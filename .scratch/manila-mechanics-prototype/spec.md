@@ -1,6 +1,11 @@
 # Manila mechanics prototype
 
-Status: accepted
+Status: superseded
+
+Superseded by `.scratch/manila-creation-flow/spec.md` after the user clarified
+that this round is an internal creation-flow validation and must use the real
+rulebook and source materials. Harbor 13 remains historical technical-spike
+evidence; it is not the current product prototype.
 
 ## Purpose
 

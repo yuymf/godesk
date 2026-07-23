@@ -1,8 +1,21 @@
-# Harbor 13
+# Godesk — give it rules, get a playable tabletop
 
-Harbor 13 is a local, browser-based tabletop mechanics prototype built from the platform MVP PRD. It uses an original presentation to probe the auction-adjacent worker placement, wagering, dice movement, outcome resolution, replay, and rules-help interactions associated with a Manila-style voyage.
+Godesk is a player-facing AI-native tabletop platform. A player supplies a
+rulebook PDF and a visual asset package; the platform understands the rules,
+extracts or generates game art, assembles a playable digital game, creates an
+online room, and lets the player invite friends.
 
-It does **not** include commercial artwork, component scans, or copied rulebook text.
+The default route is the first player-facing vertical slice:
+
+- add a rulebook and asset package;
+- watch one automatic generation run;
+- answer only an exceptional high-impact clarification;
+- open the generated game;
+- create a synchronized room and invite friends when networking is available.
+
+The included rulebook renders and photographs are **internal validation fixtures
+only**. They are not cleared for redistribution or publishing. See
+[`sources/manila/PROVENANCE.md`](sources/manila/PROVENANCE.md).
 
 ## Run
 
@@ -19,18 +32,34 @@ pnpm typecheck
 pnpm build
 ```
 
-## What this slice proves
+The default route opens the player upload-to-playable experience. Use
+`?devAuthoring=1&variant=A`, `B`, or `C` only to inspect the superseded
+authoring experiments.
 
-- Three.js can render a readable 2.5D board while React provides accessible mirrored controls.
-- A pure TypeScript reducer can validate intents and rebuild the tabletop from accepted actions.
-- Undo, local persistence, and replay can share the same action log.
-- A bounded rules helper can cite known rules and explicitly refuse unsupported questions.
+## What this slice currently implements
+
+- A player-first upload and automatic-generation experience shell.
+- Real browser-local PDF and image ingestion with per-page text and previews,
+  image dimensions, SHA-256 hashes, source anchors, explicit failures, and
+  IndexedDB recovery after refresh.
+- A seeded Manila generation run using the repository's internal source fixture.
+- A source-linked, playable three-player single-voyage output with two local
+  automated seats.
+- An explicit capability boundary that does not pretend missing services exist.
 
 ## What it does not prove
 
-- Server-authoritative multiplayer, private-state isolation, reconnection, or 500 ms synchronization.
-- Long-session stability or the PRD's two-hour runtime criterion.
-- Retrieval over uploaded rulebooks or real LLM answer quality.
-- The complete rules or commercial play experience of *Manila*.
+- A complete multi-voyage digital implementation of *Manila*.
+- Full settlement for loans, insurance, blind passengers, and final victory.
+- OCR for scanned pages, rule understanding, or game compilation.
+- Server-side private storage, cross-device recovery, accounts, or cloud
+  generation jobs; real ingestion currently stays in one browser.
+- Image generation or automatic asset segmentation.
+- A complete multi-voyage Manila implementation.
+- Online rooms, invite links, reconnect, private state, or multiplayer.
+- Publication rights or commercial readiness for the Manila fixture.
 
-See [the prototype spec](.scratch/manila-mechanics-prototype/spec.md) for the acceptance boundary.
+See [the current platform spec](.scratch/player-to-playable-platform/spec.md)
+and [ADR 0001](docs/adr/0001-player-first-generation-platform.md). The former
+designer-first authoring flow and Harbor 13 mechanics probe remain as
+superseded development experiments.
