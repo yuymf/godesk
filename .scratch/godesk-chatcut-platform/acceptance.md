@@ -92,7 +92,8 @@ session or a human playtest.
 
 ## External gates
 
-- Commit `8988790` is pushed to `origin/codex/chatcut-platform`; Draft PR
+- The current acceptance branch is pushed to
+  `origin/codex/chatcut-platform`; Draft PR
   `https://github.com/yuymf/godesk/pull/1` is open against `main`.
 - Cloudflare production version
   `197623f7-ff70-49ab-8af7-b6ec6ef3eaf1` runs the refactored Worker with the
