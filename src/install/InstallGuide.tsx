@@ -70,7 +70,7 @@ export function InstallGuide() {
             <div>
               <h3>安装 Marketplace 与 Plugin</h3>
               <pre>
-                <code>{`${resolvedCli} plugin marketplace add yuymf/godesk --ref main\n${resolvedCli} plugin add godesk@godesk --json`}</code>
+                <code>{`${resolvedCli} plugin marketplace add yuymf/godesk-plugin --ref main\n${resolvedCli} plugin add godesk@godesk --json`}</code>
               </pre>
               <p>
                 若 Marketplace 已存在，先执行 upgrade，再重试 Plugin 安装；不得手改
@@ -83,11 +83,11 @@ export function InstallGuide() {
             <div>
               <h3>完成 GoDesk OAuth</h3>
               <pre>
-                <code>{`${resolvedCli} mcp login godesk --scopes godesk:read,godesk:write`}</code>
+                <code>{`${resolvedCli} mcp login godesk`}</code>
               </pre>
               <p>
-                在打开的 GoDesk 登录页完成授权。只有 Token 能通过 GoDesk 的发行方、
-                受众、期限、scope 和 creator 校验，才算登录完成。
+                在打开的 Cloudflare Access 登录页用邮箱验证码完成授权。只有 Access
+                JWT 能通过发行方、受众、期限和 creator 校验，才算登录完成。
               </p>
             </div>
           </li>

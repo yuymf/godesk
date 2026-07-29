@@ -90,6 +90,32 @@ export function validateTokenClaims(
   };
 }
 
+export function validateAccessClaims(
+  payload: JWTPayload,
+  expected: {
+    issuer: string;
+    audience: string;
+    grantedScopes: string[];
+    nowSeconds?: number;
+  },
+): CreatorIdentity {
+  const now = expected.nowSeconds ?? Math.floor(Date.now() / 1_000);
+  const audience = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+  if (payload.iss !== expected.issuer) throw new Error("invalid_issuer");
+  if (!audience.includes(expected.audience)) throw new Error("invalid_audience");
+  if (typeof payload.exp !== "number" || payload.exp <= now) {
+    throw new Error("token_expired");
+  }
+  if (typeof payload.sub !== "string" || !payload.sub) {
+    throw new Error("missing_creator");
+  }
+  return {
+    creatorId: payload.sub,
+    mode: "oauth",
+    scopes: expected.grantedScopes,
+  };
+}
+
 export async function authorizationMetadata(env: Env) {
   const issuer = configuredIssuer(env);
   if (!issuer) throw new Error("oauth_not_configured");
@@ -158,6 +184,30 @@ export async function authorizeRequest(
   const issuer = configuredIssuer(env);
   if (!issuer || !config.GODESK_AUTH_AUDIENCE) {
     return challenge(request, requiredScopes.join(" "), "OAuth is not configured.");
+  }
+  const accessAssertion = request.headers.get("cf-access-jwt-assertion");
+  if (accessAssertion) {
+    try {
+      const certsUri = `${issuer.replace(/\/+$/, "")}/cdn-cgi/access/certs`;
+      let jwks = jwksByUri.get(certsUri);
+      if (!jwks) {
+        jwks = createRemoteJWKSet(new URL(certsUri));
+        jwksByUri.set(certsUri, jwks);
+      }
+      const verified = await jwtVerify(accessAssertion, jwks, {
+        issuer,
+        audience: config.GODESK_AUTH_AUDIENCE,
+      });
+      return validateAccessClaims(verified.payload, {
+        issuer,
+        audience: config.GODESK_AUTH_AUDIENCE,
+        grantedScopes: requiredScopes,
+      });
+    } catch (reason) {
+      const description =
+        reason instanceof Error ? reason.message : "Access token validation failed.";
+      return challenge(request, requiredScopes.join(" "), description);
+    }
   }
   const authorization = request.headers.get("authorization");
   const token = authorization?.startsWith("Bearer ")

@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { authorizationMetadata, validateTokenClaims } from "./auth";
+import {
+  authorizationMetadata,
+  validateAccessClaims,
+  validateTokenClaims,
+} from "./auth";
 
 const expected = {
   issuer: "https://auth.godesk.test",
@@ -59,5 +63,38 @@ describe("OAuth discovery", () => {
       `${issuer}.well-known/openid-configuration`,
     );
     vi.unstubAllGlobals();
+  });
+});
+
+describe("Cloudflare Access claim validation", () => {
+  const accessExpected = {
+    issuer: "https://godesk-yumengfan220.cloudflareaccess.com",
+    audience: "godesk-access-audience",
+    grantedScopes: ["godesk:read", "godesk:write"],
+    nowSeconds: 1_000,
+  };
+  const accessPayload = {
+    iss: accessExpected.issuer,
+    aud: [accessExpected.audience],
+    sub: "access-user-id",
+    email: "creator@example.com",
+    exp: 2_000,
+  };
+
+  it("maps a valid Access JWT to one tenant identity", () => {
+    expect(validateAccessClaims(accessPayload, accessExpected)).toEqual({
+      creatorId: "access-user-id",
+      mode: "oauth",
+      scopes: ["godesk:read", "godesk:write"],
+    });
+  });
+
+  it.each([
+    ["issuer", { ...accessPayload, iss: "https://attacker.test" }],
+    ["audience", { ...accessPayload, aud: ["other-app"] }],
+    ["expiry", { ...accessPayload, exp: 999 }],
+    ["creator", { ...accessPayload, sub: undefined }],
+  ])("rejects an invalid Access %s claim", (_name, payload) => {
+    expect(() => validateAccessClaims(payload, accessExpected)).toThrow();
   });
 });

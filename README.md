@@ -55,18 +55,20 @@ and the thin plugin package is [`plugins/godesk`](plugins/godesk). It contains
 brand metadata, workflow Skills, and the remote MCP declaration; no project
 truth or rules execution lives in the Plugin.
 
+Public installation is distributed from
+[`yuymf/godesk-plugin`](https://github.com/yuymf/godesk-plugin), which contains
+only the Marketplace manifest and thin Plugin bundle.
+
 The intended public install sentence is hosted at `/chatgpt-plugin`. A durable
 public install additionally requires this repository revision to be pushed,
 the Worker to be deployed, and a production OAuth provider to be configured.
 
 ## Production configuration
 
-The Worker requires:
+The production Worker validates Cloudflare Access JWTs using:
 
 - `GODESK_AUTH_ISSUER`
 - `GODESK_AUTH_AUDIENCE`
-- `GODESK_WEB_CLIENT_ID`
-- `GODESK_WEB_CLIENT_SECRET`
 
 GitHub Actions also requires `CLOUDFLARE_ACCOUNT_ID` and
 `CLOUDFLARE_API_TOKEN`. Never store secrets in the repository.

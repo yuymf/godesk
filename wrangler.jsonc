@@ -5,6 +5,10 @@
   "compatibility_date": "2026-07-29",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
+  "vars": {
+    "GODESK_AUTH_ISSUER": "https://godesk-yumengfan220.cloudflareaccess.com",
+    "GODESK_AUTH_AUDIENCE": "065b23e01718a7c613297ac38777e54223ef02e1ed5a697861f750f326e3bcfe"
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

@@ -90,10 +90,10 @@ or a human playtest.
   `https://github.com/yuymf/godesk/pull/1` is open against `main`.
 - The production `godesk` Worker is an older static deployment with no Durable
   Object binding or OAuth secrets. This refactor has not been deployed.
-- Production configuration still requires
-  `GODESK_AUTH_ISSUER`, `GODESK_AUTH_AUDIENCE`,
-  `GODESK_WEB_CLIENT_ID`, `GODESK_WEB_CLIENT_SECRET`,
-  `CLOUDFLARE_ACCOUNT_ID`, and `CLOUDFLARE_API_TOKEN`.
+- Cloudflare Access now owns browser and MCP OAuth. The Worker validates the
+  `Cf-Access-Jwt-Assertion` issuer, audience, expiry, and creator identity.
+  GitHub deployment still requires `CLOUDFLARE_ACCOUNT_ID` and
+  `CLOUDFLARE_API_TOKEN`.
 - The private application repository cannot serve as a public Marketplace.
   A separate public thin-plugin repository is recommended, but making a
   repository public still requires an explicit visibility decision.
