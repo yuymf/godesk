@@ -86,8 +86,8 @@ or a human playtest.
 
 ## External gates
 
-- The user has authorized commit and push. Publication evidence is recorded
-  separately after the branch is pushed.
+- Commit `ea2e84a` is pushed to `origin/codex/chatcut-platform`; Draft PR
+  `https://github.com/yuymf/godesk/pull/1` is open against `main`.
 - The production `godesk` Worker is an older static deployment with no Durable
   Object binding or OAuth secrets. This refactor has not been deployed.
 - Production configuration still requires
