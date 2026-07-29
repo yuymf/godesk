@@ -4,14 +4,15 @@ Date: 2026-07-30
 
 ## Evidence boundary
 
-This ledger records verified local implementation and browser behavior. It does
-not claim a production deployment, live OAuth, public marketplace publication,
-or a human playtest.
+This ledger separates local, Cloudflare control-plane, independent public
+network, OAuth, and human evidence. It does not claim a completed user OAuth
+session or a human playtest.
 
 ## Local automated evidence
 
 - App suite: 7 files, 28 tests.
-- Worker suite: 3 files, 28 tests, including malformed nested patches,
+- Worker suite: 3 files, 33 tests, including Cloudflare Access JWT claims,
+  malformed nested patches,
   action-source build provenance, legacy Build normalization, Durable Object
   eviction/alarm recovery, immutable builds, tenant isolation, rooms, and
   replay reconstruction.
@@ -57,14 +58,19 @@ or a human playtest.
   assertion confirms `dist/manila` does not exist, so uncleared internal
   Manila photos and rulebook pages are not published with the site.
 
-## Installation evidence
+## Public installation evidence
 
-- Local Marketplace `godesk` resolves this checkout's
-  `.agents/plugins/marketplace.json`.
+- Public repository `https://github.com/yuymf/godesk-plugin` is public and
+  contains only the thin Marketplace, Plugin, four Skills, metadata, and
+  production route verifier. Its default branch is `main`.
 - The bundled CLI at
-  `/Applications/ChatGPT.app/Contents/Resources/codex` removed the cached old
-  package, installed the current package, and listed it as installed and
-  enabled.
+  `/Applications/ChatGPT.app/Contents/Resources/codex` removed the checkout
+  Marketplace, added `yuymf/godesk-plugin --ref main`, installed
+  `godesk@godesk`, and resolved the enabled package from
+  `~/.codex/plugins/cache/godesk/`.
+- The installed public package contains the production
+  `https://godesk.yumengfan220.workers.dev/mcp` resource and all four validated
+  Skills. The public repository was independently cloned before validation.
 - A fresh Codex task is responsible for the final no-repository-edit Plugin +
   local MCP acceptance. Task `019faee0-b9af-70d3-ac71-83566b590568` passed:
   it discovered all 16 tools, created
@@ -86,18 +92,35 @@ or a human playtest.
 
 ## External gates
 
-- Commit `ea2e84a` is pushed to `origin/codex/chatcut-platform`; Draft PR
+- Commit `8988790` is pushed to `origin/codex/chatcut-platform`; Draft PR
   `https://github.com/yuymf/godesk/pull/1` is open against `main`.
-- The production `godesk` Worker is an older static deployment with no Durable
-  Object binding or OAuth secrets. This refactor has not been deployed.
+- Cloudflare production version
+  `197623f7-ff70-49ab-8af7-b6ec6ef3eaf1` runs the refactored Worker with the
+  `CreatorProjects` Durable Object, static assets, and Access issuer/audience
+  bindings. Versioned preview URLs are explicitly disabled.
 - Cloudflare Access now owns browser and MCP OAuth. The Worker validates the
   `Cf-Access-Jwt-Assertion` issuer, audience, expiry, and creator identity.
-  GitHub deployment still requires `CLOUDFLARE_ACCOUNT_ID` and
-  `CLOUDFLARE_API_TOKEN`.
-- The private application repository cannot serve as a public Marketplace.
-  A separate public thin-plugin repository is recommended, but making a
-  repository public still requires an explicit visibility decision.
-- Public MCP reachability, live OAuth, public Plugin discovery, and the
-  production one-sentence install-to-new-task journey remain unverified.
+  Access application `35ecc084-9dfa-48af-8e36-25c062c3e794` has Managed OAuth
+  and dynamic client registration enabled; its policy requires an authenticated
+  email one-time PIN. A narrower bypass application keeps only
+  `/chatgpt-plugin` and `/assets/*` public.
+- Public workflow run
+  `https://github.com/yuymf/godesk-plugin/actions/runs/30481864216` passed from
+  a GitHub-hosted runner: the installer HTML and hashed asset returned
+  successfully, the creator root required Access, and `/mcp` returned the
+  Managed OAuth `401` plus `WWW-Authenticate` resource metadata.
+- The current local network closes TLS connections to `workers.dev` before an
+  HTTP response. The same failure occurs in `curl`, the in-app browser, and
+  `codex mcp login godesk`. Cloudflare deployment state and the independent
+  GitHub runner prove public service behavior, but an actual browser OTP
+  authorization, authenticated remote MCP tool call, and automatic fresh-task
+  handoff remain unverified.
+- The Cloudflare account currently has no active DNS zone or Worker custom
+  domain. A custom domain is therefore not silently assumed as a workaround
+  for this network-specific `workers.dev` reachability failure.
+- Future GitHub application deployment still requires
+  `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` repository secrets; the
+  completed production release used the authorized local Wrangler OAuth
+  session.
 - Bot simulations are deterministic automated evidence only. No human
   playtest evidence is claimed.
