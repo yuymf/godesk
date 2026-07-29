@@ -1,65 +1,75 @@
-# Godesk — give it rules, get a playable tabletop
+# GoDesk — create editable tabletop games from Codex
 
-Godesk is a player-facing AI-native tabletop platform. A player supplies a
-rulebook PDF and a visual asset package; the platform understands the rules,
-extracts or generates game art, assembles a playable digital game, creates an
-online room, and lets the player invite friends.
+GoDesk is a Codex-controlled tabletop creation platform. Codex is the natural
+language control plane; GoDesk owns authenticated Game Projects, versioned Game
+Definitions, immutable Playable Builds, deterministic rooms, and replays. The
+same project remains visible and manually editable in the GoDesk Web Editor.
+Definitions cover rules, components, setup, actions, board zones, phases,
+scenarios, presentation, and explicit runtime support. Long generation,
+compile, playtest, preview, and export work is persisted as recoverable jobs;
+the Editor polls authoritative state while retaining a separate optimistic
+version baseline for unsaved drafts.
 
-The default route is the first player-facing vertical slice:
+The creator home includes two source-anchored default examples:
 
-- add a rulebook and asset package;
-- watch one automatic generation run;
-- answer only an exceptional high-impact clarification;
-- open the generated game;
-- create a synchronized room and invite friends when networking is available.
+- `港口十三号`, an original public-safe replacement for the internal Manila
+  mechanism fixture.
+- `雾岭山庄`, an original cooperative exploration mechanism slice.
 
-The included rulebook renders and photographs are **internal validation fixtures
-only**. They are not cleared for redistribution or publishing. See
+Both copy into real editable projects. Neither contains third-party rulebook
+text, scenarios, art, or photos. Vite's public-directory copy is disabled so
+the internal Manila evidence under `public/manila` is never shipped in `dist`.
+
+## Product routes
+
+- `/` — creator project home
+- `/editor/:projectId` — authoritative project editor
+- `/play/:buildId` — immutable playable build
+- `/room/:roomId` — authoritative room
+- `/replay/:replayId` — read-only replay
+- `/chatgpt-plugin` — one-sentence Codex installation contract
+
+The former player-first upload shell and Manila authoring experiments are no
+longer product routes. Their code and source material remain internal fixtures
+only. Manila assets are not cleared for redistribution; see
 [`sources/manila/PROVENANCE.md`](sources/manila/PROVENANCE.md).
 
-## Run
+## Run and verify
 
 ```bash
 pnpm install
 pnpm dev
-```
-
-## Verify
-
-```bash
 pnpm test
+pnpm test:worker
 pnpm typecheck
 pnpm build
+pnpm deploy:dry-run
 ```
 
-The default route opens the player upload-to-playable experience. Use
-`?devAuthoring=1&variant=A`, `B`, or `C` only to inspect the superseded
-authoring experiments.
+Localhost uses an explicit development identity. It is not live OAuth evidence.
 
-## What this slice currently implements
+## Codex Plugin
 
-- A player-first upload and automatic-generation experience shell.
-- Real browser-local PDF and image ingestion with per-page text and previews,
-  image dimensions, SHA-256 hashes, source anchors, explicit failures, and
-  IndexedDB recovery after refresh.
-- A seeded Manila generation run using the repository's internal source fixture.
-- A source-linked, playable three-player single-voyage output with two local
-  automated seats.
-- An explicit capability boundary that does not pretend missing services exist.
+The repo-local Marketplace is [`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json)
+and the thin plugin package is [`plugins/godesk`](plugins/godesk). It contains
+brand metadata, workflow Skills, and the remote MCP declaration; no project
+truth or rules execution lives in the Plugin.
 
-## What it does not prove
+The intended public install sentence is hosted at `/chatgpt-plugin`. A durable
+public install additionally requires this repository revision to be pushed,
+the Worker to be deployed, and a production OAuth provider to be configured.
 
-- A complete multi-voyage digital implementation of *Manila*.
-- Full settlement for loans, insurance, blind passengers, and final victory.
-- OCR for scanned pages, rule understanding, or game compilation.
-- Server-side private storage, cross-device recovery, accounts, or cloud
-  generation jobs; real ingestion currently stays in one browser.
-- Image generation or automatic asset segmentation.
-- A complete multi-voyage Manila implementation.
-- Online rooms, invite links, reconnect, private state, or multiplayer.
-- Publication rights or commercial readiness for the Manila fixture.
+## Production configuration
 
-See [the current platform spec](.scratch/player-to-playable-platform/spec.md)
-and [ADR 0001](docs/adr/0001-player-first-generation-platform.md). The former
-designer-first authoring flow and Harbor 13 mechanics probe remain as
-superseded development experiments.
+The Worker requires:
+
+- `GODESK_AUTH_ISSUER`
+- `GODESK_AUTH_AUDIENCE`
+- `GODESK_WEB_CLIENT_ID`
+- `GODESK_WEB_CLIENT_SECRET`
+
+GitHub Actions also requires `CLOUDFLARE_ACCOUNT_ID` and
+`CLOUDFLARE_API_TOKEN`. Never store secrets in the repository.
+
+See [ADR 0002](docs/adr/0002-codex-controlled-creator-platform.md) and the
+[ChatCut-form refactor specification](.scratch/godesk-chatcut-refactor/spec.md).

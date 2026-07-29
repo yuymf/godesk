@@ -1,0 +1,296 @@
+export interface GameProject {
+  id: string;
+  name: string;
+  version: number;
+  activeDefinitionId: string;
+  createdAt: string;
+  updatedAt: string;
+  capabilities: {
+    authentication: "local-development-only" | "oauth";
+    compilation: "available" | "not-yet-implemented";
+    persistence: "durable-object";
+  };
+}
+
+export interface SourceLibraryEntry {
+  id: string;
+  kind: "brief" | "rulebook" | "image";
+  name: string;
+  content: string;
+  readiness: "ready";
+  provenance: {
+    origin:
+      | "creator-authored"
+      | "creator-upload"
+      | "internal-fixture"
+      | "system-generated"
+      | "ai-proposed";
+    locator: string;
+    confidence?: number;
+  };
+  createdAt: string;
+}
+
+export interface GameDefinition {
+  id: string;
+  version: number;
+  name: string;
+  pitch: string;
+  playerCount: number;
+  durationMinutes: number;
+  rules: Array<{
+    id: string;
+    text: string;
+    sourceId: string | null;
+    provenance: "source-anchored" | "system-generated" | "ai-proposed";
+    confidence: number;
+  }>;
+  components: Array<{
+    id: string;
+    name: string;
+    quantity: number;
+    sourceId: string | null;
+    provenance: "source-anchored" | "system-generated" | "ai-proposed";
+    confidence: number;
+  }>;
+  setup: string[];
+  actions: Array<{
+    id: string;
+    label: string;
+    description: string;
+    sourceId: string | null;
+    provenance: "source-anchored" | "system-generated" | "ai-proposed";
+    confidence: number;
+  }>;
+  board: {
+    layout: string;
+    zones: Array<{ id: string; name: string; description: string }>;
+  };
+  phases: Array<{ id: string; name: string }>;
+  scenarios: Array<{ id: string; name: string }>;
+  presentation: { theme: string };
+  runtimeSupport:
+    | { status: "draft"; unsupported: string[] }
+    | {
+        status: "executable";
+        unsupported: string[];
+        kernel: {
+          type: "score-race-v1";
+          victoryTarget: number;
+          maxTurns: number;
+          actions: Array<{ id: string; label: string; points: number }>;
+        };
+      };
+}
+
+export interface Changeset {
+  id: string;
+  previousVersion: number;
+  newVersion: number;
+  affectedEntities: string[];
+  createdAt: string;
+}
+
+export type ProjectChangeOperation =
+  | {
+      op: "add_source";
+      source: {
+        kind: SourceLibraryEntry["kind"];
+        name: string;
+        content: string;
+        provenance: SourceLibraryEntry["provenance"];
+      };
+    }
+  | {
+      op: "update_definition";
+      fields: Partial<
+        Pick<
+          GameDefinition,
+          | "name"
+          | "pitch"
+          | "playerCount"
+          | "durationMinutes"
+          | "rules"
+          | "components"
+          | "setup"
+          | "actions"
+          | "board"
+          | "phases"
+          | "scenarios"
+          | "presentation"
+        >
+      >;
+    }
+  | {
+      op: "configure_score_race";
+      config: {
+        victoryTarget: number;
+        maxTurns: number;
+        actions: Array<{ id: string; label: string; points: number }>;
+      };
+    }
+  | {
+      op: "activate_definition";
+      definitionId: string;
+    };
+
+export interface ApplyProjectChangesInput {
+  expectedVersion: number;
+  idempotencyKey: string;
+  operations: ProjectChangeOperation[];
+}
+
+export interface ApplyProjectChangesResult {
+  project: GameProject;
+  definition: GameDefinition;
+  sources: SourceLibraryEntry[];
+  changeset: Changeset;
+  warnings: string[];
+  editorUrl: string;
+}
+
+export interface DuplicateDefinitionResult {
+  project: GameProject;
+  definition: GameDefinition;
+  definitions: GameDefinition[];
+  changeset: Changeset;
+  warnings: string[];
+  editorUrl: string;
+}
+
+export interface PlayableBuild {
+  id: string;
+  projectId: string;
+  definitionId: string;
+  definitionVersion: number;
+  definition: GameDefinition;
+  sourceIds: string[];
+  warnings: string[];
+  unsupportedBehavior: string[];
+  createdAt: string;
+  playableUrl: string;
+}
+
+export interface CompileBuildInput {
+  expectedVersion: number;
+  idempotencyKey: string;
+}
+
+export interface CompileBuildResult {
+  project: GameProject;
+  build: PlayableBuild;
+  changeset: Changeset;
+  warnings: string[];
+  editorUrl: string;
+}
+
+export type CreatorJobKind =
+  | "generate-definition"
+  | "compile-build"
+  | "bot-playtest"
+  | "render-preview"
+  | "export-build";
+
+export interface CreatorJob {
+  id: string;
+  projectId: string;
+  kind: CreatorJobKind;
+  status: "queued" | "running" | "succeeded" | "failed";
+  idempotencyKey: string;
+  createdAt: string;
+  updatedAt: string;
+  result?: Record<string, unknown>;
+  error?: string;
+}
+
+export type SubmitJobInput =
+  | {
+      kind: "generate-definition";
+      expectedVersion: number;
+      brief: string;
+      name?: string;
+      playerCount?: number;
+      durationMinutes?: number;
+      idempotencyKey: string;
+    }
+  | {
+      kind: "compile-build";
+      expectedVersion: number;
+      idempotencyKey: string;
+    }
+  | {
+      kind: "bot-playtest";
+      buildId: string;
+      seed: number;
+      idempotencyKey: string;
+    }
+  | {
+      kind: "render-preview" | "export-build";
+      buildId: string;
+      idempotencyKey: string;
+    };
+
+export interface CreateProjectResult {
+  project: GameProject;
+  editorUrl: string;
+  warnings: string[];
+}
+
+export interface TableState {
+  turn: number;
+  activeSeat: number;
+  scores: number[];
+  status: "active" | "complete";
+  winnerSeat: number | null;
+}
+
+export interface AcceptedAction {
+  sequence: number;
+  intentId: string;
+  seat: number;
+  actionId: string;
+  points: number;
+  state: TableState;
+}
+
+export interface PlaytestRun {
+  id: string;
+  projectId: string;
+  buildId: string;
+  seed: number;
+  evidenceType: "automated-bot-simulation";
+  terminalStatus: "complete" | "turn-limit";
+  metrics: {
+    turns: number;
+    winnerSeat: number | null;
+    finalScores: number[];
+  };
+  replayId: string;
+  createdAt: string;
+  replayUrl: string;
+}
+
+export interface GameRoom {
+  id: string;
+  projectId: string;
+  buildId: string;
+  seed: number;
+  state: TableState;
+  acceptedActions: AcceptedAction[];
+  replayId: string;
+  createdAt: string;
+  roomUrl: string;
+  replayUrl: string;
+}
+
+export interface GameReplay {
+  id: string;
+  projectId: string;
+  buildId: string;
+  seed: number;
+  evidenceType: "automated-bot-simulation" | "room-action-log";
+  initialState: TableState;
+  acceptedActions: AcceptedAction[];
+  finalState: TableState;
+  createdAt: string;
+}

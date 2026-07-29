@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create a GoDesk game"
+  short_description: "Turn a brief into an editable tabletop prototype"
+  default_prompt: "Create an editable tabletop game from my brief."

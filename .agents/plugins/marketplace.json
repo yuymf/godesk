@@ -1,0 +1,20 @@
+{
+  "name": "godesk",
+  "interface": {
+    "displayName": "GoDesk"
+  },
+  "plugins": [
+    {
+      "name": "godesk",
+      "source": {
+        "source": "local",
+        "path": "./plugins/godesk"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Design"
+    }
+  ]
+}

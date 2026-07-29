@@ -1,6 +1,6 @@
 # ADR 0001: Player-first end-to-end game generation
 
-Status: accepted
+Status: superseded by ADR 0002
 
 Date: 2026-07-23
 

@@ -1,5 +1,5 @@
 {
-  "name": "godesk-player-to-playable-prototype",
+  "name": "godesk",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -8,23 +8,32 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:worker": "vitest run --config vitest.worker.config.ts",
+    "test:watch": "vitest",
+    "deploy": "pnpm build && wrangler deploy",
+    "deploy:dry-run": "pnpm build && wrangler deploy --dry-run"
   },
   "dependencies": {
+    "@modelcontextprotocol/server": "2.0.0",
     "@react-three/fiber": "^9.3.0",
+    "agents": "^0.20.1",
+    "jose": "^6.2.4",
     "pdfjs-dist": "^6.1.200",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "three": "^0.180.0"
+    "three": "^0.180.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.19.0",
     "@types/react": "^19.1.16",
     "@types/react-dom": "^19.1.9",
     "@types/three": "^0.180.0",
     "@vitejs/plugin-react": "^5.0.4",
     "typescript": "^5.9.3",
     "vite": "^7.1.7",
-    "vitest": "^3.2.4"
+    "vitest": "^4.1.10",
+    "wrangler": "4.114.0"
   },
   "packageManager": "pnpm@10.15.1"
 }

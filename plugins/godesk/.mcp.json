@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "godesk": {
+      "http_headers": {
+        "x-godesk-mcp-surface": "codex"
+      },
+      "oauth_resource": "https://godesk.yumengfan220.workers.dev/mcp",
+      "url": "https://godesk.yumengfan220.workers.dev/mcp"
+    }
+  }
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "GoDesk basics"
+  short_description: "Operate GoDesk projects safely from Codex"
+  default_prompt: "Open my GoDesk project and continue safely."

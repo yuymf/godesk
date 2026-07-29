@@ -1,0 +1,221 @@
+.install-guide {
+  min-height: 100vh;
+  color: #181816;
+  background: #f5f0e6;
+}
+
+.install-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 76rem;
+  padding: 1.25rem clamp(1.25rem, 5vw, 4rem);
+  margin: 0 auto;
+  color: #6c675d;
+  border-bottom: 1px solid #cbc4b6;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.install-brand {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  color: #181816;
+  text-decoration: none;
+}
+
+.install-brand span {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  color: #f5f0e6;
+  background: #181816;
+  border-radius: 0.35rem;
+  font-size: 0.7rem;
+}
+
+.install-hero,
+.install-contract,
+.install-recovery {
+  max-width: 76rem;
+  padding: clamp(4rem, 9vw, 8rem) clamp(1.25rem, 5vw, 4rem);
+  margin: 0 auto;
+}
+
+.install-hero {
+  padding-bottom: clamp(5rem, 11vw, 10rem);
+}
+
+.install-kicker {
+  margin: 0 0 1.25rem;
+  color: #c4412e;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.install-hero h1 {
+  max-width: 10ch;
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(3.6rem, 10vw, 8.8rem);
+  font-weight: 400;
+  letter-spacing: -0.075em;
+  line-height: 0.88;
+}
+
+.install-lead {
+  max-width: 45rem;
+  margin: 2.5rem 0 3rem;
+  color: #5f5a51;
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  line-height: 1.75;
+}
+
+.install-prompt {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1.5rem;
+  align-items: center;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  color: #f9f5ea;
+  background: #191a18;
+  border-radius: 0.5rem;
+  box-shadow: 0 1.25rem 3.5rem rgb(54 45 33 / 18%);
+}
+
+.install-prompt p {
+  margin: 0;
+  font-size: clamp(1rem, 2.2vw, 1.35rem);
+  line-height: 1.6;
+}
+
+.install-prompt button {
+  min-height: 3rem;
+  padding: 0 1.25rem;
+  color: #181816;
+  background: #d6ff58;
+  border: 0;
+  border-radius: 0.3rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.install-note {
+  max-width: 45rem;
+  margin: 1.5rem 0 0;
+  color: #7b3126;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.install-contract {
+  border-top: 1px solid #cbc4b6;
+}
+
+.contract-heading {
+  display: grid;
+  grid-template-columns: 0.6fr 1.4fr;
+  gap: 2rem;
+  margin-bottom: 4rem;
+}
+
+.contract-heading h2,
+.install-recovery h2 {
+  max-width: 18ch;
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.1rem, 5vw, 4.5rem);
+  font-weight: 400;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.install-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.install-steps li {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr);
+  gap: 1.5rem;
+  padding: 2rem 0;
+  border-top: 1px solid #cbc4b6;
+}
+
+.install-steps li > span {
+  color: #c4412e;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+}
+
+.install-steps h3 {
+  margin: 0 0 0.8rem;
+  font-size: 1.3rem;
+}
+
+.install-steps p,
+.install-recovery > p:last-child {
+  max-width: 50rem;
+  margin: 0;
+  color: #625d54;
+  line-height: 1.7;
+}
+
+.install-steps code {
+  padding: 0.15rem 0.35rem;
+  background: #e8e1d5;
+  border-radius: 0.2rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.83em;
+}
+
+.install-steps pre {
+  overflow-x: auto;
+  margin: 1rem 0;
+  padding: 1.1rem;
+  color: #ede9df;
+  background: #252622;
+  border-radius: 0.35rem;
+}
+
+.install-steps pre code {
+  padding: 0;
+  color: inherit;
+  background: transparent;
+}
+
+.install-recovery {
+  display: grid;
+  grid-template-columns: 0.5fr 0.8fr 1fr;
+  gap: 2rem;
+  border-top: 1px solid #cbc4b6;
+}
+
+@media (max-width: 720px) {
+  .install-nav > span,
+  .install-note {
+    font-size: 0.72rem;
+  }
+
+  .install-prompt,
+  .contract-heading,
+  .install-recovery {
+    grid-template-columns: 1fr;
+  }
+
+  .install-prompt button {
+    width: 100%;
+  }
+
+  .install-steps li {
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+}

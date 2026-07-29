@@ -1,9 +1,7 @@
-import { CreationPrototype } from "./manila/CreationPrototype";
-import { PlayerPlatformFlow } from "./platform/PlayerPlatformFlow";
+import { CreatorWorkspace } from "./creator/CreatorWorkspace";
+import { InstallGuide } from "./install/InstallGuide";
 
 export default function App() {
-  const query = new URLSearchParams(window.location.search);
-  return query.get("devAuthoring") === "1"
-    ? <CreationPrototype />
-    : <PlayerPlatformFlow />;
+  if (window.location.pathname === "/chatgpt-plugin") return <InstallGuide />;
+  return <CreatorWorkspace />;
 }

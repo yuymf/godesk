@@ -1,0 +1,4 @@
+interface:
+  display_name: "Edit and compile a GoDesk game"
+  short_description: "Revise a project and compile an immutable build"
+  default_prompt: "Revise this GoDesk project and compile a playable build."
