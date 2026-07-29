@@ -7,7 +7,7 @@ task.
 
 **Blocked by:** 07 — Package the GoDesk Plugin and creator Skills.
 
-**Status:** local-flow-complete-publication-pending
+**Status:** public-flow-complete-live-handoff-pending
 
 - [x] The hosted guide is a complete agent execution contract modeled on the
       verified ChatCut installation journey.
@@ -20,8 +20,14 @@ task.
 - [x] Acceptance is version- and host-specific rather than a universal CLI
       assumption.
 
-## Remaining public gate
+## Published evidence and remaining live gate
 
-The Git revision has not been pushed, the Worker has not been deployed to the
-declared production URL, and production OAuth provider credentials are absent.
-The fresh task therefore stopped at MCP mounting and did not claim success.
+The public Marketplace, production Worker, public installer, static assets,
+protected creator route, and Managed OAuth discovery are published and
+independently verified. The bundled CLI successfully installed from
+`yuymf/godesk-plugin`, not from the application checkout.
+
+The current local network cannot reach `workers.dev`, so `codex mcp login
+godesk` did not reach the email OTP page. Authenticated tool verification and
+the automatic fresh creation task therefore remain pending rather than being
+reported as successful.

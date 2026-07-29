@@ -23,8 +23,10 @@ creators and isolate Game Projects.
 
 - Repo Marketplace, Plugin manifest, MCP declaration, brand asset, and four
   workflow Skills pass the official plugin and Skill validators.
-- Codex Desktop's bundled CLI installed `godesk@godesk` as enabled and copied
-  the complete package into its plugin cache.
+- The thin package is public at `https://github.com/yuymf/godesk-plugin`.
+  Codex Desktop's bundled CLI added that GitHub Marketplace, installed
+  `godesk@godesk` as enabled, and copied the complete package into its plugin
+  cache.
 - A fresh task discovered the Plugin and Skills. It correctly stopped because
-  the undeployed production MCP was not mounted; this is not live OAuth or MCP
-  success evidence.
+  its tested MCP was local. The production remote now exists, but a fresh
+  authenticated task still requires the live OTP gate recorded in Issue 08.

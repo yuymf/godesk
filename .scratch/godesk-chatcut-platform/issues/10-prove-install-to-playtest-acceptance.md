@@ -8,7 +8,7 @@ independent evidence locating every user-facing feature.
 **Blocked by:** 08 — Install with one sentence and hand off to creation; 09 —
 Retire the player-first product route.
 
-**Status:** local-acceptance-complete-production-pending
+**Status:** production-surface-verified-live-auth-and-human-pending
 
 - [x] Focused tests, full tests, typecheck, production build, package checks,
       MCP contract checks, and `git diff --check` pass.
@@ -24,5 +24,7 @@ Retire the player-first product route.
 ## Evidence
 
 See [`../acceptance.md`](../acceptance.md). Local implementation and browser
-acceptance are complete. Production publication, live OAuth, public MCP/Plugin
-discovery, and human playtest evidence remain explicit external gates.
+acceptance are complete. Production publication, public Plugin installation,
+Access protection, and OAuth discovery are independently verified. A completed
+OTP session, authenticated remote MCP tool call, automatic fresh-task handoff,
+and human playtest evidence remain explicit gates.

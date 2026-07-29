@@ -6,7 +6,7 @@ for Codex remote MCP.
 
 **Blocked by:** 04 — Control Game Projects through remote MCP.
 
-**Status:** implementation-complete-live-configuration-pending
+**Status:** production-configured-live-login-pending
 
 - [x] GoDesk exposes the required protected-resource and authorization-server
       metadata and supports authorization code plus PKCE.
@@ -31,9 +31,13 @@ for Codex remote MCP.
   and non-local unconfigured hosts fail closed with 401.
 - Localhost is visibly labelled `Local development identity · 非线上 OAuth 证据`.
 
-## Remaining live gate
+## Production configuration and remaining live gate
 
-An established OAuth provider must still be configured with issuer, audience,
-web client ID, and web client secret before live OAuth can be claimed. No
-production provider credentials are present in this checkout, so live login is
-not yet verified.
+Cloudflare Access now provides Managed OAuth, dynamic client registration, and
+email one-time-PIN identity for the production Worker. The origin validates the
+Access assertion issuer, audience, expiry, and creator identity. An independent
+public runner verified the MCP `401` plus OAuth resource metadata.
+
+The current local network closes TLS connections to `workers.dev` before HTTP,
+so a real browser OTP login and authenticated remote MCP request have not been
+observed from Codex. They remain explicit live acceptance gates.
