@@ -21,8 +21,9 @@ creators and isolate Game Projects.
 
 ## Verification
 
-- Repo Marketplace, Plugin manifest, MCP declaration, brand asset, and four
-  workflow Skills pass the official plugin and Skill validators.
+- Repo Marketplace, Plugin manifest, MCP declaration, brand asset, and five
+  workflow Skills pass the official plugin and Skill validators, including the
+  export-and-publish delivery workflow.
 - The thin package is public at `https://github.com/yuymf/godesk-plugin`.
   Codex Desktop's bundled CLI added that GitHub Marketplace, installed
   `godesk@godesk` as enabled, and copied the complete package into its plugin

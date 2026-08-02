@@ -38,13 +38,20 @@ only. Manila assets are not cleared for redistribution; see
 
 ```bash
 pnpm install
-pnpm dev
+pnpm dev:worker
 pnpm test
 pnpm test:worker
 pnpm typecheck
 pnpm build
+pnpm verify:local-routes
 pnpm deploy:dry-run
 ```
+
+`pnpm dev:worker` builds the client and starts the full local Worker + Assets +
+Durable Objects flow at `http://127.0.0.1:8799`. `pnpm dev` remains a static Vite-only UI server; it
+does not proxy `/api`, `/mcp`, or OAuth routes and is not a valid end-to-end
+creator flow. `pnpm verify:local-routes` starts an isolated temporary Worker
+state and checks the OAuth metadata, login/callback, and MCP route contracts.
 
 Localhost uses an explicit development identity. It is not live OAuth evidence.
 

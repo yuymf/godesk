@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
+    "dev:worker": "pnpm build && wrangler dev --local --ip 127.0.0.1 --port 8799",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
     "test:worker": "vitest run --config vitest.worker.config.ts",
+    "verify:local-routes": "node scripts/verify-local-routes.mjs",
     "test:watch": "vitest",
     "deploy": "pnpm build && wrangler deploy",
     "deploy:dry-run": "pnpm build && wrangler deploy --dry-run"

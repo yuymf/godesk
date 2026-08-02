@@ -15,7 +15,14 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*", "/mcp"]
+    "run_worker_first": [
+      "/api/*",
+      "/mcp",
+      "/.well-known/oauth-protected-resource",
+      "/.well-known/oauth-protected-resource/mcp",
+      "/login",
+      "/oauth/callback"
+    ]
   },
   "durable_objects": {
     "bindings": [

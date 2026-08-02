@@ -44,6 +44,13 @@ export function draftExpectedVersion(
   return baseVersion ?? visibleVersion;
 }
 
+export function shouldStartDefinitionDraft(
+  currentSourceDraft: string,
+  nextSourceDraft: string,
+) {
+  return Boolean(nextSourceDraft.trim() && !currentSourceDraft.trim());
+}
+
 function Brand() {
   return (
     <a className="creator-brand" href="/">
@@ -735,7 +742,12 @@ function ProjectEditor({ projectId }: { projectId: string }) {
               <label htmlFor="source-brief">添加 Source Library brief</label>
               <textarea
                 id="source-brief"
-                onChange={(event) => setSourceDraft(event.currentTarget.value)}
+                onChange={(event) => {
+                  if (shouldStartDefinitionDraft(sourceDraft, event.currentTarget.value)) {
+                    beginDefinitionDraft();
+                  }
+                  setSourceDraft(event.currentTarget.value);
+                }}
                 placeholder="可选：粘贴本次修改依据，保存后会带 provenance 进入 Source Library。"
                 rows={4}
                 value={sourceDraft}
@@ -1035,13 +1047,21 @@ function PlayablePreview({ buildId }: { buildId: string }) {
     );
   }
 
+  const runtime =
+    build.definition.runtimeSupport.status === "executable"
+      ? build.definition.runtimeSupport.kernel
+      : null;
+  const runtimePoints = new Map(
+    runtime?.actions.map((action) => [action.id, action.points]) ?? [],
+  );
+
   return (
     <main className="playable-preview" id="main">
       <header>
-        <span>Compiled preview · immutable</span>
+        <span>Playable Build · immutable visual preview</span>
         <a href={`/editor/${build.projectId}`}>返回 Editor</a>
       </header>
-      <section>
+      <section className="preview-hero">
         <div className="preview-title">
           <span>Definition v{build.definitionVersion}</span>
           <h1>{build.definition.name}</h1>
@@ -1062,6 +1082,62 @@ function PlayablePreview({ buildId }: { buildId: string }) {
           </div>
         </dl>
       </section>
+      <section className="preview-board" aria-label="结构化桌面预览">
+        <div className="preview-section-heading">
+          <span>Visual mechanism preview</span>
+          <strong>{build.definition.board.layout || "未配置桌面布局"}</strong>
+        </div>
+        <div className="preview-board-canvas">
+          {build.definition.board.zones.length > 0 ? (
+            build.definition.board.zones.map((zone) => (
+              <article className="preview-zone" key={zone.id}>
+                <span>Zone</span>
+                <h2>{zone.name}</h2>
+                <p>{zone.description}</p>
+              </article>
+            ))
+          ) : (
+            <p className="preview-empty">这个 Definition 还没有桌面区域。</p>
+          )}
+          <div className="preview-score-track" aria-label="分数轨道">
+            <span>Score track</span>
+            <div>
+              <b>0</b>
+              <i aria-hidden="true" />
+              <b>{runtime?.victoryTarget ?? "—"}</b>
+            </div>
+            <small>
+              {runtime
+                ? `先达到 ${runtime.victoryTarget} 分 · 最多 ${runtime.maxTurns} 回合`
+                : "尚未配置确定性运行时"}
+            </small>
+          </div>
+        </div>
+      </section>
+      <section className="preview-actions" aria-label="可用行动预览">
+        <div className="preview-section-heading">
+          <span>Action cards</span>
+          <strong>{build.definition.actions.length} actions</strong>
+        </div>
+        <div className="preview-action-grid">
+          {build.definition.actions.length > 0 ? (
+            build.definition.actions.map((action) => (
+              <article key={action.id}>
+                <span>{action.id}</span>
+                <h2>{action.label}</h2>
+                <p>{action.description}</p>
+                <strong>
+                  {runtimePoints.has(action.id)
+                    ? `+${runtimePoints.get(action.id)} points`
+                    : "未映射到运行时"}
+                </strong>
+              </article>
+            ))
+          ) : (
+            <p className="preview-empty">这个 Definition 还没有可用行动。</p>
+          )}
+        </div>
+      </section>
       <aside>
         <h2>Build truth</h2>
         <code>{build.id}</code>
@@ -1073,8 +1149,17 @@ function PlayablePreview({ buildId }: { buildId: string }) {
             </ul>
           </>
         )}
+        {build.unsupportedBehavior.length > 0 && (
+          <>
+            <h3>Unsupported behavior</h3>
+            <ul>
+              {build.unsupportedBehavior.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          </>
+        )}
         <p>
-          这是已编译的可视化预览，不代表缺失规则已经实现，也不等于真人试玩通过。
+          上方是根据 immutable Definition 生成的结构化视觉预览；它不是截图渲染，
+          不代表缺失规则已经实现，也不等于真人试玩通过。
         </p>
       </aside>
     </main>
@@ -1242,13 +1327,9 @@ function ReplayView({ replayId }: { replayId: string }) {
           {replay.acceptedActions.length} accepted actions · final turn{" "}
           {replay.finalState.turn}
         </p>
-        <div className="score-grid">
-          {replay.finalState.scores.map((score, seat) => (
-            <article key={seat}>
-              <span>Seat {seat}</span>
-              <strong>{score}</strong>
-            </article>
-          ))}
+        <div className="replay-state-columns">
+          <ReplayStateCard label="Initial state" state={replay.initialState} />
+          <ReplayStateCard label="Final state" state={replay.finalState} />
         </div>
       </section>
       <aside className="action-log">
@@ -1266,6 +1347,33 @@ function ReplayView({ replayId }: { replayId: string }) {
         )}
       </aside>
     </main>
+  );
+}
+
+function ReplayStateCard({
+  label,
+  state,
+}: {
+  label: string;
+  state: GameReplay["initialState"];
+}) {
+  return (
+    <article className="replay-state-card">
+      <h2>{label}</h2>
+      <dl>
+        <div><dt>Turn</dt><dd>{state.turn}</dd></div>
+        <div><dt>Active seat</dt><dd>{state.activeSeat}</dd></div>
+        <div><dt>Status</dt><dd>{state.status}</dd></div>
+      </dl>
+      <div className="score-grid">
+        {state.scores.map((score, seat) => (
+          <article key={seat}>
+            <span>Seat {seat}</span>
+            <strong>{score}</strong>
+          </article>
+        ))}
+      </div>
+    </article>
   );
 }
 

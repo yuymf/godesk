@@ -1,0 +1,4 @@
+interface:
+  display_name: "Export and publish a GoDesk build"
+  short_description: "Deliver an immutable build artifact safely"
+  default_prompt: "Export this GoDesk build and verify the delivered artifact."

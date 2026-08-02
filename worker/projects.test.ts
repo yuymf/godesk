@@ -880,6 +880,134 @@ describe("Game Project HTTP seam", () => {
     }
   });
 
+  it("invalidates executable runtime after definition kernel inputs change", async () => {
+    const created = await SELF.fetch("https://godesk.test/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "运行时失效测试桌" }),
+    }).then((response) =>
+      response.json<{ project: { id: string; version: number } }>(),
+    );
+    const configured = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/changes`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          expectedVersion: created.project.version,
+          idempotencyKey: "runtime-invalidation-configure-1",
+          operations: [{
+            op: "configure_score_race",
+            config: {
+              victoryTarget: 4,
+              maxTurns: 8,
+              actions: [{ id: "step", label: "前进", points: 1 }],
+            },
+          }],
+        }),
+      },
+    ).then((response) =>
+      response.json<{ project: { version: number } }>(),
+    );
+    const playerCountChanged = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/changes`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          expectedVersion: configured.project.version,
+          idempotencyKey: "runtime-invalidation-player-count",
+          operations: [{
+            op: "update_definition",
+            fields: { playerCount: 3 },
+          }],
+        }),
+      },
+    ).then((response) =>
+      response.json<{ project: { version: number } }>(),
+    );
+    const afterPlayerCount = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}?view=definition`,
+    ).then((response) => response.json<{
+      runtimeSupport: { status: string; unsupported: string[] };
+    }>());
+    expect(afterPlayerCount.runtimeSupport).toMatchObject({ status: "draft" });
+    expect(afterPlayerCount.runtimeSupport.unsupported).toContain(
+      "score-race-v1 requires reconfiguration after player count, rules, or action changes.",
+    );
+
+    const reconfigured = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/changes`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          expectedVersion: playerCountChanged.project.version,
+          idempotencyKey: "runtime-invalidation-configure-2",
+          operations: [{
+            op: "configure_score_race",
+            config: {
+              victoryTarget: 4,
+              maxTurns: 8,
+              actions: [{ id: "step", label: "前进", points: 1 }],
+            },
+          }],
+        }),
+      },
+    ).then((response) =>
+      response.json<{ project: { version: number } }>(),
+    );
+    const actionChanged = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/changes`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          expectedVersion: reconfigured.project.version,
+          idempotencyKey: "runtime-invalidation-actions",
+          operations: [{
+            op: "update_definition",
+            fields: {
+              actions: [{
+                id: "step",
+                label: "前进",
+                description: "获得 1 分。",
+                sourceId: null,
+                provenance: "ai-proposed",
+                confidence: 0.5,
+              }],
+            },
+          }],
+        }),
+      },
+    ).then((response) =>
+      response.json<{ project: { version: number } }>(),
+    );
+    const compiled = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/builds`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          expectedVersion: actionChanged.project.version,
+          idempotencyKey: "runtime-invalidation-build",
+        }),
+      },
+    ).then((response) => response.json<{
+      build: { id: string; unsupportedBehavior: string[] };
+    }>());
+    expect(compiled.build.unsupportedBehavior).toContain("rule-execution");
+    const room = await SELF.fetch(
+      `https://godesk.test/api/builds/${compiled.build.id}/rooms`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ seed: 42, idempotencyKey: "runtime-invalidation-room" }),
+      },
+    );
+    expect(room.status).toBe(422);
+  });
+
   it("submits idempotent durable jobs and tracks terminal artifacts", async () => {
     const createdResponse = await SELF.fetch("https://godesk.test/api/projects", {
       method: "POST",
@@ -918,19 +1046,29 @@ describe("Game Project HTTP seam", () => {
       expectedVersion: configured.project.version,
       idempotencyKey: "durable-compile-001",
     };
-    const submittedResponse = await SELF.fetch(
-      `https://godesk.test/api/projects/${project.id}/jobs`,
-      {
+    const submittedResponses = await Promise.all([
+      SELF.fetch(`https://godesk.test/api/projects/${project.id}/jobs`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(compileInput),
-      },
+      }),
+      SELF.fetch(`https://godesk.test/api/projects/${project.id}/jobs`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(compileInput),
+      }),
+    ]);
+    expect(submittedResponses.map((response) => response.status)).toEqual([
+      202,
+      202,
+    ]);
+    const [queued, raced] = await Promise.all(
+      submittedResponses.map((response) => response.json<{
+        id: string;
+        status: string;
+      }>()),
     );
-    expect(submittedResponse.status).toBe(202);
-    const queued = await submittedResponse.json<{
-      id: string;
-      status: string;
-    }>();
+    expect(queued.id).toBe(raced.id);
     expect(queued.status).toBe("queued");
     const submitted = await waitForJob(queued.id) as {
       id: string;
@@ -1124,6 +1262,63 @@ describe("Game Project HTTP seam", () => {
       id: jobId,
       status: "succeeded",
       result: { build: { definitionVersion: 2 } },
+    });
+  }, 15_000);
+
+  it("re-arms a persisted queued job when a duplicate submit arrives", async () => {
+    const created = await SELF.fetch("https://godesk.test/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "重复提交恢复测试桌" }),
+    }).then((response) => response.json<{
+      project: { id: string; version: number };
+    }>());
+    const jobId = "job_duplicate_recovery";
+    const idempotencyKey = "duplicate-recovery-001";
+    const input = {
+      kind: "compile-build" as const,
+      expectedVersion: created.project.version,
+      idempotencyKey,
+    };
+    const stub = env.CREATOR_PROJECTS.getByName("local-creator");
+    const now = new Date().toISOString();
+    await runInDurableObject(stub, async (_instance, state) => {
+      await state.storage.put({
+        [`job:${jobId}`]: {
+          id: jobId,
+          projectId: created.project.id,
+          kind: input.kind,
+          status: "queued",
+          idempotencyKey,
+          createdAt: now,
+          updatedAt: now,
+        },
+        [`job-idempotency:${created.project.id}:${idempotencyKey}`]: {
+          id: jobId,
+          projectId: created.project.id,
+          kind: input.kind,
+          status: "queued",
+          idempotencyKey,
+          createdAt: now,
+          updatedAt: now,
+        },
+        [`job-input:${jobId}`]: input,
+      });
+      await state.storage.deleteAlarm();
+    });
+    const duplicate = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/jobs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(input),
+      },
+    );
+    expect(duplicate.status).toBe(202);
+    await expect(waitForJob(jobId)).resolves.toMatchObject({
+      id: jobId,
+      status: "succeeded",
+      result: { build: { definitionVersion: 1 } },
     });
   }, 15_000);
 

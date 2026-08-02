@@ -147,8 +147,10 @@ understood.
     URLs, so that Codex never guesses an environment or route.
 38. As a creator, I want structural readback after a Codex mutation, so that
     tool success is verified against actual project state.
-39. As a creator, I want a rendered preview inspected before visual claims are
-    made, so that overflow, occlusion, and missing components are caught.
+39. As a creator, I want a structured visual preview inspected before visual
+    claims are made, so that missing zones, actions, and unsupported behavior
+    are visible in the MVP. Pixel-accurate screenshot rendering is a later
+    capability and must not be implied by this preview.
 40. As a creator, I want compile, runtime, render, and editor-visible evidence
     combined before work is reported complete, so that one passing layer does
     not mask another failure.
@@ -286,9 +288,10 @@ understood.
 - Runtime tests operate through client intents at the highest available room
   seam. They verify rejection of invalid intents, persistence of accepted
   actions, deterministic reconstruction, reconnect, and replay isolation.
-- Visual verification renders representative board, component, and player
-  views and inspects actual pixels. Structural success alone cannot satisfy a
-  visual claim.
+- Visual verification renders representative board zones, action cards, and
+  score-track structure in the visible Playable Build route and inspects the
+  resulting browser pixels. The MVP does not produce a screenshot artifact or
+  claim pixel-accurate art/layout rendering.
 - Bot playtest tests use fixed seeds and compare reproducible metrics and replay
   identifiers. They must not satisfy human-playtest acceptance.
 - Existing domain, ingestion, authoring, playable, typecheck, and production

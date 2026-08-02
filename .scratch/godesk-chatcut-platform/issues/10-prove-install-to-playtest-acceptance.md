@@ -2,7 +2,7 @@
 
 **What to build:** The complete GoDesk creator journey is exercised from one
 installation sentence through a visible project edit, immutable build,
-rendered preview, deterministic playtest, and room/replay handoff, with
+structured visual preview, deterministic playtest, and room/replay handoff, with
 independent evidence locating every user-facing feature.
 
 **Blocked by:** 08 — Install with one sentence and hand off to creation; 09 —

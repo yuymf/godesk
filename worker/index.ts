@@ -439,6 +439,10 @@ function applyOperation(
     ) {
       throw new Error("invalid_definition");
     }
+    const runtimeSensitiveEdit =
+      fields.playerCount !== undefined ||
+      fields.rules !== undefined ||
+      fields.actions !== undefined;
     record.definition = {
       ...record.definition,
       ...(fields.name === undefined
@@ -477,6 +481,19 @@ function applyOperation(
       ...(fields.presentation === undefined
         ? {}
         : { presentation: structuredClone(fields.presentation) }),
+      ...(runtimeSensitiveEdit
+        ? {
+            runtimeSupport: {
+              status: "draft" as const,
+              unsupported: [
+                ...new Set([
+                  ...record.definition.runtimeSupport.unsupported,
+                  "score-race-v1 requires reconfiguration after player count, rules, or action changes.",
+                ]),
+              ],
+            },
+          }
+        : {}),
     };
     affectedEntities.push(`definition:${record.definition.id}`);
     return;
@@ -1517,26 +1534,42 @@ export class CreatorProjects extends DurableObject<Env> {
       const projectKey = `${PROJECT_PREFIX}${projectId}`;
       const jobIdempotencyKey =
         `job-idempotency:${projectId}:${input.idempotencyKey}`;
-      let job = await this.ctx.storage.get<CreatorJob>(jobIdempotencyKey);
-      if (job?.status === "succeeded" || job?.status === "failed") {
-        return json(job, 202);
-      }
       const acceptedInput = input as SubmitJobInput;
-
-      const stored =
-        await this.ctx.storage.get<ProjectRecord | GameProject>(projectKey);
-      if (!stored) return error("没有找到这个 Game Project。", 404);
-      const now = new Date().toISOString();
-      job ??= {
-        id: `job_${crypto.randomUUID()}`,
-        projectId,
-        kind: input.kind as CreatorJobKind,
-        status: "queued",
-        idempotencyKey: input.idempotencyKey,
-        createdAt: now,
-        updatedAt: now,
-      };
-      await this.saveJob(job, acceptedInput);
+      const claim = await this.ctx.storage.transaction(async (transaction) => {
+        const existing = await transaction.get<CreatorJob>(jobIdempotencyKey);
+        if (existing) return { created: false as const, job: existing };
+        const stored =
+          await transaction.get<ProjectRecord | GameProject>(projectKey);
+        if (!stored) return { created: false as const, missing: true as const };
+        const now = new Date().toISOString();
+        const job: CreatorJob = {
+          id: `job_${crypto.randomUUID()}`,
+          projectId,
+          kind: input.kind as CreatorJobKind,
+          status: "queued",
+          idempotencyKey: input.idempotencyKey as string,
+          createdAt: now,
+          updatedAt: now,
+        };
+        const record = normalizedProjectRecord(stored);
+        record.jobs = [job, ...record.jobs.filter((candidate) => candidate.id !== job.id)];
+        await transaction.put({
+          [projectKey]: record,
+          [`job:${job.id}`]: job,
+          [jobIdempotencyKey]: job,
+          [`job-input:${job.id}`]: acceptedInput,
+        });
+        return { created: true as const, job };
+      });
+      if ("missing" in claim) return error("没有找到这个 Game Project。", 404);
+      if (!claim.created) {
+        if (claim.job.status === "queued" || claim.job.status === "running") {
+          await this.ctx.storage.setAlarm(Date.now() + 30_000);
+          this.ctx.waitUntil(this.runJob(claim.job.id));
+        }
+        return json(claim.job, 202);
+      }
+      const job = claim.job;
       await this.ctx.storage.setAlarm(Date.now() + 30_000);
       this.ctx.waitUntil(this.runJob(job.id, acceptedInput));
       return json(job, 202);
