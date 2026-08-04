@@ -1,4 +1,4 @@
-import type { GameDefinition } from "../src/creator/project-contract";
+import type { BoundImage, GameDefinition } from "../src/creator/project-contract";
 
 function cleanLines(text: string) {
   return text
@@ -30,6 +30,7 @@ export function materializeRulebookDefinition(input: {
   description: string;
   sourceText: string;
   sourceId: string;
+  image?: BoundImage;
   playerCount?: number;
   durationMinutes?: number;
 }): Pick<GameDefinition, "name" | "pitch" | "playerCount" | "durationMinutes" | "rules" | "components" | "setup" | "actions" | "board" | "phases" | "scenarios" | "presentation"> {
@@ -68,6 +69,7 @@ export function materializeRulebookDefinition(input: {
       id: `source-component-${index + 1}`,
       name: line.slice(0, 120),
       quantity: Number(line.match(/\d+/)?.[0]) || 1,
+      ...(input.image ? { image: input.image } : {}),
       ...anchored,
     })),
     setup: setup.length ? setup : ruleLines.slice(0, 3),
@@ -83,10 +85,14 @@ export function materializeRulebookDefinition(input: {
         id: `source-zone-${index + 1}`,
         name: heading.slice(0, 80),
         description: "规则文档中识别出的桌面区域或流程区。",
+        ...(input.image ? { image: input.image } : {}),
       })),
     },
     phases: headings.map((heading, index) => ({ id: `source-phase-${index + 1}`, name: heading.slice(0, 80) })),
     scenarios: [],
-    presentation: { theme: "rulebook-studio" },
+    presentation: {
+      theme: "rulebook-studio",
+      ...(input.image ? { image: input.image } : {}),
+    },
   };
 }

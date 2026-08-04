@@ -1325,6 +1325,119 @@ describe("Game Project HTTP seam", () => {
     });
   });
 
+  it("harvests rulebook art into Source Library and binds it into the playable definition", async () => {
+    const created = await SELF.fetch("https://godesk.test/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "灯塔航线" }),
+    }).then((response) => response.json<{
+      project: { id: string; version: number };
+    }>());
+    const queued = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/jobs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          kind: "generate-definition",
+          expectedVersion: created.project.version,
+          brief: "两名领航员穿越灯塔航线。",
+          sourceContent: [
+            "SETUP Place the lighthouse board in the center and shuffle 12 tide cards.",
+            "VOYAGE PHASE Players choose a route card.",
+          ].join("\n"),
+          sourceKind: "rulebook",
+          sourceName: "lighthouse-rules.pdf",
+          name: "灯塔航线",
+          harvestedImages: [{
+            name: "灯塔航线 · 第 2 页",
+            content: "data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAABwAQCdASoBAAEAAUAmJaQAA3AA/vuUAAA=",
+            pageNumber: 2,
+          }],
+          idempotencyKey: "harvest-rulebook-art-001",
+        }),
+      },
+    ).then((response) => response.json<{ id: string }>());
+
+    await expect(waitForJob(queued.id)).resolves.toMatchObject({
+      status: "succeeded",
+      result: {
+        definition: {
+          presentation: {
+            image: expect.objectContaining({
+              sourceId: expect.stringMatching(/^source_/),
+              url: expect.stringMatching(/^data:image\/webp;base64,/),
+            }),
+          },
+          components: expect.arrayContaining([
+            expect.objectContaining({ image: expect.any(Object) }),
+          ]),
+          board: {
+            zones: expect.arrayContaining([
+              expect.objectContaining({ image: expect.any(Object) }),
+            ]),
+          },
+        },
+      },
+    });
+
+    const { sources } = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}?view=sources`,
+    ).then((response) => response.json<{
+      sources: Array<{
+        id: string;
+        kind: string;
+        provenance: { origin: string; locator: string };
+      }>;
+    }>());
+    const image = sources.find((source) => source.kind === "image");
+    expect(image).toMatchObject({
+      provenance: {
+        origin: "creator-upload",
+        locator: "lighthouse-rules.pdf page 2",
+      },
+    });
+  });
+
+  it("does not claim art when a rulebook supplies no usable page image", async () => {
+    const created = await SELF.fetch("https://godesk.test/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "纯文本规则书" }),
+    }).then((response) => response.json<{
+      project: { id: string; version: number };
+    }>());
+    const queued = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/jobs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          kind: "generate-definition",
+          expectedVersion: created.project.version,
+          brief: "没有插图的规则书。",
+          sourceContent: "SETUP Place 10 cards. TURN Players draw one card.",
+          sourceKind: "rulebook",
+          sourceName: "text-only-rules.pdf",
+          idempotencyKey: "no-rulebook-art-001",
+        }),
+      },
+    ).then((response) => response.json<{ id: string }>());
+
+    await expect(waitForJob(queued.id)).resolves.toMatchObject({
+      status: "succeeded",
+      result: { definition: { presentation: { theme: "rulebook-studio" } } },
+    });
+    const definition = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}?view=definition`,
+    ).then((response) => response.json<{ presentation: { image?: unknown } }>());
+    expect(definition.presentation.image).toBeUndefined();
+    const { sources } = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}?view=sources`,
+    ).then((response) => response.json<{ sources: Array<{ kind: string }> }>());
+    expect(sources.some((source) => source.kind === "image")).toBe(false);
+  });
+
   it("recovers a persisted queued job through an alarm after eviction", async () => {
     const creatorId = "alarm-recovery-creator";
     const creatorHeaders = {
