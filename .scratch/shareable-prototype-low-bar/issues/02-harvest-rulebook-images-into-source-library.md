@@ -6,10 +6,16 @@ playable table shows extracted art instead of text-only cards.
 
 **Blocked by:** None — can start immediately.
 
-**Status:** claimed
+**Status:** resolved
 
-- [ ] Rulebook image harvest produces Source Library entries with `kind: "image"` and provenance
-- [ ] Harvested images can bind to Definition presentation / components / zones
-- [ ] Room or playable preview renders bound extracted art for at least one non-trivial rulebook fixture
-- [ ] Missing or unusable pages fail honestly without claiming art that was not extracted
-- [ ] Automated tests cover harvest → Source Library → bound presentation at the asset seam
+- [x] Rulebook image harvest produces Source Library entries with `kind: "image"` and provenance
+- [x] Harvested images can bind to Definition presentation / components / zones
+- [x] Room or playable preview renders bound extracted art for at least one non-trivial rulebook fixture
+- [x] Missing or unusable pages fail honestly without claiming art that was not extracted
+- [x] Automated tests cover harvest → Source Library → bound presentation at the asset seam
+
+## Done
+
+- Implementation commit: `43f6927` on `ticket/02-harvest-rulebook-images`
+- Verification: `pnpm typecheck`, `pnpm test`, and `pnpm test:worker`
+- Gaps: PDF pages are harvested only when PDF.js reports embedded image paint operations; vector-only artwork is intentionally not claimed as extracted art.
