@@ -1325,6 +1325,80 @@ describe("Game Project HTTP seam", () => {
     });
   });
 
+  it("turns a rulebook without experience text into a build and authoritative room", async () => {
+    const created = await SELF.fetch("https://godesk.test/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "规则书直达房间" }),
+    }).then((response) => response.json<{
+      project: { id: string; version: number };
+    }>());
+    const generation = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/jobs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          kind: "generate-definition",
+          expectedVersion: created.project.version,
+          sourceContent: "两名玩家轮流选择航线行动，先获得 8 分者获胜。",
+          sourceKind: "rulebook",
+          sourceName: "harbor-rules.md",
+          name: "规则书直达房间",
+          idempotencyKey: "rulebook-only-generate",
+        }),
+      },
+    ).then((response) => response.json<{ id: string }>());
+    const generated = await waitForJob(generation.id);
+    expect(generated.status).toBe("succeeded");
+    const generatedResult = generated.result as {
+      definition: { name: string };
+      sources: Array<{
+        kind: string;
+        name: string;
+        provenance: { origin: string };
+      }>;
+    };
+    expect(generatedResult.definition.name).toBe("规则书直达房间");
+    expect(generatedResult.sources).toContainEqual(expect.objectContaining({
+      kind: "rulebook",
+      name: "harbor-rules.md",
+      provenance: expect.objectContaining({ origin: "creator-upload" }),
+    }));
+
+    const compiled = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/jobs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          kind: "compile-build",
+          expectedVersion: 2,
+          idempotencyKey: "rulebook-only-compile",
+        }),
+      },
+    ).then((response) => response.json<{ id: string }>());
+    const buildJob = await waitForJob(compiled.id) as unknown as {
+      result: { build: { id: string; unsupportedBehavior: string[] } };
+    };
+    expect(buildJob.result.build.unsupportedBehavior).not.toHaveLength(0);
+
+    const roomResponse = await SELF.fetch(
+      `https://godesk.test/api/builds/${buildJob.result.build.id}/rooms`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          seed: 42,
+          idempotencyKey: "rulebook-only-room",
+        }),
+      },
+    );
+    expect(roomResponse.status).toBe(201);
+    const room = await roomResponse.json<{ roomUrl: string }>();
+    expect(new URL(room.roomUrl).pathname).toMatch(/^\/room\/room_/);
+  });
+
   it("recovers a persisted queued job through an alarm after eviction", async () => {
     const creatorId = "alarm-recovery-creator";
     const creatorHeaders = {

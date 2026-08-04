@@ -164,7 +164,7 @@ function CreatorHome() {
     });
   }, []);
 
-  async function runPipeline(sourceContent: string, sourceName: string, sourceKind: "rulebook" | "brief") {
+  async function runPipeline(sourceContent: string, sourceName: string) {
     setActiveStage("ingest");
     setCompletedStages(0);
     const textCharacters = sourceContent.length;
@@ -181,7 +181,7 @@ function CreatorHome() {
       description: description.trim(),
       name: name.trim(),
       sourceName,
-      sourceKind,
+      sourceKind: "rulebook",
       sourceContent,
       idempotencyKey: crypto.randomUUID(),
     });
@@ -249,7 +249,6 @@ function CreatorHome() {
       await runPipeline(
         sourceContent,
         rulebook?.name || `${name.trim()} rules.txt`,
-        rulebook ? "rulebook" : "brief",
       );
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "生成项目失败。");
@@ -426,7 +425,7 @@ function CreatorHome() {
                 <input maxLength={80} onChange={(event) => setName(event.currentTarget.value)} value={name} />
               </label>
               <label>
-                <span>你希望玩家获得什么体验？</span>
+                <span>你希望玩家获得什么体验？ <small>可选</small></span>
                 <textarea
                   maxLength={2_000}
                   onChange={(event) => setDescription(event.currentTarget.value)}
@@ -471,7 +470,7 @@ function CreatorHome() {
 
             <footer className="studio-submit-row">
               <span>来源会进入 Source Library，并保留上传文件名。</span>
-              <button disabled={busy || !name.trim() || !description.trim() || (!rulebook && !rulesText.trim())} type="submit">
+              <button disabled={busy || !name.trim() || (!rulebook && !rulesText.trim())} type="submit">
                 {busy ? <><i className="studio-spinner" /> {stageLabel || "处理中…"}</> : <>生成可玩版本 <b aria-hidden="true">→</b></>}
               </button>
             </footer>
@@ -525,11 +524,11 @@ function CreatorHome() {
               </aside>
             )}
             <div className="ready-actions">
-              <a className="player-primary" href={ready.editorUrl}>打开编辑器</a>
               <button className="player-primary" disabled={busy} onClick={openReadyRoom} type="button">
                 创建权威房间并开玩
               </button>
               <a href={`/play/${ready.buildId}`}>查看 Build 预览</a>
+              <a href={ready.editorUrl}>打开编辑器</a>
             </div>
           </section>
         )}

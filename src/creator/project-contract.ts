@@ -247,7 +247,7 @@ export type SubmitJobInput =
   | {
       kind: "generate-definition";
       expectedVersion: number;
-      brief: string;
+      brief?: string;
       description?: string;
       sourceName?: string;
       sourceKind?: "brief" | "rulebook";

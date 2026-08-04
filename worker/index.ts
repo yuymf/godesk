@@ -963,8 +963,9 @@ export class CreatorProjects extends DurableObject<Env> {
       let operation: Response;
       if (input.kind === "generate-definition") {
         const sourceId = `source_${job.id}`;
-        const description = input.description?.trim() || input.brief;
-        const sourceContent = input.sourceContent?.trim() || input.brief;
+        const sourceContent = input.sourceContent?.trim() || input.brief?.trim() || "";
+        const description =
+          input.description?.trim() || input.brief?.trim() || sourceContent;
         const generated = materializeRulebookDefinition({
           name: input.name?.trim() || "生成的游戏版本",
           description,
@@ -1599,9 +1600,11 @@ export class CreatorProjects extends DurableObject<Env> {
           input.kind === "generate-definition") &&
           !Number.isInteger(input.expectedVersion)) ||
         (input.kind === "generate-definition" &&
-          (typeof input.brief !== "string" ||
-            !input.brief.trim() ||
-            input.brief.length > 100_000 ||
+          ((input.brief !== undefined &&
+            (typeof input.brief !== "string" ||
+              !input.brief.trim() ||
+              input.brief.length > 100_000)) ||
+            (input.sourceContent === undefined && input.brief === undefined) ||
             (input.name !== undefined &&
               (typeof input.name !== "string" || !input.name.trim())) ||
             (input.playerCount !== undefined &&
