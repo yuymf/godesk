@@ -28,6 +28,7 @@ export interface ExtractedPage {
   text: string;
   width: number;
   height: number;
+  hasEmbeddedImage: boolean;
   preview: Blob;
 }
 
@@ -226,7 +227,7 @@ async function extractPdf(
 
   let loadingTask: PDFDocumentLoadingTask | undefined;
   try {
-    const { getDocument, GlobalWorkerOptions } = await import("pdfjs-dist");
+    const { getDocument, GlobalWorkerOptions, OPS } = await import("pdfjs-dist");
     GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
     loadingTask = getDocument({ data: new Uint8Array(buffer.slice(0)) });
     const pdfDocument = await loadingTask.promise;
@@ -245,6 +246,16 @@ async function extractPdf(
         .join(" ")
         .replace(/\s+/g, " ")
         .trim();
+      const operators = await page.getOperatorList();
+      const hasEmbeddedImage = operators.fnArray.some((operation) =>
+        [
+          OPS.paintImageMaskXObject,
+          OPS.paintImageMaskXObjectGroup,
+          OPS.paintImageXObject,
+          OPS.paintImageXObjectRepeat,
+          OPS.paintImageMaskXObjectRepeat,
+        ].includes(operation),
+      );
 
       const baseViewport = page.getViewport({ scale: 1 });
       const scale = Math.min(1.5, 1200 / baseViewport.width);
@@ -265,6 +276,7 @@ async function extractPdf(
         text,
         width: Math.round(baseViewport.width),
         height: Math.round(baseViewport.height),
+        hasEmbeddedImage,
         preview,
       });
     }
@@ -276,6 +288,36 @@ async function extractPdf(
   } finally {
     await loadingTask?.destroy();
   }
+}
+
+function blobDataUrl(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error ?? new Error("无法读取规则书页面图片。"));
+    reader.onload = () => resolve(String(reader.result));
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Renders rulebook pages using the same PDF path as ingestion. Oversized page
+ * previews are deliberately skipped: no Source Library image is claimed unless
+ * it can be persisted by the project contract.
+ */
+export async function harvestRulebookPageImages(file: File) {
+  if (normalizedMimeType(file) !== "application/pdf") return [];
+  const pages = await extractPdf(file, crypto.randomUUID());
+  const images = await Promise.all(
+    pages.map(async (page) => ({
+      name: `${file.name} · 第 ${page.sourceAnchor.pageNumber} 页`,
+      content: await blobDataUrl(page.preview),
+      pageNumber: page.sourceAnchor.pageNumber ?? 1,
+    })),
+  );
+  return images
+    .filter((image, index) => pages[index].hasEmbeddedImage)
+    .filter((image) => image.content.length <= 100_000)
+    .slice(0, 8);
 }
 
 async function extractImage(

@@ -37,6 +37,7 @@ import type {
 import { DEFAULT_EXAMPLES, type DefaultExampleId } from "./default-examples";
 import {
   extractRulebookText,
+  harvestRulebookPageImages,
   validateRulebookFile,
 } from "../platform/ingestion";
 import {
@@ -164,7 +165,12 @@ function CreatorHome() {
     });
   }, []);
 
-  async function runPipeline(sourceContent: string, sourceName: string) {
+  async function runPipeline(
+    sourceContent: string,
+    sourceName: string,
+    sourceKind: "rulebook" | "brief",
+    harvestedImages: Array<{ name: string; content: string; pageNumber: number }> = [],
+  ) {
     setActiveStage("ingest");
     setCompletedStages(0);
     const textCharacters = sourceContent.length;
@@ -181,8 +187,9 @@ function CreatorHome() {
       description: description.trim(),
       name: name.trim(),
       sourceName,
-      sourceKind: "rulebook",
+      sourceKind,
       sourceContent,
+      harvestedImages,
       idempotencyKey: crypto.randomUUID(),
     });
     const generated = await waitForJob(queuedGeneration.id);
@@ -246,9 +253,14 @@ function CreatorHome() {
         ? await extractRulebookText(rulebook)
         : rulesText.trim();
       if (!sourceContent) throw new Error("请上传规则文档，或粘贴规则文本。");
+      const harvestedImages = rulebook
+        ? await harvestRulebookPageImages(rulebook).catch(() => [])
+        : [];
       await runPipeline(
         sourceContent,
         rulebook?.name || `${name.trim()} rules.txt`,
+        rulebook ? "rulebook" : "brief",
+        harvestedImages,
       );
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "生成项目失败。");
@@ -1793,10 +1805,18 @@ function PlayablePreview({ buildId }: { buildId: string }) {
               <span>Visual mechanism preview</span>
               <strong>{build.definition.board.layout || "未配置桌面布局"}</strong>
             </div>
+            {build.definition.presentation.image && (
+              <img
+                alt={build.definition.presentation.image.alt}
+                className="preview-rulebook-art"
+                src={build.definition.presentation.image.url}
+              />
+            )}
             <div className="preview-board-canvas">
               {build.definition.board.zones.length > 0 ? (
                 build.definition.board.zones.map((zone) => (
                   <article className="preview-zone" key={zone.id}>
+                    {zone.image && <img alt={zone.image.alt} src={zone.image.url} />}
                     <span>Zone</span>
                     <h2>{zone.name}</h2>
                     <p>{zone.description}</p>
@@ -1967,6 +1987,7 @@ function RoomView({ roomId }: { roomId: string }) {
             <div className="room-zones" aria-label="桌面区域">
               {build.definition.board.zones.map((zone) => (
                 <article key={zone.id}>
+                  {zone.image && <img alt={zone.image.alt} src={zone.image.url} />}
                   <span>Zone</span>
                   <b>{zone.name}</b>
                   <small>{zone.description}</small>

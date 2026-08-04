@@ -259,6 +259,16 @@ function validChangeRequest(value: unknown): value is ApplyProjectChangesInput {
   );
 }
 
+function validBoundImage(value: unknown) {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      typeof (value as { sourceId?: unknown }).sourceId === "string" &&
+      typeof (value as { url?: unknown }).url === "string" &&
+      typeof (value as { alt?: unknown }).alt === "string",
+  );
+}
+
 function applyOperation(
   record: ProjectRecord,
   operation: ProjectChangeOperation,
@@ -375,6 +385,7 @@ function applyOperation(
             typeof component.name !== "string" ||
             !Number.isInteger(component.quantity) ||
             component.quantity < 1 ||
+            (component.image !== undefined && !validBoundImage(component.image)) ||
             !validAnchor(component),
         ))
     ) {
@@ -416,7 +427,8 @@ function applyOperation(
             typeof zone.id !== "string" ||
             !zone.id ||
             typeof zone.name !== "string" ||
-            typeof zone.description !== "string",
+            typeof zone.description !== "string" ||
+            (zone.image !== undefined && !validBoundImage(zone.image)),
         ))
     ) {
       throw new Error("invalid_definition");
@@ -438,7 +450,9 @@ function applyOperation(
           !validNamedList(fields.scenarios))) ||
       (fields.presentation !== undefined &&
         (!fields.presentation ||
-          typeof fields.presentation.theme !== "string"))
+          typeof fields.presentation.theme !== "string" ||
+          (fields.presentation.image !== undefined &&
+            !validBoundImage(fields.presentation.image))))
     ) {
       throw new Error("invalid_definition");
     }
@@ -711,8 +725,16 @@ async function buildId(
 function referencedSourceIds(definition: GameDefinition) {
   return [
     ...new Set(
-      [...definition.rules, ...definition.components, ...definition.actions]
-        .map((entry) => entry.sourceId)
+      [
+        ...definition.rules.map((entry) => entry.sourceId),
+        ...definition.components.flatMap((entry) => [
+          entry.sourceId,
+          entry.image?.sourceId,
+        ]),
+        ...definition.actions.map((entry) => entry.sourceId),
+        ...definition.board.zones.map((zone) => zone.image?.sourceId),
+        definition.presentation.image?.sourceId,
+      ]
         .filter((sourceId): sourceId is string => Boolean(sourceId)),
     ),
   ].sort();
@@ -966,11 +988,25 @@ export class CreatorProjects extends DurableObject<Env> {
         const sourceContent = input.sourceContent?.trim() || input.brief?.trim() || "";
         const description =
           input.description?.trim() || input.brief?.trim() || sourceContent;
+        const harvestedImages = input.harvestedImages ?? [];
+        const imageSources = harvestedImages.map((image, index) => ({
+          id: `${sourceId}_image_${index + 1}`,
+          name: image.name.trim(),
+          content: image.content,
+          locator: `${input.sourceName?.trim() || "rulebook"} page ${image.pageNumber}`,
+        }));
         const generated = materializeRulebookDefinition({
           name: input.name?.trim() || "生成的游戏版本",
           description,
           sourceText: sourceContent,
           sourceId,
+          image: imageSources[0]
+            ? {
+                sourceId: imageSources[0].id,
+                url: imageSources[0].content,
+                alt: imageSources[0].name,
+              }
+            : undefined,
           playerCount: input.playerCount,
           durationMinutes: input.durationMinutes,
         });
@@ -1016,6 +1052,19 @@ export class CreatorProjects extends DurableObject<Env> {
                       },
                     },
                   },
+                  ...imageSources.map((image) => ({
+                    op: "add_source" as const,
+                    source: {
+                      id: image.id,
+                      kind: "image" as const,
+                      name: image.name,
+                      content: image.content,
+                      provenance: {
+                        origin: "creator-upload" as const,
+                        locator: image.locator,
+                      },
+                    },
+                  })),
                   {
                     op: "update_definition",
                     fields: generated,
@@ -1564,6 +1613,7 @@ export class CreatorProjects extends DurableObject<Env> {
         sourceName?: unknown;
         sourceKind?: unknown;
         sourceContent?: unknown;
+        harvestedImages?: unknown;
         idempotencyKey?: unknown;
       } = await request.json().catch(() => ({})) as {
         kind?: unknown;
@@ -1578,6 +1628,7 @@ export class CreatorProjects extends DurableObject<Env> {
         sourceName?: unknown;
         sourceKind?: unknown;
         sourceContent?: unknown;
+        harvestedImages?: unknown;
         idempotencyKey?: unknown;
       };
       const projectId = submitJobMatch[1];
@@ -1622,6 +1673,23 @@ export class CreatorProjects extends DurableObject<Env> {
               (typeof input.sourceContent !== "string" ||
                 !input.sourceContent.trim() ||
                 input.sourceContent.length > 100_000)))) ||
+        (input.harvestedImages !== undefined &&
+          (!Array.isArray(input.harvestedImages) ||
+            input.harvestedImages.length > 8 ||
+            input.harvestedImages.some(
+              (image) =>
+                !image ||
+                typeof image !== "object" ||
+                typeof (image as { name?: unknown }).name !== "string" ||
+                !(image as { name: string }).name.trim() ||
+                typeof (image as { content?: unknown }).content !== "string" ||
+                !/^data:image\/(?:png|jpe?g|webp);base64,/.test(
+                  (image as { content: string }).content,
+                ) ||
+                (image as { content: string }).content.length > 100_000 ||
+                !Number.isInteger((image as { pageNumber?: unknown }).pageNumber) ||
+                Number((image as { pageNumber: number }).pageNumber) < 1,
+            ))) ||
         (validBuildInput &&
           (typeof input.buildId !== "string" || !input.buildId)) ||
         (input.kind === "bot-playtest" && !Number.isInteger(input.seed))

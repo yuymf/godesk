@@ -31,6 +31,12 @@ export interface SourceLibraryEntry {
   createdAt: string;
 }
 
+export interface BoundImage {
+  sourceId: string;
+  url: string;
+  alt: string;
+}
+
 export interface GameDefinition {
   id: string;
   version: number;
@@ -49,6 +55,7 @@ export interface GameDefinition {
     id: string;
     name: string;
     quantity: number;
+    image?: BoundImage;
     sourceId: string | null;
     provenance: "source-anchored" | "system-generated" | "ai-proposed";
     confidence: number;
@@ -64,11 +71,16 @@ export interface GameDefinition {
   }>;
   board: {
     layout: string;
-    zones: Array<{ id: string; name: string; description: string }>;
+    zones: Array<{
+      id: string;
+      name: string;
+      description: string;
+      image?: BoundImage;
+    }>;
   };
   phases: Array<{ id: string; name: string }>;
   scenarios: Array<{ id: string; name: string }>;
-  presentation: { theme: string };
+  presentation: { theme: string; image?: BoundImage };
   runtimeSupport:
     | { status: "draft"; unsupported: string[] }
     | {
@@ -252,6 +264,11 @@ export type SubmitJobInput =
       sourceName?: string;
       sourceKind?: "brief" | "rulebook";
       sourceContent?: string;
+      harvestedImages?: Array<{
+        name: string;
+        content: string;
+        pageNumber: number;
+      }>;
       name?: string;
       playerCount?: number;
       durationMinutes?: number;

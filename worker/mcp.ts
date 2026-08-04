@@ -17,6 +17,12 @@ const projectSchema = z.object({
   }),
 });
 
+const boundImageSchema = z.object({
+  sourceId: z.string(),
+  url: z.string(),
+  alt: z.string(),
+});
+
 const definitionSchema = z.object({
   id: z.string(),
   version: z.number().int(),
@@ -35,6 +41,7 @@ const definitionSchema = z.object({
     id: z.string(),
     name: z.string(),
     quantity: z.number().int().positive(),
+    image: boundImageSchema.optional(),
     sourceId: z.string().nullable(),
     provenance: z.enum(["source-anchored", "system-generated", "ai-proposed"]),
     confidence: z.number().min(0).max(1),
@@ -54,11 +61,15 @@ const definitionSchema = z.object({
       id: z.string(),
       name: z.string(),
       description: z.string(),
+      image: boundImageSchema.optional(),
     })),
   }),
   phases: z.array(z.object({ id: z.string(), name: z.string() })),
   scenarios: z.array(z.object({ id: z.string(), name: z.string() })),
-  presentation: z.object({ theme: z.string() }),
+  presentation: z.object({
+    theme: z.string(),
+    image: boundImageSchema.optional(),
+  }),
   runtimeSupport: z.union([
     z.object({
       status: z.literal("draft"),
