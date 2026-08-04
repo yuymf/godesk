@@ -6,11 +6,17 @@ optional. The Web Editor is a secondary link, not the success screen.
 
 **Blocked by:** None — can start immediately.
 
-**Status:** claimed
+**Status:** resolved
 
-- [ ] Home accepts rulebook-only input (paste / PDF / md / txt); experience text is optional
-- [ ] One generation run still creates Game Project, Source Library rulebook entry, Definition, and Playable Build
-- [ ] Ready primary CTA opens an authoritative Room for that Build (not the dense Editor)
-- [ ] Editor and Build preview remain reachable as secondary actions
-- [ ] Unsupported behavior remains visible on the playable surface
-- [ ] Automated tests cover optional experience text and Room-first ready path at the project/job seam
+- [x] Home accepts rulebook-only input (paste / PDF / md / txt); experience text is optional
+- [x] One generation run still creates Game Project, Source Library rulebook entry, Definition, and Playable Build
+- [x] Ready primary CTA opens an authoritative Room for that Build (not the dense Editor)
+- [x] Editor and Build preview remain reachable as secondary actions
+- [x] Unsupported behavior remains visible on the playable surface
+- [x] Automated tests cover optional experience text and Room-first ready path at the project/job seam
+
+## Done
+
+- Implementation: `f904c4b` on `ticket-01-rulebook-room`
+- Verification: `pnpm typecheck`, `pnpm test`, and `pnpm test:worker` passed.
+- Gaps: Visual Floor/share gating and asset harvesting are intentionally left to tickets 02–06.
