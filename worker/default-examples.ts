@@ -209,7 +209,13 @@ export function instantiateDefaultExample(
           { id: "settlement", name: "航次结算" },
         ],
         scenarios: [{ id: "first-voyage", name: "首航教学局" }],
-        presentation: { theme: "harbor-voyage" },
+        presentation: {
+          theme: "harbor-voyage",
+          visuals: [{
+            provenance: "kit",
+            label: "Harbor voyage fallback kit",
+          }],
+        },
         runtimeSupport: {
           status: "executable",
           unsupported: [
@@ -314,7 +320,13 @@ export function instantiateDefaultExample(
       },
       phases: [{ id: "explore", name: "调查行动" }, { id: "fog", name: "雾气推进" }],
       scenarios: [{ id: "sealed-bell", name: "封住午夜钟声" }],
-      presentation: { theme: "mistpeak-archive" },
+      presentation: {
+        theme: "mistpeak-archive",
+        visuals: [{
+          provenance: "kit",
+          label: "Mistpeak archive fallback kit",
+        }],
+      },
       runtimeSupport: {
         status: "executable",
         unsupported: ["这是合作计分机制切片，不包含隐藏身份或中途背叛系统。"],

@@ -8,7 +8,7 @@ never pass.
 
 **Blocked by:** 02 — 规则书抽图进 Source Library 并绑到桌面
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] Visual Floor readiness is an explicit Build/Room gate with pass/fail reason
 - [ ] Without generative capacity, typographic/programmatic rendering upgrades text-only presentation

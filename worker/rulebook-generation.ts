@@ -93,6 +93,15 @@ export function materializeRulebookDefinition(input: {
     presentation: {
       theme: "rulebook-studio",
       ...(input.image ? { image: input.image } : {}),
+      visuals: input.image
+        ? [{
+            provenance: "extracted",
+            label: "规则书提取图像",
+          }]
+        : [{
+            provenance: "generated",
+            label: "排版与程序化卡牌及桌面",
+          }],
     },
   };
 }

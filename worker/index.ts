@@ -32,6 +32,8 @@ import type {
   ProjectChangeOperation,
   SourceLibraryEntry,
   SubmitJobInput,
+  VisualFloorReadiness,
+  VisualTreatment,
 } from "../src/creator/project-contract";
 import {
   instantiateDefaultExample,
@@ -209,6 +211,7 @@ function normalizedBuild(build: StoredPlayableBuild): StoredPlayableBuild {
       build.definition,
       build.definitionVersion,
     ),
+    visualFloor: build.visualFloor ?? visualFloor(build.definition),
   };
 }
 
@@ -266,6 +269,25 @@ function validBoundImage(value: unknown) {
       typeof (value as { sourceId?: unknown }).sourceId === "string" &&
       typeof (value as { url?: unknown }).url === "string" &&
       typeof (value as { alt?: unknown }).alt === "string",
+  );
+}
+
+function validVisualTreatments(value: unknown) {
+  return (
+    Array.isArray(value) &&
+    value.length >= 1 &&
+    value.length <= 8 &&
+    value.every(
+      (visual) =>
+        visual &&
+        typeof visual === "object" &&
+        ["extracted", "generated", "kit", "uploaded"].includes(
+          (visual as { provenance?: unknown }).provenance as string,
+        ) &&
+        typeof (visual as { label?: unknown }).label === "string" &&
+        Boolean((visual as { label: string }).label.trim()) &&
+        (visual as { label: string }).label.length <= 160,
+    )
   );
 }
 
@@ -452,7 +474,9 @@ function applyOperation(
         (!fields.presentation ||
           typeof fields.presentation.theme !== "string" ||
           (fields.presentation.image !== undefined &&
-            !validBoundImage(fields.presentation.image))))
+            !validBoundImage(fields.presentation.image)) ||
+          (fields.presentation.visuals !== undefined &&
+            !validVisualTreatments(fields.presentation.visuals))))
     ) {
       throw new Error("invalid_definition");
     }
@@ -757,6 +781,25 @@ function buildWarnings(record: ProjectRecord) {
       ? ["Game Definition 引用了不存在的 Source Library 条目。"]
       : []),
   ];
+}
+
+function visualFloor(definition: GameDefinition): VisualFloorReadiness {
+  const visuals: VisualTreatment[] = definition.presentation.visuals?.length
+    ? definition.presentation.visuals
+    : [];
+  const visual = visuals[0];
+  if (!visual) {
+    return {
+      status: "failed",
+      reason: "没有可分享的视觉呈现：请绑定提取/上传图像、生成排版桌面，或应用主题 kit。",
+      visuals,
+    };
+  }
+  return {
+    status: "passed",
+    reason: `${visual.label} 已满足 Visual Floor。`,
+    visuals,
+  };
 }
 
 function publicBuild(build: StoredPlayableBuild, origin: string): PlayableBuild {
@@ -1886,6 +1929,7 @@ export class CreatorProjects extends DurableObject<Env> {
               ? []
               : ["rule-execution"]),
           ],
+          visualFloor: visualFloor(record.definition),
           createdAt: now,
         };
         const previousVersion = record.project.version;
@@ -2040,6 +2084,15 @@ export class CreatorProjects extends DurableObject<Env> {
         const build = storedBuild ? normalizedBuild(storedBuild) : undefined;
         if (!build) {
           return { status: 404, value: { error: "build_not_found" } };
+        }
+        if (build.visualFloor.status !== "passed") {
+          return {
+            status: 422,
+            value: {
+              error: "visual_floor_unmet",
+              visualFloor: build.visualFloor,
+            },
+          };
         }
         if (!executableRuntime(build.definition)) {
           return {

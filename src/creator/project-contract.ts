@@ -37,6 +37,23 @@ export interface BoundImage {
   alt: string;
 }
 
+export type VisualProvenance =
+  | "extracted"
+  | "generated"
+  | "kit"
+  | "uploaded";
+
+export interface VisualTreatment {
+  provenance: VisualProvenance;
+  label: string;
+}
+
+export interface VisualFloorReadiness {
+  status: "passed" | "failed";
+  reason: string;
+  visuals: VisualTreatment[];
+}
+
 export interface GameDefinition {
   id: string;
   version: number;
@@ -80,7 +97,11 @@ export interface GameDefinition {
   };
   phases: Array<{ id: string; name: string }>;
   scenarios: Array<{ id: string; name: string }>;
-  presentation: { theme: string; image?: BoundImage };
+  presentation: {
+    theme: string;
+    image?: BoundImage;
+    visuals?: VisualTreatment[];
+  };
   runtimeSupport:
     | { status: "draft"; unsupported: string[] }
     | {
@@ -219,6 +240,7 @@ export interface PlayableBuild {
   sourceIds: string[];
   warnings: string[];
   unsupportedBehavior: string[];
+  visualFloor: VisualFloorReadiness;
   createdAt: string;
   playableUrl: string;
 }

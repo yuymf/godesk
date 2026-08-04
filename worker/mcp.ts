@@ -69,6 +69,10 @@ const definitionSchema = z.object({
   presentation: z.object({
     theme: z.string(),
     image: boundImageSchema.optional(),
+    visuals: z.array(z.object({
+      provenance: z.enum(["extracted", "generated", "kit", "uploaded"]),
+      label: z.string(),
+    })).min(1).max(8).optional(),
   }),
   runtimeSupport: z.union([
     z.object({

@@ -823,6 +823,18 @@ describe("Game Project HTTP seam", () => {
               ],
             },
           },
+          {
+            op: "update_definition",
+            fields: {
+              presentation: {
+                theme: "test",
+                visuals: [{
+                  provenance: "kit",
+                  label: "Test fallback kit",
+                }],
+              },
+            },
+          },
         ],
       }),
     });
@@ -1442,6 +1454,10 @@ describe("Game Project HTTP seam", () => {
               sourceId: expect.stringMatching(/^source_/),
               url: expect.stringMatching(/^data:image\/webp;base64,/),
             }),
+            visuals: [{
+              provenance: "extracted",
+              label: "规则书提取图像",
+            }],
           },
           components: expect.arrayContaining([
             expect.objectContaining({ image: expect.any(Object) }),
@@ -1510,6 +1526,178 @@ describe("Game Project HTTP seam", () => {
       `https://godesk.test/api/projects/${created.project.id}?view=sources`,
     ).then((response) => response.json<{ sources: Array<{ kind: string }> }>());
     expect(sources.some((source) => source.kind === "image")).toBe(false);
+  });
+
+  it("blocks invitations for a naked build, then admits typographic and kit-backed visual floors", async () => {
+    const created = await SELF.fetch("https://godesk.test/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Visual Floor 门闩" }),
+    }).then((response) => response.json<{
+      project: { id: string; version: number };
+    }>());
+    const configured = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/changes`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          expectedVersion: created.project.version,
+          idempotencyKey: "visual-floor-runtime",
+          operations: [{
+            op: "configure_score_race",
+            config: {
+              victoryTarget: 3,
+              maxTurns: 6,
+              actions: [{ id: "advance", label: "前进", points: 1 }],
+            },
+          }],
+        }),
+      },
+    ).then((response) => response.json<{ project: { version: number } }>());
+    const naked = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/builds`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          expectedVersion: configured.project.version,
+          idempotencyKey: "visual-floor-naked-build",
+        }),
+      },
+    ).then((response) => response.json<{
+      build: {
+        id: string;
+        visualFloor: { status: string; reason: string };
+      };
+    }>());
+    expect(naked.build.visualFloor).toEqual({
+      status: "failed",
+      reason: "没有可分享的视觉呈现：请绑定提取/上传图像、生成排版桌面，或应用主题 kit。",
+      visuals: [],
+    });
+    const refused = await SELF.fetch(
+      `https://godesk.test/api/builds/${naked.build.id}/rooms`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ seed: 42, idempotencyKey: "visual-floor-refused" }),
+      },
+    );
+    expect(refused.status).toBe(422);
+    await expect(refused.json()).resolves.toMatchObject({
+      error: "visual_floor_unmet",
+      visualFloor: naked.build.visualFloor,
+    });
+
+    const generated = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/jobs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          kind: "generate-definition",
+          expectedVersion: configured.project.version + 1,
+          sourceContent: "两名玩家轮流选择航线行动，先获得 8 分者获胜。",
+          sourceKind: "rulebook",
+          sourceName: "visual-floor-rules.md",
+          name: "排版渲染桌",
+          idempotencyKey: "visual-floor-typographic",
+        }),
+      },
+    ).then((response) => response.json<{ id: string }>());
+    await expect(waitForJob(generated.id)).resolves.toMatchObject({
+      status: "succeeded",
+      result: {
+        definition: {
+          presentation: {
+            visuals: [{
+              provenance: "generated",
+              label: "排版与程序化卡牌及桌面",
+            }],
+          },
+        },
+      },
+    });
+    const typographicBuild = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/builds`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          expectedVersion: configured.project.version + 2,
+          idempotencyKey: "visual-floor-typographic-build",
+        }),
+      },
+    ).then((response) => response.json<{
+      build: { id: string; visualFloor: { status: string; reason: string } };
+    }>());
+    expect(typographicBuild.build.visualFloor).toEqual({
+      status: "passed",
+      reason: "排版与程序化卡牌及桌面 已满足 Visual Floor。",
+      visuals: [{
+        provenance: "generated",
+        label: "排版与程序化卡牌及桌面",
+      }],
+    });
+    expect(
+      await SELF.fetch(
+        `https://godesk.test/api/builds/${typographicBuild.build.id}/rooms`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            seed: 42,
+            idempotencyKey: "visual-floor-typographic-room",
+          }),
+        },
+      ),
+    ).toMatchObject({ status: 201 });
+
+    const kit = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/changes`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          expectedVersion: configured.project.version + 3,
+          idempotencyKey: "visual-floor-kit",
+          operations: [{
+            op: "update_definition",
+            fields: {
+              presentation: {
+                theme: "harbor-kit",
+                visuals: [{
+                  provenance: "kit",
+                  label: "Harbor ink fallback kit",
+                }],
+              },
+            },
+          }],
+        }),
+      },
+    ).then((response) => response.json<{ project: { version: number } }>());
+    const kitBuild = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/builds`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          expectedVersion: kit.project.version,
+          idempotencyKey: "visual-floor-kit-build",
+        }),
+      },
+    ).then((response) => response.json<{
+      build: { visualFloor: { status: string; reason: string } };
+    }>());
+    expect(kitBuild.build.visualFloor).toEqual({
+      status: "passed",
+      reason: "Harbor ink fallback kit 已满足 Visual Floor。",
+      visuals: [{
+        provenance: "kit",
+        label: "Harbor ink fallback kit",
+      }],
+    });
   });
 
   it("recovers a persisted queued job through an alarm after eviction", async () => {
@@ -1820,7 +2008,13 @@ describe("Game Project HTTP seam", () => {
             },
             phases: [{ id: "phase-mcp", name: "行动阶段" }],
             scenarios: [{ id: "scenario-mcp", name: "基础场景" }],
-            presentation: { theme: "harbor" },
+            presentation: {
+              theme: "harbor",
+              visuals: [{
+                provenance: "kit",
+                label: "Harbor fallback kit",
+              }],
+            },
           },
         },
       ],
