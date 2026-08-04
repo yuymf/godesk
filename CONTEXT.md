@@ -2,15 +2,33 @@
 
 ## Purpose
 
-GoDesk lets a tabletop creator use Codex to create, edit, compile, test, and
-share a real online game project. Codex plans and proposes changes; GoDesk is
+GoDesk turns a written or uploaded board-game rulebook into a shareable
+playable prototype. Users reach that outcome through a ChatCut-style website
+and/or an agent plugin; Codex may plan and edit, but GoDesk remains
 authoritative for project versions, builds, rules execution, rooms, and replay.
+The product low bar is rulebook in → shareable prototype out — not editor
+completeness.
 
 ## Glossary
 
-- **Creator**: the person operating GoDesk through Codex and the Web Editor.
+- **Creator**: the person who supplies a rulebook (and optional experience
+  intent) and receives a shareable playable prototype. They may work in the
+  website, through an agent plugin, or both.
+  _Avoid_: treating "Creator" as synonymous with "professional author who must
+  operate the full Web Editor."
+- **Shareable Prototype**: a Playable Build exposed as a Room (or equivalent
+  invitation) that other people can join and play, even when only a disclosed
+  subset of the source rules is executable.
 - **Game Project**: the tenant-scoped, versioned aggregate.
-- **Source Library**: traceable briefs, rulebooks, images, and provenance.
+- **Source Library**: traceable briefs, rulebooks, images, and provenance. It is
+  also the asset library for extracted rulebook images, uploaded art, and
+  generated visuals bound into a prototype.
+- **Generated Asset**: an image or visual produced for a missing or unusable
+  component, always labeled with provenance (extracted, uploaded, or
+  generative-API) and replaceable without rewriting rules.
+- **Visual Floor**: the minimum presentable table presentation required before
+  a Shareable Prototype may be invited. It may come from extraction, generation,
+  or a designed fallback kit — never from pure text or naked placeholders alone.
 - **Game Definition**: editable rules, components, phases, presentation, and
   supported deterministic runtime configuration.
 - **Changeset**: one atomic, idempotent, expected-version mutation.

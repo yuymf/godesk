@@ -74,14 +74,52 @@ export interface GameDefinition {
     | {
         status: "executable";
         unsupported: string[];
-        kernel: {
-          type: "score-race-v1";
-          victoryTarget: number;
-          maxTurns: number;
-          actions: Array<{ id: string; label: string; points: number }>;
-        };
+        kernel:
+          | {
+              type: "score-race-v1";
+              victoryTarget: number;
+              maxTurns: number;
+              actions: Array<{ id: string; label: string; points: number }>;
+            }
+          | {
+              type: "harbor-voyage-v1";
+              playerCount: number;
+            };
       };
 }
+
+export type HarborVoyageTableState = {
+  phase: "placement" | "movement" | "pilot" | "resolved";
+  placementRound: number;
+  movementRound: number;
+  activeSeat: number;
+  players: Array<{
+    seat: number;
+    name: string;
+    color: string;
+    cash: number;
+    workers: number;
+  }>;
+  punts: Array<{
+    cargoId: "amber" | "cobalt" | "cedar";
+    name: string;
+    color: string;
+    die: number;
+    position: number;
+    value: number;
+    result?: "port" | "shipyard" | "pirates";
+  }>;
+  placements: Array<{
+    id: string;
+    seat: number;
+    targetId: string;
+    cost: number;
+  }>;
+  lastRoll: Partial<Record<"amber" | "cobalt" | "cedar", number>>;
+  boardedPirates: Partial<Record<"amber" | "cobalt" | "cedar", number[]>>;
+  log: string[];
+  winnerSeat: number | null;
+};
 
 export interface Changeset {
   id: string;
@@ -95,6 +133,7 @@ export type ProjectChangeOperation =
   | {
       op: "add_source";
       source: {
+        id?: string;
         kind: SourceLibraryEntry["kind"];
         name: string;
         content: string;
@@ -127,6 +166,7 @@ export type ProjectChangeOperation =
         victoryTarget: number;
         maxTurns: number;
         actions: Array<{ id: string; label: string; points: number }>;
+        unsupported?: string[];
       };
     }
   | {
@@ -208,6 +248,10 @@ export type SubmitJobInput =
       kind: "generate-definition";
       expectedVersion: number;
       brief: string;
+      description?: string;
+      sourceName?: string;
+      sourceKind?: "brief" | "rulebook";
+      sourceContent?: string;
       name?: string;
       playerCount?: number;
       durationMinutes?: number;
@@ -242,6 +286,8 @@ export interface TableState {
   scores: number[];
   status: "active" | "complete";
   winnerSeat: number | null;
+  /** Present when the build kernel is harbor-voyage-v1. */
+  voyage?: HarborVoyageTableState;
 }
 
 export interface AcceptedAction {

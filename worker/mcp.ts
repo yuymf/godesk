@@ -67,18 +67,24 @@ const definitionSchema = z.object({
     z.object({
       status: z.literal("executable"),
       unsupported: z.array(z.string()),
-      kernel: z.object({
-        type: z.literal("score-race-v1"),
-        victoryTarget: z.number().int(),
-        maxTurns: z.number().int(),
-        actions: z.array(
-          z.object({
-            id: z.string(),
-            label: z.string(),
-            points: z.number().int(),
-          }),
-        ),
-      }),
+      kernel: z.union([
+        z.object({
+          type: z.literal("score-race-v1"),
+          victoryTarget: z.number().int(),
+          maxTurns: z.number().int(),
+          actions: z.array(
+            z.object({
+              id: z.string(),
+              label: z.string(),
+              points: z.number().int(),
+            }),
+          ),
+        }),
+        z.object({
+          type: z.literal("harbor-voyage-v1"),
+          playerCount: z.number().int().min(2).max(3),
+        }),
+      ]),
     }),
   ]),
 });

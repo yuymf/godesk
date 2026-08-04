@@ -82,6 +82,7 @@ const IMAGE_TYPES = new Set([
   "image/webp",
   "image/gif",
 ]);
+const TEXT_TYPES = new Set(["text/plain", "text/markdown"]);
 
 function extension(name: string) {
   const match = name.toLowerCase().match(/\.([a-z0-9]+)$/);
@@ -96,7 +97,59 @@ export function normalizedMimeType(file: Pick<File, "name" | "type">) {
   if (fileExtension === "png") return "image/png";
   if (fileExtension === "webp") return "image/webp";
   if (fileExtension === "gif") return "image/gif";
+  if (fileExtension === "txt") return "text/plain";
+  if (fileExtension === "md" || fileExtension === "markdown") return "text/markdown";
   return "";
+}
+
+export function validateRulebookFile(file: File) {
+  const mimeType = normalizedMimeType(file);
+  if (!PDF_TYPES.has(mimeType) && !TEXT_TYPES.has(mimeType)) {
+    return "规则文档必须是 PDF、TXT 或 Markdown 文件。";
+  }
+  if (file.size === 0) return "规则文档是空文件。";
+  if (file.size > INGESTION_LIMITS.maxRulebookBytes) {
+    return "规则文档不能超过 25 MB。";
+  }
+  return "";
+}
+
+export async function extractRulebookText(file: File) {
+  const validationError = validateRulebookFile(file);
+  if (validationError) throw new Error(validationError);
+  const mimeType = normalizedMimeType(file);
+  if (TEXT_TYPES.has(mimeType)) return file.text();
+
+  const buffer = await file.arrayBuffer();
+  assertPdfHeader(new Uint8Array(buffer), file.name);
+  let loadingTask: PDFDocumentLoadingTask | undefined;
+  try {
+    const { getDocument, GlobalWorkerOptions } = await import("pdfjs-dist");
+    GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+    loadingTask = getDocument({ data: new Uint8Array(buffer) });
+    const pdfDocument = await loadingTask.promise;
+    if (pdfDocument.numPages > INGESTION_LIMITS.maxPdfPages) {
+      throw new Error(`${file.name} 有 ${pdfDocument.numPages} 页，超过 200 页限制。`);
+    }
+    const pages: string[] = [];
+    for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber += 1) {
+      const page = await pdfDocument.getPage(pageNumber);
+      const content = await page.getTextContent();
+      pages.push(
+        content.items
+          .map((item) => ("str" in item ? item.str : ""))
+          .join(" ")
+          .replace(/\s+/g, " ")
+          .trim(),
+      );
+      page.cleanup();
+    }
+    const text = pages.map((page, index) => `[Page ${index + 1}]\n${page}`).join("\n\n").trim();
+    if (!text) throw new Error(`${file.name} 没有可提取的文本。`);
+    return text.slice(0, 100_000);
+  } finally {
+    await loadingTask?.destroy();
+  }
 }
 
 export function validateSourceBundle(input: IngestionInput) {

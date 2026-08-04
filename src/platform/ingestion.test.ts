@@ -3,6 +3,7 @@ import {
   INGESTION_LIMITS,
   normalizedMimeType,
   sha256Hex,
+  validateRulebookFile,
   validateSourceBundle,
 } from "./ingestion";
 
@@ -34,6 +35,15 @@ describe("source bundle validation", () => {
     expect(normalizedMimeType({ name: "token.JPEG", type: "" })).toBe(
       "image/jpeg",
     );
+    expect(normalizedMimeType({ name: "rules.md", type: "" })).toBe(
+      "text/markdown",
+    );
+  });
+
+  it("accepts PDF and text rulebooks for the creator-first flow", () => {
+    expect(validateRulebookFile(testFile("rules.pdf", "application/pdf"))).toBe("");
+    expect(validateRulebookFile(testFile("rules.txt", "text/plain"))).toBe("");
+    expect(validateRulebookFile(testFile("rules.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))).toContain("PDF、TXT 或 Markdown");
   });
 
   it("reports unsupported, empty, oversized, and missing inputs together", () => {

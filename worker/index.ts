@@ -37,6 +37,7 @@ import {
   instantiateDefaultExample,
   isDefaultExampleId,
 } from "./default-examples";
+import { materializeRulebookDefinition } from "./rulebook-generation";
 
 const PROJECT_PREFIX = "/projects/";
 const READ_ONLY_MCP_TOOLS = new Set([
@@ -283,7 +284,9 @@ function applyOperation(
       throw new Error("invalid_source");
     }
     const entry: SourceLibraryEntry = {
-      id: `source_${crypto.randomUUID()}`,
+      id: typeof source.id === "string" && /^source_[a-zA-Z0-9_-]+$/.test(source.id)
+        ? source.id
+        : `source_${crypto.randomUUID()}`,
       kind: source.kind,
       name: source.name.trim().slice(0, 120),
       content: source.content.slice(0, 100_000),
@@ -523,7 +526,13 @@ function applyOperation(
           !Number.isInteger(action.points) ||
           action.points < 1 ||
           action.points > 100,
-      )
+      ) ||
+      (config.unsupported !== undefined &&
+        (!Array.isArray(config.unsupported) ||
+          config.unsupported.length > 50 ||
+          config.unsupported.some((item) =>
+            typeof item !== "string" || !item.trim() || item.length > 500
+          )))
     ) {
       throw new Error("invalid_runtime");
     }
@@ -544,9 +553,39 @@ function applyOperation(
       createdAt: new Date().toISOString(),
     };
     record.sources.push(runtimeSource);
+    const existingRules = record.definition.rules.filter(
+      (rule) => !rule.id.startsWith("runtime-"),
+    );
+    const existingComponents = record.definition.components.filter(
+      (component) => !component.id.startsWith("runtime-"),
+    );
+    const previousRuntimeActionIds = new Set(
+      record.definition.runtimeSupport.status === "executable" &&
+        record.definition.runtimeSupport.kernel.type === "score-race-v1"
+        ? record.definition.runtimeSupport.kernel.actions.map(
+            (action) => action.id,
+          )
+        : [],
+    );
+    const existingActions = record.definition.actions.filter(
+      (action) =>
+        action.provenance === "source-anchored" ||
+        !previousRuntimeActionIds.has(action.id),
+    );
+    const generatedRuntimeActions = config.actions
+      .filter((action) => !existingActions.some((existing) => existing.id === action.id))
+      .map((action) => ({
+        id: action.id,
+        label: action.label.trim().slice(0, 80),
+        description: `获得 ${action.points} 分。`,
+        sourceId: runtimeSource.id,
+        provenance: "system-generated" as const,
+        confidence: 1,
+      }));
     record.definition = {
       ...record.definition,
       rules: [
+        ...existingRules,
         {
           id: "runtime-turn-order",
           text: "玩家按座位顺序轮流选择一个可用行动并获得对应分数。",
@@ -563,6 +602,7 @@ function applyOperation(
         },
       ],
       components: [
+        ...existingComponents,
         {
           id: "runtime-score-track",
           name: "分数轨道与玩家标记",
@@ -572,29 +612,28 @@ function applyOperation(
           confidence: 1,
         },
       ],
-      setup: ["将分数轨道置于所有玩家可见的位置。", "每位玩家选择一个座位标记。"],
-      actions: config.actions.map((action) => ({
-        id: action.id,
-        label: action.label.trim().slice(0, 80),
-        description: `获得 ${action.points} 分。`,
-        sourceId: runtimeSource.id,
-        provenance: "system-generated" as const,
-        confidence: 1,
-      })),
-      board: {
-        layout: "shared-score-track",
-        zones: [
+      setup: record.definition.setup.length
+        ? record.definition.setup
+        : ["将分数轨道置于所有玩家可见的位置。", "每位玩家选择一个座位标记。"],
+      actions: [...existingActions, ...generatedRuntimeActions],
+      board: record.definition.board.zones.length
+        ? record.definition.board
+        : {
+          layout: "shared-score-track",
+          zones: [
           {
             id: "score-track",
             name: "分数轨道",
             description: "记录所有座位当前得分。",
           },
-        ],
-      },
-      phases: [{ id: "runtime-turns", name: "轮流行动" }],
+          ],
+        },
+      phases: record.definition.phases.length
+        ? record.definition.phases
+        : [{ id: "runtime-turns", name: "轮流行动" }],
       runtimeSupport: {
         status: "executable",
-        unsupported: [],
+        unsupported: config.unsupported?.map((item) => item.trim()) ?? [],
         kernel: {
           type: "score-race-v1",
           victoryTarget: config.victoryTarget,
@@ -737,10 +776,11 @@ function publicMutation<
 function reconstructActions(
   build: StoredPlayableBuild,
   acceptedActions: GameReplay["acceptedActions"],
+  seed = 42,
 ) {
   const runtime = executableRuntime(build.definition);
   if (!runtime) throw new Error("runtime_not_executable");
-  let state = initialTableState(build.definition.playerCount);
+  let state = initialTableState(build.definition, seed);
   const reconstructed = acceptedActions.map((logged, index) => {
     const accepted = acceptIntent(
       state,
@@ -751,6 +791,7 @@ function reconstructActions(
         actionId: logged.actionId,
       },
       index + 1,
+      seed,
     );
     if (!accepted) throw new Error("action_log_invalid");
     state = accepted.state;
@@ -763,7 +804,11 @@ function reconstructRoom(
   room: StoredRoom,
   build: StoredPlayableBuild,
 ): StoredRoom {
-  const reconstructed = reconstructActions(build, room.acceptedActions);
+  const reconstructed = reconstructActions(
+    build,
+    room.acceptedActions,
+    room.seed,
+  );
   return {
     ...room,
     state: reconstructed.state,
@@ -775,10 +820,14 @@ function reconstructReplay(
   replay: StoredReplay,
   build: StoredPlayableBuild,
 ): StoredReplay {
-  const reconstructed = reconstructActions(build, replay.acceptedActions);
+  const reconstructed = reconstructActions(
+    build,
+    replay.acceptedActions,
+    replay.seed,
+  );
   return {
     ...replay,
-    initialState: initialTableState(build.definition.playerCount),
+    initialState: initialTableState(build.definition, replay.seed),
     acceptedActions: reconstructed.acceptedActions,
     finalState: reconstructed.state,
   };
@@ -913,6 +962,36 @@ export class CreatorProjects extends DurableObject<Env> {
     try {
       let operation: Response;
       if (input.kind === "generate-definition") {
+        const sourceId = `source_${job.id}`;
+        const description = input.description?.trim() || input.brief;
+        const sourceContent = input.sourceContent?.trim() || input.brief;
+        const generated = materializeRulebookDefinition({
+          name: input.name?.trim() || "生成的游戏版本",
+          description,
+          sourceText: sourceContent,
+          sourceId,
+          playerCount: input.playerCount,
+          durationMinutes: input.durationMinutes,
+        });
+        const sourceRuntimeActions = generated.actions.slice(0, 6).map(
+          (action, index) => ({
+            id: action.id,
+            label: action.label,
+            points: index % 3 + 1,
+          }),
+        );
+        const runtimeActions = sourceRuntimeActions.length
+          ? sourceRuntimeActions
+          : [
+              { id: "steady", label: "稳步推进", points: 1 },
+              { id: "bold", label: "冒险推进", points: 2 },
+            ];
+        const unsupported = [
+          "score-race-v1 只执行已识别行动的轮流选择与得分；竞价、移动、支付、随机事件和原规则结算仍未执行。",
+          ...(sourceRuntimeActions.length
+            ? []
+            : ["规则文档没有识别出可映射行动，当前运行时使用通用占位行动。"]),
+        ];
         operation = await this.fetch(
           new Request(
             `https://projects.internal/projects/${job.projectId}/changes`,
@@ -926,26 +1005,27 @@ export class CreatorProjects extends DurableObject<Env> {
                   {
                     op: "add_source",
                     source: {
-                      kind: "brief",
-                      name: `${input.name?.trim() || "生成任务"} brief`,
-                      content: input.brief,
+                      id: sourceId,
+                      kind: input.sourceKind || "brief",
+                      name: input.sourceName?.trim() || `${input.name?.trim() || "生成任务"} brief`,
+                      content: sourceContent,
                       provenance: {
-                        origin: "creator-authored",
+                        origin: input.sourceKind === "rulebook" ? "creator-upload" : "creator-authored",
                         locator: `generation job ${job.id}`,
                       },
                     },
                   },
                   {
                     op: "update_definition",
-                    fields: {
-                      ...(input.name ? { name: input.name } : {}),
-                      pitch: input.brief,
-                      ...(input.playerCount
-                        ? { playerCount: input.playerCount }
-                        : {}),
-                      ...(input.durationMinutes
-                        ? { durationMinutes: input.durationMinutes }
-                        : {}),
+                    fields: generated,
+                  },
+                  {
+                    op: "configure_score_race",
+                    config: {
+                      victoryTarget: Math.max(8, runtimeActions.length * 2),
+                      maxTurns: Math.max(12, generated.playerCount * 6),
+                      actions: runtimeActions,
+                      unsupported,
                     },
                   },
                 ],
@@ -993,9 +1073,9 @@ export class CreatorProjects extends DurableObject<Env> {
       }
       const operationBody = await operation.json<Record<string, unknown>>();
       if (operation.ok && input.kind === "generate-definition") {
-        operationBody.generationMode = "deterministic-brief-materialization";
+        operationBody.generationMode = "deterministic-rulebook-materialization";
         operationBody.warnings = [
-          "此任务只把 brief 持久化为可编辑 Definition；复杂规则解释仍由 Codex 提案并经受控 patch 接受。",
+          "规则结构来自确定性文本抽取；可运行内核是通用 score-race-v1，未覆盖原规则的部分仍需在 Editor 中校对。",
         ];
       }
       job = operation.ok
@@ -1479,6 +1559,10 @@ export class CreatorProjects extends DurableObject<Env> {
         name?: unknown;
         playerCount?: unknown;
         durationMinutes?: unknown;
+        description?: unknown;
+        sourceName?: unknown;
+        sourceKind?: unknown;
+        sourceContent?: unknown;
         idempotencyKey?: unknown;
       } = await request.json().catch(() => ({})) as {
         kind?: unknown;
@@ -1489,6 +1573,10 @@ export class CreatorProjects extends DurableObject<Env> {
         name?: unknown;
         playerCount?: unknown;
         durationMinutes?: unknown;
+        description?: unknown;
+        sourceName?: unknown;
+        sourceKind?: unknown;
+        sourceContent?: unknown;
         idempotencyKey?: unknown;
       };
       const projectId = submitJobMatch[1];
@@ -1523,7 +1611,14 @@ export class CreatorProjects extends DurableObject<Env> {
             (input.durationMinutes !== undefined &&
               (!Number.isInteger(input.durationMinutes) ||
                 Number(input.durationMinutes) < 5 ||
-                Number(input.durationMinutes) > 720)))) ||
+                Number(input.durationMinutes) > 720)) ||
+            (input.description !== undefined && typeof input.description !== "string") ||
+            (input.sourceName !== undefined && typeof input.sourceName !== "string") ||
+            (input.sourceKind !== undefined && !["brief", "rulebook"].includes(String(input.sourceKind))) ||
+            (input.sourceContent !== undefined &&
+              (typeof input.sourceContent !== "string" ||
+                !input.sourceContent.trim() ||
+                input.sourceContent.length > 100_000)))) ||
         (validBuildInput &&
           (typeof input.buildId !== "string" || !input.buildId)) ||
         (input.kind === "bot-playtest" && !Number.isInteger(input.seed))
@@ -1883,7 +1978,10 @@ export class CreatorProjects extends DurableObject<Env> {
         }
         const now = new Date().toISOString();
         const replayId = `replay_${crypto.randomUUID()}`;
-        const state = initialTableState(build.definition.playerCount);
+        const state = initialTableState(
+          build.definition,
+          Number(input.seed),
+        );
         const room: StoredRoom = {
           id: `room_${crypto.randomUUID()}`,
           projectId: build.projectId,
@@ -1978,6 +2076,7 @@ export class CreatorProjects extends DurableObject<Env> {
             actionId: String(input.actionId),
           },
           room.acceptedActions.length + 1,
+          room.seed,
         );
         if (!accepted) {
           return {

@@ -10,8 +10,9 @@ session or a human playtest.
 
 ## Local automated evidence
 
-- App suite: 7 files, 30 tests.
-- Worker suite: 3 files, 35 tests, including Cloudflare Access JWT claims,
+- App suite: 7 files, 31 tests.
+- Worker suite: 4 files, 36 tests, including rulebook structure materialization,
+  Cloudflare Access JWT claims,
   malformed nested patches,
   action-source build provenance, legacy Build normalization, Durable Object
   eviction/alarm recovery, immutable builds, tenant isolation, rooms, replay
@@ -29,6 +30,43 @@ session or a human playtest.
   `0.1.0+codex.20260730011500`.
 
 ## Browser evidence
+
+- The default creator route is now a ChatCut-form, prompt-first dark workspace
+  with a project rail, rulebook attachment area, separate experience prompt,
+  generation pipeline, source/definition panels, Build viewer, and durable job
+  evidence. Desktop and 390x844 responsive layouts were visually inspected.
+- An isolated local Worker at `http://127.0.0.1:8800` accepted the internal
+  456.9 KB `sources/manila/manila-rulebook-en.pdf` plus the description
+  "保留竞价、货船航行、海盗和港口结算的紧张感，生成 3 人、45 分钟的可编辑可玩版本。"
+  from the visible browser UI. The one-action flow created Project
+  `project_945a50a6-f3c0-4091-9969-55dad634c7c7`, source-anchored Definition
+  version 2, and immutable Build `build_bd54193e7a7ce73381c7910c`, then opened
+  the authoritative Editor at project version 3.
+- The Editor visibly read back the uploaded PDF as `creator-upload`, the
+  separate system runtime source, 20 rules, 6 components, 6 setup steps,
+  6 actions, 4 board zones, 6 phases, executable `score-race-v1`, successful
+  generation/compile jobs, and both persistent changesets.
+- The generated Build route visibly rendered the four source-derived zones,
+  six source-derived action cards, and three-player score track. All six
+  extracted actions are mapped to room controls; `unsupportedBehavior`
+  explicitly says that auction, movement, payment, random events, and original
+  settlement are not executed by the score-race kernel.
+- Browser acceptance ran fixed-seed bot job
+  `job_8a2051fe-d70e-4e09-b543-3a0fafd065c7` to an 18-turn terminal result,
+  created authoritative Room `room_61936eb0-a503-460b-b789-96a7ae54dc47`,
+  accepted source-derived `source-action-1`, advanced Seat 0 from 0 to 1, and
+  reconstructed read-only Replay `replay_5ddb8206-ef30-48a7-9c0c-6d959a82a6c6` with matching
+  initial state, final state, and accepted-action log.
+- This Manila run is internal engineering evidence only. Its extracted text is
+  not a cleared public example, and the generic runtime is not a rules-complete
+  Manila implementation or human playtest.
+- Independent Luna Worker acceptance re-ran the live local flow and returned
+  PASS for upload/generation, source provenance, structured Definition,
+  source-derived executable controls, immutable Build, unsupported-behavior
+  disclosure, durable jobs, fixed-seed bot, authoritative Room rejection, Replay,
+  and the full automated matrix. Its overall completion verdict remains FAIL
+  only because no real-human playtest record exists; automated evidence is not
+  substituted for that external gate.
 
 - Installation contract: `http://127.0.0.1:8799/chatgpt-plugin` displays the
   one-sentence entry and the desktop host, bundled CLI, OAuth, verification,

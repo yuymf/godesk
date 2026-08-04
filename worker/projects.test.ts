@@ -182,6 +182,121 @@ describe("Game Project HTTP seam", () => {
     });
   });
 
+  it("compiles harbor-13 voyage kernel, opens a room, and accepts a placement", async () => {
+    const created = await SELF.fetch("https://godesk.test/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "港口十三号", templateId: "harbor-13" }),
+    }).then((response) =>
+      response.json<{ project: { id: string; version: number } }>(),
+    );
+
+    const definition = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}?view=definition`,
+    ).then((response) =>
+      response.json<{
+        runtimeSupport: { kernel: { type: string } };
+        board: { zones: unknown[] };
+        phases: unknown[];
+      }>(),
+    );
+    expect(definition.runtimeSupport.kernel.type).toBe("harbor-voyage-v1");
+    expect(definition.board.zones.length).toBeGreaterThanOrEqual(4);
+    expect(definition.phases.length).toBeGreaterThanOrEqual(4);
+
+    const compiled = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/builds`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          expectedVersion: created.project.version,
+          idempotencyKey: "harbor-voyage-compile",
+        }),
+      },
+    );
+    expect(compiled.status).toBe(201);
+    const { build } = await compiled.json<{ build: { id: string } }>();
+
+    const roomResponse = await SELF.fetch(
+      `https://godesk.test/api/builds/${build.id}/rooms`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          seed: 42,
+          idempotencyKey: "harbor-voyage-room",
+        }),
+      },
+    );
+    expect(roomResponse.status).toBe(201);
+    const room = await roomResponse.json<{
+      id: string;
+      state: {
+        voyage?: { phase: string };
+        activeSeat: number;
+        scores: number[];
+      };
+      replayId: string;
+    }>();
+    expect(room.state.voyage?.phase).toBe("placement");
+    expect(room.state.scores).toEqual([30, 30, 30]);
+
+    const intent = await SELF.fetch(
+      `https://godesk.test/api/rooms/${room.id}/intents`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          intentId: "place-cedar-1",
+          seat: 0,
+          actionId: "place:cedar",
+        }),
+      },
+    );
+    expect(intent.status).toBe(200);
+    const updated = await intent.json<{
+      state: {
+        activeSeat: number;
+        voyage?: { placements: unknown[]; phase: string };
+      };
+      acceptedActions: Array<{ actionId: string }>;
+    }>();
+    expect(updated.state.activeSeat).toBe(1);
+    expect(updated.state.voyage?.placements).toHaveLength(1);
+    expect(updated.acceptedActions[0]?.actionId).toBe("place:cedar");
+
+    const playtest = await SELF.fetch(
+      `https://godesk.test/api/builds/${build.id}/playtests`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          seed: 42,
+          idempotencyKey: "harbor-voyage-bot",
+        }),
+      },
+    );
+    expect(playtest.status).toBe(201);
+    const run = await playtest.json<{
+      terminalStatus: string;
+      replayId: string;
+      metrics: { winnerSeat: number | null };
+    }>();
+    expect(run.terminalStatus).toBe("complete");
+    expect(run.metrics.winnerSeat).not.toBeNull();
+
+    const replay = await SELF.fetch(
+      `https://godesk.test/api/replays/${run.replayId}`,
+    ).then((response) =>
+      response.json<{
+        finalState: { status: string; voyage?: { phase: string } };
+      }>(),
+    );
+    expect(replay.finalState.status).toBe("complete");
+    expect(replay.finalState.voyage?.phase).toBe("resolved");
+  });
+
   it("isolates every project behind the resolved creator identity", async () => {
     const createdResponse = await SELF.fetch(
       "https://godesk.test/api/projects",
@@ -1170,6 +1285,9 @@ describe("Game Project HTTP seam", () => {
           kind: "generate-definition",
           expectedVersion: 1,
           brief: "三名玩家合作修复灯塔，45 分钟内完成。",
+          sourceContent: "设置灯塔板。三名玩家可以选择修复透镜或移动燃料标记。",
+          sourceKind: "rulebook",
+          sourceName: "lighthouse-rules.txt",
           name: "灯塔协作",
           playerCount: 3,
           durationMinutes: 45,
@@ -1182,12 +1300,23 @@ describe("Game Project HTTP seam", () => {
       id: queued.id,
       status: "succeeded",
       result: {
-        generationMode: "deterministic-brief-materialization",
+        generationMode: "deterministic-rulebook-materialization",
         project: { version: 2 },
         definition: {
           name: "灯塔协作",
           pitch: "三名玩家合作修复灯塔，45 分钟内完成。",
           playerCount: 3,
+          runtimeSupport: {
+            status: "executable",
+            unsupported: expect.arrayContaining([
+              expect.stringContaining("score-race-v1"),
+            ]),
+            kernel: {
+              actions: expect.arrayContaining([
+                expect.objectContaining({ id: "source-action-1" }),
+              ]),
+            },
+          },
         },
         editorUrl: expect.stringContaining(
           `/editor/${created.project.id}`,
