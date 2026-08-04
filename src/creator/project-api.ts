@@ -182,9 +182,20 @@ export function getRoom(id: string) {
   );
 }
 
+export function claimRoomSeat(
+  id: string,
+  input: { seat: number; clientId: string },
+) {
+  return fetch(`/api/rooms/${encodeURIComponent(id)}/seats`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  }).then(readJson<GameRoom>);
+}
+
 export function submitRoomIntent(
   id: string,
-  input: { intentId: string; seat: number; actionId: string },
+  input: { intentId: string; seat: number; clientId: string; actionId: string },
 ) {
   return fetch(`/api/rooms/${encodeURIComponent(id)}/intents`, {
     method: "POST",

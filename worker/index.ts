@@ -2112,6 +2112,7 @@ export class CreatorProjects extends DurableObject<Env> {
           buildId: build.id,
           seed: Number(input.seed),
           state,
+          seats: [],
           acceptedActions: [],
           replayId,
           createdAt: now,
@@ -2146,21 +2147,77 @@ export class CreatorProjects extends DurableObject<Env> {
       return json(outcome.value, outcome.status);
     }
 
+    const roomSeatMatch = url.pathname.match(/^\/rooms\/([^/]+)\/seats$/);
+    if (request.method === "POST" && roomSeatMatch) {
+      const input = await request.json<{
+        seat?: unknown;
+        clientId?: unknown;
+      }>().catch(() => ({ seat: undefined, clientId: undefined }));
+      if (
+        !Number.isInteger(input.seat) ||
+        typeof input.clientId !== "string" ||
+        !input.clientId
+      ) {
+        return error("入座请求无效。", 400);
+      }
+      const seat = input.seat as number;
+      const clientId = input.clientId as string;
+      const roomKey = `room:${roomSeatMatch[1]}`;
+      const outcome = await this.ctx.storage.transaction(async (transaction) => {
+        const storedRoom = await transaction.get<StoredRoom>(roomKey);
+        if (!storedRoom) {
+          return { status: 404, value: { error: "room_not_found" } };
+        }
+        const room = { ...storedRoom, seats: storedRoom.seats ?? [] };
+        if (seat < 0 || seat >= room.state.scores.length) {
+          return { status: 409, value: { error: "seat_unavailable" } };
+        }
+        const claimed = room.seats.find((entry) => entry.seat === seat);
+        if (claimed && claimed.clientId !== clientId) {
+          return { status: 409, value: { error: "seat_claimed" } };
+        }
+        const seats = claimed
+          ? room.seats
+          : [...room.seats, { seat, clientId }];
+        const updatedRoom = { ...room, seats };
+        const projectKey = `${PROJECT_PREFIX}${room.projectId}`;
+        const storedProject =
+          await transaction.get<ProjectRecord | GameProject>(projectKey);
+        if (!storedProject) {
+          return { status: 404, value: { error: "project_not_found" } };
+        }
+        const record = normalizedProjectRecord(storedProject);
+        record.rooms = record.rooms.map((candidate) =>
+          candidate.id === updatedRoom.id ? updatedRoom : candidate,
+        );
+        await transaction.put({
+          [roomKey]: updatedRoom,
+          [projectKey]: record,
+        });
+        return { status: 200, value: updatedRoom };
+      });
+      return json(outcome.value, outcome.status);
+    }
+
     const roomIntentMatch = url.pathname.match(/^\/rooms\/([^/]+)\/intents$/);
     if (request.method === "POST" && roomIntentMatch) {
       const input = await request.json<{
         intentId?: unknown;
         seat?: unknown;
+        clientId?: unknown;
         actionId?: unknown;
       }>().catch(() => ({
         intentId: undefined,
         seat: undefined,
+        clientId: undefined,
         actionId: undefined,
       }));
       if (
         typeof input.intentId !== "string" ||
         !input.intentId ||
         !Number.isInteger(input.seat) ||
+        (input.clientId !== undefined &&
+          (typeof input.clientId !== "string" || !input.clientId)) ||
         typeof input.actionId !== "string" ||
         !input.actionId
       ) {
@@ -2184,6 +2241,16 @@ export class CreatorProjects extends DurableObject<Env> {
           };
         }
         const room = reconstructRoom(storedRoom, build);
+        const claimedSeat = (room.seats ?? []).find(
+          (entry) =>
+            entry.seat === input.seat && entry.clientId === input.clientId,
+        );
+        if (room.seats.length > 0 && !claimedSeat) {
+          return {
+            status: 409,
+            value: { error: "seat_not_claimed", state: room.state },
+          };
+        }
         if (
           room.acceptedActions.some(
             (action) => action.intentId === input.intentId,
@@ -2634,6 +2701,21 @@ async function projectApi(
     if (!response.ok) return response;
     const room = await response.json<StoredRoom>();
     return json(publicRoom(room, url.origin), response.status);
+  }
+
+  const roomSeatMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/seats$/);
+  if (request.method === "POST" && roomSeatMatch) {
+    const response = await stub.fetch(
+      new Request(
+        `https://projects.internal/rooms/${roomSeatMatch[1]}/seats`,
+        request,
+      ),
+    );
+    if (!response.ok) return response;
+    return json(
+      publicRoom(await response.json<StoredRoom>(), url.origin),
+      response.status,
+    );
   }
 
   const roomIntentMatch = url.pathname.match(

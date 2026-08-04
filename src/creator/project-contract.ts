@@ -355,12 +355,18 @@ export interface PlaytestRun {
   replayUrl: string;
 }
 
+export interface RoomSeat {
+  seat: number;
+  clientId: string;
+}
+
 export interface GameRoom {
   id: string;
   projectId: string;
   buildId: string;
   seed: number;
   state: TableState;
+  seats: RoomSeat[];
   acceptedActions: AcceptedAction[];
   replayId: string;
   createdAt: string;

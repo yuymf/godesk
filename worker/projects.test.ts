@@ -1700,6 +1700,141 @@ describe("Game Project HTTP seam", () => {
     });
   });
 
+  it("uses the invitation URL for two clients to claim seats and take authoritative turns", async () => {
+    const created = await SELF.fetch("https://godesk.test/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "双浏览器邀请桌" }),
+    }).then((response) => response.json<{
+      project: { id: string; version: number };
+    }>());
+    const configured = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/changes`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          expectedVersion: created.project.version,
+          idempotencyKey: "two-browser-configure",
+          operations: [{
+            op: "configure_score_race",
+            config: {
+              victoryTarget: 5,
+              maxTurns: 6,
+              actions: [{ id: "advance", label: "前进", points: 1 }],
+            },
+          }, {
+            op: "update_definition",
+            fields: {
+              presentation: {
+                theme: "harbor-kit",
+                visuals: [{ provenance: "kit", label: "Harbor ink fallback kit" }],
+              },
+            },
+          }],
+        }),
+      },
+    ).then((response) => response.json<{ project: { version: number } }>());
+    const compiled = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/builds`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          expectedVersion: configured.project.version,
+          idempotencyKey: "two-browser-build",
+        }),
+      },
+    ).then((response) => response.json<{ build: { id: string } }>());
+    const room = await SELF.fetch(
+      `https://godesk.test/api/builds/${compiled.build.id}/rooms`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ seed: 42, idempotencyKey: "two-browser-room" }),
+      },
+    ).then((response) => response.json<{
+      id: string;
+      roomUrl: string;
+      replayId: string;
+    }>());
+    expect(new URL(room.roomUrl).pathname).toBe(`/room/${room.id}`);
+
+    for (const [seat, clientId] of [[0, "creator-browser"], [1, "friend-browser"]] as const) {
+      await expect(
+        SELF.fetch(`https://godesk.test/api/rooms/${room.id}/seats`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ seat, clientId }),
+        }),
+      ).resolves.toMatchObject({ status: 200 });
+    }
+
+    await expect(
+      SELF.fetch(`https://godesk.test/api/rooms/${room.id}/intents`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          intentId: "impersonated-turn",
+          seat: 0,
+          clientId: "friend-browser",
+          actionId: "advance",
+        }),
+      }),
+    ).resolves.toMatchObject({ status: 409 });
+
+    const firstTurn = await SELF.fetch(
+      `https://godesk.test/api/rooms/${room.id}/intents`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          intentId: "creator-turn",
+          seat: 0,
+          clientId: "creator-browser",
+          actionId: "advance",
+        }),
+      },
+    );
+    expect(firstTurn.status).toBe(200);
+    const secondTurn = await SELF.fetch(
+      `https://godesk.test/api/rooms/${room.id}/intents`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          intentId: "friend-turn",
+          seat: 1,
+          clientId: "friend-browser",
+          actionId: "advance",
+        }),
+      },
+    );
+    await expect(secondTurn.json()).resolves.toMatchObject({
+      state: { turn: 2, activeSeat: 0, scores: [1, 1] },
+      acceptedActions: [
+        { intentId: "creator-turn", seat: 0 },
+        { intentId: "friend-turn", seat: 1 },
+      ],
+      seats: [
+        { seat: 0, clientId: "creator-browser" },
+        { seat: 1, clientId: "friend-browser" },
+      ],
+    });
+    await expect(
+      SELF.fetch(`https://godesk.test/api/replays/${room.replayId}`).then(
+        (response) => response.json(),
+      ),
+    ).resolves.toMatchObject({
+      evidenceType: "room-action-log",
+      finalState: { turn: 2, scores: [1, 1] },
+      acceptedActions: [
+        { intentId: "creator-turn", seat: 0 },
+        { intentId: "friend-turn", seat: 1 },
+      ],
+    });
+  });
+
   it("recovers a persisted queued job through an alarm after eviction", async () => {
     const creatorId = "alarm-recovery-creator";
     const creatorHeaders = {

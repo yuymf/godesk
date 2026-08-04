@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   applyProjectChanges,
+  claimRoomSeat,
   createRoom,
   createProject,
   duplicateDefinition,
@@ -1899,25 +1900,65 @@ function RoomView({ roomId }: { roomId: string }) {
   const [build, setBuild] = useState<PlayableBuild>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [seat, setSeat] = useState<number | null>(null);
+  const [clientId] = useState(() => {
+    const key = "godesk-room-client-id";
+    const existing = window.localStorage.getItem(key);
+    if (existing) return existing;
+    const created = crypto.randomUUID();
+    window.localStorage.setItem(key, created);
+    return created;
+  });
 
   useEffect(() => {
     getRoom(roomId)
       .then(async (nextRoom) => {
         setRoom(nextRoom);
+        setSeat(
+          nextRoom.seats.find((entry) => entry.clientId === clientId)?.seat ??
+            null,
+        );
         setBuild(await getBuild(nextRoom.buildId));
       })
       .catch((reason: Error) => setError(reason.message));
+  }, [clientId, roomId]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      getRoom(roomId).then(setRoom).catch(() => {
+        // Keep the last authoritative snapshot while a transient reload fails.
+      });
+    }, 1_000);
+    return () => window.clearInterval(interval);
   }, [roomId]);
 
-  async function act(actionId: string) {
+  async function claimSeat(nextSeat: number) {
     if (!room) return;
+    setBusy(true);
+    setError("");
+    try {
+      setRoom(await claimRoomSeat(room.id, { seat: nextSeat, clientId }));
+      setSeat(nextSeat);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "入座被拒绝。");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function act(actionId: string) {
+    if (!room || seat === null) {
+      setError("请先认领一个席位。");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
       setRoom(
         await submitRoomIntent(room.id, {
           intentId: crypto.randomUUID(),
-          seat: room.state.activeSeat,
+          seat,
+          clientId,
           actionId,
         }),
       );
@@ -1960,6 +2001,46 @@ function RoomView({ roomId }: { roomId: string }) {
           <a href={room.replayUrl}>只读回放</a>
         </div>
       </header>
+      <section className="room-invitation" aria-label="邀请与入座">
+        <label>
+          邀请链接
+          <input aria-label="邀请链接" readOnly value={room.roomUrl} />
+        </label>
+        <button
+          onClick={() => navigator.clipboard.writeText(room.roomUrl)}
+          type="button"
+        >
+          复制邀请链接
+        </button>
+        <label>
+          你的席位
+          <select
+            disabled={busy}
+            onChange={(event) => {
+              const selected = Number(event.target.value);
+              if (Number.isInteger(selected)) void claimSeat(selected);
+            }}
+            value={seat ?? ""}
+          >
+            <option value="">选择空席位</option>
+            {room.state.scores.map((_score, availableSeat) => {
+              const occupant = room.seats.find(
+                (entry) => entry.seat === availableSeat,
+              );
+              const isCurrentClient = occupant?.clientId === clientId;
+              return (
+                <option
+                  disabled={Boolean(occupant && !isCurrentClient)}
+                  key={availableSeat}
+                  value={availableSeat}
+                >
+                  Seat {availableSeat}{occupant && !isCurrentClient ? "（已入座）" : ""}
+                </option>
+              );
+            })}
+          </select>
+        </label>
+      </section>
 
       {harbor ? (
         <HarborVoyageBoard
@@ -2021,7 +2102,7 @@ function RoomView({ roomId }: { roomId: string }) {
                 );
                 return (
                   <button
-                    disabled={busy}
+                    disabled={busy || seat !== room.state.activeSeat}
                     key={action.id}
                     onClick={() => act(action.id)}
                     type="button"
