@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bind or replace an asset"
+  short_description: "Swap traceable prototype art without changing rules"
+  default_prompt: "Bind this image to my GoDesk prototype and preserve its provenance."

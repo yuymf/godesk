@@ -364,6 +364,7 @@ const operationSchema = z.discriminatedUnion("op", [
   z.object({
     op: z.literal("add_source"),
     source: z.object({
+      id: z.string().regex(/^source_[a-zA-Z0-9_-]+$/).optional(),
       kind: z.enum(["brief", "rulebook", "image"]),
       name: z.string().min(1).max(120),
       content: z.string().max(100_000),
@@ -372,6 +373,9 @@ const operationSchema = z.discriminatedUnion("op", [
           "creator-authored",
           "creator-upload",
           "internal-fixture",
+          "system-generated",
+          "ai-proposed",
+          "generative-api",
         ]),
         locator: z.string().max(500),
       }),
@@ -822,12 +826,25 @@ export function createGodeskMcpServer(
           kind: z.literal("generate-definition"),
           projectId: z.string().min(1),
           expectedVersion: z.number().int().positive(),
-          brief: z.string().min(1).max(100_000),
+          brief: z.string().min(1).max(100_000).optional(),
+          sourceContent: z.string().min(1).max(100_000).optional(),
+          sourceName: z.string().min(1).max(120).optional(),
+          sourceKind: z.enum(["brief", "rulebook"]).optional(),
+          harvestedImages: z.array(z.object({
+            name: z.string().min(1).max(120),
+            content: z.string()
+              .regex(/^data:image\/(?:png|jpe?g|webp);base64,/)
+              .max(100_000),
+            pageNumber: z.number().int().positive(),
+          })).max(8).optional(),
           name: z.string().min(1).max(120).optional(),
           playerCount: z.number().int().min(1).max(20).optional(),
           durationMinutes: z.number().int().min(5).max(720).optional(),
           idempotencyKey: z.string().min(1).max(200),
-        }),
+        }).refine(
+          (input) => Boolean(input.brief || input.sourceContent),
+          { message: "brief or sourceContent is required" },
+        ),
         z.object({
           kind: z.literal("compile-build"),
           projectId: z.string().min(1),
