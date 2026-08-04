@@ -8,11 +8,17 @@ never pass.
 
 **Blocked by:** 02 — 规则书抽图进 Source Library 并绑到桌面
 
-**Status:** claimed
+**Status:** resolved
 
-- [ ] Visual Floor readiness is an explicit Build/Room gate with pass/fail reason
-- [ ] Without generative capacity, typographic/programmatic rendering upgrades text-only presentation
-- [ ] Theme fallback kit can satisfy the floor when extraction and generation are insufficient
-- [ ] Creating or exposing a share invitation is refused until the floor passes
-- [ ] Provenance labels distinguish extracted, generated, kit, and uploaded visuals
-- [ ] Automated tests cover pass and fail cases at the Visual Floor / share-gate seam
+- [x] Visual Floor readiness is an explicit Build/Room gate with pass/fail reason
+- [x] Without generative capacity, typographic/programmatic rendering upgrades text-only presentation
+- [x] Theme fallback kit can satisfy the floor when extraction and generation are insufficient
+- [x] Creating or exposing a share invitation is refused until the floor passes
+- [x] Provenance labels distinguish extracted, generated, kit, and uploaded visuals
+- [x] Automated tests cover pass and fail cases at the Visual Floor / share-gate seam
+
+## Done
+
+- Commit: `6fe9997` (`ticket-03-visual-floor-share-gate`)
+- Verification: `pnpm typecheck`; `pnpm test`; `pnpm test:worker`
+- Gaps: invitation multiplayer, Plugin Skills, and end-to-end acceptance remain out of scope for tickets 04–06.
