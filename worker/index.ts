@@ -308,7 +308,14 @@ function applyOperation(
       !source.name.trim() ||
       typeof source.content !== "string" ||
       !source.provenance ||
-      !["creator-authored", "creator-upload", "internal-fixture"].includes(
+      ![
+        "creator-authored",
+        "creator-upload",
+        "internal-fixture",
+        "system-generated",
+        "ai-proposed",
+        "generative-api",
+      ].includes(
         source.provenance.origin,
       ) ||
       typeof source.provenance.locator !== "string"

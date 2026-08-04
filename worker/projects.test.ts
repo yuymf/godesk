@@ -2203,4 +2203,100 @@ describe("Game Project HTTP seam", () => {
       ),
     ).toMatchObject({ status: 404 });
   });
+
+  it("drives harvested and host-generated assets through MCP to a shareable room", async () => {
+    const created = await callMcpTool<{
+      project: { id: string; version: number };
+    }>(30, "create_project", { name: "MCP 资产桌" });
+    const generated = await callMcpTool<{ id: string }>(31, "submit_job", {
+      kind: "generate-definition",
+      projectId: created.project.id,
+      expectedVersion: created.project.version,
+      sourceKind: "rulebook",
+      sourceName: "asset-rules.pdf",
+      sourceContent: "两名玩家轮流选择航线行动，先获得 8 分者获胜。",
+      harvestedImages: [{
+        name: "规则书第 1 页",
+        content: "data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAABwAQCdASoBAAEAAUAmJaQAA3AA/vuUAAA=",
+        pageNumber: 1,
+      }],
+      idempotencyKey: "mcp-harvest-asset-001",
+    });
+    const generation = await waitForJob(generated.id) as unknown as {
+      result: {
+        project: { version: number };
+        sources: Array<{ id: string; kind: string }>;
+      };
+    };
+    const extracted = generation.result.sources.find(
+      (source) => source.kind === "image",
+    );
+    expect(extracted?.id).toMatch(/^source_/);
+
+    const bound = await callMcpTool<{
+      project: { version: number };
+      sources: Array<{ kind: string; provenance: { origin: string } }>;
+      definition: { presentation: { visuals: Array<{ provenance: string }> } };
+    }>(32, "apply_game_patch", {
+      projectId: created.project.id,
+      expectedVersion: generation.result.project.version,
+      idempotencyKey: "mcp-bind-generated-asset-001",
+      operations: [
+        {
+          op: "add_source",
+          source: {
+            id: "source_host_generated_card",
+            kind: "image",
+            name: "Host generated route card",
+            content: "data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAABwAQCdASoBAAEAAUAmJaQAA3AA/vuUAAA=",
+            provenance: {
+              origin: "generative-api",
+              locator: "Codex host-user quota",
+            },
+          },
+        },
+        {
+          op: "update_definition",
+          fields: {
+            presentation: {
+              theme: "rulebook-studio",
+              image: {
+                sourceId: "source_host_generated_card",
+                url: "data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAABwAQCdASoBAAEAAUAmJaQAA3AA/vuUAAA=",
+                alt: "Host generated route card",
+              },
+              visuals: [{
+                provenance: "generated",
+                label: "Codex host quota generated route card",
+              }],
+            },
+          },
+        },
+      ],
+    });
+    expect(bound.sources).toContainEqual(expect.objectContaining({
+      kind: "image",
+      provenance: expect.objectContaining({ origin: "generative-api" }),
+    }));
+    expect(bound.definition.presentation.visuals).toEqual([
+      expect.objectContaining({ provenance: "generated" }),
+    ]);
+
+    const compile = await callMcpTool<{ id: string }>(33, "submit_job", {
+      kind: "compile-build",
+      projectId: created.project.id,
+      expectedVersion: bound.project.version,
+      idempotencyKey: "mcp-asset-compile-001",
+    });
+    const compiled = await waitForJob(compile.id) as unknown as {
+      result: { build: { id: string; visualFloor: { status: string } } };
+    };
+    expect(compiled.result.build.visualFloor.status).toBe("passed");
+    const room = await callMcpTool<{ roomUrl: string }>(34, "create_room", {
+      buildId: compiled.result.build.id,
+      seed: 42,
+      idempotencyKey: "mcp-asset-room-001",
+    });
+    expect(new URL(room.roomUrl).pathname).toMatch(/^\/room\/room_/);
+  });
 });

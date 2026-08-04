@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fill prototype visuals"
+  short_description: "Generate or fall back to a shareable visual floor"
+  default_prompt: "Fill the missing visuals for this GoDesk prototype."

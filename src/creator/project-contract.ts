@@ -24,7 +24,8 @@ export interface SourceLibraryEntry {
       | "creator-upload"
       | "internal-fixture"
       | "system-generated"
-      | "ai-proposed";
+      | "ai-proposed"
+      | "generative-api";
     locator: string;
     confidence?: number;
   };

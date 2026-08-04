@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create a shareable prototype"
+  short_description: "Turn a rulebook into a room invitation"
+  default_prompt: "Create a shareable GoDesk prototype from my rulebook."
