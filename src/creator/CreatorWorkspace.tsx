@@ -1409,9 +1409,9 @@ function ProjectStudio({ projectId }: { projectId: string }) {
     setBusy(true);
     setFormError("");
     try {
-      let hypothesisId = hypotheses[0]?.id;
+      let recordedHypothesisId = hypotheses[0]?.id ?? "";
       let expectedVersion = project.version;
-      if (!hypothesisId) {
+      if (!recordedHypothesisId) {
         const created = await applyProjectChanges(project.id, {
           expectedVersion,
           idempotencyKey: crypto.randomUUID(),
@@ -1427,17 +1427,17 @@ function ProjectStudio({ projectId }: { projectId: string }) {
         setHypotheses(created.hypotheses);
         setFindings(created.findings);
         setChangesets((current) => [...current, created.changeset]);
-        hypothesisId = created.hypotheses.at(-1)?.id;
+        recordedHypothesisId = created.hypotheses.at(-1)?.id ?? "";
         expectedVersion = created.project.version;
       }
-      if (!hypothesisId) throw new Error("没法记下这局要看的问题。");
+      if (!recordedHypothesisId) throw new Error("没法记下这局要看的问题。");
       const result = await applyProjectChanges(project.id, {
         expectedVersion,
         idempotencyKey: crypto.randomUUID(),
         operations: [{
           op: "record_validation_finding",
           finding: {
-            hypothesisId,
+            hypothesisId: recordedHypothesisId,
             buildId: room.buildId,
             evidence: {
               type: "human-session",
