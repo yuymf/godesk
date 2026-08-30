@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("ChatCut charter: source in, playable game out", () => {
-  test("home and install describe a generator, not a validation platform", async ({
+  test("home composer is a light table and a starter chip is enough to generate", async ({
     page,
   }) => {
     await page.goto("/");
@@ -10,11 +10,57 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.locator("body")).not.toContainText("可编辑、可分享、可验证");
     await expect(page.getByText("分享联机")).toBeVisible();
 
+    const sidebar = page.locator(".studio-sidebar");
+    await expect(sidebar).toBeVisible();
+    await expect
+      .poll(async () => sidebar.evaluate((el) => getComputedStyle(el).backgroundColor))
+      .toBe("rgb(244, 250, 246)");
+    await expect
+      .poll(async () => page.evaluate(() => getComputedStyle(document.body).backgroundColor))
+      .toBe("rgb(232, 240, 235)");
+
+    const idea = page.getByRole("textbox", { name: "描述你的游戏想法" });
+    const generate = page.getByRole("button", { name: "生成可玩版本" });
+    await expect(generate).toBeDisabled();
+
+    await page.getByRole("button", { name: "3人剧本杀" }).click();
+    await expect(idea).toHaveValue(/别墅里/);
+    await expect(page.getByRole("button", { name: "3人剧本杀" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(generate).toBeEnabled();
+
+    await page.getByRole("button", { name: "聚会卡牌" }).click();
+    await expect(idea).toHaveValue(/手牌/);
+    await expect(page.getByRole("button", { name: "聚会卡牌" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(generate).toBeEnabled();
+
+    await page.getByRole("button", { name: "轻桌游" }).click();
+    await expect(idea).toHaveValue(/城市地图/);
+    await expect(generate).toBeEnabled();
+
+    await expect(page.getByRole("button", { name: "先玩这一局" })).toHaveCount(3);
+  });
+
+  test("install page stays a light ChatCut contract", async ({ page }) => {
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
     await page.goto("/chatgpt-plugin");
     await expect(page.getByRole("heading", { name: "让 Codex 直接使用 GoDesk。" })).toBeVisible();
     await expect(page.getByText("对标 ChatCut")).toBeVisible();
     await expect(page.locator("body")).not.toContainText("开始制作并验证我的第一个规则游戏");
     await expect(page.locator("body")).not.toContainText("记录一条明确标注证据类型的验证结论");
+    await expect
+      .poll(async () =>
+        page.locator(".install-guide").evaluate((el) => getComputedStyle(el).backgroundColor),
+      )
+      .toBe("rgb(232, 240, 235)");
+
+    await page.getByRole("button", { name: "复制这一句话" }).click();
+    await expect(page.getByRole("button", { name: "已复制" })).toBeVisible();
   });
 
   test("灵感接力 becomes a joinable room where two people can play", async ({
