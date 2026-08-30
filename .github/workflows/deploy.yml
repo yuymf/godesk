@@ -38,11 +38,9 @@ jobs:
       - run: pnpm test:e2e
 
       - name: Deploy to Cloudflare
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: pnpm exec wrangler deploy
 
       - name: Smoke production composer
         run: pnpm verify:production
