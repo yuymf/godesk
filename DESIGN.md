@@ -9,7 +9,7 @@ Web Studio and creator home. Operate mode. ChatCut-style prompt workspace.
 ## World
 
 Sunday table. Cool bone-green canvas (`#e8f0eb`), white paper cards, ink (`#1c2622`).
-One forest accent (`#0f6b4c`) owns the sidebar and every primary action.
+One forest accent (`#0f6b4c`) owns primary actions and a thin rail edge — not a dark slab.
 The Shared Session table keeps its own play-surface material, because play is
 the output, not another settings panel.
 

@@ -1122,26 +1122,26 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   flex-direction: column;
   min-height: 100vh;
   padding: 18px 14px;
-  background: #0f6b4c;
-  border-right: 0;
+  background: #f4faf6;
+  border-right: 1px solid rgb(15 107 76 / 12%);
 }
 
 .studio-sidebar .creator-brand { padding: 2px 8px 18px; }
 .studio-sidebar .creator-brand > span:first-child {
-  color: #0f6b4c;
-  background: #fff;
+  color: #fff;
+  background: #0f6b4c;
   border-radius: 12px;
 }
-.studio-sidebar .creator-brand strong { color: #fff; font-size: 14px; letter-spacing: -0.02em; }
-.studio-sidebar .creator-brand small { color: rgb(255 255 255 / 72%); font-size: 10px; }
+.studio-sidebar .creator-brand strong { color: #1c2622; font-size: 14px; letter-spacing: -0.02em; }
+.studio-sidebar .creator-brand small { color: #5a6b63; font-size: 10px; }
 
 .studio-new {
   width: 100%;
   padding: 10px 12px;
-  color: #0a4d37;
-  background: #fff;
+  color: #fff;
+  background: #0f6b4c;
   border: 0;
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
   text-align: left;
 }
@@ -1149,28 +1149,28 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .studio-sidebar nav { display: grid; gap: 3px; margin-top: 24px; }
 .studio-sidebar nav > span {
   padding: 0 9px 7px;
-  color: rgb(255 255 255 / 58%);
+  color: #7a8c84;
   font-size: 11px;
   font-weight: 650;
   letter-spacing: 0.04em;
 }
-.studio-sidebar nav > small { padding: 10px 9px; color: rgb(255 255 255 / 62%); line-height: 1.5; }
+.studio-sidebar nav > small { padding: 10px 9px; color: #7a8c84; line-height: 1.5; }
 .studio-sidebar nav a {
   display: grid;
   grid-template-columns: 22px minmax(0, 1fr);
   gap: 6px;
   align-items: center;
   padding: 9px;
-  color: rgb(255 255 255 / 82%);
+  color: #1c2622;
   border-radius: 7px;
   text-decoration: none;
 }
-.studio-sidebar nav a:hover { color: #fff; background: rgb(255 255 255 / 12%); }
+.studio-sidebar nav a:hover { color: #0a4d37; background: #d4efe3; }
 .studio-sidebar nav a > span { display: grid; min-width: 0; }
-.studio-sidebar nav strong { overflow: hidden; color: #fff; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.studio-sidebar nav small { color: rgb(255 255 255 / 58%); font-size: 10px; }
-.studio-sidebar nav i { color: rgb(255 255 255 / 58%); font-style: normal; }
-.studio-install { margin-top: auto; padding: 10px 9px; color: rgb(255 255 255 / 74%); font-size: 12px; text-decoration: none; }
+.studio-sidebar nav strong { overflow: hidden; color: #1c2622; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.studio-sidebar nav small { color: #7a8c84; font-size: 10px; }
+.studio-sidebar nav i { color: #7a8c84; font-style: normal; }
+.studio-install { margin-top: auto; padding: 10px 9px; color: #5a6b63; font-size: 12px; text-decoration: none; }
 
 .studio-stage { position: relative; min-width: 0; min-height: 100vh; overflow: hidden; }
 .studio-stage::before {
@@ -1332,9 +1332,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   height: 100vh;
   min-height: 0;
   padding: 20px 16px;
-  color: #f4fff9;
-  background: #0f6b4c;
-  border-right: 0;
+  color: #1c2622;
+  background: #f4faf6;
+  border-right: 1px solid rgb(15 107 76 / 12%);
 }
 
 .studio-rail .creator-brand {
@@ -1342,8 +1342,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 }
 
 .studio-rail .creator-brand > span:first-child {
-  color: #0f6b4c;
-  background: #fff;
+  color: #fff;
+  background: #0f6b4c;
   border-radius: 12px;
 }
 
@@ -1359,7 +1359,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 
 .studio-rail nav > span {
   padding: 0 10px 8px;
-  color: rgb(255 255 255 / 58%);
+  color: #7a8c84;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .04em;
@@ -1370,7 +1370,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   box-sizing: border-box;
   width: 100%;
   padding: 10px 12px;
-  color: rgb(255 255 255 / 82%);
+  color: #1c2622;
   background: transparent;
   border-radius: 8px;
   font-size: 13px;
@@ -1382,13 +1382,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 
 .studio-rail nav a:hover,
 .back-projects:hover {
-  color: #fff;
-  background: rgb(255 255 255 / 12%);
+  color: #0a4d37;
+  background: #d4efe3;
 }
 
 .studio-rail nav a[aria-current="page"] {
-  color: #fff;
-  background: rgb(255 255 255 / 16%);
+  color: #0a4d37;
+  background: #d4efe3;
 }
 
 .back-projects {
