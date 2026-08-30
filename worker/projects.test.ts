@@ -1625,6 +1625,108 @@ describe("Game Project HTTP seam", () => {
     );
   });
 
+  it("gives a visitor a prefixed invitation a friend can follow", async () => {
+    const mount = "https://godesk.example/chatgpt-plugin";
+    const created = await SELF.fetch(`${mount}/api/projects`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "灵感接力", templateId: "idea-relay" }),
+    });
+    expect(created.status, await created.clone().text()).toBe(201);
+    const cookie = (created.headers.get("set-cookie") ?? "").split(";")[0];
+    const headers = { "content-type": "application/json", cookie };
+    const { project } = await created.json<{
+      project: { id: string; version: number };
+    }>();
+    const compiled = await SELF.fetch(`${mount}/api/projects/${project.id}/builds`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        expectedVersion: project.version,
+        idempotencyKey: "public-mount-build",
+      }),
+    });
+    expect(compiled.status, await compiled.clone().text()).toBe(201);
+    const compiledBody = await compiled.json<{
+      project: { version: number };
+      build: { id: string };
+    }>();
+    const roomResponse = await SELF.fetch(
+      `${mount}/api/builds/${compiledBody.build.id}/sessions`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ seed: 42, idempotencyKey: "public-mount-room" }),
+      },
+    );
+    expect(roomResponse.status, await roomResponse.clone().text()).toBe(201);
+    const room = await roomResponse.json<{ id: string; sessionUrl: string }>();
+    expect(new URL(room.sessionUrl).pathname).toBe(`/chatgpt-plugin/room/${room.id}`);
+    const published = await SELF.fetch(`${mount}/api/projects/${project.id}/changes`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        expectedVersion: compiledBody.project.version,
+        idempotencyKey: "public-mount-publish",
+        operations: [{ op: "publish_shared_session", sessionId: room.id }],
+      }),
+    });
+    expect(published.status, await published.clone().text()).toBe(200);
+    const link = await SELF.fetch(
+      `${mount}/api/projects/${project.id}?view=playtest-link`,
+      { headers },
+    ).then((response) => response.json<{ playtestLink: { url: string } }>());
+    expect(new URL(link.playtestLink.url).pathname).toBe(
+      `/chatgpt-plugin/try/${project.id}`,
+    );
+    const redirect = await SELF.fetch(link.playtestLink.url, { redirect: "manual" });
+    expect(redirect.status).toBe(302);
+    const joined = new URL(redirect.headers.get("location")!);
+    expect(joined.pathname).toBe(`/chatgpt-plugin/room/${room.id}`);
+    const share = joined.searchParams.get("share");
+    expect(share).toBeTruthy();
+    const friendSeat = await SELF.fetch(
+      `${mount}/api/sessions/${room.id}/seats?share=${encodeURIComponent(share!)}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ seat: 0, displayName: "朋友" }),
+      },
+    );
+    expect(friendSeat.status, await friendSeat.clone().text()).toBe(200);
+    const seated = await friendSeat.json<{ seatToken: string }>();
+    const played = await SELF.fetch(
+      `${mount}/api/sessions/${room.id}/intents?share=${encodeURIComponent(share!)}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          intentId: "public-mount-friend-turn",
+          seat: 0,
+          seatToken: seated.seatToken,
+          actionId: "extend",
+        }),
+      },
+    );
+    expect(played.status, await played.clone().text()).toBe(200);
+  });
+
+  it("challenges Codex at the Access-open MCP mount", async () => {
+    const response = await SELF.fetch("https://godesk.example/chatgpt-plugin/mcp");
+    expect(response.status).toBe(401);
+    expect(response.headers.get("www-authenticate")).toContain(
+      "oauth-protected-resource/chatgpt-plugin/mcp",
+    );
+    const metadata = await SELF.fetch(
+      "https://godesk.example/.well-known/oauth-protected-resource/chatgpt-plugin/mcp",
+    );
+    expect(metadata.status).toBe(200);
+    await expect(metadata.json()).resolves.toMatchObject({
+      resource: "https://godesk.example/chatgpt-plugin/mcp",
+      scopes_supported: ["godesk:read", "godesk:write"],
+    });
+  });
+
   it("publishes protected resource metadata at the MCP-specific discovery path", async () => {
     const response = await SELF.fetch(
       "https://godesk.example/.well-known/oauth-protected-resource/mcp",

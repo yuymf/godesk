@@ -1,4 +1,5 @@
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
+import { isPublicMount, mountHref } from "../src/public-mount";
 
 const READ_SCOPE = "godesk:read";
 const WRITE_SCOPE = "godesk:write";
@@ -144,10 +145,25 @@ export async function authorizationMetadata(env: Env) {
   return metadata;
 }
 
+function requestMount(request: Request) {
+  return request.headers.get("x-godesk-mount") ?? new URL(request.url).pathname;
+}
+
+function mcpResourceUrl(request: Request) {
+  const origin = new URL(request.url).origin;
+  return `${origin}${mountHref("/mcp", requestMount(request))}`;
+}
+
+function oauthCallbackUrl(request: Request) {
+  const origin = new URL(request.url).origin;
+  return `${origin}${mountHref("/oauth/callback", requestMount(request))}`;
+}
+
 function challenge(request: Request, scope: string, description: string) {
   const origin = new URL(request.url).origin;
-  const metadataUrl =
-    `${origin}/.well-known/oauth-protected-resource`;
+  const metadataUrl = isPublicMount(requestMount(request))
+    ? `${origin}/.well-known/oauth-protected-resource/chatgpt-plugin/mcp`
+    : `${origin}/.well-known/oauth-protected-resource`;
   return new Response(
     JSON.stringify({ error: "unauthorized", error_description: description }),
     {
@@ -274,13 +290,16 @@ export async function authorizeRequest(
 }
 
 export function protectedResourceMetadata(request: Request, env: Env) {
-  const origin = new URL(request.url).origin;
+  const url = new URL(request.url);
   const issuer = configuredIssuer(env);
+  const prefixed =
+    url.pathname.endsWith("/chatgpt-plugin/mcp") ||
+    isPublicMount(requestMount(request));
   return Response.json({
-    resource: `${origin}/mcp`,
+    resource: prefixed ? `${url.origin}/chatgpt-plugin/mcp` : `${url.origin}/mcp`,
     authorization_servers: issuer ? [issuer] : [],
     scopes_supported: [READ_SCOPE, WRITE_SCOPE],
-    resource_documentation: `${origin}/chatgpt-plugin`,
+    resource_documentation: `${url.origin}/chatgpt-plugin`,
     bearer_methods_supported: ["header"],
   });
 }
@@ -317,13 +336,12 @@ export async function startWebLogin(request: Request, env: Env) {
     ),
   );
   const url = new URL(metadata.authorization_endpoint);
-  const origin = new URL(request.url).origin;
   url.searchParams.set("response_type", "code");
   url.searchParams.set("client_id", config.GODESK_WEB_CLIENT_ID);
-  url.searchParams.set("redirect_uri", `${origin}/oauth/callback`);
+  url.searchParams.set("redirect_uri", oauthCallbackUrl(request));
   url.searchParams.set("scope", `openid profile ${READ_SCOPE} ${WRITE_SCOPE}`);
   url.searchParams.set("audience", config.GODESK_AUTH_AUDIENCE);
-  url.searchParams.set("resource", `${origin}/mcp`);
+  url.searchParams.set("resource", mcpResourceUrl(request));
   url.searchParams.set("state", state);
   url.searchParams.set("code_challenge", challenge);
   url.searchParams.set("code_challenge_method", "S256");
@@ -364,7 +382,6 @@ export async function finishWebLogin(request: Request, env: Env) {
     return new Response("Invalid OAuth callback.", { status: 400 });
   }
   const metadata = await authorizationMetadata(env);
-  const origin = url.origin;
   const response = await fetch(metadata.token_endpoint, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -374,8 +391,8 @@ export async function finishWebLogin(request: Request, env: Env) {
       client_secret: config.GODESK_WEB_CLIENT_SECRET,
       code,
       code_verifier: verifier,
-      redirect_uri: `${origin}/oauth/callback`,
-      resource: `${origin}/mcp`,
+      redirect_uri: oauthCallbackUrl(request),
+      resource: mcpResourceUrl(request),
     }),
   });
   if (!response.ok) {

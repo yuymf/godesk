@@ -28,6 +28,8 @@ describe("public plugin mount", () => {
     expect(workerMountPath(`${INSTALL_PATH}/api/projects`)).toBe("/api/projects");
     expect(workerMountPath(`${INSTALL_PATH}/try/project_1`)).toBe("/try/project_1");
     expect(workerMountPath(`${INSTALL_PATH}/login`)).toBe("/login");
+    expect(workerMountPath(`${INSTALL_PATH}/mcp`)).toBe("/mcp");
+    expect(workerMountPath(`${INSTALL_PATH}/oauth/callback`)).toBe("/oauth/callback");
   });
 
   it("leaves the unprefixed local studio alone", () => {

@@ -5120,7 +5120,8 @@ export default {
     }
     if (
       url.pathname === "/.well-known/oauth-protected-resource" ||
-      url.pathname === "/.well-known/oauth-protected-resource/mcp"
+      url.pathname === "/.well-known/oauth-protected-resource/mcp" ||
+      url.pathname === "/.well-known/oauth-protected-resource/chatgpt-plugin/mcp"
     ) {
       return protectedResourceMetadata(request, env);
     }

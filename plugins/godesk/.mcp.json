@@ -4,8 +4,8 @@
       "http_headers": {
         "x-godesk-mcp-surface": "codex"
       },
-      "oauth_resource": "https://godesk.yumengfan220.workers.dev/mcp",
-      "url": "https://godesk.yumengfan220.workers.dev/mcp"
+      "oauth_resource": "https://godesk.yumengfan220.workers.dev/chatgpt-plugin/mcp",
+      "url": "https://godesk.yumengfan220.workers.dev/chatgpt-plugin/mcp"
     }
   }
 }

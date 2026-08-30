@@ -27,7 +27,7 @@
       "Read",
       "Write"
     ],
-    "websiteURL": "https://godesk.yumengfan220.workers.dev",
+    "websiteURL": "https://godesk.yumengfan220.workers.dev/chatgpt-plugin",
     "defaultPrompt": [
       "Create a playable game from this idea",
       "Open my GoDesk project and start a joinable session",
