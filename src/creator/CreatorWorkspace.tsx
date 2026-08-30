@@ -89,36 +89,6 @@ import {
 
 export { roomActionTitle, roomSurfaceCopy } from "./room-presentation";
 
-const GENERATION_STAGES = [
-  {
-    id: "ingest",
-    name: "导入来源",
-    detail: "读取规则文档、粘贴文本或整理图片素材",
-  },
-  {
-    id: "generate",
-    name: "解析规则",
-    detail: "生成可编辑 Rule System，并识别可执行能力边界",
-  },
-  {
-    id: "review",
-    name: "审阅生成计划",
-    detail: "确认玩法摘要、行动与可执行边界",
-  },
-  {
-    id: "compile",
-    name: "搭建可玩版本",
-    detail: "编译 immutable Playable Build",
-  },
-  {
-    id: "ready",
-    name: "就绪",
-    detail: "打开 Web Studio 校对，或直接创建共享会话",
-  },
-] as const;
-
-type GenerationStageId = (typeof GENERATION_STAGES)[number]["id"];
-
 type ValidationEvidenceType =
   | "automated-playtest"
   | "participant-feedback"
@@ -416,13 +386,48 @@ export function parseRuleSystemStructure(value: string): RuleSystemStructureDraf
   return parsed as RuleSystemStructureDraft;
 }
 
+export const HOBBYIST_STARTERS = [
+  {
+    id: "script",
+    label: "3人剧本杀",
+    text: "三个人被关在别墅里，互相怀疑谁是凶手。每人有一条私密线索，每轮可以质问或隐瞒一次，先集齐关键证据的人揭晓真相。",
+  },
+  {
+    id: "cards",
+    label: "聚会卡牌",
+    text: "四个人用一副手牌打牌，每轮打出一张并接上桌面的故事。解释要说得通，讲不下去的人扣分，先到 12 分的人赢。",
+  },
+  {
+    id: "board",
+    label: "轻桌游",
+    text: "两到四人在一张城市地图上抢地盘。每回合放一个工人到街区收取资源，谁先到 12 分谁赢。",
+  },
+] as const;
+
+export function hobbyistProjectName(name: string, description: string) {
+  const trimmed = name.trim();
+  if (trimmed && trimmed !== "我的游戏") return trimmed;
+  const idea = description.replace(/\s+/g, " ").trim();
+  if (!idea) return trimmed || "我的游戏";
+  return idea.slice(0, 16);
+}
+
+export function studioHobbyistFocus(
+  generationPlanStatus: GenerationPlan["status"] | undefined,
+  canPlay: boolean,
+) {
+  if (generationPlanStatus === "pending") return "plan" as const;
+  if (canPlay) return "play" as const;
+  return "setup" as const;
+}
+
 function Brand() {
   return (
     <a className="creator-brand" href="/">
       <span aria-hidden="true">GD</span>
       <span>
         <strong>GoDesk</strong>
-        <small>Creator Workbench</small>
+        <small>写想法，就开玩</small>
       </span>
     </a>
   );
@@ -468,7 +473,6 @@ function CreatorHome() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [stageLabel, setStageLabel] = useState("");
-  const [activeStage, setActiveStage] = useState<GenerationStageId | null>(null);
   const [completedStages, setCompletedStages] = useState(0);
   const [exampleBusy, setExampleBusy] = useState<DefaultExampleId | null>(null);
 
@@ -498,25 +502,22 @@ function CreatorHome() {
       imageUse: "visual-reference" | "project-asset";
     }> = [],
   ) {
-    setActiveStage("ingest");
-    setCompletedStages(0);
     setCompletedStages(1);
-
-    setActiveStage("generate");
-    setStageLabel("创建 Game Project");
-    const created = await createProject(name.trim());
-    setStageLabel("解析规则并生成 Rule System");
+    setStageLabel("正在创建这局游戏");
+    const projectName = hobbyistProjectName(name, description);
+    const created = await createProject(projectName);
+    setStageLabel("正在把想法变成可玩版本");
     const generationSourceName = sourceContent.trim()
       ? sourceName
-      : `${name.trim()} visual material`;
+      : `${projectName} visual material`;
     const idea = description.trim() || (visualAssets.length
-      ? `根据上传的 ${visualAssets.length} 份视觉素材，创建一个可编辑的规则游戏提案。`
+      ? `根据上传的 ${visualAssets.length} 份视觉素材，创建一个可玩的规则游戏。`
       : sourceContent);
     const queuedGeneration = await submitJob(created.project.id, {
       kind: "generate-rule-system",
       expectedVersion: created.project.version,
       idea,
-      name: name.trim(),
+      name: projectName,
       ...generationSourceFields(
         sourceContent,
         generationSourceName,
@@ -531,8 +532,7 @@ function CreatorHome() {
       throw new Error(generated.error ?? "规则生成失败。");
     }
     setCompletedStages(2);
-    setActiveStage("review");
-    setStageLabel("打开生成计划");
+    setStageLabel("打开这局游戏");
     setProjects(await listProjects());
     window.location.assign(`${created.studioUrl}?plan=pending`);
   }
@@ -568,7 +568,6 @@ function CreatorHome() {
       );
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "生成项目失败。");
-      setActiveStage(null);
       setCompletedStages(0);
     } finally {
       setBusy(false);
@@ -582,14 +581,12 @@ function CreatorHome() {
     setExampleBusy(exampleId);
     setError("");
     setBusy(true);
-    setActiveStage("generate");
     setCompletedStages(1);
     try {
-      setStageLabel("复制案例项目");
+      setStageLabel("正在开局");
       const created = await createProject(example.title, exampleId);
       setCompletedStages(2);
-      setActiveStage("compile");
-      setStageLabel("编译 Playable Build");
+      setStageLabel("正在生成可玩版本");
       const queuedBuild = await submitJob(created.project.id, {
         kind: "compile-build",
         expectedVersion: created.project.version,
@@ -598,7 +595,6 @@ function CreatorHome() {
       const built = await waitForJob(queuedBuild.id);
       if (built.status === "failed") throw new Error(built.error ?? "编译失败。");
       setCompletedStages(4);
-      setActiveStage("ready");
       const builds = await getBuilds(created.project.id);
       const build = builds[0];
       if (!build) throw new Error("编译成功但未找到 Build。");
@@ -607,7 +603,6 @@ function CreatorHome() {
       await createAndOpenSession(build.id);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "复制案例失败。");
-      setActiveStage(null);
       setCompletedStages(0);
     } finally {
       setExampleBusy(null);
@@ -653,146 +648,127 @@ function CreatorHome() {
         <Brand />
         <a className="studio-new" href="/">＋ 新游戏</a>
         <nav aria-label="最近项目">
-          <span>项目</span>
+          <span>我的游戏</span>
           {projects.slice(0, 8).map((project) => (
             <a href={`/studio/${project.id}`} key={project.id}>
               <i aria-hidden="true">◇</i>
               <span><strong>{project.name}</strong><small>v{project.version}</small></span>
             </a>
           ))}
-          {!projects.length && <small>生成后，项目会出现在这里。</small>}
+          {!projects.length && <small>生成后，游戏会出现在这里。</small>}
         </nav>
         <a className="studio-install" href="/chatgpt-plugin">在 Codex 中使用</a>
       </aside>
 
       <section className="studio-stage">
         <header className="studio-topbar">
-          <span>Game studio</span>
-          <div><span className="studio-status-dot" /> Local workspace</div>
+          <span>桌游 · 剧本杀 · 棋牌</span>
+          <div><span className="studio-status-dot" /> 本地工作台</div>
         </header>
         <div className="studio-welcome">
           <div className="studio-orbit" aria-hidden="true"><span>GD</span></div>
-          <p>GoDesk Creator</p>
           <h1>今天要做一款什么游戏？</h1>
-          <span>上传剧本或规则，生成别人能立刻打开、立刻玩、还能联机的游戏。</span>
+          <span>
+            写下一局桌游、剧本杀或棋牌的想法，也可以附上剧本或规则。
+            生成别人能立刻打开、立刻玩、还能联机的游戏。写完就能自己试，再分享联机。
+          </span>
         </div>
 
-        <section className="default-examples studio-examples" aria-label="从案例开始">
-          <div className="section-heading">
-            <div>
-              <span>Default examples</span>
-              <h2>从案例开始</h2>
-            </div>
-            <p>一点即可生成可玩对局。把邀请链接发给别人，对方立刻能玩。</p>
-          </div>
-          <div className="example-grid">
-            {DEFAULT_EXAMPLES.map((example) => (
-              <article key={example.id}>
-                <span className="example-kicker">{example.kicker}</span>
-                <h3>{example.title}</h3>
-                <p>{example.summary}</p>
-                <dl>
-                  <div><dt>人数</dt><dd>{example.players}</dd></div>
-                  <div><dt>时长</dt><dd>{example.duration}</dd></div>
-                  <div><dt>状态</dt><dd>{example.status}</dd></div>
-                </dl>
-                <small>{example.rights}</small>
+        <form aria-busy={busy} className="studio-composer" onSubmit={submit}>
+            <label className="studio-idea-field">
+              <span className="sr-only">描述你的游戏想法</span>
+              <textarea
+                maxLength={2_000}
+                onChange={(event) => setDescription(event.currentTarget.value)}
+                placeholder="例如：三个人在别墅里互相怀疑谁是凶手，每人有一条私密线索，先集齐证据的人揭晓真相。"
+                rows={4}
+                value={description}
+              />
+            </label>
+
+            <div className="studio-starter-row" aria-label="常用开局">
+              {HOBBYIST_STARTERS.map((starter) => (
                 <button
-                  disabled={Boolean(exampleBusy) || busy}
-                  onClick={() => copyExample(example.id)}
+                  disabled={busy}
+                  key={starter.id}
+                  onClick={() => {
+                    setDescription(starter.text);
+                    if (name === "我的游戏") setName(starter.label);
+                  }}
                   type="button"
                 >
-                  {exampleBusy === example.id ? "正在创建…" : "复制并创建共享会话"}
+                  {starter.label}
                 </button>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <form aria-busy={busy} className="studio-composer" onSubmit={submit}>
-            <div className="studio-fields">
-              <label>
-                <span>项目名称</span>
-                <input maxLength={80} onChange={(event) => setName(event.currentTarget.value)} value={name} />
-              </label>
-              <label>
-                <span>描述你的游戏想法</span>
-                <textarea
-                  maxLength={2_000}
-                  onChange={(event) => setDescription(event.currentTarget.value)}
-                  placeholder="例如：三个人轮流把两个无关概念连成新点子，每轮必须沿用上一位提出的限制。"
-                  rows={3}
-                  value={description}
-                />
-              </label>
+              ))}
             </div>
 
-            <label
-              className={`studio-dropzone ${rulebook ? "has-file" : ""}`}
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={(event) => {
-                event.preventDefault();
-                selectRulebook(event.dataTransfer.files[0]);
-              }}
-            >
-              <input
-                accept=".pdf,.txt,.md,.markdown,application/pdf,text/plain,text/markdown"
-                onChange={(event) => selectRulebook(event.currentTarget.files?.[0])}
-                type="file"
-              />
-              <span className="studio-file-icon" aria-hidden="true">↥</span>
-              <span>
-                <strong>{rulebook ? rulebook.name : "附上 PDF 或文本规则（可选）"}</strong>
-                <small>{rulebook ? `${(rulebook.size / 1024).toFixed(1)} KB · 点击替换` : "或点击选择文件 · PDF / TXT / MD · 最大 25 MB"}</small>
-              </span>
-              {rulebook && <b aria-label="文件已就绪">Ready</b>}
-            </label>
+            <div className="studio-attach-row">
+              <label
+                className={`studio-dropzone ${rulebook ? "has-file" : ""}`}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  selectRulebook(event.dataTransfer.files[0]);
+                }}
+              >
+                <input
+                  accept=".pdf,.txt,.md,.markdown,application/pdf,text/plain,text/markdown"
+                  onChange={(event) => selectRulebook(event.currentTarget.files?.[0])}
+                  type="file"
+                />
+                <span className="studio-file-icon" aria-hidden="true">↥</span>
+                <span>
+                  <strong>{rulebook ? rulebook.name : "附上剧本或规则"}</strong>
+                  <small>{rulebook ? `${(rulebook.size / 1024).toFixed(1)} KB · 点击替换` : "PDF / TXT / MD · 可选"}</small>
+                </span>
+              </label>
 
-            <label
-              className={`studio-dropzone ${visualAssets.length ? "has-file" : ""}`}
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={(event) => {
-                event.preventDefault();
-                selectVisualAssets(event.dataTransfer.files);
-              }}
-            >
-              <input
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                aria-describedby="asset-upload-help"
-                multiple
-                onChange={(event) => selectVisualAssets(event.currentTarget.files ?? undefined)}
-                type="file"
-              />
-              <span className="studio-file-icon" aria-hidden="true">▧</span>
-              <span>
-                <strong>{visualAssets.length ? `${visualAssets.length} 份图片素材已就绪` : "添加图片素材（可选）"}</strong>
-                <small id="asset-upload-help">JPG / PNG / WebP / GIF · 单文件 25 MB · 最多 8 张</small>
-              </span>
-              {visualAssets.length > 0 && <b aria-label="图片素材已就绪">Ready</b>}
-            </label>
+              <label
+                className={`studio-dropzone ${visualAssets.length ? "has-file" : ""}`}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  selectVisualAssets(event.dataTransfer.files);
+                }}
+              >
+                <input
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  aria-describedby="asset-upload-help"
+                  multiple
+                  onChange={(event) => selectVisualAssets(event.currentTarget.files ?? undefined)}
+                  type="file"
+                />
+                <span className="studio-file-icon" aria-hidden="true">▧</span>
+                <span>
+                  <strong>{visualAssets.length ? `${visualAssets.length} 张图片` : "添加图片"}</strong>
+                  <small id="asset-upload-help">卡牌、地图或参考图 · 可选</small>
+                </span>
+              </label>
+            </div>
 
             {visualAssets.length > 0 && (
               <div className="studio-fields image-use-field">
                 <label>
-                  <span>上传图片怎么使用</span>
+                  <span>这些图片怎么用</span>
                   <select
                     onChange={(event) => setVisualAssetUse(
                       event.currentTarget.value as "visual-reference" | "project-asset",
                     )}
                     value={visualAssetUse}
                   >
-                    <option value="visual-reference">参考图 — 只指导生成风格</option>
-                    <option value="project-asset">项目素材 — 原样放进游戏</option>
+                    <option value="visual-reference">只参考风格，不直接放进游戏</option>
+                    <option value="project-asset">原样放进卡牌或桌面</option>
                   </select>
-                  <small>
-                    参考图不会直接出现在游戏里；项目素材可以绑定到卡牌、区域或整体展示。
-                  </small>
                 </label>
               </div>
             )}
 
             <details className="studio-paste">
-              <summary>没有文件？直接粘贴规则文本</summary>
+              <summary>没有文件？粘贴规则全文，或给这局起个名字</summary>
+              <label className="studio-inline-name">
+                <span>游戏名称</span>
+                <input maxLength={80} onChange={(event) => setName(event.currentTarget.value)} value={name} />
+              </label>
               <textarea
                 disabled={Boolean(rulebook)}
                 onChange={(event) => setRulesText(event.currentTarget.value)}
@@ -803,48 +779,48 @@ function CreatorHome() {
             </details>
 
             <footer className="studio-submit-row">
-              <span id="studio-submit-help">有来源时会进入 Source Library；只有一个想法或一组素材也能开始。</span>
+              <span id="studio-submit-help">一个想法就够。生成后就能自己试，再把链接发给朋友。</span>
               <button
                 aria-describedby="studio-submit-help"
-                disabled={busy || !name.trim() || !hasGenerationInput}
+                disabled={busy || !hasGenerationInput}
                 type="submit"
               >
-                {busy ? <><i className="studio-spinner" /> {stageLabel || "处理中…"}</> : <>生成 Rule System <b aria-hidden="true">→</b></>}
+                {busy ? <><i className="studio-spinner" /> {stageLabel || "正在生成…"}</> : <>生成可玩版本</>}
               </button>
             </footer>
         </form>
 
         {showPipeline && (
-          <ol className="generation-list" aria-label="生成阶段">
-            {GENERATION_STAGES.map((stage, index) => {
-              const complete = index < completedStages;
-              const active = activeStage === stage.id && !complete;
-              return (
-                <li className={complete ? "complete" : active ? "active" : ""} key={stage.id}>
-                  <span className="generation-status" aria-hidden="true">
-                    {complete ? "✓" : active ? "…" : String(index + 1)}
-                  </span>
-                  <div>
-                    <strong>{stage.name}</strong>
-                    <small>{stage.detail}</small>
-                  </div>
-                  <b>{complete ? "完成" : active ? "处理中" : "等待"}</b>
-                </li>
-              );
-            })}
-          </ol>
+          <p className="studio-progress" role="status">
+            {stageLabel || "正在把想法变成可玩版本…"}
+          </p>
         )}
 
         {error && <p className="studio-error" role="alert">{error}</p>}
 
         {!showPipeline && (
-          <div className="studio-capabilities" aria-label="生成步骤">
-            <span><b>01</b> 导入来源</span>
-            <span><b>02</b> 解析规则</span>
-            <span><b>03</b> 审阅生成计划</span>
-            <span><b>04</b> 配置并编译</span>
-            <span><b>05</b> 分享联机</span>
-          </div>
+          <section className="default-examples studio-examples" aria-label="先玩一局现成的">
+            <h2>想先摸清手感？直接开一局现成的</h2>
+            <div className="example-grid">
+              {DEFAULT_EXAMPLES.map((example) => (
+                <article key={example.id}>
+                  <h3>{example.title}</h3>
+                  <p>{example.summary}</p>
+                  <dl>
+                    <div><dt>人数</dt><dd>{example.players}</dd></div>
+                    <div><dt>时长</dt><dd>{example.duration}</dd></div>
+                  </dl>
+                  <button
+                    disabled={Boolean(exampleBusy) || busy}
+                    onClick={() => copyExample(example.id)}
+                    type="button"
+                  >
+                    {exampleBusy === example.id ? "正在开局…" : "先玩这一局"}
+                  </button>
+                </article>
+              ))}
+            </div>
+          </section>
         )}
       </section>
     </main>
@@ -1711,13 +1687,13 @@ function ProjectStudio({ projectId }: { projectId: string }) {
     return (
       <main className="studio-status" id="main">
         <span aria-hidden="true">!</span>
-        <h1>{projectMissing ? "这个项目已不存在。" : "这个项目打不开。"}</h1>
+        <h1>{projectMissing ? "这局游戏已不存在。" : "这局游戏打不开。"}</h1>
         <p role="alert">
           {projectMissing
-            ? "这个链接指向的 Game Project 已不在当前工作区，可能来自一次隔离测试。请从项目列表打开有效项目。"
+            ? "这个链接指向的游戏已不在当前工作区，可能来自一次隔离测试。请从游戏列表打开有效项目。"
             : loadError}
         </p>
-        <a href="/">返回项目列表</a>
+        <a href="/">返回游戏列表</a>
       </main>
     );
   }
@@ -1726,7 +1702,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
     return (
       <main className="studio-status" id="main" aria-busy="true">
         <span className="loading-mark" aria-hidden="true">GD</span>
-        <h1>正在打开 Game Project…</h1>
+        <h1>正在打开这局游戏…</h1>
       </main>
     );
   }
@@ -1751,21 +1727,24 @@ function ProjectStudio({ projectId }: { projectId: string }) {
   const unreviewedFeedbackCount = feedbackInbox.filter(
     ({ feedback }) => !feedbackFindings.has(feedback.id),
   ).length;
+  const canPlayLatest = Boolean(
+    studioPlayTarget.build && buildCanOpenSharedSession(studioPlayTarget.build),
+  );
+  const hobbyistFocus = studioHobbyistFocus(generationPlan?.status, canPlayLatest);
+  const showValidationOpen = unreviewedFeedbackCount > 0 || Boolean(validationRouteContext.buildId);
 
   return (
-    <main className="creator-studio" id="main">
-      <aside className="studio-rail" aria-label="项目导航">
+    <main className={`creator-studio studio-focus-${hobbyistFocus}`} id="main">
+      <aside className="studio-rail" aria-label="游戏导航">
         <Brand />
         <nav>
-          <span>工作区</span>
-          <a aria-current="page" href="#overview">游戏概览</a>
-          <a href="#plan">生成计划</a>
-          <a href="#builds">构建与试玩</a>
-          <a href="#validation">验证想法</a>
-          <a href="#rule-systems">版本与来源</a>
-          <a href="#activity">项目记录</a>
+          <span>这局游戏</span>
+          {canPlayLatest && <a href="#play">开玩</a>}
+          {generationPlan && <a href="#plan">{generationPlan.status === "pending" ? "确认玩法" : "玩法摘要"}</a>}
+          <a href="#iteration">改下一版</a>
+          <a href="#validation">朋友反馈{unreviewedFeedbackCount ? ` · ${unreviewedFeedbackCount}` : ""}</a>
         </nav>
-        <a className="back-projects" href="/">← 返回所有项目</a>
+        <a className="back-projects" href="/">← 返回所有游戏</a>
       </aside>
 
       <section className="studio-canvas">
@@ -1808,70 +1787,66 @@ function ProjectStudio({ projectId }: { projectId: string }) {
             <section className={`generation-plan-panel ${generationPlan.status}`} id="plan">
               <header className="studio-section-heading">
                 <div>
-                  <span className="panel-label">Generation Plan · {generationPlan.status === "pending" ? "待确认" : "已确认"}</span>
-                  <h2>先看懂，再让它变成可玩版本</h2>
+                  <h2>{generationPlan.status === "pending" ? "先看这一局怎么玩" : "这一局的玩法"}</h2>
                 </div>
-                <code title={generationPlan.id}>{generationPlan.id}</code>
               </header>
               <p className="generation-plan-summary">{generationPlan.summary}</p>
               <dl className="generation-plan-facts">
-                <div><dt>玩家</dt><dd>{generationPlan.participants.min}–{generationPlan.participants.max} 人</dd></div>
+                <div><dt>人数</dt><dd>{generationPlan.participants.min}–{generationPlan.participants.max} 人</dd></div>
                 <div><dt>时长</dt><dd>{generationPlan.durationMinutes} 分钟</dd></div>
-                <div><dt>界面</dt><dd>{generationPlan.playSurface.kind} · {generationPlan.playSurface.layout || "未命名布局"}</dd></div>
-                <div><dt>来源</dt><dd>{generationPlan.sourceIds.length} 个可追溯条目</dd></div>
+                <div><dt>怎么玩</dt><dd>{generationPlan.playSurface.kind === "conversation" ? "对话" : generationPlan.playSurface.kind === "cards" ? "卡牌" : generationPlan.playSurface.kind === "table" ? "桌面" : generationPlan.playSurface.kind}</dd></div>
               </dl>
+              {(generationPlan.status === "pending" || hobbyistFocus === "plan") && (
               <div className="generation-plan-columns">
                 <section>
-                  <strong>玩法循环</strong>
+                  <strong>一局怎么走</strong>
                   {generationPlan.loop.length ? (
                     <ol>{generationPlan.loop.map((item) => <li key={item}>{item}</li>)}</ol>
-                  ) : <p>尚未识别到明确流程。</p>}
+                  ) : <p>还没识别到明确流程。</p>}
                 </section>
                 <section>
-                  <strong>可用行动</strong>
+                  <strong>你可以做什么</strong>
                   {generationPlan.actions.length ? (
                     <ul>{generationPlan.actions.map((action) => <li key={`${action.label}-${action.description}`}><b>{action.label}</b><span>{action.description}</span></li>)}</ul>
-                  ) : <p>尚未识别到明确行动。</p>}
+                  ) : <p>还没识别到明确行动。</p>}
                 </section>
                 <section>
-                  <strong>预期结果</strong>
+                  <strong>怎么分胜负</strong>
                   {generationPlan.outcomes.length ? (
                     <ul>{generationPlan.outcomes.map((outcome) => <li key={outcome}>{outcome}</li>)}</ul>
-                  ) : <p>尚未识别到明确结果。</p>}
+                  ) : <p>还没识别到明确结果。</p>}
                 </section>
+                {generationPlan.unsupported.length > 0 && (
                 <section>
-                  <strong>假设与边界</strong>
+                  <strong>这局还做不到</strong>
                   <ul>
-                    {[...generationPlan.assumptions, ...generationPlan.unsupported.map((item) => `未支持：${item}`)].map((item) => <li key={item}>{item}</li>)}
+                    {generationPlan.unsupported.map((item) => <li key={item}>{item}</li>)}
                   </ul>
                 </section>
+                )}
               </div>
+              )}
               {generationPlan.status === "pending" ? (
                 <div className="generation-plan-actions">
-                  <p>确认后立即创建 immutable Build；之后仍可编辑完整 Rule System 并继续生成新版本。</p>
+                  <p>确认后立刻生成可玩版本。之后还能改规则、再开新一局。</p>
                   <button
                     disabled={busy || ruleSystemDirty || Boolean(sourceDraft.trim())}
                     onClick={approveGenerationPlan}
                     type="button"
                   >
-                    {busy ? "正在确认并构建…" : "确认计划并构建版本"}
+                    {busy ? "正在生成可玩版本…" : "确认玩法并开始试玩"}
                   </button>
-                  <small>可执行版本会继续完成固定 seed 自动试玩，并在本页打开权威 Shared Session。</small>
                 </div>
               ) : (
-                <p className="generation-plan-approved" role="status">计划已确认 · 可以继续编辑、编译与分享。</p>
+                <p className="generation-plan-approved" role="status">玩法已确认。可以直接开玩，或改下一版。</p>
               )}
             </section>
           )}
-          <section className="ruleSystem-panel" id="overview">
+          <section className={`ruleSystem-panel ${hobbyistFocus === "setup" ? "" : "studio-secondary-panel"}`} id="overview">
             <header className="studio-section-heading">
               <div>
-                <span className="panel-label">当前游戏版本 · d{ruleSystem.version}</span>
-                <h2>游戏概览</h2>
+                <h2>{hobbyistFocus === "setup" ? "先把这局说清楚" : "改游戏设定"}</h2>
               </div>
-              <code title={project.activeRuleSystemId}>
-                {project.activeRuleSystemId}
-              </code>
             </header>
             <form className="ruleSystem-form" onSubmit={saveRuleSystem}>
               <label className="ruleSystem-field" htmlFor="ruleSystem-name">
@@ -2029,11 +2004,10 @@ function ProjectStudio({ projectId }: { projectId: string }) {
             </form>
           </section>
 
-          <section className="build-workflow" id="builds">
+          <section className={`build-workflow ${hobbyistFocus === "play" ? "studio-secondary-panel" : ""}`} id="builds">
             <header className="studio-section-heading">
               <div>
-                <span className="panel-label">构建与试玩</span>
-                <h2>制作可玩版本</h2>
+                <h2>{canPlayLatest ? "再出一版" : "做成可玩版本"}</h2>
               </div>
               <button
                 disabled={
@@ -2045,60 +2019,22 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                 onClick={buildPlayable}
                 type="button"
               >
-                {busy ? "正在处理…" : "编译新版本"}
+                {busy ? "正在处理…" : "生成新版本"}
               </button>
             </header>
             {(ruleSystemDirty || sourceDraft.trim()) && (
-              <p className="workflow-hint">请先保存上方更改，再编译新的可玩版本。</p>
+              <p className="workflow-hint">请先保存上方更改，再生成新的可玩版本。</p>
             )}
             {generationPlan?.status === "pending" && (
-              <p className="workflow-hint">请先在“生成计划”中确认这次自然语言/规则来源的解释，再创建 Build。</p>
+              <p className="workflow-hint">请先确认这一局怎么玩，再生成可玩版本。</p>
             )}
-            <div className="workflow-steps">
-              <article>
-                <span>1</span>
-                <div>
-                  <small>运行规则</small>
-                  <strong>
-                    {ruleSystem.runtimeSupport.status === "executable"
-                      ? "已配置"
-                      : "需要配置"}
-                  </strong>
-                  <p>
-                    {ruleSystem.runtimeSupport.status === "executable"
-                      ? ruleSystem.runtimeSupport.kernel.type
-                      : "通过 Codex 按来源中的明确规则配置 Executable Kernel。"}
-                  </p>
-                </div>
-              </article>
-              <article>
-                <span>2</span>
-                <div>
-                  <small>可玩版本</small>
-                  <strong>{builds.length ? `已有 ${builds.length} 个版本` : "尚未构建"}</strong>
-                  <p>每次编译都会保留为不可变版本。</p>
-                </div>
-              </article>
-              <article>
-                <span>3</span>
-                <div>
-                  <small>测试结果</small>
-                  <strong>{playtests.length ? `${playtests.length} 次自动试玩` : "等待试玩"}</strong>
-                  <p>{sessions.length ? `${sessions.length} 个 Shared Session` : "构建后可创建 Shared Session。"}</p>
-                </div>
-              </article>
-            </div>
 
             <section className="iteration-panel" id="iteration" aria-labelledby="iteration-title">
               <header>
                 <div>
-                  <span className="panel-label">Studio Follow-up</span>
-                  <h3 id="iteration-title">直接写下一版聚焦改动</h3>
-                  <p>
-                    写一个明确的行动说明改写；GoDesk 会保存原提示、生成下一版、编译并用 seed 42 自动试玩。
-                  </p>
+                  <h3 id="iteration-title">下一版想改什么？</h3>
+                  <p>像聊天一样写一句改动。GoDesk 会生成下一版，并自动试一局。</p>
                 </div>
-                <span className="iteration-contract">当前支持：行动说明</span>
               </header>
               <form onSubmit={iterateFromPrompt}>
                 <label className="ruleSystem-field" htmlFor="iteration-prompt">
@@ -2107,28 +2043,29 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                     id="iteration-prompt"
                     maxLength={2000}
                     onChange={(event) => setIterationPrompt(event.currentTarget.value)}
-                    placeholder="例如：把行动 2 的说明改成“先说明新增约束，再说明获得 2 分”。"
+                    placeholder="例如：把行动 2 改成先说明新约束，再加 2 分。"
                     rows={3}
                     value={iterationPrompt}
                   />
-                  <small>一次只提交一个改动。无法安全识别的规则数值、行动增删或胜利条件不会写入项目。</small>
+                  <small>一次只改一件事。说不清楚的数值或胜负条件不会被写入。</small>
                 </label>
+                {findings.length > 0 && (
                 <label className="ruleSystem-field" htmlFor="iteration-finding">
-                  <span>关联验证 Finding <small>可选</small></span>
+                  <span>关联一条试玩结论 <small>可选</small></span>
                   <select
                     id="iteration-finding"
                     onChange={(event) => setIterationFindingId(event.currentTarget.value)}
                     value={iterationFindingId}
                   >
-                    <option value="">不绑定 Finding</option>
+                    <option value="">不绑定</option>
                     {[...findings].reverse().map((finding) => (
                       <option key={finding.id} value={finding.id}>
-                        {finding.id} · {finding.nextChange.slice(0, 72)}
+                        {finding.nextChange.slice(0, 72)}
                       </option>
                     ))}
                   </select>
-                  <small>绑定后，新 Build 和 changeset 会保留这条 Finding 的 lineage。</small>
                 </label>
+                )}
                 <div className="iteration-actions">
                   <button
                     disabled={
@@ -2139,27 +2076,24 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                     }
                     type="submit"
                   >
-                    {busy ? "正在生成、编译并自测…" : "应用改动并自动试玩"}
+                    {busy ? "正在改下一版…" : "改下一版并试玩"}
                   </button>
                   {builds.length === 0 && generationPlan?.status !== "pending" && (
-                    <small>先完成一个 Build，才能对比下一版。</small>
+                    <small>先做成可玩版本，才能对比下一版。</small>
                   )}
                   {generationPlan?.status === "pending" && (
-                    <small>先确认 Generation Plan，避免在计划尚未通过时创建版本。</small>
+                    <small>先确认这一局怎么玩。</small>
                   )}
                 </div>
               </form>
             </section>
 
             {studioPlayTarget.build && buildCanOpenSharedSession(studioPlayTarget.build) && (
-              <section className="studio-play" aria-labelledby="studio-play-title">
+              <section className="studio-play" id="play" aria-labelledby="studio-play-title">
                 <header>
                   <div>
-                    <span className="panel-label">Live Shared Session</span>
-                    <h3 id="studio-play-title">在 Studio 里立即试玩</h3>
-                    <p>
-                      Rule System v{studioPlayTarget.build.ruleSystemVersion} · 所有行动都会进入权威 Session State 与 Replay。
-                    </p>
+                    <h3 id="studio-play-title">现在就开玩</h3>
+                    <p>自己先试一局。朋友只能走已发布的邀请链接，不会自动进入你刚开的这一局。</p>
                   </div>
                   <div>
                     <button
@@ -2167,25 +2101,24 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                       onClick={() => startRoom(studioPlayTarget.build!, "studio")}
                       type="button"
                     >
-                      {studioPlayTarget.session ? "新开一局" : "开始 Studio 试玩"}
+                      {studioPlayTarget.session ? "新开一局" : "开始试玩"}
                     </button>
                     {studioPlayTarget.session && (
-                      <a href={studioPlayTarget.session.sessionUrl}>独立打开本次迭代 Session</a>
+                      <a href={studioPlayTarget.session.sessionUrl}>独立打开这一局</a>
                     )}
                   </div>
                 </header>
                 <div className="playtest-publish">
                   <div>
-                    <span className="panel-label">Stable Playtest Link</span>
                     <strong>
                       {playtestLink
                         ? playtestLink.buildId === studioPlayTarget.build.id
-                          ? "固定入口正在提供当前 Build"
-                          : "固定入口仍保留在旧 Build"
-                        : "尚未发布固定试玩入口"}
+                          ? "朋友入口指向这一版"
+                          : "朋友入口还停在旧版"
+                        : "还没有发给朋友的固定链接"}
                     </strong>
                     <small>
-                      发布会新建一局并切换固定链接；旧 Room、Replay 与已经打开的试玩不变。
+                      发布后朋友永远打开同一条链接。旧对局不会被改掉。
                     </small>
                   </div>
                   {playtestLink && (
@@ -2197,7 +2130,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                   <div>
                     {playtestLink && (
                       <button disabled={busy} onClick={() => void copyPlaytestLink()} type="button">
-                        {playtestLinkCopied ? "已复制" : "复制固定链接"}
+                        {playtestLinkCopied ? "已复制" : "复制邀请链接"}
                       </button>
                     )}
                     <button
@@ -2205,7 +2138,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                       onClick={() => void publishPlaytest(studioPlayTarget.build!)}
                       type="button"
                     >
-                      {playtestLink ? "用当前 Build 更新入口" : "发布固定试玩入口"}
+                      {playtestLink ? "改成这一版给朋友" : "发布邀请链接"}
                     </button>
                   </div>
                 </div>
@@ -2214,12 +2147,12 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                     allow="clipboard-write"
                     key={studioPlayTarget.session.id}
                     src={studioPlayTarget.session.sessionUrl}
-                    title={`${studioPlayTarget.build.ruleSystem.name} Studio 试玩`}
+                    title={`${studioPlayTarget.build.ruleSystem.name} 试玩`}
                   />
                 ) : (
                   <div className="studio-play-empty">
-                    <strong>这个 Build 还没有 Shared Session。</strong>
-                    <p>新开一局后可在这里认领席位、行动和提交反馈。好友使用已发布的固定试玩链接；未发布时不要假装最新 Room 是好友入口。</p>
+                    <strong>这一版还没有开局。</strong>
+                    <p>点「开始试玩」后即可在这里落座和行动。朋友只能使用已发布的邀请链接。</p>
                   </div>
                 )}
               </section>
@@ -2277,23 +2210,24 @@ function ProjectStudio({ projectId }: { projectId: string }) {
 
             {builds.length > 0 ? (
               <>
+              {hypotheses.length > 0 && (
               <label className="session-hypothesis-selector">
-                <span>这次 Shared Session 要验证什么？</span>
+                <span>这次开局要看什么？</span>
                 <select
                   disabled={busy}
                   onChange={(event) =>
                     setSessionHypothesisId(event.currentTarget.value)}
                   value={sessionHypothesisId}
                 >
-                  <option value="">探索性试玩，不绑定验证问题</option>
+                  <option value="">先玩着看，不绑定问题</option>
                   {hypotheses.map((hypothesis) => (
                     <option key={hypothesis.id} value={hypothesis.id}>
                       {hypothesis.question}
                     </option>
                   ))}
                 </select>
-                <small>绑定后，好友会在 Room 中看到这个问题，反馈也只能用于这条 Design Hypothesis。</small>
               </label>
+              )}
               <details className="build-history">
                 <summary>查看可玩版本与操作 <span>{builds.length}</span></summary>
                 <ul>
@@ -2366,18 +2300,17 @@ function ProjectStudio({ projectId }: { projectId: string }) {
             )}
           </section>
 
-          <section className="validation-workflow" id="validation">
-            <header className="studio-section-heading">
+          <details className="validation-workflow" id="validation" open={showValidationOpen}>
+            <summary className="studio-section-heading">
               <div>
-                <span className="panel-label">从试玩中学习</span>
-                <h2>验证创作想法</h2>
+                <h2>朋友怎么说</h2>
               </div>
               <span className="validation-count">
-                {hypotheses.length} 个假设 · {findings.length} 条结论
+                {unreviewedFeedbackCount ? `${unreviewedFeedbackCount} 条待看` : "可选"}
               </span>
-            </header>
+            </summary>
             <p className="workflow-hint">
-              先写下想验证的问题和成功信号，再把结论绑定到具体 Build 与试玩记录。参与者反馈可作为独立观察输入，但不会自动变成真人证据。
+              朋友玩过之后，评论会出现在这里。这是改下一版的参考，不是这局游戏成不成功的证明。
             </p>
             <section className="feedback-inbox" aria-labelledby="feedback-inbox-title">
               <header>
@@ -2429,9 +2362,9 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                 </ul>
               ) : (
                 <div className="feedback-inbox-empty">
-                  <strong>还没有参与者反馈。</strong>
-                  <p>发布 Playtest Link 后，参与者完成一次行动即可提交评分和评论。</p>
-                  <a href="#builds">去发布试玩链接</a>
+                  <strong>还没有朋友留言。</strong>
+                  <p>发布邀请链接后，朋友完成一次行动就能打分和评论。</p>
+                  <a href="#play">去发布邀请链接</a>
                 </div>
               )}
             </section>
@@ -2677,20 +2610,20 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                 })}
               </ul>
             )}
-          </section>
+          </details>
           </div>
 
-          <aside className="project-facts" aria-label="项目详情">
+          <aside className="project-facts" aria-label="这局游戏">
             <section className="project-snapshot">
-              <span className="panel-label">项目摘要</span>
-              <dl>
-                <div><dt>规则</dt><dd>{ruleSystem.rules.length}</dd></div>
-                <div><dt>约束</dt><dd>{ruleSystem.constraints.length}</dd></div>
-                <div><dt>实体</dt><dd>{ruleSystem.entities.length}</dd></div>
-                <div><dt>行动</dt><dd>{ruleSystem.actions.length}</dd></div>
-                <div><dt>阶段</dt><dd>{ruleSystem.stages.length}</dd></div>
-              </dl>
-              <p>{ruleSystem.pitch || "还没有填写一句话玩法。"}</p>
+              <h2>{project.name}</h2>
+              <p>{ruleSystem.pitch || "还没有一句话玩法。确认玩法或开玩后，这里会更清楚。"}</p>
+              <p className="studio-next-hint">
+                {hobbyistFocus === "plan"
+                  ? "下一步：确认这一局怎么玩。"
+                  : hobbyistFocus === "play"
+                    ? "下一步：自己试一局，再把邀请链接发给朋友。"
+                    : "下一步：把游戏设定说清楚，再做成可玩版本。"}
+              </p>
             </section>
 
             <details className="project-disclosure" id="rule-systems">
