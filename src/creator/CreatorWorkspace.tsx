@@ -807,7 +807,7 @@ function CreatorHome() {
             <span><b>02</b> 解析规则</span>
             <span><b>03</b> 审阅生成计划</span>
             <span><b>04</b> 配置并编译</span>
-            <span><b>05</b> 分享与验证</span>
+            <span><b>05</b> 分享联机</span>
           </div>
         )}
       </section>

@@ -8,6 +8,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.getByRole("heading", { name: "今天要做一款什么游戏？" })).toBeVisible();
     await expect(page.getByText("别人能立刻打开、立刻玩、还能联机的游戏")).toBeVisible();
     await expect(page.locator("body")).not.toContainText("可编辑、可分享、可验证");
+    await expect(page.getByText("分享联机")).toBeVisible();
 
     await page.goto("/chatgpt-plugin");
     await expect(page.getByRole("heading", { name: "让 Codex 直接使用 GoDesk。" })).toBeVisible();
@@ -37,7 +38,9 @@ test.describe("ChatCut charter: source in, playable game out", () => {
 
     await page.getByRole("button", { name: "行动 2 +2 创意分" }).click();
     await expect(page.getByText(/已提交/)).toBeVisible();
-    await expect(page.getByText("等待另一位玩家完成行动")).toBeVisible();
+    await expect(
+      page.getByRole("paragraph").filter({ hasText: "等待另一位玩家完成行动" }),
+    ).toBeVisible();
 
     const friendContext = await browser.newContext();
     const friendPage = await friendContext.newPage();
