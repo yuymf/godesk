@@ -184,10 +184,10 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     page,
     browser,
   }) => {
-    await page.goto("/");
+    await page.goto("/chatgpt-plugin/new");
     await page.getByRole("button", { name: "3人剧本杀" }).click();
     await page.getByRole("button", { name: "生成可玩版本" }).click();
-    await page.waitForURL(/\/studio\//, { timeout: 90_000 });
+    await page.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 90_000 });
     await expect(page.getByRole("heading", { name: "先看这一局怎么玩" })).toBeVisible({
       timeout: 30_000,
     });
@@ -208,16 +208,16 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     const studioUrl = page.url();
     await page.getByRole("button", { name: "发布邀请链接" }).click();
     const tryLink = page.getByLabel("固定好友试玩链接");
-    await expect(tryLink).toHaveValue(/\/try\//, { timeout: 30_000 });
+    await expect(tryLink).toHaveValue(/\/chatgpt-plugin\/try\//, { timeout: 30_000 });
     const tryUrl = await tryLink.inputValue();
 
     await page.goto(tryUrl);
-    await page.waitForURL(/\/room\//, { timeout: 30_000 });
+    await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
 
     await expect(page.getByText("对方直接用浏览器加入，无需安装 Codex")).toBeVisible();
     await expectLightPlaySurface(page);
     const inviteUrl = await page.getByLabel("邀请链接").inputValue();
-    expect(inviteUrl).toMatch(/\/room\//);
+    expect(inviteUrl).toMatch(/\/chatgpt-plugin\/room\//);
 
     await page.getByLabel("你的席位").selectOption("0");
     await expect(page.getByText("轮到你了")).toBeVisible();
