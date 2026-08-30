@@ -60,14 +60,35 @@ function cookieHeader(result) {
     .join("; ");
 }
 
+async function withBundles(result) {
+  const scripts = [...result.text.matchAll(/src="(\/assets\/[^"]+\.js)"/g)].map((match) => match[1]);
+  let text = result.text;
+  for (const src of scripts) {
+    const bundle = await fetchPage(`${origin}${src}`);
+    if (bundle.status === 200) text += `\n${bundle.text}`;
+  }
+  return text;
+}
+
 const home = await fetchPage(`${origin}/chatgpt-plugin/new`);
 requireOpen(home, "/chatgpt-plugin/new");
 if (home.status !== 200) {
   throw new Error(`${origin}/chatgpt-plugin/new: expected 200, got ${home.status}`);
 }
-if (!home.text.includes("今天要做一款什么游戏？")) {
+if (home.text.includes("给规则，就开玩")) {
   throw new Error(
     `${origin}/chatgpt-plugin/new: deploy the current Worker; this is still the old shell.`,
+  );
+}
+if (!home.text.includes("写想法，就开玩")) {
+  throw new Error(
+    `${origin}/chatgpt-plugin/new: expected the current composer document title.`,
+  );
+}
+const homeSource = await withBundles(home);
+if (!homeSource.includes("今天要做一款什么游戏？")) {
+  throw new Error(
+    `${origin}/chatgpt-plugin/new: composer heading missing from the shipped bundle.`,
   );
 }
 console.log("ok /chatgpt-plugin/new composer");
@@ -76,9 +97,15 @@ const install = await fetchPage(`${origin}/chatgpt-plugin`);
 if (install.status !== 200) {
   throw new Error(`${origin}/chatgpt-plugin: expected 200, got ${install.status}`);
 }
-if (!install.text.includes("不用 Codex，直接做一局")) {
+if (install.text.includes("给规则，就开玩")) {
   throw new Error(
-    `${origin}/chatgpt-plugin: deploy the current Worker; friends still cannot skip Codex.`,
+    `${origin}/chatgpt-plugin: deploy the current Worker; this is still the old shell.`,
+  );
+}
+const installSource = await withBundles(install);
+if (!installSource.includes("不用 Codex，直接做一局")) {
+  throw new Error(
+    `${origin}/chatgpt-plugin: friends still cannot skip Codex.`,
   );
 }
 console.log("ok /chatgpt-plugin install");
