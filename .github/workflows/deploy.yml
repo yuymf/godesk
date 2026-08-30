@@ -44,6 +44,9 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
 
+      - name: Smoke production composer
+        run: pnpm verify:production
+
       - name: Publish public Plugin
         env:
           GODESK_PLUGIN_SYNC_TOKEN: ${{ secrets.GODESK_PLUGIN_SYNC_TOKEN }}

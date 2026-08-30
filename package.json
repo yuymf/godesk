@@ -16,6 +16,7 @@
     "verify:local-mcp": "pnpm build && node scripts/verify-local-mcp-loop.mjs",
     "verify:plugin": "node scripts/verify-plugin-bundle.mjs && node scripts/verify-plugin-distribution.mjs",
     "verify:plugin:public": "node scripts/verify-plugin-distribution.mjs --remote",
+    "verify:production": "node scripts/verify-production-smoke.mjs",
     "publish:plugin:public": "node scripts/publish-public-plugin.mjs",
     "test:watch": "vitest",
     "deploy": "pnpm build && wrangler deploy",
