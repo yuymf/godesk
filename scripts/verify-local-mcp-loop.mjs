@@ -31,6 +31,10 @@ function freePort() {
   });
 }
 
+function pathOf(url) {
+  return new URL(url).pathname;
+}
+
 function bodyForError(body) {
   return typeof body === "string"
     ? body.slice(0, 800)
@@ -317,7 +321,7 @@ async function verifyLoop(origin) {
   const compiled = await waitForJob(compileJob.id);
   const build = compiled.result?.build;
   ensure(build?.id, "MCP compile did not return a Build");
-  ensure(build.playableUrl.endsWith(`/play/${build.id}`), "MCP compile returned the wrong Build URL");
+  ensure(pathOf(build.playableUrl) === `/play/${build.id}`, "MCP compile returned the wrong Build URL");
   const buildRead = await callTool("read_build", { buildId: build.id });
   ensure(buildRead.id === build.id, "read_build returned a different Build");
   ensure(buildRead.ruleSystemVersion === approvedRuleSystem.version, "Build did not snapshot the approved Rule System version");
@@ -335,7 +339,7 @@ async function verifyLoop(origin) {
     idempotencyKey: "local-mcp-preview-001",
   });
   const preview = await waitForJob(previewJob.id);
-  ensure(preview.result?.previewUrl.endsWith(`/play/${build.id}`), "MCP preview did not return the exact Build URL");
+  ensure(pathOf(preview.result?.previewUrl) === `/play/${build.id}`, "MCP preview did not return the exact Build URL");
 
   const playtestJob = await callTool("submit_job", {
     kind: "bot-playtest",

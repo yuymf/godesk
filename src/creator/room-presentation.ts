@@ -96,7 +96,7 @@ export type RoomLocale = "zh" | "en";
 export const ROOM_COPY = {
   zh: {
     room: "共享会话 · 可重连",
-    studio: "Web Studio",
+    studio: "回工作室",
     replay: "只读回放",
     language: "语言",
     invitation: "邀请好友",
@@ -251,27 +251,27 @@ export function roomSurfaceCopy(kind: PlaySurfaceKind, locale: RoomLocale) {
     visual: string;
   }>> = {
     table: {
-      zh: { label: "桌面游戏", title: "共享桌面", visual: "Rule System 桌面呈现" },
+      zh: { label: "桌面游戏", title: "共享桌面", visual: "这一局的桌面" },
       en: { label: "Table game", title: "Shared table", visual: "Rule System table surface" },
     },
     cards: {
-      zh: { label: "卡牌游戏", title: "共享牌面", visual: "Rule System 卡牌呈现" },
+      zh: { label: "卡牌游戏", title: "共享牌面", visual: "这一局的牌面" },
       en: { label: "Card game", title: "Shared cards", visual: "Rule System card surface" },
     },
     conversation: {
-      zh: { label: "对话游戏", title: "共同创作区", visual: "Rule System 对话呈现" },
+      zh: { label: "对话游戏", title: "共同创作区", visual: "这一局的对话桌" },
       en: { label: "Conversation game", title: "Shared creation space", visual: "Rule System conversation surface" },
     },
     screen: {
-      zh: { label: "屏幕游戏", title: "共享状态", visual: "Rule System 屏幕呈现" },
+      zh: { label: "屏幕游戏", title: "共享状态", visual: "这一局的屏幕" },
       en: { label: "Screen game", title: "Shared state", visual: "Rule System screen surface" },
     },
     scene: {
-      zh: { label: "场景游戏", title: "共享场景", visual: "Rule System 场景呈现" },
+      zh: { label: "场景游戏", title: "共享场景", visual: "这一局的场景" },
       en: { label: "Scene game", title: "Shared scene", visual: "Rule System scene surface" },
     },
     hybrid: {
-      zh: { label: "混合游戏", title: "共享游戏空间", visual: "Rule System 混合呈现" },
+      zh: { label: "混合游戏", title: "共享游戏空间", visual: "这一局的混合桌" },
       en: { label: "Hybrid game", title: "Shared game space", visual: "Rule System hybrid surface" },
     },
   };

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   applyProjectChanges,
   claimSessionSeat,
@@ -50,6 +50,7 @@ import type {
   ValidationFinding,
 } from "./project-contract";
 import { DEFAULT_EXAMPLES, type DefaultExampleId } from "./default-examples";
+import { HOBBYIST_STARTERS } from "./hobbyist-starters";
 import {
   extractRulebookText,
   harvestRulebookPageImages,
@@ -386,23 +387,7 @@ export function parseRuleSystemStructure(value: string): RuleSystemStructureDraf
   return parsed as RuleSystemStructureDraft;
 }
 
-export const HOBBYIST_STARTERS = [
-  {
-    id: "script",
-    label: "3人剧本杀",
-    text: "三个人被关在别墅里，互相怀疑谁是凶手。每人有一条私密线索，每轮可以质问或隐瞒一次，先集齐关键证据的人揭晓真相。",
-  },
-  {
-    id: "cards",
-    label: "聚会卡牌",
-    text: "四个人用一副手牌打牌，每轮打出一张并接上桌面的故事。解释要说得通，讲不下去的人扣分，先到 12 分的人赢。",
-  },
-  {
-    id: "board",
-    label: "轻桌游",
-    text: "两到四人在一张城市地图上抢地盘。每回合放一个工人到街区收取资源，谁先到 12 分谁赢。",
-  },
-] as const;
+export { HOBBYIST_STARTERS } from "./hobbyist-starters";
 
 export function hobbyistProjectName(name: string, description: string) {
   const trimmed = name.trim();
@@ -642,6 +627,7 @@ function CreatorHome() {
   const hasGenerationInput = Boolean(
     description.trim() || rulebook || rulesText.trim() || visualAssets.length,
   );
+  const selectedStarterId = HOBBYIST_STARTERS.find((starter) => starter.text === description)?.id;
 
   return (
     <main className="studio-home" id="main">
@@ -675,7 +661,11 @@ function CreatorHome() {
           </span>
         </div>
 
-        <form aria-busy={busy} className="studio-composer" onSubmit={submit}>
+        <form
+          aria-busy={busy}
+          className={`studio-composer${description.trim() ? " is-filled" : ""}${hasGenerationInput ? " is-ready" : ""}`}
+          onSubmit={submit}
+        >
             <label className="studio-idea-field">
               <span className="sr-only">描述你的游戏想法</span>
               <textarea
@@ -690,6 +680,8 @@ function CreatorHome() {
             <div className="studio-starter-row" aria-label="常用开局">
               {HOBBYIST_STARTERS.map((starter) => (
                 <button
+                  aria-pressed={selectedStarterId === starter.id}
+                  className={selectedStarterId === starter.id ? "is-selected" : undefined}
                   disabled={busy}
                   key={starter.id}
                   onClick={() => {
@@ -803,8 +795,8 @@ function CreatorHome() {
           <section className="default-examples studio-examples" aria-label="先玩一局现成的">
             <h2>想先摸清手感？直接开一局现成的</h2>
             <div className="example-grid">
-              {DEFAULT_EXAMPLES.map((example) => (
-                <article key={example.id}>
+              {DEFAULT_EXAMPLES.map((example, index) => (
+                <article key={example.id} style={{ "--i": index } as CSSProperties}>
                   <h3>{example.title}</h3>
                   <p>{example.summary}</p>
                   <dl>
@@ -867,6 +859,8 @@ function ProjectStudio({ projectId }: { projectId: string }) {
   const [iterationPrompt, setIterationPrompt] = useState("");
   const [iterationFindingId, setIterationFindingId] = useState("");
   const [playtestLinkCopied, setPlaytestLinkCopied] = useState(false);
+  const [humanNames, setHumanNames] = useState<Record<number, string>>({});
+  const [humanAttested, setHumanAttested] = useState(false);
   const [sourceDraft, setSourceDraft] = useState("");
   const [structureDraft, setStructureDraft] = useState("");
   const [ruleSystemDirty, setRuleSystemDirty] = useState(false);
@@ -1393,6 +1387,83 @@ function ProjectStudio({ projectId }: { projectId: string }) {
     }
   }
 
+  async function attestHumanSession() {
+    if (!project || !playtestLink) return;
+    const room = sessions.find((session) => session.id === playtestLink.sessionId);
+    if (!room || room.seats.length < 2 || room.acceptedActions.length < 1) {
+      setFormError("固定邀请这一局还没有两位玩家各走一步。");
+      return;
+    }
+    if (!humanAttested) {
+      setFormError("请先确认这两位是真人。");
+      return;
+    }
+    const seatedParticipants = room.seats.map((seat) => ({
+      seat: seat.seat,
+      name: (humanNames[seat.seat] ?? "").trim() || `玩家 ${seat.seat}`,
+    }));
+    if (new Set(seatedParticipants.map((entry) => entry.name)).size !== seatedParticipants.length) {
+      setFormError("每位玩家的称呼不能重复。");
+      return;
+    }
+    setBusy(true);
+    setFormError("");
+    try {
+      let recordedHypothesisId = hypotheses[0]?.id ?? "";
+      let expectedVersion = project.version;
+      if (!recordedHypothesisId) {
+        const created = await applyProjectChanges(project.id, {
+          expectedVersion,
+          idempotencyKey: crypto.randomUUID(),
+          operations: [{
+            op: "add_design_hypothesis",
+            hypothesis: {
+              question: "朋友打开邀请链接后能不能立刻一起玩？",
+              successSignal: "至少两个人各完成一次行动。",
+            },
+          }],
+        });
+        setProject(created.project);
+        setHypotheses(created.hypotheses);
+        setFindings(created.findings);
+        setChangesets((current) => [...current, created.changeset]);
+        recordedHypothesisId = created.hypotheses.at(-1)?.id ?? "";
+        expectedVersion = created.project.version;
+      }
+      if (!recordedHypothesisId) throw new Error("没法记下这局要看的问题。");
+      const result = await applyProjectChanges(project.id, {
+        expectedVersion,
+        idempotencyKey: crypto.randomUUID(),
+        operations: [{
+          op: "record_validation_finding",
+          finding: {
+            hypothesisId: recordedHypothesisId,
+            buildId: room.buildId,
+            evidence: {
+              type: "human-session",
+              sessionId: room.id,
+              seatedParticipants,
+              creatorAttested: true,
+            },
+            verdict: "supported",
+            notes: "两人从固定邀请链接加入，并各走了至少一步。",
+            nextChange: "保持这一版，再约朋友打一局。",
+          },
+        }],
+      });
+      setProject(result.project);
+      setHypotheses(result.hypotheses);
+      setFindings(result.findings);
+      setChangesets((current) => [...current, result.changeset]);
+      setHumanAttested(false);
+      setNotice("已记下：这是真人一起打的一局。");
+    } catch (reason) {
+      setFormError(reason instanceof Error ? reason.message : "没能记下这是真人局。");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function addDesignHypothesis(event: React.FormEvent) {
     event.preventDefault();
     if (!project) return;
@@ -1733,6 +1804,21 @@ function ProjectStudio({ projectId }: { projectId: string }) {
   );
   const hobbyistFocus = studioHobbyistFocus(generationPlan?.status, canPlayLatest);
   const showValidationOpen = unreviewedFeedbackCount > 0 || Boolean(validationRouteContext.buildId);
+  const friendSession = playtestLink
+    ? sessions.find((session) => session.id === playtestLink.sessionId)
+    : undefined;
+  const humanFinding = friendSession
+    ? findings.find((finding) =>
+        finding.evidence.type === "human-session" &&
+        finding.evidence.sessionId === friendSession.id,
+      )
+    : undefined;
+  const canAttestHuman = Boolean(
+    friendSession &&
+    friendSession.seats.length >= 2 &&
+    friendSession.acceptedActions.length >= 1 &&
+    !humanFinding,
+  );
 
   return (
     <main className={`creator-studio studio-focus-${hobbyistFocus}`} id="main">
@@ -2156,6 +2242,50 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                     <p>点「开始试玩」后即可在这里落座和行动。朋友只能使用已发布的邀请链接。</p>
                   </div>
                 )}
+                {humanFinding && (
+                  <p className="human-attest-done" role="status">
+                    已记下：这是真人一起打的一局。
+                    <code className="human-attest-id">{humanFinding.id}</code>
+                  </p>
+                )}
+                {canAttestHuman && friendSession && (
+                  <form
+                    className="human-attest"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void attestHumanSession();
+                    }}
+                  >
+                    <strong>这局是真人一起打的？</strong>
+                    <p>固定邀请链接上已经有两位玩家各走了一步。写下称呼并确认后记下。</p>
+                    {friendSession.seats.map((seat) => (
+                      <label key={seat.seat}>
+                        <span>座位 {seat.seat} 的称呼</span>
+                        <input
+                          aria-label={`座位 ${seat.seat} 的称呼`}
+                          onChange={(event) => {
+                            const name = event.currentTarget.value;
+                            setHumanNames((current) => ({ ...current, [seat.seat]: name }));
+                          }}
+                          placeholder={`玩家 ${seat.seat}`}
+                          value={humanNames[seat.seat] ?? ""}
+                        />
+                      </label>
+                    ))}
+                    <label className="human-attest-check">
+                      <input
+                        aria-label="我确认这两位是真人"
+                        checked={humanAttested}
+                        onChange={(event) => setHumanAttested(event.currentTarget.checked)}
+                        type="checkbox"
+                      />
+                      <span>我确认这两位是真人，不是脚本或机器人。</span>
+                    </label>
+                    <button disabled={busy || !humanAttested} type="submit">
+                      记下这是真人局
+                    </button>
+                  </form>
+                )}
               </section>
             )}
 
@@ -2184,7 +2314,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                         <div><dt>结果</dt><dd>{playtestOutcome(playtest)}</dd></div>
                         <div><dt>终局分数</dt><dd>{playtest.metrics.finalScores.join(" / ")}</dd></div>
                       </dl>
-                      <a href={playtest.replayUrl}>打开 Replay</a>
+                      <a href={playtest.replayUrl}>打开回放</a>
                     </article>
                   ))}
                 </div>
@@ -2344,7 +2474,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                             : "探索性试玩 · 尚未绑定 Design Hypothesis"}
                         </small>
                         <div className="feedback-inbox-actions">
-                          <a href={session.replayUrl}>检查 Replay</a>
+                          <a href={session.replayUrl}>看回放</a>
                           {recordedFinding ? (
                             <a href={`#finding-${recordedFinding.id}`}>查看已记录结论</a>
                           ) : (
@@ -2948,7 +3078,7 @@ function HarborVoyageBoard({
             <span>航次节奏</span>
             <b>
               {voyage.phase === "placement"
-                ? `放置 ${voyage.placementRound}/4 · Seat ${voyage.activeSeat}`
+                ? `放置 ${voyage.placementRound}/4 · 座位 ${voyage.activeSeat}`
                 : voyage.phase === "movement"
                   ? `航行 ${voyage.movementRound + 1}/3`
                   : voyage.phase === "pilot"
@@ -3013,7 +3143,6 @@ function HarborVoyageBoard({
       <section className="action-board" aria-label="派遣伙计">
         <div className="action-board-heading">
           <div>
-            <span className="kicker">WORKER PLACEMENT</span>
             <h2>派遣伙计</h2>
           </div>
           <span>
@@ -3142,7 +3271,7 @@ function PlayablePreview({ buildId }: { buildId: string }) {
   if (error) {
     return (
       <main className="studio-status" id="main">
-        <h1>这个 Build 打不开。</h1>
+        <h1>这个版本打不开。</h1>
         <p role="alert">{error}</p>
       </main>
     );
@@ -3150,7 +3279,7 @@ function PlayablePreview({ buildId }: { buildId: string }) {
   if (!build) {
     return (
       <main className="studio-status" id="main" aria-busy="true">
-        <h1>正在加载 Playable Build…</h1>
+        <h1>正在打开这个版本…</h1>
       </main>
     );
   }
@@ -3174,18 +3303,18 @@ function PlayablePreview({ buildId }: { buildId: string }) {
   return (
     <main className="playable-preview" id="main">
       <header>
-        <span>Playable Build · immutable visual preview</span>
-        <a href={`/studio/${build.projectId}`}>返回 Web Studio</a>
+        <span>这个版本长什么样</span>
+        <a href={`/studio/${build.projectId}`}>回工作室</a>
       </header>
       <section className="preview-hero">
         <div className="preview-title">
-          <span>Rule System v{build.ruleSystemVersion}</span>
+          <span>第 {build.ruleSystemVersion} 版</span>
           <h1>{build.ruleSystem.name}</h1>
           <p>{build.ruleSystem.pitch || "这个版本还没有一句话玩法。"}</p>
         </div>
         <dl>
           <div>
-            <dt>Players</dt>
+            <dt>人数</dt>
             <dd>
               {build.ruleSystem.participants.min ===
               build.ruleSystem.participants.max
@@ -3194,11 +3323,11 @@ function PlayablePreview({ buildId }: { buildId: string }) {
             </dd>
           </div>
           <div>
-            <dt>Minutes</dt>
-            <dd>{build.ruleSystem.durationMinutes}</dd>
+            <dt>时长</dt>
+            <dd>{build.ruleSystem.durationMinutes} 分钟</dd>
           </div>
           <div>
-            <dt>Kernel</dt>
+            <dt>玩法</dt>
             <dd>
               {build.ruleSystem.runtimeSupport.status === "executable"
                 ? build.ruleSystem.runtimeSupport.kernel.type
@@ -3220,7 +3349,7 @@ function PlayablePreview({ buildId }: { buildId: string }) {
         <>
           <section className="preview-board" aria-label="结构化桌面预览">
             <div className="preview-section-heading">
-              <span>Visual mechanism preview</span>
+              <span>桌面预览</span>
               <strong>{build.ruleSystem.playSurface.layout || "未配置桌面布局"}</strong>
             </div>
             {build.ruleSystem.presentation.image && (
@@ -3235,7 +3364,7 @@ function PlayablePreview({ buildId }: { buildId: string }) {
                 build.ruleSystem.playSurface.regions.map((zone) => (
                   <article className="preview-zone" key={zone.id}>
                     {zone.image && <img alt={zone.image.alt} src={zone.image.url} />}
-                    <span>Zone</span>
+                    <span>区域</span>
                     <h2>{zone.name}</h2>
                     <p>{zone.description}</p>
                   </article>
@@ -3247,7 +3376,7 @@ function PlayablePreview({ buildId }: { buildId: string }) {
                 className="preview-score-track"
                 aria-label={takeAway ? "共享拿取池" : rollAndMove ? "位置轨道" : drawAndScore ? "抽牌牌库与分数" : pushYourLuck ? "未存分与总分" : turnTaking ? "回合轨道" : sharedGoal ? "共享目标进度" : "分数轨道"}
               >
-                <span>{takeAway ? "Shared pool" : rollAndMove ? "Race track" : drawAndScore ? "Draw deck" : pushYourLuck ? "Risk and bank" : turnTaking ? "Turn order" : sharedGoal ? "Shared goal" : "Score track"}</span>
+                <span>{takeAway ? "共享物件" : rollAndMove ? "前进轨道" : drawAndScore ? "抽牌牌库" : pushYourLuck ? "冒险与存分" : turnTaking ? "回合顺序" : sharedGoal ? "共同目标" : "分数轨道"}</span>
                 <div>
                   <b>{takeAway?.initialPool ?? (drawAndScore ? drawAndScore.cardValues.length * drawAndScore.copiesPerValue : 0)}</b>
                   <i aria-hidden="true" />
@@ -3275,8 +3404,8 @@ function PlayablePreview({ buildId }: { buildId: string }) {
           </section>
           <section className="preview-actions" aria-label="可用行动预览">
             <div className="preview-section-heading">
-              <span>Action cards</span>
-              <strong>{build.ruleSystem.actions.length} actions</strong>
+              <span>可用行动</span>
+              <strong>{build.ruleSystem.actions.length} 个行动</strong>
             </div>
             <div className="preview-action-grid">
               {build.ruleSystem.actions.length > 0 ? (
@@ -3287,7 +3416,7 @@ function PlayablePreview({ buildId }: { buildId: string }) {
                     <p>{action.description}</p>
                     <strong>
                       {runtimeValues.has(action.id)
-                        ? `${takeAway ? "−" : "+"}${runtimeValues.get(action.id)} ${takeAway ? "objects" : sharedGoal ? "progress" : "points"}`
+                        ? `${takeAway ? "−" : "+"}${runtimeValues.get(action.id)} ${takeAway ? "个物件" : sharedGoal ? "进度" : "分"}`
                         : rollAndMove
                           ? `掷 D${rollAndMove.dieSides}`
                         : drawAndScore
@@ -3308,11 +3437,11 @@ function PlayablePreview({ buildId }: { buildId: string }) {
         </>
       )}
       <aside>
-        <h2>Build truth</h2>
+        <h2>这个版本的依据</h2>
         <code>{build.id}</code>
         {build.warnings.length > 0 && (
           <>
-            <h3>Warnings</h3>
+            <h3>要注意</h3>
             <ul>
               {build.warnings.map((warning) => <li key={warning}>{warning}</li>)}
             </ul>
@@ -3320,15 +3449,14 @@ function PlayablePreview({ buildId }: { buildId: string }) {
         )}
         {build.unsupportedBehavior.length > 0 && (
           <>
-            <h3>Unsupported behavior</h3>
+            <h3>这一版还做不到</h3>
             <ul>
               {build.unsupportedBehavior.map((item) => <li key={item}>{item}</li>)}
             </ul>
           </>
         )}
         <p>
-          上方是根据 immutable Rule System 生成的结构化视觉预览；它不是截图渲染，
-          不代表缺失规则已经实现，也不等于真人试玩通过。
+          这是按当前版本生成的桌面预览，不是截图，也不等于已经真人试过。
         </p>
       </aside>
     </main>
@@ -4161,19 +4289,29 @@ function RoomView({ sessionId }: { sessionId: string }) {
 
 function ReplayView({ replayId }: { replayId: string }) {
   const [replay, setReplay] = useState<GameReplay>();
+  const [build, setBuild] = useState<PlayableBuild>();
   const [error, setError] = useState("");
   const shareToken = readShareToken();
 
   useEffect(() => {
-    getReplay(replayId, shareToken).then(setReplay).catch((reason: Error) => {
-      setError(reason.message);
-    });
+    getReplay(replayId, shareToken)
+      .then(async (record) => {
+        setReplay(record);
+        try {
+          setBuild(await getBuild(record.buildId, shareToken));
+        } catch {
+          setBuild(undefined);
+        }
+      })
+      .catch((reason: Error) => {
+        setError(reason.message);
+      });
   }, [replayId, shareToken]);
 
   if (error) {
     return (
       <main className="studio-status" id="main">
-        <h1>这个回放打不开。</h1>
+        <h1>这一局回放打不开。</h1>
         <p role="alert">{error}</p>
       </main>
     );
@@ -4181,47 +4319,59 @@ function ReplayView({ replayId }: { replayId: string }) {
   if (!replay) {
     return (
       <main className="studio-status" id="main" aria-busy="true">
-        <h1>正在读取不可变 Action Log…</h1>
+        <h1>正在打开这一局回放…</h1>
       </main>
     );
   }
 
+  const actionLabel = (actionId: string) =>
+    build?.ruleSystem.actions.find((action) => action.id === actionId)?.label ?? actionId;
+
   return (
     <main className="replay-view" id="main">
-      <header>
-        <span>Read-only Replay · cannot mutate a Shared Session</span>
-        <a href={validationStudioHref(replay.projectId, { buildId: replay.buildId })}>
-          返回 Web Studio
-        </a>
+      <header className="room-shell-header">
+        <div className="room-title-block">
+          <span className="room-brand-mark" aria-hidden="true">GD</span>
+          <div>
+            <span className="room-kicker">只读 · 不能改这一局</span>
+            <h1>{build?.ruleSystem.name ?? "这一局怎么打完的"}</h1>
+          </div>
+        </div>
+        <div className="room-header-actions">
+          <a href={validationStudioHref(replay.projectId, { buildId: replay.buildId })}>
+            回工作室
+          </a>
+        </div>
       </header>
       <section>
-        <span>{replay.evidenceType}</span>
-        <h1>Seed {replay.seed}</h1>
+        <span className="room-kicker">
+          {replay.evidenceType === "automated-bot-simulation" ? "自动试玩" : "朋友刚打完的这一局"}
+        </span>
+        <h2>这一局怎么打完的</h2>
         <p>
-          {replay.acceptedActions.length} accepted actions · final turn{" "}
-          {replay.finalState.turn}
+          {replay.acceptedActions.length} 次行动 · 打到第 {replay.finalState.turn} 回合
         </p>
         {replay.finalState.voyage ? (
           <HarborVoyageBoard readOnly voyage={replay.finalState.voyage as HarborVoyageState} />
         ) : (
           <div className="replay-state-columns">
-            <ReplayStateCard label="Initial state" state={replay.initialState} />
-            <ReplayStateCard label="Final state" state={replay.finalState} />
+            <ReplayStateCard label="开局" state={replay.initialState} />
+            <ReplayStateCard label="终局" state={replay.finalState} />
           </div>
         )}
       </section>
       <aside className="action-log">
-        <h2>Accepted actions</h2>
+        <span>行动记录</span>
         <ol>
           {replay.acceptedActions.map((action) => (
             <li key={action.sequence}>
-              #{action.sequence} · seat {action.seat} · {action.actionId}
-              {action.state.pushYourLuck ? action.actionId === "roll" ? ` · 🎲 ${action.points} · unbanked ${action.state.pushYourLuck.turnScore}` : ` · bank +${action.points}` : action.points ? action.state.rollAndMove ? ` · 🎲 ${action.points} · +${action.points} move` : action.state.drawAndScore ? ` · 🎴 ${action.points} · +${action.points}` : ` · ${action.state.takeAway ? "−" : "+"}${action.points}` : ""}
+              #{action.sequence} · 座位 {action.seat} · {actionLabel(action.actionId)}
+              {action.state.pushYourLuck ? action.actionId === "roll" ? ` · 🎲 ${action.points} · 未存 ${action.state.pushYourLuck.turnScore}` : ` · 收手 +${action.points}` : action.points ? action.state.rollAndMove ? ` · 🎲 ${action.points} · +${action.points} 格` : action.state.drawAndScore ? ` · 🎴 ${action.points} · +${action.points}` : ` · ${action.state.takeAway ? "−" : "+"}${action.points}` : ""}
             </li>
           ))}
         </ol>
         {replay.evidenceType === "automated-bot-simulation" && (
-          <p>这是自动 bot simulation evidence，不是真人试玩记录。</p>
+          <p>这是自动试玩，不是真人局。</p>
         )}
       </aside>
     </main>
@@ -4239,32 +4389,32 @@ function ReplayStateCard({
     <article className="replay-state-card">
       <h2>{label}</h2>
       <dl>
-        <div><dt>Turn</dt><dd>{state.turn}</dd></div>
-        <div><dt>Active seat</dt><dd>{state.activeSeat}</dd></div>
-        <div><dt>Status</dt><dd>{state.status}</dd></div>
+        <div><dt>回合</dt><dd>{state.turn}</dd></div>
+        <div><dt>轮到</dt><dd>座位 {state.activeSeat}</dd></div>
+        <div><dt>状态</dt><dd>{state.status === "complete" ? "已结束" : "进行中"}</dd></div>
       </dl>
       <div className="score-grid">
         {state.sharedGoal ? (
           <article className="shared-goal-replay-card">
-            <span>Shared goal</span>
+            <span>共同目标</span>
             <strong>{state.sharedGoal.progress} / {state.sharedGoal.target}</strong>
           </article>
         ) : state.takeAway ? (
           <article className="shared-goal-replay-card">
-            <span>Shared pool remaining</span>
+            <span>桌上还剩</span>
             <strong>{state.takeAway.remaining} / {state.takeAway.initialPool}</strong>
           </article>
         ) : state.rollAndMove ? (
           <>
             {state.rollAndMove.lastRoll !== null && (
               <article>
-                <span>Last roll</span>
+                <span>上次掷骰</span>
                 <strong>🎲 {state.rollAndMove.lastRoll}</strong>
               </article>
             )}
             {state.rollAndMove.positions.map((position, seat) => (
               <article key={seat}>
-                <span>Seat {seat} position</span>
+                <span>座位 {seat} 位置</span>
                 <strong>{position} / {state.rollAndMove?.targetPosition}</strong>
               </article>
             ))}
@@ -4272,18 +4422,18 @@ function ReplayStateCard({
         ) : state.drawAndScore ? (
           <>
             <article className="shared-goal-replay-card">
-              <span>Deck remaining</span>
+              <span>牌库剩余</span>
               <strong>{state.drawAndScore.remainingCards} / {state.drawAndScore.totalCards}</strong>
             </article>
             {state.drawAndScore.lastDraw !== null && (
               <article>
-                <span>Last draw</span>
+                <span>刚抽到</span>
                 <strong>🎴 {state.drawAndScore.lastDraw}</strong>
               </article>
             )}
             {state.scores.map((score, seat) => (
               <article key={seat}>
-                <span>Seat {seat}</span>
+                <span>座位 {seat}</span>
                 <strong>{score}</strong>
               </article>
             ))}
@@ -4291,30 +4441,30 @@ function ReplayStateCard({
         ) : state.pushYourLuck ? (
           <>
             <article className="shared-goal-replay-card">
-              <span>Unbanked turn score</span>
+              <span>本回合未存分</span>
               <strong>{state.pushYourLuck.turnScore}</strong>
             </article>
             {state.pushYourLuck.lastRoll !== null && (
               <article>
-                <span>Last roll</span>
+                <span>上次掷骰</span>
                 <strong>🎲 {state.pushYourLuck.lastRoll}</strong>
               </article>
             )}
             {state.scores.map((score, seat) => (
               <article key={seat}>
-                <span>Seat {seat}</span>
+                <span>座位 {seat}</span>
                 <strong>{score}</strong>
               </article>
             ))}
           </>
         ) : state.turnTaking ? (
           <article className="shared-goal-replay-card">
-            <span>Turn limit</span>
+            <span>回合上限</span>
             <strong>{state.turn} / {state.turnTaking.maxTurns}</strong>
           </article>
         ) : state.scores.map((score, seat) => (
             <article key={seat}>
-              <span>Seat {seat}</span>
+              <span>座位 {seat}</span>
               <strong>{score}</strong>
             </article>
           ))}

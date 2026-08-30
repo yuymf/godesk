@@ -1,4 +1,4 @@
 interface:
-  display_name: "Validate a game idea"
-  short_description: "Test one design hypothesis against play evidence"
-  default_prompt: "Use $validate-game-idea to test this design hypothesis and record the evidence."
+  display_name: "Optional: test one claim"
+  short_description: "Record one optional finding after a playable game exists"
+  default_prompt: "This game is already playable. Use $validate-game-idea only if I named one claim to test."

@@ -1,7 +1,7 @@
 {
   "name": "godesk",
-  "version": "0.2.0+codex.20260811",
-  "description": "Create, share, and validate editable rule-orchestrated games from Codex.",
+  "version": "0.2.0+codex.20260830",
+  "description": "Turn a script or idea into a playable, shareable game. Friends join from a URL.",
   "author": {
     "name": "GoDesk",
     "url": "https://github.com/yuymf/godesk"
@@ -19,8 +19,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "GoDesk",
-    "shortDescription": "Create, share, and validate rule games",
-    "longDescription": "Turn an idea or source into an authoritative GoDesk Game Project, edit the same versioned Rule System in Codex and Web Studio, compile immutable Playable Builds, share browser-only friend sessions, inspect Replays, and record evidence-labelled Validation Findings.",
+    "shortDescription": "Write an idea, get a joinable game",
+    "longDescription": "Install GoDesk in Codex or open the website, upload a script, rulebook, or written idea, and receive a playable Shared Session. Other people join through a URL and play together. They do not install Codex.",
     "developerName": "GoDesk",
     "category": "Design",
     "capabilities": [
@@ -29,11 +29,11 @@
     ],
     "websiteURL": "https://godesk.yumengfan220.workers.dev",
     "defaultPrompt": [
-      "Create a playable rule game from this idea",
-      "Open my GoDesk project and revise its Rule System",
-      "Test this design hypothesis and record the evidence"
+      "Create a playable game from this idea",
+      "Open my GoDesk project and start a joinable session",
+      "Share this game so a friend can play in the browser"
     ],
-    "brandColor": "#F04B33",
+    "brandColor": "#0F6B4C",
     "composerIcon": "./assets/godesk-mark.svg",
     "logo": "./assets/godesk-mark.svg"
   },

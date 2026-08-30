@@ -1,4 +1,4 @@
 interface:
-  display_name: "Playtest and verify a GoDesk game"
-  short_description: "Run deterministic tests and verify visible results"
-  default_prompt: "Use $playtest-and-verify-game to playtest this game and verify the result in GoDesk."
+  display_name: "Play and share a GoDesk game"
+  short_description: "Open a joinable session and inspect what happened"
+  default_prompt: "Use $playtest-and-verify-game to share this game and return the friend invitation URL."

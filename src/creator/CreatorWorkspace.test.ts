@@ -320,7 +320,7 @@ describe("Creator Studio optimistic draft baseline", () => {
     expect(roomSurfaceCopy("conversation", "zh")).toEqual({
       label: "对话游戏",
       title: "共同创作区",
-      visual: "Rule System 对话呈现",
+      visual: "这一局的对话桌",
     });
     expect(roomSurfaceCopy("table", "zh").label).toBe("桌面游戏");
     expect(roomSurfaceCopy("scene", "zh").label).toBe("场景游戏");
