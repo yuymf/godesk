@@ -86,6 +86,8 @@ Session, and Replay.
 `pnpm verify:plugin:public` compares the separately published thin Plugin with
 the local manifest, MCP declaration, Skill set, and current contract terms; it
 is expected to fail while the public repository is on an older release.
+Set repository secret `GODESK_PLUGIN_SYNC_TOKEN` (write access to
+`yuymf/godesk-plugin`) so a push to `main` publishes the current bundle.
 
 Localhost uses an explicit development identity. It is not live OAuth evidence.
 

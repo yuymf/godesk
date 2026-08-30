@@ -43,3 +43,8 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
+
+      - name: Publish public Plugin
+        env:
+          GODESK_PLUGIN_SYNC_TOKEN: ${{ secrets.GODESK_PLUGIN_SYNC_TOKEN }}
+        run: node scripts/publish-public-plugin.mjs
