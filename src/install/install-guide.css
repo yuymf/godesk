@@ -1,7 +1,7 @@
 .install-guide {
   min-height: 100dvh;
-  color: #e9ebef;
-  background: #0d0e10;
+  color: #1c2622;
+  background: #e8f0eb;
 }
 
 .install-nav {
@@ -11,8 +11,8 @@
   max-width: 76rem;
   padding: 1.25rem clamp(1.25rem, 5vw, 4rem);
   margin: 0 auto;
-  color: #858a93;
-  border-bottom: 1px solid #24262b;
+  color: #5a6b63;
+  border-bottom: 1px solid rgb(28 38 34 / 8%);
   font-size: 0.78rem;
 }
 
@@ -20,7 +20,7 @@
   display: flex;
   gap: 0.75rem;
   align-items: center;
-  color: #f4f5f7;
+  color: #1c2622;
   text-decoration: none;
 }
 
@@ -29,9 +29,9 @@
   width: 2.25rem;
   height: 2.25rem;
   place-items: center;
-  color: #0b0d0f;
-  background: #8ef0b7;
-  border-radius: 10px;
+  color: #0f6b4c;
+  background: #fff;
+  border-radius: 12px;
   font-size: 0.7rem;
   font-weight: 800;
 }
@@ -46,7 +46,7 @@
 
 .install-kicker {
   margin: 0 0 1rem;
-  color: #8ef0b7;
+  color: #0f6b4c;
   font-size: 0.8rem;
   font-weight: 650;
 }
@@ -55,7 +55,7 @@
   max-width: 14ch;
   margin: 0;
   font-size: clamp(2.4rem, 6vw, 4.8rem);
-  font-weight: 580;
+  font-weight: 640;
   letter-spacing: -0.045em;
   line-height: 1.05;
 }
@@ -63,7 +63,7 @@
 .install-lead {
   max-width: 45rem;
   margin: 1.5rem 0 2.5rem;
-  color: #858a93;
+  color: #5a6b63;
   font-size: clamp(1rem, 2vw, 1.2rem);
   line-height: 1.7;
 }
@@ -74,10 +74,10 @@
   gap: 1.5rem;
   align-items: center;
   padding: clamp(1.25rem, 3vw, 2rem);
-  color: #f4f5f7;
-  background: #17191d;
-  border: 1px solid #30333a;
-  border-radius: 15px;
+  color: #1c2622;
+  background: #fff;
+  border: 1px solid rgb(28 38 34 / 8%);
+  border-radius: 20px;
 }
 
 .install-prompt p {
@@ -89,10 +89,10 @@
 .install-prompt button {
   min-height: 3rem;
   padding: 0 1.25rem;
-  color: #0a160f;
-  background: #8ef0b7;
+  color: #fff;
+  background: #0f6b4c;
   border: 0;
-  border-radius: 8px;
+  border-radius: 12px;
   font-weight: 750;
   cursor: pointer;
 }
@@ -100,14 +100,14 @@
 .install-note {
   max-width: 45rem;
   margin: 1.5rem 0 0;
-  color: #858a93;
+  color: #5a6b63;
   font-size: 0.9rem;
   line-height: 1.6;
 }
 
 .install-contract,
 .install-recovery {
-  border-top: 1px solid #24262b;
+  border-top: 1px solid rgb(28 38 34 / 8%);
 }
 
 .contract-heading {
@@ -122,7 +122,7 @@
   max-width: 18ch;
   margin: 0;
   font-size: clamp(1.8rem, 4vw, 3rem);
-  font-weight: 580;
+  font-weight: 620;
   letter-spacing: -0.03em;
   line-height: 1.1;
 }
@@ -138,11 +138,11 @@
   grid-template-columns: 5rem minmax(0, 1fr);
   gap: 1.5rem;
   padding: 2rem 0;
-  border-top: 1px solid #24262b;
+  border-top: 1px solid rgb(28 38 34 / 8%);
 }
 
 .install-steps li > span {
-  color: #8ef0b7;
+  color: #0f6b4c;
   font-size: 0.8rem;
 }
 
@@ -155,14 +155,14 @@
 .install-recovery > p:last-child {
   max-width: 50rem;
   margin: 0;
-  color: #858a93;
+  color: #5a6b63;
   line-height: 1.7;
 }
 
 .install-steps code {
   padding: 0.15rem 0.35rem;
-  color: #d7dbe2;
-  background: #1b1e24;
+  color: #0a4d37;
+  background: #d4efe3;
   border-radius: 0.2rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.83em;
@@ -172,8 +172,8 @@
   overflow-x: auto;
   margin: 1rem 0;
   padding: 1.1rem;
-  color: #ede9df;
-  background: #15171a;
+  color: #1c2622;
+  background: #f3f8f5;
   border-radius: 0.5rem;
 }
 

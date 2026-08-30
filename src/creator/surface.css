@@ -1,0 +1,755 @@
+/* Sunday table: light Operate surfaces + authored motion.
+   Imported last. Play rooms keep their own tabletop material. */
+
+:root {
+  --ink: #1c2622;
+  --muted: #5a6b63;
+  --faint: #7a8c84;
+  --line: #c5d4cc;
+  --paper: #ffffff;
+  --canvas: #e8f0eb;
+  --forest: #0f6b4c;
+  --forest-deep: #0a4d37;
+  --forest-soft: #d4efe3;
+  --danger: #b42318;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --shadow-card: 0 22px 54px rgb(28 38 34 / 10%);
+  color: var(--ink);
+  background: var(--canvas);
+  font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background: var(--canvas);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: 2px;
+}
+
+/* —— Home —— */
+.studio-home {
+  color: var(--ink);
+  background: var(--canvas);
+}
+
+.studio-sidebar,
+.studio-rail {
+  color: #f4fff9;
+  background: var(--forest);
+  border-right: 0;
+}
+
+.studio-sidebar .creator-brand > span:first-child,
+.studio-rail .creator-brand > span:first-child,
+.install-brand span {
+  color: var(--forest);
+  background: #fff;
+  border-radius: 12px;
+}
+
+.studio-sidebar .creator-brand strong,
+.studio-rail .creator-brand strong {
+  color: #fff;
+}
+
+.studio-sidebar .creator-brand small,
+.studio-rail .creator-brand small {
+  color: rgb(255 255 255 / 72%);
+}
+
+.studio-new {
+  color: var(--forest-deep);
+  background: #fff;
+  border: 0;
+  border-radius: 10px;
+  font-weight: 700;
+  transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
+}
+
+.studio-new:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgb(10 77 55 / 22%);
+}
+
+.studio-sidebar nav > span,
+.studio-rail nav > span {
+  color: rgb(255 255 255 / 58%);
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.studio-sidebar nav > small {
+  color: rgb(255 255 255 / 62%);
+}
+
+.studio-sidebar nav a,
+.studio-rail nav a,
+.back-projects {
+  color: rgb(255 255 255 / 82%);
+}
+
+.studio-sidebar nav a:hover,
+.studio-rail nav a:hover,
+.back-projects:hover {
+  color: #fff;
+  background: rgb(255 255 255 / 12%);
+}
+
+.studio-sidebar nav strong {
+  color: #fff;
+}
+
+.studio-sidebar nav small,
+.studio-sidebar nav i {
+  color: rgb(255 255 255 / 58%);
+}
+
+.studio-rail nav a[aria-current="page"] {
+  color: #fff;
+  background: rgb(255 255 255 / 16%);
+}
+
+.studio-install {
+  color: rgb(255 255 255 / 74%);
+}
+
+.studio-install:hover {
+  color: #fff;
+}
+
+.studio-stage {
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 70% 48% at 50% 0%, rgb(15 107 76 / 10%), transparent 58%),
+    radial-gradient(circle at 88% 82%, rgb(15 107 76 / 7%), transparent 36%),
+    var(--canvas);
+  background-size: 140% 140%, 100% 100%, auto;
+  animation: daylight 18s ease-in-out infinite;
+}
+
+.studio-stage::before {
+  background:
+    linear-gradient(90deg, rgb(28 38 34 / 4%) 1px, transparent 1px) 0 0 / 72px 72px,
+    linear-gradient(rgb(28 38 34 / 4%) 1px, transparent 1px) 0 0 / 72px 72px;
+  opacity: 0.55;
+}
+
+.studio-topbar {
+  color: var(--muted);
+  border-bottom-color: rgb(28 38 34 / 8%);
+}
+
+.studio-topbar > span {
+  color: var(--ink);
+}
+
+.studio-status-dot {
+  background: var(--forest);
+  box-shadow: 0 0 0 0 rgb(15 107 76 / 45%);
+  animation: pulse-dot 1.8s var(--ease-out) infinite;
+}
+
+.studio-topbar kbd {
+  color: var(--muted);
+  background: var(--paper);
+  border-color: var(--line);
+}
+
+.studio-welcome {
+  animation: rise-in 640ms var(--ease-out) both;
+}
+
+.studio-orbit {
+  color: var(--forest);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 28px rgb(15 107 76 / 10%);
+  animation: float-mark 4.2s ease-in-out infinite;
+}
+
+.studio-orbit span {
+  color: var(--forest);
+}
+
+.studio-welcome h1 {
+  color: var(--ink);
+  font-weight: 680;
+  letter-spacing: -0.038em;
+}
+
+.studio-welcome > span {
+  color: var(--muted);
+}
+
+.studio-composer {
+  padding: 14px 14px 12px;
+  background: var(--paper);
+  border: 1px solid rgb(28 38 34 / 8%);
+  border-radius: 22px;
+  box-shadow: var(--shadow-card);
+  animation: deal-in 760ms var(--ease-out) both;
+  transition: box-shadow 320ms var(--ease-out), transform 320ms var(--ease-out);
+}
+
+.studio-composer.is-filled,
+.studio-composer.is-ready {
+  box-shadow:
+    0 28px 64px rgb(15 107 76 / 14%),
+    0 0 0 1px rgb(15 107 76 / 12%);
+}
+
+.studio-idea-field textarea {
+  color: var(--ink);
+}
+
+.studio-idea-field textarea::placeholder {
+  color: #8a9a92;
+}
+
+.studio-starter-row button {
+  color: var(--ink);
+  background: #f3f8f5;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  transition:
+    transform 180ms var(--ease-out),
+    background-color 180ms var(--ease-out),
+    color 180ms var(--ease-out),
+    border-color 180ms var(--ease-out),
+    box-shadow 180ms var(--ease-out);
+}
+
+.studio-starter-row button:hover:not(:disabled) {
+  color: var(--forest-deep);
+  border-color: var(--forest);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgb(15 107 76 / 12%);
+}
+
+.studio-starter-row button.is-selected,
+.studio-starter-row button[aria-pressed="true"] {
+  color: #fff;
+  background: var(--forest);
+  border-color: var(--forest);
+  animation: chip-lock 420ms var(--ease-out);
+}
+
+.studio-attach-row .studio-dropzone {
+  color: var(--muted);
+  background: #f6faf7;
+  border: 1px dashed #9bb5a8;
+  transition:
+    transform 200ms var(--ease-out),
+    border-color 200ms var(--ease-out),
+    background-color 200ms var(--ease-out),
+    box-shadow 200ms var(--ease-out);
+}
+
+.studio-attach-row .studio-dropzone:hover {
+  color: var(--ink);
+  background: #fff;
+  border-color: var(--forest);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgb(15 107 76 / 10%);
+}
+
+.studio-dropzone:focus-within {
+  border-color: var(--forest);
+  box-shadow: 0 0 0 3px rgb(15 107 76 / 16%);
+}
+
+.studio-dropzone.has-file {
+  color: var(--forest-deep);
+  background: var(--forest-soft);
+  border-style: solid;
+  border-color: var(--forest);
+  animation: file-land 420ms var(--ease-out);
+}
+
+.studio-file-icon {
+  color: var(--forest);
+  background: var(--forest-soft);
+}
+
+.studio-dropzone strong {
+  color: var(--ink);
+}
+
+.studio-dropzone small {
+  color: var(--faint);
+}
+
+.studio-dropzone b {
+  color: var(--forest-deep);
+  background: var(--forest-soft);
+}
+
+.image-use-field select {
+  color: var(--ink);
+  background: #f6faf7;
+  border-color: var(--line);
+}
+
+.studio-inline-name span,
+.studio-paste summary,
+.studio-submit-row > span {
+  color: var(--faint);
+}
+
+.studio-inline-name input,
+.studio-paste textarea {
+  color: var(--ink);
+  background: #f6faf7;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.studio-submit-row button {
+  position: relative;
+  overflow: hidden;
+  min-height: 44px;
+  color: #fff;
+  background: var(--forest);
+  border-radius: 12px;
+  font-size: 14px;
+  transition: transform 180ms var(--ease-out), background-color 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
+}
+
+.studio-submit-row button:hover:not(:disabled) {
+  background: var(--forest-deep);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgb(15 107 76 / 28%);
+}
+
+.studio-submit-row button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+}
+
+.studio-submit-row button:disabled {
+  color: #7d8c85;
+  background: #d9e4de;
+}
+
+.studio-composer.is-ready .studio-submit-row button:not(:disabled)::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 28%, rgb(255 255 255 / 32%) 48%, transparent 64%);
+  background-size: 220% 100%;
+  animation: sheen 2.2s ease-in-out infinite;
+  content: "";
+  pointer-events: none;
+}
+
+.studio-progress {
+  color: var(--forest);
+  animation: rise-in 360ms var(--ease-out) both;
+}
+
+.studio-error {
+  color: var(--danger);
+}
+
+.studio-examples {
+  margin: 36px auto 64px;
+  padding: 0 24px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  animation: rise-in 700ms var(--ease-out) 180ms both;
+}
+
+.studio-examples h2 {
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 680;
+}
+
+.studio-examples .example-grid article {
+  background: var(--paper);
+  border: 1px solid rgb(28 38 34 / 8%);
+  border-radius: 18px;
+  box-shadow: 0 10px 28px rgb(28 38 34 / 6%);
+  animation: deal-card 680ms var(--ease-out) both;
+  animation-delay: calc(320ms + var(--i, 0) * 90ms);
+  transition: transform 240ms var(--ease-out), box-shadow 240ms var(--ease-out);
+}
+
+.studio-examples .example-grid article:hover {
+  transform: translateY(-6px) rotate(-0.35deg);
+  box-shadow: 0 22px 44px rgb(15 107 76 / 14%);
+}
+
+.studio-examples .example-grid h3 {
+  color: var(--ink);
+}
+
+.studio-examples .example-grid article > p,
+.studio-examples .example-grid dt,
+.studio-examples .example-grid small {
+  color: var(--muted);
+}
+
+.studio-examples .example-grid dd {
+  color: var(--ink);
+}
+
+.studio-examples .example-grid button {
+  color: #fff;
+  background: var(--forest);
+  border: 0;
+  border-radius: 10px;
+  transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
+}
+
+.studio-examples .example-grid button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgb(15 107 76 / 22%);
+}
+
+.studio-next-hint {
+  color: var(--forest) !important;
+}
+
+/* —— Studio —— */
+.creator-studio {
+  color: var(--ink);
+  background: var(--canvas);
+}
+
+.studio-canvas {
+  background:
+    radial-gradient(ellipse 80% 40% at 50% 0%, rgb(15 107 76 / 8%), transparent 55%),
+    var(--canvas);
+}
+
+.studio-header {
+  color: var(--muted);
+  background: rgb(232 240 235 / 88%);
+  border-bottom-color: rgb(28 38 34 / 8%);
+}
+
+.studio-header h1 {
+  color: var(--ink);
+}
+
+.project-version span {
+  color: var(--muted);
+}
+
+.project-version i {
+  background: var(--forest);
+}
+
+.project-version strong {
+  color: var(--forest-deep);
+  background: var(--forest-soft);
+}
+
+.studio-agent-activity {
+  color: var(--ink);
+  background: #fff7e8;
+  border-color: #efd3a0;
+  animation: rise-in 320ms var(--ease-out) both;
+}
+
+.studio-agent-activity span {
+  color: #9a6700;
+}
+
+.studio-agent-activity.succeeded {
+  background: var(--forest-soft);
+  border-color: #8ec9ae;
+}
+
+.studio-agent-activity.succeeded span {
+  color: var(--forest);
+}
+
+.studio-agent-activity.failed {
+  background: #fdecec;
+  border-color: #f0b4b4;
+}
+
+.studio-agent-activity.failed span {
+  color: var(--danger);
+}
+
+.creator-studio .ruleSystem-panel,
+.build-workflow,
+.validation-workflow,
+.creator-studio .project-facts > section,
+.project-disclosure,
+.creator-studio .generation-plan-panel,
+.creator-studio .generation-plan-panel.approved {
+  background: var(--paper);
+  border: 1px solid rgb(28 38 34 / 8%);
+  box-shadow: 0 12px 32px rgb(28 38 34 / 6%);
+  animation: rise-in 520ms var(--ease-out) both;
+}
+
+.studio-section-heading h2,
+.build-workflow h2,
+.validation-workflow h2,
+.project-snapshot h2 {
+  color: var(--ink);
+}
+
+.creator-studio .generation-plan-summary,
+.creator-studio .generation-plan-facts dd,
+.creator-studio .generation-plan-columns li b {
+  color: var(--ink);
+}
+
+.creator-studio .panel-label,
+.creator-studio .generation-plan-facts dt,
+.creator-studio .generation-plan-columns p,
+.creator-studio .generation-plan-columns li span,
+.creator-studio .generation-plan-actions p {
+  color: var(--muted);
+}
+
+.creator-studio .generation-plan-facts div,
+.creator-studio .generation-plan-columns section,
+.creator-studio .generation-plan-actions {
+  border-color: var(--line);
+}
+
+.creator-studio .ruleSystem-form input,
+.creator-studio .ruleSystem-form textarea,
+.studio-fields input,
+.studio-fields textarea {
+  color: var(--ink);
+  background: #f6faf7;
+  border-color: var(--line);
+}
+
+.creator-studio .ruleSystem-form input:focus,
+.creator-studio .ruleSystem-form textarea:focus {
+  background: #fff;
+  border-color: var(--forest);
+  box-shadow: 0 0 0 3px rgb(15 107 76 / 14%);
+}
+
+.studio-optional {
+  border-top-color: var(--line);
+}
+
+.creator-studio .ruleSystem-actions button,
+.build-workflow > header button,
+.creator-studio .generation-plan-actions button {
+  color: #fff;
+  background: var(--forest);
+  border-color: var(--forest);
+}
+
+.creator-studio .ruleSystem-actions button:hover:not(:disabled),
+.build-workflow > header button:hover:not(:disabled),
+.creator-studio .generation-plan-actions button:hover:not(:disabled) {
+  background: var(--forest-deep);
+  border-color: var(--forest-deep);
+}
+
+.creator-studio .generation-plan-approved {
+  color: var(--forest-deep);
+  border-color: #8ec9ae;
+}
+
+.creator-studio .creator-notice {
+  color: var(--forest-deep);
+}
+
+.creator-studio .creator-error {
+  color: var(--danger);
+}
+
+/* —— Install —— */
+.install-guide {
+  color: var(--ink);
+  background:
+    radial-gradient(ellipse 80% 42% at 20% 0%, rgb(15 107 76 / 12%), transparent 52%),
+    var(--canvas);
+}
+
+.install-nav {
+  color: var(--muted);
+  border-bottom-color: rgb(28 38 34 / 8%);
+}
+
+.install-brand {
+  color: var(--ink);
+}
+
+.install-kicker {
+  color: var(--forest);
+}
+
+.install-hero h1,
+.contract-heading h2,
+.install-recovery h2 {
+  color: var(--ink);
+}
+
+.install-lead,
+.install-note,
+.install-steps p,
+.install-recovery > p:last-child {
+  color: var(--muted);
+}
+
+.install-prompt {
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid rgb(28 38 34 / 8%);
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+  animation: deal-in 700ms var(--ease-out) both;
+}
+
+.install-prompt button {
+  color: #fff;
+  background: var(--forest);
+  border-radius: 12px;
+  transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
+}
+
+.install-prompt button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgb(15 107 76 / 24%);
+}
+
+.install-contract,
+.install-recovery {
+  border-top-color: rgb(28 38 34 / 8%);
+}
+
+.install-steps li {
+  border-top-color: rgb(28 38 34 / 8%);
+  animation: rise-in 520ms var(--ease-out) both;
+}
+
+.install-steps li:nth-child(1) { animation-delay: 80ms; }
+.install-steps li:nth-child(2) { animation-delay: 140ms; }
+.install-steps li:nth-child(3) { animation-delay: 200ms; }
+.install-steps li:nth-child(4) { animation-delay: 260ms; }
+.install-steps li:nth-child(5) { animation-delay: 320ms; }
+
+.install-steps li > span {
+  color: var(--forest);
+}
+
+.install-steps code {
+  color: var(--forest-deep);
+  background: var(--forest-soft);
+}
+
+.install-steps pre {
+  color: var(--ink);
+  background: #f3f8f5;
+}
+
+@keyframes daylight {
+  0%, 100% { background-position: 20% 0%, 88% 82%, 0 0; }
+  50% { background-position: 70% 8%, 20% 90%, 0 0; }
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes deal-in {
+  from {
+    opacity: 0;
+    transform: translateY(32px) rotate(-1.1deg) scale(0.97);
+    box-shadow: 0 2px 8px rgb(15 107 76 / 0%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    box-shadow: var(--shadow-card);
+  }
+}
+
+@keyframes deal-card {
+  from {
+    opacity: 0;
+    transform: translateY(18px) rotate(0.6deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes float-mark {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+@keyframes pulse-dot {
+  0% { box-shadow: 0 0 0 0 rgb(15 107 76 / 42%); }
+  70% { box-shadow: 0 0 0 8px rgb(15 107 76 / 0%); }
+  100% { box-shadow: 0 0 0 0 rgb(15 107 76 / 0%); }
+}
+
+@keyframes chip-lock {
+  0% { transform: scale(0.94); }
+  55% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes file-land {
+  0% { transform: scale(0.98); }
+  60% { transform: scale(1.015); }
+  100% { transform: none; }
+}
+
+@keyframes sheen {
+  from { background-position: 200% 0; }
+  to { background-position: -40% 0; }
+}
+
+@media (max-width: 900px) {
+  .studio-home {
+    grid-template-columns: 1fr;
+  }
+
+  .studio-sidebar {
+    min-height: auto;
+  }
+
+  .studio-composer {
+    width: min(100% - 32px, 780px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-stage,
+  .studio-orbit,
+  .studio-status-dot,
+  .studio-composer,
+  .studio-welcome,
+  .studio-examples,
+  .studio-examples .example-grid article,
+  .studio-starter-row button.is-selected,
+  .studio-dropzone.has-file,
+  .studio-composer.is-ready .studio-submit-row button:not(:disabled)::after,
+  .install-prompt,
+  .install-steps li,
+  .creator-studio .ruleSystem-panel,
+  .build-workflow,
+  .validation-workflow,
+  .creator-studio .generation-plan-panel {
+    animation: none;
+  }
+
+  .studio-stage {
+    background-position: 50% 0, 88% 82%, 0 0;
+  }
+}

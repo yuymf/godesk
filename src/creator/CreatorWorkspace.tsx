@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   applyProjectChanges,
   claimSessionSeat,
@@ -642,6 +642,7 @@ function CreatorHome() {
   const hasGenerationInput = Boolean(
     description.trim() || rulebook || rulesText.trim() || visualAssets.length,
   );
+  const selectedStarterId = HOBBYIST_STARTERS.find((starter) => starter.text === description)?.id;
 
   return (
     <main className="studio-home" id="main">
@@ -675,7 +676,11 @@ function CreatorHome() {
           </span>
         </div>
 
-        <form aria-busy={busy} className="studio-composer" onSubmit={submit}>
+        <form
+          aria-busy={busy}
+          className={`studio-composer${description.trim() ? " is-filled" : ""}${hasGenerationInput ? " is-ready" : ""}`}
+          onSubmit={submit}
+        >
             <label className="studio-idea-field">
               <span className="sr-only">描述你的游戏想法</span>
               <textarea
@@ -690,6 +695,8 @@ function CreatorHome() {
             <div className="studio-starter-row" aria-label="常用开局">
               {HOBBYIST_STARTERS.map((starter) => (
                 <button
+                  aria-pressed={selectedStarterId === starter.id}
+                  className={selectedStarterId === starter.id ? "is-selected" : undefined}
                   disabled={busy}
                   key={starter.id}
                   onClick={() => {
@@ -803,8 +810,8 @@ function CreatorHome() {
           <section className="default-examples studio-examples" aria-label="先玩一局现成的">
             <h2>想先摸清手感？直接开一局现成的</h2>
             <div className="example-grid">
-              {DEFAULT_EXAMPLES.map((example) => (
-                <article key={example.id}>
+              {DEFAULT_EXAMPLES.map((example, index) => (
+                <article key={example.id} style={{ "--i": index } as CSSProperties}>
                   <h3>{example.title}</h3>
                   <p>{example.summary}</p>
                   <dl>
