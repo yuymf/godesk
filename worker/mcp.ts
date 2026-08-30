@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp";
 import { z } from "zod";
 import { isDefaultExampleId } from "./default-examples";
+import { publicShareUrl, signShareToken, shareSecret } from "./share-capability";
 
 const projectSchema = z.object({
   id: z.string(),
@@ -209,6 +210,10 @@ const generationPlanSchema = z.object({
   assumptions: z.array(z.string()),
   unsupported: z.array(z.string()),
   sourceIds: z.array(z.string()),
+  proposedRuntime: z.object({
+    op: z.string(),
+    config: z.record(z.string(), z.unknown()),
+  }).optional(),
   createdAt: z.string(),
   approvedAt: z.string().optional(),
 });
@@ -268,7 +273,10 @@ const validationEvidenceSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("human-session"),
     sessionId: z.string(),
-    participantNames: z.array(z.string()),
+    seatedParticipants: z.array(z.object({
+      seat: z.number().int().nonnegative(),
+      name: z.string().min(1).max(80),
+    })).min(2).max(20),
     creatorAttested: z.literal(true),
   }),
 ]);
@@ -471,6 +479,10 @@ const sharedSessionSchema = z.object({
   buildId: z.string(),
   seed: z.number().int(),
   state: sessionStateSchema,
+  seats: z.array(z.object({
+    seat: z.number().int().nonnegative(),
+    displayName: z.string().max(80).optional(),
+  })),
   acceptedActions: z.array(acceptedActionSchema),
   feedback: z.array(sessionFeedbackSchema),
   experiment: z.object({
@@ -488,6 +500,7 @@ const playtestLinkSchema = z.object({
   projectId: z.string(),
   sessionId: z.string(),
   buildId: z.string(),
+  replayId: z.string(),
   updatedAt: z.string(),
   url: z.string(),
 });
@@ -872,6 +885,13 @@ const operationSchema = z.discriminatedUnion("op", [
     }),
   }),
   z.object({
+    op: z.literal("configure_harbor_voyage"),
+    config: z.object({
+      playerCount: z.number().int().min(2).max(3),
+      unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
+    }),
+  }),
+  z.object({
     op: z.literal("activate_rule_system"),
     ruleSystemId: z.string().min(1),
   }),
@@ -954,58 +974,107 @@ function studioUrl(origin: string, projectId: string) {
   return new URL(`/studio/${projectId}`, origin).toString();
 }
 
-function publicShareUrl(pathname: string, origin: string, creatorId: string) {
-  const url = new URL(pathname, origin);
-  url.searchParams.set("creator", creatorId);
-  return url.toString();
-}
-
-function playableBuild(value: JsonObject, origin: string) {
-  return {
-    ...value,
-    playableUrl: new URL(`/play/${String(value.id)}`, origin).toString(),
-  };
-}
-
-function playablePlaytest(value: JsonObject, origin: string, creatorId: string) {
-  return {
-    ...value,
-    replayUrl: publicShareUrl(
-      `/replay/${String(value.replayId)}`,
-      origin,
-      creatorId,
-    ),
-  };
-}
-
-function playableSession(value: JsonObject, origin: string, creatorId: string) {
-  return {
-    ...value,
-    sessionUrl: publicShareUrl(`/room/${String(value.id)}`, origin, creatorId),
-    replayUrl: publicShareUrl(
-      `/replay/${String(value.replayId)}`,
-      origin,
-      creatorId,
-    ),
-  };
-}
-
-function playablePlaytestLink(
+async function playableBuild(
   value: JsonObject,
   origin: string,
   creatorId: string,
+  secret: string,
 ) {
+  const token = await signShareToken(
+    { v: 1, c: creatorId, build: String(value.id) },
+    secret,
+  );
+  return {
+    ...value,
+    playableUrl: publicShareUrl(`/play/${String(value.id)}`, origin, token),
+  };
+}
+
+async function playablePlaytest(
+  value: JsonObject,
+  origin: string,
+  creatorId: string,
+  secret: string,
+) {
+  const token = await signShareToken(
+    { v: 1, c: creatorId, replay: String(value.replayId) },
+    secret,
+  );
+  return {
+    ...value,
+    replayUrl: publicShareUrl(
+      `/replay/${String(value.replayId)}`,
+      origin,
+      token,
+    ),
+  };
+}
+
+async function playableSession(
+  value: JsonObject,
+  origin: string,
+  creatorId: string,
+  secret: string,
+) {
+  const token = await signShareToken(
+    {
+      v: 1,
+      c: creatorId,
+      room: String(value.id),
+      build: String(value.buildId),
+      replay: String(value.replayId),
+    },
+    secret,
+  );
+  const seats = Array.isArray(value.seats)
+    ? value.seats.map((entry) => {
+        const seat = entry as { seat: number; displayName?: string };
+        return {
+          seat: seat.seat,
+          ...(seat.displayName ? { displayName: seat.displayName } : {}),
+        };
+      })
+    : [];
+  return {
+    ...value,
+    seats,
+    sessionUrl: publicShareUrl(`/room/${String(value.id)}`, origin, token),
+    replayUrl: publicShareUrl(
+      `/replay/${String(value.replayId)}`,
+      origin,
+      token,
+    ),
+  };
+}
+
+async function playablePlaytestLink(
+  value: JsonObject,
+  origin: string,
+  creatorId: string,
+  secret: string,
+) {
+  const token = await signShareToken(
+    {
+      v: 1,
+      c: creatorId,
+      project: String(value.projectId),
+      room: String(value.sessionId),
+      build: String(value.buildId),
+      replay: String(value.replayId),
+    },
+    secret,
+  );
   return {
     ...value,
     url: publicShareUrl(
       `/try/${String(value.projectId)}`,
       origin,
-      creatorId,
+      token,
     ),
   };
 }
 
-function playableJob(value: JsonObject, origin: string, creatorId: string) {
+async function playableJob(value: JsonObject, origin: string, creatorId: string, secret: string) {
   const job = { ...value };
   const jobResult = value.result as JsonObject | undefined;
   if (!jobResult) return job;
@@ -1014,10 +1083,10 @@ function playableJob(value: JsonObject, origin: string, creatorId: string) {
   } else if (value.kind === "compile-build" && jobResult.build) {
     job.result = playableMutation({
       ...jobResult,
-      build: playableBuild(jobResult.build as JsonObject, origin),
+      build: await playableBuild(jobResult.build as JsonObject, origin, creatorId, secret),
     }, origin);
   } else if (value.kind === "bot-playtest") {
-    job.result = playablePlaytest(jobResult, origin, creatorId);
+    job.result = await playablePlaytest(jobResult, origin, creatorId, secret);
   } else if (value.kind === "render-preview") {
     job.result = {
       ...jobResult,
@@ -1078,6 +1147,7 @@ export function createGodeskMcpServer(
       },
       callback,
     )) as typeof server.registerTool;
+  const secret = shareSecret(env);
   const projectRequest = (path: string, init?: RequestInit) =>
     internalRequest(env, creatorId, path, init);
 
@@ -1222,41 +1292,50 @@ export function createGodeskMcpServer(
           await projectRequest(`/projects/${projectId}${query}`),
         );
         if (view === "builds" && Array.isArray(data.builds)) {
-          data.builds = data.builds.map((build: unknown) =>
-            playableBuild(build as JsonObject, origin),
+          data.builds = await Promise.all(
+            data.builds.map((build: unknown) =>
+              playableBuild(build as JsonObject, origin, creatorId, secret),
+            ),
           );
         }
         if (view === "playtests" && Array.isArray(data.playtests)) {
-          data.playtests = data.playtests.map((playtest: unknown) =>
-            playablePlaytest(playtest as JsonObject, origin, creatorId),
+          data.playtests = await Promise.all(
+            data.playtests.map((playtest: unknown) =>
+              playablePlaytest(playtest as JsonObject, origin, creatorId, secret),
+            ),
           );
         }
         if (view === "sessions" && Array.isArray(data.sessions)) {
-          data.sessions = data.sessions.map((session: unknown) =>
-            playableSession(session as JsonObject, origin, creatorId),
+          data.sessions = await Promise.all(
+            data.sessions.map((session: unknown) =>
+              playableSession(session as JsonObject, origin, creatorId, secret),
+            ),
           );
         }
         if (view === "playtest-link" && data.playtestLink) {
-          data.playtestLink = playablePlaytestLink(
+          data.playtestLink = await playablePlaytestLink(
             data.playtestLink as JsonObject,
             origin,
             creatorId,
+            secret,
           );
         }
         if (view === "jobs" && Array.isArray(data.jobs)) {
-          data.jobs = data.jobs.map((job: unknown) =>
-            playableJob(job as JsonObject, origin, creatorId),
+          data.jobs = await Promise.all(
+            data.jobs.map((job: unknown) =>
+              playableJob(job as JsonObject, origin, creatorId, secret),
+            ),
           );
         }
         if (view === "entity") {
           if (entityType === "build") {
-            Object.assign(data, playableBuild(data, origin));
+            Object.assign(data, await playableBuild(data, origin, creatorId, secret));
           } else if (entityType === "playtest") {
-            Object.assign(data, playablePlaytest(data, origin, creatorId));
+            Object.assign(data, await playablePlaytest(data, origin, creatorId, secret));
           } else if (entityType === "session") {
-            Object.assign(data, playableSession(data, origin, creatorId));
+            Object.assign(data, await playableSession(data, origin, creatorId, secret));
           } else if (entityType === "job") {
-            Object.assign(data, playableJob(data, origin, creatorId));
+            Object.assign(data, await playableJob(data, origin, creatorId, secret));
           }
         }
         return result({ projectId, view, data });
@@ -1420,7 +1499,7 @@ export function createGodeskMcpServer(
             body: JSON.stringify(input),
           }),
         );
-        return result(playableJob(job, origin, creatorId));
+        return result(await playableJob(job, origin, creatorId, secret));
       } catch (reason) {
         return toolError(reason);
       }
@@ -1447,7 +1526,7 @@ export function createGodeskMcpServer(
         const job = await bodyOrError(
           await projectRequest(`/jobs/${jobId}`),
         );
-        return result(playableJob(job, origin, creatorId));
+        return result(await playableJob(job, origin, creatorId, secret));
       } catch (reason) {
         return toolError(reason);
       }
@@ -1474,7 +1553,7 @@ export function createGodeskMcpServer(
         const job = await bodyOrError(
           await projectRequest(`/jobs/${jobId}/retry`, { method: "POST" }),
         );
-        return result(playableJob(job, origin, creatorId));
+        return result(await playableJob(job, origin, creatorId, secret));
       } catch (reason) {
         return toolError(reason);
       }
@@ -1501,7 +1580,7 @@ export function createGodeskMcpServer(
         const build = await bodyOrError(
           await projectRequest(`/builds/${buildId}`),
         );
-        return result(playableBuild(build, origin));
+        return result(await playableBuild(build, origin, creatorId, secret));
       } catch (reason) {
         return toolError(reason);
       }
@@ -1537,7 +1616,7 @@ export function createGodeskMcpServer(
             body: JSON.stringify(input),
           }),
         );
-        return result(playableSession(room, origin, creatorId));
+        return result(await playableSession(room, origin, creatorId, secret));
       } catch (reason) {
         return toolError(reason);
       }
@@ -1564,7 +1643,7 @@ export function createGodeskMcpServer(
         const room = await bodyOrError(
           await projectRequest(`/sessions/${sessionId}`),
         );
-        return result(playableSession(room, origin, creatorId));
+        return result(await playableSession(room, origin, creatorId, secret));
       } catch (reason) {
         return toolError(reason);
       }
@@ -1601,7 +1680,7 @@ export function createGodeskMcpServer(
             body: JSON.stringify(input),
           }),
         );
-        return result(playableSession(room, origin, creatorId));
+        return result(await playableSession(room, origin, creatorId, secret));
       } catch (reason) {
         return toolError(reason);
       }

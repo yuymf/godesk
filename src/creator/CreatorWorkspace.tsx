@@ -143,7 +143,7 @@ function readStoredSeatClaim(sessionId: string): StoredSeatClaim | undefined {
     const parsed = JSON.parse(raw) as Partial<StoredSeatClaim>;
     if (typeof parsed.seatToken !== "string" || !parsed.seatToken) return undefined;
     if (!Number.isInteger(parsed.seat)) return undefined;
-    return { seat: parsed.seat, seatToken: parsed.seatToken };
+    return { seat: parsed.seat as number, seatToken: parsed.seatToken };
   } catch {
     return undefined;
   }
