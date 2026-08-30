@@ -7,6 +7,7 @@ import {
 } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import type { GameProject } from "../src/creator/project-contract";
+import { HOBBYIST_STARTERS } from "../src/creator/hobbyist-starters";
 
 async function mcpPayload<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -5538,7 +5539,6 @@ describe("Game Project HTTP seam", () => {
   });
 
   it("turns each hobbyist starter into a pending score-race plan", async () => {
-    const { HOBBYIST_STARTERS } = await import("../src/creator/hobbyist-starters");
     for (const starter of HOBBYIST_STARTERS) {
       const created = await SELF.fetch("https://godesk.test/api/projects", {
         method: "POST",
