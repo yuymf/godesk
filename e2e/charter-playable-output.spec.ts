@@ -33,8 +33,9 @@ test.describe("ChatCut charter: source in, playable game out", () => {
 
     await page.getByLabel("你的席位").selectOption("0");
     await expect(page.getByText("轮到你了")).toBeVisible();
+    await expect(page.getByText("加入约束")).toBeVisible();
 
-    await page.locator(".room-action-cards button").filter({ hasText: "加入约束" }).click();
+    await page.getByRole("button", { name: "行动 2 +2 创意分" }).click();
     await expect(page.getByText(/已提交/)).toBeVisible();
     await expect(page.getByText("等待另一位玩家完成行动")).toBeVisible();
 
@@ -44,7 +45,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(friendPage.getByRole("heading", { name: "灵感接力" })).toBeVisible();
     await friendPage.getByLabel("你的席位").selectOption("1");
     await expect(friendPage.getByText("轮到你了")).toBeVisible();
-    await friendPage.locator(".room-action-cards button").filter({ hasText: "扩展创意" }).click();
+    await friendPage.getByRole("button", { name: "行动 1 +1 创意分" }).click();
     await expect(friendPage.getByText(/已提交/)).toBeVisible();
     await friendContext.close();
   });
