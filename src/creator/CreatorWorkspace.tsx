@@ -387,8 +387,6 @@ export function parseRuleSystemStructure(value: string): RuleSystemStructureDraf
   return parsed as RuleSystemStructureDraft;
 }
 
-export { HOBBYIST_STARTERS } from "./hobbyist-starters";
-
 export function hobbyistProjectName(name: string, description: string) {
   const trimmed = name.trim();
   if (trimmed && trimmed !== "我的游戏") return trimmed;
