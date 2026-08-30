@@ -110,30 +110,21 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.getByRole("heading", { name: "今天要做一款什么游戏？" })).toBeVisible();
   });
 
-  test("the public plugin mount opens a joinable ready-made room", async ({ page }) => {
-    await page.goto("/chatgpt-plugin/new");
-    await expect(page.getByRole("heading", { name: "今天要做一款什么游戏？" })).toBeVisible();
-    const ideaRelay = page.locator("article").filter({ hasText: "灵感接力" });
-    await ideaRelay.getByRole("button", { name: "先玩这一局" }).click();
-    await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 90_000 });
-    await expect(page.getByRole("heading", { name: "灵感接力" })).toBeVisible();
-  });
-
   test("灵感接力 becomes a joinable room where two people can play", async ({
     page,
     browser,
   }) => {
-    await page.goto("/");
+    await page.goto("/chatgpt-plugin/new");
     const ideaRelay = page.locator("article").filter({ hasText: "灵感接力" });
     await ideaRelay.getByRole("button", { name: "先玩这一局" }).click();
-    await page.waitForURL(/\/room\//, { timeout: 90_000 });
+    await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 90_000 });
 
     await expect(page.getByRole("heading", { name: "灵感接力" })).toBeVisible();
     await expect(page.getByText("对方直接用浏览器加入，无需安装 Codex")).toBeVisible();
     await expectLightPlaySurface(page);
 
     const inviteUrl = await page.getByLabel("邀请链接").inputValue();
-    expect(inviteUrl).toMatch(/\/room\//);
+    expect(inviteUrl).toMatch(/\/chatgpt-plugin\/room\//);
 
     await page.getByLabel("你的席位").selectOption("0");
     await expect(page.getByText("轮到你了")).toBeVisible();
@@ -161,7 +152,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.getByText("✓ 反馈已保存")).toBeVisible();
 
     await page.getByRole("link", { name: "只读回放" }).click();
-    await page.waitForURL(/\/replay\//, { timeout: 30_000 });
+    await page.waitForURL(/\/chatgpt-plugin\/replay\//, { timeout: 30_000 });
     await expect(page.getByRole("heading", { name: "这一局怎么打完的" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "灵感接力" })).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Read-only Replay");
@@ -250,10 +241,10 @@ test.describe("ChatCut charter: source in, playable game out", () => {
   });
 
   test("港口十三号 opens a light harbor table and accepts a waiter", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/chatgpt-plugin/new");
     const harbor = page.locator("article").filter({ hasText: "港口十三号" });
     await harbor.getByRole("button", { name: "先玩这一局" }).click();
-    await page.waitForURL(/\/room\//, { timeout: 90_000 });
+    await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 90_000 });
 
     await expect(page.getByRole("heading", { name: "港口十三号" })).toBeVisible();
     await expectLightPlaySurface(page);
@@ -275,10 +266,10 @@ test.describe("ChatCut charter: source in, playable game out", () => {
   });
 
   test("雾岭山庄 becomes a joinable score race", async ({ page, browser }) => {
-    await page.goto("/");
+    await page.goto("/chatgpt-plugin/new");
     const lodge = page.locator("article").filter({ hasText: "雾岭山庄" });
     await lodge.getByRole("button", { name: "先玩这一局" }).click();
-    await page.waitForURL(/\/room\//, { timeout: 90_000 });
+    await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 90_000 });
 
     await expect(page.getByRole("heading", { name: "雾岭山庄" })).toBeVisible();
     await expectLightPlaySurface(page);
