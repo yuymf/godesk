@@ -1,30 +1,28 @@
 # GoDesk Rule System creator platform
 
-Status: accepted
+Status: superseded for product identity by ADR 0011 / `AGENTS.md` charter
+
+The product is a ChatCut-style rule-game generator: upload a script or rules,
+receive a playable shareable game, let others join and play. Validation Findings
+are optional iteration tools. The tickets below remain historical delivery
+notes; do not revive "learning loop as the product."
 
 ## Problem
 
-GoDesk's current ChatCut-style flow still defines its product as converting a
-board-game rulebook into a table prototype. The public model requires physical
-components and a board, the website leads with rule-document upload, and a
-Shared Session does not capture what creative claim the Creator wanted to test.
-This excludes rule-orchestrated games that use conversation, cards, screens,
-scenes, or abstract state and makes sharing an endpoint rather than a learning
-loop.
+An earlier ChatCut-style flow still defined the product as converting a
+board-game rulebook into a table prototype, or later as a validation platform
+whose success was a Finding. That excludes rule-orchestrated games that use
+conversation, cards, screens, scenes, or abstract state, and treats sharing as
+a side effect instead of the output.
 
 ## Product outcome
 
-A Creator installs GoDesk in Codex or opens the website, describes a game idea
-or supplies optional sources, and receives an editable Rule System plus a
-durable Generation Plan. The Creator reviews the plan's proposed loop, actions,
-assumptions, and unsupported behavior; GoDesk requires explicit approval before
-creating a new immutable Build for that generation. If the Rule System maps to a
-supported Executable Kernel, GoDesk compiles it into a Playable Build, opens a
-Shared Session, and returns one invitation URL. If it does not, GoDesk opens the
-same project in Web Studio with unsupported behavior visible instead of
-inventing executable rules. Friends need only the eventual invitation URL.
-After play, the Creator records a Validation Finding against a Design
-Hypothesis and iterates the same Game Project.
+A Creator or hobbyist installs GoDesk in Codex or opens the website, describes
+a game idea or supplies a script or rules, and receives a playable game plus an
+invitation URL. Friends need only that URL. If the Rule System does not map to
+a supported Executable Kernel, GoDesk keeps unsupported behavior visible
+instead of inventing executable rules. Iteration tools (Generation Plan,
+Findings) may refine the same Game Project; they are not the destination.
 
 ## Canonical model
 
@@ -48,9 +46,9 @@ A Rule System contains:
    Surface without a compatibility layer.
 3. A rights-safe, non-tabletop example compiles, opens a Shared Session, accepts
    authoritative actions, and reconstructs a Replay.
-4. A Creator can attach a Design Hypothesis and record a human, automated, or
-   participant-feedback Validation Finding with an explicit evidence type,
-   verdict, and one actionable next change for the same Game Project.
+4. Optional iteration: a Creator can attach a Design Hypothesis and record a
+   Finding. This is not the product success bar; the charter bar is a stranger
+   joining the invitation URL and playing.
 5. A claimed Shared Session seat can persist one rating and short participant
    comment; the creator can read it from the same project, while Replay remains
    an action-log-only artifact and the feedback does not become human evidence

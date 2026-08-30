@@ -1,12 +1,17 @@
-# GoDesk — create and validate rule-orchestrated games from Codex
+# GoDesk — upload rules, get a playable game
 
-GoDesk is an installable Codex Skills package and hosted runtime for creating,
-sharing, and validating rule-orchestrated games. A creator can start with one
-idea, optional rules text, a source document, or visual material. Codex is the natural-language
-control plane; GoDesk owns authenticated Game Projects, versioned Rule Systems,
-immutable Playable Builds, authoritative Shared Sessions, replays, Design
-Hypotheses, Experiment Briefs, and Validation Findings. The same project remains visible and
-manually editable in GoDesk Web Studio.
+GoDesk is a ChatCut-style Codex Plugin and hosted runtime. ChatCut lets someone
+install a Plugin, upload a video, and receive a finished film. GoDesk is the
+same shape for rule-orchestrated games: a Creator or hobbyist uploads a script,
+a rulebook, or a written idea and receives a playable, shareable game. Other
+people join through a URL and play together. They do not install Codex.
+
+The success bar is `source in → playable game out → others can play together`.
+Design Hypotheses and Validation Findings are optional iteration tools, not
+the product. Codex is the natural-language control plane. GoDesk owns
+authenticated Game Projects, versioned Rule Systems, immutable Playable Builds,
+authoritative Shared Sessions, and Replays. The same project stays visible in
+Web Studio.
 
 Rule Systems describe participants, rules, entities, setup, actions, play
 surfaces, stages, outcomes, presentation, and explicit runtime support. A play
@@ -23,9 +28,9 @@ After approval, the same Rule System remains editable and can return to the
 normal compile → play → feedback → focused iteration loop.
 
 After an executable Build exists, Web Studio can create and show the latest
-Shared Session inline. The Creator can claim a seat and submit an authoritative
-action without leaving the project; that action persists in the same Session
-State and Replay used by the independent friend invitation URL.
+Shared Session inline. The Creator can claim a seat and take an action without
+leaving the project; that action persists in the same Session State and Replay
+used by the friend invitation URL. The invitation URL is the product handoff.
 
 The creator home includes three rights-safe default examples:
 
@@ -53,6 +58,7 @@ pnpm install
 pnpm dev:worker
 pnpm test
 pnpm test:worker
+pnpm test:e2e
 pnpm typecheck
 pnpm build
 pnpm verify:plugin
@@ -71,10 +77,12 @@ state and checks the OAuth metadata, login/callback, and MCP route contracts.
 `pnpm verify:local-loop` starts another isolated temporary Worker and exercises
 the complete prompt → Generation Plan → approval → Build → fixed-seed self-play
 → Finding → revised Build → Shared Session → Replay loop against real HTTP
-routes. `pnpm verify:local-mcp` drives the same kind of isolated Worker through
-the actual Streamable HTTP MCP route, including tool discovery, durable job
-tracking, plan approval, Build/preview, self-play, Shared Session, participant
-feedback, same-project iteration, and Replay.
+routes. `pnpm test:e2e` starts the local Worker and drives the user-visible charter
+path in Chromium: home → playable Shared Session → friend join → action.
+Unit tests and HTTP verifiers are not a substitute. `pnpm verify:local-mcp`
+drives an isolated Worker through the Streamable HTTP MCP route, including
+tool discovery, durable jobs, plan approval, Build/preview, self-play, Shared
+Session, and Replay.
 `pnpm verify:plugin:public` compares the separately published thin Plugin with
 the local manifest, MCP declaration, Skill set, and current contract terms; it
 is expected to fail while the public repository is on an older release.
@@ -98,17 +106,9 @@ A durable
 public install additionally requires this repository revision to be pushed,
 the Worker to be deployed, and a production OAuth provider to be configured.
 
-The feedback loop is explicit: friends can leave a rating and short comment on
-the URL-only Shared Session. When the Creator binds a Design Hypothesis, the
-Room snapshots its question and success signal as one immutable Experiment
-Brief; feedback cannot be reassigned to a different hypothesis.
-Each feedback entry also records the participant's latest Accepted Action as a
-Feedback Moment, so the Creator can inspect the exact play context in Replay.
-`validate-game-idea` reads that qualitative input,
-records a `participant-feedback` evidence snapshot and one actionable `nextChange`; `iterate-from-finding` applies
-that change to the same project, compiles a new immutable Build, and compares
-fixed-seed self-play. Participant comments never become human evidence by
-themselves.
+Friends can leave a rating and short comment on the URL-only Shared Session.
+That feedback is an optional iteration input, not the success criterion. The
+journey succeeds when the invitation URL lets someone else sit down and play.
 
 ## Production configuration
 
@@ -120,5 +120,5 @@ The production Worker validates Cloudflare Access JWTs using:
 GitHub Actions also requires `CLOUDFLARE_ACCOUNT_ID` and
 `CLOUDFLARE_API_TOKEN`. Never store secrets in the repository.
 
-See [ADR 0005](docs/adr/0005-rule-system-creator-platform.md) and the
-[Rule System creator specification](.scratch/rule-system-creator-platform/spec.md).
+See [AGENTS.md](AGENTS.md), [ADR 0011](docs/adr/0011-chatcut-playable-output-is-the-product.md),
+and the [Rule System specification](.scratch/rule-system-creator-platform/spec.md).

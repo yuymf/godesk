@@ -2,8 +2,9 @@
 
 ## Notes
 
-This effort replaces the former tabletop-only product model with the canonical
-Rule System creation and validation loop in `spec.md`.
+Product identity is the ChatCut-style charter in `AGENTS.md` and ADR 0011:
+source in → playable shareable game out → others can play together. This map
+is a historical delivery log. Do not revive "validation loop as the product."
 
 ## Decisions-so-far
 

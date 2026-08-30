@@ -1,7 +1,9 @@
 # GoDesk Codex Plugin
 
 This is the public, thin Codex Plugin distribution for
-[GoDesk](https://godesk.yumengfan220.workers.dev).
+[GoDesk](https://godesk.yumengfan220.workers.dev), a ChatCut-style
+rule-game generator: upload a script or rules, receive a playable
+shareable game, let others join through a URL.
 
 It contains only:
 
@@ -43,7 +45,7 @@ Sessions, Replays, and Findings unchanged.
 
 Give Codex Desktop this sentence:
 
-> 阅读 https://godesk.yumengfan220.workers.dev/chatgpt-plugin，帮我安装 GoDesk；完成登录与功能验证后，自动新建一个 Codex 任务，开始制作并验证我的第一个规则游戏。
+> 阅读 https://godesk.yumengfan220.workers.dev/chatgpt-plugin，帮我安装 GoDesk；完成登录后，自动新建一个 Codex 任务，根据我的剧本或规则生成一款别人能立刻打开、立刻玩、还能联机的游戏。
 
 The hosted page is the authoritative, version-specific installation contract.
 Friends who receive a Shared Session URL can join in a browser without Codex.

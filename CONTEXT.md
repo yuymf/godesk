@@ -1,30 +1,37 @@
 # GoDesk
 
-GoDesk turns a creator's game idea or rule sources into an editable Rule System,
-an executable build, and a shared session that produces evidence about the idea.
-It covers rule-orchestrated games; tabletop play is one possible presentation,
+GoDesk is a ChatCut-style rule-game generator. A Creator or hobbyist installs
+it in Codex or opens the website, supplies a script, a rulebook, a written
+idea, or optional visuals, and receives a playable, shareable game. Other
+people join a Shared Session through a URL and play together.
+
+It covers rule-orchestrated games. Tabletop play is one possible presentation,
 not the product boundary.
+
+The success bar is `source in → playable game out → others can play together`.
+Web Studio and Codex operate the same Game Project. Validation Findings are
+optional iteration tools, not the product.
 
 ## Language
 
 **Creator**:
-The person who authors a game idea, supplies optional source material, and owns
-the questions the prototype should answer.
-_Avoid_: Tabletop creator, rulebook uploader
+The person who supplies a game idea, script, or rules and wants a playable,
+shareable game. Includes professional authors and hobbyists.
+_Avoid_: Tabletop creator, rulebook uploader, playtest researcher
+
+**Participant**:
+A person who joins a Shared Session through an invitation URL and plays. They
+do not install Codex or GoDesk.
+_Avoid_: Tester, subject
 
 **Rule System**:
 The editable model of participants, entities, setup, actions, stages,
 constraints, outcomes, and presentation for one game.
 _Avoid_: Board-game schema, rules document
 
-**Design Hypothesis**:
-A concrete claim the Creator wants a play session to support, refute, or leave
-inconclusive.
-_Avoid_: Goal, generic feedback request
-
 **Game Project**:
-The tenant-scoped, versioned home for sources, one or more Rule Systems, builds,
-shared sessions, and validation evidence.
+The tenant-scoped, versioned home for sources, one or more Rule Systems,
+builds, and Shared Sessions.
 
 **Source Library**:
 Traceable creator briefs, rules documents, images, and generated assets used by
@@ -63,31 +70,18 @@ An immutable executable output compiled from one Rule System version.
 
 **Restored Rule System**:
 A new editable Rule System copied from one immutable Playable Build in the same
-Game Project. The source Build, Shared Sessions, Replays, and Validation
-Findings remain unchanged.
+Game Project. The source Build, Shared Sessions, and Replays remain unchanged.
 _Avoid_: Rollback in place, activate old version
 
 **Shared Session**:
-An authoritative run of one Playable Build that participants can join through
+An authoritative run of one Playable Build that Participants can join through
 an invitation URL.
-_Avoid_: Table session
+_Avoid_: Table session, experiment room as the primary name
 
 **Playtest Link**:
 A stable Game Project URL that resolves to one Creator-published Shared Session.
 Changing its target affects new visits without mutating prior Sessions or Replays.
 _Avoid_: Latest Room, mutable Session URL
-
-**Experiment Brief**:
-The immutable Design Hypothesis question and success signal shown to
-participants in one Shared Session. An exploratory Shared Session has no
-Experiment Brief.
-_Avoid_: Survey, generic feedback prompt
-
-**Feedback Moment**:
-The exact Accepted Action a participant had most recently completed when they
-submitted or updated Shared Session feedback. It identifies the action sequence
-and action, so the observation can be checked against the Replay.
-_Avoid_: Free-floating comment, inferred play context
 
 **Intent**:
 A participant-requested action submitted to a Shared Session.
@@ -103,25 +97,39 @@ _Avoid_: Table State
 **Replay**:
 A read-only reconstruction of a Shared Session that cannot mutate it.
 
-**Validation Finding**:
-A Creator-recorded interpretation of human or automated evidence against one
-Design Hypothesis, classified as supported, refuted, or inconclusive, with one
-concrete `nextChange` for the next focused iteration of the same project.
-_Avoid_: Playtest result
-
 **Web Studio**:
 The visible collaboration surface for the same Game Project Codex edits through
 MCP.
 _Avoid_: Web Editor
 
+**Design Hypothesis**:
+An optional concrete claim a Creator may attach when iterating. Not required to
+share or play.
+_Avoid_: Goal, the product outcome
+
+**Experiment Brief**:
+The optional snapshot of one Design Hypothesis shown in a Shared Session.
+_Avoid_: Survey, required playtest form
+
+**Feedback Moment**:
+The exact Accepted Action a Participant had most recently completed when they
+submitted Shared Session feedback.
+
+**Validation Finding**:
+An optional Creator-recorded note against a Design Hypothesis, with one
+`nextChange` for focused iteration. It is not human acceptance of the game and
+not the product destination.
+_Avoid_: Playtest result, product success metric
+
 ## Trust language
 
 **Automated Evidence**:
 Deterministic bot or contract evidence that can establish system behavior but
-cannot establish human acceptance.
+cannot establish that people enjoyed or accepted the game.
 
 **Human Evidence**:
-Evidence recorded from real people using a Shared Session.
+Evidence recorded from real people using a Shared Session, only when the
+Creator attests that.
 
 **Presentation Floor**:
 The minimum legible and intentional presentation required before a Shared

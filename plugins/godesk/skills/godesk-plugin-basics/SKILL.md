@@ -6,7 +6,9 @@ description: Operate authoritative GoDesk rule-game projects safely from Codex. 
 # GoDesk Plugin Basics
 
 Use Codex as the control plane and GoDesk as the authoritative project service,
-deterministic runtime, validation ledger, and visible Web Studio.
+deterministic runtime, and visible Web Studio. The product output is a
+playable, shareable Shared Session. Validation Findings are optional
+iteration tools, not the destination.
 
 ## Required workflow
 

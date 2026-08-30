@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 const installPrompt =
-  "阅读 https://godesk.yumengfan220.workers.dev/chatgpt-plugin，帮我安装 GoDesk；完成登录与功能验证后，自动新建一个 Codex 任务，开始制作并验证我的第一个规则游戏。";
+  "阅读 https://godesk.yumengfan220.workers.dev/chatgpt-plugin，帮我安装 GoDesk；完成登录后，自动新建一个 Codex 任务，根据我的剧本或规则生成一款别人能立刻打开、立刻玩、还能联机的游戏。";
 
 const defaultMacCli = "/Applications/ChatGPT.app/Contents/Resources/codex";
 const resolvedCli = "<resolved Codex Desktop bundled CLI>";
@@ -26,11 +26,12 @@ export function InstallGuide() {
       </header>
 
       <section className="install-hero">
-        <p className="install-kicker">从一个想法，到可分享的规则游戏</p>
+        <p className="install-kicker">从一个剧本或规则，到可玩可分享的游戏</p>
         <h1>让 Codex 直接使用 GoDesk。</h1>
         <p className="install-lead">
-          Codex 负责理解需求、规划、修改和验证；GoDesk 负责项目状态、规则编译、
-          确定性运行时、共享会话、回放与验证记录。整个创作过程始终有一个可见、可手动编辑的 Web Studio。
+          对标 ChatCut：安装 Plugin，上传源材料，得到可直接使用的成品。GoDesk
+          把剧本或规则变成别人能立刻打开、立刻玩、还能联机的游戏。Codex
+          负责自然语言控制；GoDesk 负责项目、编译、确定性对局和邀请链接。朋友只打开 URL，不装 Codex。
         </p>
 
         <div className="install-prompt" aria-label="一句话安装提示">
@@ -108,8 +109,8 @@ export function InstallGuide() {
               <h3>自动进入新任务</h3>
               <p>
                 使用 Codex 的任务管理能力新建并打开一个任务，发送：
-                “使用 GoDesk，根据我的想法创建一个可编辑的规则游戏，尽早打开 Web Studio，
-                编译一个不可变 Build，创建可分享的会话，并记录一条明确标注证据类型的验证结论。”
+                “使用 GoDesk，根据我的剧本或规则生成一款可玩的规则游戏，尽早打开 Web Studio，
+                编译一个不可变 Build，创建可分享的会话，并把邀请链接发给别人联机游玩。”
                 必须取得新任务 ID、打开该任务，并在新任务内实际调用
                 <code>list_projects</code>；不能只在当前任务里复述这段提示。
               </p>

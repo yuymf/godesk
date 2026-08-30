@@ -1,6 +1,6 @@
 # ADR 0003: Rulebook-first creator onboarding
 
-Status: superseded by ADR 0005
+Status: superseded by ADR 0005. Product identity is ADR 0011.
 
 Date: 2026-08-03
 
