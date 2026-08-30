@@ -5537,6 +5537,44 @@ describe("Game Project HTTP seam", () => {
     });
   });
 
+  it("turns each hobbyist starter into a pending score-race plan", async () => {
+    const { HOBBYIST_STARTERS } = await import("../src/creator/hobbyist-starters");
+    for (const starter of HOBBYIST_STARTERS) {
+      const created = await SELF.fetch("https://godesk.test/api/projects", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: starter.label }),
+      }).then((response) => response.json<{
+        project: { id: string; version: number };
+      }>());
+      const submitted = await SELF.fetch(
+        `https://godesk.test/api/projects/${created.project.id}/jobs`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            kind: "generate-rule-system",
+            expectedVersion: created.project.version,
+            idea: starter.text,
+            name: starter.label,
+            idempotencyKey: `hobbyist-starter-${starter.id}`,
+          }),
+        },
+      ).then((response) => response.json<{ id: string }>());
+      const finished = await waitForJob(submitted.id);
+      expect(finished.status, starter.label).toBe("succeeded");
+      expect((finished.result as { generationPlan: unknown }).generationPlan).toMatchObject({
+        status: "pending",
+        proposedRuntime: {
+          op: "configure_score_race",
+          config: {
+            actions: [{ points: 2 }, { points: 1 }],
+          },
+        },
+      });
+    }
+  });
+
   it("materializes, compiles, shares, and replays an explicit shared goal", async () => {
     const created = await SELF.fetch("https://godesk.test/api/projects", {
       method: "POST",

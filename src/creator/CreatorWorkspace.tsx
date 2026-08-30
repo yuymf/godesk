@@ -50,6 +50,7 @@ import type {
   ValidationFinding,
 } from "./project-contract";
 import { DEFAULT_EXAMPLES, type DefaultExampleId } from "./default-examples";
+import { HOBBYIST_STARTERS } from "./hobbyist-starters";
 import {
   extractRulebookText,
   harvestRulebookPageImages,
@@ -386,23 +387,7 @@ export function parseRuleSystemStructure(value: string): RuleSystemStructureDraf
   return parsed as RuleSystemStructureDraft;
 }
 
-export const HOBBYIST_STARTERS = [
-  {
-    id: "script",
-    label: "3人剧本杀",
-    text: "三个人被关在别墅里，互相怀疑谁是凶手。每人有一条私密线索，每轮可以质问或隐瞒一次，先集齐关键证据的人揭晓真相。",
-  },
-  {
-    id: "cards",
-    label: "聚会卡牌",
-    text: "四个人用一副手牌打牌，每轮打出一张并接上桌面的故事。解释要说得通，讲不下去的人扣分，先到 12 分的人赢。",
-  },
-  {
-    id: "board",
-    label: "轻桌游",
-    text: "两到四人在一张城市地图上抢地盘。每回合放一个工人到街区收取资源，谁先到 12 分谁赢。",
-  },
-] as const;
+export { HOBBYIST_STARTERS } from "./hobbyist-starters";
 
 export function hobbyistProjectName(name: string, description: string) {
   const trimmed = name.trim();
