@@ -4,8 +4,10 @@ How the engineering skills should consume this repository's domain documentation
 
 ## Before exploring, read these
 
+- **`AGENTS.md`** — product charter and Playwright verification rule.
 - **`CONTEXT.md`** at the repository root.
-- **`docs/adr/`** — read ADRs that touch the area about to be changed.
+- **`docs/adr/0011-chatcut-playable-output-is-the-product.md`** — current product identity.
+- **`docs/adr/`** — other ADRs that touch the area about to be changed.
 
 If any of these files do not exist, proceed silently. The `/domain-modeling` skill creates them lazily when terms or decisions are actually resolved.
 

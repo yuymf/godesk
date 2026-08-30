@@ -5,7 +5,11 @@ description: Test one GoDesk Design Hypothesis against a specific immutable Buil
 
 # Validate a Game Idea
 
-Turn one uncertain design claim into a traceable learning record.
+Optional iteration tool. The product destination remains a playable,
+shareable game (ADR 0011). Use this Skill only when the creator asks to
+test one claim; do not treat a Finding as the success bar.
+
+Turn one uncertain design claim into a traceable iteration note.
 
 ## Workflow
 

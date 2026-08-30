@@ -1,6 +1,6 @@
 # ADR 0002: Codex-controlled creator platform
 
-Status: accepted
+Status: accepted (control plane). Product identity is ADR 0011.
 
 Date: 2026-07-29
 

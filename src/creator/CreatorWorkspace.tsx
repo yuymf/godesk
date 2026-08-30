@@ -638,7 +638,7 @@ function CreatorHome() {
           <div className="studio-orbit" aria-hidden="true"><span>GD</span></div>
           <p>GoDesk Creator</p>
           <h1>今天要做一款什么游戏？</h1>
-          <span>写下一个游戏想法，也可以附上现有规则。GoDesk 会生成可编辑、可分享、可验证的版本。</span>
+          <span>上传剧本或规则，生成别人能立刻打开、立刻玩、还能联机的游戏。</span>
         </div>
 
         <section className="default-examples studio-examples" aria-label="从案例开始">
@@ -647,7 +647,7 @@ function CreatorHome() {
               <span>Default examples</span>
               <h2>从案例开始</h2>
             </div>
-            <p>公开安全的规则游戏，一点即可编译、分享和试玩。</p>
+            <p>一点即可生成可玩对局。把邀请链接发给别人，对方立刻能玩。</p>
           </div>
           <div className="example-grid">
             {DEFAULT_EXAMPLES.map((example) => (

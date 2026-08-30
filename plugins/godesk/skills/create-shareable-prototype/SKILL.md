@@ -5,8 +5,10 @@ description: Turn a game idea or source into a presentable GoDesk Shared Session
 
 # Create a Shareable Prototype
 
-The success path is Idea or Source → Presentation Floor → immutable Build →
-Studio embedded Shared Session → stable Playtest Link.
+The success path is Idea or Source → playable game → invitation URL that
+others can open and play. Presentation Floor, immutable Build, Studio
+embedded Shared Session, and a stable Playtest Link exist to make that
+output real. A Finding is optional.
 
 ## Workflow
 
