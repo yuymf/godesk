@@ -429,7 +429,7 @@ export function materializeRuleSystem(input: {
     .filter((line) => line.length <= 80 && /\b(round|phase|turn|auction|voyage|setup|scoring|game end)\b|回合|阶段|结算|游戏结束/i.test(line))
     .slice(0, 6);
   const outcomeLines = lines
-    .filter((line) => /\b(winner|wins?|victory|game end|ends? when|goal)\b|获胜|胜利|结束条件|目标/i.test(line))
+    .filter((line) => /\b(winner|wins?|victory|game end|ends? when|goal)\b|获胜|胜利|结束条件|目标|揭晓|率先达到/i.test(line))
     .slice(0, 4);
   const surface = inferPlaySurface(corpus);
   const anchored = { sourceId: input.sourceId, provenance: "source-anchored" as const, confidence: 0.72 };

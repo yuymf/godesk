@@ -330,6 +330,18 @@ describe("rulebook Rule System materialization", () => {
     });
   });
 
+  it("keeps a reveal-the-truth score race as an outcome", () => {
+    const ruleSystem = materializeRuleSystem({
+      name: HOBBYIST_STARTERS[0].label,
+      description: HOBBYIST_STARTERS[0].text,
+      sourceId: "source_hobbyist_script",
+      sourceText: "",
+    });
+    expect(ruleSystem.outcomes.map((outcome) => outcome.name)).toEqual([
+      "率先达到 8 分的人揭晓真相，最多 12 回合。",
+    ]);
+  });
+
   it("keeps multiple English scored actions and their victory target", () => {
     const ruleSystem = materializeRuleSystem({
       name: "Clue relay",
