@@ -2176,7 +2176,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                         <div><dt>结果</dt><dd>{playtestOutcome(playtest)}</dd></div>
                         <div><dt>终局分数</dt><dd>{playtest.metrics.finalScores.join(" / ")}</dd></div>
                       </dl>
-                      <a href={playtest.replayUrl}>打开 Replay</a>
+                      <a href={playtest.replayUrl}>打开回放</a>
                     </article>
                   ))}
                 </div>
@@ -2336,7 +2336,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                             : "探索性试玩 · 尚未绑定 Design Hypothesis"}
                         </small>
                         <div className="feedback-inbox-actions">
-                          <a href={session.replayUrl}>检查 Replay</a>
+                          <a href={session.replayUrl}>看回放</a>
                           {recordedFinding ? (
                             <a href={`#finding-${recordedFinding.id}`}>查看已记录结论</a>
                           ) : (

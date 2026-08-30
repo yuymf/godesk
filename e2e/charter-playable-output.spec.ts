@@ -161,7 +161,12 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.getByRole("heading", { name: "现在就开玩" })).toBeVisible({
       timeout: 90_000,
     });
-    await page.getByRole("link", { name: "独立打开这一局" }).click();
+    await page.getByRole("button", { name: "发布邀请链接" }).click();
+    const tryLink = page.getByLabel("固定好友试玩链接");
+    await expect(tryLink).toHaveValue(/\/try\//, { timeout: 30_000 });
+    const tryUrl = await tryLink.inputValue();
+
+    await page.goto(tryUrl);
     await page.waitForURL(/\/room\//, { timeout: 30_000 });
 
     await expect(page.getByText("对方直接用浏览器加入，无需安装 Codex")).toBeVisible();
