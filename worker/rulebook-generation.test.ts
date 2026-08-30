@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { HOBBYIST_STARTERS } from "../src/creator/hobbyist-starters";
 import {
   inferredDrawAndScoreRule,
   inferredPushYourLuckRule,
@@ -304,6 +305,29 @@ describe("rulebook Rule System materialization", () => {
       sourceText: "Players take turns adding one idea.",
     });
     expect(ruleSystem.participants).toMatchObject({ min: 2, max: 4, default: 2 });
+  });
+
+  it("reads 个人 counts from hobbyist starter copy", () => {
+    expect(inferredParticipantRange(HOBBYIST_STARTERS[0].text)).toEqual({
+      min: 3,
+      max: 3,
+      default: 3,
+    });
+    expect(inferredParticipantRange(HOBBYIST_STARTERS[1].text)).toEqual({
+      min: 4,
+      max: 4,
+      default: 4,
+    });
+    expect(inferredParticipantRange(HOBBYIST_STARTERS[2].text)).toEqual({
+      min: 2,
+      max: 4,
+      default: 2,
+    });
+    expect(inferredParticipantRange("率先达到 8 分的人揭晓真相。")).toEqual({
+      min: 2,
+      max: 2,
+      default: 2,
+    });
   });
 
   it("keeps multiple English scored actions and their victory target", () => {

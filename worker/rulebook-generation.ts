@@ -111,6 +111,7 @@ export function inferredParticipantRange(text: string, defaultValue = 2) {
       new RegExp(`(${numberToken})\\s*players?`, "i"),
       new RegExp(`(${numberToken})\\s*(?:位|名)?玩家`, "i"),
       new RegExp(`(${numberToken})\\s*(?:位|名)\\s*[\\u4e00-\\u9fff]{1,12}`, "i"),
+      new RegExp(`(${numberToken})\\s*个\\s*人`),
     ],
     defaultValue,
   );

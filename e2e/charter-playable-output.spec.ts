@@ -158,6 +158,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.getByRole("heading", { name: "先看这一局怎么玩" })).toBeVisible({
       timeout: 30_000,
     });
+    await expect(page.getByText("3–3 人")).toBeVisible();
     await page.getByRole("button", { name: "确认玩法并开始试玩" }).click();
     await expect(page.getByRole("heading", { name: "现在就开玩" })).toBeVisible({
       timeout: 90_000,

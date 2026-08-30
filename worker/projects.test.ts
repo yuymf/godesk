@@ -5572,6 +5572,18 @@ describe("Game Project HTTP seam", () => {
           },
         },
       });
+      const participants = (
+        finished.result as {
+          ruleSystem: { participants: { min: number; max: number; default: number } };
+        }
+      ).ruleSystem.participants;
+      if (starter.id === "script") {
+        expect(participants, starter.label).toMatchObject({ min: 3, max: 3, default: 3 });
+      } else if (starter.id === "cards") {
+        expect(participants, starter.label).toMatchObject({ min: 4, max: 4, default: 4 });
+      } else {
+        expect(participants, starter.label).toMatchObject({ min: 2, max: 4, default: 2 });
+      }
     }
   });
 
