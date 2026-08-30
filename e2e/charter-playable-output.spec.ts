@@ -124,7 +124,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await page.getByRole("button", { name: "5 / 5" }).click();
     await page.getByPlaceholder(/目标很清楚/).fill("目标清楚，第二回合还可以更有张力。");
     await page.getByRole("button", { name: "提交反馈" }).click();
-    await expect(page.getByText(/反馈已保存/)).toBeVisible();
+    await expect(page.getByText("✓ 反馈已保存")).toBeVisible();
 
     await page.getByRole("link", { name: "只读回放" }).click();
     await page.waitForURL(/\/replay\//, { timeout: 30_000 });
