@@ -4351,3 +4351,223 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
     text-align: left;
   }
 }
+
+/* Hobbyist ChatCut pass: one composer, one next action */
+.studio-welcome > p {
+  display: none;
+}
+
+.studio-idea-field {
+  display: block;
+  padding: 6px 8px 0;
+}
+
+.studio-idea-field textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 108px;
+  padding: 8px 6px 12px;
+  color: #f4f5f7;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.studio-idea-field textarea::placeholder {
+  color: #555a63;
+}
+
+.studio-starter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 8px 10px;
+}
+
+.studio-starter-row button {
+  min-height: 32px;
+  padding: 0 10px;
+  color: #d7dbe2;
+  background: #1b1e24;
+  border: 1px solid #30343d;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.studio-starter-row button:hover:not(:disabled) {
+  color: #f4f5f7;
+  border-color: #8ef0b7;
+}
+
+.studio-attach-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.studio-attach-row .studio-dropzone {
+  margin: 0;
+}
+
+.studio-inline-name {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 8px;
+}
+
+.studio-inline-name span {
+  color: #777c85;
+  font-size: 11px;
+}
+
+.studio-inline-name input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  color: #f4f5f7;
+  background: #111317;
+  border: 1px solid #292c32;
+  border-radius: 8px;
+}
+
+.studio-progress {
+  width: min(780px, calc(100% - 48px));
+  margin: 14px auto 0;
+  color: #8ef0b7;
+  font-size: 13px;
+}
+
+.studio-examples {
+  max-width: 920px;
+  margin: 36px auto 48px;
+}
+
+.studio-examples h2 {
+  margin: 0 0 14px;
+  color: #e9ebee;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.studio-examples .example-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.studio-examples .example-grid article {
+  padding: 16px;
+}
+
+.studio-examples .example-grid h3 {
+  margin: 0 0 8px;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.studio-examples .example-grid dl {
+  grid-template-columns: 1fr 1fr;
+}
+
+.studio-examples .example-grid article > p {
+  min-height: 0;
+}
+
+.studio-focus-play .studio-primary,
+.studio-focus-plan .studio-primary {
+  display: flex;
+  flex-direction: column;
+}
+
+.studio-focus-play #builds {
+  order: -1;
+}
+
+.studio-focus-plan #plan {
+  order: -1;
+}
+
+.studio-secondary-panel {
+  opacity: 0.92;
+}
+
+.studio-next-hint {
+  margin-top: 12px !important;
+  color: #8ef0b7 !important;
+}
+
+.project-snapshot h2 {
+  margin: 0 0 8px;
+  color: #f2f4f7;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.creator-studio .generation-plan-panel,
+.creator-studio .generation-plan-panel.approved {
+  background: #14171c;
+  border: 1px solid #282c34;
+  box-shadow: none;
+}
+
+.creator-studio .generation-plan-summary,
+.creator-studio .generation-plan-facts dd,
+.creator-studio .generation-plan-columns li b {
+  color: #f2f4f7;
+}
+
+.creator-studio .generation-plan-facts dt,
+.creator-studio .generation-plan-columns p,
+.creator-studio .generation-plan-columns li span,
+.creator-studio .generation-plan-actions p {
+  color: #858b95;
+}
+
+.creator-studio .generation-plan-facts div,
+.creator-studio .generation-plan-columns section,
+.creator-studio .generation-plan-actions {
+  border-color: #282c34;
+}
+
+.creator-studio .generation-plan-actions button {
+  background: #8ef0b7;
+  border-color: #8ef0b7;
+  color: #0c1711;
+}
+
+.creator-studio .generation-plan-approved {
+  color: #a8efc5;
+  border-color: #274a37;
+}
+
+.validation-workflow {
+  padding: 0;
+}
+
+.validation-workflow > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 20px 24px 8px;
+}
+
+.validation-workflow > summary::-webkit-details-marker {
+  display: none;
+}
+
+.validation-workflow > .workflow-hint,
+.validation-workflow > .feedback-inbox,
+.validation-workflow > .validation-columns,
+.validation-workflow > .validation-findings {
+  margin-left: 24px;
+  margin-right: 24px;
+}
+
+@media (max-width: 900px) {
+  .studio-attach-row,
+  .studio-examples .example-grid {
+    grid-template-columns: 1fr;
+  }
+}

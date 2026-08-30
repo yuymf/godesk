@@ -4,6 +4,7 @@ import {
   draftExpectedVersion,
   findingContinuationPrompt,
   generationSourceFields,
+  hobbyistProjectName,
   latestBuildPlaytestComparison,
   latestStudioPlayTarget,
   latestActiveCreatorJob,
@@ -14,6 +15,7 @@ import {
   roomActionTitle,
   roomSurfaceCopy,
   shouldStartRuleSystemDraft,
+  studioHobbyistFocus,
   upsertCreatorJob,
   validationStudioHref,
   visibleCreatorJob,
@@ -328,5 +330,18 @@ describe("Creator Studio optimistic draft baseline", () => {
     expect(() => parseRuleSystemStructure('{"rules":[]}')).toThrow(
       "Rule System 结构 JSON 缺少必填字段。",
     );
+  });
+
+  it("names a hobbyist project from the idea when the default title is left alone", () => {
+    expect(hobbyistProjectName("我的游戏", "三个人在别墅里互相怀疑谁是凶手")).toBe(
+      "三个人在别墅里互相怀疑谁是凶手".slice(0, 16),
+    );
+    expect(hobbyistProjectName("雾岭山庄", "随便写点想法")).toBe("雾岭山庄");
+  });
+
+  it("puts play first once a joinable game exists", () => {
+    expect(studioHobbyistFocus("pending", false)).toBe("plan");
+    expect(studioHobbyistFocus("approved", true)).toBe("play");
+    expect(studioHobbyistFocus("approved", false)).toBe("setup");
   });
 });

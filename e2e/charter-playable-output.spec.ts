@@ -23,7 +23,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
   }) => {
     await page.goto("/");
     const ideaRelay = page.locator("article").filter({ hasText: "灵感接力" });
-    await ideaRelay.getByRole("button", { name: "复制并创建共享会话" }).click();
+    await ideaRelay.getByRole("button", { name: "先玩这一局" }).click();
     await page.waitForURL(/\/room\//, { timeout: 90_000 });
 
     await expect(page.getByRole("heading", { name: "灵感接力" })).toBeVisible();
