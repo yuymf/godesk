@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
 
+test.afterEach(async ({ page }, testInfo) => {
+  await page.screenshot({ path: testInfo.outputPath("final.png"), fullPage: true });
+});
+
 test.describe("ChatCut charter: source in, playable game out", () => {
   test("home composer is a light table and a starter chip is enough to generate", async ({
     page,
