@@ -120,6 +120,30 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await friendPage.getByRole("button", { name: "行动 1 +1 创意分" }).click();
     await expect(friendPage.getByText(/已提交/)).toBeVisible();
     await friendContext.close();
+
+    await page.getByRole("button", { name: "5 / 5" }).click();
+    await page.getByPlaceholder(/目标很清楚/).fill("目标清楚，第二回合还可以更有张力。");
+    await page.getByRole("button", { name: "提交反馈" }).click();
+    await expect(page.getByText(/反馈已保存/)).toBeVisible();
+
+    await page.getByRole("link", { name: "只读回放" }).click();
+    await page.waitForURL(/\/replay\//, { timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: "这一局怎么打完的" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "灵感接力" })).toBeVisible();
+    await expect(page.locator("body")).not.toContainText("Read-only Replay");
+    await expect(page.locator("body")).not.toContainText("Accepted actions");
+    await expect
+      .poll(async () =>
+        page.locator(".replay-view").evaluate((el) => getComputedStyle(el).backgroundColor),
+      )
+      .toBe("rgb(232, 240, 235)");
+    await expect
+      .poll(async () =>
+        page.locator(".room-shell-header").evaluate((el) => getComputedStyle(el).backgroundColor),
+      )
+      .toBe("rgb(244, 250, 246)");
+    await expect(page.getByText(/座位 0 · 加入约束/)).toBeVisible();
+    await expect(page.getByText(/座位 1 · 扩展创意/)).toBeVisible();
   });
 
   test("a starter chip generates a plan, then two people can play", async ({
@@ -179,10 +203,10 @@ test.describe("ChatCut charter: source in, playable game out", () => {
       .toBe("rgb(255, 255, 255)");
 
     await page.getByLabel("你的席位").selectOption("0");
-    await expect(page.getByText(/放置 1\/4 · Seat 0/)).toBeVisible();
+    await expect(page.getByText(/放置 1\/4 · 座位 0/)).toBeVisible();
     await page.getByRole("button", { name: /雪松木/ }).click();
     await expect(page.getByText("place:cedar")).toBeVisible();
-    await expect(page.getByText(/放置 1\/4 · Seat 1/)).toBeVisible();
+    await expect(page.getByText(/放置 1\/4 · 座位 1/)).toBeVisible();
   });
 
   test("雾岭山庄 becomes a joinable score race", async ({ page, browser }) => {

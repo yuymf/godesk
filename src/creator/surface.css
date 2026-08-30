@@ -971,6 +971,75 @@ summary:focus-visible {
   color: var(--forest-deep);
 }
 
+.playable-preview {
+  color: var(--ink);
+  background:
+    radial-gradient(ellipse 80% 52% at 48% -10%, rgb(15 107 76 / 12%), transparent 56%),
+    var(--canvas);
+}
+
+.playable-preview > header {
+  color: var(--muted);
+  border-bottom-color: var(--line);
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.playable-preview > header a {
+  color: var(--forest);
+}
+
+.playable-preview > .preview-hero,
+.preview-board,
+.preview-actions {
+  border-bottom-color: var(--line);
+}
+
+.preview-title h1 {
+  color: var(--ink);
+  font-family: inherit;
+}
+
+.preview-title p,
+.playable-preview dt,
+.playable-preview > aside code,
+.playable-preview > aside p,
+.playable-preview > aside li {
+  color: var(--muted);
+}
+
+.playable-preview dd {
+  color: var(--ink);
+}
+
+.playable-preview dl div {
+  border-left-color: var(--line);
+}
+
+.replay-view h2,
+.replay-state-card h2,
+.replay-state-card dd {
+  color: var(--ink);
+  text-transform: none;
+}
+
+.replay-state-card {
+  background: var(--paper);
+  border-color: var(--line);
+  box-shadow: 0 12px 32px rgb(28 38 34 / 6%);
+}
+
+.replay-state-card dt {
+  color: var(--faint);
+  text-transform: none;
+}
+
+.replay-view .score-grid article {
+  color: var(--ink);
+  background: var(--paper);
+  border-color: var(--line);
+}
+
 .room-view > .action-log,
 .replay-view > .action-log,
 .room-view:not(.room-view-voyage) > .action-log {
