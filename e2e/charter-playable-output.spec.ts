@@ -159,6 +159,9 @@ test.describe("ChatCut charter: source in, playable game out", () => {
       timeout: 30_000,
     });
     await expect(page.getByText("3–3 人")).toBeVisible();
+    await expect(page.locator(".generation-plan-panel")).not.toContainText("这局还做不到");
+    await expect(page.locator("body")).not.toContainText("Executable Kernel");
+    await expect(page.locator("body")).not.toContainText("requires reconfiguration");
     await expect(
       page
         .locator(".generation-plan-columns > section")

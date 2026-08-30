@@ -1901,7 +1901,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                     <ul>{generationPlan.outcomes.map((outcome) => <li key={outcome}>{outcome}</li>)}</ul>
                   ) : <p>还没识别到明确结果。</p>}
                 </section>
-                {generationPlan.unsupported.length > 0 && (
+                {generationPlan.status === "approved" && generationPlan.unsupported.length > 0 && (
                 <section>
                   <strong>这局还做不到</strong>
                   <ul>

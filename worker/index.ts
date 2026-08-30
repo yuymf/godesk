@@ -1202,7 +1202,7 @@ function applyOperation(
       (fields.actions !== undefined &&
         runtimeActionShapeChanged(record.ruleSystem.actions, fields.actions));
     const runtimeReconfigurationMessage =
-      "The executable runtime requires reconfiguration after participant, rule, or action changes.";
+      "改了人数、规则或行动后，需要再确认一次玩法才能继续开玩。";
     record.ruleSystem = {
       ...record.ruleSystem,
       ...(fields.name === undefined
