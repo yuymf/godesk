@@ -859,6 +859,8 @@ function ProjectStudio({ projectId }: { projectId: string }) {
   const [iterationPrompt, setIterationPrompt] = useState("");
   const [iterationFindingId, setIterationFindingId] = useState("");
   const [playtestLinkCopied, setPlaytestLinkCopied] = useState(false);
+  const [humanNames, setHumanNames] = useState<Record<number, string>>({});
+  const [humanAttested, setHumanAttested] = useState(false);
   const [sourceDraft, setSourceDraft] = useState("");
   const [structureDraft, setStructureDraft] = useState("");
   const [ruleSystemDirty, setRuleSystemDirty] = useState(false);
@@ -1385,6 +1387,83 @@ function ProjectStudio({ projectId }: { projectId: string }) {
     }
   }
 
+  async function attestHumanSession() {
+    if (!project || !playtestLink) return;
+    const room = sessions.find((session) => session.id === playtestLink.sessionId);
+    if (!room || room.seats.length < 2 || room.acceptedActions.length < 1) {
+      setFormError("固定邀请这一局还没有两位玩家各走一步。");
+      return;
+    }
+    if (!humanAttested) {
+      setFormError("请先确认这两位是真人。");
+      return;
+    }
+    const seatedParticipants = room.seats.map((seat) => ({
+      seat: seat.seat,
+      name: (humanNames[seat.seat] ?? "").trim() || `玩家 ${seat.seat}`,
+    }));
+    if (new Set(seatedParticipants.map((entry) => entry.name)).size !== seatedParticipants.length) {
+      setFormError("每位玩家的称呼不能重复。");
+      return;
+    }
+    setBusy(true);
+    setFormError("");
+    try {
+      let hypothesisId = hypotheses[0]?.id;
+      let expectedVersion = project.version;
+      if (!hypothesisId) {
+        const created = await applyProjectChanges(project.id, {
+          expectedVersion,
+          idempotencyKey: crypto.randomUUID(),
+          operations: [{
+            op: "add_design_hypothesis",
+            hypothesis: {
+              question: "朋友打开邀请链接后能不能立刻一起玩？",
+              successSignal: "至少两个人各完成一次行动。",
+            },
+          }],
+        });
+        setProject(created.project);
+        setHypotheses(created.hypotheses);
+        setFindings(created.findings);
+        setChangesets((current) => [...current, created.changeset]);
+        hypothesisId = created.hypotheses.at(-1)?.id;
+        expectedVersion = created.project.version;
+      }
+      if (!hypothesisId) throw new Error("没法记下这局要看的问题。");
+      const result = await applyProjectChanges(project.id, {
+        expectedVersion,
+        idempotencyKey: crypto.randomUUID(),
+        operations: [{
+          op: "record_validation_finding",
+          finding: {
+            hypothesisId,
+            buildId: room.buildId,
+            evidence: {
+              type: "human-session",
+              sessionId: room.id,
+              seatedParticipants,
+              creatorAttested: true,
+            },
+            verdict: "supported",
+            notes: "两人从固定邀请链接加入，并各走了至少一步。",
+            nextChange: "保持这一版，再约朋友打一局。",
+          },
+        }],
+      });
+      setProject(result.project);
+      setHypotheses(result.hypotheses);
+      setFindings(result.findings);
+      setChangesets((current) => [...current, result.changeset]);
+      setHumanAttested(false);
+      setNotice("已记下：这是真人一起打的一局。");
+    } catch (reason) {
+      setFormError(reason instanceof Error ? reason.message : "没能记下这是真人局。");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function addDesignHypothesis(event: React.FormEvent) {
     event.preventDefault();
     if (!project) return;
@@ -1725,6 +1804,21 @@ function ProjectStudio({ projectId }: { projectId: string }) {
   );
   const hobbyistFocus = studioHobbyistFocus(generationPlan?.status, canPlayLatest);
   const showValidationOpen = unreviewedFeedbackCount > 0 || Boolean(validationRouteContext.buildId);
+  const friendSession = playtestLink
+    ? sessions.find((session) => session.id === playtestLink.sessionId)
+    : undefined;
+  const humanFinding = friendSession
+    ? findings.find((finding) =>
+        finding.evidence.type === "human-session" &&
+        finding.evidence.sessionId === friendSession.id,
+      )
+    : undefined;
+  const canAttestHuman = Boolean(
+    friendSession &&
+    friendSession.seats.length >= 2 &&
+    friendSession.acceptedActions.length >= 1 &&
+    !humanFinding,
+  );
 
   return (
     <main className={`creator-studio studio-focus-${hobbyistFocus}`} id="main">
@@ -2147,6 +2241,49 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                     <strong>这一版还没有开局。</strong>
                     <p>点「开始试玩」后即可在这里落座和行动。朋友只能使用已发布的邀请链接。</p>
                   </div>
+                )}
+                {humanFinding && (
+                  <p className="human-attest-done" role="status">
+                    已记下：这是真人一起打的一局。
+                  </p>
+                )}
+                {canAttestHuman && friendSession && (
+                  <form
+                    className="human-attest"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void attestHumanSession();
+                    }}
+                  >
+                    <strong>这局是真人一起打的？</strong>
+                    <p>固定邀请链接上已经有两位玩家各走了一步。写下称呼并确认后记下。</p>
+                    {friendSession.seats.map((seat) => (
+                      <label key={seat.seat}>
+                        <span>座位 {seat.seat} 的称呼</span>
+                        <input
+                          aria-label={`座位 ${seat.seat} 的称呼`}
+                          onChange={(event) => {
+                            const name = event.currentTarget.value;
+                            setHumanNames((current) => ({ ...current, [seat.seat]: name }));
+                          }}
+                          placeholder={`玩家 ${seat.seat}`}
+                          value={humanNames[seat.seat] ?? ""}
+                        />
+                      </label>
+                    ))}
+                    <label className="human-attest-check">
+                      <input
+                        aria-label="我确认这两位是真人"
+                        checked={humanAttested}
+                        onChange={(event) => setHumanAttested(event.currentTarget.checked)}
+                        type="checkbox"
+                      />
+                      <span>我确认这两位是真人，不是脚本或机器人。</span>
+                    </label>
+                    <button disabled={busy || !humanAttested} type="submit">
+                      记下这是真人局
+                    </button>
+                  </form>
                 )}
               </section>
             )}

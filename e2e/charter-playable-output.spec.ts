@@ -162,6 +162,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.getByRole("heading", { name: "现在就开玩" })).toBeVisible({
       timeout: 90_000,
     });
+    const studioUrl = page.url();
     await page.getByRole("button", { name: "发布邀请链接" }).click();
     const tryLink = page.getByLabel("固定好友试玩链接");
     await expect(tryLink).toHaveValue(/\/try\//, { timeout: 30_000 });
@@ -188,6 +189,15 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await friendPage.getByRole("button", { name: /行动 2/ }).click();
     await expect(friendPage.getByText(/已提交/)).toBeVisible();
     await friendContext.close();
+
+    await page.goto(studioUrl);
+    await expect(page.getByRole("heading", { name: "现在就开玩" })).toBeVisible();
+    await expect(page.getByLabel("座位 0 的称呼")).toBeVisible({ timeout: 20_000 });
+    await page.getByLabel("座位 0 的称呼").fill("创作者");
+    await page.getByLabel("座位 1 的称呼").fill("朋友");
+    await page.getByLabel("我确认这两位是真人").check();
+    await page.getByRole("button", { name: "记下这是真人局" }).click();
+    await expect(page.getByText("已记下：这是真人一起打的一局。")).toBeVisible();
   });
 
   test("港口十三号 opens a light harbor table and accepts a waiter", async ({ page }) => {
