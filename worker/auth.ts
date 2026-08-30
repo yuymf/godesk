@@ -95,7 +95,6 @@ export function validateAccessClaims(
   expected: {
     issuer: string;
     audience: string;
-    grantedScopes: string[];
     nowSeconds?: number;
   },
 ): CreatorIdentity {
@@ -109,10 +108,11 @@ export function validateAccessClaims(
   if (typeof payload.sub !== "string" || !payload.sub) {
     throw new Error("missing_creator");
   }
+  const grantedScopes = scopes(payload);
   return {
     creatorId: payload.sub,
     mode: "oauth",
-    scopes: expected.grantedScopes,
+    scopes: grantedScopes.length ? grantedScopes : [READ_SCOPE, WRITE_SCOPE],
   };
 }
 
@@ -198,11 +198,14 @@ export async function authorizeRequest(
         issuer,
         audience: config.GODESK_AUTH_AUDIENCE,
       });
-      return validateAccessClaims(verified.payload, {
+      const identity = validateAccessClaims(verified.payload, {
         issuer,
         audience: config.GODESK_AUTH_AUDIENCE,
-        grantedScopes: requiredScopes,
       });
+      if (requiredScopes.some((scope) => !identity.scopes.includes(scope))) {
+        return challenge(request, requiredScopes.join(" "), "insufficient_scope");
+      }
+      return identity;
     } catch (reason) {
       const description =
         reason instanceof Error ? reason.message : "Access token validation failed.";

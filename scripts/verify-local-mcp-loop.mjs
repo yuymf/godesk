@@ -124,6 +124,26 @@ async function verifyLoop(origin) {
     fail(`job ${jobId} did not finish within 30 seconds`);
   }
 
+  function shareApi(shareUrl, pathname) {
+    const url = new URL(shareUrl);
+    url.pathname = pathname;
+    return url;
+  }
+
+  async function claimSeat(roomId, seat, shareUrl, extras = {}) {
+    const response = await fetch(shareApi(shareUrl, `/api/sessions/${roomId}/seats`), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ seat, ...extras }),
+    });
+    const body = await response.json();
+    if (response.status !== 200) {
+      fail(`claim seat ${seat}: expected 200, got ${response.status}: ${bodyForError(body)}`);
+    }
+    ensure(typeof body.seatToken === "string" && body.seatToken.startsWith("seat_"), "seat claim did not return a seatToken");
+    return { status: response.status, session: body.session, seatToken: body.seatToken };
+  }
+
   const initialized = await rpc({
     jsonrpc: "2.0",
     id: nextId++,
@@ -194,13 +214,16 @@ async function verifyLoop(origin) {
   });
   const generated = await waitForJob(generatedJob.id);
   ensure(generated.result?.generationPlan?.status === "pending", "MCP generation did not return a pending Generation Plan");
+  ensure(generated.result?.ruleSystem?.runtimeSupport?.status === "draft", "MCP generation must keep the Rule System in draft");
+  ensure(generated.result?.generationPlan?.proposedRuntime?.op === "configure_shared_goal", "MCP generation did not propose shared-goal-v1");
+  ensure(generated.result.generationPlan.proposedRuntime.config.goalTarget === 6, "MCP generation changed the shared target");
   const sourceView = await readProject(projectId, "sources");
   ensure(sourceView.sources.some((source) => source.content === brief), "MCP generation did not persist the source");
   const generatedRuleSystem = await readProject(projectId, "rule-system");
-  ensure(generatedRuleSystem.runtimeSupport?.kernel?.type === "shared-goal-v1", "MCP generation did not produce shared-goal-v1");
-  ensure(generatedRuleSystem.runtimeSupport.kernel.goalTarget === 6, "MCP generation changed the shared target");
+  ensure(generatedRuleSystem.runtimeSupport?.status === "draft", "MCP read_project lost the draft Rule System");
   const pendingPlan = await readProject(projectId, "generation-plan");
   ensure(pendingPlan.generationPlan?.status === "pending", "MCP read_project lost the pending plan");
+  ensure(pendingPlan.generationPlan?.proposedRuntime?.op === "configure_shared_goal", "MCP read_project lost proposedRuntime");
 
   const visualBriefId = "source_mcp_visual_brief";
   const visualReferenceId = "source_mcp_visual_reference";
@@ -281,6 +304,9 @@ async function verifyLoop(origin) {
   ensure(approved.generationPlan?.status === "approved", "MCP did not approve the Generation Plan");
   const approvedProject = await readProject(projectId);
   const approvedRuleSystem = await readProject(projectId, "rule-system");
+  ensure(approvedRuleSystem.runtimeSupport?.status === "executable", "MCP approve did not apply proposedRuntime");
+  ensure(approvedRuleSystem.runtimeSupport.kernel?.type === "shared-goal-v1", "MCP approve did not produce shared-goal-v1");
+  ensure(approvedRuleSystem.runtimeSupport.kernel.goalTarget === 6, "MCP approve changed the shared target");
 
   const compileJob = await callTool("submit_job", {
     kind: "compile-build",
@@ -355,7 +381,7 @@ async function verifyLoop(origin) {
       session.experiment.successSignal === "参与者评论明确指出下一步行动容易判断。",
     "MCP Shared Session lost its Experiment Brief snapshot",
   );
-  const actionId = generatedRuleSystem.runtimeSupport.kernel.actions[0].id;
+  const actionId = approvedRuleSystem.runtimeSupport.kernel.actions[0].id;
   const acted = await callTool("submit_session_intent", {
     sessionId: session.id,
     intentId: "local-mcp-intent-001",
@@ -368,29 +394,17 @@ async function verifyLoop(origin) {
   ensure(reopened.acceptedActions.length === 1, "MCP Shared Session action log has unexpected length");
 
   const publicRoomUrl = new URL(session.sessionUrl);
-  const publicShareApi = (suffix) => {
-    const url = new URL(publicRoomUrl);
-    url.pathname = suffix;
-    return url;
-  };
-  const feedbackClientId = "mcp-feedback-browser";
-  const seatClaim = await fetch(
-    publicShareApi(`/api/sessions/${session.id}/seats`),
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ seat: 0, clientId: feedbackClientId }),
-    },
-  );
-  ensure(seatClaim.status === 200, "public MCP loop feedback client could not claim a seat");
+  ensure(publicRoomUrl.searchParams.get("share"), "MCP session URL is missing a share token");
+  ensure(!publicRoomUrl.searchParams.has("creator"), "MCP session URL still uses creator=");
+  const feedbackSeat = await claimSeat(session.id, 0, session.sessionUrl);
   const publicFeedback = await fetch(
-    publicShareApi(`/api/sessions/${session.id}/feedback`),
+    shareApi(session.sessionUrl, `/api/sessions/${session.id}/feedback`),
     {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         seat: 0,
-        clientId: feedbackClientId,
+        seatToken: feedbackSeat.seatToken,
         rating: 5,
         comment: "MCP 生成的行动反馈清楚，下一步容易判断。",
       }),
@@ -431,6 +445,12 @@ async function verifyLoop(origin) {
     publishedView.playtestLink?.sessionId === publishedSession.id,
     "MCP Playtest Link did not pin the published Session",
   );
+  ensure(
+    publishedView.playtestLink?.replayId === publishedSession.replayId,
+    "MCP Playtest Link lost its Replay id",
+  );
+  ensure(new URL(publishedView.playtestLink.url).searchParams.get("share"), "MCP Playtest Link is missing a share token");
+  ensure(!new URL(publishedView.playtestLink.url).searchParams.has("creator"), "MCP Playtest Link still uses creator=");
   const stableResponse = await fetch(publishedView.playtestLink.url, {
     redirect: "manual",
   });
@@ -569,10 +589,12 @@ async function verifyLoop(origin) {
     idempotencyKey: "local-mcp-turn-generate-001",
   });
   const turnGenerated = await waitForJob(turnGeneratedJob.id);
-  const turnKernel = turnGenerated.result?.ruleSystem?.runtimeSupport?.kernel;
-  ensure(turnKernel?.type === "turn-taking-v1", "MCP generation did not produce turn-taking-v1");
-  ensure(turnKernel.maxTurns === 4, "MCP turn-taking generation changed the turn limit");
-  ensure(turnKernel.actions.length === 2, "MCP turn-taking generation lost explicit actions");
+  ensure(turnGenerated.result?.ruleSystem?.runtimeSupport?.status === "draft", "MCP turn-taking generation must stay draft");
+  const turnProposed = turnGenerated.result?.generationPlan?.proposedRuntime;
+  ensure(turnProposed?.op === "configure_turn_taking", "MCP generation did not propose turn-taking-v1");
+  ensure(turnProposed.config.maxTurns === 4, "MCP turn-taking generation changed the turn limit");
+  ensure(turnProposed.config.actions.length === 2, "MCP turn-taking generation lost explicit actions");
+  const turnKernel = turnProposed.config;
   const turnPlan = await readProject(turnProjectId, "generation-plan");
   ensure(turnPlan.generationPlan?.status === "pending", "MCP turn-taking generation did not create a pending plan");
   const turnApproved = await callTool("apply_project_patch", {
@@ -640,10 +662,12 @@ async function verifyLoop(origin) {
     idempotencyKey: "local-mcp-take-generate-001",
   });
   const takeGenerated = await waitForJob(takeGeneratedJob.id);
-  const takeKernel = takeGenerated.result?.ruleSystem?.runtimeSupport?.kernel;
-  ensure(takeKernel?.type === "take-away-v1", "MCP generation did not produce take-away-v1");
-  ensure(takeKernel.initialPool === 15, "MCP take-away generation changed the initial pool");
-  ensure(JSON.stringify(takeKernel.actions.map((action) => action.take)) === "[1,2]", "MCP take-away generation changed legal takes");
+  ensure(takeGenerated.result?.ruleSystem?.runtimeSupport?.status === "draft", "MCP take-away generation must stay draft");
+  const takeProposed = takeGenerated.result?.generationPlan?.proposedRuntime;
+  ensure(takeProposed?.op === "configure_take_away", "MCP generation did not propose take-away-v1");
+  ensure(takeProposed.config.initialPool === 15, "MCP take-away generation changed the initial pool");
+  ensure(JSON.stringify(takeProposed.config.actions.map((action) => action.take)) === "[1,2]", "MCP take-away generation changed legal takes");
+  const takeKernel = takeProposed.config;
   const takePlan = await readProject(takeProjectId, "generation-plan");
   const takeApproved = await callTool("apply_project_patch", {
     projectId: takeProjectId,
@@ -706,11 +730,13 @@ async function verifyLoop(origin) {
     idempotencyKey: "local-mcp-roll-generate-001",
   });
   const rollGenerated = await waitForJob(rollGeneratedJob.id);
-  const rollKernel = rollGenerated.result?.ruleSystem?.runtimeSupport?.kernel;
-  ensure(rollKernel?.type === "roll-and-move-v1", "MCP generation did not produce roll-and-move-v1");
-  ensure(rollKernel.dieSides === 6, "MCP roll-and-move generation changed the die");
-  ensure(rollKernel.targetPosition === 20, "MCP roll-and-move generation changed the target");
-  ensure(rollKernel.maxTurns === 80, "MCP roll-and-move generation changed the visible safety limit");
+  ensure(rollGenerated.result?.ruleSystem?.runtimeSupport?.status === "draft", "MCP roll-and-move generation must stay draft");
+  const rollProposed = rollGenerated.result?.generationPlan?.proposedRuntime;
+  ensure(rollProposed?.op === "configure_roll_and_move", "MCP generation did not propose roll-and-move-v1");
+  ensure(rollProposed.config.dieSides === 6, "MCP roll-and-move generation changed the die");
+  ensure(rollProposed.config.targetPosition === 20, "MCP roll-and-move generation changed the target");
+  ensure(rollProposed.config.maxTurns === 80, "MCP roll-and-move generation changed the visible safety limit");
+  const rollKernel = rollProposed.config;
   const rollPlan = await readProject(rollProjectId, "generation-plan");
   const rollApproved = await callTool("apply_project_patch", {
     projectId: rollProjectId,
@@ -775,11 +801,13 @@ async function verifyLoop(origin) {
     idempotencyKey: "local-mcp-draw-generate-001",
   });
   const drawGenerated = await waitForJob(drawGeneratedJob.id);
-  const drawKernel = drawGenerated.result?.ruleSystem?.runtimeSupport?.kernel;
-  ensure(drawKernel?.type === "draw-and-score-v1", "MCP generation did not produce draw-and-score-v1");
-  ensure(JSON.stringify(drawKernel.cardValues) === "[1,2,3,4,5,6]", "MCP draw generation changed card values");
-  ensure(drawKernel.copiesPerValue === 2, "MCP draw generation changed copies per value");
-  ensure(drawKernel.victoryTarget === 15, "MCP draw generation changed the victory target");
+  ensure(drawGenerated.result?.ruleSystem?.runtimeSupport?.status === "draft", "MCP draw generation must stay draft");
+  const drawProposed = drawGenerated.result?.generationPlan?.proposedRuntime;
+  ensure(drawProposed?.op === "configure_draw_and_score", "MCP generation did not propose draw-and-score-v1");
+  ensure(JSON.stringify(drawProposed.config.cardValues) === "[1,2,3,4,5,6]", "MCP draw generation changed card values");
+  ensure(drawProposed.config.copiesPerValue === 2, "MCP draw generation changed copies per value");
+  ensure(drawProposed.config.victoryTarget === 15, "MCP draw generation changed the victory target");
+  const drawKernel = drawProposed.config;
   const drawPlan = await readProject(drawProjectId, "generation-plan");
   const drawApproved = await callTool("apply_project_patch", {
     projectId: drawProjectId,
@@ -842,11 +870,13 @@ async function verifyLoop(origin) {
     idempotencyKey: "local-mcp-push-generate-001",
   });
   const pushGenerated = await waitForJob(pushGeneratedJob.id);
-  const pushKernel = pushGenerated.result?.ruleSystem?.runtimeSupport?.kernel;
-  ensure(pushKernel?.type === "push-your-luck-v1", "MCP generation did not produce push-your-luck-v1");
-  ensure(pushKernel.dieSides === 6 && pushKernel.bustFace === 1, "MCP push generation changed die semantics");
-  ensure(pushKernel.victoryTarget === 20, "MCP push generation changed the victory target");
-  ensure(JSON.stringify(pushKernel.actions.map((action) => action.id)) === '["roll","bank"]', "MCP push generation lost its decisions");
+  ensure(pushGenerated.result?.ruleSystem?.runtimeSupport?.status === "draft", "MCP push generation must stay draft");
+  const pushProposed = pushGenerated.result?.generationPlan?.proposedRuntime;
+  ensure(pushProposed?.op === "configure_push_your_luck", "MCP generation did not propose push-your-luck-v1");
+  ensure(pushProposed.config.dieSides === 6 && pushProposed.config.bustFace === 1, "MCP push generation changed die semantics");
+  ensure(pushProposed.config.victoryTarget === 20, "MCP push generation changed the victory target");
+  ensure(JSON.stringify(pushProposed.config.actions.map((action) => action.id)) === '["roll","bank"]', "MCP push generation lost its decisions");
+  const pushKernel = pushProposed.config;
   const pushPlan = await readProject(pushProjectId, "generation-plan");
   const pushApproved = await callTool("apply_project_patch", {
     projectId: pushProjectId,

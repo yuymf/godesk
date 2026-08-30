@@ -124,6 +124,42 @@ type ValidationEvidenceType =
   | "participant-feedback"
   | "human-session";
 
+type SeatedParticipantDraft = { seat: number; name: string };
+
+type StoredSeatClaim = { seat: number; seatToken: string };
+
+function readShareToken() {
+  return new URLSearchParams(window.location.search).get("share") ?? undefined;
+}
+
+function seatClaimStorageKey(sessionId: string) {
+  return `godesk-seat:${sessionId}`;
+}
+
+function readStoredSeatClaim(sessionId: string): StoredSeatClaim | undefined {
+  try {
+    const raw = window.sessionStorage.getItem(seatClaimStorageKey(sessionId));
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw) as Partial<StoredSeatClaim>;
+    if (typeof parsed.seatToken !== "string" || !parsed.seatToken) return undefined;
+    if (!Number.isInteger(parsed.seat)) return undefined;
+    return { seat: parsed.seat as number, seatToken: parsed.seatToken };
+  } catch {
+    return undefined;
+  }
+}
+
+function writeStoredSeatClaim(sessionId: string, claim: StoredSeatClaim) {
+  window.sessionStorage.setItem(seatClaimStorageKey(sessionId), JSON.stringify(claim));
+}
+
+function seatedParticipantsFromSession(session?: SharedSession): SeatedParticipantDraft[] {
+  return (session?.seats ?? []).map((entry) => ({
+    seat: entry.seat,
+    name: entry.displayName ?? "",
+  }));
+}
+
 const CREATOR_JOB_LABELS: Record<CreatorJob["kind"], string> = {
   "generate-rule-system": "解析规则",
   "iterate-rule-system": "应用自然语言迭代",
@@ -841,7 +877,9 @@ function ProjectStudio({ projectId }: { projectId: string }) {
     validationRouteContext.evidenceType,
   );
   const [findingEvidenceId, setFindingEvidenceId] = useState(validationRouteContext.evidenceId);
-  const [findingParticipants, setFindingParticipants] = useState("");
+  const [findingSeatedParticipants, setFindingSeatedParticipants] = useState<
+    SeatedParticipantDraft[]
+  >([]);
   const [findingCreatorAttested, setFindingCreatorAttested] = useState(false);
   const [findingVerdict, setFindingVerdict] = useState<
     ValidationFinding["verdict"]
@@ -1428,10 +1466,10 @@ function ProjectStudio({ projectId }: { projectId: string }) {
     setBusy(true);
     setFormError("");
     try {
-      const participantNames = findingParticipants
-        .split(/[，,\n]/)
-        .map((name) => name.trim())
-        .filter(Boolean);
+      const seatedParticipants = findingSeatedParticipants.map((entry) => ({
+        seat: entry.seat,
+        name: entry.name.trim(),
+      }));
       const result = await applyProjectChanges(project.id, {
         expectedVersion: project.version,
         idempotencyKey: crypto.randomUUID(),
@@ -1457,7 +1495,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                 : {
                   type: "human-session",
                   sessionId: findingEvidenceId,
-                  participantNames,
+                  seatedParticipants,
                   creatorAttested: true,
                 },
             verdict: findingVerdict,
@@ -1471,7 +1509,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
       setFindings(result.findings);
       setChangesets((current) => [...current, result.changeset]);
       setFindingEvidenceId("");
-      setFindingParticipants("");
+      setFindingSeatedParticipants([]);
       setFindingCreatorAttested(false);
       setFindingNotes("");
       setFindingNextChange("");
@@ -1508,7 +1546,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
     setFindingBuildId(session.buildId);
     setFindingEvidenceType("participant-feedback");
     setFindingEvidenceId(session.id);
-    setFindingParticipants("");
+    setFindingSeatedParticipants([]);
     setFindingCreatorAttested(false);
     setFindingVerdict("inconclusive");
     setFindingNotes(participantFeedbackFindingNotes(feedback, actionLabel));
@@ -1546,6 +1584,23 @@ function ProjectStudio({ projectId }: { projectId: string }) {
       if (timeout !== undefined) window.clearTimeout(timeout);
     };
   }, [projectId]);
+
+  const findingSessionSeatKey = (() => {
+    if (findingEvidenceType !== "human-session" || !findingEvidenceId) return "";
+    const session = sessions.find((candidate) => candidate.id === findingEvidenceId);
+    return session
+      ? `${session.id}:${session.seats.map((entry) => entry.seat).join(",")}`
+      : "";
+  })();
+
+  useEffect(() => {
+    if (findingEvidenceType !== "human-session" || !findingEvidenceId) {
+      setFindingSeatedParticipants([]);
+      return;
+    }
+    const session = sessions.find((candidate) => candidate.id === findingEvidenceId);
+    setFindingSeatedParticipants(seatedParticipantsFromSession(session));
+  }, [findingEvidenceType, findingEvidenceId, findingSessionSeatKey]);
 
   useEffect(() => {
     ruleSystemDirtyRef.current = ruleSystemDirty;
@@ -2115,7 +2170,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                       {studioPlayTarget.session ? "新开一局" : "开始 Studio 试玩"}
                     </button>
                     {studioPlayTarget.session && (
-                      <a href={studioPlayTarget.session.sessionUrl}>独立打开</a>
+                      <a href={studioPlayTarget.session.sessionUrl}>独立打开本次迭代 Session</a>
                     )}
                   </div>
                 </header>
@@ -2164,7 +2219,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                 ) : (
                   <div className="studio-play-empty">
                     <strong>这个 Build 还没有 Shared Session。</strong>
-                    <p>新开一局后直接在这里认领席位、行动和提交反馈；好友仍可使用独立邀请链接。</p>
+                    <p>新开一局后可在这里认领席位、行动和提交反馈。好友使用已发布的固定试玩链接；未发布时不要假装最新 Room 是好友入口。</p>
                   </div>
                 )}
               </section>
@@ -2501,16 +2556,29 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                 )}
                 {findingEvidenceType === "human-session" && (
                   <>
-                    <label htmlFor="finding-participants">
-                      <span>参与者姓名</span>
-                      <input
-                        id="finding-participants"
-                        onChange={(event) => setFindingParticipants(event.currentTarget.value)}
-                        placeholder="Creator, Friend"
-                        value={findingParticipants}
-                      />
-                      <small>至少两位真实参与者，用逗号分隔；Shared Session 也必须已有两个席位和一次有效行动。</small>
-                    </label>
+                    {findingSeatedParticipants.length > 0 ? (
+                      findingSeatedParticipants.map((participant, index) => (
+                        <label htmlFor={`finding-participant-${participant.seat}`} key={participant.seat}>
+                          <span>座位 {participant.seat} 的姓名</span>
+                          <input
+                            id={`finding-participant-${participant.seat}`}
+                            onChange={(event) => {
+                              const name = event.currentTarget.value;
+                              setFindingSeatedParticipants((current) =>
+                                current.map((entry, entryIndex) =>
+                                  entryIndex === index ? { ...entry, name } : entry,
+                                ),
+                              );
+                            }}
+                            placeholder="真实参与者姓名"
+                            value={participant.name}
+                          />
+                        </label>
+                      ))
+                    ) : (
+                      <small>所选 Shared Session 还没有已认领的席位。</small>
+                    )}
+                    <small>为每个已认领席位填写姓名；自动客户端或机器人结果不得作为 Human Evidence。</small>
                     <label htmlFor="finding-human-attestation">
                       <span>真人证据声明</span>
                       <input
@@ -2566,7 +2634,8 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                     !findingEvidenceId ||
                     !findingNextChange.trim() ||
                     (findingEvidenceType === "human-session" &&
-                      (findingParticipants.split(/[，,\n]/).filter((name) => name.trim()).length < 2 ||
+                      (findingSeatedParticipants.length === 0 ||
+                        findingSeatedParticipants.some((entry) => !entry.name.trim()) ||
                         !findingCreatorAttested))
                   }
                   type="submit"
@@ -3128,13 +3197,13 @@ function HarborVoyageBoard({
 function PlayablePreview({ buildId }: { buildId: string }) {
   const [build, setBuild] = useState<PlayableBuild>();
   const [error, setError] = useState("");
-  const shareCreator = new URLSearchParams(window.location.search).get("creator") ?? undefined;
+  const shareToken = readShareToken();
 
   useEffect(() => {
-    getBuild(buildId, shareCreator).then(setBuild).catch((reason: Error) => {
+    getBuild(buildId, shareToken).then(setBuild).catch((reason: Error) => {
       setError(reason.message);
     });
-  }, [buildId, shareCreator]);
+  }, [buildId, shareToken]);
 
   if (error) {
     return (
@@ -3341,17 +3410,14 @@ function RoomView({ sessionId }: { sessionId: string }) {
   const [feedbackComment, setFeedbackComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [seat, setSeat] = useState<number | null>(null);
+  const [seat, setSeat] = useState<number | null>(
+    () => readStoredSeatClaim(sessionId)?.seat ?? null,
+  );
   const [locale, setLocale] = useState<RoomLocale>(readRoomLocale);
-  const shareCreator = new URLSearchParams(window.location.search).get("creator") ?? undefined;
-  const [clientId] = useState(() => {
-    const key = "godesk-room-client-id";
-    const existing = window.localStorage.getItem(key);
-    if (existing) return existing;
-    const created = crypto.randomUUID();
-    window.localStorage.setItem(key, created);
-    return created;
-  });
+  const shareToken = readShareToken();
+  const [seatToken, setSeatToken] = useState(
+    () => readStoredSeatClaim(sessionId)?.seatToken,
+  );
   const copy = ROOM_COPY[locale];
 
   useEffect(() => {
@@ -3367,7 +3433,7 @@ function RoomView({ sessionId }: { sessionId: string }) {
       : "Live connection interrupted. Reconnecting.";
 
     const connect = () => {
-      socket = new WebSocket(sharedSessionSocketUrl(sessionId, shareCreator));
+      socket = new WebSocket(sharedSessionSocketUrl(sessionId, shareToken));
       socket.addEventListener("open", () => {
         setError((current) => current === connectionError ? "" : current);
         socket?.send('{"type":"session.sync"}');
@@ -3385,13 +3451,19 @@ function RoomView({ sessionId }: { sessionId: string }) {
           const nextRoom = publicSharedSession(
             message.session,
             window.location.origin,
-            shareCreator,
+            shareToken,
           );
           setRoom(nextRoom);
-          setSeat(
-            nextRoom.seats.find((entry) => entry.clientId === clientId)?.seat ??
-              null,
-          );
+          setSeat((current) => {
+            const stored = readStoredSeatClaim(sessionId);
+            if (
+              stored?.seatToken &&
+              nextRoom.seats.some((entry) => entry.seat === stored.seat)
+            ) {
+              return stored.seat;
+            }
+            return current;
+          });
         } catch {
           setError(locale === "zh" ? "实时状态格式无效。" : "Invalid live state.");
         }
@@ -3409,23 +3481,38 @@ function RoomView({ sessionId }: { sessionId: string }) {
       if (reconnectTimer !== undefined) window.clearTimeout(reconnectTimer);
       socket?.close(1000, "room_view_closed");
     };
-  }, [clientId, locale, sessionId, shareCreator]);
+  }, [locale, sessionId, shareToken]);
 
   useEffect(() => {
     if (!room?.buildId) return;
-    getBuild(room.buildId, shareCreator)
+    getBuild(room.buildId, shareToken)
       .then(setBuild)
       .catch((reason: Error) => setError(reason.message));
-  }, [room?.buildId, shareCreator]);
+  }, [room?.buildId, shareToken]);
 
   async function claimSeat(nextSeat: number) {
     if (!room) return;
     setBusy(true);
     setError("");
     try {
-      setRoom(await claimSessionSeat(room.id, { seat: nextSeat, clientId }, shareCreator));
-      setSeat(nextSeat);
-      setFeedback(`${copy.yourSeat}: ${locale === "zh" ? "座位" : "Seat"} ${nextSeat}`);
+      const result = await claimSessionSeat(
+        room.id,
+        {
+          seat: nextSeat,
+          ...(seatToken ? { seatToken } : {}),
+        },
+        shareToken,
+      );
+      setRoom(result.session);
+      setSeatToken(result.seatToken);
+      const claimedSeat = result.session.seats.find((entry) => entry.seat === nextSeat)?.seat
+        ?? nextSeat;
+      setSeat(claimedSeat);
+      writeStoredSeatClaim(room.id, {
+        seat: claimedSeat,
+        seatToken: result.seatToken,
+      });
+      setFeedback(`${copy.yourSeat}: ${locale === "zh" ? "座位" : "Seat"} ${claimedSeat}`);
     } catch (reason) {
       setError(localizedRoomError(reason, locale, "seat"));
     } finally {
@@ -3448,7 +3535,7 @@ function RoomView({ sessionId }: { sessionId: string }) {
     actionIndex = -1,
     payload?: Record<string, unknown>,
   ) {
-    if (!room || seat === null) {
+    if (!room || seat === null || !seatToken) {
       setError(copy.claimSeat);
       return;
     }
@@ -3460,11 +3547,11 @@ function RoomView({ sessionId }: { sessionId: string }) {
         {
           intentId: crypto.randomUUID(),
           seat,
-          clientId,
+          seatToken,
           actionId,
           payload,
         },
-        shareCreator,
+        shareToken,
       );
       setRoom(nextRoom);
       if (actionIndex >= 0 && build) {
@@ -3521,7 +3608,7 @@ function RoomView({ sessionId }: { sessionId: string }) {
   }
 
   async function submitFeedback() {
-    if (!room || seat === null || feedbackRating === 0 || feedbackComment.trim().length < 2) {
+    if (!room || seat === null || !seatToken || feedbackRating === 0 || feedbackComment.trim().length < 2) {
       setError(copy.feedbackRequired);
       return;
     }
@@ -3532,11 +3619,11 @@ function RoomView({ sessionId }: { sessionId: string }) {
         room.id,
         {
           seat,
-          clientId,
+          seatToken,
           rating: feedbackRating,
           comment: feedbackComment.trim(),
         },
-        shareCreator,
+        shareToken,
       ));
       setFeedback(copy.feedbackSubmitted);
       setFeedbackRating(0);
@@ -3700,7 +3787,7 @@ function RoomView({ sessionId }: { sessionId: string }) {
             <option value="">{copy.chooseSeat}</option>
             {room.state.scores.map((_score, availableSeat) => {
               const occupant = room.seats.find((entry) => entry.seat === availableSeat);
-              const isCurrentClient = occupant?.clientId === clientId;
+              const isCurrentClient = seat === availableSeat;
               return (
                 <option
                   disabled={Boolean(occupant && !isCurrentClient)}
@@ -4141,13 +4228,13 @@ function RoomView({ sessionId }: { sessionId: string }) {
 function ReplayView({ replayId }: { replayId: string }) {
   const [replay, setReplay] = useState<GameReplay>();
   const [error, setError] = useState("");
-  const shareCreator = new URLSearchParams(window.location.search).get("creator") ?? undefined;
+  const shareToken = readShareToken();
 
   useEffect(() => {
-    getReplay(replayId, shareCreator).then(setReplay).catch((reason: Error) => {
+    getReplay(replayId, shareToken).then(setReplay).catch((reason: Error) => {
       setError(reason.message);
     });
-  }, [replayId, shareCreator]);
+  }, [replayId, shareToken]);
 
   if (error) {
     return (

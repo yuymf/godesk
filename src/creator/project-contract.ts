@@ -222,6 +222,7 @@ export interface GenerationPlan {
   assumptions: string[];
   unsupported: string[];
   sourceIds: string[];
+  proposedRuntime?: RuntimeConfigureOperation;
   createdAt: string;
   approvedAt?: string;
 }
@@ -230,6 +231,7 @@ export interface PlaytestLink {
   projectId: string;
   sessionId: string;
   buildId: string;
+  replayId: string;
   updatedAt: string;
   url: string;
 }
@@ -305,7 +307,7 @@ export type ValidationEvidence =
   | {
       type: "human-session";
       sessionId: string;
-      participantNames: string[];
+      seatedParticipants: Array<{ seat: number; name: string }>;
       creatorAttested: true;
     };
 
@@ -419,6 +421,13 @@ export type ProjectChangeOperation =
       };
     }
   | {
+      op: "configure_harbor_voyage";
+      config: {
+        playerCount: number;
+        unsupported?: string[];
+      };
+    }
+  | {
       op: "activate_rule_system";
       ruleSystemId: string;
     }
@@ -448,6 +457,11 @@ export type ProjectChangeOperation =
       op: "publish_shared_session";
       sessionId: string;
     };
+
+export type RuntimeConfigureOperation = Extract<
+  ProjectChangeOperation,
+  { op: `configure_${string}` }
+>;
 
 export interface ApplyProjectChangesInput {
   expectedVersion: number;
@@ -687,7 +701,7 @@ export interface PlaytestRun {
 
 export interface SessionSeat {
   seat: number;
-  clientId: string;
+  displayName?: string;
 }
 
 export interface SessionFeedback {

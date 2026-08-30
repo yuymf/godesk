@@ -68,20 +68,20 @@ export function getProjectActivity(id: string) {
   );
 }
 
-function withShareCreator(
+function withShareToken(
   path: string,
-  shareCreator?: string,
+  shareToken?: string,
   origin = window.location.origin,
 ) {
-  if (!shareCreator) return path;
+  if (!shareToken) return path;
   const url = new URL(path, origin);
-  url.searchParams.set("creator", shareCreator);
+  url.searchParams.set("share", shareToken);
   return `${url.pathname}${url.search}`;
 }
 
 export function sharedSessionSocketUrl(
   id: string,
-  shareCreator?: string,
+  shareToken?: string,
   location: Pick<Location, "origin" | "protocol"> = window.location,
 ) {
   const url = new URL(
@@ -89,29 +89,29 @@ export function sharedSessionSocketUrl(
     location.origin,
   );
   url.protocol = location.protocol === "https:" ? "wss:" : "ws:";
-  if (shareCreator) url.searchParams.set("creator", shareCreator);
+  if (shareToken) url.searchParams.set("share", shareToken);
   return url.toString();
 }
 
 export function publicSharedSession(
   session: SharedSessionSnapshot,
   origin: string,
-  shareCreator?: string,
+  shareToken?: string,
 ): SharedSession {
   return {
     ...session,
     sessionUrl: new URL(
-      withShareCreator(
+      withShareToken(
         `/room/${encodeURIComponent(session.id)}`,
-        shareCreator,
+        shareToken,
         origin,
       ),
       origin,
     ).toString(),
     replayUrl: new URL(
-      withShareCreator(
+      withShareToken(
         `/replay/${encodeURIComponent(session.replayId)}`,
-        shareCreator,
+        shareToken,
         origin,
       ),
       origin,
@@ -248,9 +248,9 @@ export function getBuilds(id: string) {
     .then((result) => result.builds);
 }
 
-export function getBuild(id: string, shareCreator?: string) {
+export function getBuild(id: string, shareToken?: string) {
   return fetch(
-    withShareCreator(`/api/builds/${encodeURIComponent(id)}`, shareCreator),
+    withShareToken(`/api/builds/${encodeURIComponent(id)}`, shareToken),
   ).then(
     readJson<PlayableBuild>,
   );
@@ -289,20 +289,20 @@ export function createSharedSession(
 
 export function claimSessionSeat(
   id: string,
-  input: { seat: number; clientId: string },
-  shareCreator?: string,
+  input: { seat: number; seatToken?: string; displayName?: string },
+  shareToken?: string,
 ) {
   return fetch(
-    withShareCreator(
+    withShareToken(
       `/api/sessions/${encodeURIComponent(id)}/seats`,
-      shareCreator,
+      shareToken,
     ),
     {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(input),
     },
-  ).then(readJson<SharedSession>);
+  ).then(readJson<{ session: SharedSession; seatToken: string }>);
 }
 
 export function submitSessionIntent(
@@ -310,16 +310,16 @@ export function submitSessionIntent(
   input: {
     intentId: string;
     seat: number;
-    clientId: string;
+    seatToken: string;
     actionId: string;
     payload?: Record<string, unknown>;
   },
-  shareCreator?: string,
+  shareToken?: string,
 ) {
   return fetch(
-    withShareCreator(
+    withShareToken(
       `/api/sessions/${encodeURIComponent(id)}/intents`,
-      shareCreator,
+      shareToken,
     ),
     {
       method: "POST",
@@ -333,16 +333,16 @@ export function submitSessionFeedback(
   id: string,
   input: {
     seat: number;
-    clientId: string;
+    seatToken: string;
     rating: 1 | 2 | 3 | 4 | 5;
     comment: string;
   },
-  shareCreator?: string,
+  shareToken?: string,
 ) {
   return fetch(
-    withShareCreator(
+    withShareToken(
       `/api/sessions/${encodeURIComponent(id)}/feedback`,
-      shareCreator,
+      shareToken,
     ),
     {
       method: "POST",
@@ -352,9 +352,9 @@ export function submitSessionFeedback(
   ).then(readJson<SharedSession>);
 }
 
-export function getReplay(id: string, shareCreator?: string) {
+export function getReplay(id: string, shareToken?: string) {
   return fetch(
-    withShareCreator(`/api/replays/${encodeURIComponent(id)}`, shareCreator),
+    withShareToken(`/api/replays/${encodeURIComponent(id)}`, shareToken),
   ).then(
     readJson<GameReplay>,
   );

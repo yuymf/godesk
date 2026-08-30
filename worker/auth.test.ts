@@ -70,7 +70,6 @@ describe("Cloudflare Access claim validation", () => {
   const accessExpected = {
     issuer: "https://godesk-yumengfan220.cloudflareaccess.com",
     audience: "godesk-access-audience",
-    grantedScopes: ["godesk:read", "godesk:write"],
     nowSeconds: 1_000,
   };
   const accessPayload = {
@@ -86,6 +85,17 @@ describe("Cloudflare Access claim validation", () => {
       creatorId: "access-user-id",
       mode: "oauth",
       scopes: ["godesk:read", "godesk:write"],
+    });
+  });
+
+  it("uses Access token scopes when present instead of request-derived grants", () => {
+    expect(validateAccessClaims({
+      ...accessPayload,
+      scope: "godesk:read",
+    }, accessExpected)).toEqual({
+      creatorId: "access-user-id",
+      mode: "oauth",
+      scopes: ["godesk:read"],
     });
   });
 

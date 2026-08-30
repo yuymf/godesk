@@ -186,12 +186,12 @@ describe("Creator Studio optimistic draft baseline", () => {
     expect(normalizeAppPathname("////")).toBe("/");
   });
 
-  it("builds Room WebSocket and share URLs without losing creator scope", () => {
-    expect(sharedSessionSocketUrl("room/a b", "creator/demo", {
+  it("builds Room WebSocket and share URLs from a signed share token", () => {
+    expect(sharedSessionSocketUrl("room/a b", "share/token", {
       origin: "https://godesk.example",
       protocol: "https:",
     })).toBe(
-      "wss://godesk.example/api/sessions/room%2Fa%20b/events?creator=creator%2Fdemo",
+      "wss://godesk.example/api/sessions/room%2Fa%20b/events?share=share%2Ftoken",
     );
     expect(publicSharedSession({
       id: "room/a b",
@@ -211,11 +211,11 @@ describe("Creator Studio optimistic draft baseline", () => {
       experiment: null,
       replayId: "replay/a b",
       createdAt: "2026-08-11T00:00:00.000Z",
-    }, "https://godesk.example", "creator/demo")).toMatchObject({
+    }, "https://godesk.example", "share/token")).toMatchObject({
       sessionUrl:
-        "https://godesk.example/room/room%2Fa%20b?creator=creator%2Fdemo",
+        "https://godesk.example/room/room%2Fa%20b?share=share%2Ftoken",
       replayUrl:
-        "https://godesk.example/replay/replay%2Fa%20b?creator=creator%2Fdemo",
+        "https://godesk.example/replay/replay%2Fa%20b?share=share%2Ftoken",
     });
   });
 

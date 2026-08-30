@@ -30,6 +30,7 @@ import type {
   GameProject,
   GameReplay,
   SharedSession,
+  SharedSessionSnapshot,
   SharedSessionSnapshotEvent,
   SessionFeedback,
   PlaytestRun,
@@ -39,6 +40,7 @@ import type {
   SourceLibraryEntry,
   SubmitJobInput,
   PresentationFloorReadiness,
+  RuntimeConfigureOperation,
   ValidationFinding,
   VisualTreatment,
 } from "../src/creator/project-contract";
@@ -59,6 +61,24 @@ import {
   materializeRuleSystem,
 } from "./rulebook-generation";
 import { createActionDescriptionIterationPlan } from "./rule-system-iteration";
+import {
+  capabilityMatches,
+  publicShareUrl,
+  resourceKindFromPath,
+  shareSecret,
+  shareTokenFromUrl,
+  signShareToken,
+  verifyShareToken,
+  type ShareCapability,
+} from "./share-capability";
+import {
+  hashSeatToken,
+  issueSeatToken,
+  otherSeatForHash,
+  publicSeats,
+  seatForToken,
+  type StoredSessionSeat,
+} from "./seat-capability";
 
 const PROJECT_PREFIX = "/projects/";
 const GENERATION_PLAN_PREFIX = "generation-plan:";
@@ -104,7 +124,9 @@ interface ProjectRecord {
 
 type StoredPlayableBuild = Omit<PlayableBuild, "playableUrl">;
 type StoredPlaytest = Omit<PlaytestRun, "replayUrl">;
-type StoredSharedSession = Omit<SharedSession, "sessionUrl" | "replayUrl">;
+type StoredSharedSession = Omit<SharedSession, "sessionUrl" | "replayUrl" | "seats"> & {
+  seats: StoredSessionSeat[];
+};
 type StoredPlaytestLink = Omit<PlaytestLink, "url">;
 interface SessionSocketAttachment {
   sessionId: string;
@@ -368,6 +390,9 @@ type RuntimeConfiguration =
     }
   | Extract<ProjectChangeOperation, { op: "configure_push_your_luck" }> & {
       op: "configure_push_your_luck";
+    }
+  | Extract<ProjectChangeOperation, { op: "configure_harbor_voyage" }> & {
+      op: "configure_harbor_voyage";
     };
 
 function configureRuntimeKernel(
@@ -375,6 +400,37 @@ function configureRuntimeKernel(
   configuration: RuntimeConfiguration,
   affectedEntities: string[],
 ) {
+  if (configuration.op === "configure_harbor_voyage") {
+    const unsupported = configuration.config.unsupported?.map((item) => item.trim()) ?? [];
+    const runtimeSource: SourceLibraryEntry = {
+      id: `source_${crypto.randomUUID()}`,
+      kind: "brief",
+      name: `${record.ruleSystem.name} · harbor-voyage-v1 配置`,
+      content: JSON.stringify(configuration.config),
+      readiness: "ready",
+      provenance: {
+        origin: "system-generated",
+        locator: `${configuration.op} operation`,
+        confidence: 1,
+      },
+      createdAt: new Date().toISOString(),
+    };
+    record.sources.push(runtimeSource);
+    record.ruleSystem = {
+      ...record.ruleSystem,
+      runtimeSupport: {
+        status: "executable",
+        unsupported,
+        kernel: {
+          type: "harbor-voyage-v1",
+          playerCount: configuration.config.playerCount,
+        },
+      },
+    };
+    affectedEntities.push(`source:${runtimeSource.id}`);
+    affectedEntities.push(`runtime:${record.ruleSystem.id}`);
+    return;
+  }
   const config = configuration.config;
   const normalizedActions = configuration.config.actions.map((action) => ({
     id: action.id,
@@ -1479,6 +1535,25 @@ function applyOperation(
     return;
   }
 
+  if (operation.op === "configure_harbor_voyage") {
+    const { config } = operation;
+    if (
+      !config ||
+      typeof config !== "object" ||
+      !Number.isInteger(config.playerCount) ||
+      config.playerCount < 2 ||
+      config.playerCount > 3 ||
+      (config.unsupported !== undefined &&
+        (!Array.isArray(config.unsupported) ||
+          config.unsupported.length > 50 ||
+          config.unsupported.some((item) =>
+            typeof item !== "string" || !item.trim() || item.length > 500
+          )))
+    ) throw new Error("invalid_runtime");
+    configureRuntimeKernel(record, operation, affectedEntities);
+    return;
+  }
+
   if (operation.op === "activate_rule_system") {
     if (typeof operation.ruleSystemId !== "string") {
       throw new Error("invalid_rule_system");
@@ -1599,9 +1674,18 @@ function applyOperation(
       const room = record.sessions.find(
         (candidate) => candidate.id === evidence.sessionId,
       );
-      const participantNames = evidence.participantNames
-        .map((name) => name.trim())
-        .filter(Boolean);
+      const seated = evidence.seatedParticipants;
+      const names = Array.isArray(seated)
+        ? seated.map((entry) => entry?.name?.trim()).filter(Boolean)
+        : [];
+      const evidenceSeats = Array.isArray(seated)
+        ? seated.map((entry) => entry?.seat)
+        : [];
+      const claimedSeats = [...new Set((room?.seats ?? []).map((entry) => entry.seat))]
+        .sort((left, right) => left - right);
+      const namedSeats = [...evidenceSeats]
+        .filter((seat): seat is number => Number.isInteger(seat))
+        .sort((left, right) => left - right);
       if (
         !room ||
         room.buildId !== build.id ||
@@ -1609,9 +1693,25 @@ function applyOperation(
           room.experiment.hypothesisId !== hypothesis.id) ||
         room.seats.length < 2 ||
         room.acceptedActions.length < 1 ||
-        participantNames.length < 2 ||
-        new Set(participantNames).size !== participantNames.length ||
-        participantNames.some((name) => name.length > 80) ||
+        !Array.isArray(seated) ||
+        seated.length !== room.seats.length ||
+        names.length !== seated.length ||
+        new Set(names).size !== names.length ||
+        names.some((name) => name.length > 80) ||
+        new Set(namedSeats).size !== namedSeats.length ||
+        claimedSeats.join(",") !== namedSeats.join(",") ||
+        seated.some((entry) => {
+          if (
+            !entry ||
+            !Number.isInteger(entry.seat) ||
+            typeof entry.name !== "string" ||
+            !entry.name.trim()
+          ) {
+            return true;
+          }
+          const stored = room.seats.find((candidate) => candidate.seat === entry.seat);
+          return Boolean(stored?.displayName && stored.displayName !== entry.name.trim());
+        }) ||
         evidence.creatorAttested !== true
       ) {
         throw new Error("invalid_human_evidence");
@@ -1650,7 +1750,8 @@ function proposedAffectedEntities(
       operation.op === "configure_take_away" ||
       operation.op === "configure_roll_and_move" ||
       operation.op === "configure_draw_and_score" ||
-      operation.op === "configure_push_your_luck"
+      operation.op === "configure_push_your_luck" ||
+      operation.op === "configure_harbor_voyage"
     ) {
       return `runtime:${ruleSystemId}`;
     }
@@ -1738,6 +1839,14 @@ function buildWarnings(record: ProjectRecord) {
   ];
 }
 
+function hasBoundImage(ruleSystem: RuleSystem) {
+  return Boolean(
+    ruleSystem.presentation.image?.url ||
+    ruleSystem.entities.some((entity) => entity.image?.url) ||
+    ruleSystem.playSurface.regions.some((region) => region.image?.url),
+  );
+}
+
 function presentationFloor(ruleSystem: RuleSystem): PresentationFloorReadiness {
   const visuals: VisualTreatment[] = ruleSystem.presentation.visuals?.length
     ? ruleSystem.presentation.visuals
@@ -1750,6 +1859,27 @@ function presentationFloor(ruleSystem: RuleSystem): PresentationFloorReadiness {
       visuals,
     };
   }
+  if (visual.provenance === "kit") {
+    if (!ruleSystem.presentation.theme.trim()) {
+      return {
+        status: "failed",
+        reason: "主题 kit 缺少 theme，不能作为 Presentation Floor。",
+        visuals,
+      };
+    }
+    return {
+      status: "passed",
+      reason: `${visual.label} 已满足 Presentation Floor。`,
+      visuals,
+    };
+  }
+  if (!hasBoundImage(ruleSystem)) {
+    return {
+      status: "failed",
+      reason: "generated、extracted 或 uploaded 呈现必须绑定真实图像，不能只写 provenance。",
+      visuals,
+    };
+  }
   return {
     status: "passed",
     reason: `${visual.label} 已满足 Presentation Floor。`,
@@ -1757,60 +1887,90 @@ function presentationFloor(ruleSystem: RuleSystem): PresentationFloorReadiness {
   };
 }
 
-function publicShareUrl(pathname: string, origin: string, creatorId: string) {
-  const url = new URL(pathname, origin);
-  url.searchParams.set("creator", creatorId);
-  return url.toString();
+function visibleSession(session: StoredSharedSession): SharedSessionSnapshot {
+  return {
+    ...session,
+    seats: publicSeats(session.seats),
+  };
 }
 
-function publicBuild(
+async function signedShareToken(
+  secret: string,
+  creatorId: string,
+  capability: Omit<ShareCapability, "v" | "c">,
+) {
+  return signShareToken({ v: 1, c: creatorId, ...capability }, secret);
+}
+
+async function publicBuild(
   build: StoredPlayableBuild,
   origin: string,
   creatorId?: string,
-): PlayableBuild {
+  secret?: string,
+): Promise<PlayableBuild> {
   const normalized = normalizedBuild(build);
+  const token = creatorId && secret
+    ? await signedShareToken(secret, creatorId, { build: normalized.id })
+    : null;
   return {
     ...normalized,
-    playableUrl: creatorId
-      ? publicShareUrl(`/play/${normalized.id}`, origin, creatorId)
+    playableUrl: token
+      ? publicShareUrl(`/play/${normalized.id}`, origin, token)
       : new URL(`/play/${normalized.id}`, origin).toString(),
   };
 }
 
-function publicPlaytest(
+async function publicPlaytest(
   playtest: StoredPlaytest,
   origin: string,
   creatorId?: string,
-): PlaytestRun {
+  secret?: string,
+): Promise<PlaytestRun> {
+  const token = creatorId && secret
+    ? await signedShareToken(secret, creatorId, { replay: playtest.replayId })
+    : null;
   return {
     ...playtest,
-    replayUrl: creatorId
-      ? publicShareUrl(`/replay/${playtest.replayId}`, origin, creatorId)
+    replayUrl: token
+      ? publicShareUrl(`/replay/${playtest.replayId}`, origin, token)
       : new URL(`/replay/${playtest.replayId}`, origin).toString(),
   };
 }
 
-function publicSession(
+async function publicSession(
   session: StoredSharedSession,
   origin: string,
   creatorId: string,
-): SharedSession {
-  const visible = structuredClone(session) as StoredSharedSession;
+  secret: string,
+): Promise<SharedSession> {
+  const token = await signedShareToken(secret, creatorId, {
+    room: session.id,
+    build: session.buildId,
+    replay: session.replayId,
+  });
   return {
-    ...visible,
-    sessionUrl: publicShareUrl(`/room/${visible.id}`, origin, creatorId),
-    replayUrl: publicShareUrl(`/replay/${visible.replayId}`, origin, creatorId),
+    ...session,
+    seats: publicSeats(session.seats),
+    sessionUrl: publicShareUrl(`/room/${session.id}`, origin, token),
+    replayUrl: publicShareUrl(`/replay/${session.replayId}`, origin, token),
   };
 }
 
-function publicPlaytestLink(
+async function publicPlaytestLink(
   link: StoredPlaytestLink,
   origin: string,
   creatorId: string,
-): PlaytestLink {
+  secret: string,
+): Promise<PlaytestLink> {
+  const token = await signedShareToken(secret, creatorId, {
+    project: link.projectId,
+    room: link.sessionId,
+    build: link.buildId,
+    replay: link.replayId,
+  });
   return {
     ...link,
-    url: publicShareUrl(`/try/${link.projectId}`, origin, creatorId),
+    url: publicShareUrl(`/try/${link.projectId}`, origin, token),
   };
 }
 
@@ -1885,17 +2045,19 @@ function reconstructReplay(
   };
 }
 
-function publicJob(
+async function publicJob(
   job: CreatorJob,
   origin: string,
   creatorId?: string,
-): CreatorJob {
+  secret?: string,
+): Promise<CreatorJob> {
   if (!job.result) return job;
   if (job.kind === "compile-build" && job.result.build) {
-    const build = publicBuild(
+    const build = await publicBuild(
       job.result.build as unknown as StoredPlayableBuild,
       origin,
       creatorId,
+      secret,
     );
     return {
       ...job,
@@ -1924,12 +2086,17 @@ function publicJob(
     };
   }
   if (job.kind === "bot-playtest") {
+    const token = creatorId && secret
+      ? await signedShareToken(secret, creatorId, {
+          replay: String(job.result.replayId),
+        })
+      : null;
     return {
       ...job,
       result: {
         ...job.result,
-        replayUrl: creatorId
-          ? publicShareUrl(`/replay/${String(job.result.replayId)}`, origin, creatorId)
+        replayUrl: token
+          ? publicShareUrl(`/replay/${String(job.result.replayId)}`, origin, token)
           : new URL(`/replay/${String(job.result.replayId)}`, origin).toString(),
       },
     };
@@ -1959,7 +2126,7 @@ export class CreatorProjects extends DurableObject<Env> {
   private broadcastSession(session: StoredSharedSession) {
     const message = JSON.stringify({
       type: "session.snapshot",
-      session,
+      session: visibleSession(session),
     } satisfies SharedSessionSnapshotEvent);
     for (const socket of this.ctx.getWebSockets()) {
       const attachment = socket.deserializeAttachment() as
@@ -2044,7 +2211,14 @@ export class CreatorProjects extends DurableObject<Env> {
     try {
       let operation: Response;
       let generationRuntimeConfigured = false;
+      let proposedRuntime: RuntimeConfigureOperation | null = null;
       if (input.kind === "generate-rule-system") {
+        const pendingPlan = await this.ctx.storage.get<GenerationPlan>(
+          generationPlanKey(job.projectId),
+        );
+        if (pendingPlan?.status === "pending") {
+          throw new Error("generation_plan_pending");
+        }
         const sourceId = `source_${job.id}`;
         const sourceContent = input.sourceContent?.trim() || "";
         const idea = input.idea?.trim() || sourceContent;
@@ -2294,6 +2468,7 @@ export class CreatorProjects extends DurableObject<Env> {
                   },
                 }
               : null;
+        proposedRuntime = runtimeOperation;
         operation = await this.fetch(
           new Request(
             `https://projects.internal/projects/${job.projectId}/changes`,
@@ -2335,7 +2510,6 @@ export class CreatorProjects extends DurableObject<Env> {
                     op: "update_rule_system",
                     fields: generatedRuleSystem,
                   },
-                  ...(runtimeOperation ? [runtimeOperation] : []),
                 ],
               }),
             },
@@ -2447,6 +2621,7 @@ export class CreatorProjects extends DurableObject<Env> {
           generationJobId: job.id,
           ruleSystem: generatedRuleSystem,
           sourceIds: generatedSources.map((source) => source.id),
+          proposedRuntime: proposedRuntime ?? undefined,
           createdAt: new Date().toISOString(),
         });
         await this.ctx.storage.put(
@@ -2456,25 +2631,19 @@ export class CreatorProjects extends DurableObject<Env> {
         operationBody.generationPlan = generationPlan;
         operationBody.generationMode = "deterministic-rule-system-materialization";
         operationBody.warnings = [generationRuntimeConfigured
-          ? generatedRuleSystem.runtimeSupport.status === "executable" &&
-            generatedRuleSystem.runtimeSupport.kernel.type === "roll-and-move-v1"
-            ? "规则结构来自确定性文本抽取；骰子面数、按点数前进与先到终点获胜被配置为可复现的 roll-and-move-v1。"
-            : generatedRuleSystem.runtimeSupport.status === "executable" &&
-              generatedRuleSystem.runtimeSupport.kernel.type === "push-your-luck-v1"
-            ? "规则结构来自确定性文本抽取；继续掷、爆掉、未存分、收手存分与目标胜利被配置为 push-your-luck-v1。"
-            : generatedRuleSystem.runtimeSupport.status === "executable" &&
-              generatedRuleSystem.runtimeSupport.kernel.type === "draw-and-score-v1"
-            ? "规则结构来自确定性文本抽取；有限牌库、确定性洗牌、抽牌计分与牌库耗尽结算被配置为 draw-and-score-v1。"
-            : generatedRuleSystem.runtimeSupport.status === "executable" &&
-              generatedRuleSystem.runtimeSupport.kernel.type === "take-away-v1"
-            ? "规则结构来自确定性文本抽取；共享池、合法拿取数量与拿完获胜条件被配置为 take-away-v1。"
-            : generatedRuleSystem.runtimeSupport.status === "executable" &&
-              generatedRuleSystem.runtimeSupport.kernel.type === "shared-goal-v1"
-            ? "规则结构来自确定性文本抽取；仅来源中明确写出的共享推进行动与目标被配置为 shared-goal-v1。"
-            : generatedRuleSystem.runtimeSupport.status === "executable" &&
-              generatedRuleSystem.runtimeSupport.kernel.type === "score-race-v1"
-              ? "规则结构来自确定性文本抽取；仅来源中明确写出的计分行动与胜利目标被配置为 score-race-v1。"
-              : "规则结构来自确定性文本抽取；来源明确写出的轮流行动被配置为 turn-taking-v1，回合上限来自来源或可见的保守原型默认值。"
+          ? proposedRuntime?.op === "configure_roll_and_move"
+            ? "规则结构来自确定性文本抽取；骰子面数、按点数前进与先到终点获胜将在批准 Generation Plan 后配置为可复现的 roll-and-move-v1。"
+            : proposedRuntime?.op === "configure_push_your_luck"
+            ? "规则结构来自确定性文本抽取；继续掷、爆掉、未存分、收手存分与目标胜利将在批准 Generation Plan 后配置为 push-your-luck-v1。"
+            : proposedRuntime?.op === "configure_draw_and_score"
+            ? "规则结构来自确定性文本抽取；有限牌库、确定性洗牌、抽牌计分与牌库耗尽结算将在批准 Generation Plan 后配置为 draw-and-score-v1。"
+            : proposedRuntime?.op === "configure_take_away"
+            ? "规则结构来自确定性文本抽取；共享池、合法拿取数量与拿完获胜条件将在批准 Generation Plan 后配置为 take-away-v1。"
+            : proposedRuntime?.op === "configure_shared_goal"
+            ? "规则结构来自确定性文本抽取；仅来源中明确写出的共享推进行动与目标将在批准 Generation Plan 后配置为 shared-goal-v1。"
+            : proposedRuntime?.op === "configure_score_race"
+              ? "规则结构来自确定性文本抽取；仅来源中明确写出的计分行动与胜利目标将在批准 Generation Plan 后配置为 score-race-v1。"
+              : "规则结构来自确定性文本抽取；来源明确写出的轮流行动将在批准 Generation Plan 后配置为 turn-taking-v1，回合上限来自来源或可见的保守原型默认值。"
           : generatedRuleSystem.actions.length > 12
             ? "来源识别出超过 Kernel 上限的行动；为避免静默丢弃规则，Rule System 保持 draft，等待创作者明确缩减或配置 Executable Kernel。"
             : "规则结构来自确定性文本抽取；来源不足以证明可执行语义，Rule System 保持 draft，等待显式配置 Executable Kernel。"];
@@ -3058,12 +3227,16 @@ export class CreatorProjects extends DurableObject<Env> {
               operation.op === "configure_take_away" ||
               operation.op === "configure_roll_and_move" ||
               operation.op === "configure_draw_and_score" ||
-              operation.op === "configure_push_your_luck",
+              operation.op === "configure_push_your_luck" ||
+              operation.op === "configure_harbor_voyage",
           );
           const affectedEntities: string[] = [];
           const now = new Date().toISOString();
           let publishedPlaytestLink: StoredPlaytestLink | undefined;
           for (const operation of input.operations) {
+            if (pendingGenerationPlan && operation.op === "activate_rule_system") {
+              throw new Error("generation_plan_pending");
+            }
             if (operation.op === "approve_generation_plan") {
               if (
                 !generationPlan ||
@@ -3078,6 +3251,12 @@ export class CreatorProjects extends DurableObject<Env> {
                 status: "approved",
                 approvedAt: now,
               };
+              if (
+                generationPlan.proposedRuntime &&
+                record.ruleSystem.runtimeSupport.status === "draft"
+              ) {
+                applyOperation(record, generationPlan.proposedRuntime, affectedEntities);
+              }
               affectedEntities.push(`generation-plan:${generationPlan.id}`);
             } else if (operation.op === "publish_shared_session") {
               const session = record.sessions.find(
@@ -3098,6 +3277,7 @@ export class CreatorProjects extends DurableObject<Env> {
                 projectId: record.project.id,
                 sessionId: session.id,
                 buildId: build.id,
+                replayId: session.replayId,
                 updatedAt: now,
               };
               affectedEntities.push(`playtest-link:${record.project.id}`);
@@ -3129,6 +3309,7 @@ export class CreatorProjects extends DurableObject<Env> {
                   ...referencedSourceIds(record.ruleSystem, record.sources),
                 ]),
               ],
+              proposedRuntime: generationPlan.proposedRuntime,
               createdAt: generationPlan.createdAt,
             });
             generationPlan = {
@@ -3195,6 +3376,7 @@ export class CreatorProjects extends DurableObject<Env> {
             "source_dependency_not_found",
             "bound_image_source_not_found",
             "visual_reference_not_bindable",
+            "generation_plan_pending",
           ].includes(reason.message)
         ) {
           return error(reason.message, 409);
@@ -3883,17 +4065,29 @@ export class CreatorProjects extends DurableObject<Env> {
     if (request.method === "POST" && roomSeatMatch) {
       const input = await request.json<{
         seat?: unknown;
-        clientId?: unknown;
-      }>().catch(() => ({ seat: undefined, clientId: undefined }));
+        seatToken?: unknown;
+        displayName?: unknown;
+      }>().catch(() => ({
+        seat: undefined,
+        seatToken: undefined,
+        displayName: undefined,
+      }));
+      const displayName = typeof input.displayName === "string"
+        ? input.displayName.trim()
+        : "";
       if (
         !Number.isInteger(input.seat) ||
-        typeof input.clientId !== "string" ||
-        !input.clientId
+        (input.seatToken !== undefined &&
+          (typeof input.seatToken !== "string" || !input.seatToken || input.seatToken.length > 200)) ||
+        displayName.length > 80
       ) {
         return error("入座请求无效。", 400);
       }
       const seat = input.seat as number;
-      const clientId = input.clientId as string;
+      const existingToken = typeof input.seatToken === "string" && input.seatToken
+        ? input.seatToken
+        : "";
+      const existingHash = existingToken ? await hashSeatToken(existingToken) : "";
       const roomKey = `session:${roomSeatMatch[1]}`;
       const outcome = await this.ctx.storage.transaction(async (transaction) => {
         const storedRoom = await transaction.get<StoredSharedSession>(roomKey);
@@ -3905,25 +4099,31 @@ export class CreatorProjects extends DurableObject<Env> {
           return { status: 409, value: { error: "seat_unavailable" } };
         }
         const claimed = room.seats.find((entry) => entry.seat === seat);
-        if (claimed && claimed.clientId !== clientId) {
-          return { status: 409, value: { error: "seat_claimed" } };
+        if (claimed) {
+          if (!existingHash || claimed.seatTokenHash !== existingHash) {
+            return { status: 409, value: { error: "seat_claimed" } };
+          }
+          return { status: 200, value: { session: room, seatToken: existingToken } };
         }
-        const existingClientSeat = room.seats.find(
-          (entry) => entry.clientId === clientId && entry.seat !== seat,
-        );
-        if (existingClientSeat) {
-          return {
-            status: 409,
-            value: {
-              error: "client_already_seated",
-              seat: existingClientSeat.seat,
-            },
-          };
+        if (existingHash) {
+          const other = otherSeatForHash(room.seats, seat, existingHash);
+          if (other) {
+            return {
+              status: 409,
+              value: {
+                error: "client_already_seated",
+                seat: other.seat,
+              },
+            };
+          }
         }
-        const seats = claimed
-          ? room.seats
-          : [...room.seats, { seat, clientId }];
-        const updatedRoom = { ...room, seats };
+        const seatToken = issueSeatToken();
+        const nextSeat: StoredSessionSeat = {
+          seat,
+          seatTokenHash: await hashSeatToken(seatToken),
+          ...(displayName ? { displayName } : {}),
+        };
+        const updatedRoom = { ...room, seats: [...room.seats, nextSeat] };
         const projectKey = `${PROJECT_PREFIX}${room.projectId}`;
         const storedProject =
           await transaction.get<ProjectRecord>(projectKey);
@@ -3938,10 +4138,10 @@ export class CreatorProjects extends DurableObject<Env> {
           [roomKey]: updatedRoom,
           [projectKey]: record,
         });
-        return { status: 200, value: updatedRoom };
+        return { status: 200, value: { session: updatedRoom, seatToken } };
       });
-      if (outcome.status === 200 && "id" in outcome.value) {
-        this.broadcastSession(outcome.value);
+      if (outcome.status === 200 && "session" in outcome.value && outcome.value.session) {
+        this.broadcastSession(outcome.value.session);
       }
       return json(outcome.value, outcome.status);
     }
@@ -3951,13 +4151,13 @@ export class CreatorProjects extends DurableObject<Env> {
       const input = await request.json<{
         intentId?: unknown;
         seat?: unknown;
-        clientId?: unknown;
+        seatToken?: unknown;
         actionId?: unknown;
         payload?: unknown;
       }>().catch(() => ({
         intentId: undefined,
         seat: undefined,
-        clientId: undefined,
+        seatToken: undefined,
         actionId: undefined,
         payload: undefined,
       }));
@@ -3965,8 +4165,8 @@ export class CreatorProjects extends DurableObject<Env> {
         typeof input.intentId !== "string" ||
         !input.intentId ||
         !Number.isInteger(input.seat) ||
-        (input.clientId !== undefined &&
-          (typeof input.clientId !== "string" || !input.clientId)) ||
+        (input.seatToken !== undefined &&
+          (typeof input.seatToken !== "string" || !input.seatToken || input.seatToken.length > 200)) ||
         typeof input.actionId !== "string" ||
         !input.actionId ||
         (input.payload !== undefined &&
@@ -3992,13 +4192,15 @@ export class CreatorProjects extends DurableObject<Env> {
           };
         }
         const room = reconstructSession(storedRoom, build);
-        const claimedSeat = room.seats.find(
-          (entry) =>
-            entry.seat === input.seat && entry.clientId === input.clientId,
-        );
+        const seatToken = typeof input.seatToken === "string" ? input.seatToken : "";
+        const claimedSeat = seatToken
+          ? await seatForToken(room.seats, Number(input.seat), seatToken)
+          : undefined;
         const publicShareIntent =
           request.headers.get("x-godesk-public-share") === "1";
-        if ((publicShareIntent || room.seats.length > 0) && !claimedSeat) {
+        const controlPlaneHeadless =
+          !publicShareIntent && !seatToken && room.seats.length === 0;
+        if (!controlPlaneHeadless && !claimedSeat) {
           return {
             status: 409,
             value: { error: "seat_not_claimed", state: room.state },
@@ -4072,12 +4274,12 @@ export class CreatorProjects extends DurableObject<Env> {
     if (request.method === "POST" && roomFeedbackMatch) {
       const input = await request.json<{
         seat?: unknown;
-        clientId?: unknown;
+        seatToken?: unknown;
         rating?: unknown;
         comment?: unknown;
       }>().catch(() => ({
         seat: undefined,
-        clientId: undefined,
+        seatToken: undefined,
         rating: undefined,
         comment: undefined,
       }));
@@ -4086,9 +4288,9 @@ export class CreatorProjects extends DurableObject<Env> {
         : "";
       if (
         !Number.isInteger(input.seat) ||
-        typeof input.clientId !== "string" ||
-        !input.clientId ||
-        input.clientId.length > 200 ||
+        typeof input.seatToken !== "string" ||
+        !input.seatToken ||
+        input.seatToken.length > 200 ||
         !Number.isInteger(input.rating) ||
         Number(input.rating) < 1 ||
         Number(input.rating) > 5 ||
@@ -4098,7 +4300,7 @@ export class CreatorProjects extends DurableObject<Env> {
         return error("试玩反馈需要已入座席位、1 到 5 分评分和 2 到 1000 字评论。", 400);
       }
       const seat = Number(input.seat);
-      const clientId = input.clientId;
+      const seatToken = input.seatToken;
       const rating = Number(input.rating) as SessionFeedback["rating"];
       const roomKey = `session:${roomFeedbackMatch[1]}`;
       const outcome = await this.ctx.storage.transaction(async (transaction) => {
@@ -4106,9 +4308,7 @@ export class CreatorProjects extends DurableObject<Env> {
         if (!storedRoom) {
           return { status: 404, value: { error: "room_not_found" } };
         }
-        const claimedSeat = storedRoom.seats.find(
-          (entry) => entry.seat === seat && entry.clientId === clientId,
-        );
+        const claimedSeat = await seatForToken(storedRoom.seats, seat, seatToken);
         if (!claimedSeat) {
           return {
             status: 409,
@@ -4402,7 +4602,7 @@ export class CreatorProjects extends DurableObject<Env> {
     }
     socket.send(JSON.stringify({
       type: "session.snapshot",
-      session: reconstructSession(room, build),
+      session: visibleSession(reconstructSession(room, build)),
     } satisfies SharedSessionSnapshotEvent));
   }
 
@@ -4419,8 +4619,10 @@ async function projectApi(
 ) {
   const url = new URL(request.url);
   const stub = env.CREATOR_PROJECTS.getByName(creatorId);
+  const secret = shareSecret(env);
+  const shareToken = shareTokenFromUrl(url);
   const forwardRoomRequest = (target: string) =>
-    publicShareCreator(url)
+    shareToken
       ? publicShareForwardRequest(target, request)
       : new Request(target, request);
 
@@ -4546,15 +4748,19 @@ async function projectApi(
       }>();
       return json({
         ...body,
-        builds: body.builds.map((build) => publicBuild(build, url.origin, creatorId)),
+        builds: await Promise.all(
+          body.builds.map((build) => publicBuild(build, url.origin, creatorId, secret)),
+        ),
       });
     }
     if (view === "playtests") {
       const body = await response.json<{ playtests: StoredPlaytest[] }>();
       return json({
         ...body,
-        playtests: body.playtests.map((playtest) =>
-          publicPlaytest(playtest, url.origin, creatorId),
+        playtests: await Promise.all(
+          body.playtests.map((playtest) =>
+            publicPlaytest(playtest, url.origin, creatorId, secret),
+          ),
         ),
       });
     }
@@ -4562,7 +4768,9 @@ async function projectApi(
       const body = await response.json<{ sessions: StoredSharedSession[] }>();
       return json({
         ...body,
-        sessions: body.sessions.map((room) => publicSession(room, url.origin, creatorId)),
+        sessions: await Promise.all(
+          body.sessions.map((room) => publicSession(room, url.origin, creatorId, secret)),
+        ),
       });
     }
     if (view === "playtest-link") {
@@ -4571,7 +4779,7 @@ async function projectApi(
       }>();
       return json({
         playtestLink: body.playtestLink
-          ? publicPlaytestLink(body.playtestLink, url.origin, creatorId)
+          ? await publicPlaytestLink(body.playtestLink, url.origin, creatorId, secret)
           : null,
       });
     }
@@ -4579,7 +4787,9 @@ async function projectApi(
       const body = await response.json<{ jobs: CreatorJob[] }>();
       return json({
         ...body,
-        jobs: body.jobs.map((job) => publicJob(job, url.origin, creatorId)),
+        jobs: await Promise.all(
+          body.jobs.map((job) => publicJob(job, url.origin, creatorId, secret)),
+        ),
       });
     }
     if (view === "activity") {
@@ -4590,9 +4800,13 @@ async function projectApi(
       }>();
       return json({
         project: body.project,
-        jobs: body.jobs.map((job) => publicJob(job, url.origin, creatorId)),
-        sessions: body.sessions.map((room) =>
-          publicSession(room, url.origin, creatorId)
+        jobs: await Promise.all(
+          body.jobs.map((job) => publicJob(job, url.origin, creatorId, secret)),
+        ),
+        sessions: await Promise.all(
+          body.sessions.map((room) =>
+            publicSession(room, url.origin, creatorId, secret)
+          ),
         ),
       });
     }
@@ -4629,7 +4843,7 @@ async function projectApi(
     );
     if (!response.ok) return response;
     return json(
-      publicJob(await response.json<CreatorJob>(), url.origin, creatorId),
+      await publicJob(await response.json<CreatorJob>(), url.origin, creatorId, secret),
       response.status,
     );
   }
@@ -4649,7 +4863,7 @@ async function projectApi(
       `https://projects.internal/jobs/${jobMatch[1]}`,
     );
     if (!response.ok) return response;
-    return json(publicJob(await response.json<CreatorJob>(), url.origin, creatorId));
+    return json(await publicJob(await response.json<CreatorJob>(), url.origin, creatorId, secret));
   }
 
   const retryJobMatch = url.pathname.match(/^\/api\/jobs\/([^/]+)\/retry$/);
@@ -4662,7 +4876,7 @@ async function projectApi(
     );
     if (!response.ok) return response;
     return json(
-      publicJob(await response.json<CreatorJob>(), url.origin, creatorId),
+      await publicJob(await response.json<CreatorJob>(), url.origin, creatorId, secret),
       response.status,
     );
   }
@@ -4680,7 +4894,7 @@ async function projectApi(
     return json(
       publicMutation({
         ...result,
-        build: publicBuild(result.build, url.origin, creatorId),
+        build: await publicBuild(result.build, url.origin, creatorId, secret),
       }, url.origin),
       response.status,
     );
@@ -4693,7 +4907,7 @@ async function projectApi(
     );
     if (!response.ok) return response;
     const build = await response.json<StoredPlayableBuild>();
-    return json(publicBuild(build, url.origin, creatorId));
+    return json(await publicBuild(build, url.origin, creatorId, secret));
   }
 
   const playtestCreateMatch = url.pathname.match(
@@ -4708,7 +4922,7 @@ async function projectApi(
     );
     if (!response.ok) return response;
     const playtest = await response.json<StoredPlaytest>();
-    return json(publicPlaytest(playtest, url.origin, creatorId), response.status);
+    return json(await publicPlaytest(playtest, url.origin, creatorId, secret), response.status);
   }
 
   const roomCreateMatch = url.pathname.match(
@@ -4723,7 +4937,7 @@ async function projectApi(
     );
     if (!response.ok) return response;
     const room = await response.json<StoredSharedSession>();
-    return json(publicSession(room, url.origin, creatorId), response.status);
+    return json(await publicSession(room, url.origin, creatorId, secret), response.status);
   }
 
   const roomEventsMatch = url.pathname.match(
@@ -4747,8 +4961,15 @@ async function projectApi(
       ),
     );
     if (!response.ok) return response;
+    const claimed = await response.json<{
+      session: StoredSharedSession;
+      seatToken: string;
+    }>();
     return json(
-      publicSession(await response.json<StoredSharedSession>(), url.origin, creatorId),
+      {
+        session: await publicSession(claimed.session, url.origin, creatorId, secret),
+        seatToken: claimed.seatToken,
+      },
       response.status,
     );
   }
@@ -4765,7 +4986,7 @@ async function projectApi(
     if (!response.ok) return response;
     const room = await response.json<StoredSharedSession>();
     return json(
-      publicSession(room, url.origin, creatorId),
+      await publicSession(room, url.origin, creatorId, secret),
       response.status,
     );
   }
@@ -4782,7 +5003,7 @@ async function projectApi(
     if (!response.ok) return response;
     const room = await response.json<StoredSharedSession>();
     return json(
-      publicSession(room, url.origin, creatorId),
+      await publicSession(room, url.origin, creatorId, secret),
       response.status,
     );
   }
@@ -4794,7 +5015,7 @@ async function projectApi(
     );
     if (!response.ok) return response;
     return json(
-      publicPlaytest(await response.json<StoredPlaytest>(), url.origin, creatorId),
+      await publicPlaytest(await response.json<StoredPlaytest>(), url.origin, creatorId, secret),
     );
   }
 
@@ -4805,7 +5026,7 @@ async function projectApi(
     );
     if (!response.ok) return response;
     return json(
-      publicSession(await response.json<StoredSharedSession>(), url.origin, creatorId),
+      await publicSession(await response.json<StoredSharedSession>(), url.origin, creatorId, secret),
     );
   }
 
@@ -4825,11 +5046,6 @@ function publicShareForwardRequest(target: string, request: Request) {
   return forwarded;
 }
 
-function publicShareCreator(url: URL) {
-  const creatorId = url.searchParams.get("creator")?.trim();
-  return creatorId && creatorId.length <= 512 ? creatorId : null;
-}
-
 function isPublicSharePage(url: URL) {
   return /^\/(?:play|room|replay|try)\/[^/]+$/.test(url.pathname);
 }
@@ -4847,10 +5063,19 @@ function isPublicShareApi(request: Request) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    const shareCreatorId = publicShareCreator(url);
+    const shareToken = shareTokenFromUrl(url);
+    const shareCapability = shareToken
+      ? await verifyShareToken(shareToken, shareSecret(env))
+      : null;
+    const shareResource = resourceKindFromPath(url.pathname);
+    const validShare = Boolean(
+      shareCapability &&
+      shareResource &&
+      capabilityMatches(shareCapability, shareResource.kind, shareResource.resourceId),
+    );
     const playtestLinkMatch = url.pathname.match(/^\/try\/([^/]+)$/);
-    if (request.method === "GET" && shareCreatorId && playtestLinkMatch) {
-      const stub = env.CREATOR_PROJECTS.getByName(shareCreatorId);
+    if (request.method === "GET" && validShare && shareCapability && playtestLinkMatch) {
+      const stub = env.CREATOR_PROJECTS.getByName(shareCapability.c);
       const response = await stub.fetch(
         `https://projects.internal/projects/${playtestLinkMatch[1]}?view=playtest-link`,
       );
@@ -4860,16 +5085,17 @@ export default {
       }>();
       if (!playtestLink) return error("playtest_link_not_published", 404);
       return Response.redirect(
-        publicShareUrl(`/room/${playtestLink.sessionId}`, url.origin, shareCreatorId),
+        publicShareUrl(`/room/${playtestLink.sessionId}`, url.origin, shareToken!),
         302,
       );
     }
     if (
-      shareCreatorId &&
+      validShare &&
+      shareCapability &&
       (isPublicSharePage(url) || isPublicShareApi(request))
     ) {
       if (isPublicShareApi(request)) {
-        return projectApi(request, env, shareCreatorId, "oauth");
+        return projectApi(request, env, shareCapability.c, "oauth");
       }
       return env.ASSETS.fetch(request);
     }

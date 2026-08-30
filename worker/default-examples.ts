@@ -317,7 +317,7 @@ export function instantiateDefaultExample(
         presentation: {
           theme: "idea-relay",
           visuals: [{
-            provenance: "generated",
+            provenance: "kit",
             label: "程序化提示卡与共享分数界面",
           }],
         },

@@ -525,8 +525,8 @@ export function materializeRuleSystem(input: {
             label: "规则书提取图像",
           }]
         : [{
-            provenance: "generated",
-            label: "排版与程序化游戏界面",
+            provenance: "kit",
+            label: "程序化主题 kit",
           }],
     },
   };
@@ -539,6 +539,7 @@ export function createGenerationPlan(input: {
   ruleSystem: RuleSystem;
   sourceIds: string[];
   createdAt: string;
+  proposedRuntime?: GenerationPlan["proposedRuntime"];
 }): GenerationPlan {
   const { ruleSystem } = input;
   const unsupported = [...ruleSystem.runtimeSupport.unsupported];
@@ -546,7 +547,10 @@ export function createGenerationPlan(input: {
     "识别出的规则、行动与结果仍需创作者在同一项目中审阅。",
     "来源锚点决定了可追溯内容；未从来源中识别出的裁判、随机与资源语义不会被隐式补全。",
   ];
-  if (ruleSystem.runtimeSupport.status === "draft") {
+  if (ruleSystem.runtimeSupport.status === "draft" && input.proposedRuntime) {
+    assumptions.push(`批准 Generation Plan 后才会把可执行范围配置为 ${input.proposedRuntime.op}；在此之前 Rule System 保持 draft。`);
+    unsupported.push("Executable Kernel 仍待创作者批准 Generation Plan。");
+  } else if (ruleSystem.runtimeSupport.status === "draft") {
     assumptions.push("当前规则尚未证明可由 GoDesk 的 Executable Kernel 执行，需要在 Studio 中显式配置。");
     unsupported.push("当前 Rule System 尚未配置可执行内核。");
   } else {
@@ -580,6 +584,7 @@ export function createGenerationPlan(input: {
     assumptions,
     unsupported: unique(unsupported),
     sourceIds: [...new Set(input.sourceIds)].sort(),
+    ...(input.proposedRuntime ? { proposedRuntime: input.proposedRuntime } : {}),
     createdAt: input.createdAt,
   };
 }
