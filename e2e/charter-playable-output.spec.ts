@@ -213,6 +213,9 @@ test.describe("ChatCut charter: source in, playable game out", () => {
       "已记下：这是真人一起打的一局。",
     );
     await expect(page.locator(".human-attest-id")).toHaveText(/^finding_/);
+    await expect(page.locator(".human-attest-session")).toHaveText(/^room_/);
+    await expect(page.locator(".human-attest-replay")).toHaveText(/^replay_/);
+    await expect(page.locator(".human-attest-hypothesis")).toHaveText(/^hypothesis_/);
   });
 
   test("港口十三号 opens a light harbor table and accepts a waiter", async ({ page }) => {

@@ -2252,10 +2252,13 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                     <p>点「开始试玩」后即可在这里落座和行动。朋友只能使用已发布的邀请链接。</p>
                   </div>
                 )}
-                {humanFinding && (
+                {humanFinding && friendSession && (
                   <p className="human-attest-done" role="status">
                     已记下：这是真人一起打的一局。
                     <code className="human-attest-id">{humanFinding.id}</code>
+                    <code className="human-attest-session">{friendSession.id}</code>
+                    <code className="human-attest-replay">{friendSession.replayId}</code>
+                    <code className="human-attest-hypothesis">{humanFinding.hypothesisId}</code>
                   </p>
                 )}
                 {canAttestHuman && friendSession && (

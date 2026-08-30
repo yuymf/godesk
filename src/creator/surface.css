@@ -588,7 +588,10 @@ summary:focus-visible {
   color: var(--forest-deep);
 }
 
-.human-attest-id {
+.human-attest-id,
+.human-attest-session,
+.human-attest-replay,
+.human-attest-hypothesis {
   display: block;
   margin-top: 4px;
   color: var(--muted);
