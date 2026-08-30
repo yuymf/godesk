@@ -29,6 +29,15 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Require Cloudflare token
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::Repository secret CLOUDFLARE_API_TOKEN is empty. Add an Edit Cloudflare Workers token at Settings → Secrets and variables → Actions, then re-run this workflow. Without it the hobbyist composer never reaches https://godesk.yumengfan220.workers.dev/chatgpt-plugin."
+            exit 1
+          fi
+
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
       - run: pnpm build
@@ -40,6 +49,7 @@ jobs:
       - name: Deploy to Cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: pnpm exec wrangler deploy
 
       - name: Smoke production composer
@@ -48,4 +58,9 @@ jobs:
       - name: Publish public Plugin
         env:
           GODESK_PLUGIN_SYNC_TOKEN: ${{ secrets.GODESK_PLUGIN_SYNC_TOKEN }}
-        run: node scripts/publish-public-plugin.mjs
+        run: |
+          if [ -z "$GODESK_PLUGIN_SYNC_TOKEN" ]; then
+            echo "::error::Repository secret GODESK_PLUGIN_SYNC_TOKEN is empty. Add a PAT with write access to yuymf/godesk-plugin, then re-run this workflow. Production can already be live; this step publishes 0.2.0+codex.20260830 so Codex Marketplace is not the stale 0.1.0 tabletop bundle."
+            exit 1
+          fi
+          node scripts/publish-public-plugin.mjs
