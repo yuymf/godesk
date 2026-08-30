@@ -173,6 +173,37 @@ function localIdentity(request: Request): CreatorIdentity | null {
   };
 }
 
+const ANON_COOKIE = "__Host-GODESK_ANON";
+
+export function anonymousCreator(request: Request) {
+  const existing = cookie(request, ANON_COOKIE);
+  if (existing?.startsWith("anon_")) {
+    return {
+      identity: {
+        creatorId: existing,
+        mode: "oauth" as const,
+        scopes: [READ_SCOPE, WRITE_SCOPE],
+      },
+    };
+  }
+  const creatorId = `anon_${crypto.randomUUID()}`;
+  return {
+    identity: {
+      creatorId,
+      mode: "oauth" as const,
+      scopes: [READ_SCOPE, WRITE_SCOPE],
+    },
+    cookie: loginCookie(ANON_COOKIE, creatorId, 60 * 60 * 24 * 30),
+  };
+}
+
+export function withCookies(response: Response, cookies: string[]) {
+  if (!cookies.length) return response;
+  const headers = new Headers(response.headers);
+  for (const value of cookies) headers.append("set-cookie", value);
+  return new Response(response.body, { status: response.status, headers });
+}
+
 export async function authorizeRequest(
   request: Request,
   env: Env,

@@ -59,6 +59,11 @@ import {
 } from "./composer-draft";
 import { DEFAULT_EXAMPLES, type DefaultExampleId } from "./default-examples";
 import { HOBBYIST_STARTERS } from "./hobbyist-starters";
+import { logicalPathname, mountHref } from "../public-mount";
+
+function href(path: string) {
+  return mountHref(path, window.location.pathname);
+}
 import {
   extractRulebookText,
   harvestRulebookPageImages,
@@ -414,7 +419,7 @@ export function studioHobbyistFocus(
 
 function Brand() {
   return (
-    <a className="creator-brand" href="/">
+    <a className="creator-brand" href={href("/")}>
       <span aria-hidden="true">GD</span>
       <span>
         <strong>GoDesk</strong>
@@ -695,10 +700,10 @@ function CreatorHome() {
         <Brand />
         <a
           className="studio-new"
-          href="/"
+          href={href("/")}
           onClick={(event) => {
             clearComposerDraft();
-            if (window.location.pathname !== "/") return;
+            if (logicalPathname(window.location.pathname) !== "/") return;
             event.preventDefault();
             setName("我的游戏");
             setDescription("");
@@ -713,7 +718,7 @@ function CreatorHome() {
         <nav aria-label="最近项目">
           <span>我的游戏</span>
           {projects.slice(0, 8).map((project) => (
-            <a href={`/studio/${project.id}`} key={project.id}>
+            <a href={href(`/studio/${project.id}`)} key={project.id}>
               <i aria-hidden="true">◇</i>
               <span><strong>{project.name}</strong><small>v{project.version}</small></span>
             </a>
@@ -1842,7 +1847,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
             ? "这个链接指向的游戏已不在当前工作区，可能来自一次隔离测试。请从游戏列表打开有效项目。"
             : loadError}
         </p>
-        <a href="/">返回游戏列表</a>
+        <a href={href("/")}>返回游戏列表</a>
       </main>
     );
   }
@@ -1908,7 +1913,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
           <a href="#iteration">改下一版</a>
           <a href="#validation">朋友反馈{unreviewedFeedbackCount ? ` · ${unreviewedFeedbackCount}` : ""}</a>
         </nav>
-        <a className="back-projects" href="/">← 返回所有游戏</a>
+        <a className="back-projects" href={href("/")}>← 返回所有游戏</a>
       </aside>
 
       <section className="studio-canvas">
@@ -3384,7 +3389,7 @@ function PlayablePreview({ buildId }: { buildId: string }) {
     <main className="playable-preview" id="main">
       <header>
         <span>这个版本长什么样</span>
-        <a href={`/studio/${build.projectId}`}>回工作室</a>
+        <a href={href(`/studio/${build.projectId}`)}>回工作室</a>
       </header>
       <section className="preview-hero">
         <div className="preview-title">
@@ -4554,19 +4559,20 @@ function ReplayStateCard({
 }
 
 export function CreatorWorkspace() {
-  const studioMatch = window.location.pathname.match(/^\/studio\/([^/]+)$/);
+  const pathname = logicalPathname(window.location.pathname);
+  const studioMatch = pathname.match(/^\/studio\/([^/]+)$/);
   if (studioMatch) {
     return <ProjectStudio projectId={decodeURIComponent(studioMatch[1])} />;
   }
-  const playMatch = window.location.pathname.match(/^\/play\/([^/]+)$/);
+  const playMatch = pathname.match(/^\/play\/([^/]+)$/);
   if (playMatch) {
     return <PlayablePreview buildId={decodeURIComponent(playMatch[1])} />;
   }
-  const roomMatch = window.location.pathname.match(/^\/room\/([^/]+)$/);
+  const roomMatch = pathname.match(/^\/room\/([^/]+)$/);
   if (roomMatch) {
     return <RoomView sessionId={decodeURIComponent(roomMatch[1])} />;
   }
-  const replayMatch = window.location.pathname.match(/^\/replay\/([^/]+)$/);
+  const replayMatch = pathname.match(/^\/replay\/([^/]+)$/);
   if (replayMatch) {
     return <ReplayView replayId={decodeURIComponent(replayMatch[1])} />;
   }

@@ -1608,6 +1608,23 @@ describe("Game Project HTTP seam", () => {
     expect(response.status).not.toBe(302);
   });
 
+  it("lets a visitor create a game through the public plugin mount", async () => {
+    const created = await SELF.fetch("https://godesk.example/chatgpt-plugin/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "公开入口" }),
+    });
+    expect(created.status, await created.clone().text()).toBe(201);
+    expect(created.headers.get("set-cookie") ?? "").toContain("GODESK_ANON");
+    const body = await created.json<{
+      project: { id: string };
+      studioUrl: string;
+    }>();
+    expect(new URL(body.studioUrl).pathname).toBe(
+      `/chatgpt-plugin/studio/${body.project.id}`,
+    );
+  });
+
   it("publishes protected resource metadata at the MCP-specific discovery path", async () => {
     const response = await SELF.fetch(
       "https://godesk.example/.well-known/oauth-protected-resource/mcp",

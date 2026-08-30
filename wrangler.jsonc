@@ -22,7 +22,11 @@
       "/.well-known/oauth-protected-resource",
       "/.well-known/oauth-protected-resource/mcp",
       "/login",
-      "/oauth/callback"
+      "/oauth/callback",
+      "/chatgpt-plugin/api/*",
+      "/chatgpt-plugin/try/*",
+      "/chatgpt-plugin/login",
+      "/chatgpt-plugin/oauth/callback"
     ]
   },
   "durable_objects": {

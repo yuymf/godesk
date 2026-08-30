@@ -18,7 +18,7 @@ export function InstallGuide() {
   return (
     <main className="install-guide">
       <header className="install-nav">
-        <a href="/" className="install-brand" aria-label="GoDesk 首页">
+        <a href="/chatgpt-plugin/new" className="install-brand" aria-label="GoDesk 首页">
           <span>GD</span>
           <strong>GoDesk</strong>
         </a>
@@ -44,6 +44,9 @@ export function InstallGuide() {
         <p className="install-note">
           需要 Codex Desktop。Web 对话不能改动本机插件安装，因此不得把 Web
           环境里的阅读成功称为安装成功。
+        </p>
+        <p>
+          <a href="/chatgpt-plugin/new">不用 Codex，直接做一局</a>
         </p>
       </section>
 

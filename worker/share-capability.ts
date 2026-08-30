@@ -1,3 +1,5 @@
+import { mountHref } from "../src/public-mount";
+
 const encoder = new TextEncoder();
 
 export type ShareResourceKind = "room" | "build" | "replay" | "try";
@@ -80,8 +82,9 @@ export function publicShareUrl(
   pathname: string,
   origin: string,
   token: string,
+  mountPathname = "/",
 ) {
-  const url = new URL(pathname, origin);
+  const url = new URL(mountHref(pathname, mountPathname), origin);
   url.searchParams.set("share", token);
   return url.toString();
 }

@@ -104,6 +104,19 @@ test.describe("ChatCut charter: source in, playable game out", () => {
 
     await page.getByRole("button", { name: "复制这一句话" }).click();
     await expect(page.getByRole("button", { name: "已复制" })).toBeVisible();
+
+    await page.getByRole("link", { name: "不用 Codex，直接做一局" }).click();
+    await expect(page).toHaveURL(/\/chatgpt-plugin\/new$/);
+    await expect(page.getByRole("heading", { name: "今天要做一款什么游戏？" })).toBeVisible();
+  });
+
+  test("the public plugin mount opens a joinable ready-made room", async ({ page }) => {
+    await page.goto("/chatgpt-plugin/new");
+    await expect(page.getByRole("heading", { name: "今天要做一款什么游戏？" })).toBeVisible();
+    const ideaRelay = page.locator("article").filter({ hasText: "灵感接力" });
+    await ideaRelay.getByRole("button", { name: "先玩这一局" }).click();
+    await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 90_000 });
+    await expect(page.getByRole("heading", { name: "灵感接力" })).toBeVisible();
   });
 
   test("灵感接力 becomes a joinable room where two people can play", async ({

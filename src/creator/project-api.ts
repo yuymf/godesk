@@ -21,6 +21,19 @@ import type {
   ValidationFinding,
 } from "./project-contract";
 import type { DefaultExampleId } from "./default-examples";
+import { mountHref } from "../public-mount";
+
+function here() {
+  try {
+    return window.location.pathname;
+  } catch {
+    return "/";
+  }
+}
+
+function apiPath(path: string) {
+  return mountHref(path, here());
+}
 
 export class ProjectApiError extends Error {
   constructor(
@@ -39,7 +52,8 @@ export function shouldOfferWebLogin() {
 
 export function beginWebLogin(returnTo = "/") {
   const next = returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/";
-  window.location.assign(`/login?returnTo=${encodeURIComponent(next)}`);
+  const mounted = mountHref(next, here());
+  window.location.assign(mountHref(`/login?returnTo=${encodeURIComponent(mounted)}`, here()));
 }
 
 export function isUnauthorized(reason: unknown) {
@@ -59,7 +73,7 @@ async function readJson<T>(response: Response) {
 }
 
 export function createProject(name: string, templateId?: DefaultExampleId) {
-  return fetch("/api/projects", {
+  return fetch(apiPath("/api/projects"), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ name, templateId }),
@@ -67,13 +81,13 @@ export function createProject(name: string, templateId?: DefaultExampleId) {
 }
 
 export function getProject(id: string) {
-  return fetch(`/api/projects/${encodeURIComponent(id)}`).then(
+  return fetch(apiPath(`/api/projects/${encodeURIComponent(id)}`)).then(
     readJson<GameProject>,
   );
 }
 
 export function getProjectActivity(id: string) {
-  return fetch(`/api/projects/${encodeURIComponent(id)}?view=activity`).then(
+  return fetch(apiPath(`/api/projects/${encodeURIComponent(id)}?view=activity`)).then(
     readJson<{
       project: GameProject;
       jobs: CreatorJob[];
@@ -98,8 +112,11 @@ export function sharedSessionSocketUrl(
   shareToken?: string,
   location: Pick<Location, "origin" | "protocol"> = window.location,
 ) {
+  const pathname = location && "pathname" in location
+    ? String((location as Location).pathname)
+    : here();
   const url = new URL(
-    `/api/sessions/${encodeURIComponent(id)}/events`,
+    mountHref(`/api/sessions/${encodeURIComponent(id)}/events`, pathname),
     location.origin,
   );
   url.protocol = location.protocol === "https:" ? "wss:" : "ws:";
@@ -115,19 +132,19 @@ export function publicSharedSession(
   return {
     ...session,
     sessionUrl: new URL(
-      withShareToken(
+      mountHref(withShareToken(
         `/room/${encodeURIComponent(session.id)}`,
         shareToken,
         origin,
-      ),
+      ), here()),
       origin,
     ).toString(),
     replayUrl: new URL(
-      withShareToken(
+      mountHref(withShareToken(
         `/replay/${encodeURIComponent(session.replayId)}`,
         shareToken,
         origin,
-      ),
+      ), here()),
       origin,
     ).toString(),
   };
@@ -135,30 +152,30 @@ export function publicSharedSession(
 
 export function getRuleSystem(id: string) {
   return fetch(
-    `/api/projects/${encodeURIComponent(id)}?view=rule-system`,
+    apiPath(`/api/projects/${encodeURIComponent(id)}?view=rule-system`),
   ).then(readJson<RuleSystem>);
 }
 
 export function getGenerationPlan(id: string) {
   return fetch(
-    `/api/projects/${encodeURIComponent(id)}?view=generation-plan`,
+    apiPath(`/api/projects/${encodeURIComponent(id)}?view=generation-plan`),
   ).then(readJson<{ generationPlan: GenerationPlan | null }>);
 }
 
 export function getPlaytestLink(id: string) {
   return fetch(
-    `/api/projects/${encodeURIComponent(id)}?view=playtest-link`,
+    apiPath(`/api/projects/${encodeURIComponent(id)}?view=playtest-link`),
   ).then(readJson<{ playtestLink: PlaytestLink | null }>);
 }
 
 export function getRuleSystems(id: string) {
-  return fetch(`/api/projects/${encodeURIComponent(id)}?view=rule-systems`)
+  return fetch(apiPath(`/api/projects/${encodeURIComponent(id)}?view=rule-systems`))
     .then(readJson<{ ruleSystems: RuleSystem[] }>)
     .then((result) => result.ruleSystems);
 }
 
 export function getChangesets(id: string) {
-  return fetch(`/api/projects/${encodeURIComponent(id)}?view=changesets`)
+  return fetch(apiPath(`/api/projects/${encodeURIComponent(id)}?view=changesets`))
     .then(readJson<{ changesets: Changeset[] }>)
     .then((result) => result.changesets);
 }
@@ -173,7 +190,7 @@ export function duplicateRuleSystem(
   },
 ) {
   return fetch(
-    `/api/projects/${encodeURIComponent(projectId)}/rule-systems/${encodeURIComponent(ruleSystemId)}/duplicate`,
+    apiPath(`/api/projects/${encodeURIComponent(projectId)}/rule-systems/${encodeURIComponent(ruleSystemId)}/duplicate`),
     {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -191,7 +208,7 @@ export function restoreBuild(
   },
 ) {
   return fetch(
-    `/api/projects/${encodeURIComponent(projectId)}/builds/${encodeURIComponent(buildId)}/restore`,
+    apiPath(`/api/projects/${encodeURIComponent(projectId)}/builds/${encodeURIComponent(buildId)}/restore`),
     {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -201,7 +218,7 @@ export function restoreBuild(
 }
 
 export function getSources(id: string) {
-  return fetch(`/api/projects/${encodeURIComponent(id)}?view=sources`)
+  return fetch(apiPath(`/api/projects/${encodeURIComponent(id)}?view=sources`))
     .then(readJson<{ sources: SourceLibraryEntry[] }>)
     .then((result) => result.sources);
 }
@@ -210,7 +227,7 @@ export function applyProjectChanges(
   id: string,
   input: ApplyProjectChangesInput,
 ) {
-  return fetch(`/api/projects/${encodeURIComponent(id)}/changes`, {
+  return fetch(apiPath(`/api/projects/${encodeURIComponent(id)}/changes`), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(input),
@@ -218,7 +235,7 @@ export function applyProjectChanges(
 }
 
 export function submitJob(id: string, input: SubmitJobInput) {
-  return fetch(`/api/projects/${encodeURIComponent(id)}/jobs`, {
+  return fetch(apiPath(`/api/projects/${encodeURIComponent(id)}/jobs`), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(input),
@@ -226,13 +243,13 @@ export function submitJob(id: string, input: SubmitJobInput) {
 }
 
 export function getJob(id: string) {
-  return fetch(`/api/jobs/${encodeURIComponent(id)}`).then(
+  return fetch(apiPath(`/api/jobs/${encodeURIComponent(id)}`)).then(
     readJson<CreatorJob>,
   );
 }
 
 export function retryJob(id: string) {
-  return fetch(`/api/jobs/${encodeURIComponent(id)}/retry`, {
+  return fetch(apiPath(`/api/jobs/${encodeURIComponent(id)}/retry`), {
     method: "POST",
   }).then(readJson<CreatorJob>);
 }
@@ -251,39 +268,39 @@ export async function waitForJob(
 }
 
 export function getJobs(id: string) {
-  return fetch(`/api/projects/${encodeURIComponent(id)}?view=jobs`)
+  return fetch(apiPath(`/api/projects/${encodeURIComponent(id)}?view=jobs`))
     .then(readJson<{ jobs: CreatorJob[] }>)
     .then((result) => result.jobs);
 }
 
 export function getBuilds(id: string) {
-  return fetch(`/api/projects/${encodeURIComponent(id)}?view=builds`)
+  return fetch(apiPath(`/api/projects/${encodeURIComponent(id)}?view=builds`))
     .then(readJson<{ builds: PlayableBuild[] }>)
     .then((result) => result.builds);
 }
 
 export function getBuild(id: string, shareToken?: string) {
   return fetch(
-    withShareToken(`/api/builds/${encodeURIComponent(id)}`, shareToken),
+    apiPath(withShareToken(`/api/builds/${encodeURIComponent(id)}`, shareToken)),
   ).then(
     readJson<PlayableBuild>,
   );
 }
 
 export function getPlaytests(id: string) {
-  return fetch(`/api/projects/${encodeURIComponent(id)}?view=playtests`)
+  return fetch(apiPath(`/api/projects/${encodeURIComponent(id)}?view=playtests`))
     .then(readJson<{ playtests: PlaytestRun[] }>)
     .then((result) => result.playtests);
 }
 
 export function getSharedSessions(id: string) {
-  return fetch(`/api/projects/${encodeURIComponent(id)}?view=sessions`)
+  return fetch(apiPath(`/api/projects/${encodeURIComponent(id)}?view=sessions`))
     .then(readJson<{ sessions: SharedSession[] }>)
     .then((result) => result.sessions);
 }
 
 export function getValidation(id: string) {
-  return fetch(`/api/projects/${encodeURIComponent(id)}?view=validation`)
+  return fetch(apiPath(`/api/projects/${encodeURIComponent(id)}?view=validation`))
     .then(readJson<{
       hypotheses: DesignHypothesis[];
       findings: ValidationFinding[];
@@ -294,7 +311,7 @@ export function createSharedSession(
   buildId: string,
   input: { seed: number; idempotencyKey: string; hypothesisId?: string },
 ) {
-  return fetch(`/api/builds/${encodeURIComponent(buildId)}/sessions`, {
+  return fetch(apiPath(`/api/builds/${encodeURIComponent(buildId)}/sessions`), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(input),
@@ -307,10 +324,10 @@ export function claimSessionSeat(
   shareToken?: string,
 ) {
   return fetch(
-    withShareToken(
+    apiPath(withShareToken(
       `/api/sessions/${encodeURIComponent(id)}/seats`,
       shareToken,
-    ),
+    )),
     {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -331,10 +348,10 @@ export function submitSessionIntent(
   shareToken?: string,
 ) {
   return fetch(
-    withShareToken(
+    apiPath(withShareToken(
       `/api/sessions/${encodeURIComponent(id)}/intents`,
       shareToken,
-    ),
+    )),
     {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -354,10 +371,10 @@ export function submitSessionFeedback(
   shareToken?: string,
 ) {
   return fetch(
-    withShareToken(
+    apiPath(withShareToken(
       `/api/sessions/${encodeURIComponent(id)}/feedback`,
       shareToken,
-    ),
+    )),
     {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -368,14 +385,14 @@ export function submitSessionFeedback(
 
 export function getReplay(id: string, shareToken?: string) {
   return fetch(
-    withShareToken(`/api/replays/${encodeURIComponent(id)}`, shareToken),
+    apiPath(withShareToken(`/api/replays/${encodeURIComponent(id)}`, shareToken)),
   ).then(
     readJson<GameReplay>,
   );
 }
 
 export function listProjects() {
-  return fetch("/api/projects")
+  return fetch(apiPath("/api/projects"))
     .then(readJson<{ projects: GameProject[] }>)
     .then((result) => result.projects);
 }

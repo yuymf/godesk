@@ -1,11 +1,14 @@
 import { DurableObject } from "cloudflare:workers";
 import {
+  anonymousCreator,
   authorizeRequest,
   finishWebLogin,
   protectedResourceMetadata,
   requiredScopes,
   startWebLogin,
+  withCookies,
 } from "./auth";
+import { logicalPathname, mountHref } from "../src/public-mount";
 import { godeskMcpHandler } from "./mcp";
 import {
   acceptIntent,
@@ -1907,6 +1910,7 @@ async function publicBuild(
   origin: string,
   creatorId?: string,
   secret?: string,
+  mount = "/",
 ): Promise<PlayableBuild> {
   const normalized = normalizedBuild(build);
   const token = creatorId && secret
@@ -1915,8 +1919,8 @@ async function publicBuild(
   return {
     ...normalized,
     playableUrl: token
-      ? publicShareUrl(`/play/${normalized.id}`, origin, token)
-      : new URL(`/play/${normalized.id}`, origin).toString(),
+      ? publicShareUrl(`/play/${normalized.id}`, origin, token, mount)
+      : new URL(mountHref(`/play/${normalized.id}`, mount), origin).toString(),
   };
 }
 
@@ -1925,6 +1929,7 @@ async function publicPlaytest(
   origin: string,
   creatorId?: string,
   secret?: string,
+  mount = "/",
 ): Promise<PlaytestRun> {
   const token = creatorId && secret
     ? await signedShareToken(secret, creatorId, { replay: playtest.replayId })
@@ -1932,8 +1937,8 @@ async function publicPlaytest(
   return {
     ...playtest,
     replayUrl: token
-      ? publicShareUrl(`/replay/${playtest.replayId}`, origin, token)
-      : new URL(`/replay/${playtest.replayId}`, origin).toString(),
+      ? publicShareUrl(`/replay/${playtest.replayId}`, origin, token, mount)
+      : new URL(mountHref(`/replay/${playtest.replayId}`, mount), origin).toString(),
   };
 }
 
@@ -1942,6 +1947,7 @@ async function publicSession(
   origin: string,
   creatorId: string,
   secret: string,
+  mount = "/",
 ): Promise<SharedSession> {
   const token = await signedShareToken(secret, creatorId, {
     room: session.id,
@@ -1951,8 +1957,8 @@ async function publicSession(
   return {
     ...session,
     seats: publicSeats(session.seats),
-    sessionUrl: publicShareUrl(`/room/${session.id}`, origin, token),
-    replayUrl: publicShareUrl(`/replay/${session.replayId}`, origin, token),
+    sessionUrl: publicShareUrl(`/room/${session.id}`, origin, token, mount),
+    replayUrl: publicShareUrl(`/replay/${session.replayId}`, origin, token, mount),
   };
 }
 
@@ -1961,6 +1967,7 @@ async function publicPlaytestLink(
   origin: string,
   creatorId: string,
   secret: string,
+  mount = "/",
 ): Promise<PlaytestLink> {
   const token = await signedShareToken(secret, creatorId, {
     project: link.projectId,
@@ -1970,17 +1977,17 @@ async function publicPlaytestLink(
   });
   return {
     ...link,
-    url: publicShareUrl(`/try/${link.projectId}`, origin, token),
+    url: publicShareUrl(`/try/${link.projectId}`, origin, token, mount),
   };
 }
 
 function publicMutation<
   T extends { studioPath: string },
->(value: T, origin: string): Omit<T, "studioPath"> & { studioUrl: string } {
+>(value: T, origin: string, mount = "/"): Omit<T, "studioPath"> & { studioUrl: string } {
   const { studioPath, ...rest } = value;
   return {
     ...rest,
-    studioUrl: new URL(studioPath, origin).toString(),
+    studioUrl: new URL(mountHref(studioPath, mount), origin).toString(),
   };
 }
 
@@ -2050,6 +2057,7 @@ async function publicJob(
   origin: string,
   creatorId?: string,
   secret?: string,
+  mount = "/",
 ): Promise<CreatorJob> {
   if (!job.result) return job;
   if (job.kind === "compile-build" && job.result.build) {
@@ -2058,6 +2066,7 @@ async function publicJob(
       origin,
       creatorId,
       secret,
+      mount,
     );
     return {
       ...job,
@@ -2096,8 +2105,8 @@ async function publicJob(
       result: {
         ...job.result,
         replayUrl: token
-          ? publicShareUrl(`/replay/${String(job.result.replayId)}`, origin, token)
-          : new URL(`/replay/${String(job.result.replayId)}`, origin).toString(),
+          ? publicShareUrl(`/replay/${String(job.result.replayId)}`, origin, token, mount)
+          : new URL(mountHref(`/replay/${String(job.result.replayId)}`, mount), origin).toString(),
       },
     };
   }
@@ -4618,6 +4627,7 @@ async function projectApi(
   authentication: "local-development-only" | "oauth",
 ) {
   const url = new URL(request.url);
+  const mount = request.headers.get("x-godesk-mount") ?? url.pathname;
   const stub = env.CREATOR_PROJECTS.getByName(creatorId);
   const secret = shareSecret(env);
   const shareToken = shareTokenFromUrl(url);
@@ -4648,7 +4658,7 @@ async function projectApi(
     const project = await response.json<GameProject>();
     const result: CreateProjectResult = {
       project,
-      studioUrl: new URL(`/studio/${project.id}`, url.origin).toString(),
+      studioUrl: new URL(mountHref(`/studio/${project.id}`, mount), url.origin).toString(),
       warnings: input.templateId
         ? []
         : ["新项目尚未包含来源、结构化规则或 Game Entity。"],
@@ -4675,7 +4685,7 @@ async function projectApi(
     return json(
       {
         project,
-        studioUrl: new URL(`/studio/${project.id}`, url.origin).toString(),
+        studioUrl: new URL(mountHref(`/studio/${project.id}`, mount), url.origin).toString(),
         warnings: [],
       } satisfies CreateProjectResult,
       response.status,
@@ -4697,6 +4707,7 @@ async function projectApi(
       publicMutation(
         await response.json<StoredDuplicateRuleSystemResult>(),
         url.origin,
+        mount,
       ),
       response.status,
     );
@@ -4717,6 +4728,7 @@ async function projectApi(
       publicMutation(
         await response.json<StoredRestoreBuildResult>(),
         url.origin,
+        mount,
       ),
       response.status,
     );
@@ -4749,7 +4761,7 @@ async function projectApi(
       return json({
         ...body,
         builds: await Promise.all(
-          body.builds.map((build) => publicBuild(build, url.origin, creatorId, secret)),
+          body.builds.map((build) => publicBuild(build, url.origin, creatorId, secret, mount)),
         ),
       });
     }
@@ -4759,7 +4771,7 @@ async function projectApi(
         ...body,
         playtests: await Promise.all(
           body.playtests.map((playtest) =>
-            publicPlaytest(playtest, url.origin, creatorId, secret),
+            publicPlaytest(playtest, url.origin, creatorId, secret, mount),
           ),
         ),
       });
@@ -4769,7 +4781,7 @@ async function projectApi(
       return json({
         ...body,
         sessions: await Promise.all(
-          body.sessions.map((room) => publicSession(room, url.origin, creatorId, secret)),
+          body.sessions.map((room) => publicSession(room, url.origin, creatorId, secret, mount)),
         ),
       });
     }
@@ -4779,7 +4791,7 @@ async function projectApi(
       }>();
       return json({
         playtestLink: body.playtestLink
-          ? await publicPlaytestLink(body.playtestLink, url.origin, creatorId, secret)
+          ? await publicPlaytestLink(body.playtestLink, url.origin, creatorId, secret, mount)
           : null,
       });
     }
@@ -4788,7 +4800,7 @@ async function projectApi(
       return json({
         ...body,
         jobs: await Promise.all(
-          body.jobs.map((job) => publicJob(job, url.origin, creatorId, secret)),
+          body.jobs.map((job) => publicJob(job, url.origin, creatorId, secret, mount)),
         ),
       });
     }
@@ -4801,11 +4813,11 @@ async function projectApi(
       return json({
         project: body.project,
         jobs: await Promise.all(
-          body.jobs.map((job) => publicJob(job, url.origin, creatorId, secret)),
+          body.jobs.map((job) => publicJob(job, url.origin, creatorId, secret, mount)),
         ),
         sessions: await Promise.all(
           body.sessions.map((room) =>
-            publicSession(room, url.origin, creatorId, secret)
+            publicSession(room, url.origin, creatorId, secret, mount)
           ),
         ),
       });
@@ -4826,6 +4838,7 @@ async function projectApi(
       publicMutation(
         await response.json<StoredApplyProjectChangesResult>(),
         url.origin,
+        mount,
       ),
       response.status,
     );
@@ -4843,7 +4856,7 @@ async function projectApi(
     );
     if (!response.ok) return response;
     return json(
-      await publicJob(await response.json<CreatorJob>(), url.origin, creatorId, secret),
+      await publicJob(await response.json<CreatorJob>(), url.origin, creatorId, secret, mount),
       response.status,
     );
   }
@@ -4863,7 +4876,7 @@ async function projectApi(
       `https://projects.internal/jobs/${jobMatch[1]}`,
     );
     if (!response.ok) return response;
-    return json(await publicJob(await response.json<CreatorJob>(), url.origin, creatorId, secret));
+    return json(await publicJob(await response.json<CreatorJob>(), url.origin, creatorId, secret, mount));
   }
 
   const retryJobMatch = url.pathname.match(/^\/api\/jobs\/([^/]+)\/retry$/);
@@ -4876,7 +4889,7 @@ async function projectApi(
     );
     if (!response.ok) return response;
     return json(
-      await publicJob(await response.json<CreatorJob>(), url.origin, creatorId, secret),
+      await publicJob(await response.json<CreatorJob>(), url.origin, creatorId, secret, mount),
       response.status,
     );
   }
@@ -4894,8 +4907,8 @@ async function projectApi(
     return json(
       publicMutation({
         ...result,
-        build: await publicBuild(result.build, url.origin, creatorId, secret),
-      }, url.origin),
+        build: await publicBuild(result.build, url.origin, creatorId, secret, mount),
+      }, url.origin, mount),
       response.status,
     );
   }
@@ -4907,7 +4920,7 @@ async function projectApi(
     );
     if (!response.ok) return response;
     const build = await response.json<StoredPlayableBuild>();
-    return json(await publicBuild(build, url.origin, creatorId, secret));
+    return json(await publicBuild(build, url.origin, creatorId, secret, mount));
   }
 
   const playtestCreateMatch = url.pathname.match(
@@ -4922,7 +4935,7 @@ async function projectApi(
     );
     if (!response.ok) return response;
     const playtest = await response.json<StoredPlaytest>();
-    return json(await publicPlaytest(playtest, url.origin, creatorId, secret), response.status);
+    return json(await publicPlaytest(playtest, url.origin, creatorId, secret, mount), response.status);
   }
 
   const roomCreateMatch = url.pathname.match(
@@ -4937,7 +4950,7 @@ async function projectApi(
     );
     if (!response.ok) return response;
     const room = await response.json<StoredSharedSession>();
-    return json(await publicSession(room, url.origin, creatorId, secret), response.status);
+    return json(await publicSession(room, url.origin, creatorId, secret, mount), response.status);
   }
 
   const roomEventsMatch = url.pathname.match(
@@ -4967,7 +4980,7 @@ async function projectApi(
     }>();
     return json(
       {
-        session: await publicSession(claimed.session, url.origin, creatorId, secret),
+        session: await publicSession(claimed.session, url.origin, creatorId, secret, mount),
         seatToken: claimed.seatToken,
       },
       response.status,
@@ -4986,7 +4999,7 @@ async function projectApi(
     if (!response.ok) return response;
     const room = await response.json<StoredSharedSession>();
     return json(
-      await publicSession(room, url.origin, creatorId, secret),
+      await publicSession(room, url.origin, creatorId, secret, mount),
       response.status,
     );
   }
@@ -5003,7 +5016,7 @@ async function projectApi(
     if (!response.ok) return response;
     const room = await response.json<StoredSharedSession>();
     return json(
-      await publicSession(room, url.origin, creatorId, secret),
+      await publicSession(room, url.origin, creatorId, secret, mount),
       response.status,
     );
   }
@@ -5015,7 +5028,7 @@ async function projectApi(
     );
     if (!response.ok) return response;
     return json(
-      await publicPlaytest(await response.json<StoredPlaytest>(), url.origin, creatorId, secret),
+      await publicPlaytest(await response.json<StoredPlaytest>(), url.origin, creatorId, secret, mount),
     );
   }
 
@@ -5026,7 +5039,7 @@ async function projectApi(
     );
     if (!response.ok) return response;
     return json(
-      await publicSession(await response.json<StoredSharedSession>(), url.origin, creatorId, secret),
+      await publicSession(await response.json<StoredSharedSession>(), url.origin, creatorId, secret, mount),
     );
   }
 
@@ -5062,7 +5075,13 @@ function isPublicShareApi(request: Request) {
 
 export default {
   async fetch(request, env, ctx) {
-    const url = new URL(request.url);
+    const incoming = new URL(request.url);
+    const mount = incoming.pathname;
+    const logical = logicalPathname(incoming.pathname);
+    const url = new URL(incoming);
+    if (logical !== "/chatgpt-plugin") url.pathname = logical;
+    const routed = new Request(url, request);
+    routed.headers.set("x-godesk-mount", mount);
     const shareToken = shareTokenFromUrl(url);
     const shareCapability = shareToken
       ? await verifyShareToken(shareToken, shareSecret(env))
@@ -5074,7 +5093,7 @@ export default {
       capabilityMatches(shareCapability, shareResource.kind, shareResource.resourceId),
     );
     const playtestLinkMatch = url.pathname.match(/^\/try\/([^/]+)$/);
-    if (request.method === "GET" && validShare && shareCapability && playtestLinkMatch) {
+    if (routed.method === "GET" && validShare && shareCapability && playtestLinkMatch) {
       const stub = env.CREATOR_PROJECTS.getByName(shareCapability.c);
       const response = await stub.fetch(
         `https://projects.internal/projects/${playtestLinkMatch[1]}?view=playtest-link`,
@@ -5085,17 +5104,17 @@ export default {
       }>();
       if (!playtestLink) return error("playtest_link_not_published", 404);
       return Response.redirect(
-        publicShareUrl(`/room/${playtestLink.sessionId}`, url.origin, shareToken!),
+        publicShareUrl(`/room/${playtestLink.sessionId}`, url.origin, shareToken!, mount),
         302,
       );
     }
     if (
       validShare &&
       shareCapability &&
-      (isPublicSharePage(url) || isPublicShareApi(request))
+      (isPublicSharePage(url) || isPublicShareApi(routed))
     ) {
-      if (isPublicShareApi(request)) {
-        return projectApi(request, env, shareCapability.c, "oauth");
+      if (isPublicShareApi(routed)) {
+        return projectApi(routed, env, shareCapability.c, "oauth");
       }
       return env.ASSETS.fetch(request);
     }
@@ -5106,48 +5125,59 @@ export default {
       return protectedResourceMetadata(request, env);
     }
     if (url.pathname === "/login") {
-      return startWebLogin(request, env);
+      return startWebLogin(routed, env);
     }
     if (url.pathname === "/oauth/callback") {
-      return finishWebLogin(request, env);
+      return finishWebLogin(routed, env);
     }
     if (url.pathname === "/mcp") {
       const identity = await authorizeRequest(
-        request,
+        routed,
         env,
-        await mcpScopes(request),
+        await mcpScopes(routed),
       );
       if (identity instanceof Response) return identity;
       return godeskMcpHandler(
-        request,
+        routed,
         env,
         identity.creatorId,
         identity.mode === "oauth" ? "oauth" : "local-development-only",
       )(
-        request,
+        routed,
         env,
         ctx,
       );
     }
     if (url.pathname.startsWith("/api/")) {
       const identity = await authorizeRequest(
-        request,
+        routed,
         env,
-        requiredScopes(request),
+        requiredScopes(routed),
       );
-      if (identity instanceof Response) return identity;
-      return projectApi(
-        request,
-        env,
-        identity.creatorId,
-        identity.mode === "oauth" ? "oauth" : "local-development-only",
+      const allowAnonymous = logical.startsWith("/api/") && mount.startsWith("/chatgpt-plugin/");
+      let creator = identity;
+      const cookies: string[] = [];
+      if (creator instanceof Response && allowAnonymous) {
+        const issued = anonymousCreator(routed);
+        creator = issued.identity;
+        if (issued.cookie) cookies.push(issued.cookie);
+      }
+      if (creator instanceof Response) return creator;
+      return withCookies(
+        await projectApi(
+          routed,
+          env,
+          creator.creatorId,
+          creator.mode === "oauth" ? "oauth" : "local-development-only",
+        ),
+        cookies,
       );
     }
     if (/^\/(studio|play|room|replay)\//.test(url.pathname)) {
-      const identity = await authorizeRequest(request, env, ["godesk:read"]);
-      if (identity instanceof Response) {
+      const identity = await authorizeRequest(routed, env, ["godesk:read"]);
+      if (identity instanceof Response && !mount.startsWith("/chatgpt-plugin/")) {
         const login = new URL("/login", url.origin);
-        login.searchParams.set("returnTo", `${url.pathname}${url.search}`);
+        login.searchParams.set("returnTo", `${incoming.pathname}${incoming.search}`);
         return Response.redirect(login, 302);
       }
     }
