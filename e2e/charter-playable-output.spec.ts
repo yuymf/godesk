@@ -86,6 +86,15 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(generate).toBeDisabled();
 
     await expect(page.getByRole("button", { name: "先玩这一局" })).toHaveCount(3);
+
+    await page.getByRole("button", { name: "3人剧本杀" }).click();
+    await generate.click();
+    await page.waitForURL(/\/studio\//, { timeout: 90_000 });
+    await expect(page.getByRole("heading", { name: "先看这一局怎么玩" })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByText("3–3 人")).toBeVisible();
+    await expect(page.getByRole("button", { name: "确认玩法并开始试玩" })).toBeVisible();
   });
 
   test("install page stays a light ChatCut contract", async ({ page }) => {

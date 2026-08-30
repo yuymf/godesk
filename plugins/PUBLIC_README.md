@@ -1,7 +1,7 @@
 # GoDesk Codex Plugin
 
 This is the public, thin Codex Plugin distribution for
-[GoDesk](https://godesk.yumengfan220.workers.dev), a ChatCut-style
+[GoDesk](https://godesk.yumengfan220.workers.dev/chatgpt-plugin), a ChatCut-style
 rule-game generator: upload a script or rules, receive a playable
 shareable game, let others join through a URL.
 
