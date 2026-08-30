@@ -478,6 +478,7 @@ function CreatorHome() {
 
   useEffect(() => {
     listProjects().then(setProjects).catch((reason: Error) => {
+      if (/<!doctype|unexpected token/i.test(reason.message)) return;
       setError(reason.message);
     });
   }, []);
