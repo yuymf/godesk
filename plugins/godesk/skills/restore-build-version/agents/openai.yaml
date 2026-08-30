@@ -1,0 +1,4 @@
+interface:
+  display_name: "Restore a GoDesk build version"
+  short_description: "Continue safely from an immutable historical build"
+  default_prompt: "Use $restore-build-version to restore this GoDesk Build as a new editable Rule System without changing its existing evidence."

@@ -15,6 +15,7 @@
     "worker",
     "worker-configuration.d.ts",
     "src/creator/project-contract.ts",
+    "src/creator/default-examples.ts",
     "src/runtime/harbor-voyage.ts"
   ]
 }

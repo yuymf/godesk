@@ -1,0 +1,4 @@
+interface:
+  display_name: "Iterate from a Finding"
+  short_description: "Apply playtest feedback to the same project"
+  default_prompt: "Use $iterate-from-finding to apply this GoDesk playtest feedback to the same project."

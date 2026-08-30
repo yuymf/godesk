@@ -1,4 +1,4 @@
 interface:
   display_name: "Playtest and verify a GoDesk game"
   short_description: "Run deterministic tests and verify visible results"
-  default_prompt: "Playtest this game and verify the result in GoDesk."
+  default_prompt: "Use $playtest-and-verify-game to playtest this game and verify the result in GoDesk."

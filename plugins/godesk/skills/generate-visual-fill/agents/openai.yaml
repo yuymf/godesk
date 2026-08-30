@@ -1,4 +1,4 @@
 interface:
   display_name: "Fill prototype visuals"
-  short_description: "Generate or fall back to a shareable visual floor"
-  default_prompt: "Fill the missing visuals for this GoDesk prototype."
+  short_description: "Complete a shareable Presentation Floor"
+  default_prompt: "Use $generate-visual-fill to complete the missing presentation for this GoDesk game."

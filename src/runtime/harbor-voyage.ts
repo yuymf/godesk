@@ -526,7 +526,7 @@ export function applyHarborIntent(
   }
 
   if (parsed.kind === "roll") {
-    // Harbor master (seat 0) steers shared sailing / pilot phases.
+    // Harbor master (seat 0) steers shared sailing / pilot stages.
     if (state.phase !== "movement" || seat !== 0) return null;
     const rolls =
       parsed.rolls ?? seededHarborRoll(state, seed, sequence);

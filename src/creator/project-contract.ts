@@ -2,7 +2,7 @@ export interface GameProject {
   id: string;
   name: string;
   version: number;
-  activeDefinitionId: string;
+  activeRuleSystemId: string;
   createdAt: string;
   updatedAt: string;
   capabilities: {
@@ -12,9 +12,10 @@ export interface GameProject {
   };
 }
 
-export interface SourceLibraryEntry {
+export type ImageUse = "visual-reference" | "project-asset";
+
+interface SourceLibraryEntryBase {
   id: string;
-  kind: "brief" | "rulebook" | "image";
   name: string;
   content: string;
   readiness: "ready";
@@ -27,10 +28,16 @@ export interface SourceLibraryEntry {
       | "ai-proposed"
       | "generative-api";
     locator: string;
+    basedOnSourceIds?: string[];
     confidence?: number;
   };
   createdAt: string;
 }
+
+export type SourceLibraryEntry = SourceLibraryEntryBase & (
+  | { kind: "brief" | "rulebook"; imageUse?: never }
+  | { kind: "image"; imageUse: ImageUse }
+);
 
 export interface BoundImage {
   sourceId: string;
@@ -49,18 +56,56 @@ export interface VisualTreatment {
   label: string;
 }
 
-export interface VisualFloorReadiness {
+export interface PresentationFloorReadiness {
   status: "passed" | "failed";
   reason: string;
   visuals: VisualTreatment[];
 }
 
-export interface GameDefinition {
+export type PlaySurfaceKind =
+  | "table"
+  | "cards"
+  | "conversation"
+  | "screen"
+  | "scene"
+  | "hybrid";
+
+export interface ParticipantRole {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface GameEntity {
+  id: string;
+  name: string;
+  kind:
+    | "resource"
+    | "card"
+    | "character"
+    | "token"
+    | "location"
+    | "concept"
+    | "object";
+  quantity?: number;
+  image?: BoundImage;
+  sourceId: string | null;
+  provenance: "source-anchored" | "system-generated" | "ai-proposed";
+  confidence: number;
+}
+
+export interface RuleSystem {
   id: string;
   version: number;
+  restoredFromBuildId?: string;
   name: string;
   pitch: string;
-  playerCount: number;
+  participants: {
+    min: number;
+    max: number;
+    default: number;
+    roles: ParticipantRole[];
+  };
   durationMinutes: number;
   rules: Array<{
     id: string;
@@ -69,15 +114,14 @@ export interface GameDefinition {
     provenance: "source-anchored" | "system-generated" | "ai-proposed";
     confidence: number;
   }>;
-  components: Array<{
+  constraints: Array<{
     id: string;
-    name: string;
-    quantity: number;
-    image?: BoundImage;
+    text: string;
     sourceId: string | null;
     provenance: "source-anchored" | "system-generated" | "ai-proposed";
     confidence: number;
   }>;
+  entities: GameEntity[];
   setup: string[];
   actions: Array<{
     id: string;
@@ -87,17 +131,18 @@ export interface GameDefinition {
     provenance: "source-anchored" | "system-generated" | "ai-proposed";
     confidence: number;
   }>;
-  board: {
+  playSurface: {
+    kind: PlaySurfaceKind;
     layout: string;
-    zones: Array<{
+    regions: Array<{
       id: string;
       name: string;
       description: string;
       image?: BoundImage;
     }>;
   };
-  phases: Array<{ id: string; name: string }>;
-  scenarios: Array<{ id: string; name: string }>;
+  stages: Array<{ id: string; name: string }>;
+  outcomes: Array<{ id: string; name: string }>;
   presentation: {
     theme: string;
     image?: BoundImage;
@@ -116,10 +161,77 @@ export interface GameDefinition {
               actions: Array<{ id: string; label: string; points: number }>;
             }
           | {
+              type: "shared-goal-v1";
+              goalTarget: number;
+              maxTurns: number;
+              actions: Array<{ id: string; label: string; progress: number }>;
+            }
+          | {
+              type: "turn-taking-v1";
+              maxTurns: number;
+              actions: Array<{ id: string; label: string }>;
+            }
+          | {
+              type: "take-away-v1";
+              initialPool: number;
+              actions: Array<{ id: string; label: string; take: number }>;
+            }
+          | {
+              type: "roll-and-move-v1";
+              dieSides: number;
+              targetPosition: number;
+              maxTurns: number;
+              actions: Array<{ id: string; label: string }>;
+            }
+          | {
+              type: "draw-and-score-v1";
+              cardValues: number[];
+              copiesPerValue: number;
+              victoryTarget: number;
+              actions: Array<{ id: string; label: string }>;
+            }
+          | {
+              type: "push-your-luck-v1";
+              dieSides: number;
+              bustFace: number;
+              victoryTarget: number;
+              maxActions: number;
+              actions: Array<{ id: "roll" | "bank"; label: string }>;
+            }
+          | {
               type: "harbor-voyage-v1";
               playerCount: number;
             };
-      };
+  };
+}
+
+export interface GenerationPlan {
+  id: string;
+  projectId: string;
+  generationJobId: string;
+  ruleSystemId: string;
+  ruleSystemVersion: number;
+  status: "pending" | "approved";
+  summary: string;
+  participants: RuleSystem["participants"];
+  durationMinutes: number;
+  playSurface: RuleSystem["playSurface"];
+  loop: string[];
+  actions: Array<{ label: string; description: string }>;
+  outcomes: string[];
+  assumptions: string[];
+  unsupported: string[];
+  sourceIds: string[];
+  createdAt: string;
+  approvedAt?: string;
+}
+
+export interface PlaytestLink {
+  projectId: string;
+  sessionId: string;
+  buildId: string;
+  updatedAt: string;
+  url: string;
 }
 
 export type HarborVoyageTableState = {
@@ -160,6 +272,51 @@ export interface Changeset {
   previousVersion: number;
   newVersion: number;
   affectedEntities: string[];
+  basedOnFindingId?: string;
+  restoredFromBuildId?: string;
+  createdAt: string;
+}
+
+export interface DesignHypothesis {
+  id: string;
+  question: string;
+  successSignal: string;
+  createdAt: string;
+}
+
+export interface ParticipantFeedbackObservation {
+  id: string;
+  seat: number;
+  rating: 1 | 2 | 3 | 4 | 5;
+  comment: string;
+  moment: FeedbackMoment;
+}
+
+export type ValidationEvidence =
+  | {
+      type: "automated-playtest";
+      playtestId: string;
+    }
+  | {
+      type: "participant-feedback";
+      sessionId: string;
+      feedback: ParticipantFeedbackObservation[];
+    }
+  | {
+      type: "human-session";
+      sessionId: string;
+      participantNames: string[];
+      creatorAttested: true;
+    };
+
+export interface ValidationFinding {
+  id: string;
+  hypothesisId: string;
+  buildId: string;
+  evidence: ValidationEvidence;
+  verdict: "supported" | "refuted" | "inconclusive";
+  notes: string;
+  nextChange: string;
   createdAt: string;
 }
 
@@ -169,27 +326,29 @@ export type ProjectChangeOperation =
       source: {
         id?: string;
         kind: SourceLibraryEntry["kind"];
+        imageUse?: ImageUse;
         name: string;
         content: string;
         provenance: SourceLibraryEntry["provenance"];
       };
     }
   | {
-      op: "update_definition";
+      op: "update_rule_system";
       fields: Partial<
         Pick<
-          GameDefinition,
+          RuleSystem,
           | "name"
           | "pitch"
-          | "playerCount"
+          | "participants"
           | "durationMinutes"
           | "rules"
-          | "components"
+          | "constraints"
+          | "entities"
           | "setup"
           | "actions"
-          | "board"
-          | "phases"
-          | "scenarios"
+          | "playSurface"
+          | "stages"
+          | "outcomes"
           | "presentation"
         >
       >;
@@ -204,8 +363,90 @@ export type ProjectChangeOperation =
       };
     }
   | {
-      op: "activate_definition";
-      definitionId: string;
+      op: "configure_shared_goal";
+      config: {
+        goalTarget: number;
+        maxTurns: number;
+        actions: Array<{ id: string; label: string; progress: number }>;
+        unsupported?: string[];
+      };
+    }
+  | {
+      op: "configure_turn_taking";
+      config: {
+        maxTurns: number;
+        actions: Array<{ id: string; label: string }>;
+        unsupported?: string[];
+      };
+    }
+  | {
+      op: "configure_take_away";
+      config: {
+        initialPool: number;
+        actions: Array<{ id: string; label: string; take: number }>;
+        unsupported?: string[];
+      };
+    }
+  | {
+      op: "configure_roll_and_move";
+      config: {
+        dieSides: number;
+        targetPosition: number;
+        maxTurns: number;
+        actions: Array<{ id: string; label: string }>;
+        unsupported?: string[];
+      };
+    }
+  | {
+      op: "configure_draw_and_score";
+      config: {
+        cardValues: number[];
+        copiesPerValue: number;
+        victoryTarget: number;
+        actions: Array<{ id: string; label: string }>;
+        unsupported?: string[];
+      };
+    }
+  | {
+      op: "configure_push_your_luck";
+      config: {
+        dieSides: number;
+        bustFace: number;
+        victoryTarget: number;
+        maxActions: number;
+        actions: Array<{ id: "roll" | "bank"; label: string }>;
+        unsupported?: string[];
+      };
+    }
+  | {
+      op: "activate_rule_system";
+      ruleSystemId: string;
+    }
+  | {
+      op: "approve_generation_plan";
+      planId: string;
+    }
+  | {
+      op: "add_design_hypothesis";
+      hypothesis: {
+        question: string;
+        successSignal: string;
+      };
+    }
+  | {
+      op: "record_validation_finding";
+      finding: {
+        hypothesisId: string;
+        buildId: string;
+        evidence: ValidationEvidence;
+        verdict: ValidationFinding["verdict"];
+        notes: string;
+        nextChange: string;
+      };
+    }
+  | {
+      op: "publish_shared_session";
+      sessionId: string;
     };
 
 export interface ApplyProjectChangesInput {
@@ -216,32 +457,46 @@ export interface ApplyProjectChangesInput {
 
 export interface ApplyProjectChangesResult {
   project: GameProject;
-  definition: GameDefinition;
+  ruleSystem: RuleSystem;
+  generationPlan: GenerationPlan | null;
   sources: SourceLibraryEntry[];
+  hypotheses: DesignHypothesis[];
+  findings: ValidationFinding[];
   changeset: Changeset;
   warnings: string[];
-  editorUrl: string;
+  studioUrl: string;
 }
 
-export interface DuplicateDefinitionResult {
+export interface DuplicateRuleSystemResult {
   project: GameProject;
-  definition: GameDefinition;
-  definitions: GameDefinition[];
+  ruleSystem: RuleSystem;
+  ruleSystems: RuleSystem[];
   changeset: Changeset;
   warnings: string[];
-  editorUrl: string;
+  studioUrl: string;
+}
+
+export interface RestoreBuildResult {
+  project: GameProject;
+  ruleSystem: RuleSystem;
+  ruleSystems: RuleSystem[];
+  changeset: Changeset;
+  sourceBuildId: string;
+  warnings: string[];
+  studioUrl: string;
 }
 
 export interface PlayableBuild {
   id: string;
   projectId: string;
-  definitionId: string;
-  definitionVersion: number;
-  definition: GameDefinition;
+  ruleSystemId: string;
+  ruleSystemVersion: number;
+  basedOnFindingId?: string;
+  ruleSystem: RuleSystem;
   sourceIds: string[];
   warnings: string[];
   unsupportedBehavior: string[];
-  visualFloor: VisualFloorReadiness;
+  presentationFloor: PresentationFloorReadiness;
   createdAt: string;
   playableUrl: string;
 }
@@ -249,6 +504,7 @@ export interface PlayableBuild {
 export interface CompileBuildInput {
   expectedVersion: number;
   idempotencyKey: string;
+  basedOnFindingId?: string;
 }
 
 export interface CompileBuildResult {
@@ -256,11 +512,12 @@ export interface CompileBuildResult {
   build: PlayableBuild;
   changeset: Changeset;
   warnings: string[];
-  editorUrl: string;
+  studioUrl: string;
 }
 
 export type CreatorJobKind =
-  | "generate-definition"
+  | "generate-rule-system"
+  | "iterate-rule-system"
   | "compile-build"
   | "bot-playtest"
   | "render-preview"
@@ -280,27 +537,35 @@ export interface CreatorJob {
 
 export type SubmitJobInput =
   | {
-      kind: "generate-definition";
+      kind: "generate-rule-system";
       expectedVersion: number;
-      brief?: string;
-      description?: string;
+      idea?: string;
       sourceName?: string;
       sourceKind?: "brief" | "rulebook";
       sourceContent?: string;
-      harvestedImages?: Array<{
+      visualInputs?: Array<{
         name: string;
         content: string;
         pageNumber: number;
+        imageUse: ImageUse;
       }>;
       name?: string;
-      playerCount?: number;
+      participants?: RuleSystem["participants"];
       durationMinutes?: number;
       idempotencyKey: string;
+    }
+  | {
+      kind: "iterate-rule-system";
+      expectedVersion: number;
+      prompt: string;
+      idempotencyKey: string;
+      basedOnFindingId?: string;
     }
   | {
       kind: "compile-build";
       expectedVersion: number;
       idempotencyKey: string;
+      basedOnFindingId?: string;
     }
   | {
       kind: "bot-playtest";
@@ -316,16 +581,50 @@ export type SubmitJobInput =
 
 export interface CreateProjectResult {
   project: GameProject;
-  editorUrl: string;
+  studioUrl: string;
   warnings: string[];
 }
 
-export interface TableState {
+export interface SessionState {
   turn: number;
   activeSeat: number;
   scores: number[];
   status: "active" | "complete";
   winnerSeat: number | null;
+  /** Present when the build kernel is shared-goal-v1. */
+  sharedGoal?: {
+    progress: number;
+    target: number;
+  };
+  /** Present when the build kernel is turn-taking-v1. */
+  turnTaking?: {
+    maxTurns: number;
+  };
+  /** Present when the build kernel is take-away-v1. */
+  takeAway?: {
+    initialPool: number;
+    remaining: number;
+  };
+  /** Present when the build kernel is roll-and-move-v1. */
+  rollAndMove?: {
+    positions: number[];
+    targetPosition: number;
+    lastRoll: number | null;
+  };
+  /** Present when the build kernel is draw-and-score-v1. Future deck order is intentionally private. */
+  drawAndScore?: {
+    totalCards: number;
+    remainingCards: number;
+    lastDraw: number | null;
+  };
+  /** Present when the build kernel is push-your-luck-v1. */
+  pushYourLuck?: {
+    turnScore: number;
+    dieSides: number;
+    bustFace: number;
+    lastRoll: number | null;
+    maxActions: number;
+  };
   /** Present when the build kernel is harbor-voyage-v1. */
   voyage?: HarborVoyageTableState;
 }
@@ -336,7 +635,8 @@ export interface AcceptedAction {
   seat: number;
   actionId: string;
   points: number;
-  state: TableState;
+  payload?: Record<string, unknown>;
+  state: SessionState;
 }
 
 export interface PlaytestRun {
@@ -350,29 +650,91 @@ export interface PlaytestRun {
     turns: number;
     winnerSeat: number | null;
     finalScores: number[];
+    sharedGoal?: {
+      progress: number;
+      target: number;
+    };
+    turnTaking?: {
+      turns: number;
+      maxTurns: number;
+    };
+    takeAway?: {
+      initialPool: number;
+      remaining: number;
+    };
+    rollAndMove?: {
+      positions: number[];
+      targetPosition: number;
+      lastRoll: number | null;
+    };
+    drawAndScore?: {
+      totalCards: number;
+      remainingCards: number;
+      lastDraw: number | null;
+    };
+    pushYourLuck?: {
+      turnScore: number;
+      dieSides: number;
+      bustFace: number;
+      lastRoll: number | null;
+      maxActions: number;
+    };
   };
   replayId: string;
   createdAt: string;
   replayUrl: string;
 }
 
-export interface RoomSeat {
+export interface SessionSeat {
   seat: number;
   clientId: string;
 }
 
-export interface GameRoom {
+export interface SessionFeedback {
+  id: string;
+  seat: number;
+  rating: 1 | 2 | 3 | 4 | 5;
+  comment: string;
+  moment: FeedbackMoment;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FeedbackMoment {
+  actionSequence: number;
+  actionId: string;
+}
+
+export interface ExperimentBrief {
+  hypothesisId: string;
+  question: string;
+  successSignal: string;
+}
+
+export interface SharedSession {
   id: string;
   projectId: string;
   buildId: string;
   seed: number;
-  state: TableState;
-  seats: RoomSeat[];
+  state: SessionState;
+  seats: SessionSeat[];
   acceptedActions: AcceptedAction[];
+  feedback: SessionFeedback[];
+  experiment: ExperimentBrief | null;
   replayId: string;
   createdAt: string;
-  roomUrl: string;
+  sessionUrl: string;
   replayUrl: string;
+}
+
+export type SharedSessionSnapshot = Omit<
+  SharedSession,
+  "sessionUrl" | "replayUrl"
+>;
+
+export interface SharedSessionSnapshotEvent {
+  type: "session.snapshot";
+  session: SharedSessionSnapshot;
 }
 
 export interface GameReplay {
@@ -380,9 +742,9 @@ export interface GameReplay {
   projectId: string;
   buildId: string;
   seed: number;
-  evidenceType: "automated-bot-simulation" | "room-action-log";
-  initialState: TableState;
+  evidenceType: "automated-bot-simulation" | "session-action-log";
+  initialState: SessionState;
   acceptedActions: AcceptedAction[];
-  finalState: TableState;
+  finalState: SessionState;
   createdAt: string;
 }

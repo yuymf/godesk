@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   INGESTION_LIMITS,
   normalizedMimeType,
+  validateImageAssets,
   sha256Hex,
   validateRulebookFile,
   validateSourceBundle,
@@ -62,6 +63,26 @@ describe("source bundle validation", () => {
     expect(errors).toContain("规则书是空文件。");
     expect(errors).toContain("huge.bmp 不是支持的 PDF、JPG、PNG、WebP 或 GIF。");
     expect(errors).toContain("huge.bmp 超过单文件 25 MB 限制。");
+  });
+
+  it("validates standalone visual assets for prompt generation", () => {
+    expect(validateImageAssets([
+      testFile("board.png", "image/png"),
+      testFile("cards.webp", "image/webp"),
+    ])).toEqual([]);
+    expect(validateImageAssets([
+      testFile("rules.txt", "text/plain"),
+      testFile("empty.png", "image/png", 0),
+    ]).join(" ")).toContain("rules.txt 不是支持的 JPG、PNG、WebP 或 GIF 图片");
+    expect(validateImageAssets([
+      testFile("empty.png", "image/png", 0),
+    ])).toContain("empty.png 是空文件。");
+  });
+
+  it("limits the number of generation images", () => {
+    const files = Array.from({ length: INGESTION_LIMITS.maxGenerationImages + 1 }, (_, index) =>
+      testFile(`image-${index}.png`, "image/png"));
+    expect(validateImageAssets(files)).toContain("一次最多添加 8 张图片素材。");
   });
 });
 

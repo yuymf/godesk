@@ -1,6 +1,6 @@
 # ADR 0003: Rulebook-first creator onboarding
 
-Status: accepted
+Status: superseded by ADR 0005
 
 Date: 2026-08-03
 

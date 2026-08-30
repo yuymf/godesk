@@ -6,6 +6,8 @@ export const INGESTION_LIMITS = {
   maxAssetFileBytes: 25 * 1024 * 1024,
   maxAssetBytes: 100 * 1024 * 1024,
   maxAssetFiles: 40,
+  maxGenerationImages: 8,
+  maxGenerationImageDataUrlLength: 100_000,
   maxPdfPages: 200,
 } as const;
 
@@ -215,6 +217,82 @@ function canvasToBlob(canvas: HTMLCanvasElement) {
       else reject(new Error("无法生成 PDF 页面预览。"));
     }, "image/webp", 0.82);
   });
+}
+
+export function validateImageAssets(files: Array<Pick<File, "name" | "size" | "type">>) {
+  const errors: string[] = [];
+  if (files.length > INGESTION_LIMITS.maxGenerationImages) {
+    errors.push(`一次最多添加 ${INGESTION_LIMITS.maxGenerationImages} 张图片素材。`);
+  }
+
+  let totalBytes = 0;
+  for (const file of files) {
+    totalBytes += file.size;
+    const mimeType = normalizedMimeType(file);
+    if (!IMAGE_TYPES.has(mimeType)) {
+      errors.push(`${file.name} 不是支持的 JPG、PNG、WebP 或 GIF 图片。`);
+    }
+    if (file.size === 0) {
+      errors.push(`${file.name} 是空文件。`);
+    }
+    if (file.size > INGESTION_LIMITS.maxAssetFileBytes) {
+      errors.push(`${file.name} 超过单文件 25 MB 限制。`);
+    }
+  }
+  if (totalBytes > INGESTION_LIMITS.maxAssetBytes) {
+    errors.push("图片素材总大小不能超过 100 MB。");
+  }
+  return errors;
+}
+
+export async function prepareImageAsset(file: File, pageNumber: number) {
+  const validationErrors = validateImageAssets([file]);
+  if (validationErrors.length) throw new Error(validationErrors.join(" "));
+
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    throw new Error(`${file.name} 无法解码，可能已损坏或格式不受支持。`);
+  }
+
+  try {
+    const attempts = [
+      { maxDimension: 1_200, quality: 0.82 },
+      { maxDimension: 1_000, quality: 0.72 },
+      { maxDimension: 800, quality: 0.62 },
+      { maxDimension: 640, quality: 0.52 },
+    ];
+    for (const attempt of attempts) {
+      const scale = Math.min(1, attempt.maxDimension / Math.max(bitmap.width, bitmap.height));
+      const canvas = globalThis.document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error(`${file.name} 无法创建图片处理画布。`);
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((value) => {
+          if (value) resolve(value);
+          else reject(new Error(`${file.name} 无法压缩。`));
+        }, "image/webp", attempt.quality);
+      });
+      canvas.width = 0;
+      canvas.height = 0;
+      const content = await blobDataUrl(blob);
+      if (content.length <= INGESTION_LIMITS.maxGenerationImageDataUrlLength) {
+        return {
+          name: file.name,
+          content,
+          pageNumber,
+        };
+      }
+    }
+  } finally {
+    bitmap.close();
+  }
+
+  throw new Error(`${file.name} 压缩后仍超过素材大小限制，请选择更小的图片。`);
 }
 
 async function extractPdf(

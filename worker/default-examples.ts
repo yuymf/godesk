@@ -1,47 +1,15 @@
 import type {
-  GameDefinition,
+  RuleSystem,
   SourceLibraryEntry,
 } from "../src/creator/project-contract";
+import {
+  DEFAULT_EXAMPLES,
+  isDefaultExampleId,
+  type DefaultExampleId,
+} from "../src/creator/default-examples";
 
-export type DefaultExampleId = "harbor-13" | "mistpeak-lodge";
-
-export interface DefaultExample {
-  id: DefaultExampleId;
-  title: string;
-  kicker: string;
-  summary: string;
-  players: string;
-  duration: string;
-  status: string;
-  rights: string;
-}
-
-export const DEFAULT_EXAMPLES: DefaultExample[] = [
-  {
-    id: "harbor-13",
-    title: "港口十三号",
-    kicker: "原马尼拉机制 Demo 的公开安全版",
-    summary: "派遣伙计、掷骰航行与领航结算，单航次抢先积累信用。",
-    players: "3 人",
-    duration: "25 分钟",
-    status: "可玩机制切片",
-    rights: "GoDesk 原创内容，不含原版规则、美术或照片",
-  },
-  {
-    id: "mistpeak-lodge",
-    title: "雾岭山庄",
-    kicker: "原创山庄探索案例",
-    summary: "调查房间、封印异象，在雾气吞没山庄前共同取得足够线索。",
-    players: "2–4 人",
-    duration: "30 分钟",
-    status: "可玩机制切片",
-    rights: "GoDesk 原创内容，不含第三方角色、剧本或美术",
-  },
-];
-
-export function isDefaultExampleId(value: unknown): value is DefaultExampleId {
-  return DEFAULT_EXAMPLES.some((example) => example.id === value);
-}
+export { DEFAULT_EXAMPLES, isDefaultExampleId };
+export type { DefaultExampleId };
 
 function source(
   id: string,
@@ -66,9 +34,9 @@ function source(
 
 export function instantiateDefaultExample(
   exampleId: DefaultExampleId,
-  definitionId: string,
+  ruleSystemId: string,
   createdAt: string,
-): { definition: GameDefinition; sources: SourceLibraryEntry[] } {
+): { ruleSystem: RuleSystem; sources: SourceLibraryEntry[] } {
   if (exampleId === "harbor-13") {
     const sourceId = "source_harbor_13_original_brief";
     return {
@@ -76,16 +44,16 @@ export function instantiateDefaultExample(
         source(
           sourceId,
           "港口十三号原创玩法简述",
-          "三家商会争夺三条货船航线。玩家轮流派遣伙计到货船、栈桥、干坞、私掠与领航位置；随后航行三次并结算进港/进坞收益。此案例只复用通用航运题材，不含任何第三方规则表达、美术或照片。",
+          "三家商会争夺三条货船航线。玩家轮流派遣伙计到货船、栈桥、干坞、私掠与领航位置；随后航行三次并结算进港或进坞收益。",
           createdAt,
         ),
       ],
-      definition: {
-        id: definitionId,
+      ruleSystem: {
+        id: ruleSystemId,
         version: 1,
         name: "港口十三号",
         pitch: "在三条拥挤航线上押下有限资源，用放置、航行与领航抢先积累信用。",
-        playerCount: 3,
+        participants: { min: 3, max: 3, default: 3, roles: [] },
         durationMinutes: 25,
         rules: [
           {
@@ -110,34 +78,47 @@ export function instantiateDefaultExample(
             confidence: 1,
           },
         ],
-        components: [
+        constraints: [
           {
-            id: "component_harbor_board",
+            id: "constraint_harbor_capacity",
+            text: "伙计只能放到仍有空位且当前商会付得起的位置。",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+        ],
+        entities: [
+          {
+            id: "entity_harbor_board",
             name: "港口航线板",
+            kind: "object",
             quantity: 1,
             sourceId,
             provenance: "source-anchored",
             confidence: 1,
           },
           {
-            id: "component_harbor_ships",
+            id: "entity_harbor_ships",
             name: "货船标记",
+            kind: "token",
             quantity: 3,
             sourceId,
             provenance: "source-anchored",
             confidence: 1,
           },
           {
-            id: "component_harbor_workers",
+            id: "entity_harbor_workers",
             name: "商会伙计",
+            kind: "token",
             quantity: 12,
             sourceId,
             provenance: "source-anchored",
             confidence: 1,
           },
           {
-            id: "component_harbor_dice",
+            id: "entity_harbor_dice",
             name: "货船骰",
+            kind: "object",
             quantity: 3,
             sourceId,
             provenance: "source-anchored",
@@ -191,9 +172,10 @@ export function instantiateDefaultExample(
             confidence: 1,
           },
         ],
-        board: {
+        playSurface: {
+          kind: "table",
           layout: "三条并列航线、栈桥、干坞、私掠与领航区。",
-          zones: [
+          regions: [
             { id: "route-amber", name: "琥珀航线", description: "d4 货船，货值 24。" },
             { id: "route-cobalt", name: "钴蓝航线", description: "d3 货船，货值 18。" },
             { id: "route-cedar", name: "雪松航线", description: "d2 货船，货值 12。" },
@@ -202,29 +184,155 @@ export function instantiateDefaultExample(
             { id: "specials", name: "特殊区", description: "私掠、领航与港务保险。" },
           ],
         },
-        phases: [
+        stages: [
           { id: "placement", name: "派遣伙计" },
           { id: "movement", name: "航行" },
           { id: "pilot", name: "领航" },
           { id: "settlement", name: "航次结算" },
         ],
-        scenarios: [{ id: "first-voyage", name: "首航教学局" }],
+        outcomes: [{ id: "first-voyage", name: "首航教学局" }],
         presentation: {
           theme: "harbor-voyage",
           visuals: [{
             provenance: "kit",
-            label: "Harbor voyage fallback kit",
+            label: "Harbor voyage presentation kit",
           }],
         },
         runtimeSupport: {
           status: "executable",
           unsupported: [
             "多航次终局、股份拍卖、贷款与盲客未包含在此单航次切片。",
-            "原内部马尼拉 fixture 的商标文案、美术与照片未包含。",
           ],
           kernel: {
             type: "harbor-voyage-v1",
             playerCount: 3,
+          },
+        },
+      },
+    };
+  }
+
+  if (exampleId === "idea-relay") {
+    const sourceId = "source_idea_relay_original_brief";
+    return {
+      sources: [
+        source(
+          sourceId,
+          "灵感接力原创玩法简述",
+          "参与者轮流扩展共同创意、加入新约束或连接前文。每次行动获得不同分数，率先达到目标分者获胜。游戏只需要共享提示与对话，不使用棋盘或实体道具。",
+          createdAt,
+        ),
+      ],
+      ruleSystem: {
+        id: ruleSystemId,
+        version: 1,
+        name: "灵感接力",
+        pitch: "把一个点子传下去；每个人都让它更具体，也更难一点。",
+        participants: { min: 2, max: 6, default: 3, roles: [] },
+        durationMinutes: 12,
+        rules: [
+          {
+            id: "rule_idea_turn",
+            text: "参与者按座位顺序轮流选择一个创意行动。",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+          {
+            id: "rule_idea_continuity",
+            text: "新内容必须保留并回应至少一个已有元素。",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+          {
+            id: "rule_idea_win",
+            text: "率先达到 8 分者获胜；18 回合后仍无人达到时最高分获胜。",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+        ],
+        constraints: [
+          {
+            id: "constraint_idea_continuity",
+            text: "新内容必须保留并回应至少一个已有元素。",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+        ],
+        entities: [
+          {
+            id: "entity_shared_idea",
+            name: "共同创意",
+            kind: "concept",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+          {
+            id: "entity_constraints",
+            name: "当前约束",
+            kind: "concept",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+        ],
+        setup: ["选出一句起始创意。", "随机确定第一位参与者。"],
+        actions: [
+          {
+            id: "extend",
+            label: "扩展创意",
+            description: "增加一个与现有内容一致的新元素，获得 1 分。",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+          {
+            id: "constraint",
+            label: "加入约束",
+            description: "增加一个之后所有人都必须遵守的约束，获得 2 分。",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+          {
+            id: "connect",
+            label: "连接前文",
+            description: "把两个已有元素组合成一个新关系，获得 3 分。",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+        ],
+        playSurface: {
+          kind: "conversation",
+          layout: "prompt-and-response",
+          regions: [],
+        },
+        stages: [{ id: "relay", name: "创意接力" }],
+        outcomes: [{ id: "target-score", name: "率先达到 8 分" }],
+        presentation: {
+          theme: "idea-relay",
+          visuals: [{
+            provenance: "generated",
+            label: "程序化提示卡与共享分数界面",
+          }],
+        },
+        runtimeSupport: {
+          status: "executable",
+          unsupported: ["文本内容的质量与约束一致性由真人评议；内核只执行轮次、行动与计分。"],
+          kernel: {
+            type: "score-race-v1",
+            victoryTarget: 8,
+            maxTurns: 18,
+            actions: [
+              { id: "extend", label: "扩展创意", points: 1 },
+              { id: "constraint", label: "加入约束", points: 2 },
+              { id: "connect", label: "连接前文", points: 3 },
+            ],
           },
         },
       },
@@ -241,12 +349,12 @@ export function instantiateDefaultExample(
         createdAt,
       ),
     ],
-    definition: {
-      id: definitionId,
+    ruleSystem: {
+      id: ruleSystemId,
       version: 1,
       name: "雾岭山庄",
       pitch: "在雾气封锁出口前，合作调查房间并封印山庄里的异响。",
-      playerCount: 4,
+      participants: { min: 2, max: 4, default: 4, roles: [] },
       durationMinutes: 30,
       rules: [
         {
@@ -264,18 +372,29 @@ export function instantiateDefaultExample(
           confidence: 1,
         },
       ],
-      components: [
+      constraints: [
         {
-          id: "component_lodge_map",
+          id: "constraint_lodge_limit",
+          text: "团队必须在 14 回合内累计 18 条线索。",
+          sourceId,
+          provenance: "source-anchored",
+          confidence: 1,
+        },
+      ],
+      entities: [
+        {
+          id: "entity_lodge_map",
           name: "山庄房间图",
+          kind: "location",
           quantity: 1,
           sourceId,
           provenance: "source-anchored",
           confidence: 1,
         },
         {
-          id: "component_lodge_clues",
+          id: "entity_lodge_clues",
           name: "线索标记",
+          kind: "token",
           quantity: 18,
           sourceId,
           provenance: "source-anchored",
@@ -309,22 +428,23 @@ export function instantiateDefaultExample(
           confidence: 1,
         },
       ],
-      board: {
+      playSurface: {
+        kind: "table",
         layout: "门厅连接书房、温室与阁楼的原创固定地图。",
-        zones: [
+        regions: [
           { id: "foyer", name: "门厅", description: "调查员的共同起点。" },
           { id: "study", name: "旧书房", description: "散落着住客记录。" },
           { id: "greenhouse", name: "雾温室", description: "玻璃外只有白雾。" },
           { id: "attic", name: "阁楼", description: "异响最密集的区域。" },
         ],
       },
-      phases: [{ id: "explore", name: "调查行动" }, { id: "fog", name: "雾气推进" }],
-      scenarios: [{ id: "sealed-bell", name: "封住午夜钟声" }],
+      stages: [{ id: "explore", name: "调查行动" }, { id: "fog", name: "雾气推进" }],
+      outcomes: [{ id: "sealed-bell", name: "封住午夜钟声" }],
       presentation: {
         theme: "mistpeak-archive",
         visuals: [{
           provenance: "kit",
-          label: "Mistpeak archive fallback kit",
+          label: "Mistpeak archive presentation kit",
         }],
       },
       runtimeSupport: {

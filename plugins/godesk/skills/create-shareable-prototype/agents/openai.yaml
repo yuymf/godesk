@@ -1,4 +1,4 @@
 interface:
   display_name: "Create a shareable prototype"
-  short_description: "Turn a rulebook into a room invitation"
-  default_prompt: "Create a shareable GoDesk prototype from my rulebook."
+  short_description: "Turn an idea or source into a friend-ready session"
+  default_prompt: "Use $create-shareable-prototype to make this idea playable and return the friend invitation URL."

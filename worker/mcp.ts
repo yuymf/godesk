@@ -7,7 +7,7 @@ const projectSchema = z.object({
   id: z.string(),
   name: z.string(),
   version: z.number().int(),
-  activeDefinitionId: z.string(),
+  activeRuleSystemId: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
   capabilities: z.object({
@@ -23,12 +23,22 @@ const boundImageSchema = z.object({
   alt: z.string(),
 });
 
-const definitionSchema = z.object({
+const ruleSystemSchema = z.object({
   id: z.string(),
   version: z.number().int(),
+  restoredFromBuildId: z.string().optional(),
   name: z.string(),
   pitch: z.string(),
-  playerCount: z.number().int(),
+  participants: z.object({
+    min: z.number().int().min(1).max(20),
+    max: z.number().int().min(1).max(20),
+    default: z.number().int().min(1).max(20),
+    roles: z.array(z.object({
+      id: z.string(),
+      name: z.string(),
+      description: z.string(),
+    })).max(20),
+  }),
   durationMinutes: z.number().int(),
   rules: z.array(z.object({
     id: z.string(),
@@ -37,10 +47,18 @@ const definitionSchema = z.object({
     provenance: z.enum(["source-anchored", "system-generated", "ai-proposed"]),
     confidence: z.number().min(0).max(1),
   })),
-  components: z.array(z.object({
+  constraints: z.array(z.object({
+    id: z.string(),
+    text: z.string(),
+    sourceId: z.string().nullable(),
+    provenance: z.enum(["source-anchored", "system-generated", "ai-proposed"]),
+    confidence: z.number().min(0).max(1),
+  })),
+  entities: z.array(z.object({
     id: z.string(),
     name: z.string(),
-    quantity: z.number().int().positive(),
+    kind: z.enum(["resource", "card", "character", "token", "location", "concept", "object"]),
+    quantity: z.number().int().positive().optional(),
     image: boundImageSchema.optional(),
     sourceId: z.string().nullable(),
     provenance: z.enum(["source-anchored", "system-generated", "ai-proposed"]),
@@ -55,17 +73,18 @@ const definitionSchema = z.object({
     provenance: z.enum(["source-anchored", "system-generated", "ai-proposed"]),
     confidence: z.number().min(0).max(1),
   })),
-  board: z.object({
+  playSurface: z.object({
+    kind: z.enum(["table", "cards", "conversation", "screen", "scene", "hybrid"]),
     layout: z.string(),
-    zones: z.array(z.object({
+    regions: z.array(z.object({
       id: z.string(),
       name: z.string(),
       description: z.string(),
       image: boundImageSchema.optional(),
     })),
   }),
-  phases: z.array(z.object({ id: z.string(), name: z.string() })),
-  scenarios: z.array(z.object({ id: z.string(), name: z.string() })),
+  stages: z.array(z.object({ id: z.string(), name: z.string() })),
+  outcomes: z.array(z.object({ id: z.string(), name: z.string() })),
   presentation: z.object({
     theme: z.string(),
     image: boundImageSchema.optional(),
@@ -96,6 +115,72 @@ const definitionSchema = z.object({
           ),
         }),
         z.object({
+          type: z.literal("shared-goal-v1"),
+          goalTarget: z.number().int(),
+          maxTurns: z.number().int(),
+          actions: z.array(
+            z.object({
+              id: z.string(),
+              label: z.string(),
+              progress: z.number().int(),
+            }),
+          ),
+        }),
+        z.object({
+          type: z.literal("turn-taking-v1"),
+          maxTurns: z.number().int(),
+          actions: z.array(
+            z.object({
+              id: z.string(),
+              label: z.string(),
+            }),
+          ),
+        }),
+        z.object({
+          type: z.literal("take-away-v1"),
+          initialPool: z.number().int(),
+          actions: z.array(
+            z.object({
+              id: z.string(),
+              label: z.string(),
+              take: z.number().int(),
+            }),
+          ),
+        }),
+        z.object({
+          type: z.literal("roll-and-move-v1"),
+          dieSides: z.number().int(),
+          targetPosition: z.number().int(),
+          maxTurns: z.number().int(),
+          actions: z.array(
+            z.object({
+              id: z.string(),
+              label: z.string(),
+            }),
+          ),
+        }),
+        z.object({
+          type: z.literal("draw-and-score-v1"),
+          cardValues: z.array(z.number().int()),
+          copiesPerValue: z.number().int(),
+          victoryTarget: z.number().int(),
+          actions: z.array(z.object({
+            id: z.string(),
+            label: z.string(),
+          })),
+        }),
+        z.object({
+          type: z.literal("push-your-luck-v1"),
+          dieSides: z.number().int(),
+          bustFace: z.number().int(),
+          victoryTarget: z.number().int(),
+          maxActions: z.number().int(),
+          actions: z.array(z.object({
+            id: z.enum(["roll", "bank"]),
+            label: z.string(),
+          })),
+        }),
+        z.object({
           type: z.literal("harbor-voyage-v1"),
           playerCount: z.number().int().min(2).max(3),
         }),
@@ -104,15 +189,41 @@ const definitionSchema = z.object({
   ]),
 });
 
+const generationPlanSchema = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  generationJobId: z.string(),
+  ruleSystemId: z.string(),
+  ruleSystemVersion: z.number().int(),
+  status: z.enum(["pending", "approved"]),
+  summary: z.string(),
+  participants: ruleSystemSchema.shape.participants,
+  durationMinutes: z.number().int(),
+  playSurface: ruleSystemSchema.shape.playSurface,
+  loop: z.array(z.string()),
+  actions: z.array(z.object({
+    label: z.string(),
+    description: z.string(),
+  })),
+  outcomes: z.array(z.string()),
+  assumptions: z.array(z.string()),
+  unsupported: z.array(z.string()),
+  sourceIds: z.array(z.string()),
+  createdAt: z.string(),
+  approvedAt: z.string().optional(),
+});
+
 const sourceSchema = z.object({
   id: z.string(),
   kind: z.string(),
+  imageUse: z.enum(["visual-reference", "project-asset"]).optional(),
   name: z.string(),
   content: z.string(),
   readiness: z.string(),
   provenance: z.object({
     origin: z.string(),
     locator: z.string(),
+    basedOnSourceIds: z.array(z.string()).optional(),
     confidence: z.number().min(0).max(1).optional(),
   }),
   createdAt: z.string(),
@@ -123,28 +234,160 @@ const changesetSchema = z.object({
   previousVersion: z.number().int(),
   newVersion: z.number().int(),
   affectedEntities: z.array(z.string()),
+  basedOnFindingId: z.string().optional(),
+  restoredFromBuildId: z.string().optional(),
+  createdAt: z.string(),
+});
+
+const designHypothesisSchema = z.object({
+  id: z.string(),
+  question: z.string(),
+  successSignal: z.string(),
+  createdAt: z.string(),
+});
+
+const validationEvidenceSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("automated-playtest"),
+    playtestId: z.string(),
+  }),
+  z.object({
+    type: z.literal("participant-feedback"),
+    sessionId: z.string(),
+    feedback: z.array(z.object({
+      id: z.string(),
+      seat: z.number().int().nonnegative(),
+      rating: z.number().int().min(1).max(5),
+      comment: z.string().min(2).max(1_000),
+      moment: z.object({
+        actionSequence: z.number().int().positive(),
+        actionId: z.string().min(1),
+      }),
+    })).min(1).max(8),
+  }),
+  z.object({
+    type: z.literal("human-session"),
+    sessionId: z.string(),
+    participantNames: z.array(z.string()),
+    creatorAttested: z.literal(true),
+  }),
+]);
+
+const validationFindingSchema = z.object({
+  id: z.string(),
+  hypothesisId: z.string(),
+  buildId: z.string(),
+  evidence: validationEvidenceSchema,
+  verdict: z.enum(["supported", "refuted", "inconclusive"]),
+  notes: z.string(),
+  nextChange: z.string(),
   createdAt: z.string(),
 });
 
 const buildSchema = z.object({
   id: z.string(),
   projectId: z.string(),
-  definitionId: z.string(),
-  definitionVersion: z.number().int(),
-  definition: definitionSchema,
+  ruleSystemId: z.string(),
+  ruleSystemVersion: z.number().int(),
+  basedOnFindingId: z.string().optional(),
+  ruleSystem: ruleSystemSchema,
   sourceIds: z.array(z.string()),
   warnings: z.array(z.string()),
   unsupportedBehavior: z.array(z.string()),
+  presentationFloor: z.object({
+    status: z.enum(["passed", "failed"]),
+    reason: z.string(),
+    visuals: z.array(z.object({
+      provenance: z.enum(["extracted", "generated", "kit", "uploaded"]),
+      label: z.string(),
+    })),
+  }),
   createdAt: z.string(),
   playableUrl: z.string(),
 });
 
-const tableStateSchema = z.object({
+const harborVoyageSchema = z.object({
+  phase: z.enum(["placement", "movement", "pilot", "resolved"]),
+  placementRound: z.number().int(),
+  movementRound: z.number().int(),
+  activeSeat: z.number().int(),
+  players: z.array(z.object({
+    seat: z.number().int(),
+    name: z.string(),
+    color: z.string(),
+    cash: z.number().int(),
+    workers: z.number().int(),
+  })),
+  punts: z.array(z.object({
+    cargoId: z.enum(["amber", "cobalt", "cedar"]),
+    name: z.string(),
+    color: z.string(),
+    die: z.number().int(),
+    position: z.number().int(),
+    value: z.number().int(),
+    result: z.enum(["port", "shipyard", "pirates"]).optional(),
+  })),
+  placements: z.array(z.object({
+    id: z.string(),
+    seat: z.number().int(),
+    targetId: z.enum([
+      "amber",
+      "cobalt",
+      "cedar",
+      "port-a",
+      "port-b",
+      "port-c",
+      "yard-a",
+      "yard-b",
+      "yard-c",
+      "pirates",
+      "pilot-small",
+      "pilot-large",
+      "insurance",
+    ]),
+    cost: z.number().int(),
+  })),
+  lastRoll: z.record(z.string(), z.number().int()),
+  boardedPirates: z.record(z.string(), z.array(z.number().int())),
+  log: z.array(z.string()),
+  winnerSeat: z.number().int().nullable(),
+});
+
+const sessionStateSchema = z.object({
   turn: z.number().int(),
   activeSeat: z.number().int(),
   scores: z.array(z.number().int()),
   status: z.enum(["active", "complete"]),
   winnerSeat: z.number().int().nullable(),
+  sharedGoal: z.object({
+    progress: z.number().int(),
+    target: z.number().int(),
+  }).optional(),
+  turnTaking: z.object({
+    maxTurns: z.number().int(),
+  }).optional(),
+  takeAway: z.object({
+    initialPool: z.number().int(),
+    remaining: z.number().int(),
+  }).optional(),
+  rollAndMove: z.object({
+    positions: z.array(z.number().int()),
+    targetPosition: z.number().int(),
+    lastRoll: z.number().int().nullable(),
+  }).optional(),
+  drawAndScore: z.object({
+    totalCards: z.number().int(),
+    remainingCards: z.number().int(),
+    lastDraw: z.number().int().nullable(),
+  }).optional(),
+  pushYourLuck: z.object({
+    turnScore: z.number().int(),
+    dieSides: z.number().int(),
+    bustFace: z.number().int(),
+    lastRoll: z.number().int().nullable(),
+    maxActions: z.number().int(),
+  }).optional(),
+  voyage: harborVoyageSchema.optional(),
 });
 
 const acceptedActionSchema = z.object({
@@ -153,7 +396,27 @@ const acceptedActionSchema = z.object({
   seat: z.number().int(),
   actionId: z.string(),
   points: z.number().int(),
-  state: tableStateSchema,
+  payload: z.record(z.string(), z.unknown()).optional(),
+  state: sessionStateSchema,
+});
+
+const sessionFeedbackSchema = z.object({
+  id: z.string(),
+  seat: z.number().int().nonnegative(),
+  rating: z.union([
+    z.literal(1),
+    z.literal(2),
+    z.literal(3),
+    z.literal(4),
+    z.literal(5),
+  ]),
+  comment: z.string(),
+  moment: z.object({
+    actionSequence: z.number().int().positive(),
+    actionId: z.string().min(1),
+  }),
+  createdAt: z.string(),
+  updatedAt: z.string(),
 });
 
 const playtestSchema = z.object({
@@ -167,23 +430,66 @@ const playtestSchema = z.object({
     turns: z.number().int(),
     winnerSeat: z.number().int().nullable(),
     finalScores: z.array(z.number().int()),
+    sharedGoal: z.object({
+      progress: z.number().int(),
+      target: z.number().int(),
+    }).optional(),
+    turnTaking: z.object({
+      turns: z.number().int(),
+      maxTurns: z.number().int(),
+    }).optional(),
+    takeAway: z.object({
+      initialPool: z.number().int(),
+      remaining: z.number().int(),
+    }).optional(),
+    rollAndMove: z.object({
+      positions: z.array(z.number().int()),
+      targetPosition: z.number().int(),
+      lastRoll: z.number().int().nullable(),
+    }).optional(),
+    drawAndScore: z.object({
+      totalCards: z.number().int(),
+      remainingCards: z.number().int(),
+      lastDraw: z.number().int().nullable(),
+    }).optional(),
+    pushYourLuck: z.object({
+      turnScore: z.number().int(),
+      dieSides: z.number().int(),
+      bustFace: z.number().int(),
+      lastRoll: z.number().int().nullable(),
+      maxActions: z.number().int(),
+    }).optional(),
   }),
   replayId: z.string(),
   createdAt: z.string(),
   replayUrl: z.string(),
 });
 
-const roomSchema = z.object({
+const sharedSessionSchema = z.object({
   id: z.string(),
   projectId: z.string(),
   buildId: z.string(),
   seed: z.number().int(),
-  state: tableStateSchema,
+  state: sessionStateSchema,
   acceptedActions: z.array(acceptedActionSchema),
+  feedback: z.array(sessionFeedbackSchema),
+  experiment: z.object({
+    hypothesisId: z.string(),
+    question: z.string(),
+    successSignal: z.string(),
+  }).nullable(),
   replayId: z.string(),
   createdAt: z.string(),
-  roomUrl: z.string(),
+  sessionUrl: z.string(),
   replayUrl: z.string(),
+});
+
+const playtestLinkSchema = z.object({
+  projectId: z.string(),
+  sessionId: z.string(),
+  buildId: z.string(),
+  updatedAt: z.string(),
+  url: z.string(),
 });
 
 const replaySchema = z.object({
@@ -191,10 +497,10 @@ const replaySchema = z.object({
   projectId: z.string(),
   buildId: z.string(),
   seed: z.number().int(),
-  evidenceType: z.enum(["automated-bot-simulation", "room-action-log"]),
-  initialState: tableStateSchema,
+  evidenceType: z.enum(["automated-bot-simulation", "session-action-log"]),
+  initialState: sessionStateSchema,
   acceptedActions: z.array(acceptedActionSchema),
-  finalState: tableStateSchema,
+  finalState: sessionStateSchema,
   createdAt: z.string(),
 });
 
@@ -210,11 +516,14 @@ const jobBaseSchema = z.object({
 
 const mutationResultSchema = z.object({
   project: projectSchema,
-  definition: definitionSchema,
+  ruleSystem: ruleSystemSchema,
+  generationPlan: generationPlanSchema.nullable(),
   sources: z.array(sourceSchema),
+  hypotheses: z.array(designHypothesisSchema),
+  findings: z.array(validationFindingSchema),
   changeset: changesetSchema,
   warnings: z.array(z.string()),
-  editorUrl: z.string(),
+  studioUrl: z.string(),
 });
 
 const compileResultSchema = z.object({
@@ -222,15 +531,30 @@ const compileResultSchema = z.object({
   build: buildSchema,
   changeset: changesetSchema,
   warnings: z.array(z.string()),
-  editorUrl: z.string(),
+  studioUrl: z.string(),
+});
+
+const iterationResultSchema = mutationResultSchema.extend({
+  iteration: z.object({
+    prompt: z.string(),
+    summary: z.string(),
+    actionId: z.string(),
+    actionLabel: z.string(),
+    sourceId: z.string(),
+    basedOnFindingId: z.string().optional(),
+  }),
 });
 
 const jobSchema = z.union([
   jobBaseSchema.extend({
-    kind: z.literal("generate-definition"),
+    kind: z.literal("generate-rule-system"),
     result: mutationResultSchema.extend({
-      generationMode: z.literal("deterministic-brief-materialization"),
+      generationMode: z.literal("deterministic-rule-system-materialization"),
     }).optional(),
+  }),
+  jobBaseSchema.extend({
+    kind: z.literal("iterate-rule-system"),
+    result: iterationResultSchema.optional(),
   }),
   jobBaseSchema.extend({
     kind: z.literal("compile-build"),
@@ -271,35 +595,55 @@ const projectViewSchema = z.discriminatedUnion("view", [
   }),
   z.object({
     projectId: z.string(),
-    view: z.literal("definition"),
-    data: definitionSchema,
+    view: z.literal("rule-system"),
+    data: ruleSystemSchema,
+  }),
+  z.object({
+    projectId: z.string(),
+    view: z.literal("generation-plan"),
+    data: z.object({
+      generationPlan: generationPlanSchema.nullable(),
+    }),
+  }),
+  z.object({
+    projectId: z.string(),
+    view: z.literal("playtest-link"),
+    data: z.object({ playtestLink: playtestLinkSchema.nullable() }),
   }),
   z.object({
     projectId: z.string(),
     view: z.literal("rules"),
     data: z.object({
-      rules: definitionSchema.shape.rules,
+      rules: ruleSystemSchema.shape.rules,
       page: pageSchema,
     }),
   }),
   z.object({
     projectId: z.string(),
-    view: z.literal("components"),
+    view: z.literal("constraints"),
     data: z.object({
-      components: definitionSchema.shape.components,
+      constraints: ruleSystemSchema.shape.constraints,
       page: pageSchema,
     }),
   }),
   z.object({
     projectId: z.string(),
-    view: z.literal("board"),
-    data: definitionSchema.shape.board,
+    view: z.literal("entities"),
+    data: z.object({
+      entities: ruleSystemSchema.shape.entities,
+      page: pageSchema,
+    }),
   }),
   z.object({
     projectId: z.string(),
-    view: z.literal("scenarios"),
+    view: z.literal("surface"),
+    data: ruleSystemSchema.shape.playSurface,
+  }),
+  z.object({
+    projectId: z.string(),
+    view: z.literal("outcomes"),
     data: z.object({
-      scenarios: definitionSchema.shape.scenarios,
+      outcomes: ruleSystemSchema.shape.outcomes,
       page: pageSchema,
     }),
   }),
@@ -308,20 +652,23 @@ const projectViewSchema = z.discriminatedUnion("view", [
     view: z.literal("entity"),
     data: z.union([
       sourceSchema,
-      definitionSchema.shape.rules.element,
-      definitionSchema.shape.components.element,
-      definitionSchema.shape.scenarios.element,
+      ruleSystemSchema.shape.rules.element,
+      ruleSystemSchema.shape.constraints.element,
+      ruleSystemSchema.shape.entities.element,
+      ruleSystemSchema.shape.outcomes.element,
       buildSchema,
       playtestSchema,
-      roomSchema,
+      sharedSessionSchema,
+      designHypothesisSchema,
+      validationFindingSchema,
       jobSchema,
     ]),
   }),
   z.object({
     projectId: z.string(),
-    view: z.literal("definitions"),
+    view: z.literal("rule-systems"),
     data: z.object({
-      definitions: z.array(definitionSchema),
+      ruleSystems: z.array(ruleSystemSchema),
       page: pageSchema,
     }),
   }),
@@ -350,8 +697,16 @@ const projectViewSchema = z.discriminatedUnion("view", [
   }),
   z.object({
     projectId: z.string(),
-    view: z.literal("rooms"),
-    data: z.object({ rooms: z.array(roomSchema), page: pageSchema }),
+    view: z.literal("sessions"),
+    data: z.object({ sessions: z.array(sharedSessionSchema), page: pageSchema }),
+  }),
+  z.object({
+    projectId: z.string(),
+    view: z.literal("validation"),
+    data: z.object({
+      hypotheses: z.array(designHypothesisSchema),
+      findings: z.array(validationFindingSchema),
+    }),
   }),
   z.object({
     projectId: z.string(),
@@ -366,6 +721,7 @@ const operationSchema = z.discriminatedUnion("op", [
     source: z.object({
       id: z.string().regex(/^source_[a-zA-Z0-9_-]+$/).optional(),
       kind: z.enum(["brief", "rulebook", "image"]),
+      imageUse: z.enum(["visual-reference", "project-asset"]).optional(),
       name: z.string().min(1).max(120),
       content: z.string().max(100_000),
       provenance: z.object({
@@ -378,24 +734,28 @@ const operationSchema = z.discriminatedUnion("op", [
           "generative-api",
         ]),
         locator: z.string().max(500),
+        basedOnSourceIds: z.array(
+          z.string().regex(/^source_[a-zA-Z0-9_-]+$/),
+        ).min(1).max(9).optional(),
       }),
     }),
   }),
   z.object({
-    op: z.literal("update_definition"),
+    op: z.literal("update_rule_system"),
     fields: z.object({
       name: z.string().min(1).max(120).optional(),
       pitch: z.string().max(2_000).optional(),
-      playerCount: z.number().int().min(1).max(20).optional(),
+      participants: ruleSystemSchema.shape.participants.optional(),
       durationMinutes: z.number().int().min(5).max(720).optional(),
-      rules: definitionSchema.shape.rules.max(500).optional(),
-      components: definitionSchema.shape.components.max(500).optional(),
-      setup: definitionSchema.shape.setup.max(200).optional(),
-      actions: definitionSchema.shape.actions.max(500).optional(),
-      board: definitionSchema.shape.board.optional(),
-      phases: definitionSchema.shape.phases.max(500).optional(),
-      scenarios: definitionSchema.shape.scenarios.max(500).optional(),
-      presentation: definitionSchema.shape.presentation.optional(),
+      rules: ruleSystemSchema.shape.rules.max(500).optional(),
+      constraints: ruleSystemSchema.shape.constraints.max(500).optional(),
+      entities: ruleSystemSchema.shape.entities.max(500).optional(),
+      setup: ruleSystemSchema.shape.setup.max(200).optional(),
+      actions: ruleSystemSchema.shape.actions.max(500).optional(),
+      playSurface: ruleSystemSchema.shape.playSurface.optional(),
+      stages: ruleSystemSchema.shape.stages.max(500).optional(),
+      outcomes: ruleSystemSchema.shape.outcomes.max(500).optional(),
+      presentation: ruleSystemSchema.shape.presentation.optional(),
     }),
   }),
   z.object({
@@ -413,11 +773,133 @@ const operationSchema = z.discriminatedUnion("op", [
         )
         .min(1)
       .max(12),
+      unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
     }),
   }),
   z.object({
-    op: z.literal("activate_definition"),
-    definitionId: z.string().min(1),
+    op: z.literal("configure_shared_goal"),
+    config: z.object({
+      goalTarget: z.number().int().min(1).max(1_000),
+      maxTurns: z.number().int().min(1).max(1_000),
+      actions: z
+        .array(
+          z.object({
+            id: z.string().regex(/^[a-z0-9-]{1,40}$/),
+            label: z.string().min(1).max(80),
+            progress: z.number().int().min(1).max(100),
+          }),
+        )
+        .min(1)
+        .max(12),
+      unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
+    }),
+  }),
+  z.object({
+    op: z.literal("configure_turn_taking"),
+    config: z.object({
+      maxTurns: z.number().int().min(1).max(1_000),
+      actions: z
+        .array(
+          z.object({
+            id: z.string().regex(/^[a-z0-9-]{1,40}$/),
+            label: z.string().min(1).max(80),
+          }),
+        )
+        .min(1)
+        .max(12),
+      unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
+    }),
+  }),
+  z.object({
+    op: z.literal("configure_take_away"),
+    config: z.object({
+      initialPool: z.number().int().min(2).max(1_000),
+      actions: z
+        .array(
+          z.object({
+            id: z.string().regex(/^[a-z0-9-]{1,40}$/),
+            label: z.string().min(1).max(80),
+            take: z.number().int().min(1).max(100),
+          }),
+        )
+        .min(1)
+        .max(12),
+      unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
+    }),
+  }),
+  z.object({
+    op: z.literal("configure_roll_and_move"),
+    config: z.object({
+      dieSides: z.number().int().min(2).max(100),
+      targetPosition: z.number().int().min(2).max(1_000),
+      maxTurns: z.number().int().min(1).max(1_000),
+      actions: z
+        .array(
+          z.object({
+            id: z.string().regex(/^[a-z0-9-]{1,40}$/),
+            label: z.string().min(1).max(80),
+          }),
+        )
+        .length(1),
+      unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
+    }),
+  }),
+  z.object({
+    op: z.literal("configure_draw_and_score"),
+    config: z.object({
+      cardValues: z.array(z.number().int().min(1).max(100)).min(1).max(100),
+      copiesPerValue: z.number().int().min(1).max(100),
+      victoryTarget: z.number().int().min(1).max(1_000),
+      actions: z.array(z.object({
+        id: z.string().regex(/^[a-z0-9-]{1,40}$/),
+        label: z.string().min(1).max(80),
+      })).length(1),
+      unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
+    }),
+  }),
+  z.object({
+    op: z.literal("configure_push_your_luck"),
+    config: z.object({
+      dieSides: z.number().int().min(2).max(100),
+      bustFace: z.number().int().min(1).max(100),
+      victoryTarget: z.number().int().min(1).max(1_000),
+      maxActions: z.number().int().min(1).max(10_000),
+      actions: z.array(z.object({
+        id: z.enum(["roll", "bank"]),
+        label: z.string().min(1).max(80),
+      })).length(2),
+      unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
+    }),
+  }),
+  z.object({
+    op: z.literal("activate_rule_system"),
+    ruleSystemId: z.string().min(1),
+  }),
+  z.object({
+    op: z.literal("approve_generation_plan"),
+    planId: z.string().min(1),
+  }),
+  z.object({
+    op: z.literal("add_design_hypothesis"),
+    hypothesis: z.object({
+      question: z.string().min(1).max(500),
+      successSignal: z.string().min(1).max(500),
+    }),
+  }),
+  z.object({
+    op: z.literal("record_validation_finding"),
+    finding: z.object({
+      hypothesisId: z.string().min(1),
+      buildId: z.string().min(1),
+      evidence: validationEvidenceSchema,
+      verdict: z.enum(["supported", "refuted", "inconclusive"]),
+      notes: z.string().max(2_000),
+      nextChange: z.string().min(1).max(1_000),
+    }),
+  }),
+  z.object({
+    op: z.literal("publish_shared_session"),
+    sessionId: z.string().min(1),
   }),
 ]);
 
@@ -468,8 +950,14 @@ function internalRequest(
   return stub.fetch(new Request(`https://projects.internal${path}`, init));
 }
 
-function editorUrl(origin: string, projectId: string) {
-  return new URL(`/editor/${projectId}`, origin).toString();
+function studioUrl(origin: string, projectId: string) {
+  return new URL(`/studio/${projectId}`, origin).toString();
+}
+
+function publicShareUrl(pathname: string, origin: string, creatorId: string) {
+  const url = new URL(pathname, origin);
+  url.searchParams.set("creator", creatorId);
+  return url.toString();
 }
 
 function playableBuild(value: JsonObject, origin: string) {
@@ -479,26 +967,49 @@ function playableBuild(value: JsonObject, origin: string) {
   };
 }
 
-function playablePlaytest(value: JsonObject, origin: string) {
+function playablePlaytest(value: JsonObject, origin: string, creatorId: string) {
   return {
     ...value,
-    replayUrl: new URL(`/replay/${String(value.replayId)}`, origin).toString(),
+    replayUrl: publicShareUrl(
+      `/replay/${String(value.replayId)}`,
+      origin,
+      creatorId,
+    ),
   };
 }
 
-function playableRoom(value: JsonObject, origin: string) {
+function playableSession(value: JsonObject, origin: string, creatorId: string) {
   return {
     ...value,
-    roomUrl: new URL(`/room/${String(value.id)}`, origin).toString(),
-    replayUrl: new URL(`/replay/${String(value.replayId)}`, origin).toString(),
+    sessionUrl: publicShareUrl(`/room/${String(value.id)}`, origin, creatorId),
+    replayUrl: publicShareUrl(
+      `/replay/${String(value.replayId)}`,
+      origin,
+      creatorId,
+    ),
   };
 }
 
-function playableJob(value: JsonObject, origin: string) {
+function playablePlaytestLink(
+  value: JsonObject,
+  origin: string,
+  creatorId: string,
+) {
+  return {
+    ...value,
+    url: publicShareUrl(
+      `/try/${String(value.projectId)}`,
+      origin,
+      creatorId,
+    ),
+  };
+}
+
+function playableJob(value: JsonObject, origin: string, creatorId: string) {
   const job = { ...value };
   const jobResult = value.result as JsonObject | undefined;
   if (!jobResult) return job;
-  if (value.kind === "generate-definition") {
+  if (value.kind === "generate-rule-system" || value.kind === "iterate-rule-system") {
     job.result = playableMutation(jobResult, origin);
   } else if (value.kind === "compile-build" && jobResult.build) {
     job.result = playableMutation({
@@ -506,7 +1017,7 @@ function playableJob(value: JsonObject, origin: string) {
       build: playableBuild(jobResult.build as JsonObject, origin),
     }, origin);
   } else if (value.kind === "bot-playtest") {
-    job.result = playablePlaytest(jobResult, origin);
+    job.result = playablePlaytest(jobResult, origin, creatorId);
   } else if (value.kind === "render-preview") {
     job.result = {
       ...jobResult,
@@ -529,9 +1040,9 @@ function playableJob(value: JsonObject, origin: string) {
 
 function playableMutation(value: JsonObject, origin: string) {
   const result = { ...value };
-  const editorPath = String(result.editorPath ?? "");
-  delete result.editorPath;
-  result.editorUrl = new URL(editorPath || "/", origin).toString();
+  const studioPath = String(result.studioPath ?? "");
+  delete result.studioPath;
+  result.studioUrl = new URL(studioPath || "/", origin).toString();
   return result;
 }
 
@@ -543,7 +1054,7 @@ export function createGodeskMcpServer(
 ) {
   const server = new McpServer({
     name: "godesk",
-    version: "0.1.0",
+    version: "0.2.0",
   });
   const registerTool = server.registerTool.bind(server);
   server.registerTool = ((
@@ -600,14 +1111,14 @@ export function createGodeskMcpServer(
     {
       title: "Create a GoDesk project",
       description:
-        "Create one authoritative Game Project and return its exact Web Editor URL.",
+        "Create one authoritative Game Project and return its exact Web Studio URL.",
       inputSchema: z.object({
         name: z.string().min(1).max(80),
-        templateId: z.enum(["harbor-13", "mistpeak-lodge"]).optional(),
+        templateId: z.enum(["harbor-13", "mistpeak-lodge", "idea-relay"]).optional(),
       }),
       outputSchema: z.object({
         project: projectSchema,
-        editorUrl: z.string(),
+        studioUrl: z.string(),
         warnings: z.array(z.string()),
       }),
       annotations: {
@@ -631,10 +1142,10 @@ export function createGodeskMcpServer(
         );
         return result({
           project,
-          editorUrl: editorUrl(origin, String(project.id)),
+          studioUrl: studioUrl(origin, String(project.id)),
           warnings: templateId
             ? []
-            : ["新项目尚未包含来源、结构化规则或组件。"],
+            : ["新项目尚未包含来源、结构化规则或 Game Entities。"],
         });
       } catch (reason) {
         return toolError(reason);
@@ -653,18 +1164,22 @@ export function createGodeskMcpServer(
         view: z
           .enum([
             "overview",
-            "definition",
+            "rule-system",
+            "generation-plan",
+            "playtest-link",
             "rules",
-            "components",
-            "board",
-            "scenarios",
+            "constraints",
+            "entities",
+            "surface",
+            "outcomes",
             "entity",
-            "definitions",
+            "rule-systems",
             "sources",
             "changesets",
             "builds",
             "playtests",
-            "rooms",
+            "sessions",
+            "validation",
             "jobs",
           ])
           .default("overview"),
@@ -672,11 +1187,14 @@ export function createGodeskMcpServer(
           .enum([
             "source",
             "rule",
-            "component",
-            "scenario",
+            "constraint",
+            "entity",
+            "outcome",
             "build",
             "playtest",
-            "room",
+            "session",
+            "hypothesis",
+            "finding",
             "job",
           ])
           .optional(),
@@ -710,28 +1228,35 @@ export function createGodeskMcpServer(
         }
         if (view === "playtests" && Array.isArray(data.playtests)) {
           data.playtests = data.playtests.map((playtest: unknown) =>
-            playablePlaytest(playtest as JsonObject, origin),
+            playablePlaytest(playtest as JsonObject, origin, creatorId),
           );
         }
-        if (view === "rooms" && Array.isArray(data.rooms)) {
-          data.rooms = data.rooms.map((room: unknown) =>
-            playableRoom(room as JsonObject, origin),
+        if (view === "sessions" && Array.isArray(data.sessions)) {
+          data.sessions = data.sessions.map((session: unknown) =>
+            playableSession(session as JsonObject, origin, creatorId),
+          );
+        }
+        if (view === "playtest-link" && data.playtestLink) {
+          data.playtestLink = playablePlaytestLink(
+            data.playtestLink as JsonObject,
+            origin,
+            creatorId,
           );
         }
         if (view === "jobs" && Array.isArray(data.jobs)) {
           data.jobs = data.jobs.map((job: unknown) =>
-            playableJob(job as JsonObject, origin),
+            playableJob(job as JsonObject, origin, creatorId),
           );
         }
         if (view === "entity") {
           if (entityType === "build") {
             Object.assign(data, playableBuild(data, origin));
           } else if (entityType === "playtest") {
-            Object.assign(data, playablePlaytest(data, origin));
-          } else if (entityType === "room") {
-            Object.assign(data, playableRoom(data, origin));
+            Object.assign(data, playablePlaytest(data, origin, creatorId));
+          } else if (entityType === "session") {
+            Object.assign(data, playableSession(data, origin, creatorId));
           } else if (entityType === "job") {
-            Object.assign(data, playableJob(data, origin));
+            Object.assign(data, playableJob(data, origin, creatorId));
           }
         }
         return result({ projectId, view, data });
@@ -742,15 +1267,15 @@ export function createGodeskMcpServer(
   );
 
   server.registerTool(
-    "get_editor_url",
+    "get_studio_url",
     {
-      title: "Open the exact GoDesk editor",
+      title: "Open the exact GoDesk Web Studio",
       description:
-        "Verify a project exists and return the exact visible Web Editor URL.",
+        "Verify a project exists and return the exact visible Web Studio URL.",
       inputSchema: z.object({ projectId: z.string().min(1) }),
       outputSchema: z.object({
         projectId: z.string(),
-        editorUrl: z.string(),
+        studioUrl: z.string(),
       }),
       annotations: {
         readOnlyHint: true,
@@ -764,7 +1289,7 @@ export function createGodeskMcpServer(
         await bodyOrError(
           await projectRequest(`/projects/${projectId}`),
         );
-        return result({ projectId, editorUrl: editorUrl(origin, projectId) });
+        return result({ projectId, studioUrl: studioUrl(origin, projectId) });
       } catch (reason) {
         return toolError(reason);
       }
@@ -772,11 +1297,11 @@ export function createGodeskMcpServer(
   );
 
   server.registerTool(
-    "apply_game_patch",
+    "apply_project_patch",
     {
       title: "Apply a versioned GoDesk patch",
       description:
-        "Atomically add traceable sources or update the active Game Definition. Stale expectedVersion values apply nothing.",
+        "Atomically add traceable sources or update the active Rule System. Stale expectedVersion values apply nothing.",
       inputSchema: z.object({
         projectId: z.string().min(1),
         expectedVersion: z.number().int().positive(),
@@ -785,11 +1310,14 @@ export function createGodeskMcpServer(
       }),
       outputSchema: z.object({
         project: projectSchema,
-        definition: definitionSchema,
+        ruleSystem: ruleSystemSchema,
+        generationPlan: generationPlanSchema.nullable(),
         sources: z.array(sourceSchema),
+        hypotheses: z.array(designHypothesisSchema),
+        findings: z.array(validationFindingSchema),
         changeset: changesetSchema,
         warnings: z.array(z.string()),
-        editorUrl: z.string(),
+        studioUrl: z.string(),
       }),
       annotations: {
         readOnlyHint: false,
@@ -820,35 +1348,45 @@ export function createGodeskMcpServer(
     {
       title: "Submit durable GoDesk work",
       description:
-        "Submit brief materialization, compilation, fixed-seed bot playtest, preview render, or build export work and return a durable job ID for tracking.",
+        "Submit idea-or-source Rule System materialization, a bounded natural-language Studio iteration, compilation, fixed-seed bot playtest, preview render, or build export work and return a durable job ID for tracking.",
       inputSchema: z.discriminatedUnion("kind", [
         z.object({
-          kind: z.literal("generate-definition"),
+          kind: z.literal("generate-rule-system"),
           projectId: z.string().min(1),
           expectedVersion: z.number().int().positive(),
-          brief: z.string().min(1).max(100_000).optional(),
+          idea: z.string().min(1).max(100_000).optional(),
           sourceContent: z.string().min(1).max(100_000).optional(),
           sourceName: z.string().min(1).max(120).optional(),
           sourceKind: z.enum(["brief", "rulebook"]).optional(),
-          harvestedImages: z.array(z.object({
+          visualInputs: z.array(z.object({
             name: z.string().min(1).max(120),
             content: z.string()
               .regex(/^data:image\/(?:png|jpe?g|webp);base64,/)
               .max(100_000),
             pageNumber: z.number().int().positive(),
+            imageUse: z.enum(["visual-reference", "project-asset"]),
           })).max(8).optional(),
           name: z.string().min(1).max(120).optional(),
-          playerCount: z.number().int().min(1).max(20).optional(),
+          participants: ruleSystemSchema.shape.participants.optional(),
           durationMinutes: z.number().int().min(5).max(720).optional(),
           idempotencyKey: z.string().min(1).max(200),
         }).refine(
-          (input) => Boolean(input.brief || input.sourceContent),
-          { message: "brief or sourceContent is required" },
+          (input) => Boolean(input.idea || input.sourceContent),
+          { message: "idea or sourceContent is required" },
         ),
+        z.object({
+          kind: z.literal("iterate-rule-system"),
+          projectId: z.string().min(1),
+          expectedVersion: z.number().int().positive(),
+          prompt: z.string().min(1).max(2_000),
+          basedOnFindingId: z.string().min(1).optional(),
+          idempotencyKey: z.string().min(1).max(200),
+        }),
         z.object({
           kind: z.literal("compile-build"),
           projectId: z.string().min(1),
           expectedVersion: z.number().int().positive(),
+          basedOnFindingId: z.string().min(1).optional(),
           idempotencyKey: z.string().min(1).max(200),
         }),
         z.object({
@@ -882,7 +1420,7 @@ export function createGodeskMcpServer(
             body: JSON.stringify(input),
           }),
         );
-        return result(playableJob(job, origin));
+        return result(playableJob(job, origin, creatorId));
       } catch (reason) {
         return toolError(reason);
       }
@@ -909,7 +1447,7 @@ export function createGodeskMcpServer(
         const job = await bodyOrError(
           await projectRequest(`/jobs/${jobId}`),
         );
-        return result(playableJob(job, origin));
+        return result(playableJob(job, origin, creatorId));
       } catch (reason) {
         return toolError(reason);
       }
@@ -936,7 +1474,7 @@ export function createGodeskMcpServer(
         const job = await bodyOrError(
           await projectRequest(`/jobs/${jobId}/retry`, { method: "POST" }),
         );
-        return result(playableJob(job, origin));
+        return result(playableJob(job, origin, creatorId));
       } catch (reason) {
         return toolError(reason);
       }
@@ -971,17 +1509,18 @@ export function createGodeskMcpServer(
   );
 
   server.registerTool(
-    "create_room",
+    "create_shared_session",
     {
-      title: "Create an authoritative GoDesk room",
+      title: "Create an authoritative GoDesk Shared Session",
       description:
-        "Create a reconnectable room from one immutable executable build.",
+        "Create a reconnectable Shared Session from one immutable executable Build.",
       inputSchema: z.object({
         buildId: z.string().min(1),
         seed: z.number().int(),
         idempotencyKey: z.string().min(1).max(200),
+        hypothesisId: z.string().min(1).optional(),
       }),
-      outputSchema: roomSchema,
+      outputSchema: sharedSessionSchema,
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -992,13 +1531,13 @@ export function createGodeskMcpServer(
     async ({ buildId, ...input }) => {
       try {
         const room = await bodyOrError(
-          await projectRequest(`/builds/${buildId}/rooms`, {
+          await projectRequest(`/builds/${buildId}/sessions`, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify(input),
           }),
         );
-        return result(playableRoom(room, origin));
+        return result(playableSession(room, origin, creatorId));
       } catch (reason) {
         return toolError(reason);
       }
@@ -1006,13 +1545,13 @@ export function createGodeskMcpServer(
   );
 
   server.registerTool(
-    "read_room",
+    "read_shared_session",
     {
-      title: "Reconnect to a GoDesk room",
+      title: "Reconnect to a GoDesk Shared Session",
       description:
-        "Read authoritative Table State and the accepted Action Log for a room.",
-      inputSchema: z.object({ roomId: z.string().min(1) }),
-      outputSchema: roomSchema,
+        "Read authoritative Session State and the accepted Action Log for a Shared Session.",
+      inputSchema: z.object({ sessionId: z.string().min(1) }),
+      outputSchema: sharedSessionSchema,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -1020,12 +1559,12 @@ export function createGodeskMcpServer(
         openWorldHint: false,
       },
     },
-    async ({ roomId }) => {
+    async ({ sessionId }) => {
       try {
         const room = await bodyOrError(
-          await projectRequest(`/rooms/${roomId}`),
+          await projectRequest(`/sessions/${sessionId}`),
         );
-        return result(playableRoom(room, origin));
+        return result(playableSession(room, origin, creatorId));
       } catch (reason) {
         return toolError(reason);
       }
@@ -1033,18 +1572,19 @@ export function createGodeskMcpServer(
   );
 
   server.registerTool(
-    "submit_room_intent",
+    "submit_session_intent",
     {
-      title: "Submit a validated GoDesk room intent",
+      title: "Submit a validated GoDesk Shared Session intent",
       description:
         "Submit one player intent. Only a legal active-seat action enters the authoritative Action Log.",
       inputSchema: z.object({
-        roomId: z.string().min(1),
+        sessionId: z.string().min(1),
         intentId: z.string().min(1).max(200),
         seat: z.number().int().nonnegative(),
         actionId: z.string().min(1).max(40),
+        payload: z.record(z.string(), z.unknown()).optional(),
       }),
-      outputSchema: roomSchema,
+      outputSchema: sharedSessionSchema,
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -1052,16 +1592,16 @@ export function createGodeskMcpServer(
         openWorldHint: false,
       },
     },
-    async ({ roomId, ...input }) => {
+    async ({ sessionId, ...input }) => {
       try {
         const room = await bodyOrError(
-          await projectRequest(`/rooms/${roomId}/intents`, {
+          await projectRequest(`/sessions/${sessionId}/intents`, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify(input),
           }),
         );
-        return result(playableRoom(room, origin));
+        return result(playableSession(room, origin, creatorId));
       } catch (reason) {
         return toolError(reason);
       }
@@ -1073,7 +1613,7 @@ export function createGodeskMcpServer(
     {
       title: "Read a non-mutating GoDesk replay",
       description:
-        "Read an immutable replay snapshot. This tool has no live-room mutation path.",
+        "Read an immutable Replay snapshot. This tool has no live Shared Session mutation path.",
       inputSchema: z.object({ replayId: z.string().min(1) }),
       outputSchema: replaySchema,
       annotations: {
@@ -1097,25 +1637,25 @@ export function createGodeskMcpServer(
   );
 
   server.registerTool(
-    "duplicate_definition",
+    "duplicate_rule_system",
     {
-      title: "Duplicate a GoDesk Game Definition",
+      title: "Duplicate a GoDesk Rule System",
       description:
-        "Branch one Game Definition inside the same project, keep shared sources, and make the new variant active.",
+        "Branch one Rule System inside the same project, keep shared sources, and make the new variant active.",
       inputSchema: z.object({
         projectId: z.string().min(1),
-        definitionId: z.string().min(1),
+        ruleSystemId: z.string().min(1),
         expectedVersion: z.number().int().positive(),
         idempotencyKey: z.string().min(1).max(200),
         name: z.string().min(1).max(120),
       }),
       outputSchema: z.object({
         project: projectSchema,
-        definition: definitionSchema,
-        definitions: z.array(definitionSchema),
+        ruleSystem: ruleSystemSchema,
+        ruleSystems: z.array(ruleSystemSchema),
         changeset: changesetSchema,
         warnings: z.array(z.string()),
-        editorUrl: z.string(),
+        studioUrl: z.string(),
       }),
       annotations: {
         readOnlyHint: false,
@@ -1124,12 +1664,60 @@ export function createGodeskMcpServer(
         openWorldHint: false,
       },
     },
-    async ({ projectId, definitionId, ...input }) => {
+    async ({ projectId, ruleSystemId, ...input }) => {
       try {
         return result(
           playableMutation(await bodyOrError(
             await projectRequest(
-              `/projects/${projectId}/definitions/${definitionId}/duplicate`,
+              `/projects/${projectId}/rule-systems/${ruleSystemId}/duplicate`,
+              {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify(input),
+              },
+            ),
+          ), origin),
+        );
+      } catch (reason) {
+        return toolError(reason);
+      }
+    },
+  );
+
+  server.registerTool(
+    "restore_build_as_rule_system",
+    {
+      title: "Restore a GoDesk Build as an editable Rule System",
+      description:
+        "Copy one immutable Build snapshot into a new active editable Rule System while preserving the original Build, sessions, replays, and findings.",
+      inputSchema: z.object({
+        projectId: z.string().min(1),
+        buildId: z.string().min(1),
+        expectedVersion: z.number().int().positive(),
+        idempotencyKey: z.string().min(1).max(200),
+      }),
+      outputSchema: z.object({
+        project: projectSchema,
+        ruleSystem: ruleSystemSchema,
+        ruleSystems: z.array(ruleSystemSchema),
+        changeset: changesetSchema,
+        sourceBuildId: z.string(),
+        warnings: z.array(z.string()),
+        studioUrl: z.string(),
+      }),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async ({ projectId, buildId, ...input }) => {
+      try {
+        return result(
+          playableMutation(await bodyOrError(
+            await projectRequest(
+              `/projects/${projectId}/builds/${buildId}/restore`,
               {
                 method: "POST",
                 headers: { "content-type": "application/json" },
@@ -1149,7 +1737,7 @@ export function createGodeskMcpServer(
     {
       title: "Duplicate a GoDesk project",
       description:
-        "Copy the current definition and sources into a new project without copying builds.",
+        "Copy the current Rule System and sources into a new project without copying Builds.",
       inputSchema: z.object({
         projectId: z.string().min(1),
         expectedVersion: z.number().int().positive(),
@@ -1158,7 +1746,7 @@ export function createGodeskMcpServer(
       }),
       outputSchema: z.object({
         project: projectSchema,
-        editorUrl: z.string(),
+        studioUrl: z.string(),
         warnings: z.array(z.string()),
       }),
       annotations: {
@@ -1179,7 +1767,7 @@ export function createGodeskMcpServer(
         );
         return result({
           project,
-          editorUrl: editorUrl(origin, String(project.id)),
+          studioUrl: studioUrl(origin, String(project.id)),
           warnings: [],
         });
       } catch (reason) {

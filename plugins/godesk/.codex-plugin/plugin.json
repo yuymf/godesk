@@ -1,7 +1,7 @@
 {
   "name": "godesk",
-  "version": "0.1.0+codex.20260730011500",
-  "description": "Create, edit, compile, playtest, and open editable tabletop game projects from Codex.",
+  "version": "0.2.0+codex.20260811",
+  "description": "Create, share, and validate editable rule-orchestrated games from Codex.",
   "author": {
     "name": "GoDesk",
     "url": "https://github.com/yuymf/godesk"
@@ -9,8 +9,8 @@
   "homepage": "https://godesk.yumengfan220.workers.dev/chatgpt-plugin",
   "repository": "https://github.com/yuymf/godesk-plugin",
   "keywords": [
-    "board-game",
-    "tabletop",
+    "rule-game",
+    "game-creation",
     "game-design",
     "playtest",
     "codex",
@@ -19,8 +19,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "GoDesk",
-    "shortDescription": "Create and test editable tabletop games",
-    "longDescription": "Turn a brief into an authoritative GoDesk Game Project, edit the same versioned definition in Codex and the visible Web Editor, compile immutable playable builds, run clearly labelled deterministic bot playtests, create reconnectable rooms, and inspect read-only replays.",
+    "shortDescription": "Create, share, and validate rule games",
+    "longDescription": "Turn an idea or source into an authoritative GoDesk Game Project, edit the same versioned Rule System in Codex and Web Studio, compile immutable Playable Builds, share browser-only friend sessions, inspect Replays, and record evidence-labelled Validation Findings.",
     "developerName": "GoDesk",
     "category": "Design",
     "capabilities": [
@@ -29,9 +29,9 @@
     ],
     "websiteURL": "https://godesk.yumengfan220.workers.dev",
     "defaultPrompt": [
-      "Create an editable tabletop game from this brief",
-      "Open my GoDesk project and revise its rules",
-      "Run a bot playtest and verify the visible result"
+      "Create a playable rule game from this idea",
+      "Open my GoDesk project and revise its Rule System",
+      "Test this design hypothesis and record the evidence"
     ],
     "brandColor": "#F04B33",
     "composerIcon": "./assets/godesk-mark.svg",

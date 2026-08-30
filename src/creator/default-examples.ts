@@ -1,4 +1,4 @@
-export type DefaultExampleId = "harbor-13" | "mistpeak-lodge";
+export type DefaultExampleId = "harbor-13" | "mistpeak-lodge" | "idea-relay";
 
 export interface DefaultExample {
   id: DefaultExampleId;
@@ -15,7 +15,7 @@ export const DEFAULT_EXAMPLES: DefaultExample[] = [
   {
     id: "harbor-13",
     title: "港口十三号",
-    kicker: "原马尼拉机制 Demo 的公开安全版",
+    kicker: "原创港口竞速案例",
     summary: "派遣伙计、掷骰航行与领航结算，单航次抢先积累信用。",
     players: "3 人",
     duration: "25 分钟",
@@ -32,4 +32,18 @@ export const DEFAULT_EXAMPLES: DefaultExample[] = [
     status: "可玩机制切片",
     rights: "GoDesk 原创内容，不含第三方角色、剧本或美术",
   },
+  {
+    id: "idea-relay",
+    title: "灵感接力",
+    kicker: "无棋盘的对话创作游戏",
+    summary: "轮流扩展一个共同创意、加入约束并连接前文，率先达到目标分。",
+    players: "2–6 人",
+    duration: "12 分钟",
+    status: "可分享对话游戏",
+    rights: "GoDesk 原创规则与程序化界面",
+  },
 ];
+
+export function isDefaultExampleId(value: unknown): value is DefaultExampleId {
+  return DEFAULT_EXAMPLES.some((example) => example.id === value);
+}

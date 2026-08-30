@@ -1,6 +1,6 @@
 # ADR 0004: Shareable prototype is the product low bar
 
-Status: accepted
+Status: superseded by ADR 0005
 
 Date: 2026-08-04
 

@@ -4,15 +4,21 @@ import type {
   Changeset,
   CreatorJob,
   CreateProjectResult,
-  DuplicateDefinitionResult,
-  GameDefinition,
+  DesignHypothesis,
+  DuplicateRuleSystemResult,
+  RestoreBuildResult,
+  GenerationPlan,
+  RuleSystem,
   GameProject,
   GameReplay,
-  GameRoom,
+  SharedSession,
+  SharedSessionSnapshot,
   PlaytestRun,
   PlayableBuild,
+  PlaytestLink,
   SourceLibraryEntry,
   SubmitJobInput,
+  ValidationFinding,
 } from "./project-contract";
 import type { DefaultExampleId } from "./default-examples";
 
@@ -52,16 +58,89 @@ export function getProject(id: string) {
   );
 }
 
-export function getDefinition(id: string) {
-  return fetch(
-    `/api/projects/${encodeURIComponent(id)}?view=definition`,
-  ).then(readJson<GameDefinition>);
+export function getProjectActivity(id: string) {
+  return fetch(`/api/projects/${encodeURIComponent(id)}?view=activity`).then(
+    readJson<{
+      project: GameProject;
+      jobs: CreatorJob[];
+      sessions: SharedSession[];
+    }>,
+  );
 }
 
-export function getDefinitions(id: string) {
-  return fetch(`/api/projects/${encodeURIComponent(id)}?view=definitions`)
-    .then(readJson<{ definitions: GameDefinition[] }>)
-    .then((result) => result.definitions);
+function withShareCreator(
+  path: string,
+  shareCreator?: string,
+  origin = window.location.origin,
+) {
+  if (!shareCreator) return path;
+  const url = new URL(path, origin);
+  url.searchParams.set("creator", shareCreator);
+  return `${url.pathname}${url.search}`;
+}
+
+export function sharedSessionSocketUrl(
+  id: string,
+  shareCreator?: string,
+  location: Pick<Location, "origin" | "protocol"> = window.location,
+) {
+  const url = new URL(
+    `/api/sessions/${encodeURIComponent(id)}/events`,
+    location.origin,
+  );
+  url.protocol = location.protocol === "https:" ? "wss:" : "ws:";
+  if (shareCreator) url.searchParams.set("creator", shareCreator);
+  return url.toString();
+}
+
+export function publicSharedSession(
+  session: SharedSessionSnapshot,
+  origin: string,
+  shareCreator?: string,
+): SharedSession {
+  return {
+    ...session,
+    sessionUrl: new URL(
+      withShareCreator(
+        `/room/${encodeURIComponent(session.id)}`,
+        shareCreator,
+        origin,
+      ),
+      origin,
+    ).toString(),
+    replayUrl: new URL(
+      withShareCreator(
+        `/replay/${encodeURIComponent(session.replayId)}`,
+        shareCreator,
+        origin,
+      ),
+      origin,
+    ).toString(),
+  };
+}
+
+export function getRuleSystem(id: string) {
+  return fetch(
+    `/api/projects/${encodeURIComponent(id)}?view=rule-system`,
+  ).then(readJson<RuleSystem>);
+}
+
+export function getGenerationPlan(id: string) {
+  return fetch(
+    `/api/projects/${encodeURIComponent(id)}?view=generation-plan`,
+  ).then(readJson<{ generationPlan: GenerationPlan | null }>);
+}
+
+export function getPlaytestLink(id: string) {
+  return fetch(
+    `/api/projects/${encodeURIComponent(id)}?view=playtest-link`,
+  ).then(readJson<{ playtestLink: PlaytestLink | null }>);
+}
+
+export function getRuleSystems(id: string) {
+  return fetch(`/api/projects/${encodeURIComponent(id)}?view=rule-systems`)
+    .then(readJson<{ ruleSystems: RuleSystem[] }>)
+    .then((result) => result.ruleSystems);
 }
 
 export function getChangesets(id: string) {
@@ -70,9 +149,9 @@ export function getChangesets(id: string) {
     .then((result) => result.changesets);
 }
 
-export function duplicateDefinition(
+export function duplicateRuleSystem(
   projectId: string,
-  definitionId: string,
+  ruleSystemId: string,
   input: {
     expectedVersion: number;
     idempotencyKey: string;
@@ -80,13 +159,31 @@ export function duplicateDefinition(
   },
 ) {
   return fetch(
-    `/api/projects/${encodeURIComponent(projectId)}/definitions/${encodeURIComponent(definitionId)}/duplicate`,
+    `/api/projects/${encodeURIComponent(projectId)}/rule-systems/${encodeURIComponent(ruleSystemId)}/duplicate`,
     {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(input),
     },
-  ).then(readJson<DuplicateDefinitionResult>);
+  ).then(readJson<DuplicateRuleSystemResult>);
+}
+
+export function restoreBuild(
+  projectId: string,
+  buildId: string,
+  input: {
+    expectedVersion: number;
+    idempotencyKey: string;
+  },
+) {
+  return fetch(
+    `/api/projects/${encodeURIComponent(projectId)}/builds/${encodeURIComponent(buildId)}/restore`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  ).then(readJson<RestoreBuildResult>);
 }
 
 export function getSources(id: string) {
@@ -126,9 +223,13 @@ export function retryJob(id: string) {
   }).then(readJson<CreatorJob>);
 }
 
-export async function waitForJob(id: string) {
+export async function waitForJob(
+  id: string,
+  onUpdate?: (job: CreatorJob) => void,
+) {
   for (let attempt = 0; attempt < 80; attempt += 1) {
     const job = await getJob(id);
+    onUpdate?.(job);
     if (job.status === "succeeded" || job.status === "failed") return job;
     await new Promise((resolve) => window.setTimeout(resolve, 250));
   }
@@ -147,8 +248,10 @@ export function getBuilds(id: string) {
     .then((result) => result.builds);
 }
 
-export function getBuild(id: string) {
-  return fetch(`/api/builds/${encodeURIComponent(id)}`).then(
+export function getBuild(id: string, shareCreator?: string) {
+  return fetch(
+    withShareCreator(`/api/builds/${encodeURIComponent(id)}`, shareCreator),
+  ).then(
     readJson<PlayableBuild>,
   );
 }
@@ -159,53 +262,100 @@ export function getPlaytests(id: string) {
     .then((result) => result.playtests);
 }
 
-export function getRooms(id: string) {
-  return fetch(`/api/projects/${encodeURIComponent(id)}?view=rooms`)
-    .then(readJson<{ rooms: GameRoom[] }>)
-    .then((result) => result.rooms);
+export function getSharedSessions(id: string) {
+  return fetch(`/api/projects/${encodeURIComponent(id)}?view=sessions`)
+    .then(readJson<{ sessions: SharedSession[] }>)
+    .then((result) => result.sessions);
 }
 
-export function createRoom(
+export function getValidation(id: string) {
+  return fetch(`/api/projects/${encodeURIComponent(id)}?view=validation`)
+    .then(readJson<{
+      hypotheses: DesignHypothesis[];
+      findings: ValidationFinding[];
+    }>);
+}
+
+export function createSharedSession(
   buildId: string,
-  input: { seed: number; idempotencyKey: string },
+  input: { seed: number; idempotencyKey: string; hypothesisId?: string },
 ) {
-  return fetch(`/api/builds/${encodeURIComponent(buildId)}/rooms`, {
+  return fetch(`/api/builds/${encodeURIComponent(buildId)}/sessions`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(input),
-  }).then(readJson<GameRoom>);
+  }).then(readJson<SharedSession>);
 }
 
-export function getRoom(id: string) {
-  return fetch(`/api/rooms/${encodeURIComponent(id)}`).then(
-    readJson<GameRoom>,
-  );
-}
-
-export function claimRoomSeat(
+export function claimSessionSeat(
   id: string,
   input: { seat: number; clientId: string },
+  shareCreator?: string,
 ) {
-  return fetch(`/api/rooms/${encodeURIComponent(id)}/seats`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(input),
-  }).then(readJson<GameRoom>);
+  return fetch(
+    withShareCreator(
+      `/api/sessions/${encodeURIComponent(id)}/seats`,
+      shareCreator,
+    ),
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  ).then(readJson<SharedSession>);
 }
 
-export function submitRoomIntent(
+export function submitSessionIntent(
   id: string,
-  input: { intentId: string; seat: number; clientId: string; actionId: string },
+  input: {
+    intentId: string;
+    seat: number;
+    clientId: string;
+    actionId: string;
+    payload?: Record<string, unknown>;
+  },
+  shareCreator?: string,
 ) {
-  return fetch(`/api/rooms/${encodeURIComponent(id)}/intents`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(input),
-  }).then(readJson<GameRoom>);
+  return fetch(
+    withShareCreator(
+      `/api/sessions/${encodeURIComponent(id)}/intents`,
+      shareCreator,
+    ),
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  ).then(readJson<SharedSession>);
 }
 
-export function getReplay(id: string) {
-  return fetch(`/api/replays/${encodeURIComponent(id)}`).then(
+export function submitSessionFeedback(
+  id: string,
+  input: {
+    seat: number;
+    clientId: string;
+    rating: 1 | 2 | 3 | 4 | 5;
+    comment: string;
+  },
+  shareCreator?: string,
+) {
+  return fetch(
+    withShareCreator(
+      `/api/sessions/${encodeURIComponent(id)}/feedback`,
+      shareCreator,
+    ),
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  ).then(readJson<SharedSession>);
+}
+
+export function getReplay(id: string, shareCreator?: string) {
+  return fetch(
+    withShareCreator(`/api/replays/${encodeURIComponent(id)}`, shareCreator),
+  ).then(
     readJson<GameReplay>,
   );
 }

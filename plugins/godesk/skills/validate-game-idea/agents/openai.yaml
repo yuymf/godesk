@@ -1,0 +1,4 @@
+interface:
+  display_name: "Validate a game idea"
+  short_description: "Test one design hypothesis against play evidence"
+  default_prompt: "Use $validate-game-idea to test this design hypothesis and record the evidence."

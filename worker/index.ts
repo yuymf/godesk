@@ -10,7 +10,7 @@ import { godeskMcpHandler } from "./mcp";
 import {
   acceptIntent,
   executableRuntime,
-  initialTableState,
+  initialSessionState,
   runBotSimulation,
 } from "./runtime";
 import type {
@@ -22,33 +22,54 @@ import type {
   CreatorJob,
   CreatorJobKind,
   CreateProjectResult,
-  DuplicateDefinitionResult,
-  GameDefinition,
+  DesignHypothesis,
+  DuplicateRuleSystemResult,
+  RestoreBuildResult,
+  GenerationPlan,
+  RuleSystem,
   GameProject,
   GameReplay,
-  GameRoom,
+  SharedSession,
+  SharedSessionSnapshotEvent,
+  SessionFeedback,
   PlaytestRun,
   PlayableBuild,
+  PlaytestLink,
   ProjectChangeOperation,
   SourceLibraryEntry,
   SubmitJobInput,
-  VisualFloorReadiness,
+  PresentationFloorReadiness,
+  ValidationFinding,
   VisualTreatment,
 } from "../src/creator/project-contract";
 import {
   instantiateDefaultExample,
   isDefaultExampleId,
 } from "./default-examples";
-import { materializeRulebookDefinition } from "./rulebook-generation";
+import {
+  inferredNumber,
+  inferredDrawAndScoreRule,
+  inferredPushYourLuckRule,
+  inferredRollAndMoveRule,
+  inferredSharedGoalTarget,
+  inferredTakeAwayRule,
+  isSharedGoalDescription,
+  isTurnTakingDescription,
+  createGenerationPlan,
+  materializeRuleSystem,
+} from "./rulebook-generation";
+import { createActionDescriptionIterationPlan } from "./rule-system-iteration";
 
 const PROJECT_PREFIX = "/projects/";
+const GENERATION_PLAN_PREFIX = "generation-plan:";
+const PLAYTEST_LINK_PREFIX = "playtest-link:";
 const READ_ONLY_MCP_TOOLS = new Set([
   "list_projects",
   "read_project",
-  "get_editor_url",
+  "get_studio_url",
   "track_job",
   "read_build",
-  "read_room",
+  "read_shared_session",
   "read_replay",
 ]);
 
@@ -69,35 +90,53 @@ async function mcpScopes(request: Request) {
 
 interface ProjectRecord {
   project: GameProject;
-  definition: GameDefinition;
-  definitions: GameDefinition[];
+  ruleSystem: RuleSystem;
+  ruleSystems: RuleSystem[];
   sources: SourceLibraryEntry[];
   changesets: Changeset[];
   builds: StoredPlayableBuild[];
   playtests: StoredPlaytest[];
-  rooms: StoredRoom[];
+  sessions: StoredSharedSession[];
   jobs: CreatorJob[];
+  hypotheses: DesignHypothesis[];
+  findings: ValidationFinding[];
 }
 
 type StoredPlayableBuild = Omit<PlayableBuild, "playableUrl">;
 type StoredPlaytest = Omit<PlaytestRun, "replayUrl">;
-type StoredRoom = Omit<GameRoom, "roomUrl" | "replayUrl">;
+type StoredSharedSession = Omit<SharedSession, "sessionUrl" | "replayUrl">;
+type StoredPlaytestLink = Omit<PlaytestLink, "url">;
+interface SessionSocketAttachment {
+  sessionId: string;
+}
 type StoredReplay = GameReplay;
 type StoredCompileBuildResult = Omit<
   CompileBuildResult,
-  "build" | "editorUrl"
+  "build" | "studioUrl"
 > & {
   build: StoredPlayableBuild;
-  editorPath: string;
+  studioPath: string;
 };
 type StoredApplyProjectChangesResult = Omit<
   ApplyProjectChangesResult,
-  "editorUrl"
-> & { editorPath: string };
-type StoredDuplicateDefinitionResult = Omit<
-  DuplicateDefinitionResult,
-  "editorUrl"
-> & { editorPath: string };
+  "studioUrl"
+> & { studioPath: string };
+type StoredDuplicateRuleSystemResult = Omit<
+  DuplicateRuleSystemResult,
+  "studioUrl"
+> & { studioPath: string };
+type StoredRestoreBuildResult = Omit<
+  RestoreBuildResult,
+  "studioUrl"
+> & { studioPath: string };
+
+function generationPlanKey(projectId: string) {
+  return `${GENERATION_PLAN_PREFIX}${projectId}`;
+}
+
+function playtestLinkKey(projectId: string) {
+  return `${PLAYTEST_LINK_PREFIX}${projectId}`;
+}
 
 function json(value: unknown, status = 200) {
   return Response.json(value, { status });
@@ -132,103 +171,105 @@ function paginated<T>(
   };
 }
 
-function initialDefinition(id: string): GameDefinition {
+function initialRuleSystem(id: string): RuleSystem {
   return {
     id,
     version: 1,
     name: "未命名初始版本",
     pitch: "",
-    playerCount: 2,
+    participants: { min: 2, max: 2, default: 2, roles: [] },
     durationMinutes: 45,
     rules: [],
-    components: [],
+    constraints: [],
+    entities: [],
     setup: [],
     actions: [],
-    board: { layout: "", zones: [] },
-    phases: [],
-    scenarios: [],
+    playSurface: { kind: "screen", layout: "", regions: [] },
+    stages: [],
+    outcomes: [],
     presentation: { theme: "unassigned" },
     runtimeSupport: { status: "draft", unsupported: [] },
   };
 }
 
-function projectRecord(value: ProjectRecord | GameProject): ProjectRecord {
-  if ("project" in value) return value;
-  const definition = initialDefinition(value.activeDefinitionId);
-  return {
-    project: value,
-    definition,
-    definitions: [definition],
-    sources: [],
-    changesets: [],
-    builds: [],
-    playtests: [],
-    rooms: [],
-    jobs: [],
-  };
+function normalizedRuleSystem(ruleSystem: RuleSystem): RuleSystem {
+  if (
+    !ruleSystem.participants ||
+    !Array.isArray(ruleSystem.constraints) ||
+    !Array.isArray(ruleSystem.entities) ||
+    !ruleSystem.playSurface ||
+    !Array.isArray(ruleSystem.stages) ||
+    !Array.isArray(ruleSystem.outcomes)
+  ) {
+    throw new Error("unsupported_rule_system_shape");
+  }
+  return structuredClone(ruleSystem);
 }
 
-function normalizedDefinition(
-  definition: GameDefinition,
-  fallbackVersion: number,
-): GameDefinition {
-  return {
-    ...definition,
-    version: definition.version ?? fallbackVersion,
-    rules: (definition.rules ?? []).map((rule) => ({
-      ...rule,
-      provenance:
-        rule.provenance ??
-        (rule.sourceId ? "source-anchored" : "ai-proposed"),
-      confidence: rule.confidence ?? (rule.sourceId ? 1 : 0.5),
-    })),
-    components: (definition.components ?? []).map((component) => ({
-      ...component,
-      provenance:
-        component.provenance ??
-        (component.sourceId ? "source-anchored" : "ai-proposed"),
-      confidence: component.confidence ?? (component.sourceId ? 1 : 0.5),
-    })),
-    setup: definition.setup ?? [],
-    actions: (definition.actions ?? []).map((action) => ({
-      ...action,
-      provenance:
-        action.provenance ??
-        (action.sourceId ? "source-anchored" : "ai-proposed"),
-      confidence: action.confidence ?? (action.sourceId ? 1 : 0.5),
-    })),
-    board: definition.board ?? { layout: "", zones: [] },
-    phases: definition.phases ?? [],
-    scenarios: definition.scenarios ?? [],
-    presentation: definition.presentation ?? { theme: "unassigned" },
-  };
+function sameRuleSystemContent(left: RuleSystem, right: RuleSystem) {
+  const comparable = (ruleSystem: RuleSystem) => ({
+    ...structuredClone(ruleSystem),
+    id: "",
+    version: 0,
+    restoredFromBuildId: undefined,
+  });
+  return JSON.stringify(comparable(left)) === JSON.stringify(comparable(right));
 }
 
 function normalizedBuild(build: StoredPlayableBuild): StoredPlayableBuild {
+  if (!build.presentationFloor) {
+    throw new Error("unsupported_build_shape");
+  }
   return {
     ...build,
-    definition: normalizedDefinition(
-      build.definition,
-      build.definitionVersion,
-    ),
-    visualFloor: build.visualFloor ?? visualFloor(build.definition),
+    ruleSystem: normalizedRuleSystem(build.ruleSystem),
+    presentationFloor: build.presentationFloor,
   };
 }
 
-function normalizedProjectRecord(value: ProjectRecord | GameProject) {
-  const record = projectRecord(value);
-  const definitions = (record.definitions ?? [record.definition]).map(
-    (definition) =>
-      normalizedDefinition(definition, record.project.version),
-  );
-  const definition =
-    definitions.find(
-      (candidate) => candidate.id === record.project.activeDefinitionId,
-    ) ?? definitions[0];
+function normalizedProjectRecord(record: ProjectRecord) {
+  if (!record || !("project" in record)) {
+    throw new Error("unsupported_project_shape");
+  }
+  if (
+    !Array.isArray(record.ruleSystems) ||
+    !Array.isArray(record.sources) ||
+    !Array.isArray(record.changesets) ||
+    !Array.isArray(record.builds) ||
+    !Array.isArray(record.playtests) ||
+    !Array.isArray(record.sessions) ||
+    !Array.isArray(record.jobs) ||
+    !Array.isArray(record.hypotheses) ||
+    !Array.isArray(record.findings)
+  ) {
+    throw new Error("unsupported_project_shape");
+  }
+  if (record.findings.some((finding) => typeof finding.nextChange !== "string")) {
+    throw new Error("unsupported_project_shape");
+  }
+  if (record.sessions.some((session) =>
+    !("experiment" in session) ||
+    !Array.isArray(session.feedback) ||
+    session.feedback.some((entry) =>
+      !entry.moment ||
+      !Number.isInteger(entry.moment.actionSequence) ||
+      entry.moment.actionSequence < 1 ||
+      typeof entry.moment.actionId !== "string" ||
+      !entry.moment.actionId
+    )
+  )) {
+    throw new Error("unsupported_project_shape");
+  }
+  const ruleSystems = record.ruleSystems.map(normalizedRuleSystem);
+  const ruleSystem =
+    ruleSystems.find(
+      (candidate) => candidate.id === record.project.activeRuleSystemId,
+    );
+  if (!ruleSystem) throw new Error("unsupported_project_shape");
   return {
     ...record,
-    definition,
-    definitions,
+    ruleSystem,
+    ruleSystems,
     project: {
       ...record.project,
       capabilities: {
@@ -236,10 +277,12 @@ function normalizedProjectRecord(value: ProjectRecord | GameProject) {
         compilation: "available" as const,
       },
     },
-    builds: (record.builds ?? []).map(normalizedBuild),
-    playtests: record.playtests ?? [],
-    rooms: record.rooms ?? [],
-    jobs: record.jobs ?? [],
+    builds: record.builds.map(normalizedBuild),
+    playtests: record.playtests,
+    sessions: record.sessions,
+    jobs: record.jobs,
+    hypotheses: record.hypotheses,
+    findings: record.findings,
   };
 }
 
@@ -291,6 +334,533 @@ function validVisualTreatments(value: unknown) {
   );
 }
 
+function runtimeActionShapeChanged(
+  previous: RuleSystem["actions"],
+  next: RuleSystem["actions"],
+) {
+  return (
+    previous.length !== next.length ||
+    previous.some(
+      (action, index) =>
+        action.id !== next[index]?.id || action.label !== next[index]?.label,
+    )
+  );
+}
+
+type RuntimeConfiguration =
+  | Extract<ProjectChangeOperation, { op: "configure_score_race" }> & {
+      op: "configure_score_race";
+    }
+  | Extract<ProjectChangeOperation, { op: "configure_shared_goal" }> & {
+      op: "configure_shared_goal";
+    }
+  | Extract<ProjectChangeOperation, { op: "configure_turn_taking" }> & {
+      op: "configure_turn_taking";
+    }
+  | Extract<ProjectChangeOperation, { op: "configure_take_away" }> & {
+      op: "configure_take_away";
+    }
+  | Extract<ProjectChangeOperation, { op: "configure_roll_and_move" }> & {
+      op: "configure_roll_and_move";
+    }
+  | Extract<ProjectChangeOperation, { op: "configure_draw_and_score" }> & {
+      op: "configure_draw_and_score";
+    }
+  | Extract<ProjectChangeOperation, { op: "configure_push_your_luck" }> & {
+      op: "configure_push_your_luck";
+    };
+
+function configureRuntimeKernel(
+  record: ProjectRecord,
+  configuration: RuntimeConfiguration,
+  affectedEntities: string[],
+) {
+  const config = configuration.config;
+  const normalizedActions = configuration.config.actions.map((action) => ({
+    id: action.id,
+    label: action.label,
+    value: "points" in action
+      ? action.points
+      : "progress" in action
+        ? action.progress
+        : "take" in action
+          ? action.take
+          : undefined,
+  }));
+  const kernelType = configuration.op === "configure_score_race"
+    ? "score-race-v1"
+    : configuration.op === "configure_shared_goal"
+      ? "shared-goal-v1"
+      : configuration.op === "configure_take_away"
+        ? "take-away-v1"
+        : configuration.op === "configure_roll_and_move"
+          ? "roll-and-move-v1"
+        : configuration.op === "configure_draw_and_score"
+          ? "draw-and-score-v1"
+        : configuration.op === "configure_push_your_luck"
+          ? "push-your-luck-v1"
+          : "turn-taking-v1";
+  const unsupported = configuration.config.unsupported?.map((item) => item.trim()) ?? [];
+  const runtimeSource: SourceLibraryEntry = {
+    id: `source_${crypto.randomUUID()}`,
+    kind: "brief",
+    name: `${record.ruleSystem.name} · ${kernelType} 配置`,
+    content: JSON.stringify(config),
+    readiness: "ready",
+    provenance: {
+      origin: "system-generated",
+      locator: `${configuration.op} operation`,
+      confidence: 1,
+    },
+    createdAt: new Date().toISOString(),
+  };
+  record.sources.push(runtimeSource);
+  const existingRules = record.ruleSystem.rules.filter(
+    (rule) => !rule.id.startsWith("runtime-"),
+  );
+  const existingEntities = record.ruleSystem.entities.filter(
+    (entity) => !entity.id.startsWith("runtime-"),
+  );
+  const previousRuntimeActionIds = new Set(
+    record.ruleSystem.runtimeSupport.status === "executable" &&
+      "actions" in record.ruleSystem.runtimeSupport.kernel
+      ? record.ruleSystem.runtimeSupport.kernel.actions.map(
+          (action) => action.id,
+        )
+      : [],
+  );
+  const existingActions = record.ruleSystem.actions.filter(
+    (action) =>
+      action.provenance === "source-anchored" ||
+      !previousRuntimeActionIds.has(action.id),
+  );
+  const generatedRuntimeActions = normalizedActions
+    .filter((action) => !existingActions.some((existing) => existing.id === action.id))
+    .map((action) => {
+      const value = action.value;
+      return {
+        id: action.id,
+        label: action.label.trim().slice(0, 80),
+        description: configuration.op === "configure_score_race"
+          ? `获得 ${value} 分。`
+          : configuration.op === "configure_shared_goal"
+            ? `推进共享目标 ${value} 点。`
+            : configuration.op === "configure_take_away"
+              ? `从共享池拿走 ${value} 个物件。`
+              : configuration.op === "configure_roll_and_move"
+                ? "掷骰并按点数前进。"
+              : configuration.op === "configure_draw_and_score"
+                ? "从洗牌后的牌库顶抽一张牌，并将牌面点数加入自己的总分。"
+              : configuration.op === "configure_push_your_luck"
+                ? action.id === "roll"
+                  ? "继续掷骰；爆点清空本回合未存分，否则累加结果。"
+                  : "把本回合未存分加入总分并结束回合。"
+                : "执行一个轮流行动。",
+        sourceId: runtimeSource.id,
+        provenance: "system-generated" as const,
+        confidence: 1,
+      };
+    });
+  const maxTurns = "maxTurns" in configuration.config
+    ? configuration.config.maxTurns
+    : null;
+  const target = configuration.op === "configure_score_race"
+    ? configuration.config.victoryTarget
+    : configuration.op === "configure_shared_goal"
+      ? configuration.config.goalTarget
+      : configuration.op === "configure_roll_and_move"
+        ? configuration.config.targetPosition
+      : configuration.op === "configure_draw_and_score"
+        ? configuration.config.victoryTarget
+      : configuration.op === "configure_push_your_luck"
+        ? configuration.config.victoryTarget
+      : null;
+  const runtimeRules = configuration.op === "configure_score_race"
+    ? [
+        {
+          id: "runtime-turn-order",
+          text: "玩家按座位顺序轮流选择一个可用行动并获得对应分数。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+        {
+          id: "runtime-victory",
+          text: `率先达到 ${target} 分者获胜；若 ${maxTurns} 回合仍无人达到，则最高分获胜。`,
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+      ]
+    : configuration.op === "configure_shared_goal"
+      ? [
+        {
+          id: "runtime-turn-order",
+          text: "玩家按座位顺序轮流选择一个可用行动，共同推进共享目标。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+        {
+          id: "runtime-victory",
+          text: `共享进度达到 ${target} 点即完成目标；若 ${maxTurns} 回合仍未达到，则会话以回合上限结束。`,
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+      ]
+      : configuration.op === "configure_take_away"
+        ? [
+          {
+            id: "runtime-turn-order",
+            text: "玩家按座位顺序轮流从共享池拿走一个可用数量。",
+            sourceId: runtimeSource.id,
+            provenance: "system-generated" as const,
+            confidence: 1,
+          },
+          {
+            id: "runtime-victory",
+            text: `共享池初始有 ${configuration.config.initialPool} 个物件；拿走最后一个物件的玩家获胜。`,
+            sourceId: runtimeSource.id,
+            provenance: "system-generated" as const,
+            confidence: 1,
+          },
+        ]
+        : configuration.op === "configure_roll_and_move"
+          ? [
+            {
+              id: "runtime-turn-order",
+              text: `玩家按座位顺序轮流掷一颗 ${configuration.config.dieSides} 面骰子，并按结果前进相应格数。`,
+              sourceId: runtimeSource.id,
+              provenance: "system-generated" as const,
+              confidence: 1,
+            },
+            {
+              id: "runtime-victory",
+              text: `率先到达 ${configuration.config.targetPosition} 格的玩家获胜；若 ${maxTurns} 回合仍无人到达，则会话以回合上限结束且不补造胜者。`,
+              sourceId: runtimeSource.id,
+              provenance: "system-generated" as const,
+              confidence: 1,
+            },
+          ]
+        : configuration.op === "configure_draw_and_score"
+          ? [
+            {
+              id: "runtime-turn-order",
+              text: "玩家按座位顺序轮流从洗牌后的牌库顶抽一张牌，并将牌面点数加入自己的总分。",
+              sourceId: runtimeSource.id,
+              provenance: "system-generated" as const,
+              confidence: 1,
+            },
+            {
+              id: "runtime-victory",
+              text: `率先达到 ${configuration.config.victoryTarget} 分者获胜；牌库耗尽仍无人达到时，唯一最高分者获胜，平分则不补造胜者。`,
+              sourceId: runtimeSource.id,
+              provenance: "system-generated" as const,
+              confidence: 1,
+            },
+          ]
+        : configuration.op === "configure_push_your_luck"
+          ? [
+            {
+              id: "runtime-turn-order",
+              text: `当前玩家可反复掷一颗 ${configuration.config.dieSides} 面骰子；掷出 ${configuration.config.bustFace} 会清空本回合未存分并换人，其他结果累加到本回合未存分。`,
+              sourceId: runtimeSource.id,
+              provenance: "system-generated" as const,
+              confidence: 1,
+            },
+            {
+              id: "runtime-victory",
+              text: `玩家可收手把本回合未存分加入总分并换人；率先存到 ${configuration.config.victoryTarget} 分者获胜。${configuration.config.maxActions} 次行动安全上限只结束会话，不补造胜者。`,
+              sourceId: runtimeSource.id,
+              provenance: "system-generated" as const,
+              confidence: 1,
+            },
+          ]
+        : [
+        {
+          id: "runtime-turn-order",
+          text: "玩家按座位顺序轮流选择一个可用行动。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+        {
+          id: "runtime-end",
+          text: `最多进行 ${maxTurns} 回合；此 Kernel 不自动判定胜负或补全其他规则。`,
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+      ];
+  const runtimeEntity = configuration.op === "configure_score_race"
+    ? {
+        id: "runtime-score-track",
+        name: "分数与参与者状态",
+        kind: "concept" as const,
+        quantity: record.ruleSystem.participants.default,
+      }
+    : configuration.op === "configure_shared_goal"
+      ? {
+        id: "runtime-shared-goal",
+        name: "共享目标与参与者状态",
+        kind: "concept" as const,
+        quantity: 1,
+      }
+      : configuration.op === "configure_take_away"
+        ? {
+          id: "runtime-shared-pool",
+          name: "共享拿取池",
+          kind: "resource" as const,
+          quantity: configuration.config.initialPool,
+        }
+        : configuration.op === "configure_roll_and_move"
+          ? {
+            id: "runtime-roll-and-move",
+            name: "骰子与位置轨道",
+            kind: "concept" as const,
+            quantity: 1,
+          }
+        : configuration.op === "configure_draw_and_score"
+          ? {
+            id: "runtime-draw-deck",
+            name: "有限抽牌牌库",
+            kind: "resource" as const,
+            quantity: configuration.config.cardValues.length * configuration.config.copiesPerValue,
+          }
+        : configuration.op === "configure_push_your_luck"
+          ? {
+            id: "runtime-push-your-luck",
+            name: "骰子、未存分与总分",
+            kind: "concept" as const,
+            quantity: 1,
+          }
+        : {
+          id: "runtime-turn-order",
+          name: "回合与参与者状态",
+          kind: "concept" as const,
+          quantity: 1,
+        };
+  const playSurface = configuration.op === "configure_score_race"
+    ? {
+        kind: "screen" as const,
+        layout: "shared-score-track",
+        regions: [{
+          id: "score-track",
+          name: "分数轨道",
+          description: "记录所有座位当前得分。",
+        }],
+      }
+    : configuration.op === "configure_shared_goal"
+      ? {
+        kind: "screen" as const,
+        layout: "shared-goal-track",
+        regions: [{
+          id: "goal-track",
+          name: "共享目标进度",
+          description: "记录所有参与者共同推进的目标进度。",
+        }],
+      }
+      : configuration.op === "configure_take_away"
+        ? {
+          kind: "table" as const,
+          layout: "shared-take-away-pool",
+          regions: [{
+            id: "shared-pool",
+            name: "共享拿取池",
+            description: "记录仍可拿取的共享物件数量。",
+          }],
+        }
+        : configuration.op === "configure_roll_and_move"
+          ? {
+            kind: "table" as const,
+            layout: "roll-and-move-track",
+            regions: [{
+              id: "position-track",
+              name: "位置轨道",
+              description: "记录每位玩家的当前位置与终点。",
+            }],
+          }
+        : configuration.op === "configure_draw_and_score"
+          ? {
+            kind: "cards" as const,
+            layout: "draw-and-score-table",
+            regions: [{
+              id: "draw-deck",
+              name: "抽牌牌库与分数",
+              description: "显示剩余牌数、最近一次抽牌和所有座位当前得分，不公开未来牌序。",
+            }],
+          }
+        : configuration.op === "configure_push_your_luck"
+          ? {
+            kind: "table" as const,
+            layout: "push-your-luck-table",
+            regions: [{
+              id: "risk-and-score",
+              name: "未存分与总分",
+              description: "显示当前骰点、本回合未存分、各座位总分和继续或收手决策。",
+            }],
+          }
+        : {
+          kind: "screen" as const,
+          layout: "turn-order-track",
+          regions: [{
+            id: "turn-order",
+            name: "回合顺序",
+            description: "记录当前行动席位与剩余回合。",
+          }],
+        };
+  const scoreActions = normalizedActions.map((action) => ({
+    id: action.id,
+    label: action.label.trim().slice(0, 80),
+    points: action.value ?? 0,
+  }));
+  const sharedActions = normalizedActions.map((action) => ({
+      id: action.id,
+      label: action.label.trim().slice(0, 80),
+      progress: action.value ?? 0,
+    }));
+  const turnActions = normalizedActions.map((action) => ({
+    id: action.id,
+    label: action.label.trim().slice(0, 80),
+  }));
+  const takeActions = normalizedActions.map((action) => ({
+    id: action.id,
+    label: action.label.trim().slice(0, 80),
+    take: action.value ?? 0,
+  }));
+  record.ruleSystem = {
+    ...record.ruleSystem,
+    rules: [...existingRules, ...runtimeRules],
+    entities: [
+      ...existingEntities,
+      {
+        ...runtimeEntity,
+        sourceId: runtimeSource.id,
+        provenance: "system-generated" as const,
+        confidence: 1,
+      },
+    ],
+    setup: record.ruleSystem.setup.length
+      ? record.ruleSystem.setup
+      : configuration.op === "configure_score_race"
+        ? ["将共享分数状态置于所有参与者可见的位置。", "每位参与者选择一个座位。"]
+        : configuration.op === "configure_shared_goal"
+          ? ["将共享目标进度置于所有参与者可见的位置。", "每位参与者选择一个座位。"]
+          : configuration.op === "configure_take_away"
+            ? [`在共享区域放置 ${configuration.config.initialPool} 个物件。`, "每位参与者选择一个座位。"]
+            : configuration.op === "configure_roll_and_move"
+              ? [`准备一颗 ${configuration.config.dieSides} 面骰子与 ${configuration.config.targetPosition} 格位置轨道。`, "所有参与者从第 0 格开始并选择一个座位。"]
+            : configuration.op === "configure_draw_and_score"
+              ? [`将点数为 ${configuration.config.cardValues.join("、")} 的牌各准备 ${configuration.config.copiesPerValue} 张并洗牌。`, "将牌库背面朝上放在共享区域，每位参与者选择一个座位。"]
+            : configuration.op === "configure_push_your_luck"
+              ? [`准备一颗 ${configuration.config.dieSides} 面骰子与总分记录。`, "所有参与者总分与本回合未存分从 0 开始。"]
+            : ["将当前回合与行动席位置于所有参与者可见的位置。", "每位参与者选择一个座位。"],
+    actions: [...existingActions, ...generatedRuntimeActions],
+    playSurface: record.ruleSystem.playSurface.layout
+      ? record.ruleSystem.playSurface
+      : playSurface,
+    stages: record.ruleSystem.stages.length
+      ? record.ruleSystem.stages
+      : [{
+          id: "runtime-turns",
+          name: configuration.op === "configure_score_race"
+            ? "轮流计分"
+            : configuration.op === "configure_shared_goal"
+              ? "共同推进"
+              : configuration.op === "configure_take_away"
+                ? "轮流拿取"
+                : configuration.op === "configure_roll_and_move"
+                  ? "掷骰竞速"
+                : configuration.op === "configure_draw_and_score"
+                  ? "轮流抽牌计分"
+                : configuration.op === "configure_push_your_luck"
+                  ? "冒险押注"
+                : "轮流行动",
+        }],
+    runtimeSupport: configuration.op === "configure_score_race"
+      ? {
+          status: "executable" as const,
+          unsupported,
+          kernel: {
+            type: "score-race-v1" as const,
+            victoryTarget: configuration.config.victoryTarget,
+            maxTurns: configuration.config.maxTurns,
+            actions: scoreActions,
+          },
+        }
+      : configuration.op === "configure_shared_goal"
+        ? {
+          status: "executable" as const,
+          unsupported,
+          kernel: {
+            type: "shared-goal-v1" as const,
+            goalTarget: configuration.config.goalTarget,
+            maxTurns: configuration.config.maxTurns,
+            actions: sharedActions,
+          },
+        }
+        : configuration.op === "configure_take_away"
+          ? {
+            status: "executable" as const,
+            unsupported,
+            kernel: {
+              type: "take-away-v1" as const,
+              initialPool: configuration.config.initialPool,
+              actions: takeActions,
+            },
+          }
+          : configuration.op === "configure_roll_and_move"
+            ? {
+              status: "executable" as const,
+              unsupported,
+              kernel: {
+                type: "roll-and-move-v1" as const,
+                dieSides: configuration.config.dieSides,
+                targetPosition: configuration.config.targetPosition,
+                maxTurns: configuration.config.maxTurns,
+                actions: turnActions,
+              },
+            }
+          : configuration.op === "configure_draw_and_score"
+            ? {
+              status: "executable" as const,
+              unsupported,
+              kernel: {
+                type: "draw-and-score-v1" as const,
+                cardValues: configuration.config.cardValues,
+                copiesPerValue: configuration.config.copiesPerValue,
+                victoryTarget: configuration.config.victoryTarget,
+                actions: turnActions,
+              },
+            }
+          : configuration.op === "configure_push_your_luck"
+            ? {
+              status: "executable" as const,
+              unsupported,
+              kernel: {
+                type: "push-your-luck-v1" as const,
+                dieSides: configuration.config.dieSides,
+                bustFace: configuration.config.bustFace,
+                victoryTarget: configuration.config.victoryTarget,
+                maxActions: configuration.config.maxActions,
+                actions: configuration.config.actions,
+              },
+            }
+          : {
+            status: "executable" as const,
+            unsupported,
+            kernel: {
+              type: "turn-taking-v1" as const,
+              maxTurns: configuration.config.maxTurns,
+              actions: turnActions,
+            },
+          },
+  };
+  affectedEntities.push(`source:${runtimeSource.id}`);
+  affectedEntities.push(`runtime:${record.ruleSystem.id}`);
+}
+
 function applyOperation(
   record: ProjectRecord,
   operation: ProjectChangeOperation,
@@ -301,9 +871,13 @@ function applyOperation(
   }
   if (operation.op === "add_source") {
     const source = operation.source;
+    const basedOnSourceIds = source?.provenance?.basedOnSourceIds;
     if (
       !source ||
       !["brief", "rulebook", "image"].includes(source.kind) ||
+      (source.kind === "image" &&
+        !["visual-reference", "project-asset"].includes(String(source.imageUse))) ||
+      (source.kind !== "image" && source.imageUse !== undefined) ||
       typeof source.name !== "string" ||
       !source.name.trim() ||
       typeof source.content !== "string" ||
@@ -318,30 +892,56 @@ function applyOperation(
       ].includes(
         source.provenance.origin,
       ) ||
-      typeof source.provenance.locator !== "string"
+      typeof source.provenance.locator !== "string" ||
+      (basedOnSourceIds !== undefined &&
+        (!Array.isArray(basedOnSourceIds) ||
+          basedOnSourceIds.length < 1 ||
+          basedOnSourceIds.length > 9 ||
+          new Set(basedOnSourceIds).size !== basedOnSourceIds.length ||
+          basedOnSourceIds.some(
+            (sourceId) =>
+              typeof sourceId !== "string" ||
+              !/^source_[a-zA-Z0-9_-]+$/.test(sourceId),
+          ))) ||
+      (source.provenance.origin === "generative-api" &&
+        (source.kind !== "image" ||
+          source.imageUse !== "project-asset" ||
+          !basedOnSourceIds))
     ) {
       throw new Error("invalid_source");
     }
-    const entry: SourceLibraryEntry = {
+    if (
+      basedOnSourceIds?.some(
+        (sourceId) => !record.sources.some((candidate) => candidate.id === sourceId),
+      )
+    ) {
+      throw new Error("source_dependency_not_found");
+    }
+    const entryBase = {
       id: typeof source.id === "string" && /^source_[a-zA-Z0-9_-]+$/.test(source.id)
         ? source.id
         : `source_${crypto.randomUUID()}`,
-      kind: source.kind,
       name: source.name.trim().slice(0, 120),
       content: source.content.slice(0, 100_000),
-      readiness: "ready",
+      readiness: "ready" as const,
       provenance: {
         origin: source.provenance.origin,
         locator: source.provenance.locator.slice(0, 500),
+        ...(basedOnSourceIds
+          ? { basedOnSourceIds: [...basedOnSourceIds] }
+          : {}),
       },
       createdAt: new Date().toISOString(),
     };
+    const entry: SourceLibraryEntry = source.kind === "image"
+      ? { ...entryBase, kind: "image", imageUse: source.imageUse! }
+      : { ...entryBase, kind: source.kind };
     record.sources.push(entry);
     affectedEntities.push(`source:${entry.id}`);
     return;
   }
 
-  if (operation.op === "update_definition") {
+  if (operation.op === "update_rule_system") {
     const fields = operation.fields;
     if (
       !fields ||
@@ -349,21 +949,36 @@ function applyOperation(
       fields.name !== undefined &&
       (typeof fields.name !== "string" || !fields.name.trim())
     ) {
-      throw new Error("invalid_definition");
+      throw new Error("invalid_rule_system");
     }
     if (
       fields.pitch !== undefined &&
       typeof fields.pitch !== "string"
     ) {
-      throw new Error("invalid_definition");
+      throw new Error("invalid_rule_system");
     }
     if (
-      fields.playerCount !== undefined &&
-      (!Number.isInteger(fields.playerCount) ||
-        fields.playerCount < 1 ||
-        fields.playerCount > 20)
+      fields.participants !== undefined &&
+      (!fields.participants ||
+        !Number.isInteger(fields.participants.min) ||
+        !Number.isInteger(fields.participants.max) ||
+        !Number.isInteger(fields.participants.default) ||
+        fields.participants.min < 1 ||
+        fields.participants.max > 20 ||
+        fields.participants.min > fields.participants.default ||
+        fields.participants.default > fields.participants.max ||
+        !Array.isArray(fields.participants.roles) ||
+        fields.participants.roles.length > 20 ||
+        fields.participants.roles.some(
+          (role) =>
+            !role ||
+            typeof role.id !== "string" ||
+            !role.id ||
+            typeof role.name !== "string" ||
+            typeof role.description !== "string",
+        ))
     ) {
-      throw new Error("invalid_definition");
+      throw new Error("invalid_rule_system");
     }
     if (
       fields.durationMinutes !== undefined &&
@@ -371,7 +986,7 @@ function applyOperation(
         fields.durationMinutes < 5 ||
         fields.durationMinutes > 720)
     ) {
-      throw new Error("invalid_definition");
+      throw new Error("invalid_rule_system");
     }
     const validAnchor = (
       item: {
@@ -400,25 +1015,41 @@ function applyOperation(
             !validAnchor(rule),
         ))
     ) {
-      throw new Error("invalid_definition");
+      throw new Error("invalid_rule_system");
     }
     if (
-      fields.components !== undefined &&
-      (!Array.isArray(fields.components) ||
-        fields.components.length > 500 ||
-        fields.components.some(
-          (component) =>
-            !component ||
-            typeof component.id !== "string" ||
-            !component.id ||
-            typeof component.name !== "string" ||
-            !Number.isInteger(component.quantity) ||
-            component.quantity < 1 ||
-            (component.image !== undefined && !validBoundImage(component.image)) ||
-            !validAnchor(component),
+      fields.constraints !== undefined &&
+      (!Array.isArray(fields.constraints) ||
+        fields.constraints.length > 500 ||
+        fields.constraints.some(
+          (constraint) =>
+            !constraint ||
+            typeof constraint.id !== "string" ||
+            !constraint.id ||
+            typeof constraint.text !== "string" ||
+            !validAnchor(constraint),
         ))
     ) {
-      throw new Error("invalid_definition");
+      throw new Error("invalid_rule_system");
+    }
+    if (
+      fields.entities !== undefined &&
+      (!Array.isArray(fields.entities) ||
+        fields.entities.length > 500 ||
+        fields.entities.some(
+          (entity) =>
+            !entity ||
+            typeof entity.id !== "string" ||
+            !entity.id ||
+            typeof entity.name !== "string" ||
+            !["resource", "card", "character", "token", "location", "concept", "object"].includes(entity.kind) ||
+            (entity.quantity !== undefined &&
+              (!Number.isInteger(entity.quantity) || entity.quantity < 1)) ||
+            (entity.image !== undefined && !validBoundImage(entity.image)) ||
+            !validAnchor(entity),
+        ))
+    ) {
+      throw new Error("invalid_rule_system");
     }
     if (
       fields.setup !== undefined &&
@@ -426,7 +1057,7 @@ function applyOperation(
         fields.setup.length > 200 ||
         fields.setup.some((step) => typeof step !== "string"))
     ) {
-      throw new Error("invalid_definition");
+      throw new Error("invalid_rule_system");
     }
     if (
       fields.actions !== undefined &&
@@ -442,15 +1073,16 @@ function applyOperation(
             !validAnchor(action),
         ))
     ) {
-      throw new Error("invalid_definition");
+      throw new Error("invalid_rule_system");
     }
     if (
-      fields.board !== undefined &&
-      (!fields.board ||
-        typeof fields.board.layout !== "string" ||
-        !Array.isArray(fields.board.zones) ||
-        fields.board.zones.length > 500 ||
-        fields.board.zones.some(
+      fields.playSurface !== undefined &&
+      (!fields.playSurface ||
+        !["table", "cards", "conversation", "screen", "scene", "hybrid"].includes(fields.playSurface.kind) ||
+        typeof fields.playSurface.layout !== "string" ||
+        !Array.isArray(fields.playSurface.regions) ||
+        fields.playSurface.regions.length > 500 ||
+        fields.playSurface.regions.some(
           (zone) =>
             !zone ||
             typeof zone.id !== "string" ||
@@ -460,7 +1092,7 @@ function applyOperation(
             (zone.image !== undefined && !validBoundImage(zone.image)),
         ))
     ) {
-      throw new Error("invalid_definition");
+      throw new Error("invalid_rule_system");
     }
     const validNamedList = (items: Array<{ id: string; name: string }>) =>
       items.length <= 500 &&
@@ -472,11 +1104,11 @@ function applyOperation(
           typeof item.name === "string",
       );
     if (
-      (fields.phases !== undefined &&
-        (!Array.isArray(fields.phases) || !validNamedList(fields.phases))) ||
-      (fields.scenarios !== undefined &&
-        (!Array.isArray(fields.scenarios) ||
-          !validNamedList(fields.scenarios))) ||
+      (fields.stages !== undefined &&
+        (!Array.isArray(fields.stages) || !validNamedList(fields.stages))) ||
+      (fields.outcomes !== undefined &&
+        (!Array.isArray(fields.outcomes) ||
+          !validNamedList(fields.outcomes))) ||
       (fields.presentation !== undefined &&
         (!fields.presentation ||
           typeof fields.presentation.theme !== "string" ||
@@ -485,47 +1117,74 @@ function applyOperation(
           (fields.presentation.visuals !== undefined &&
             !validVisualTreatments(fields.presentation.visuals))))
     ) {
-      throw new Error("invalid_definition");
+      throw new Error("invalid_rule_system");
+    }
+    const boundImageSourceIds = [
+      ...(fields.entities ?? []).flatMap((entity) =>
+        entity.image ? [entity.image.sourceId] : []
+      ),
+      ...(fields.playSurface?.regions ?? []).flatMap((region) =>
+        region.image ? [region.image.sourceId] : []
+      ),
+      ...(fields.presentation?.image
+        ? [fields.presentation.image.sourceId]
+        : []),
+    ];
+    for (const sourceId of boundImageSourceIds) {
+      const source = record.sources.find((candidate) => candidate.id === sourceId);
+      if (!source || source.kind !== "image") {
+        throw new Error("bound_image_source_not_found");
+      }
+      if (source.imageUse !== "project-asset") {
+        throw new Error("visual_reference_not_bindable");
+      }
     }
     const runtimeSensitiveEdit =
-      fields.playerCount !== undefined ||
+      fields.participants !== undefined ||
       fields.rules !== undefined ||
-      fields.actions !== undefined;
-    record.definition = {
-      ...record.definition,
+      fields.constraints !== undefined ||
+      (fields.actions !== undefined &&
+        runtimeActionShapeChanged(record.ruleSystem.actions, fields.actions));
+    const runtimeReconfigurationMessage =
+      "The executable runtime requires reconfiguration after participant, rule, or action changes.";
+    record.ruleSystem = {
+      ...record.ruleSystem,
       ...(fields.name === undefined
         ? {}
         : { name: fields.name.trim().slice(0, 120) }),
       ...(fields.pitch === undefined
         ? {}
         : { pitch: fields.pitch.trim().slice(0, 2_000) }),
-      ...(fields.playerCount === undefined
+      ...(fields.participants === undefined
         ? {}
-        : { playerCount: fields.playerCount }),
+        : { participants: structuredClone(fields.participants) }),
       ...(fields.durationMinutes === undefined
         ? {}
         : { durationMinutes: fields.durationMinutes }),
       ...(fields.rules === undefined
         ? {}
         : { rules: structuredClone(fields.rules) }),
-      ...(fields.components === undefined
+      ...(fields.constraints === undefined
         ? {}
-        : { components: structuredClone(fields.components) }),
+        : { constraints: structuredClone(fields.constraints) }),
+      ...(fields.entities === undefined
+        ? {}
+        : { entities: structuredClone(fields.entities) }),
       ...(fields.setup === undefined
         ? {}
         : { setup: structuredClone(fields.setup) }),
       ...(fields.actions === undefined
         ? {}
         : { actions: structuredClone(fields.actions) }),
-      ...(fields.board === undefined
+      ...(fields.playSurface === undefined
         ? {}
-        : { board: structuredClone(fields.board) }),
-      ...(fields.phases === undefined
+        : { playSurface: structuredClone(fields.playSurface) }),
+      ...(fields.stages === undefined
         ? {}
-        : { phases: structuredClone(fields.phases) }),
-      ...(fields.scenarios === undefined
+        : { stages: structuredClone(fields.stages) }),
+      ...(fields.outcomes === undefined
         ? {}
-        : { scenarios: structuredClone(fields.scenarios) }),
+        : { outcomes: structuredClone(fields.outcomes) }),
       ...(fields.presentation === undefined
         ? {}
         : { presentation: structuredClone(fields.presentation) }),
@@ -535,15 +1194,15 @@ function applyOperation(
               status: "draft" as const,
               unsupported: [
                 ...new Set([
-                  ...record.definition.runtimeSupport.unsupported,
-                  "score-race-v1 requires reconfiguration after player count, rules, or action changes.",
+                  ...record.ruleSystem.runtimeSupport.unsupported,
+                  runtimeReconfigurationMessage,
                 ]),
               ],
             },
           }
         : {}),
     };
-    affectedEntities.push(`definition:${record.definition.id}`);
+    affectedEntities.push(`rule-system:${record.ruleSystem.id}`);
     return;
   }
 
@@ -584,131 +1243,394 @@ function applyOperation(
     if (new Set(config.actions.map((action) => action.id)).size !== config.actions.length) {
       throw new Error("invalid_runtime");
     }
-    const runtimeSource: SourceLibraryEntry = {
-      id: `source_${crypto.randomUUID()}`,
-      kind: "brief",
-      name: `${record.definition.name} · score-race-v1 配置`,
-      content: JSON.stringify(config),
-      readiness: "ready",
-      provenance: {
-        origin: "system-generated",
-        locator: "configure_score_race operation",
-        confidence: 1,
-      },
-      createdAt: new Date().toISOString(),
-    };
-    record.sources.push(runtimeSource);
-    const existingRules = record.definition.rules.filter(
-      (rule) => !rule.id.startsWith("runtime-"),
-    );
-    const existingComponents = record.definition.components.filter(
-      (component) => !component.id.startsWith("runtime-"),
-    );
-    const previousRuntimeActionIds = new Set(
-      record.definition.runtimeSupport.status === "executable" &&
-        record.definition.runtimeSupport.kernel.type === "score-race-v1"
-        ? record.definition.runtimeSupport.kernel.actions.map(
-            (action) => action.id,
-          )
-        : [],
-    );
-    const existingActions = record.definition.actions.filter(
-      (action) =>
-        action.provenance === "source-anchored" ||
-        !previousRuntimeActionIds.has(action.id),
-    );
-    const generatedRuntimeActions = config.actions
-      .filter((action) => !existingActions.some((existing) => existing.id === action.id))
-      .map((action) => ({
-        id: action.id,
-        label: action.label.trim().slice(0, 80),
-        description: `获得 ${action.points} 分。`,
-        sourceId: runtimeSource.id,
-        provenance: "system-generated" as const,
-        confidence: 1,
-      }));
-    record.definition = {
-      ...record.definition,
-      rules: [
-        ...existingRules,
-        {
-          id: "runtime-turn-order",
-          text: "玩家按座位顺序轮流选择一个可用行动并获得对应分数。",
-          sourceId: runtimeSource.id,
-          provenance: "system-generated",
-          confidence: 1,
-        },
-        {
-          id: "runtime-victory",
-          text: `率先达到 ${config.victoryTarget} 分者获胜；若 ${config.maxTurns} 回合仍无人达到，则最高分获胜。`,
-          sourceId: runtimeSource.id,
-          provenance: "system-generated",
-          confidence: 1,
-        },
-      ],
-      components: [
-        ...existingComponents,
-        {
-          id: "runtime-score-track",
-          name: "分数轨道与玩家标记",
-          quantity: record.definition.playerCount,
-          sourceId: runtimeSource.id,
-          provenance: "system-generated",
-          confidence: 1,
-        },
-      ],
-      setup: record.definition.setup.length
-        ? record.definition.setup
-        : ["将分数轨道置于所有玩家可见的位置。", "每位玩家选择一个座位标记。"],
-      actions: [...existingActions, ...generatedRuntimeActions],
-      board: record.definition.board.zones.length
-        ? record.definition.board
-        : {
-          layout: "shared-score-track",
-          zones: [
-          {
-            id: "score-track",
-            name: "分数轨道",
-            description: "记录所有座位当前得分。",
-          },
-          ],
-        },
-      phases: record.definition.phases.length
-        ? record.definition.phases
-        : [{ id: "runtime-turns", name: "轮流行动" }],
-      runtimeSupport: {
-        status: "executable",
-        unsupported: config.unsupported?.map((item) => item.trim()) ?? [],
-        kernel: {
-          type: "score-race-v1",
-          victoryTarget: config.victoryTarget,
-          maxTurns: config.maxTurns,
-          actions: config.actions.map((action) => ({
-            ...action,
-            label: action.label.trim().slice(0, 80),
-          })),
-        },
-      },
-    };
-    affectedEntities.push(`source:${runtimeSource.id}`);
-    affectedEntities.push(`runtime:${record.definition.id}`);
+    configureRuntimeKernel(record, operation, affectedEntities);
     return;
   }
 
-  if (operation.op === "activate_definition") {
-    if (typeof operation.definitionId !== "string") {
-      throw new Error("invalid_definition");
+  if (operation.op === "configure_shared_goal") {
+    const { config } = operation;
+    if (
+      !config ||
+      typeof config !== "object" ||
+      !Number.isInteger(config.goalTarget) ||
+      config.goalTarget < 1 ||
+      config.goalTarget > 1_000 ||
+      !Number.isInteger(config.maxTurns) ||
+      config.maxTurns < 1 ||
+      config.maxTurns > 1_000 ||
+      !Array.isArray(config.actions) ||
+      config.actions.length < 1 ||
+      config.actions.length > 12 ||
+      config.actions.some(
+        (action) =>
+          !action ||
+          typeof action.id !== "string" ||
+          !/^[a-z0-9-]{1,40}$/.test(action.id) ||
+          typeof action.label !== "string" ||
+          !action.label.trim() ||
+          !Number.isInteger(action.progress) ||
+          action.progress < 1 ||
+          action.progress > 100,
+      ) ||
+      (config.unsupported !== undefined &&
+        (!Array.isArray(config.unsupported) ||
+          config.unsupported.length > 50 ||
+          config.unsupported.some((item) =>
+            typeof item !== "string" || !item.trim() || item.length > 500
+          )))
+    ) {
+      throw new Error("invalid_runtime");
     }
-    const definition = record.definitions.find(
-      (candidate) => candidate.id === operation.definitionId,
+    if (new Set(config.actions.map((action) => action.id)).size !== config.actions.length) {
+      throw new Error("invalid_runtime");
+    }
+    configureRuntimeKernel(record, operation, affectedEntities);
+    return;
+  }
+
+  if (operation.op === "configure_turn_taking") {
+    const { config } = operation;
+    if (
+      !config ||
+      typeof config !== "object" ||
+      !Number.isInteger(config.maxTurns) ||
+      config.maxTurns < 1 ||
+      config.maxTurns > 1_000 ||
+      !Array.isArray(config.actions) ||
+      config.actions.length < 1 ||
+      config.actions.length > 12 ||
+      config.actions.some(
+        (action) =>
+          !action ||
+          typeof action.id !== "string" ||
+          !/^[a-z0-9-]{1,40}$/.test(action.id) ||
+          typeof action.label !== "string" ||
+          !action.label.trim(),
+      ) ||
+      (config.unsupported !== undefined &&
+        (!Array.isArray(config.unsupported) ||
+          config.unsupported.length > 50 ||
+          config.unsupported.some((item) =>
+            typeof item !== "string" || !item.trim() || item.length > 500
+          )))
+    ) {
+      throw new Error("invalid_runtime");
+    }
+    if (new Set(config.actions.map((action) => action.id)).size !== config.actions.length) {
+      throw new Error("invalid_runtime");
+    }
+    configureRuntimeKernel(record, operation, affectedEntities);
+    return;
+  }
+
+  if (operation.op === "configure_take_away") {
+    const { config } = operation;
+    if (
+      !config ||
+      typeof config !== "object" ||
+      !Number.isInteger(config.initialPool) ||
+      config.initialPool < 2 ||
+      config.initialPool > 1_000 ||
+      !Array.isArray(config.actions) ||
+      config.actions.length < 1 ||
+      config.actions.length > 12 ||
+      config.actions.some(
+        (action) =>
+          !action ||
+          typeof action.id !== "string" ||
+          !/^[a-z0-9-]{1,40}$/.test(action.id) ||
+          typeof action.label !== "string" ||
+          !action.label.trim() ||
+          !Number.isInteger(action.take) ||
+          action.take < 1 ||
+          action.take > 100 ||
+          action.take > config.initialPool,
+      ) ||
+      (config.unsupported !== undefined &&
+        (!Array.isArray(config.unsupported) ||
+          config.unsupported.length > 50 ||
+          config.unsupported.some((item) =>
+            typeof item !== "string" || !item.trim() || item.length > 500
+          )))
+    ) {
+      throw new Error("invalid_runtime");
+    }
+    if (
+      new Set(config.actions.map((action) => action.id)).size !== config.actions.length ||
+      new Set(config.actions.map((action) => action.take)).size !== config.actions.length
+    ) {
+      throw new Error("invalid_runtime");
+    }
+    configureRuntimeKernel(record, operation, affectedEntities);
+    return;
+  }
+
+  if (operation.op === "configure_roll_and_move") {
+    const { config } = operation;
+    if (
+      !config ||
+      typeof config !== "object" ||
+      !Number.isInteger(config.dieSides) ||
+      config.dieSides < 2 ||
+      config.dieSides > 100 ||
+      !Number.isInteger(config.targetPosition) ||
+      config.targetPosition < 2 ||
+      config.targetPosition > 1_000 ||
+      !Number.isInteger(config.maxTurns) ||
+      config.maxTurns < 1 ||
+      config.maxTurns > 1_000 ||
+      !Array.isArray(config.actions) ||
+      config.actions.length !== 1 ||
+      config.actions.some(
+        (action) =>
+          !action ||
+          typeof action.id !== "string" ||
+          !/^[a-z0-9-]{1,40}$/.test(action.id) ||
+          typeof action.label !== "string" ||
+          !action.label.trim() ||
+          action.label.length > 80,
+      ) ||
+      (config.unsupported !== undefined &&
+        (!Array.isArray(config.unsupported) ||
+          config.unsupported.length > 50 ||
+          config.unsupported.some((item) =>
+            typeof item !== "string" || !item.trim() || item.length > 500
+          )))
+    ) {
+      throw new Error("invalid_runtime");
+    }
+    configureRuntimeKernel(record, operation, affectedEntities);
+    return;
+  }
+
+  if (operation.op === "configure_draw_and_score") {
+    const { config } = operation;
+    if (
+      !config ||
+      typeof config !== "object" ||
+      !Array.isArray(config.cardValues) ||
+      config.cardValues.length < 1 ||
+      config.cardValues.length > 100 ||
+      config.cardValues.some((value) => !Number.isInteger(value) || value < 1 || value > 100) ||
+      new Set(config.cardValues).size !== config.cardValues.length ||
+      !Number.isInteger(config.copiesPerValue) ||
+      config.copiesPerValue < 1 ||
+      config.copiesPerValue > 100 ||
+      config.cardValues.length * config.copiesPerValue > 1_000 ||
+      !Number.isInteger(config.victoryTarget) ||
+      config.victoryTarget < 1 ||
+      config.victoryTarget > 1_000 ||
+      !Array.isArray(config.actions) ||
+      config.actions.length !== 1 ||
+      config.actions.some((action) =>
+        !action ||
+        typeof action.id !== "string" ||
+        !/^[a-z0-9-]{1,40}$/.test(action.id) ||
+        typeof action.label !== "string" ||
+        !action.label.trim() ||
+        action.label.length > 80
+      ) ||
+      (config.unsupported !== undefined &&
+        (!Array.isArray(config.unsupported) ||
+          config.unsupported.length > 50 ||
+          config.unsupported.some((item) =>
+            typeof item !== "string" || !item.trim() || item.length > 500
+          )))
+    ) throw new Error("invalid_runtime");
+    configureRuntimeKernel(record, operation, affectedEntities);
+    return;
+  }
+
+  if (operation.op === "configure_push_your_luck") {
+    const { config } = operation;
+    if (
+      !config ||
+      typeof config !== "object" ||
+      !Number.isInteger(config.dieSides) ||
+      config.dieSides < 2 ||
+      config.dieSides > 100 ||
+      !Number.isInteger(config.bustFace) ||
+      config.bustFace < 1 ||
+      config.bustFace > config.dieSides ||
+      !Number.isInteger(config.victoryTarget) ||
+      config.victoryTarget < 1 ||
+      config.victoryTarget > 1_000 ||
+      !Number.isInteger(config.maxActions) ||
+      config.maxActions < 1 ||
+      config.maxActions > 10_000 ||
+      !Array.isArray(config.actions) ||
+      config.actions.length !== 2 ||
+      config.actions.some((action) =>
+        !action ||
+        !["roll", "bank"].includes(action.id) ||
+        typeof action.label !== "string" ||
+        !action.label.trim() ||
+        action.label.length > 80
+      ) ||
+      new Set(config.actions.map((action) => action.id)).size !== 2 ||
+      (config.unsupported !== undefined &&
+        (!Array.isArray(config.unsupported) ||
+          config.unsupported.length > 50 ||
+          config.unsupported.some((item) =>
+            typeof item !== "string" || !item.trim() || item.length > 500
+          )))
+    ) throw new Error("invalid_runtime");
+    configureRuntimeKernel(record, operation, affectedEntities);
+    return;
+  }
+
+  if (operation.op === "activate_rule_system") {
+    if (typeof operation.ruleSystemId !== "string") {
+      throw new Error("invalid_rule_system");
+    }
+    const ruleSystem = record.ruleSystems.find(
+      (candidate) => candidate.id === operation.ruleSystemId,
     );
-    if (!definition) throw new Error("invalid_definition");
-    record.definition = structuredClone(definition);
+    if (!ruleSystem) throw new Error("invalid_rule_system");
+    record.ruleSystem = structuredClone(ruleSystem);
     record.project = {
       ...record.project,
-      activeDefinitionId: definition.id,
+      activeRuleSystemId: ruleSystem.id,
     };
-    affectedEntities.push(`active-definition:${definition.id}`);
+    affectedEntities.push(`active-rule-system:${ruleSystem.id}`);
+    return;
+  }
+
+  if (operation.op === "add_design_hypothesis") {
+    const hypothesis = operation.hypothesis;
+    if (
+      !hypothesis ||
+      typeof hypothesis.question !== "string" ||
+      !hypothesis.question.trim() ||
+      hypothesis.question.length > 500 ||
+      typeof hypothesis.successSignal !== "string" ||
+      !hypothesis.successSignal.trim() ||
+      hypothesis.successSignal.length > 500
+    ) {
+      throw new Error("invalid_design_hypothesis");
+    }
+    const entry: DesignHypothesis = {
+      id: `hypothesis_${crypto.randomUUID()}`,
+      question: hypothesis.question.trim(),
+      successSignal: hypothesis.successSignal.trim(),
+      createdAt: new Date().toISOString(),
+    };
+    record.hypotheses.push(entry);
+    affectedEntities.push(`hypothesis:${entry.id}`);
+    return;
+  }
+
+  if (operation.op === "record_validation_finding") {
+    const finding = operation.finding;
+    const hypothesis = record.hypotheses.find(
+      (candidate) => candidate.id === finding?.hypothesisId,
+    );
+    const build = record.builds.find(
+      (candidate) => candidate.id === finding?.buildId,
+    );
+    if (
+      !finding ||
+      !hypothesis ||
+      !build ||
+      !["supported", "refuted", "inconclusive"].includes(finding.verdict) ||
+      typeof finding.notes !== "string" ||
+      finding.notes.length > 2_000 ||
+      typeof finding.nextChange !== "string" ||
+      !finding.nextChange.trim() ||
+      finding.nextChange.length > 1_000
+    ) {
+      throw new Error("invalid_validation_finding");
+    }
+    const evidence = finding.evidence;
+    if (evidence.type === "automated-playtest") {
+      const playtest = record.playtests.find(
+        (candidate) => candidate.id === evidence.playtestId,
+      );
+      if (!playtest || playtest.buildId !== build.id) {
+        throw new Error("invalid_automated_evidence");
+      }
+    } else if (evidence.type === "participant-feedback") {
+      const room = record.sessions.find(
+        (candidate) => candidate.id === evidence.sessionId,
+      );
+      const feedback = evidence.feedback;
+      if (
+        !room ||
+        room.buildId !== build.id ||
+        (room.experiment !== null &&
+          room.experiment.hypothesisId !== hypothesis.id) ||
+        !Array.isArray(feedback) ||
+        feedback.length < 1 ||
+        feedback.length > 8 ||
+        new Set(feedback.map((entry) => entry?.id)).size !== feedback.length ||
+        new Set(feedback.map((entry) => entry?.seat)).size !== feedback.length ||
+        feedback.some((entry) => {
+          if (
+            !entry ||
+            typeof entry.id !== "string" ||
+            !Number.isInteger(entry.seat) ||
+            !Number.isInteger(entry.rating) ||
+            entry.rating < 1 ||
+            entry.rating > 5 ||
+            typeof entry.comment !== "string" ||
+            entry.comment.trim() !== entry.comment ||
+            entry.comment.length < 2 ||
+            entry.comment.length > 1_000 ||
+            !entry.moment ||
+            !Number.isInteger(entry.moment.actionSequence) ||
+            entry.moment.actionSequence < 1 ||
+            typeof entry.moment.actionId !== "string" ||
+            !entry.moment.actionId
+          ) {
+            return true;
+          }
+          const stored = room.feedback.find((candidate) => candidate.id === entry.id);
+          return !stored ||
+            stored.seat !== entry.seat ||
+            stored.rating !== entry.rating ||
+            stored.comment !== entry.comment ||
+            stored.moment.actionSequence !== entry.moment.actionSequence ||
+            stored.moment.actionId !== entry.moment.actionId;
+        })
+      ) {
+        throw new Error("invalid_participant_feedback");
+      }
+    } else if (evidence.type === "human-session") {
+      const room = record.sessions.find(
+        (candidate) => candidate.id === evidence.sessionId,
+      );
+      const participantNames = evidence.participantNames
+        .map((name) => name.trim())
+        .filter(Boolean);
+      if (
+        !room ||
+        room.buildId !== build.id ||
+        (room.experiment !== null &&
+          room.experiment.hypothesisId !== hypothesis.id) ||
+        room.seats.length < 2 ||
+        room.acceptedActions.length < 1 ||
+        participantNames.length < 2 ||
+        new Set(participantNames).size !== participantNames.length ||
+        participantNames.some((name) => name.length > 80) ||
+        evidence.creatorAttested !== true
+      ) {
+        throw new Error("invalid_human_evidence");
+      }
+    } else {
+      throw new Error("invalid_validation_evidence");
+    }
+    const entry: ValidationFinding = {
+      id: `finding_${crypto.randomUUID()}`,
+      hypothesisId: hypothesis.id,
+      buildId: build.id,
+      evidence: structuredClone(evidence),
+      verdict: finding.verdict,
+      notes: finding.notes.trim(),
+      nextChange: finding.nextChange.trim(),
+      createdAt: new Date().toISOString(),
+    };
+    record.findings.push(entry);
+    affectedEntities.push(`finding:${entry.id}`);
     return;
   }
 
@@ -716,31 +1638,45 @@ function applyOperation(
 }
 
 function proposedAffectedEntities(
-  definitionId: string,
+  ruleSystemId: string,
   operations: ProjectChangeOperation[],
 ) {
   return operations.map((operation) => {
     if (operation.op === "add_source") return "source:new";
-    if (operation.op === "configure_score_race") {
-      return `runtime:${definitionId}`;
+    if (
+      operation.op === "configure_score_race" ||
+      operation.op === "configure_shared_goal" ||
+      operation.op === "configure_turn_taking" ||
+      operation.op === "configure_take_away" ||
+      operation.op === "configure_roll_and_move" ||
+      operation.op === "configure_draw_and_score" ||
+      operation.op === "configure_push_your_luck"
+    ) {
+      return `runtime:${ruleSystemId}`;
     }
-    if (operation.op === "activate_definition") {
-      return `active-definition:${operation.definitionId}`;
+    if (operation.op === "activate_rule_system") {
+      return `active-rule-system:${operation.ruleSystemId}`;
     }
-    return `definition:${definitionId}`;
+    if (operation.op === "approve_generation_plan") {
+      return `generation-plan:${operation.planId}`;
+    }
+    if (operation.op === "add_design_hypothesis") return "hypothesis:new";
+    if (operation.op === "record_validation_finding") return "finding:new";
+    if (operation.op === "publish_shared_session") return "playtest-link:new";
+    return `rule-system:${ruleSystemId}`;
   });
 }
 
 async function buildId(
   projectId: string,
-  definitionVersion: number,
-  definition: GameDefinition,
+  ruleSystemVersion: number,
+  ruleSystem: RuleSystem,
   sourceIds: string[],
 ) {
   const input = JSON.stringify({
     projectId,
-    definitionVersion,
-    definition,
+    ruleSystemVersion,
+    ruleSystem,
     sourceIds,
   });
   const digest = await crypto.subtle.digest(
@@ -753,95 +1689,138 @@ async function buildId(
   return `build_${hex.slice(0, 24)}`;
 }
 
-function referencedSourceIds(definition: GameDefinition) {
-  return [
-    ...new Set(
-      [
-        ...definition.rules.map((entry) => entry.sourceId),
-        ...definition.components.flatMap((entry) => [
-          entry.sourceId,
-          entry.image?.sourceId,
-        ]),
-        ...definition.actions.map((entry) => entry.sourceId),
-        ...definition.board.zones.map((zone) => zone.image?.sourceId),
-        definition.presentation.image?.sourceId,
-      ]
-        .filter((sourceId): sourceId is string => Boolean(sourceId)),
-    ),
-  ].sort();
+function referencedSourceIds(
+  ruleSystem: RuleSystem,
+  sources: SourceLibraryEntry[],
+) {
+  const sourceIds = new Set(
+    [
+      ...ruleSystem.rules.map((entry) => entry.sourceId),
+      ...ruleSystem.entities.flatMap((entry) => [
+        entry.sourceId,
+        entry.image?.sourceId,
+      ]),
+      ...ruleSystem.actions.map((entry) => entry.sourceId),
+      ...ruleSystem.playSurface.regions.map((zone) => zone.image?.sourceId),
+      ruleSystem.presentation.image?.sourceId,
+    ].filter((sourceId): sourceId is string => Boolean(sourceId)),
+  );
+  const sourcesById = new Map(sources.map((source) => [source.id, source]));
+  const pending = [...sourceIds];
+  for (const sourceId of pending) {
+    const basedOnSourceIds = sourcesById.get(sourceId)?.provenance.basedOnSourceIds ?? [];
+    for (const basedOnSourceId of basedOnSourceIds) {
+      if (!sourceIds.has(basedOnSourceId)) {
+        sourceIds.add(basedOnSourceId);
+        pending.push(basedOnSourceId);
+      }
+    }
+  }
+  return [...sourceIds].sort();
 }
 
 function buildWarnings(record: ProjectRecord) {
-  const referencedIds = referencedSourceIds(record.definition);
+  const referencedIds = referencedSourceIds(record.ruleSystem, record.sources);
   const availableIds = new Set(record.sources.map((source) => source.id));
   return [
-    ...(record.definition.rules.length
+    ...(record.ruleSystem.rules.length
       ? []
-      : ["Game Definition 还没有结构化规则。"]),
-    ...(record.definition.components.length
+      : ["Rule System 还没有结构化规则。"]),
+    ...(record.ruleSystem.entities.length
       ? []
-      : ["Game Definition 还没有组件清单。"]),
+      : ["Rule System 还没有 Game Entity。"]),
     ...(referencedIds.length
       ? []
-      : ["规则与组件尚未锚定 Source Library，当前规则事实无法追溯。"]),
+      : ["规则与 Game Entity 尚未锚定 Source Library，当前规则事实无法追溯。"]),
     ...(referencedIds.some((sourceId) => !availableIds.has(sourceId))
-      ? ["Game Definition 引用了不存在的 Source Library 条目。"]
+      ? ["Rule System 引用了不存在的 Source Library 条目。"]
       : []),
   ];
 }
 
-function visualFloor(definition: GameDefinition): VisualFloorReadiness {
-  const visuals: VisualTreatment[] = definition.presentation.visuals?.length
-    ? definition.presentation.visuals
+function presentationFloor(ruleSystem: RuleSystem): PresentationFloorReadiness {
+  const visuals: VisualTreatment[] = ruleSystem.presentation.visuals?.length
+    ? ruleSystem.presentation.visuals
     : [];
   const visual = visuals[0];
   if (!visual) {
     return {
       status: "failed",
-      reason: "没有可分享的视觉呈现：请绑定提取/上传图像、生成排版桌面，或应用主题 kit。",
+      reason: "没有可分享的呈现：请绑定提取/上传图像、生成排版界面，或应用主题 kit。",
       visuals,
     };
   }
   return {
     status: "passed",
-    reason: `${visual.label} 已满足 Visual Floor。`,
+    reason: `${visual.label} 已满足 Presentation Floor。`,
     visuals,
   };
 }
 
-function publicBuild(build: StoredPlayableBuild, origin: string): PlayableBuild {
+function publicShareUrl(pathname: string, origin: string, creatorId: string) {
+  const url = new URL(pathname, origin);
+  url.searchParams.set("creator", creatorId);
+  return url.toString();
+}
+
+function publicBuild(
+  build: StoredPlayableBuild,
+  origin: string,
+  creatorId?: string,
+): PlayableBuild {
   const normalized = normalizedBuild(build);
   return {
     ...normalized,
-    playableUrl: new URL(`/play/${normalized.id}`, origin).toString(),
+    playableUrl: creatorId
+      ? publicShareUrl(`/play/${normalized.id}`, origin, creatorId)
+      : new URL(`/play/${normalized.id}`, origin).toString(),
   };
 }
 
 function publicPlaytest(
   playtest: StoredPlaytest,
   origin: string,
+  creatorId?: string,
 ): PlaytestRun {
   return {
     ...playtest,
-    replayUrl: new URL(`/replay/${playtest.replayId}`, origin).toString(),
+    replayUrl: creatorId
+      ? publicShareUrl(`/replay/${playtest.replayId}`, origin, creatorId)
+      : new URL(`/replay/${playtest.replayId}`, origin).toString(),
   };
 }
 
-function publicRoom(room: StoredRoom, origin: string): GameRoom {
+function publicSession(
+  session: StoredSharedSession,
+  origin: string,
+  creatorId: string,
+): SharedSession {
+  const visible = structuredClone(session) as StoredSharedSession;
   return {
-    ...room,
-    roomUrl: new URL(`/room/${room.id}`, origin).toString(),
-    replayUrl: new URL(`/replay/${room.replayId}`, origin).toString(),
+    ...visible,
+    sessionUrl: publicShareUrl(`/room/${visible.id}`, origin, creatorId),
+    replayUrl: publicShareUrl(`/replay/${visible.replayId}`, origin, creatorId),
+  };
+}
+
+function publicPlaytestLink(
+  link: StoredPlaytestLink,
+  origin: string,
+  creatorId: string,
+): PlaytestLink {
+  return {
+    ...link,
+    url: publicShareUrl(`/try/${link.projectId}`, origin, creatorId),
   };
 }
 
 function publicMutation<
-  T extends { editorPath: string },
->(value: T, origin: string): Omit<T, "editorPath"> & { editorUrl: string } {
-  const { editorPath, ...rest } = value;
+  T extends { studioPath: string },
+>(value: T, origin: string): Omit<T, "studioPath"> & { studioUrl: string } {
+  const { studioPath, ...rest } = value;
   return {
     ...rest,
-    editorUrl: new URL(editorPath, origin).toString(),
+    studioUrl: new URL(studioPath, origin).toString(),
   };
 }
 
@@ -850,9 +1829,9 @@ function reconstructActions(
   acceptedActions: GameReplay["acceptedActions"],
   seed = 42,
 ) {
-  const runtime = executableRuntime(build.definition);
+  const runtime = executableRuntime(build.ruleSystem);
   if (!runtime) throw new Error("runtime_not_executable");
-  let state = initialTableState(build.definition, seed);
+  let state = initialSessionState(build.ruleSystem, seed);
   const reconstructed = acceptedActions.map((logged, index) => {
     const accepted = acceptIntent(
       state,
@@ -861,6 +1840,7 @@ function reconstructActions(
         intentId: logged.intentId,
         seat: logged.seat,
         actionId: logged.actionId,
+        payload: logged.payload,
       },
       index + 1,
       seed,
@@ -872,17 +1852,17 @@ function reconstructActions(
   return { state, acceptedActions: reconstructed };
 }
 
-function reconstructRoom(
-  room: StoredRoom,
+function reconstructSession(
+  session: StoredSharedSession,
   build: StoredPlayableBuild,
-): StoredRoom {
+): StoredSharedSession {
   const reconstructed = reconstructActions(
     build,
-    room.acceptedActions,
-    room.seed,
+    session.acceptedActions,
+    session.seed,
   );
   return {
-    ...room,
+    ...session,
     state: reconstructed.state,
     acceptedActions: reconstructed.acceptedActions,
   };
@@ -899,18 +1879,23 @@ function reconstructReplay(
   );
   return {
     ...replay,
-    initialState: initialTableState(build.definition, replay.seed),
+    initialState: initialSessionState(build.ruleSystem, replay.seed),
     acceptedActions: reconstructed.acceptedActions,
     finalState: reconstructed.state,
   };
 }
 
-function publicJob(job: CreatorJob, origin: string): CreatorJob {
+function publicJob(
+  job: CreatorJob,
+  origin: string,
+  creatorId?: string,
+): CreatorJob {
   if (!job.result) return job;
   if (job.kind === "compile-build" && job.result.build) {
     const build = publicBuild(
       job.result.build as unknown as StoredPlayableBuild,
       origin,
+      creatorId,
     );
     return {
       ...job,
@@ -918,23 +1903,23 @@ function publicJob(job: CreatorJob, origin: string): CreatorJob {
         ...job.result,
         build,
         warnings: build.warnings,
-        editorUrl: new URL(
-          `/editor/${job.projectId}`,
+        studioUrl: new URL(
+          `/studio/${job.projectId}`,
           origin,
         ).toString(),
       },
     };
   }
   if (
-    job.kind === "generate-definition" &&
-    typeof job.result.editorPath === "string"
+    job.kind === "generate-rule-system" &&
+    typeof job.result.studioPath === "string"
   ) {
-    const { editorPath, ...result } = job.result;
+    const { studioPath, ...result } = job.result;
     return {
       ...job,
       result: {
         ...result,
-        editorUrl: new URL(editorPath, origin).toString(),
+        studioUrl: new URL(studioPath, origin).toString(),
       },
     };
   }
@@ -943,10 +1928,9 @@ function publicJob(job: CreatorJob, origin: string): CreatorJob {
       ...job,
       result: {
         ...job.result,
-        replayUrl: new URL(
-          `/replay/${String(job.result.replayId)}`,
-          origin,
-        ).toString(),
+        replayUrl: creatorId
+          ? publicShareUrl(`/replay/${String(job.result.replayId)}`, origin, creatorId)
+          : new URL(`/replay/${String(job.result.replayId)}`, origin).toString(),
       },
     };
   }
@@ -972,10 +1956,36 @@ function publicJob(job: CreatorJob, origin: string): CreatorJob {
 }
 
 export class CreatorProjects extends DurableObject<Env> {
+  private broadcastSession(session: StoredSharedSession) {
+    const message = JSON.stringify({
+      type: "session.snapshot",
+      session,
+    } satisfies SharedSessionSnapshotEvent);
+    for (const socket of this.ctx.getWebSockets()) {
+      const attachment = socket.deserializeAttachment() as
+        | SessionSocketAttachment
+        | null;
+      if (
+        attachment?.sessionId === session.id &&
+        socket.readyState === WebSocket.OPEN
+      ) {
+        try {
+          socket.send(message);
+        } catch {
+          try {
+            socket.close(1011, "session_broadcast_failed");
+          } catch {
+            // The durable mutation already succeeded; the browser reconnects.
+          }
+        }
+      }
+    }
+  }
+
   private async saveJob(job: CreatorJob, input?: SubmitJobInput) {
     const projectKey = `${PROJECT_PREFIX}${job.projectId}`;
     const stored =
-      await this.ctx.storage.get<ProjectRecord | GameProject>(projectKey);
+      await this.ctx.storage.get<ProjectRecord>(projectKey);
     const values: Record<string, unknown> = {
       [`job:${job.id}`]: job,
       [`job-idempotency:${job.projectId}:${job.idempotencyKey}`]: job,
@@ -1033,52 +2043,257 @@ export class CreatorProjects extends DurableObject<Env> {
 
     try {
       let operation: Response;
-      if (input.kind === "generate-definition") {
+      let generationRuntimeConfigured = false;
+      if (input.kind === "generate-rule-system") {
         const sourceId = `source_${job.id}`;
-        const sourceContent = input.sourceContent?.trim() || input.brief?.trim() || "";
-        const description =
-          input.description?.trim() || input.brief?.trim() || sourceContent;
-        const harvestedImages = input.harvestedImages ?? [];
-        const imageSources = harvestedImages.map((image, index) => ({
+        const sourceContent = input.sourceContent?.trim() || "";
+        const idea = input.idea?.trim() || sourceContent;
+        const authoredMaterial = sourceContent || idea;
+        const visualInputs = input.visualInputs ?? [];
+        const imageSources = visualInputs.map((image, index) => ({
           id: `${sourceId}_image_${index + 1}`,
           name: image.name.trim(),
           content: image.content,
-          locator: `${input.sourceName?.trim() || "rulebook"} page ${image.pageNumber}`,
+          imageUse: image.imageUse,
+          locator: `${input.sourceName?.trim() || "visual material"} ${sourceContent ? "page" : "item"} ${image.pageNumber}`,
         }));
-        const generated = materializeRulebookDefinition({
+        const firstProjectAsset = imageSources.find(
+          (image) => image.imageUse === "project-asset",
+        );
+        const materialized = materializeRuleSystem({
           name: input.name?.trim() || "生成的游戏版本",
-          description,
-          sourceText: sourceContent,
+          description: idea,
+          sourceText: authoredMaterial,
           sourceId,
-          image: imageSources[0]
+          image: firstProjectAsset
             ? {
-                sourceId: imageSources[0].id,
-                url: imageSources[0].content,
-                alt: imageSources[0].name,
+                sourceId: firstProjectAsset.id,
+                url: firstProjectAsset.content,
+                alt: firstProjectAsset.name,
               }
             : undefined,
-          playerCount: input.playerCount,
+          playerCount: input.participants?.default,
           durationMinutes: input.durationMinutes,
         });
-        const sourceRuntimeActions = generated.actions.slice(0, 6).map(
-          (action, index) => ({
-            id: action.id,
-            label: action.label,
-            points: index % 3 + 1,
-          }),
+        const generated = input.participants
+          ? { ...materialized, participants: structuredClone(input.participants) }
+          : materialized;
+        const generatedRuleSystem = generated;
+        const sourceRuntimeActions = generatedRuleSystem.actions
+          .flatMap((action) => {
+            const value = inferredNumber(
+              action.description,
+              [/([0-9一二两三四五六七八九十]+)\s*(?:points?|分|点|进度)/i],
+              Number.NaN,
+            );
+            return Number.isInteger(value) && value > 0
+              ? [{ id: action.id, label: action.label, value }]
+              : [];
+        });
+        const sharedGoal = isSharedGoalDescription(authoredMaterial);
+        const turnTaking = isTurnTakingDescription(authoredMaterial);
+        const takeAwayRule = inferredTakeAwayRule(authoredMaterial);
+        const rollAndMoveRule = inferredRollAndMoveRule(authoredMaterial);
+        const drawAndScoreRule = inferredDrawAndScoreRule(authoredMaterial);
+        const pushYourLuckRule = inferredPushYourLuckRule(authoredMaterial);
+        const victoryTarget = inferredNumber(
+          authoredMaterial,
+          [
+            /(?:first|率先|先).{0,40}?([0-9一二两三四五六七八九十]+)\s*(?:points?|分)/i,
+            /(?:reach|score|earn|win with|victory target|winning score).{0,40}?([0-9一二两三四五六七八九十]+)\s*(?:points?|分)/i,
+            /(?:达到|获得|胜利目标|目标).{0,20}?([0-9一二两三四五六七八九十]+)\s*(?:points?|分)/i,
+          ],
+          Number.NaN,
         );
-        const runtimeActions = sourceRuntimeActions.length
-          ? sourceRuntimeActions
-          : [
-              { id: "steady", label: "稳步推进", points: 1 },
-              { id: "bold", label: "冒险推进", points: 2 },
-            ];
-        const unsupported = [
-          "score-race-v1 只执行已识别行动的轮流选择与得分；竞价、移动、支付、随机事件和原规则结算仍未执行。",
-          ...(sourceRuntimeActions.length
-            ? []
-            : ["规则文档没有识别出可映射行动，当前运行时使用通用占位行动。"]),
-        ];
+        const goalTarget = inferredSharedGoalTarget(authoredMaterial);
+        const inferredTurnLimit = inferredNumber(
+          authoredMaterial,
+          [/([0-9一二两三四五六七八九十]+)\s*(?:turns?|rounds?|回合|轮)/i],
+          Number.NaN,
+        );
+        const maxTurns = Number.isInteger(inferredTurnLimit) && inferredTurnLimit > 0
+          ? inferredTurnLimit
+          : Math.max(12, generatedRuleSystem.participants.default * 6);
+        const rollMaxTurns = Number.isInteger(inferredTurnLimit) && inferredTurnLimit > 0
+          ? inferredTurnLimit
+          : Math.min(
+            1_000,
+            Math.max(
+              50,
+              (rollAndMoveRule?.targetPosition ?? 0) *
+                generatedRuleSystem.participants.default * 2,
+            ),
+          );
+        const scoreRaceRuntimeConfigured =
+          !sharedGoal &&
+          sourceRuntimeActions.length > 0 &&
+          sourceRuntimeActions.length === generatedRuleSystem.actions.length &&
+          generatedRuleSystem.actions.length <= 12 &&
+          Number.isInteger(victoryTarget) &&
+          victoryTarget > 0;
+        const sharedGoalRuntimeConfigured =
+          sharedGoal &&
+          sourceRuntimeActions.length > 0 &&
+          sourceRuntimeActions.length === generatedRuleSystem.actions.length &&
+          generatedRuleSystem.actions.length <= 12 &&
+          Number.isInteger(goalTarget) &&
+          goalTarget > 0;
+        const takeAwayRuntimeConfigured =
+          takeAwayRule !== null &&
+          generatedRuleSystem.actions.length === takeAwayRule.takes.length &&
+          generatedRuleSystem.actions.length <= 12;
+        const rollAndMoveRuntimeConfigured =
+          rollAndMoveRule !== null &&
+          generatedRuleSystem.actions.length === 1;
+        const drawAndScoreRuntimeConfigured =
+          drawAndScoreRule !== null &&
+          generatedRuleSystem.actions.length === 1;
+        const pushYourLuckRuntimeConfigured =
+          pushYourLuckRule !== null &&
+          generatedRuleSystem.actions.length === 2 &&
+          generatedRuleSystem.actions.some((action) => action.id === "roll") &&
+          generatedRuleSystem.actions.some((action) => action.id === "bank");
+        const turnTakingRuntimeConfigured =
+          !sharedGoal &&
+          !scoreRaceRuntimeConfigured &&
+          !takeAwayRuntimeConfigured &&
+          !rollAndMoveRuntimeConfigured &&
+          !drawAndScoreRuntimeConfigured &&
+          !pushYourLuckRuntimeConfigured &&
+          turnTaking &&
+          sourceRuntimeActions.length === 0 &&
+          generatedRuleSystem.actions.length > 0 &&
+          generatedRuleSystem.actions.length <= 12;
+        generationRuntimeConfigured =
+          scoreRaceRuntimeConfigured ||
+          sharedGoalRuntimeConfigured ||
+          takeAwayRuntimeConfigured ||
+          rollAndMoveRuntimeConfigured ||
+          drawAndScoreRuntimeConfigured ||
+          pushYourLuckRuntimeConfigured ||
+          turnTakingRuntimeConfigured;
+        const pushMaxActions = Math.min(10_000, Math.max(
+          200,
+          (pushYourLuckRule?.victoryTarget ?? 0) * generatedRuleSystem.participants.default * 5,
+        ));
+        const runtimeOperation = pushYourLuckRuntimeConfigured
+          ? {
+              op: "configure_push_your_luck" as const,
+              config: {
+                dieSides: pushYourLuckRule!.dieSides,
+                bustFace: pushYourLuckRule!.bustFace,
+                victoryTarget: pushYourLuckRule!.victoryTarget,
+                maxActions: pushMaxActions,
+                actions: generatedRuleSystem.actions.map((action) => ({
+                  id: action.id as "roll" | "bank",
+                  label: action.label,
+                })),
+                unsupported: [
+                  "push-your-luck-v1 executes only repeated seeded rolls, one bust face, unbanked turn score, voluntary banking, round-robin turns, and first-to-target victory; other source behavior remains unsupported.",
+                  `The source did not specify an action limit; push-your-luck-v1 uses a visible ${pushMaxActions}-action safety limit without inventing a winner.`,
+                ],
+              },
+            }
+          : drawAndScoreRuntimeConfigured
+          ? {
+              op: "configure_draw_and_score" as const,
+              config: {
+                cardValues: drawAndScoreRule!.cardValues,
+                copiesPerValue: drawAndScoreRule!.copiesPerValue,
+                victoryTarget: drawAndScoreRule!.victoryTarget,
+                actions: generatedRuleSystem.actions.map((action) => ({
+                  id: action.id,
+                  label: action.label,
+                })),
+                unsupported: [
+                  "draw-and-score-v1 executes only deterministic shuffle, top-card draw without replacement, score by card value, first-to-target victory, and highest-score deck exhaustion; other source behavior remains unsupported.",
+                ],
+              },
+            }
+          : rollAndMoveRuntimeConfigured
+          ? {
+              op: "configure_roll_and_move" as const,
+              config: {
+                dieSides: rollAndMoveRule!.dieSides,
+                targetPosition: rollAndMoveRule!.targetPosition,
+                maxTurns: rollMaxTurns,
+                actions: generatedRuleSystem.actions.map((action) => ({
+                  id: action.id,
+                  label: action.label,
+                })),
+                unsupported: [
+                  "roll-and-move-v1 executes only the explicit die, movement by roll, round-robin turns, and first-to-target victory condition; other source behavior remains unsupported.",
+                  ...(Number.isInteger(inferredTurnLimit) && inferredTurnLimit > 0
+                    ? []
+                    : [`The source did not specify a turn limit; roll-and-move-v1 uses a visible ${rollMaxTurns}-turn safety limit without inventing a winner.`]),
+                ],
+              },
+            }
+          : takeAwayRuntimeConfigured
+          ? {
+              op: "configure_take_away" as const,
+              config: {
+                initialPool: takeAwayRule!.initialPool,
+                actions: generatedRuleSystem.actions.map((action, index) => ({
+                  id: action.id,
+                  label: action.label,
+                  take: takeAwayRule!.takes[index],
+                })),
+                unsupported: [
+                  "take-away-v1 executes only the explicit shared pool, legal take amounts, turn order, and last-taken-wins condition; other source behavior remains unsupported.",
+                ],
+              },
+            }
+          : sharedGoalRuntimeConfigured
+          ? {
+              op: "configure_shared_goal" as const,
+              config: {
+                goalTarget,
+                maxTurns,
+                actions: sourceRuntimeActions.map((action) => ({
+                  id: action.id,
+                  label: action.label,
+                  progress: action.value,
+                })),
+                unsupported: [
+                  "shared-goal-v1 only executes the source's explicit shared progress actions and goal target; other rule behavior remains unsupported.",
+                ],
+              },
+            }
+          : scoreRaceRuntimeConfigured
+            ? {
+                op: "configure_score_race" as const,
+                config: {
+                  victoryTarget,
+                  maxTurns,
+                  actions: sourceRuntimeActions.map((action) => ({
+                    id: action.id,
+                    label: action.label,
+                    points: action.value,
+                  })),
+                  unsupported: [
+                    "score-race-v1 only executes the source's explicit point actions and victory target; other rule behavior remains unsupported.",
+                  ],
+                },
+              }
+            : turnTakingRuntimeConfigured
+              ? {
+                  op: "configure_turn_taking" as const,
+                  config: {
+                    maxTurns,
+                    actions: generatedRuleSystem.actions.map((action) => ({
+                      id: action.id,
+                      label: action.label,
+                    })),
+                    unsupported: [
+                      "turn-taking-v1 only executes explicit turn-taking actions until the turn limit; it does not infer winners, scores, resources, or other rule resolution.",
+                      ...(Number.isInteger(inferredTurnLimit) && inferredTurnLimit > 0
+                        ? []
+                        : [`The source did not specify a turn limit; turn-taking-v1 uses a conservative ${maxTurns}-turn prototype limit.`]),
+                    ],
+                  },
+                }
+              : null;
         operation = await this.fetch(
           new Request(
             `https://projects.internal/projects/${job.projectId}/changes`,
@@ -1095,7 +2310,7 @@ export class CreatorProjects extends DurableObject<Env> {
                       id: sourceId,
                       kind: input.sourceKind || "brief",
                       name: input.sourceName?.trim() || `${input.name?.trim() || "生成任务"} brief`,
-                      content: sourceContent,
+                      content: authoredMaterial,
                       provenance: {
                         origin: input.sourceKind === "rulebook" ? "creator-upload" : "creator-authored",
                         locator: `generation job ${job.id}`,
@@ -1107,6 +2322,7 @@ export class CreatorProjects extends DurableObject<Env> {
                     source: {
                       id: image.id,
                       kind: "image" as const,
+                      imageUse: image.imageUse,
                       name: image.name,
                       content: image.content,
                       provenance: {
@@ -1116,23 +2332,69 @@ export class CreatorProjects extends DurableObject<Env> {
                     },
                   })),
                   {
-                    op: "update_definition",
-                    fields: generated,
+                    op: "update_rule_system",
+                    fields: generatedRuleSystem,
                   },
-                  {
-                    op: "configure_score_race",
-                    config: {
-                      victoryTarget: Math.max(8, runtimeActions.length * 2),
-                      maxTurns: Math.max(12, generated.playerCount * 6),
-                      actions: runtimeActions,
-                      unsupported,
-                    },
-                  },
+                  ...(runtimeOperation ? [runtimeOperation] : []),
                 ],
               }),
             },
           ),
         );
+      } else if (input.kind === "iterate-rule-system") {
+        const stored = await this.ctx.storage.get<ProjectRecord>(
+          `${PROJECT_PREFIX}${job.projectId}`,
+        );
+        if (!stored) throw new Error("project_not_found");
+        const record = normalizedProjectRecord(stored);
+        const generationPlan = await this.ctx.storage.get<GenerationPlan>(
+          generationPlanKey(job.projectId),
+        );
+        if (generationPlan?.status === "pending") {
+          throw new Error("generation_plan_pending");
+        }
+        if (
+          input.basedOnFindingId &&
+          !record.findings.some((finding) => finding.id === input.basedOnFindingId)
+        ) {
+          throw new Error("finding_not_found");
+        }
+        const plan = createActionDescriptionIterationPlan({
+          ruleSystem: record.ruleSystem,
+          prompt: input.prompt,
+          sourceId: `source_${job.id}`,
+        });
+        operation = await this.fetch(
+          new Request(
+            `https://projects.internal/projects/${job.projectId}/changes`,
+            {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                expectedVersion: input.expectedVersion,
+                idempotencyKey: `job:${input.idempotencyKey}`,
+                operations: plan.operations,
+              }),
+            },
+          ),
+        );
+        if (operation.ok) {
+          const operationBody = await operation.clone().json<Record<string, unknown>>();
+          operationBody.iteration = {
+            prompt: plan.prompt,
+            summary: plan.summary,
+            actionId: plan.actionId,
+            actionLabel: plan.actionLabel,
+            sourceId: plan.sourceId,
+            ...(input.basedOnFindingId
+              ? { basedOnFindingId: input.basedOnFindingId }
+              : {}),
+          };
+          operation = new Response(JSON.stringify(operationBody), {
+            status: operation.status,
+            headers: { "content-type": "application/json" },
+          });
+        }
       } else if (input.kind === "compile-build") {
         operation = await this.fetch(
           new Request(
@@ -1142,6 +2404,7 @@ export class CreatorProjects extends DurableObject<Env> {
               headers: { "content-type": "application/json" },
               body: JSON.stringify({
                 expectedVersion: input.expectedVersion,
+                basedOnFindingId: input.basedOnFindingId,
                 idempotencyKey: `job:${input.idempotencyKey}`,
               }),
             },
@@ -1172,11 +2435,49 @@ export class CreatorProjects extends DurableObject<Env> {
             : error("build_not_found", 404);
       }
       const operationBody = await operation.json<Record<string, unknown>>();
-      if (operation.ok && input.kind === "generate-definition") {
-        operationBody.generationMode = "deterministic-rulebook-materialization";
-        operationBody.warnings = [
-          "规则结构来自确定性文本抽取；可运行内核是通用 score-race-v1，未覆盖原规则的部分仍需在 Editor 中校对。",
-        ];
+      if (operation.ok && input.kind === "generate-rule-system") {
+        const generatedRuleSystem = operationBody.ruleSystem as RuleSystem | undefined;
+        const generatedSources = operationBody.sources as SourceLibraryEntry[] | undefined;
+        if (!generatedRuleSystem || !Array.isArray(generatedSources)) {
+          throw new Error("generation_plan_materialization_missing");
+        }
+        const generationPlan = createGenerationPlan({
+          id: `generation_plan_${job.id}`,
+          projectId: job.projectId,
+          generationJobId: job.id,
+          ruleSystem: generatedRuleSystem,
+          sourceIds: generatedSources.map((source) => source.id),
+          createdAt: new Date().toISOString(),
+        });
+        await this.ctx.storage.put(
+          generationPlanKey(job.projectId),
+          generationPlan,
+        );
+        operationBody.generationPlan = generationPlan;
+        operationBody.generationMode = "deterministic-rule-system-materialization";
+        operationBody.warnings = [generationRuntimeConfigured
+          ? generatedRuleSystem.runtimeSupport.status === "executable" &&
+            generatedRuleSystem.runtimeSupport.kernel.type === "roll-and-move-v1"
+            ? "规则结构来自确定性文本抽取；骰子面数、按点数前进与先到终点获胜被配置为可复现的 roll-and-move-v1。"
+            : generatedRuleSystem.runtimeSupport.status === "executable" &&
+              generatedRuleSystem.runtimeSupport.kernel.type === "push-your-luck-v1"
+            ? "规则结构来自确定性文本抽取；继续掷、爆掉、未存分、收手存分与目标胜利被配置为 push-your-luck-v1。"
+            : generatedRuleSystem.runtimeSupport.status === "executable" &&
+              generatedRuleSystem.runtimeSupport.kernel.type === "draw-and-score-v1"
+            ? "规则结构来自确定性文本抽取；有限牌库、确定性洗牌、抽牌计分与牌库耗尽结算被配置为 draw-and-score-v1。"
+            : generatedRuleSystem.runtimeSupport.status === "executable" &&
+              generatedRuleSystem.runtimeSupport.kernel.type === "take-away-v1"
+            ? "规则结构来自确定性文本抽取；共享池、合法拿取数量与拿完获胜条件被配置为 take-away-v1。"
+            : generatedRuleSystem.runtimeSupport.status === "executable" &&
+              generatedRuleSystem.runtimeSupport.kernel.type === "shared-goal-v1"
+            ? "规则结构来自确定性文本抽取；仅来源中明确写出的共享推进行动与目标被配置为 shared-goal-v1。"
+            : generatedRuleSystem.runtimeSupport.status === "executable" &&
+              generatedRuleSystem.runtimeSupport.kernel.type === "score-race-v1"
+              ? "规则结构来自确定性文本抽取；仅来源中明确写出的计分行动与胜利目标被配置为 score-race-v1。"
+              : "规则结构来自确定性文本抽取；来源明确写出的轮流行动被配置为 turn-taking-v1，回合上限来自来源或可见的保守原型默认值。"
+          : generatedRuleSystem.actions.length > 12
+            ? "来源识别出超过 Kernel 上限的行动；为避免静默丢弃规则，Rule System 保持 draft，等待创作者明确缩减或配置 Executable Kernel。"
+            : "规则结构来自确定性文本抽取；来源不足以证明可执行语义，Rule System 保持 draft，等待显式配置 Executable Kernel。"];
       }
       job = operation.ok
         ? {
@@ -1218,6 +2519,29 @@ export class CreatorProjects extends DurableObject<Env> {
   async fetch(request: Request) {
     const url = new URL(request.url);
 
+    const roomEventsMatch = url.pathname.match(/^\/sessions\/([^/]+)\/events$/);
+    if (request.method === "GET" && roomEventsMatch) {
+      if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
+        return error("Shared Session 实时连接需要 WebSocket upgrade。", 426);
+      }
+      const room = await this.ctx.storage.get<StoredSharedSession>(
+        `session:${roomEventsMatch[1]}`,
+      );
+      if (!room) return error("没有找到这个 Shared Session。", 404);
+      const storedBuild = await this.ctx.storage.get<StoredPlayableBuild>(
+        `build:${room.buildId}`,
+      );
+      const build = storedBuild ? normalizedBuild(storedBuild) : undefined;
+      if (!build) return error("Shared Session 引用的 Build 不存在。", 500);
+
+      const [client, server] = Object.values(new WebSocketPair());
+      this.ctx.acceptWebSocket(server);
+      server.serializeAttachment({
+        sessionId: room.id,
+      } satisfies SessionSocketAttachment);
+      return new Response(null, { status: 101, webSocket: client });
+    }
+
     if (request.method === "POST" && url.pathname === "/projects") {
       const input = await request.json<{
         name?: unknown;
@@ -1233,12 +2557,12 @@ export class CreatorProjects extends DurableObject<Env> {
 
       const now = new Date().toISOString();
       const projectId = `project_${crypto.randomUUID()}`;
-      const definitionId = `definition_${crypto.randomUUID()}`;
+      const ruleSystemId = `rule_system_${crypto.randomUUID()}`;
       const project: GameProject = {
         id: projectId,
         name: input.name.trim().slice(0, 80),
         version: 1,
-        activeDefinitionId: definitionId,
+        activeRuleSystemId: ruleSystemId,
         createdAt: now,
         updatedAt: now,
         capabilities: {
@@ -1251,19 +2575,21 @@ export class CreatorProjects extends DurableObject<Env> {
         },
       };
       const example = input.templateId
-        ? instantiateDefaultExample(input.templateId, definitionId, now)
+        ? instantiateDefaultExample(input.templateId, ruleSystemId, now)
         : undefined;
-      const definition = example?.definition ?? initialDefinition(definitionId);
+      const ruleSystem = example?.ruleSystem ?? initialRuleSystem(ruleSystemId);
       const record: ProjectRecord = {
         project,
-        definition,
-        definitions: [definition],
+        ruleSystem,
+        ruleSystems: [ruleSystem],
         sources: example?.sources ?? [],
         changesets: [],
         builds: [],
         playtests: [],
-        rooms: [],
+        sessions: [],
         jobs: [],
+        hypotheses: [],
+        findings: [],
       };
       await this.ctx.storage.put(`${PROJECT_PREFIX}${project.id}`, record);
       return json(project, 201);
@@ -1296,7 +2622,7 @@ export class CreatorProjects extends DurableObject<Env> {
         const existing = await transaction.get<GameProject>(idempotencyKey);
         if (existing) return { status: 201, value: existing };
         const stored =
-          await transaction.get<ProjectRecord | GameProject>(sourceKey);
+          await transaction.get<ProjectRecord>(sourceKey);
         if (!stored) {
           return { status: 404, value: { error: "project_not_found" } };
         }
@@ -1310,39 +2636,41 @@ export class CreatorProjects extends DurableObject<Env> {
               affectedEntities: [`project:${source.project.id}`],
               currentState: {
                 project: source.project,
-                definition: source.definition,
+                ruleSystem: source.ruleSystem,
               },
             },
           };
         }
         const now = new Date().toISOString();
         const projectId = `project_${crypto.randomUUID()}`;
-        const definitionId = `definition_${crypto.randomUUID()}`;
+        const ruleSystemId = `rule_system_${crypto.randomUUID()}`;
         const project: GameProject = {
           ...source.project,
           id: projectId,
           name: String(input.name).trim().slice(0, 80),
           version: 1,
-          activeDefinitionId: definitionId,
+          activeRuleSystemId: ruleSystemId,
           createdAt: now,
           updatedAt: now,
         };
         const record: ProjectRecord = {
           project,
-          definition: {
-            ...structuredClone(source.definition),
-            id: definitionId,
+          ruleSystem: {
+            ...structuredClone(source.ruleSystem),
+            id: ruleSystemId,
           },
-          definitions: [{
-            ...structuredClone(source.definition),
-            id: definitionId,
+          ruleSystems: [{
+            ...structuredClone(source.ruleSystem),
+            id: ruleSystemId,
           }],
           sources: structuredClone(source.sources),
           changesets: [],
           builds: [],
           playtests: [],
-          rooms: [],
+          sessions: [],
           jobs: [],
+          hypotheses: structuredClone(source.hypotheses),
+          findings: [],
         };
         await transaction.put({
           [`${PROJECT_PREFIX}${projectId}`]: record,
@@ -1353,10 +2681,10 @@ export class CreatorProjects extends DurableObject<Env> {
       return json(outcome.value, outcome.status);
     }
 
-    const duplicateDefinitionMatch = url.pathname.match(
-      /^\/projects\/([^/]+)\/definitions\/([^/]+)\/duplicate$/,
+    const duplicateRuleSystemMatch = url.pathname.match(
+      /^\/projects\/([^/]+)\/rule-systems\/([^/]+)\/duplicate$/,
     );
-    if (request.method === "POST" && duplicateDefinitionMatch) {
+    if (request.method === "POST" && duplicateRuleSystemMatch) {
       const input = await request.json<{
         expectedVersion?: unknown;
         idempotencyKey?: unknown;
@@ -1373,29 +2701,41 @@ export class CreatorProjects extends DurableObject<Env> {
         typeof input.name !== "string" ||
         !input.name.trim()
       ) {
-        return error("Definition 复制请求无效。", 400);
+        return error("Rule System 复制请求无效。", 400);
       }
-      const projectId = duplicateDefinitionMatch[1];
-      const definitionId = duplicateDefinitionMatch[2];
-      const definitionName = input.name.trim().slice(0, 120);
+      const projectId = duplicateRuleSystemMatch[1];
+      const ruleSystemId = duplicateRuleSystemMatch[2];
+      const ruleSystemName = input.name.trim().slice(0, 120);
       const projectKey = `${PROJECT_PREFIX}${projectId}`;
       const idempotencyKey =
-        `definition-duplicate:${projectId}:${input.idempotencyKey}`;
+        `rule-system-duplicate:${projectId}:${input.idempotencyKey}`;
       const outcome = await this.ctx.storage.transaction(async (transaction) => {
         const existing =
-          await transaction.get<StoredDuplicateDefinitionResult>(idempotencyKey);
+          await transaction.get<StoredDuplicateRuleSystemResult>(idempotencyKey);
         if (existing) return { status: 201, value: existing };
         const stored =
-          await transaction.get<ProjectRecord | GameProject>(projectKey);
+          await transaction.get<ProjectRecord>(projectKey);
         if (!stored) {
           return { status: 404, value: { error: "project_not_found" } };
         }
         const record = normalizedProjectRecord(stored);
-        const source = record.definitions.find(
-          (definition) => definition.id === definitionId,
+        const generationPlan = await transaction.get<GenerationPlan>(
+          generationPlanKey(projectId),
+        );
+        if (generationPlan?.status === "pending") {
+          return {
+            status: 409,
+            value: {
+              error: "generation_plan_pending",
+              generationPlan,
+            },
+          };
+        }
+        const source = record.ruleSystems.find(
+          (ruleSystem) => ruleSystem.id === ruleSystemId,
         );
         if (!source) {
-          return { status: 404, value: { error: "definition_not_found" } };
+          return { status: 404, value: { error: "rule_system_not_found" } };
         }
         if (record.project.version !== input.expectedVersion) {
           return {
@@ -1403,49 +2743,164 @@ export class CreatorProjects extends DurableObject<Env> {
             value: {
               error: "version_conflict",
               currentVersion: record.project.version,
-              affectedEntities: [`definition:${definitionId}`],
+              affectedEntities: [`rule-system:${ruleSystemId}`],
               currentState: {
                 project: record.project,
-                definition: record.definition,
-                definitions: record.definitions,
+                ruleSystem: record.ruleSystem,
+                ruleSystems: record.ruleSystems,
               },
             },
           };
         }
         const now = new Date().toISOString();
-        const definition: GameDefinition = {
+        const ruleSystem: RuleSystem = {
           ...structuredClone(source),
-          id: `definition_${crypto.randomUUID()}`,
+          id: `rule_system_${crypto.randomUUID()}`,
           version: 1,
-          name: definitionName,
+          name: ruleSystemName,
         };
         const previousVersion = record.project.version;
         record.project = {
           ...record.project,
-          activeDefinitionId: definition.id,
+          activeRuleSystemId: ruleSystem.id,
           version: previousVersion + 1,
           updatedAt: now,
         };
-        record.definition = definition;
-        record.definitions = [...record.definitions, definition];
+        record.ruleSystem = ruleSystem;
+        record.ruleSystems = [...record.ruleSystems, ruleSystem];
         const changeset: Changeset = {
           id: `changeset_${crypto.randomUUID()}`,
           previousVersion,
           newVersion: record.project.version,
           affectedEntities: [
-            `definition:${definition.id}`,
-            `active-definition:${definition.id}`,
+            `rule-system:${ruleSystem.id}`,
+            `active-rule-system:${ruleSystem.id}`,
           ],
           createdAt: now,
         };
         record.changesets.push(changeset);
-        const result: StoredDuplicateDefinitionResult = {
+        const result: StoredDuplicateRuleSystemResult = {
           project: record.project,
-          definition,
-          definitions: record.definitions,
+          ruleSystem,
+          ruleSystems: record.ruleSystems,
           changeset,
           warnings: buildWarnings(record),
-          editorPath: `/editor/${record.project.id}`,
+          studioPath: `/studio/${record.project.id}`,
+        };
+        await transaction.put({
+          [projectKey]: record,
+          [idempotencyKey]: result,
+        });
+        return { status: 201, value: result };
+      });
+      return json(outcome.value, outcome.status);
+    }
+
+    const restoreBuildMatch = url.pathname.match(
+      /^\/projects\/([^/]+)\/builds\/([^/]+)\/restore$/,
+    );
+    if (request.method === "POST" && restoreBuildMatch) {
+      const input = await request.json<{
+        expectedVersion?: unknown;
+        idempotencyKey?: unknown;
+      }>().catch((): {
+        expectedVersion?: unknown;
+        idempotencyKey?: unknown;
+      } => ({}));
+      if (
+        !Number.isInteger(input.expectedVersion) ||
+        typeof input.idempotencyKey !== "string" ||
+        !input.idempotencyKey
+      ) {
+        return error("Build 恢复请求无效。", 400);
+      }
+      const projectId = restoreBuildMatch[1];
+      const sourceBuildId = restoreBuildMatch[2];
+      const projectKey = `${PROJECT_PREFIX}${projectId}`;
+      const idempotencyKey =
+        `build-restore:${projectId}:${input.idempotencyKey}`;
+      const outcome = await this.ctx.storage.transaction(async (transaction) => {
+        const existing =
+          await transaction.get<StoredRestoreBuildResult>(idempotencyKey);
+        if (existing) return { status: 201, value: existing };
+        const stored = await transaction.get<ProjectRecord>(projectKey);
+        if (!stored) {
+          return { status: 404, value: { error: "project_not_found" } };
+        }
+        const record = normalizedProjectRecord(stored);
+        const generationPlan = await transaction.get<GenerationPlan>(
+          generationPlanKey(projectId),
+        );
+        if (generationPlan?.status === "pending") {
+          return {
+            status: 409,
+            value: { error: "generation_plan_pending", generationPlan },
+          };
+        }
+        const sourceBuild = record.builds.find(
+          (build) => build.id === sourceBuildId,
+        );
+        if (!sourceBuild) {
+          return { status: 404, value: { error: "build_not_found" } };
+        }
+        if (record.project.version !== input.expectedVersion) {
+          return {
+            status: 409,
+            value: {
+              error: "version_conflict",
+              currentVersion: record.project.version,
+              affectedEntities: [`build:${sourceBuildId}`],
+              currentState: {
+                project: record.project,
+                ruleSystem: record.ruleSystem,
+                ruleSystems: record.ruleSystems,
+              },
+            },
+          };
+        }
+        if (sameRuleSystemContent(record.ruleSystem, sourceBuild.ruleSystem)) {
+          return {
+            status: 409,
+            value: { error: "build_already_active", buildId: sourceBuildId },
+          };
+        }
+        const now = new Date().toISOString();
+        const ruleSystem: RuleSystem = {
+          ...structuredClone(sourceBuild.ruleSystem),
+          id: `rule_system_${crypto.randomUUID()}`,
+          version: 1,
+          restoredFromBuildId: sourceBuildId,
+        };
+        const previousVersion = record.project.version;
+        record.project = {
+          ...record.project,
+          activeRuleSystemId: ruleSystem.id,
+          version: previousVersion + 1,
+          updatedAt: now,
+        };
+        record.ruleSystem = ruleSystem;
+        record.ruleSystems = [...record.ruleSystems, ruleSystem];
+        const changeset: Changeset = {
+          id: `changeset_${crypto.randomUUID()}`,
+          previousVersion,
+          newVersion: record.project.version,
+          affectedEntities: [
+            `build:${sourceBuildId}`,
+            `rule-system:${ruleSystem.id}`,
+            `active-rule-system:${ruleSystem.id}`,
+          ],
+          restoredFromBuildId: sourceBuildId,
+          createdAt: now,
+        };
+        record.changesets.push(changeset);
+        const result: StoredRestoreBuildResult = {
+          project: record.project,
+          ruleSystem,
+          ruleSystems: record.ruleSystems,
+          changeset,
+          sourceBuildId,
+          warnings: buildWarnings(record),
+          studioPath: `/studio/${record.project.id}`,
         };
         await transaction.put({
           [projectKey]: record,
@@ -1483,7 +2938,7 @@ export class CreatorProjects extends DurableObject<Env> {
         );
         if (deleted) return { status: 200, value: deleted };
         const stored =
-          await transaction.get<ProjectRecord | GameProject>(projectKey);
+          await transaction.get<ProjectRecord>(projectKey);
         if (!stored) {
           return { status: 404, value: { error: "project_not_found" } };
         }
@@ -1497,7 +2952,7 @@ export class CreatorProjects extends DurableObject<Env> {
               affectedEntities: [`project:${record.project.id}`],
               currentState: {
                 project: record.project,
-                definition: record.definition,
+                ruleSystem: record.ruleSystem,
               },
             },
           };
@@ -1505,23 +2960,27 @@ export class CreatorProjects extends DurableObject<Env> {
         const idempotencyLists = await Promise.all([
           transaction.list({ prefix: `idempotency:${record.project.id}:` }),
           transaction.list({
-            prefix: `definition-duplicate:${record.project.id}:`,
+            prefix: `rule-system-duplicate:${record.project.id}:`,
+          }),
+          transaction.list({
+            prefix: `build-restore:${record.project.id}:`,
           }),
           ...record.builds.flatMap((build) => [
             transaction.list({ prefix: `playtest:${build.id}:` }),
-            transaction.list({ prefix: `room:${build.id}:` }),
+            transaction.list({ prefix: `session:${build.id}:` }),
           ]),
         ]);
         await transaction.delete([
           projectKey,
+          generationPlanKey(record.project.id),
           ...record.builds.map((build) => `build:${build.id}`),
           ...record.playtests.flatMap((playtest) => [
             `playtest:${playtest.id}`,
             `replay:${playtest.replayId}`,
           ]),
-          ...record.rooms.flatMap((room) => [
-            `room:${room.id}`,
-            `replay:${room.replayId}`,
+          ...record.sessions.flatMap((session) => [
+            `session:${session.id}`,
+            `replay:${session.replayId}`,
           ]),
           ...record.jobs.flatMap((job) => [
             `job:${job.id}`,
@@ -1557,7 +3016,7 @@ export class CreatorProjects extends DurableObject<Env> {
           }
 
           const stored =
-            await transaction.get<ProjectRecord | GameProject>(projectKey);
+            await transaction.get<ProjectRecord>(projectKey);
           if (!stored) {
             return { status: 404, value: { error: "project_not_found" } };
           }
@@ -1569,41 +3028,129 @@ export class CreatorProjects extends DurableObject<Env> {
                 error: "version_conflict",
                 currentVersion: record.project.version,
                 affectedEntities: proposedAffectedEntities(
-                  record.definition.id,
+                  record.ruleSystem.id,
                   input.operations,
                 ),
                 currentState: {
                   project: record.project,
-                  definition: record.definition,
+                  ruleSystem: record.ruleSystem,
                   sources: record.sources,
+                  hypotheses: record.hypotheses,
+                  findings: record.findings,
                 },
               },
             };
           }
 
+          let generationPlan = await transaction.get<GenerationPlan>(
+            generationPlanKey(record.project.id),
+          ) ?? null;
+          const pendingGenerationPlan = generationPlan?.status === "pending";
+          const approvesGenerationPlan = input.operations.some(
+            (operation) => operation.op === "approve_generation_plan",
+          );
+          const changesGenerationCandidate = input.operations.some(
+            (operation) =>
+              operation.op === "update_rule_system" ||
+              operation.op === "configure_score_race" ||
+              operation.op === "configure_shared_goal" ||
+              operation.op === "configure_turn_taking" ||
+              operation.op === "configure_take_away" ||
+              operation.op === "configure_roll_and_move" ||
+              operation.op === "configure_draw_and_score" ||
+              operation.op === "configure_push_your_luck",
+          );
           const affectedEntities: string[] = [];
+          const now = new Date().toISOString();
+          let publishedPlaytestLink: StoredPlaytestLink | undefined;
           for (const operation of input.operations) {
-            applyOperation(record, operation, affectedEntities);
+            if (operation.op === "approve_generation_plan") {
+              if (
+                !generationPlan ||
+                generationPlan.id !== operation.planId ||
+                generationPlan.status !== "pending" ||
+                generationPlan.ruleSystemId !== record.ruleSystem.id
+              ) {
+                throw new Error("invalid_generation_plan");
+              }
+              generationPlan = {
+                ...generationPlan,
+                status: "approved",
+                approvedAt: now,
+              };
+              affectedEntities.push(`generation-plan:${generationPlan.id}`);
+            } else if (operation.op === "publish_shared_session") {
+              const session = record.sessions.find(
+                (candidate) => candidate.id === operation.sessionId,
+              );
+              const build = session
+                ? record.builds.find((candidate) => candidate.id === session.buildId)
+                : undefined;
+              if (
+                !session ||
+                !build ||
+                build.presentationFloor.status !== "passed" ||
+                build.ruleSystem.runtimeSupport.status !== "executable"
+              ) {
+                throw new Error("invalid_playtest_link");
+              }
+              publishedPlaytestLink = {
+                projectId: record.project.id,
+                sessionId: session.id,
+                buildId: build.id,
+                updatedAt: now,
+              };
+              affectedEntities.push(`playtest-link:${record.project.id}`);
+            } else {
+              applyOperation(record, operation, affectedEntities);
+            }
           }
           if (
-            input.operations.some(
-              (operation) =>
-                operation.op === "update_definition" ||
-                operation.op === "configure_score_race",
-            )
+            pendingGenerationPlan &&
+            record.ruleSystem.id !== generationPlan?.ruleSystemId
           ) {
-            record.definition = {
-              ...record.definition,
-              version: record.definition.version + 1,
+            throw new Error("invalid_generation_plan");
+          }
+          if (changesGenerationCandidate) {
+            record.ruleSystem = {
+              ...record.ruleSystem,
+              version: record.ruleSystem.version + 1,
             };
           }
-          record.definitions = record.definitions.map((definition) =>
-            definition.id === record.definition.id
-              ? record.definition
-              : definition
+          if (pendingGenerationPlan && generationPlan && changesGenerationCandidate) {
+            const refreshedPlan = createGenerationPlan({
+              id: generationPlan.id,
+              projectId: generationPlan.projectId,
+              generationJobId: generationPlan.generationJobId,
+              ruleSystem: record.ruleSystem,
+              sourceIds: [
+                ...new Set([
+                  ...generationPlan.sourceIds,
+                  ...referencedSourceIds(record.ruleSystem, record.sources),
+                ]),
+              ],
+              createdAt: generationPlan.createdAt,
+            });
+            generationPlan = {
+              ...refreshedPlan,
+              status: generationPlan.status,
+              ...(generationPlan.approvedAt
+                ? { approvedAt: generationPlan.approvedAt }
+                : {}),
+            };
+          }
+          if (approvesGenerationPlan && generationPlan) {
+            generationPlan = {
+              ...generationPlan,
+              ruleSystemVersion: record.ruleSystem.version,
+            };
+          }
+          record.ruleSystems = record.ruleSystems.map((ruleSystem) =>
+            ruleSystem.id === record.ruleSystem.id
+              ? record.ruleSystem
+              : ruleSystem
           );
           const previousVersion = record.project.version;
-          const now = new Date().toISOString();
           record.project = {
             ...record.project,
             version: previousVersion + 1,
@@ -1619,15 +3166,24 @@ export class CreatorProjects extends DurableObject<Env> {
           record.changesets.push(changeset);
           const result: StoredApplyProjectChangesResult = {
             project: record.project,
-            definition: record.definition,
+            ruleSystem: record.ruleSystem,
+            generationPlan,
             sources: record.sources,
+            hypotheses: record.hypotheses,
+            findings: record.findings,
             changeset,
             warnings: buildWarnings(record),
-            editorPath: `/editor/${record.project.id}`,
+            studioPath: `/studio/${record.project.id}`,
           };
           await transaction.put({
             [projectKey]: record,
             [idempotencyKey]: result,
+            ...(publishedPlaytestLink ? {
+              [playtestLinkKey(record.project.id)]: publishedPlaytestLink,
+            } : {}),
+            ...(generationPlan ? {
+              [generationPlanKey(record.project.id)]: generationPlan,
+            } : {}),
           });
           return { status: 200, value: result };
         });
@@ -1636,9 +3192,27 @@ export class CreatorProjects extends DurableObject<Env> {
         if (
           reason instanceof Error &&
           [
+            "source_dependency_not_found",
+            "bound_image_source_not_found",
+            "visual_reference_not_bindable",
+          ].includes(reason.message)
+        ) {
+          return error(reason.message, 409);
+        }
+        if (
+          reason instanceof Error &&
+          [
             "invalid_source",
-            "invalid_definition",
+            "invalid_rule_system",
             "invalid_runtime",
+            "invalid_design_hypothesis",
+            "invalid_validation_finding",
+            "invalid_automated_evidence",
+            "invalid_participant_feedback",
+            "invalid_human_evidence",
+            "invalid_validation_evidence",
+            "invalid_generation_plan",
+            "invalid_playtest_link",
             "unsupported_operation",
           ].includes(reason.message)
         ) {
@@ -1653,37 +3227,40 @@ export class CreatorProjects extends DurableObject<Env> {
       const input: {
         kind?: unknown;
         expectedVersion?: unknown;
+        basedOnFindingId?: unknown;
         buildId?: unknown;
         seed?: unknown;
-        brief?: unknown;
+        idea?: unknown;
         name?: unknown;
-        playerCount?: unknown;
+        participants?: unknown;
         durationMinutes?: unknown;
-        description?: unknown;
         sourceName?: unknown;
         sourceKind?: unknown;
         sourceContent?: unknown;
-        harvestedImages?: unknown;
+        visualInputs?: unknown;
+        prompt?: unknown;
         idempotencyKey?: unknown;
       } = await request.json().catch(() => ({})) as {
         kind?: unknown;
         expectedVersion?: unknown;
+        basedOnFindingId?: unknown;
         buildId?: unknown;
         seed?: unknown;
-        brief?: unknown;
+        idea?: unknown;
         name?: unknown;
-        playerCount?: unknown;
+        participants?: unknown;
         durationMinutes?: unknown;
-        description?: unknown;
         sourceName?: unknown;
         sourceKind?: unknown;
         sourceContent?: unknown;
-        harvestedImages?: unknown;
+        visualInputs?: unknown;
+        prompt?: unknown;
         idempotencyKey?: unknown;
       };
       const projectId = submitJobMatch[1];
       const validKind = [
-        "generate-definition",
+        "generate-rule-system",
+        "iterate-rule-system",
         "compile-build",
         "bot-playtest",
         "render-preview",
@@ -1698,35 +3275,56 @@ export class CreatorProjects extends DurableObject<Env> {
         typeof input.idempotencyKey !== "string" ||
         !input.idempotencyKey ||
         ((input.kind === "compile-build" ||
-          input.kind === "generate-definition") &&
+          input.kind === "generate-rule-system" ||
+          input.kind === "iterate-rule-system") &&
           !Number.isInteger(input.expectedVersion)) ||
-        (input.kind === "generate-definition" &&
-          ((input.brief !== undefined &&
-            (typeof input.brief !== "string" ||
-              !input.brief.trim() ||
-              input.brief.length > 100_000)) ||
-            (input.sourceContent === undefined && input.brief === undefined) ||
+        (input.kind === "iterate-rule-system" &&
+          (typeof input.prompt !== "string" ||
+            !input.prompt.trim() ||
+            input.prompt.length > 2_000)) ||
+        (input.kind === "iterate-rule-system" &&
+          input.basedOnFindingId !== undefined &&
+          (typeof input.basedOnFindingId !== "string" ||
+            !input.basedOnFindingId.trim())) ||
+        (input.kind === "compile-build" &&
+          input.basedOnFindingId !== undefined &&
+          (typeof input.basedOnFindingId !== "string" ||
+            !input.basedOnFindingId.trim())) ||
+        (input.kind === "generate-rule-system" &&
+          ((input.idea !== undefined &&
+            (typeof input.idea !== "string" ||
+              !input.idea.trim() ||
+              input.idea.length > 100_000)) ||
+            (input.sourceContent === undefined && input.idea === undefined) ||
             (input.name !== undefined &&
               (typeof input.name !== "string" || !input.name.trim())) ||
-            (input.playerCount !== undefined &&
-              (!Number.isInteger(input.playerCount) ||
-                Number(input.playerCount) < 1 ||
-                Number(input.playerCount) > 20)) ||
+            (input.participants !== undefined &&
+              (!input.participants ||
+                typeof input.participants !== "object" ||
+                !Number.isInteger((input.participants as { min?: unknown }).min) ||
+                !Number.isInteger((input.participants as { max?: unknown }).max) ||
+                !Number.isInteger((input.participants as { default?: unknown }).default) ||
+                Number((input.participants as { min: number }).min) < 1 ||
+                Number((input.participants as { max: number }).max) > 20 ||
+                Number((input.participants as { min: number }).min) >
+                  Number((input.participants as { default: number }).default) ||
+                Number((input.participants as { default: number }).default) >
+                  Number((input.participants as { max: number }).max) ||
+                !Array.isArray((input.participants as { roles?: unknown }).roles))) ||
             (input.durationMinutes !== undefined &&
               (!Number.isInteger(input.durationMinutes) ||
                 Number(input.durationMinutes) < 5 ||
                 Number(input.durationMinutes) > 720)) ||
-            (input.description !== undefined && typeof input.description !== "string") ||
             (input.sourceName !== undefined && typeof input.sourceName !== "string") ||
             (input.sourceKind !== undefined && !["brief", "rulebook"].includes(String(input.sourceKind))) ||
             (input.sourceContent !== undefined &&
               (typeof input.sourceContent !== "string" ||
                 !input.sourceContent.trim() ||
                 input.sourceContent.length > 100_000)))) ||
-        (input.harvestedImages !== undefined &&
-          (!Array.isArray(input.harvestedImages) ||
-            input.harvestedImages.length > 8 ||
-            input.harvestedImages.some(
+        (input.visualInputs !== undefined &&
+          (!Array.isArray(input.visualInputs) ||
+            input.visualInputs.length > 8 ||
+            input.visualInputs.some(
               (image) =>
                 !image ||
                 typeof image !== "object" ||
@@ -1738,7 +3336,10 @@ export class CreatorProjects extends DurableObject<Env> {
                 ) ||
                 (image as { content: string }).content.length > 100_000 ||
                 !Number.isInteger((image as { pageNumber?: unknown }).pageNumber) ||
-                Number((image as { pageNumber: number }).pageNumber) < 1,
+                Number((image as { pageNumber: number }).pageNumber) < 1 ||
+                !["visual-reference", "project-asset"].includes(
+                  String((image as { imageUse?: unknown }).imageUse),
+                ),
             ))) ||
         (validBuildInput &&
           (typeof input.buildId !== "string" || !input.buildId)) ||
@@ -1755,7 +3356,7 @@ export class CreatorProjects extends DurableObject<Env> {
         const existing = await transaction.get<CreatorJob>(jobIdempotencyKey);
         if (existing) return { created: false as const, job: existing };
         const stored =
-          await transaction.get<ProjectRecord | GameProject>(projectKey);
+          await transaction.get<ProjectRecord>(projectKey);
         if (!stored) return { created: false as const, missing: true as const };
         const now = new Date().toISOString();
         const job: CreatorJob = {
@@ -1856,7 +3457,10 @@ export class CreatorProjects extends DurableObject<Env> {
         !input ||
         !Number.isInteger(input.expectedVersion) ||
         typeof input.idempotencyKey !== "string" ||
-        !input.idempotencyKey
+        !input.idempotencyKey ||
+        (input.basedOnFindingId !== undefined &&
+          (typeof input.basedOnFindingId !== "string" ||
+            !input.basedOnFindingId.trim()))
       ) {
         return error("编译请求无效。", 400);
       }
@@ -1870,7 +3474,7 @@ export class CreatorProjects extends DurableObject<Env> {
         if (existingResult) return { status: 201, value: existingResult };
 
         const stored =
-          await transaction.get<ProjectRecord | GameProject>(projectKey);
+          await transaction.get<ProjectRecord>(projectKey);
         if (!stored) {
           return { status: 404, value: { error: "project_not_found" } };
         }
@@ -1881,26 +3485,85 @@ export class CreatorProjects extends DurableObject<Env> {
             value: {
               error: "version_conflict",
               currentVersion: record.project.version,
-              affectedEntities: [`build:${record.definition.id}`],
+              affectedEntities: [`build:${record.ruleSystem.id}`],
               currentState: {
                 project: record.project,
-                definition: record.definition,
+                ruleSystem: record.ruleSystem,
+              },
+            },
+          };
+        }
+        const generationPlan = await transaction.get<GenerationPlan>(
+          generationPlanKey(record.project.id),
+        );
+        if (generationPlan?.status === "pending") {
+          return {
+            status: 409,
+            value: {
+              error: "generation_plan_pending",
+              generationPlan,
+              currentState: {
+                project: record.project,
+                ruleSystem: record.ruleSystem,
               },
             },
           };
         }
 
-        const sourceIds = referencedSourceIds(record.definition);
+        const basedOnFinding = input.basedOnFindingId
+          ? record.findings.find((finding) => finding.id === input.basedOnFindingId)
+          : undefined;
+        const motivatingBuild = basedOnFinding
+          ? record.builds.find((build) => build.id === basedOnFinding.buildId)
+          : undefined;
+        if (input.basedOnFindingId && (!basedOnFinding || !motivatingBuild)) {
+          return {
+            status: 409,
+            value: {
+              error: "finding_not_found",
+              basedOnFindingId: input.basedOnFindingId,
+            },
+          };
+        }
+        if (
+          motivatingBuild &&
+          record.ruleSystem.version <= motivatingBuild.ruleSystemVersion
+        ) {
+          return {
+            status: 409,
+            value: {
+              error: "finding_revision_missing",
+              basedOnFindingId: basedOnFinding?.id,
+              motivatingBuildId: motivatingBuild.id,
+              currentRuleSystemVersion: record.ruleSystem.version,
+            },
+          };
+        }
+
+        const sourceIds = referencedSourceIds(record.ruleSystem, record.sources);
         const id = await buildId(
           record.project.id,
-          record.definition.version,
-          record.definition,
+          record.ruleSystem.version,
+          record.ruleSystem,
           sourceIds,
         );
         const existingBuild = record.builds.find(
           (candidate) => candidate.id === id,
         );
         if (existingBuild) {
+          if (
+            input.basedOnFindingId &&
+            existingBuild.basedOnFindingId !== input.basedOnFindingId
+          ) {
+            return {
+              status: 409,
+              value: {
+                error: "build_lineage_conflict",
+                buildId: existingBuild.id,
+                basedOnFindingId: input.basedOnFindingId,
+              },
+            };
+          }
           const existingChangeset =
             [...record.changesets].reverse().find((changeset) =>
               changeset.affectedEntities.includes(`build:${id}`)
@@ -1916,7 +3579,7 @@ export class CreatorProjects extends DurableObject<Env> {
             build: existingBuild,
             changeset: existingChangeset,
             warnings: existingBuild.warnings,
-            editorPath: `/editor/${record.project.id}`,
+            studioPath: `/studio/${record.project.id}`,
           };
           await transaction.put(idempotencyKey, result);
           return { status: 200, value: result };
@@ -1925,18 +3588,21 @@ export class CreatorProjects extends DurableObject<Env> {
         const build: StoredPlayableBuild = {
           id,
           projectId: record.project.id,
-          definitionId: record.definition.id,
-          definitionVersion: record.definition.version,
-          definition: structuredClone(record.definition),
+          ruleSystemId: record.ruleSystem.id,
+          ruleSystemVersion: record.ruleSystem.version,
+          ...(input.basedOnFindingId
+            ? { basedOnFindingId: input.basedOnFindingId }
+            : {}),
+          ruleSystem: structuredClone(record.ruleSystem),
           sourceIds,
           warnings: buildWarnings(record),
           unsupportedBehavior: [
-            ...record.definition.runtimeSupport.unsupported,
-            ...(record.definition.runtimeSupport.status === "executable"
+            ...record.ruleSystem.runtimeSupport.unsupported,
+            ...(record.ruleSystem.runtimeSupport.status === "executable"
               ? []
               : ["rule-execution"]),
           ],
-          visualFloor: visualFloor(record.definition),
+          presentationFloor: presentationFloor(record.ruleSystem),
           createdAt: now,
         };
         const previousVersion = record.project.version;
@@ -1950,6 +3616,9 @@ export class CreatorProjects extends DurableObject<Env> {
           previousVersion,
           newVersion: record.project.version,
           affectedEntities: [`build:${build.id}`],
+          ...(input.basedOnFindingId
+            ? { basedOnFindingId: input.basedOnFindingId }
+            : {}),
           createdAt: now,
         };
         record.changesets.push(changeset);
@@ -1961,7 +3630,7 @@ export class CreatorProjects extends DurableObject<Env> {
           build,
           changeset,
           warnings: build.warnings,
-          editorPath: `/editor/${record.project.id}`,
+          studioPath: `/studio/${record.project.id}`,
         };
         await transaction.put({
           [projectKey]: record,
@@ -1978,9 +3647,20 @@ export class CreatorProjects extends DurableObject<Env> {
       const storedBuild = await this.ctx.storage.get<StoredPlayableBuild>(
         `build:${buildMatch[1]}`,
       );
-      return storedBuild
-        ? json(normalizedBuild(storedBuild))
-        : error("没有找到这个 Playable Build。", 404);
+      if (!storedBuild) return error("没有找到这个 Playable Build。", 404);
+      try {
+        return json(normalizedBuild(storedBuild));
+      } catch (reason) {
+        if (
+          reason instanceof Error &&
+          ["unsupported_rule_system_shape", "unsupported_build_shape"].includes(
+            reason.message,
+          )
+        ) {
+          return error("这个 Build 使用已删除的旧规则格式，请从当前 Rule System 重新编译。", 410);
+        }
+        throw reason;
+      }
     }
 
     const playtestCreateMatch = url.pathname.match(
@@ -2010,14 +3690,14 @@ export class CreatorProjects extends DurableObject<Env> {
         if (!build) {
           return { status: 404, value: { error: "build_not_found" } };
         }
-        if (!executableRuntime(build.definition)) {
+        if (!executableRuntime(build.ruleSystem)) {
           return {
             status: 422,
             value: { error: "runtime_not_executable" },
           };
         }
         const simulation = runBotSimulation(
-          build.definition,
+          build.ruleSystem,
           Number(input.seed),
         );
         const now = new Date().toISOString();
@@ -2033,6 +3713,29 @@ export class CreatorProjects extends DurableObject<Env> {
             turns: simulation.finalState.turn,
             winnerSeat: simulation.finalState.winnerSeat,
             finalScores: simulation.finalState.scores,
+            ...(simulation.finalState.sharedGoal
+              ? { sharedGoal: simulation.finalState.sharedGoal }
+              : {}),
+            ...(simulation.finalState.turnTaking
+              ? {
+                  turnTaking: {
+                    turns: simulation.finalState.turn,
+                    maxTurns: simulation.finalState.turnTaking.maxTurns,
+                  },
+                }
+              : {}),
+            ...(simulation.finalState.takeAway
+              ? { takeAway: simulation.finalState.takeAway }
+              : {}),
+            ...(simulation.finalState.rollAndMove
+              ? { rollAndMove: simulation.finalState.rollAndMove }
+              : {}),
+            ...(simulation.finalState.drawAndScore
+              ? { drawAndScore: simulation.finalState.drawAndScore }
+              : {}),
+            ...(simulation.finalState.pushYourLuck
+              ? { pushYourLuck: simulation.finalState.pushYourLuck }
+              : {}),
           },
           replayId,
           createdAt: now,
@@ -2050,7 +3753,7 @@ export class CreatorProjects extends DurableObject<Env> {
         };
         const projectKey = `${PROJECT_PREFIX}${build.projectId}`;
         const storedProject =
-          await transaction.get<ProjectRecord | GameProject>(projectKey);
+          await transaction.get<ProjectRecord>(projectKey);
         if (!storedProject) {
           return { status: 404, value: { error: "project_not_found" } };
         }
@@ -2067,23 +3770,30 @@ export class CreatorProjects extends DurableObject<Env> {
       return json(outcome.value, outcome.status);
     }
 
-    const roomCreateMatch = url.pathname.match(/^\/builds\/([^/]+)\/rooms$/);
+    const roomCreateMatch = url.pathname.match(/^\/builds\/([^/]+)\/sessions$/);
     if (request.method === "POST" && roomCreateMatch) {
       const input = await request.json<{
         seed?: unknown;
         idempotencyKey?: unknown;
-      }>().catch(() => ({ seed: undefined, idempotencyKey: undefined }));
+        hypothesisId?: unknown;
+      }>().catch(() => ({
+        seed: undefined,
+        idempotencyKey: undefined,
+        hypothesisId: undefined,
+      }));
       if (
         !Number.isInteger(input.seed) ||
         typeof input.idempotencyKey !== "string" ||
-        !input.idempotencyKey
+        !input.idempotencyKey ||
+        (input.hypothesisId !== undefined &&
+          (typeof input.hypothesisId !== "string" || !input.hypothesisId))
       ) {
-        return error("房间请求需要整数 seed 和幂等键。", 400);
+        return error("Shared Session 请求需要整数 seed 和幂等键。", 400);
       }
       const idempotencyKey =
-        `room:${roomCreateMatch[1]}:${input.idempotencyKey}`;
+        `session:${roomCreateMatch[1]}:${input.idempotencyKey}`;
       const outcome = await this.ctx.storage.transaction(async (transaction) => {
-        const existing = await transaction.get<StoredRoom>(idempotencyKey);
+        const existing = await transaction.get<StoredSharedSession>(idempotencyKey);
         if (existing) return { status: 201, value: existing };
         const storedBuild = await transaction.get<StoredPlayableBuild>(
           `build:${roomCreateMatch[1]}`,
@@ -2092,28 +3802,42 @@ export class CreatorProjects extends DurableObject<Env> {
         if (!build) {
           return { status: 404, value: { error: "build_not_found" } };
         }
-        if (build.visualFloor.status !== "passed") {
+        if (build.presentationFloor.status !== "passed") {
           return {
             status: 422,
             value: {
               error: "visual_floor_unmet",
-              visualFloor: build.visualFloor,
+              presentationFloor: build.presentationFloor,
             },
           };
         }
-        if (!executableRuntime(build.definition)) {
+        if (!executableRuntime(build.ruleSystem)) {
           return {
             status: 422,
             value: { error: "runtime_not_executable" },
           };
         }
+        const projectKey = `${PROJECT_PREFIX}${build.projectId}`;
+        const storedProject = await transaction.get<ProjectRecord>(projectKey);
+        if (!storedProject) {
+          return { status: 404, value: { error: "project_not_found" } };
+        }
+        const record = normalizedProjectRecord(storedProject);
+        const hypothesis = input.hypothesisId
+          ? record.hypotheses.find(
+            (candidate) => candidate.id === input.hypothesisId,
+          )
+          : undefined;
+        if (input.hypothesisId && !hypothesis) {
+          return { status: 404, value: { error: "hypothesis_not_found" } };
+        }
         const now = new Date().toISOString();
         const replayId = `replay_${crypto.randomUUID()}`;
-        const state = initialTableState(
-          build.definition,
+        const state = initialSessionState(
+          build.ruleSystem,
           Number(input.seed),
         );
-        const room: StoredRoom = {
+        const room: StoredSharedSession = {
           id: `room_${crypto.randomUUID()}`,
           projectId: build.projectId,
           buildId: build.id,
@@ -2121,6 +3845,14 @@ export class CreatorProjects extends DurableObject<Env> {
           state,
           seats: [],
           acceptedActions: [],
+          feedback: [],
+          experiment: hypothesis
+            ? {
+                hypothesisId: hypothesis.id,
+                question: hypothesis.question,
+                successSignal: hypothesis.successSignal,
+              }
+            : null,
           replayId,
           createdAt: now,
         };
@@ -2129,23 +3861,16 @@ export class CreatorProjects extends DurableObject<Env> {
           projectId: build.projectId,
           buildId: build.id,
           seed: Number(input.seed),
-          evidenceType: "room-action-log",
+          evidenceType: "session-action-log",
           initialState: state,
           acceptedActions: [],
           finalState: state,
           createdAt: now,
         };
-        const projectKey = `${PROJECT_PREFIX}${build.projectId}`;
-        const storedProject =
-          await transaction.get<ProjectRecord | GameProject>(projectKey);
-        if (!storedProject) {
-          return { status: 404, value: { error: "project_not_found" } };
-        }
-        const record = normalizedProjectRecord(storedProject);
-        record.rooms.push(room);
+        record.sessions.push(room);
         await transaction.put({
           [projectKey]: record,
-          [`room:${room.id}`]: room,
+          [`session:${room.id}`]: room,
           [`replay:${replay.id}`]: replay,
           [idempotencyKey]: room,
         });
@@ -2154,7 +3879,7 @@ export class CreatorProjects extends DurableObject<Env> {
       return json(outcome.value, outcome.status);
     }
 
-    const roomSeatMatch = url.pathname.match(/^\/rooms\/([^/]+)\/seats$/);
+    const roomSeatMatch = url.pathname.match(/^\/sessions\/([^/]+)\/seats$/);
     if (request.method === "POST" && roomSeatMatch) {
       const input = await request.json<{
         seat?: unknown;
@@ -2169,13 +3894,13 @@ export class CreatorProjects extends DurableObject<Env> {
       }
       const seat = input.seat as number;
       const clientId = input.clientId as string;
-      const roomKey = `room:${roomSeatMatch[1]}`;
+      const roomKey = `session:${roomSeatMatch[1]}`;
       const outcome = await this.ctx.storage.transaction(async (transaction) => {
-        const storedRoom = await transaction.get<StoredRoom>(roomKey);
+        const storedRoom = await transaction.get<StoredSharedSession>(roomKey);
         if (!storedRoom) {
           return { status: 404, value: { error: "room_not_found" } };
         }
-        const room = { ...storedRoom, seats: storedRoom.seats ?? [] };
+        const room = storedRoom;
         if (seat < 0 || seat >= room.state.scores.length) {
           return { status: 409, value: { error: "seat_unavailable" } };
         }
@@ -2183,18 +3908,30 @@ export class CreatorProjects extends DurableObject<Env> {
         if (claimed && claimed.clientId !== clientId) {
           return { status: 409, value: { error: "seat_claimed" } };
         }
+        const existingClientSeat = room.seats.find(
+          (entry) => entry.clientId === clientId && entry.seat !== seat,
+        );
+        if (existingClientSeat) {
+          return {
+            status: 409,
+            value: {
+              error: "client_already_seated",
+              seat: existingClientSeat.seat,
+            },
+          };
+        }
         const seats = claimed
           ? room.seats
           : [...room.seats, { seat, clientId }];
         const updatedRoom = { ...room, seats };
         const projectKey = `${PROJECT_PREFIX}${room.projectId}`;
         const storedProject =
-          await transaction.get<ProjectRecord | GameProject>(projectKey);
+          await transaction.get<ProjectRecord>(projectKey);
         if (!storedProject) {
           return { status: 404, value: { error: "project_not_found" } };
         }
         const record = normalizedProjectRecord(storedProject);
-        record.rooms = record.rooms.map((candidate) =>
+        record.sessions = record.sessions.map((candidate) =>
           candidate.id === updatedRoom.id ? updatedRoom : candidate,
         );
         await transaction.put({
@@ -2203,21 +3940,26 @@ export class CreatorProjects extends DurableObject<Env> {
         });
         return { status: 200, value: updatedRoom };
       });
+      if (outcome.status === 200 && "id" in outcome.value) {
+        this.broadcastSession(outcome.value);
+      }
       return json(outcome.value, outcome.status);
     }
 
-    const roomIntentMatch = url.pathname.match(/^\/rooms\/([^/]+)\/intents$/);
+    const roomIntentMatch = url.pathname.match(/^\/sessions\/([^/]+)\/intents$/);
     if (request.method === "POST" && roomIntentMatch) {
       const input = await request.json<{
         intentId?: unknown;
         seat?: unknown;
         clientId?: unknown;
         actionId?: unknown;
+        payload?: unknown;
       }>().catch(() => ({
         intentId: undefined,
         seat: undefined,
         clientId: undefined,
         actionId: undefined,
+        payload: undefined,
       }));
       if (
         typeof input.intentId !== "string" ||
@@ -2226,13 +3968,15 @@ export class CreatorProjects extends DurableObject<Env> {
         (input.clientId !== undefined &&
           (typeof input.clientId !== "string" || !input.clientId)) ||
         typeof input.actionId !== "string" ||
-        !input.actionId
+        !input.actionId ||
+        (input.payload !== undefined &&
+          (!input.payload || typeof input.payload !== "object" || Array.isArray(input.payload)))
       ) {
         return error("行动意图无效。", 400);
       }
-      const roomKey = `room:${roomIntentMatch[1]}`;
+      const roomKey = `session:${roomIntentMatch[1]}`;
       const outcome = await this.ctx.storage.transaction(async (transaction) => {
-        const storedRoom = await transaction.get<StoredRoom>(roomKey);
+        const storedRoom = await transaction.get<StoredSharedSession>(roomKey);
         if (!storedRoom) {
           return { status: 404, value: { error: "room_not_found" } };
         }
@@ -2240,19 +3984,21 @@ export class CreatorProjects extends DurableObject<Env> {
           `build:${storedRoom.buildId}`,
         );
         const build = storedBuild ? normalizedBuild(storedBuild) : undefined;
-        const runtime = build && executableRuntime(build.definition);
+        const runtime = build && executableRuntime(build.ruleSystem);
         if (!build || !runtime) {
           return {
             status: 422,
             value: { error: "runtime_not_executable" },
           };
         }
-        const room = reconstructRoom(storedRoom, build);
-        const claimedSeat = (room.seats ?? []).find(
+        const room = reconstructSession(storedRoom, build);
+        const claimedSeat = room.seats.find(
           (entry) =>
             entry.seat === input.seat && entry.clientId === input.clientId,
         );
-        if (room.seats.length > 0 && !claimedSeat) {
+        const publicShareIntent =
+          request.headers.get("x-godesk-public-share") === "1";
+        if ((publicShareIntent || room.seats.length > 0) && !claimedSeat) {
           return {
             status: 409,
             value: { error: "seat_not_claimed", state: room.state },
@@ -2272,6 +4018,7 @@ export class CreatorProjects extends DurableObject<Env> {
             intentId: String(input.intentId),
             seat: Number(input.seat),
             actionId: String(input.actionId),
+            payload: input.payload as Record<string, unknown> | undefined,
           },
           room.acceptedActions.length + 1,
           room.seed,
@@ -2282,7 +4029,7 @@ export class CreatorProjects extends DurableObject<Env> {
             value: { error: "intent_rejected", state: room.state },
           };
         }
-        const updatedRoom: StoredRoom = {
+        const updatedRoom: StoredSharedSession = {
           ...room,
           state: accepted.state,
           acceptedActions: [...room.acceptedActions, accepted],
@@ -2300,12 +4047,12 @@ export class CreatorProjects extends DurableObject<Env> {
         };
         const projectKey = `${PROJECT_PREFIX}${room.projectId}`;
         const storedProject =
-          await transaction.get<ProjectRecord | GameProject>(projectKey);
+          await transaction.get<ProjectRecord>(projectKey);
         if (!storedProject) {
           return { status: 404, value: { error: "project_not_found" } };
         }
         const record = normalizedProjectRecord(storedProject);
-        record.rooms = record.rooms.map((candidate) =>
+        record.sessions = record.sessions.map((candidate) =>
           candidate.id === updatedRoom.id ? updatedRoom : candidate,
         );
         await transaction.put({
@@ -2315,6 +4062,118 @@ export class CreatorProjects extends DurableObject<Env> {
         });
         return { status: 200, value: updatedRoom };
       });
+      if (outcome.status === 200 && "id" in outcome.value) {
+        this.broadcastSession(outcome.value);
+      }
+      return json(outcome.value, outcome.status);
+    }
+
+    const roomFeedbackMatch = url.pathname.match(/^\/sessions\/([^/]+)\/feedback$/);
+    if (request.method === "POST" && roomFeedbackMatch) {
+      const input = await request.json<{
+        seat?: unknown;
+        clientId?: unknown;
+        rating?: unknown;
+        comment?: unknown;
+      }>().catch(() => ({
+        seat: undefined,
+        clientId: undefined,
+        rating: undefined,
+        comment: undefined,
+      }));
+      const comment = typeof input.comment === "string"
+        ? input.comment.trim()
+        : "";
+      if (
+        !Number.isInteger(input.seat) ||
+        typeof input.clientId !== "string" ||
+        !input.clientId ||
+        input.clientId.length > 200 ||
+        !Number.isInteger(input.rating) ||
+        Number(input.rating) < 1 ||
+        Number(input.rating) > 5 ||
+        comment.length < 2 ||
+        comment.length > 1_000
+      ) {
+        return error("试玩反馈需要已入座席位、1 到 5 分评分和 2 到 1000 字评论。", 400);
+      }
+      const seat = Number(input.seat);
+      const clientId = input.clientId;
+      const rating = Number(input.rating) as SessionFeedback["rating"];
+      const roomKey = `session:${roomFeedbackMatch[1]}`;
+      const outcome = await this.ctx.storage.transaction(async (transaction) => {
+        const storedRoom = await transaction.get<StoredSharedSession>(roomKey);
+        if (!storedRoom) {
+          return { status: 404, value: { error: "room_not_found" } };
+        }
+        const claimedSeat = storedRoom.seats.find(
+          (entry) => entry.seat === seat && entry.clientId === clientId,
+        );
+        if (!claimedSeat) {
+          return {
+            status: 409,
+            value: { error: "seat_not_claimed" },
+          };
+        }
+        const acceptedAction = [...storedRoom.acceptedActions]
+          .reverse()
+          .find((candidate) => candidate.seat === seat);
+        if (!acceptedAction) {
+          return {
+            status: 409,
+            value: { error: "feedback_requires_action" },
+          };
+        }
+        const moment = {
+          actionSequence: acceptedAction.sequence,
+          actionId: acceptedAction.actionId,
+        };
+        const now = new Date().toISOString();
+        const existing = storedRoom.feedback.find((entry) => entry.seat === seat);
+        const entry: SessionFeedback = existing
+          ? {
+              ...existing,
+              rating,
+              comment,
+              moment,
+              updatedAt: now,
+            }
+          : {
+              id: `feedback_${crypto.randomUUID()}`,
+              seat,
+              rating,
+              comment,
+              moment,
+              createdAt: now,
+              updatedAt: now,
+            };
+        const updatedRoom: StoredSharedSession = {
+          ...storedRoom,
+          feedback: existing
+            ? storedRoom.feedback.map((candidate) =>
+                candidate.id === existing.id ? entry : candidate,
+              )
+            : [...storedRoom.feedback, entry],
+        };
+        const projectKey = `${PROJECT_PREFIX}${storedRoom.projectId}`;
+        const storedProject =
+          await transaction.get<ProjectRecord>(projectKey);
+        if (!storedProject) {
+          return { status: 404, value: { error: "project_not_found" } };
+        }
+        const record = normalizedProjectRecord(storedProject);
+        record.sessions = record.sessions.map((candidate) =>
+          candidate.id === updatedRoom.id ? updatedRoom : candidate,
+        );
+        await transaction.put({
+          [roomKey]: updatedRoom,
+          [projectKey]: record,
+        });
+        return { status: 200, value: updatedRoom };
+      });
+      if (outcome.status === 200 && "id" in outcome.value) {
+        this.broadcastSession(outcome.value);
+      }
       return json(outcome.value, outcome.status);
     }
 
@@ -2326,18 +4185,18 @@ export class CreatorProjects extends DurableObject<Env> {
       return playtest ? json(playtest) : error("没有找到这个试玩。", 404);
     }
 
-    const roomMatch = url.pathname.match(/^\/rooms\/([^/]+)$/);
+    const roomMatch = url.pathname.match(/^\/sessions\/([^/]+)$/);
     if (request.method === "GET" && roomMatch) {
-      const room = await this.ctx.storage.get<StoredRoom>(
-        `room:${roomMatch[1]}`,
+      const room = await this.ctx.storage.get<StoredSharedSession>(
+        `session:${roomMatch[1]}`,
       );
-      if (!room) return error("没有找到这个房间。", 404);
+      if (!room) return error("没有找到这个 Shared Session。", 404);
       const storedBuild = await this.ctx.storage.get<StoredPlayableBuild>(
         `build:${room.buildId}`,
       );
       const build = storedBuild ? normalizedBuild(storedBuild) : undefined;
-      if (!build) return error("房间引用的 Build 不存在。", 500);
-      return json(reconstructRoom(room, build));
+      if (!build) return error("Shared Session 引用的 Build 不存在。", 500);
+      return json(reconstructSession(room, build));
     }
 
     const replayMatch = url.pathname.match(/^\/replays\/([^/]+)$/);
@@ -2355,27 +4214,78 @@ export class CreatorProjects extends DurableObject<Env> {
     }
 
     if (request.method === "GET" && url.pathname.startsWith(PROJECT_PREFIX)) {
-      const stored = await this.ctx.storage.get<ProjectRecord | GameProject>(
+      const stored = await this.ctx.storage.get<ProjectRecord>(
         url.pathname,
       );
       if (!stored) return error("没有找到这个 Game Project。", 404);
-      const record = normalizedProjectRecord(stored);
+      let record: ReturnType<typeof normalizedProjectRecord>;
+      try {
+        record = normalizedProjectRecord(stored);
+      } catch (reason) {
+        if (
+          reason instanceof Error &&
+          ["unsupported_project_shape", "unsupported_rule_system_shape", "unsupported_build_shape"].includes(reason.message)
+        ) {
+          return error("这个 Game Project 使用已删除的旧规则格式，请创建新项目。", 410);
+        }
+        throw reason;
+      }
       if (!url.searchParams.has("view")) return json(record.project);
       const view = url.searchParams.get("view");
-      if (view === "definition") return json(record.definition);
+      if (view === "rule-system") return json(record.ruleSystem);
+      if (view === "activity") {
+        const sessions = record.sessions.slice(-50).map((room) => {
+          const build = record.builds.find(
+            (candidate) => candidate.id === room.buildId,
+          );
+          return build ? reconstructSession(room, build) : room;
+        });
+        return json({
+          project: record.project,
+          jobs: record.jobs.slice(0, 50),
+          sessions,
+        });
+      }
+      if (view === "generation-plan") {
+        return json({
+          generationPlan:
+            await this.ctx.storage.get<GenerationPlan>(
+              generationPlanKey(record.project.id),
+            ) ?? null,
+        });
+      }
+      if (view === "playtest-link") {
+        return json({
+          playtestLink:
+            await this.ctx.storage.get<StoredPlaytestLink>(
+              playtestLinkKey(record.project.id),
+            ) ?? null,
+        });
+      }
       if (view === "rules") {
-        return json(paginated(record.definition.rules, url, "rules"));
+        return json(paginated(record.ruleSystem.rules, url, "rules"));
       }
-      if (view === "components") {
+      if (view === "constraints") {
         return json(
-          paginated(record.definition.components, url, "components"),
+          paginated(record.ruleSystem.constraints, url, "constraints"),
         );
       }
-      if (view === "board") return json(record.definition.board);
-      if (view === "scenarios") {
+      if (view === "entities") {
         return json(
-          paginated(record.definition.scenarios, url, "scenarios"),
+          paginated(record.ruleSystem.entities, url, "entities"),
         );
+      }
+      if (view === "surface") return json(record.ruleSystem.playSurface);
+      if (view === "outcomes") {
+        return json(
+          paginated(record.ruleSystem.outcomes, url, "outcomes"),
+        );
+      }
+      if (view === "validation") {
+        return json({
+          hypotheses: record.hypotheses,
+          findings: record.findings,
+        });
       }
       if (view === "entity") {
         const entityType = url.searchParams.get("entityType");
@@ -2385,21 +4295,24 @@ export class CreatorProjects extends DurableObject<Env> {
         }
         const collections: Record<string, Array<{ id: string }>> = {
           source: record.sources,
-          rule: record.definition.rules,
-          component: record.definition.components,
-          scenario: record.definition.scenarios,
+          rule: record.ruleSystem.rules,
+          constraint: record.ruleSystem.constraints,
+          entity: record.ruleSystem.entities,
+          outcome: record.ruleSystem.outcomes,
           build: record.builds,
           playtest: record.playtests,
-          room: record.rooms,
+          session: record.sessions,
           job: record.jobs,
+          hypothesis: record.hypotheses,
+          finding: record.findings,
         };
         const entity = collections[entityType]?.find(
           (candidate) => candidate.id === entityId,
         );
         return entity ? json(entity) : error("没有找到这个项目实体。", 404);
       }
-      if (view === "definitions") {
-        return json(paginated(record.definitions, url, "definitions"));
+      if (view === "rule-systems") {
+        return json(paginated(record.ruleSystems, url, "ruleSystems"));
       }
       if (view === "sources") {
         return json(paginated(record.sources, url, "sources"));
@@ -2413,14 +4326,14 @@ export class CreatorProjects extends DurableObject<Env> {
       if (view === "playtests") {
         return json(paginated(record.playtests, url, "playtests"));
       }
-      if (view === "rooms") {
-        const rooms = record.rooms.map((room) => {
+      if (view === "sessions") {
+        const sessions = record.sessions.map((room) => {
           const build = record.builds.find(
             (candidate) => candidate.id === room.buildId,
           );
-          return build ? reconstructRoom(room, build) : room;
+          return build ? reconstructSession(room, build) : room;
         });
-        return json(paginated(rooms, url, "rooms"));
+        return json(paginated(sessions, url, "sessions"));
       }
       if (view === "jobs") {
         return json(paginated(record.jobs, url, "jobs"));
@@ -2429,17 +4342,72 @@ export class CreatorProjects extends DurableObject<Env> {
     }
 
     if (request.method === "GET" && url.pathname === "/projects") {
-      const entries = await this.ctx.storage.list<ProjectRecord | GameProject>({
+      const entries = await this.ctx.storage.list<ProjectRecord>({
         prefix: PROJECT_PREFIX,
       });
+      const projects: GameProject[] = [];
+      for (const entry of entries.values()) {
+        try {
+          projects.push(normalizedProjectRecord(entry).project);
+        } catch (reason) {
+          if (
+            reason instanceof Error &&
+            [
+              "unsupported_project_shape",
+              "unsupported_rule_system_shape",
+              "unsupported_build_shape",
+            ].includes(reason.message)
+          ) {
+            continue;
+          }
+          throw reason;
+        }
+      }
       return json({
-        projects: [...entries.values()]
-          .map((entry) => normalizedProjectRecord(entry).project)
-          .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)),
+        projects: projects.sort((left, right) =>
+          right.updatedAt.localeCompare(left.updatedAt)
+        ),
       });
     }
 
     return error("没有这个项目操作。", 404);
+  }
+
+  async webSocketMessage(socket: WebSocket, message: string | ArrayBuffer) {
+    if (message !== '{"type":"session.sync"}') {
+      socket.close(1008, "unsupported_session_event");
+      return;
+    }
+    const attachment = socket.deserializeAttachment() as
+      | SessionSocketAttachment
+      | null;
+    if (!attachment?.sessionId) {
+      socket.close(1008, "session_attachment_missing");
+      return;
+    }
+    const room = await this.ctx.storage.get<StoredSharedSession>(
+      `session:${attachment.sessionId}`,
+    );
+    if (!room) {
+      socket.close(1008, "session_not_found");
+      return;
+    }
+    const storedBuild = await this.ctx.storage.get<StoredPlayableBuild>(
+      `build:${room.buildId}`,
+    );
+    const build = storedBuild ? normalizedBuild(storedBuild) : undefined;
+    if (!build) {
+      socket.close(1011, "session_build_not_found");
+      return;
+    }
+    socket.send(JSON.stringify({
+      type: "session.snapshot",
+      session: reconstructSession(room, build),
+    } satisfies SharedSessionSnapshotEvent));
+  }
+
+  webSocketClose(socket: WebSocket, code: number, reason: string) {
+    socket.close(code, reason);
   }
 }
 
@@ -2451,6 +4419,10 @@ async function projectApi(
 ) {
   const url = new URL(request.url);
   const stub = env.CREATOR_PROJECTS.getByName(creatorId);
+  const forwardRoomRequest = (target: string) =>
+    publicShareCreator(url)
+      ? publicShareForwardRequest(target, request)
+      : new Request(target, request);
 
   if (request.method === "POST" && url.pathname === "/api/projects") {
     const input = await request
@@ -2474,10 +4446,10 @@ async function projectApi(
     const project = await response.json<GameProject>();
     const result: CreateProjectResult = {
       project,
-      editorUrl: new URL(`/editor/${project.id}`, url.origin).toString(),
+      studioUrl: new URL(`/studio/${project.id}`, url.origin).toString(),
       warnings: input.templateId
         ? []
-        : ["新项目尚未包含来源、结构化规则或组件。"],
+        : ["新项目尚未包含来源、结构化规则或 Game Entity。"],
     };
     return json(result, 201);
   }
@@ -2501,27 +4473,47 @@ async function projectApi(
     return json(
       {
         project,
-        editorUrl: new URL(`/editor/${project.id}`, url.origin).toString(),
+        studioUrl: new URL(`/studio/${project.id}`, url.origin).toString(),
         warnings: [],
       } satisfies CreateProjectResult,
       response.status,
     );
   }
 
-  const duplicateDefinitionMatch = url.pathname.match(
-    /^\/api\/projects\/([^/]+)\/definitions\/([^/]+)\/duplicate$/,
+  const duplicateRuleSystemMatch = url.pathname.match(
+    /^\/api\/projects\/([^/]+)\/rule-systems\/([^/]+)\/duplicate$/,
   );
-  if (request.method === "POST" && duplicateDefinitionMatch) {
+  if (request.method === "POST" && duplicateRuleSystemMatch) {
     const response = await stub.fetch(
       new Request(
-        `https://projects.internal/projects/${duplicateDefinitionMatch[1]}/definitions/${duplicateDefinitionMatch[2]}/duplicate`,
+        `https://projects.internal/projects/${duplicateRuleSystemMatch[1]}/rule-systems/${duplicateRuleSystemMatch[2]}/duplicate`,
         request,
       ),
     );
     if (!response.ok) return response;
     return json(
       publicMutation(
-        await response.json<StoredDuplicateDefinitionResult>(),
+        await response.json<StoredDuplicateRuleSystemResult>(),
+        url.origin,
+      ),
+      response.status,
+    );
+  }
+
+  const restoreBuildMatch = url.pathname.match(
+    /^\/api\/projects\/([^/]+)\/builds\/([^/]+)\/restore$/,
+  );
+  if (request.method === "POST" && restoreBuildMatch) {
+    const response = await stub.fetch(
+      new Request(
+        `https://projects.internal/projects/${restoreBuildMatch[1]}/builds/${restoreBuildMatch[2]}/restore`,
+        request,
+      ),
+    );
+    if (!response.ok) return response;
+    return json(
+      publicMutation(
+        await response.json<StoredRestoreBuildResult>(),
         url.origin,
       ),
       response.status,
@@ -2554,7 +4546,7 @@ async function projectApi(
       }>();
       return json({
         ...body,
-        builds: body.builds.map((build) => publicBuild(build, url.origin)),
+        builds: body.builds.map((build) => publicBuild(build, url.origin, creatorId)),
       });
     }
     if (view === "playtests") {
@@ -2562,22 +4554,46 @@ async function projectApi(
       return json({
         ...body,
         playtests: body.playtests.map((playtest) =>
-          publicPlaytest(playtest, url.origin),
+          publicPlaytest(playtest, url.origin, creatorId),
         ),
       });
     }
-    if (view === "rooms") {
-      const body = await response.json<{ rooms: StoredRoom[] }>();
+    if (view === "sessions") {
+      const body = await response.json<{ sessions: StoredSharedSession[] }>();
       return json({
         ...body,
-        rooms: body.rooms.map((room) => publicRoom(room, url.origin)),
+        sessions: body.sessions.map((room) => publicSession(room, url.origin, creatorId)),
+      });
+    }
+    if (view === "playtest-link") {
+      const body = await response.json<{
+        playtestLink: StoredPlaytestLink | null;
+      }>();
+      return json({
+        playtestLink: body.playtestLink
+          ? publicPlaytestLink(body.playtestLink, url.origin, creatorId)
+          : null,
       });
     }
     if (view === "jobs") {
       const body = await response.json<{ jobs: CreatorJob[] }>();
       return json({
         ...body,
-        jobs: body.jobs.map((job) => publicJob(job, url.origin)),
+        jobs: body.jobs.map((job) => publicJob(job, url.origin, creatorId)),
+      });
+    }
+    if (view === "activity") {
+      const body = await response.json<{
+        project: GameProject;
+        jobs: CreatorJob[];
+        sessions: StoredSharedSession[];
+      }>();
+      return json({
+        project: body.project,
+        jobs: body.jobs.map((job) => publicJob(job, url.origin, creatorId)),
+        sessions: body.sessions.map((room) =>
+          publicSession(room, url.origin, creatorId)
+        ),
       });
     }
     return response;
@@ -2613,7 +4629,7 @@ async function projectApi(
     );
     if (!response.ok) return response;
     return json(
-      publicJob(await response.json<CreatorJob>(), url.origin),
+      publicJob(await response.json<CreatorJob>(), url.origin, creatorId),
       response.status,
     );
   }
@@ -2633,7 +4649,7 @@ async function projectApi(
       `https://projects.internal/jobs/${jobMatch[1]}`,
     );
     if (!response.ok) return response;
-    return json(publicJob(await response.json<CreatorJob>(), url.origin));
+    return json(publicJob(await response.json<CreatorJob>(), url.origin, creatorId));
   }
 
   const retryJobMatch = url.pathname.match(/^\/api\/jobs\/([^/]+)\/retry$/);
@@ -2646,7 +4662,7 @@ async function projectApi(
     );
     if (!response.ok) return response;
     return json(
-      publicJob(await response.json<CreatorJob>(), url.origin),
+      publicJob(await response.json<CreatorJob>(), url.origin, creatorId),
       response.status,
     );
   }
@@ -2664,7 +4680,7 @@ async function projectApi(
     return json(
       publicMutation({
         ...result,
-        build: publicBuild(result.build, url.origin),
+        build: publicBuild(result.build, url.origin, creatorId),
       }, url.origin),
       response.status,
     );
@@ -2677,7 +4693,7 @@ async function projectApi(
     );
     if (!response.ok) return response;
     const build = await response.json<StoredPlayableBuild>();
-    return json(publicBuild(build, url.origin));
+    return json(publicBuild(build, url.origin, creatorId));
   }
 
   const playtestCreateMatch = url.pathname.match(
@@ -2692,52 +4708,83 @@ async function projectApi(
     );
     if (!response.ok) return response;
     const playtest = await response.json<StoredPlaytest>();
-    return json(publicPlaytest(playtest, url.origin), response.status);
+    return json(publicPlaytest(playtest, url.origin, creatorId), response.status);
   }
 
   const roomCreateMatch = url.pathname.match(
-    /^\/api\/builds\/([^/]+)\/rooms$/,
+    /^\/api\/builds\/([^/]+)\/sessions$/,
   );
   if (request.method === "POST" && roomCreateMatch) {
     const response = await stub.fetch(
       new Request(
-        `https://projects.internal/builds/${roomCreateMatch[1]}/rooms`,
+        `https://projects.internal/builds/${roomCreateMatch[1]}/sessions`,
         request,
       ),
     );
     if (!response.ok) return response;
-    const room = await response.json<StoredRoom>();
-    return json(publicRoom(room, url.origin), response.status);
+    const room = await response.json<StoredSharedSession>();
+    return json(publicSession(room, url.origin, creatorId), response.status);
   }
 
-  const roomSeatMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/seats$/);
+  const roomEventsMatch = url.pathname.match(
+    /^\/api\/sessions\/([^/]+)\/events$/,
+  );
+  if (request.method === "GET" && roomEventsMatch) {
+    if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
+      return error("Shared Session 实时连接需要 WebSocket upgrade。", 426);
+    }
+    return stub.fetch(new Request(
+      `https://projects.internal/sessions/${roomEventsMatch[1]}/events`,
+      request,
+    ));
+  }
+
+    const roomSeatMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/seats$/);
   if (request.method === "POST" && roomSeatMatch) {
     const response = await stub.fetch(
-      new Request(
-        `https://projects.internal/rooms/${roomSeatMatch[1]}/seats`,
-        request,
+      forwardRoomRequest(
+        `https://projects.internal/sessions/${roomSeatMatch[1]}/seats`,
       ),
     );
     if (!response.ok) return response;
     return json(
-      publicRoom(await response.json<StoredRoom>(), url.origin),
+      publicSession(await response.json<StoredSharedSession>(), url.origin, creatorId),
       response.status,
     );
   }
 
   const roomIntentMatch = url.pathname.match(
-    /^\/api\/rooms\/([^/]+)\/intents$/,
-  );
+    /^\/api\/sessions\/([^/]+)\/intents$/,
+    );
   if (request.method === "POST" && roomIntentMatch) {
     const response = await stub.fetch(
-      new Request(
-        `https://projects.internal/rooms/${roomIntentMatch[1]}/intents`,
-        request,
+      forwardRoomRequest(
+        `https://projects.internal/sessions/${roomIntentMatch[1]}/intents`,
       ),
     );
     if (!response.ok) return response;
-    const room = await response.json<StoredRoom>();
-    return json(publicRoom(room, url.origin), response.status);
+    const room = await response.json<StoredSharedSession>();
+    return json(
+      publicSession(room, url.origin, creatorId),
+      response.status,
+    );
+  }
+
+  const roomFeedbackMatch = url.pathname.match(
+    /^\/api\/sessions\/([^/]+)\/feedback$/,
+  );
+  if (request.method === "POST" && roomFeedbackMatch) {
+    const response = await stub.fetch(
+      forwardRoomRequest(
+        `https://projects.internal/sessions/${roomFeedbackMatch[1]}/feedback`,
+      ),
+    );
+    if (!response.ok) return response;
+    const room = await response.json<StoredSharedSession>();
+    return json(
+      publicSession(room, url.origin, creatorId),
+      response.status,
+    );
   }
 
   const playtestMatch = url.pathname.match(/^\/api\/playtests\/([^/]+)$/);
@@ -2747,17 +4794,19 @@ async function projectApi(
     );
     if (!response.ok) return response;
     return json(
-      publicPlaytest(await response.json<StoredPlaytest>(), url.origin),
+      publicPlaytest(await response.json<StoredPlaytest>(), url.origin, creatorId),
     );
   }
 
-  const roomMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)$/);
+  const roomMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)$/);
   if (request.method === "GET" && roomMatch) {
     const response = await stub.fetch(
-      `https://projects.internal/rooms/${roomMatch[1]}`,
+      `https://projects.internal/sessions/${roomMatch[1]}`,
     );
     if (!response.ok) return response;
-    return json(publicRoom(await response.json<StoredRoom>(), url.origin));
+    return json(
+      publicSession(await response.json<StoredSharedSession>(), url.origin, creatorId),
+    );
   }
 
   const replayMatch = url.pathname.match(/^\/api\/replays\/([^/]+)$/);
@@ -2770,9 +4819,60 @@ async function projectApi(
   return error("没有这个 API。", 404);
 }
 
+function publicShareForwardRequest(target: string, request: Request) {
+  const forwarded = new Request(target, request);
+  forwarded.headers.set("x-godesk-public-share", "1");
+  return forwarded;
+}
+
+function publicShareCreator(url: URL) {
+  const creatorId = url.searchParams.get("creator")?.trim();
+  return creatorId && creatorId.length <= 512 ? creatorId : null;
+}
+
+function isPublicSharePage(url: URL) {
+  return /^\/(?:play|room|replay|try)\/[^/]+$/.test(url.pathname);
+}
+
+function isPublicShareApi(request: Request) {
+  const url = new URL(request.url);
+  if (request.method === "GET") {
+    return /^\/api\/(?:builds|sessions|replays)\/[^/]+$/.test(url.pathname) ||
+      /^\/api\/sessions\/[^/]+\/events$/.test(url.pathname);
+  }
+  return /^\/api\/sessions\/[^/]+\/(?:seats|intents|feedback)$/.test(url.pathname) &&
+    request.method === "POST";
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const shareCreatorId = publicShareCreator(url);
+    const playtestLinkMatch = url.pathname.match(/^\/try\/([^/]+)$/);
+    if (request.method === "GET" && shareCreatorId && playtestLinkMatch) {
+      const stub = env.CREATOR_PROJECTS.getByName(shareCreatorId);
+      const response = await stub.fetch(
+        `https://projects.internal/projects/${playtestLinkMatch[1]}?view=playtest-link`,
+      );
+      if (!response.ok) return response;
+      const { playtestLink } = await response.json<{
+        playtestLink: StoredPlaytestLink | null;
+      }>();
+      if (!playtestLink) return error("playtest_link_not_published", 404);
+      return Response.redirect(
+        publicShareUrl(`/room/${playtestLink.sessionId}`, url.origin, shareCreatorId),
+        302,
+      );
+    }
+    if (
+      shareCreatorId &&
+      (isPublicSharePage(url) || isPublicShareApi(request))
+    ) {
+      if (isPublicShareApi(request)) {
+        return projectApi(request, env, shareCreatorId, "oauth");
+      }
+      return env.ASSETS.fetch(request);
+    }
     if (
       url.pathname === "/.well-known/oauth-protected-resource" ||
       url.pathname === "/.well-known/oauth-protected-resource/mcp"
@@ -2819,7 +4919,7 @@ export default {
     }
     if (
       url.pathname === "/" ||
-      /^\/(editor|play|room|replay)\//.test(url.pathname)
+      /^\/(studio|play|room|replay)\//.test(url.pathname)
     ) {
       const identity = await authorizeRequest(request, env, ["godesk:read"]);
       if (identity instanceof Response) {

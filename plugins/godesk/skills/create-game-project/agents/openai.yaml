@@ -1,4 +1,4 @@
 interface:
   display_name: "Create a GoDesk game"
-  short_description: "Turn a brief into an editable tabletop prototype"
-  default_prompt: "Create an editable tabletop game from my brief."
+  short_description: "Turn an idea into an editable rule game"
+  default_prompt: "Use $create-game-project to turn this idea into a playable rule game."
