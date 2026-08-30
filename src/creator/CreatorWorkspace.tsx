@@ -3005,7 +3005,6 @@ function HarborVoyageBoard({
       <section className="action-board" aria-label="派遣伙计">
         <div className="action-board-heading">
           <div>
-            <span className="kicker">WORKER PLACEMENT</span>
             <h2>派遣伙计</h2>
           </div>
           <span>
