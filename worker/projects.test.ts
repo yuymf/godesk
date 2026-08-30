@@ -4165,12 +4165,10 @@ describe("Game Project HTTP seam", () => {
     const publicShare = publicRoomUrl.toString();
     const publicRoomPage = await SELF.fetch(publicRoomUrl);
     expect(publicRoomPage.status, await publicRoomPage.text()).toBe(200);
-    await expect(
-      SELF.fetch(shareApi(publicShare, `/api/sessions/${room.id}`)),
-    ).resolves.toMatchObject({ status: 200 });
-    await expect(
-      SELF.fetch(shareApi(publicShare, `/api/builds/${compiled.build.id}`)),
-    ).resolves.toMatchObject({ status: 200 });
+    const publicSession = await SELF.fetch(shareApi(publicShare, `/api/sessions/${room.id}`));
+    expect(publicSession.status, await publicSession.clone().text()).toBe(200);
+    const publicBuild = await SELF.fetch(shareApi(publicShare, `/api/builds/${compiled.build.id}`));
+    expect(publicBuild.status, await publicBuild.clone().text()).toBe(200);
     const unclaimedTurn = await SELF.fetch(
       shareApi(publicShare, `/api/sessions/${room.id}/intents`),
       {
