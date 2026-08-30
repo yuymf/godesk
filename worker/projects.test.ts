@@ -4044,7 +4044,8 @@ describe("Game Project HTTP seam", () => {
     const publicRoomUrl = new URL(room.sessionUrl);
     publicRoomUrl.hostname = "friend.godesk.example";
     const publicShare = publicRoomUrl.toString();
-    await expect(SELF.fetch(publicRoomUrl)).resolves.toMatchObject({ status: 200 });
+    const publicRoomPage = await SELF.fetch(publicRoomUrl);
+    expect(publicRoomPage.status, await publicRoomPage.text()).toBe(200);
     await expect(
       SELF.fetch(shareApi(publicShare, `/api/sessions/${room.id}`)),
     ).resolves.toMatchObject({ status: 200 });
