@@ -1,6 +1,6 @@
 ---
 name: validate-game-idea
-description: Test one GoDesk Design Hypothesis against a specific immutable Build and persisted play evidence. Use when a creator asks whether an idea works, wants to validate an assumption, compare a rule change, learn from playtesting, or record a supported, refuted, or inconclusive finding.
+description: Optional follow-up after a game is already playable. Record one design claim against play evidence. Use only when the creator names a specific claim to test; do not use this as the default create or share path.
 ---
 
 # Validate a Game Idea

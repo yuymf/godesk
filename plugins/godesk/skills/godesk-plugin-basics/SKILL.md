@@ -1,6 +1,6 @@
 ---
 name: godesk-plugin-basics
-description: Operate authoritative GoDesk rule-game projects safely from Codex. Use for GoDesk creation, editing, compilation, playtesting, sharing, replay, validation, duplication, deletion, or Web Studio handoff requests across conversation, card, screen, scene, table, and hybrid games.
+description: Operate GoDesk from Codex to turn an idea into a playable, shareable game. Use when creating, compiling, opening a joinable session, publishing a friend URL, or inspecting a Replay. Validation Findings are optional follow-up tools, not the destination.
 ---
 
 # GoDesk Plugin Basics

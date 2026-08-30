@@ -72,6 +72,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
     await page.goto("/chatgpt-plugin");
     await expect(page.getByRole("heading", { name: "让 Codex 直接使用 GoDesk。" })).toBeVisible();
+    await expect(page.getByText("Codex Plugin · 0.2.0+codex.20260830")).toBeVisible();
     await expect(page.getByText("对标 ChatCut")).toBeVisible();
     await expect(page.locator("body")).not.toContainText("开始制作并验证我的第一个规则游戏");
     await expect(page.locator("body")).not.toContainText("记录一条明确标注证据类型的验证结论");

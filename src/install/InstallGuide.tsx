@@ -22,7 +22,7 @@ export function InstallGuide() {
           <span>GD</span>
           <strong>GoDesk</strong>
         </a>
-        <span>Codex Plugin · 0.2.0</span>
+        <span>Codex Plugin · 0.2.0+codex.20260830</span>
       </header>
 
       <section className="install-hero">

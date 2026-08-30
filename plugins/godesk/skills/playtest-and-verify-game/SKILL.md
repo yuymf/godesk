@@ -1,6 +1,6 @@
 ---
 name: playtest-and-verify-game
-description: Run deterministic GoDesk bot playtests, create Shared Sessions, inspect Replays, and verify Web Studio or playable results. Use when a creator asks to test, balance, diagnose, preview, verify, share, reconnect, or review what happened in a GoDesk game.
+description: Play, share, and inspect a GoDesk game. Use when a creator wants a friend invitation URL, bot self-play, or a Replay. Automated evidence is not a human playtest.
 ---
 
 # Playtest and Verify a Game
