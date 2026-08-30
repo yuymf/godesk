@@ -67,12 +67,51 @@ async function waitForJob(id: string) {
   throw new Error(`job ${id} did not finish`);
 }
 
+function shareApi(shareUrl: string, pathname: string) {
+  const url = new URL(shareUrl);
+  url.pathname = pathname;
+  return url.toString();
+}
+
+async function claimSeat(
+  roomId: string,
+  seat: number,
+  shareUrl?: string,
+  extras?: { seatToken?: string; displayName?: string },
+) {
+  const pathname = `/api/sessions/${roomId}/seats`;
+  const response = await SELF.fetch(
+    shareUrl ? shareApi(shareUrl, pathname) : `https://godesk.test${pathname}`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ seat, ...extras }),
+    },
+  );
+  const body = await response.json<{
+    session?: {
+      id: string;
+      seats: Array<{ seat: number; displayName?: string }>;
+    };
+    seatToken?: string;
+    error?: string;
+    seat?: number;
+  }>();
+  return {
+    status: response.status,
+    session: body.session,
+    seatToken: body.seatToken,
+    error: body.error,
+    claimedSeat: body.seat,
+  };
+}
+
 function nextSocketSnapshot(socket: WebSocket, label = "Room snapshot") {
   return new Promise<{
     type: string;
     session: {
       id: string;
-      seats: Array<{ seat: number; clientId: string }>;
+      seats: Array<{ seat: number; displayName?: string }>;
       acceptedActions: Array<{ actionId: string }>;
     };
   }>((resolve, reject) => {
@@ -202,7 +241,7 @@ describe("Game Project HTTP seam", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ seed: 42, idempotencyKey }),
       },
-    ).then((response) => response.json<{ id: string }>());
+    ).then((response) => response.json<{ id: string; replayId: string }>());
     const firstRoom = await createRoom("stable-playtest-room-1");
 
     await expect(SELF.fetch(
@@ -252,6 +291,7 @@ describe("Game Project HTTP seam", () => {
         projectId: string;
         sessionId: string;
         buildId: string;
+        replayId: string;
         url: string;
       };
     }>());
@@ -259,10 +299,13 @@ describe("Game Project HTTP seam", () => {
       projectId: created.project.id,
       sessionId: firstRoom.id,
       buildId: compiled.build.id,
+      replayId: firstRoom.replayId,
     });
     expect(new URL(firstLink.playtestLink.url).pathname).toBe(
       `/try/${created.project.id}`,
     );
+    expect(new URL(firstLink.playtestLink.url).searchParams.get("share")).toBeTruthy();
+    expect(new URL(firstLink.playtestLink.url).searchParams.has("creator")).toBe(false);
     const firstRedirect = await SELF.fetch(firstLink.playtestLink.url, {
       redirect: "manual",
     });
@@ -281,10 +324,14 @@ describe("Game Project HTTP seam", () => {
     const secondLink = await SELF.fetch(
       `https://godesk.test/api/projects/${created.project.id}?view=playtest-link`,
     ).then((response) => response.json<{
-      playtestLink: { sessionId: string; url: string };
+      playtestLink: { sessionId: string; replayId: string; url: string };
     }>());
-    expect(secondLink.playtestLink.url).toBe(firstLink.playtestLink.url);
+    expect(new URL(secondLink.playtestLink.url).pathname).toBe(
+      `/try/${created.project.id}`,
+    );
+    expect(new URL(secondLink.playtestLink.url).searchParams.get("share")).toBeTruthy();
     expect(secondLink.playtestLink.sessionId).toBe(secondRoom.id);
+    expect(secondLink.playtestLink.replayId).toBe(secondRoom.replayId);
     const secondRedirect = await SELF.fetch(secondLink.playtestLink.url, {
       redirect: "manual",
     });
@@ -315,7 +362,7 @@ describe("Game Project HTTP seam", () => {
       project: { version: number };
       build: { id: string };
     };
-    const room = await callMcpTool<{ id: string }>(903, "create_shared_session", {
+    const room = await callMcpTool<{ id: string; replayId: string }>(903, "create_shared_session", {
       buildId: result.build.id,
       seed: 42,
       idempotencyKey: "mcp-stable-playtest-room",
@@ -339,6 +386,7 @@ describe("Game Project HTTP seam", () => {
           projectId: string;
           sessionId: string;
           buildId: string;
+          replayId: string;
           url: string;
         };
       };
@@ -350,10 +398,13 @@ describe("Game Project HTTP seam", () => {
       projectId: created.project.id,
       sessionId: room.id,
       buildId: result.build.id,
+      replayId: room.replayId,
     });
     expect(new URL(view.data.playtestLink.url).pathname).toBe(
       `/try/${created.project.id}`,
     );
+    expect(new URL(view.data.playtestLink.url).searchParams.get("share")).toBeTruthy();
+    expect(new URL(view.data.playtestLink.url).searchParams.has("creator")).toBe(false);
   });
 
   it.each([
@@ -649,20 +700,16 @@ describe("Game Project HTTP seam", () => {
       },
     ).then((response) => response.json<{ id: string; replayId: string }>());
 
-    for (const [seat, clientId] of [[0, "creator"], [1, "friend"]] as const) {
-      const claimed = await SELF.fetch(
-        `https://godesk.test/api/sessions/${room.id}/seats`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ seat, clientId }),
-        },
-      );
+    const seats = new Map<number, string>();
+    for (const seat of [0, 1] as const) {
+      const claimed = await claimSeat(room.id, seat);
       expect(claimed.status).toBe(200);
+      expect(claimed.seatToken).toMatch(/^seat_/);
+      seats.set(seat, claimed.seatToken!);
     }
-    for (const [seat, clientId, actionId] of [
-      [0, "creator", "connect"],
-      [1, "friend", "constraint"],
+    for (const [seat, actionId] of [
+      [0, "connect"],
+      [1, "constraint"],
     ] as const) {
       const accepted = await SELF.fetch(
         `https://godesk.test/api/sessions/${room.id}/intents`,
@@ -672,7 +719,7 @@ describe("Game Project HTTP seam", () => {
           body: JSON.stringify({
             intentId: `idea-${seat}`,
             seat,
-            clientId,
+            seatToken: seats.get(seat),
             actionId,
           }),
         },
@@ -759,20 +806,16 @@ describe("Game Project HTTP seam", () => {
     secondSocket.addEventListener("message", () => {
       secondRoomUpdated = true;
     }, { once: true });
-    const claimed = await SELF.fetch(
-      `https://godesk.test/api/sessions/${firstRoom.id}/seats`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ seat: 0, clientId: "socket-friend" }),
-      },
-    );
+    const claimed = await claimSeat(firstRoom.id, 0, undefined, {
+      displayName: "socket-friend",
+    });
     expect(claimed.status).toBe(200);
+    expect(claimed.seatToken).toMatch(/^seat_/);
     expect(await firstUpdate).toMatchObject({
       type: "session.snapshot",
       session: {
         id: firstRoom.id,
-        seats: [{ seat: 0, clientId: "socket-friend" }],
+        seats: [{ seat: 0, displayName: "socket-friend" }],
       },
     });
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -788,7 +831,7 @@ describe("Game Project HTTP seam", () => {
         body: JSON.stringify({
           intentId: "socket-action",
           seat: 0,
-          clientId: "socket-friend",
+          seatToken: claimed.seatToken,
           actionId: "connect",
         }),
       },
@@ -831,15 +874,9 @@ describe("Game Project HTTP seam", () => {
       },
     ).then((response) => response.json<{ id: string; replayId: string }>());
 
-    const claim = await SELF.fetch(
-      `https://godesk.test/api/sessions/${room.id}/seats`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ seat: 0, clientId: "feedback-friend" }),
-      },
-    );
+    const claim = await claimSeat(room.id, 0);
     expect(claim.status).toBe(200);
+    expect(claim.seatToken).toMatch(/^seat_/);
     const beforeAction = await SELF.fetch(
       `https://godesk.test/api/sessions/${room.id}/feedback`,
       {
@@ -847,7 +884,7 @@ describe("Game Project HTTP seam", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           seat: 0,
-          clientId: "feedback-friend",
+          seatToken: claim.seatToken,
           rating: 5,
           comment: "还没有行动，不能形成可追溯反馈。",
         }),
@@ -865,7 +902,7 @@ describe("Game Project HTTP seam", () => {
         body: JSON.stringify({
           intentId: "feedback-action",
           seat: 0,
-          clientId: "feedback-friend",
+          seatToken: claim.seatToken,
           actionId: "connect",
         }),
       },
@@ -885,7 +922,7 @@ describe("Game Project HTTP seam", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           seat: 0,
-          clientId: "feedback-friend",
+          seatToken: claim.seatToken,
           rating: 6,
           comment: "太短",
         }),
@@ -900,7 +937,7 @@ describe("Game Project HTTP seam", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           seat: 1,
-          clientId: "unclaimed-friend",
+          seatToken: "seat_unclaimed-friend",
           rating: 5,
           comment: "这条反馈不应该被接受。",
         }),
@@ -918,7 +955,7 @@ describe("Game Project HTTP seam", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           seat: 0,
-          clientId: "feedback-friend",
+          seatToken: claim.seatToken,
           rating: 5,
           comment: "目标很清楚，行动反馈也很及时。",
         }),
@@ -953,7 +990,7 @@ describe("Game Project HTTP seam", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           seat: 0,
-          clientId: "feedback-friend",
+          seatToken: claim.seatToken,
           rating: 4,
           comment: "目标很清楚，但第二回合还可以更有张力。",
         }),
@@ -1081,7 +1118,10 @@ describe("Game Project HTTP seam", () => {
               evidence: {
                 type: "human-session",
                 sessionId: botPlaytest.id,
-                participantNames: ["Bot A", "Bot B"],
+                seatedParticipants: [
+                  { seat: 0, name: "Bot A" },
+                  { seat: 1, name: "Bot B" },
+                ],
                 creatorAttested: true,
               },
               verdict: "supported",
@@ -1101,20 +1141,17 @@ describe("Game Project HTTP seam", () => {
         body: JSON.stringify({ seed: 4, idempotencyKey: "idea-relay-validation-room" }),
       },
     ).then((response) => response.json<{ id: string }>());
-    for (const [seat, clientId] of [[0, "creator"], [1, "friend"]] as const) {
-      await SELF.fetch(`https://godesk.test/api/sessions/${room.id}/seats`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ seat, clientId }),
-      });
-    }
+    const creatorSeat = await claimSeat(room.id, 0, undefined, { displayName: "Creator" });
+    const friendSeat = await claimSeat(room.id, 1, undefined, { displayName: "Friend" });
+    expect(creatorSeat.status).toBe(200);
+    expect(friendSeat.status).toBe(200);
     await SELF.fetch(`https://godesk.test/api/sessions/${room.id}/intents`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         intentId: "validation-action-1",
         seat: 0,
-        clientId: "creator",
+        seatToken: creatorSeat.seatToken,
         actionId: "constraint",
       }),
     });
@@ -1135,7 +1172,10 @@ describe("Game Project HTTP seam", () => {
               evidence: {
                 type: "human-session",
                 sessionId: room.id,
-                participantNames: ["Creator", "Friend"],
+                seatedParticipants: [
+                  { seat: 0, name: "Creator" },
+                  { seat: 1, name: "Friend" },
+                ],
               },
               verdict: "inconclusive",
               notes: "缺少创作者真人证据声明。",
@@ -1163,7 +1203,10 @@ describe("Game Project HTTP seam", () => {
               evidence: {
                 type: "human-session",
                 sessionId: room.id,
-                participantNames: ["Creator", "Friend"],
+                seatedParticipants: [
+                  { seat: 0, name: "Creator" },
+                  { seat: 1, name: "Friend" },
+                ],
                 creatorAttested: true,
               },
               verdict: "supported",
@@ -1194,6 +1237,10 @@ describe("Game Project HTTP seam", () => {
         evidence: {
           type: "human-session",
           sessionId: room.id,
+          seatedParticipants: [
+            { seat: 0, name: "Creator" },
+            { seat: 1, name: "Friend" },
+          ],
           creatorAttested: true,
         },
         verdict: "supported",
@@ -1275,18 +1322,15 @@ describe("Game Project HTTP seam", () => {
       question: "参与者是否能理解共同创意的推进节奏？",
       successSignal: "反馈评论明确指出行动反馈易于理解。",
     });
-    await SELF.fetch(`https://godesk.test/api/sessions/${room.id}/seats`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ seat: 0, clientId: "participant-feedback-client" }),
-    });
+    const participantSeat = await claimSeat(room.id, 0);
+    expect(participantSeat.status).toBe(200);
     await SELF.fetch(`https://godesk.test/api/sessions/${room.id}/intents`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         intentId: "participant-feedback-action",
         seat: 0,
-        clientId: "participant-feedback-client",
+        seatToken: participantSeat.seatToken,
         actionId: "extend",
       }),
     });
@@ -1297,7 +1341,7 @@ describe("Game Project HTTP seam", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           seat: 0,
-          clientId: "participant-feedback-client",
+          seatToken: participantSeat.seatToken,
           rating: 5,
           comment: "行动反馈很清楚，知道下一步要继续扩展。",
         }),
@@ -1428,7 +1472,7 @@ describe("Game Project HTTP seam", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         seat: 0,
-        clientId: "participant-feedback-client",
+        seatToken: participantSeat.seatToken,
         rating: 3,
         comment: "后续回合需要更多节奏变化。",
       }),
@@ -3084,6 +3128,23 @@ describe("Game Project HTTP seam", () => {
       status: "pending",
       ruleSystemVersion: 2,
     });
+    const secondGenerate = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/jobs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          kind: "generate-rule-system",
+          expectedVersion: 2,
+          idea: "第二次生成必须在未确认的 Generation Plan 上失败。",
+          idempotencyKey: "generate-rule-system-pending-blocked",
+        }),
+      },
+    ).then((response) => response.json<{ id: string }>());
+    await expect(waitForJob(secondGenerate.id)).resolves.toMatchObject({
+      status: "failed",
+      error: "generation_plan_pending",
+    });
     const blockedBuild = await SELF.fetch(
       `https://godesk.test/api/projects/${created.project.id}/builds`,
       {
@@ -3193,12 +3254,18 @@ describe("Game Project HTTP seam", () => {
         ruleSystem: {
           participants: { min: 2, max: 6, default: 3 },
           playSurface: { kind: "conversation", regions: [] },
-          runtimeSupport: {
-            status: "executable",
-            unsupported: expect.arrayContaining([
-              expect.stringContaining("conservative 18-turn prototype limit"),
-            ]),
-            kernel: { type: "turn-taking-v1", maxTurns: 18 },
+          runtimeSupport: { status: "draft" },
+        },
+        generationPlan: {
+          status: "pending",
+          proposedRuntime: {
+            op: "configure_turn_taking",
+            config: {
+              maxTurns: 18,
+              unsupported: expect.arrayContaining([
+                expect.stringContaining("conservative 18-turn prototype limit"),
+              ]),
+            },
           },
         },
       },
@@ -3272,10 +3339,13 @@ describe("Game Project HTTP seam", () => {
       status: "succeeded",
       result: {
         ruleSystem: {
-          runtimeSupport: {
-            status: "executable",
-            kernel: {
-              type: "score-race-v1",
+          runtimeSupport: { status: "draft" },
+        },
+        generationPlan: {
+          status: "pending",
+          proposedRuntime: {
+            op: "configure_score_race",
+            config: {
               victoryTarget: 6,
               maxTurns: 12,
               actions: [
@@ -3362,7 +3432,8 @@ describe("Game Project HTTP seam", () => {
     const generated = await waitForJob(generation.id);
     expect(generated.status).toBe("succeeded");
     const generatedResult = generated.result as {
-      ruleSystem: { name: string };
+      ruleSystem: { name: string; runtimeSupport: { status: string } };
+      generationPlan: { status: string; proposedRuntime?: { op: string } };
       sources: Array<{
         kind: string;
         name: string;
@@ -3370,6 +3441,11 @@ describe("Game Project HTTP seam", () => {
       }>;
     };
     expect(generatedResult.ruleSystem.name).toBe("规则书直达房间");
+    expect(generatedResult.ruleSystem.runtimeSupport.status).toBe("draft");
+    expect(generatedResult.generationPlan).toMatchObject({
+      status: "pending",
+      proposedRuntime: { op: expect.stringMatching(/^configure_/) },
+    });
     expect(generatedResult.sources).toContainEqual(expect.objectContaining({
       kind: "rulebook",
       name: "harbor-rules.md",
@@ -3665,10 +3741,11 @@ describe("Game Project HTTP seam", () => {
         ruleSystem: {
           presentation: {
             visuals: [{
-              provenance: "generated",
-              label: "排版与程序化游戏界面",
+              provenance: "kit",
+              label: "程序化主题 kit",
             }],
           },
+          runtimeSupport: { status: "draft" },
         },
       },
     });
@@ -3677,7 +3754,7 @@ describe("Game Project HTTP seam", () => {
       configured.project.version + 2,
       "visual-floor-approve-plan",
     );
-    const typographicBuild = await SELF.fetch(
+    const kitMaterializedBuild = await SELF.fetch(
       `https://godesk.test/api/projects/${created.project.id}/builds`,
       {
         method: "POST",
@@ -3690,17 +3767,17 @@ describe("Game Project HTTP seam", () => {
     ).then((response) => response.json<{
       build: { id: string; presentationFloor: { status: string; reason: string } };
     }>());
-    expect(typographicBuild.build.presentationFloor).toEqual({
+    expect(kitMaterializedBuild.build.presentationFloor).toEqual({
       status: "passed",
-      reason: "排版与程序化游戏界面 已满足 Presentation Floor。",
+      reason: "程序化主题 kit 已满足 Presentation Floor。",
       visuals: [{
-        provenance: "generated",
-          label: "排版与程序化游戏界面",
+        provenance: "kit",
+        label: "程序化主题 kit",
       }],
     });
     expect(
       await SELF.fetch(
-        `https://godesk.test/api/builds/${typographicBuild.build.id}/sessions`,
+        `https://godesk.test/api/builds/${kitMaterializedBuild.build.id}/sessions`,
         {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -3712,13 +3789,71 @@ describe("Game Project HTTP seam", () => {
       ),
     ).toMatchObject({ status: 201 });
 
-    const kit = await SELF.fetch(
+    const fakeGenerated = await SELF.fetch(
       `https://godesk.test/api/projects/${created.project.id}/changes`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           expectedVersion: approved.project.version + 1,
+          idempotencyKey: "visual-floor-fake-generated",
+          operations: [{
+            op: "update_rule_system",
+            fields: {
+              presentation: {
+                theme: "fake-generated",
+                visuals: [{
+                  provenance: "generated",
+                  label: "排版与程序化游戏界面",
+                }],
+              },
+            },
+          }],
+        }),
+      },
+    ).then((response) => response.json<{ project: { version: number } }>());
+    const fakeGeneratedBuild = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/builds`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          expectedVersion: fakeGenerated.project.version,
+          idempotencyKey: "visual-floor-fake-generated-build",
+        }),
+      },
+    ).then((response) => response.json<{
+      build: { id: string; presentationFloor: { status: string; reason: string } };
+    }>());
+    expect(fakeGeneratedBuild.build.presentationFloor).toEqual({
+      status: "failed",
+      reason: "generated、extracted 或 uploaded 呈现必须绑定真实图像，不能只写 provenance。",
+      visuals: [{
+        provenance: "generated",
+        label: "排版与程序化游戏界面",
+      }],
+    });
+    const refusedFake = await SELF.fetch(
+      `https://godesk.test/api/builds/${fakeGeneratedBuild.build.id}/sessions`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ seed: 42, idempotencyKey: "visual-floor-fake-refused" }),
+      },
+    );
+    expect(refusedFake.status).toBe(422);
+    await expect(refusedFake.json()).resolves.toMatchObject({
+      error: "visual_floor_unmet",
+      presentationFloor: fakeGeneratedBuild.build.presentationFloor,
+    });
+
+    const kit = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/changes`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          expectedVersion: fakeGenerated.project.version + 1,
           idempotencyKey: "visual-floor-kit",
           operations: [{
             op: "update_rule_system",
@@ -3817,30 +3952,27 @@ describe("Game Project HTTP seam", () => {
       replayId: string;
     }>());
     expect(new URL(room.sessionUrl).pathname).toBe(`/room/${room.id}`);
+    expect(new URL(room.sessionUrl).searchParams.get("share")).toBeTruthy();
+    expect(new URL(room.sessionUrl).searchParams.has("creator")).toBe(false);
 
     const publicRoomUrl = new URL(room.sessionUrl);
     publicRoomUrl.hostname = "friend.godesk.example";
-    const publicApi = (pathname: string) => {
-      const url = new URL(publicRoomUrl);
-      url.pathname = pathname;
-      return url.toString();
-    };
+    const publicShare = publicRoomUrl.toString();
     await expect(SELF.fetch(publicRoomUrl)).resolves.toMatchObject({ status: 200 });
     await expect(
-      SELF.fetch(publicApi(`/api/sessions/${room.id}`)),
+      SELF.fetch(shareApi(publicShare, `/api/sessions/${room.id}`)),
     ).resolves.toMatchObject({ status: 200 });
     await expect(
-      SELF.fetch(publicApi(`/api/builds/${compiled.build.id}`)),
+      SELF.fetch(shareApi(publicShare, `/api/builds/${compiled.build.id}`)),
     ).resolves.toMatchObject({ status: 200 });
     const unclaimedTurn = await SELF.fetch(
-      publicApi(`/api/sessions/${room.id}/intents`),
+      shareApi(publicShare, `/api/sessions/${room.id}/intents`),
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           intentId: "unclaimed-turn",
           seat: 0,
-          clientId: "unclaimed-browser",
           actionId: "advance",
         }),
       },
@@ -3856,67 +3988,69 @@ describe("Game Project HTTP seam", () => {
     );
     expect(protectedRoom.status).toBe(302);
 
-    for (const [seat, clientId] of [[0, "creator-browser"], [1, "friend-browser"]] as const) {
-      if (seat === 1) {
-        const duplicateClient = await SELF.fetch(
-          publicApi(`/api/sessions/${room.id}/seats`),
-          {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ seat, clientId: "creator-browser" }),
-          },
-        );
-        expect(duplicateClient.status).toBe(409);
-        await expect(duplicateClient.json()).resolves.toMatchObject({
-          error: "client_already_seated",
-          seat: 0,
-        });
-      }
-      await expect(
-        SELF.fetch(publicApi(`/api/sessions/${room.id}/seats`), {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ seat, clientId }),
-        }),
-      ).resolves.toMatchObject({ status: 200 });
-    }
+    const creatorSeat = await claimSeat(room.id, 0, publicShare, {
+      displayName: "Creator",
+    });
+    expect(creatorSeat.status).toBe(200);
+    expect(creatorSeat.seatToken).toMatch(/^seat_/);
+    const reclaim = await claimSeat(room.id, 0, publicShare, {
+      seatToken: creatorSeat.seatToken,
+    });
+    expect(reclaim.status).toBe(200);
+    expect(reclaim.seatToken).toBe(creatorSeat.seatToken);
+    const duplicateSeat = await claimSeat(room.id, 1, publicShare, {
+      seatToken: creatorSeat.seatToken,
+    });
+    expect(duplicateSeat.status).toBe(409);
+    expect(duplicateSeat.error).toBe("client_already_seated");
+    expect(duplicateSeat.claimedSeat).toBe(0);
+    const friendSeat = await claimSeat(room.id, 1, publicShare, {
+      displayName: "Friend",
+    });
+    expect(friendSeat.status).toBe(200);
+    expect(friendSeat.seatToken).toMatch(/^seat_/);
 
-    await expect(
-      SELF.fetch(publicApi(`/api/sessions/${room.id}/intents`), {
+    const impersonatedTurn = await SELF.fetch(
+      shareApi(publicShare, `/api/sessions/${room.id}/intents`),
+      {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           intentId: "impersonated-turn",
           seat: 0,
-          clientId: "friend-browser",
+          seatToken: friendSeat.seatToken,
           actionId: "advance",
         }),
-      }),
-    ).resolves.toMatchObject({ status: 409 });
+      },
+    );
+    expect(impersonatedTurn.status).toBe(409);
+    await expect(impersonatedTurn.json()).resolves.toMatchObject({
+      error: expect.stringMatching(/^(seat_not_claimed|seat_claimed)$/),
+    });
 
     const firstTurn = await SELF.fetch(
-      publicApi(`/api/sessions/${room.id}/intents`),
+      shareApi(publicShare, `/api/sessions/${room.id}/intents`),
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           intentId: "creator-turn",
           seat: 0,
-          clientId: "creator-browser",
+          seatToken: creatorSeat.seatToken,
           actionId: "advance",
         }),
       },
     );
     expect(firstTurn.status).toBe(200);
     const secondTurn = await SELF.fetch(
-      publicApi(`/api/sessions/${room.id}/intents`),
+      shareApi(publicShare, `/api/sessions/${room.id}/intents`),
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           intentId: "friend-turn",
           seat: 1,
-          clientId: "friend-browser",
+          seatToken: friendSeat.seatToken,
           actionId: "advance",
         }),
       },
@@ -3928,18 +4062,18 @@ describe("Game Project HTTP seam", () => {
         { intentId: "friend-turn", seat: 1 },
       ],
       seats: [
-        { seat: 0, clientId: "creator-browser" },
-        { seat: 1, clientId: "friend-browser" },
+        { seat: 0, displayName: "Creator" },
+        { seat: 1, displayName: "Friend" },
       ],
     });
     const friendFeedback = await SELF.fetch(
-      publicApi(`/api/sessions/${room.id}/feedback`),
+      shareApi(publicShare, `/api/sessions/${room.id}/feedback`),
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           seat: 1,
-          clientId: "friend-browser",
+          seatToken: friendSeat.seatToken,
           rating: 4,
           comment: "两个人的回合衔接很清楚。",
         }),
@@ -3950,14 +4084,14 @@ describe("Game Project HTTP seam", () => {
       feedback: [{ seat: 1, rating: 4, comment: "两个人的回合衔接很清楚。" }],
     });
     await expect(
-      SELF.fetch(publicApi(`/api/sessions/${room.id}`)).then((response) =>
+      SELF.fetch(shareApi(publicShare, `/api/sessions/${room.id}`)).then((response) =>
         response.json(),
       ),
     ).resolves.toMatchObject({
       feedback: [{ seat: 1, rating: 4 }],
     });
     await expect(
-      SELF.fetch(publicApi(`/api/replays/${room.replayId}`)).then(
+      SELF.fetch(shareApi(publicShare, `/api/replays/${room.replayId}`)).then(
         (response) => response.json(),
       ),
     ).resolves.toMatchObject({
@@ -4588,20 +4722,15 @@ describe("Game Project HTTP seam", () => {
       actionId: "bold",
     });
     expect(actedRoom.state).toMatchObject({ turn: 1, scores: [2, 0] });
-    await expect(
-      SELF.fetch(`https://godesk.test/api/sessions/${room.id}/seats`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ seat: 0, clientId: "mcp-feedback-reader" }),
-      }),
-    ).resolves.toMatchObject({ status: 200 });
+    const mcpFeedbackSeat = await claimSeat(room.id, 0);
+    expect(mcpFeedbackSeat.status).toBe(200);
     await expect(
       SELF.fetch(`https://godesk.test/api/sessions/${room.id}/feedback`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           seat: 0,
-          clientId: "mcp-feedback-reader",
+          seatToken: mcpFeedbackSeat.seatToken,
           rating: 5,
           comment: "MCP 可以读取同一 Shared Session 的反馈。",
         }),
@@ -4751,8 +4880,8 @@ describe("Game Project HTTP seam", () => {
               presentation: {
                 theme: "structured-action-fixture",
                 visuals: [{
-                  provenance: "generated",
-                  label: "Generated test presentation",
+                  provenance: "kit",
+                  label: "程序化主题 kit",
                 }],
               },
             },
@@ -5316,10 +5445,16 @@ describe("Game Project HTTP seam", () => {
       "加入约束",
     ]);
     expect(result.ruleSystem.runtimeSupport).toMatchObject({
-      status: "executable",
-      kernel: {
-        maxTurns: 18,
-        actions: [{ points: 1 }, { points: 2 }],
+      status: "draft",
+    });
+    expect((finished.result as { generationPlan: unknown }).generationPlan).toMatchObject({
+      status: "pending",
+      proposedRuntime: {
+        op: "configure_score_race",
+        config: {
+          maxTurns: 18,
+          actions: [{ points: 1 }, { points: 2 }],
+        },
       },
     });
   });
@@ -5352,21 +5487,26 @@ describe("Game Project HTTP seam", () => {
     expect(finished.status).toBe("succeeded");
     const generated = finished.result as {
       project: { version: number };
+      generationPlan: {
+        proposedRuntime?: {
+          op: string;
+          config: {
+            goalTarget?: number;
+            maxTurns: number;
+            actions: Array<{ progress?: number }>;
+          };
+        };
+      };
       ruleSystem: {
-        runtimeSupport:
-          | { status: "draft" }
-          | { status: "executable"; kernel: {
-              type: string;
-              goalTarget?: number;
-              maxTurns: number;
-              actions: Array<{ progress?: number }>;
-            } };
+        runtimeSupport: { status: string };
       };
     };
     expect(generated.ruleSystem.runtimeSupport).toMatchObject({
-      status: "executable",
-      kernel: {
-        type: "shared-goal-v1",
+      status: "draft",
+    });
+    expect(generated.generationPlan.proposedRuntime).toMatchObject({
+      op: "configure_shared_goal",
+      config: {
         goalTarget: 6,
         maxTurns: 12,
         actions: [{ progress: 2 }, { progress: 1 }],
@@ -5482,22 +5622,27 @@ describe("Game Project HTTP seam", () => {
     expect(finished.status).toBe("succeeded");
     const generated = finished.result as {
       project: { version: number };
-      generationPlan: { status: string };
+      generationPlan: {
+        status: string;
+        proposedRuntime?: {
+          op: string;
+          config: {
+            maxTurns: number;
+            actions: Array<{ id: string; label: string }>;
+          };
+        };
+      };
       ruleSystem: {
-        runtimeSupport:
-          | { status: "draft" }
-          | { status: "executable"; kernel: {
-              type: string;
-              maxTurns: number;
-              actions: Array<{ id: string; label: string }>;
-            } };
+        runtimeSupport: { status: string };
       };
     };
     expect(generated.generationPlan.status).toBe("pending");
     expect(generated.ruleSystem.runtimeSupport).toMatchObject({
-      status: "executable",
-      kernel: {
-        type: "turn-taking-v1",
+      status: "draft",
+    });
+    expect(generated.generationPlan.proposedRuntime).toMatchObject({
+      op: "configure_turn_taking",
+      config: {
         maxTurns: 4,
         actions: [
           { id: "source-action-1", label: "扩展创意" },
@@ -5628,19 +5773,23 @@ describe("Game Project HTTP seam", () => {
     expect(finished.status).toBe("succeeded");
     const generated = finished.result as {
       project: { version: number };
-      ruleSystem: { runtimeSupport: {
-        status: string;
-        kernel: {
-          type: string;
-          initialPool: number;
-          actions: Array<{ id: string; label: string; take: number }>;
+      generationPlan: {
+        proposedRuntime?: {
+          op: string;
+          config: {
+            initialPool: number;
+            actions: Array<{ id: string; label: string; take: number }>;
+          };
         };
-      } };
+      };
+      ruleSystem: { runtimeSupport: { status: string } };
     };
     expect(generated.ruleSystem.runtimeSupport).toMatchObject({
-      status: "executable",
-      kernel: {
-        type: "take-away-v1",
+      status: "draft",
+    });
+    expect(generated.generationPlan.proposedRuntime).toMatchObject({
+      op: "configure_take_away",
+      config: {
         initialPool: 15,
         actions: [
           { id: "source-action-1", label: "拿走 1 枚", take: 1 },
@@ -5765,21 +5914,25 @@ describe("Game Project HTTP seam", () => {
     expect(finished.status).toBe("succeeded");
     const generated = finished.result as {
       project: { version: number };
-      ruleSystem: { runtimeSupport: {
-        status: string;
-        kernel: {
-          type: string;
-          dieSides: number;
-          targetPosition: number;
-          maxTurns: number;
-          actions: Array<{ id: string; label: string }>;
+      generationPlan: {
+        proposedRuntime?: {
+          op: string;
+          config: {
+            dieSides: number;
+            targetPosition: number;
+            maxTurns: number;
+            actions: Array<{ id: string; label: string }>;
+          };
         };
-      } };
+      };
+      ruleSystem: { runtimeSupport: { status: string } };
     };
     expect(generated.ruleSystem.runtimeSupport).toMatchObject({
-      status: "executable",
-      kernel: {
-        type: "roll-and-move-v1",
+      status: "draft",
+    });
+    expect(generated.generationPlan.proposedRuntime).toMatchObject({
+      op: "configure_roll_and_move",
+      config: {
         dieSides: 6,
         targetPosition: 20,
         maxTurns: 80,

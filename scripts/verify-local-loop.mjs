@@ -92,6 +92,28 @@ function projectPath(projectId, suffix = "") {
   return `/api/projects/${encodeURIComponent(projectId)}${suffix}`;
 }
 
+function shareApi(shareUrl, pathname) {
+  const url = new URL(shareUrl);
+  url.pathname = pathname;
+  return url.toString();
+}
+
+async function claimSeat(origin, roomId, seat, shareUrl, extras = {}) {
+  const pathname = `/api/sessions/${encodeURIComponent(roomId)}/seats`;
+  const url = shareUrl ? shareApi(shareUrl, pathname) : `${origin}${pathname}`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ seat, ...extras }),
+  });
+  const body = await response.json();
+  if (response.status !== 200) {
+    fail(`claim seat ${seat}: expected 200, got ${response.status}: ${bodyForError(body)}`);
+  }
+  ensure(typeof body.seatToken === "string" && body.seatToken.startsWith("seat_"), "seat claim did not return a seatToken");
+  return { status: response.status, session: body.session, seatToken: body.seatToken };
+}
+
 async function compileBuild(origin, projectId, expectedVersion, idempotencyKey) {
   const queued = await postJson(
     origin,
@@ -146,13 +168,13 @@ async function verifyLoop(origin) {
   );
   const generatedJobResult = await waitForJob(origin, generatedJob.id);
   const generated = generatedJobResult.result?.ruleSystem;
-  ensure(generated?.runtimeSupport?.status === "executable", "prompt did not produce an executable Rule System");
-  const firstKernel = generated.runtimeSupport.kernel;
-  ensure(firstKernel.type === "shared-goal-v1", `expected shared-goal-v1, got ${firstKernel.type}`);
-  ensure(firstKernel.goalTarget === 6, "generated shared target drifted");
-  ensure(firstKernel.maxTurns === 12, "generated turn limit drifted");
+  ensure(generated?.runtimeSupport?.status === "draft", "generation must keep the Rule System in draft until the plan is approved");
+  const proposedRuntime = generatedJobResult.result?.generationPlan?.proposedRuntime;
+  ensure(proposedRuntime?.op === "configure_shared_goal", `expected proposed configure_shared_goal, got ${proposedRuntime?.op}`);
+  ensure(proposedRuntime.config.goalTarget === 6, "generated shared target drifted");
+  ensure(proposedRuntime.config.maxTurns === 12, "generated turn limit drifted");
   ensure(
-    JSON.stringify(firstKernel.actions.map((action) => action.progress)) === JSON.stringify([2, 1]),
+    JSON.stringify(proposedRuntime.config.actions.map((action) => action.progress)) === JSON.stringify([2, 1]),
     "generated action progress drifted",
   );
 
@@ -182,6 +204,16 @@ async function verifyLoop(origin) {
   );
   ensure(approvedPlan.generationPlan?.status === "approved", "Generation Plan was not approved");
   project = approvedPlan.project;
+  const approvedRuleSystem = await request(origin, `${projectPath(projectId)}?view=rule-system`);
+  ensure(approvedRuleSystem.runtimeSupport?.status === "executable", "approving the Generation Plan did not apply proposedRuntime");
+  const firstKernel = approvedRuleSystem.runtimeSupport.kernel;
+  ensure(firstKernel.type === "shared-goal-v1", `expected shared-goal-v1, got ${firstKernel.type}`);
+  ensure(firstKernel.goalTarget === 6, "approved shared target drifted");
+  ensure(firstKernel.maxTurns === 12, "approved turn limit drifted");
+  ensure(
+    JSON.stringify(firstKernel.actions.map((action) => action.progress)) === JSON.stringify([2, 1]),
+    "approved action progress drifted",
+  );
   const hypothesisChange = await postJson(
     origin,
     `${projectPath(projectId)}/changes`,
@@ -233,19 +265,14 @@ async function verifyLoop(origin) {
       feedbackSession.experiment.successSignal === "固定 seed 42 在更少回合内达到 6 点。",
     "feedback Room lost its Experiment Brief snapshot",
   );
-  const feedbackClientId = "local-loop-feedback-client";
-  await postJson(
-    origin,
-    `/api/sessions/${encodeURIComponent(feedbackSession.id)}/seats`,
-    { seat: 0, clientId: feedbackClientId },
-  );
+  const feedbackSeat = await claimSeat(origin, feedbackSession.id, 0);
   const feedbackAction = await postJson(
     origin,
     `/api/sessions/${encodeURIComponent(feedbackSession.id)}/intents`,
     {
       intentId: "local-loop-feedback-intent-001",
       seat: 0,
-      clientId: feedbackClientId,
+      seatToken: feedbackSeat.seatToken,
       actionId: firstKernel.actions[0].id,
     },
   );
@@ -255,7 +282,7 @@ async function verifyLoop(origin) {
     `/api/sessions/${encodeURIComponent(feedbackSession.id)}/feedback`,
     {
       seat: 0,
-      clientId: feedbackClientId,
+      seatToken: feedbackSeat.seatToken,
       rating: 5,
       comment: "行动反馈很清楚，知道下一步要继续推进。",
     },
@@ -354,23 +381,18 @@ async function verifyLoop(origin) {
     201,
   );
   ensure(session.state.sharedGoal?.progress === 0, "Shared Session did not start at zero progress");
-  const clientId = "local-loop-creator";
-  await postJson(
-    origin,
-    `/api/sessions/${encodeURIComponent(session.id)}/seats`,
-    { seat: 0, clientId },
-  );
+  const creatorSeat = await claimSeat(origin, session.id, 0);
   const rejected = await postJson(
     origin,
     `/api/sessions/${encodeURIComponent(session.id)}/intents`,
-    { intentId: "local-loop-wrong-seat-001", seat: 1, clientId: "local-loop-stranger", actionId: firstKernel.actions[0].id },
+    { intentId: "local-loop-wrong-seat-001", seat: 1, seatToken: "seat_local-loop-stranger", actionId: firstKernel.actions[0].id },
     409,
   );
   ensure(rejected.error === "seat_not_claimed", "unclaimed seat intent was not rejected");
   const acted = await postJson(
     origin,
     `/api/sessions/${encodeURIComponent(session.id)}/intents`,
-    { intentId: "local-loop-intent-001", seat: 0, clientId, actionId: firstKernel.actions[0].id },
+    { intentId: "local-loop-intent-001", seat: 0, seatToken: creatorSeat.seatToken, actionId: firstKernel.actions[0].id },
   );
   ensure(acted.state.sharedGoal?.progress === 3, "Shared Session did not execute the revised action");
 
@@ -379,7 +401,7 @@ async function verifyLoop(origin) {
     `/api/sessions/${encodeURIComponent(session.id)}/feedback`,
     {
       seat: 0,
-      clientId,
+      seatToken: creatorSeat.seatToken,
       rating: 5,
       comment: "固定 seed 下行动反馈可复核。",
     },
@@ -423,7 +445,10 @@ async function verifyLoop(origin) {
     `${projectPath(projectId)}?view=playtest-link`,
   );
   ensure(playtestLink?.sessionId === publishedSession.id, "Playtest Link did not pin the published Session");
+  ensure(playtestLink?.replayId === publishedSession.replayId, "Playtest Link lost its Replay id");
   ensure(new URL(playtestLink.url).pathname === `/try/${projectId}`, "Playtest Link path drifted");
+  ensure(new URL(playtestLink.url).searchParams.get("share"), "Playtest Link is missing a share token");
+  ensure(!new URL(playtestLink.url).searchParams.has("creator"), "Playtest Link still uses creator=");
   const playtestRedirect = await fetch(playtestLink.url, { redirect: "manual" });
   ensure(playtestRedirect.status === 302, "Playtest Link did not redirect");
   ensure(

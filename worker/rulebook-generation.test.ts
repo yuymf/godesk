@@ -78,6 +78,10 @@ describe("rulebook Rule System materialization", () => {
       layout: "prompt-and-response",
       regions: [],
     });
+    expect(ruleSystem.presentation.visuals).toEqual([{
+      provenance: "kit",
+      label: "程序化主题 kit",
+    }]);
     expect(ruleSystem.entities).toEqual([]);
     expect(ruleSystem.rules.length).toBeGreaterThan(0);
     expect(ruleSystem.constraints).toEqual([
