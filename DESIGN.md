@@ -10,8 +10,8 @@ Web Studio and creator home. Operate mode. ChatCut-style prompt workspace.
 
 Sunday table. Cool bone-green canvas (`#e8f0eb`), white paper cards, ink (`#1c2622`).
 One forest accent (`#0f6b4c`) owns primary actions and a thin rail edge — not a dark slab.
-The Shared Session table keeps its own play-surface material, because play is
-the output, not another settings panel.
+The Shared Session table uses the same daylight: paper header, forest actions,
+bone-green canvas. Friends opening an invite do not drop into a navy slab or beige felt.
 
 ## Type
 
@@ -34,5 +34,5 @@ Honor `prefers-reduced-motion`.
 ## Anti-references
 
 Dark charcoal studio. Mint-on-charcoal ChatCut clone. Beige luxury paper.
-Validation cockpit as the home screen. "生成 Rule System" as the primary CTA.
-Numbered 01-05 capability strips.
+Navy play-room chrome. Brass gold CTAs. Validation cockpit as the home screen.
+"生成 Rule System" as the primary CTA. Numbered 01-05 capability strips.

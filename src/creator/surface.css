@@ -1,5 +1,5 @@
-/* Sunday table: light Operate surfaces + authored motion.
-   Imported last. Play rooms keep their own tabletop material. */
+/* Sunday table: light Operate + play surfaces, authored motion.
+   Imported last. Friends opening an invite see the same daylight table. */
 
 :root {
   --ink: #1c2622;
@@ -718,6 +718,397 @@ summary:focus-visible {
   to { background-position: -40% 0; }
 }
 
+/* —— Room / Replay —— */
+.room-view,
+.replay-view,
+.room-view:not(.room-view-voyage) {
+  color: var(--ink);
+  background:
+    radial-gradient(ellipse 80% 52% at 48% -10%, rgb(15 107 76 / 12%), transparent 56%),
+    var(--canvas);
+}
+
+.room-view .room-shell-header,
+.replay-view > header,
+.room-view:not(.room-view-voyage) .room-shell-header {
+  color: var(--ink);
+  background: #f4faf6;
+  border-bottom: 1px solid rgb(15 107 76 / 12%);
+  box-shadow: inset 0 -3px 0 var(--forest);
+  animation: rise-in 480ms var(--ease-out) both;
+}
+
+.room-brand-mark {
+  color: #fff;
+  background: var(--forest);
+}
+
+.room-kicker,
+.room-command-label,
+.surface-action-index,
+.visual-floor-badge,
+.player-mat small,
+.action-card-index,
+.invitation-heading .room-kicker {
+  color: var(--faint);
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.room-shell-header .room-kicker {
+  color: var(--forest);
+}
+
+.room-shell-header h1,
+.replay-view h1 {
+  color: var(--ink);
+  font-family: inherit;
+}
+
+.room-header-actions a,
+.room-view > header a,
+.replay-view > header a {
+  color: var(--forest);
+}
+
+.room-locale-switch {
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+
+.room-locale-switch button {
+  color: var(--muted);
+}
+
+.room-locale-switch button.is-selected {
+  color: #fff;
+  background: var(--forest);
+}
+
+.room-view:not(.room-view-voyage) .room-invitation-rich,
+.room-invitation-rich {
+  color: var(--ink);
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+  animation: rise-in 520ms var(--ease-out) 40ms both;
+}
+
+.invitation-link-row input,
+.seat-picker select {
+  color: var(--ink);
+  background: #f6faf7;
+  border-color: var(--line);
+}
+
+.invitation-link-row button {
+  color: #fff;
+  background: var(--forest);
+  transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
+}
+
+.invitation-link-row button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgb(15 107 76 / 22%);
+}
+
+.room-command-bar,
+.room-action-panel,
+.player-mat {
+  background: var(--paper);
+  border-color: var(--line);
+}
+
+.room-command-bar strong,
+.table-section-header h2,
+.room-action-panel h2 {
+  color: var(--ink);
+  font-family: inherit;
+}
+
+.turn-callout {
+  color: var(--muted);
+  background: var(--forest-soft);
+}
+
+.turn-callout.is-your-turn {
+  color: var(--forest-deep);
+  background: #c8ebd9;
+  animation: pulse-dot 1.8s var(--ease-out) infinite;
+}
+
+.turn-callout.is-your-turn > span {
+  background: var(--forest);
+}
+
+.room-game-table {
+  background: var(--paper);
+  border-color: var(--line);
+  box-shadow: var(--shadow-card);
+  animation: deal-in 700ms var(--ease-out) both;
+}
+
+.room-game-table.is-conversation {
+  background: var(--paper);
+  border-color: var(--line);
+}
+
+.surface-action-card {
+  color: var(--ink);
+  background: #f6faf7;
+  border-color: var(--line);
+  box-shadow: none;
+  animation: deal-card 560ms var(--ease-out) both;
+}
+
+.surface-action-card-2,
+.surface-action-card-3,
+.surface-action-card-4 {
+  border-color: var(--line);
+}
+
+.surface-action-symbol,
+.player-token,
+.player-mat.is-active .player-token,
+.shared-goal-mat .player-token {
+  color: #fff;
+  background: var(--forest);
+}
+
+.surface-action-card b,
+.player-mat > header > b {
+  color: var(--forest-deep);
+}
+
+.player-mat.is-active {
+  border-color: var(--forest);
+  box-shadow: 0 0 0 0.2rem rgb(15 107 76 / 12%);
+}
+
+.player-mat.is-you,
+.shared-goal-mat {
+  background: var(--forest-soft);
+}
+
+.score-track span {
+  background: #d5e4db;
+}
+
+.score-track span.filled {
+  background: var(--forest);
+}
+
+.room-action-panel .room-action-cards button {
+  color: var(--ink);
+  background: #f3f8f5;
+  border-color: var(--line);
+}
+
+.room-action-panel .room-action-cards button.is-available {
+  color: #fff;
+  background: var(--forest);
+  border-color: var(--forest);
+  box-shadow: 0 10px 22px rgb(15 107 76 / 16%);
+  animation: chip-lock 420ms var(--ease-out);
+}
+
+.room-action-panel .room-action-cards button.is-available:hover {
+  background: var(--forest-deep);
+  box-shadow: 0 14px 28px rgb(15 107 76 / 24%);
+  transform: translateY(-2px);
+}
+
+.room-action-panel .room-action-cards button > b {
+  font-family: inherit;
+}
+
+.room-action-panel .room-action-cards button.is-available > strong,
+.room-action-panel .room-action-cards button.is-available > strong small,
+.room-action-panel .room-action-cards button.is-available > span:last-child {
+  color: rgb(255 255 255 / 86%);
+}
+
+.action-reminder,
+.action-feedback {
+  color: var(--forest-deep);
+  background: var(--forest-soft);
+  border-left-color: var(--forest);
+}
+
+.action-reminder.is-muted {
+  color: var(--muted);
+  background: #eef4f0;
+  border-left-color: var(--line);
+}
+
+.room-feedback-panel,
+.room-experiment-brief {
+  color: var(--ink);
+  background: var(--paper);
+  border-color: var(--line);
+}
+
+.room-experiment-brief p,
+.room-feedback-form textarea {
+  color: var(--ink);
+}
+
+.room-feedback-form textarea {
+  background: #f6faf7;
+  border-color: var(--line);
+}
+
+.feedback-rating button.is-selected,
+.feedback-rating button:hover {
+  color: var(--forest);
+}
+
+.feedback-submit {
+  color: #fff;
+  background: var(--forest);
+}
+
+.feedback-saved {
+  color: var(--forest-deep);
+}
+
+.room-view > .action-log,
+.replay-view > .action-log,
+.room-view:not(.room-view-voyage) > .action-log {
+  color: var(--ink);
+  background: #f4faf6;
+  border-left: 1px solid rgb(15 107 76 / 12%);
+  box-shadow: inset 3px 0 0 var(--forest);
+  animation: rise-in 560ms var(--ease-out) 80ms both;
+}
+
+.room-view > .action-log code,
+.room-view > .action-log p,
+.room-view > .action-log li,
+.room-view:not(.room-view-voyage) > .action-log code,
+.room-view:not(.room-view-voyage) > .action-log p,
+.room-view:not(.room-view-voyage) > .action-log li {
+  color: var(--muted);
+}
+
+.room-view > .action-log > span,
+.room-view:not(.room-view-voyage) > .action-log > span {
+  color: var(--forest);
+}
+
+.room-view:not(.room-view-voyage) .room-unsupported,
+.room-unsupported {
+  color: var(--muted);
+  border-top-color: var(--line);
+}
+
+.session-hypothesis-selector {
+  color: var(--muted);
+  background: #f6faf7;
+  border-color: var(--line);
+}
+
+/* Harbor voyage: same paper table, not a night chart. */
+.harbor-voyage-board {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
+  animation: deal-in 720ms var(--ease-out) both;
+}
+
+.harbor-instruction,
+.punt-title,
+.action-board-heading,
+.action-board-heading h2,
+.movement-console {
+  color: var(--ink);
+}
+
+.sea-chart {
+  background: #f6faf7;
+}
+
+.chart-labels,
+.punt-title small,
+.punt-footer,
+.action-board-heading .kicker,
+.target-groups > section > header,
+.harbor-voyage-board .game-log {
+  color: var(--muted);
+}
+
+.track > span {
+  background: #d5e4db;
+}
+
+.track > span.pirate-line {
+  background: #d9a3a0;
+}
+
+.track > span.port-line {
+  background: #8ec9ae;
+}
+
+.punt-token {
+  animation: float-mark 3.6s ease-in-out infinite;
+}
+
+.punt-footer b,
+.punt-footer em {
+  color: var(--forest-deep);
+}
+
+.movement-console {
+  border-top-color: var(--line);
+}
+
+.roll-button {
+  color: #fff;
+  background: var(--forest);
+}
+
+.pilot-console select,
+.pilot-console button {
+  color: var(--ink);
+  background: var(--paper);
+  border-color: var(--line);
+}
+
+.target-space,
+.player-ledger article,
+.room-zones article {
+  color: var(--ink);
+  background: #f6faf7;
+  border-color: var(--line);
+}
+
+.target-space.available {
+  color: var(--forest-deep);
+  background: var(--forest-soft);
+  border-color: var(--forest);
+  animation: chip-lock 360ms var(--ease-out);
+}
+
+.player-ledger article.active {
+  border-color: var(--forest);
+}
+
+.worker-slots i {
+  background: #d5e4db;
+  color: var(--ink);
+}
+
+.room-zones b {
+  color: var(--ink);
+}
+
+@media (max-width: 960px) {
+  .room-view:not(.room-view-voyage) > .action-log,
+  .room-view > .action-log {
+    border-top: 1px solid rgb(15 107 76 / 12%);
+    border-left: 0;
+  }
+}
+
 @media (max-width: 900px) {
   .studio-home,
   .creator-studio {
@@ -770,7 +1161,17 @@ summary:focus-visible {
   .creator-studio .ruleSystem-panel,
   .build-workflow,
   .validation-workflow,
-  .creator-studio .generation-plan-panel {
+  .creator-studio .generation-plan-panel,
+  .room-view .room-shell-header,
+  .room-invitation-rich,
+  .room-game-table,
+  .surface-action-card,
+  .harbor-voyage-board,
+  .punt-token,
+  .turn-callout.is-your-turn,
+  .room-action-panel .room-action-cards button.is-available,
+  .target-space.available,
+  .room-view > .action-log {
     animation: none;
   }
 

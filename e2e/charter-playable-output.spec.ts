@@ -1,8 +1,26 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 test.afterEach(async ({ page }, testInfo) => {
   await page.screenshot({ path: testInfo.outputPath("final.png"), fullPage: true });
 });
+
+async function expectLightPlaySurface(page: Page) {
+  const header = page.locator(".room-shell-header");
+  await expect(header).toBeVisible();
+  await expect
+    .poll(async () => header.evaluate((el) => getComputedStyle(el).backgroundColor))
+    .toBe("rgb(244, 250, 246)");
+  await expect
+    .poll(async () =>
+      page.locator(".room-view").evaluate((el) => getComputedStyle(el).backgroundColor),
+    )
+    .toBe("rgb(232, 240, 235)");
+  const log = page.locator(".action-log");
+  await expect(log).toBeVisible();
+  await expect
+    .poll(async () => log.evaluate((el) => getComputedStyle(el).backgroundColor))
+    .toBe("rgb(244, 250, 246)");
+}
 
 test.describe("ChatCut charter: source in, playable game out", () => {
   test("home composer is a light table and a starter chip is enough to generate", async ({
@@ -78,6 +96,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
 
     await expect(page.getByRole("heading", { name: "灵感接力" })).toBeVisible();
     await expect(page.getByText("对方直接用浏览器加入，无需安装 Codex")).toBeVisible();
+    await expectLightPlaySurface(page);
 
     const inviteUrl = await page.getByLabel("邀请链接").inputValue();
     expect(inviteUrl).toMatch(/\/room\//);
@@ -122,9 +141,61 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await page.waitForURL(/\/room\//, { timeout: 30_000 });
 
     await expect(page.getByText("对方直接用浏览器加入，无需安装 Codex")).toBeVisible();
+    await expectLightPlaySurface(page);
     const inviteUrl = await page.getByLabel("邀请链接").inputValue();
     expect(inviteUrl).toMatch(/\/room\//);
 
+    await page.getByLabel("你的席位").selectOption("0");
+    await expect(page.getByText("轮到你了")).toBeVisible();
+    await page.getByRole("button", { name: /行动 1/ }).click();
+    await expect(page.getByText(/已提交/)).toBeVisible();
+
+    const friendContext = await browser.newContext();
+    const friendPage = await friendContext.newPage();
+    await friendPage.goto(inviteUrl);
+    await friendPage.getByLabel("你的席位").selectOption("1");
+    await expect(friendPage.getByText("轮到你了")).toBeVisible();
+    await friendPage.getByRole("button", { name: /行动 2/ }).click();
+    await expect(friendPage.getByText(/已提交/)).toBeVisible();
+    await friendContext.close();
+  });
+
+  test("港口十三号 opens a light harbor table and accepts a waiter", async ({ page }) => {
+    await page.goto("/");
+    const harbor = page.locator("article").filter({ hasText: "港口十三号" });
+    await harbor.getByRole("button", { name: "先玩这一局" }).click();
+    await page.waitForURL(/\/room\//, { timeout: 90_000 });
+
+    await expect(page.getByRole("heading", { name: "港口十三号" })).toBeVisible();
+    await expectLightPlaySurface(page);
+    await expect(page.getByRole("heading", { name: "派遣伙计" })).toBeVisible();
+    await expect(page.locator(".harbor-voyage-board")).toBeVisible();
+    await expect
+      .poll(async () =>
+        page
+          .locator(".harbor-voyage-board")
+          .evaluate((el) => getComputedStyle(el).backgroundColor),
+      )
+      .toBe("rgb(255, 255, 255)");
+
+    await page.getByLabel("你的席位").selectOption("0");
+    await expect(page.getByText(/放置 1\/4 · Seat 0/)).toBeVisible();
+    await page.getByRole("button", { name: /雪松木/ }).click();
+    await expect(page.getByText("place:cedar")).toBeVisible();
+    await expect(page.getByText(/放置 1\/4 · Seat 1/)).toBeVisible();
+  });
+
+  test("雾岭山庄 becomes a joinable score race", async ({ page, browser }) => {
+    await page.goto("/");
+    const lodge = page.locator("article").filter({ hasText: "雾岭山庄" });
+    await lodge.getByRole("button", { name: "先玩这一局" }).click();
+    await page.waitForURL(/\/room\//, { timeout: 90_000 });
+
+    await expect(page.getByRole("heading", { name: "雾岭山庄" })).toBeVisible();
+    await expectLightPlaySurface(page);
+    await expect(page.getByText("调查房间")).toBeVisible();
+
+    const inviteUrl = await page.getByLabel("邀请链接").inputValue();
     await page.getByLabel("你的席位").selectOption("0");
     await expect(page.getByText("轮到你了")).toBeVisible();
     await page.getByRole("button", { name: /行动 1/ }).click();
