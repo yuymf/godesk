@@ -52,6 +52,11 @@ import type {
   SourceLibraryEntry,
   ValidationFinding,
 } from "./project-contract";
+import {
+  clearComposerDraft,
+  readComposerDraft,
+  writeComposerDraft,
+} from "./composer-draft";
 import { DEFAULT_EXAMPLES, type DefaultExampleId } from "./default-examples";
 import { HOBBYIST_STARTERS } from "./hobbyist-starters";
 import {
@@ -447,9 +452,10 @@ function CapabilityList({ project }: { project: GameProject }) {
 }
 
 function CreatorHome() {
-  const [name, setName] = useState("我的游戏");
-  const [description, setDescription] = useState("");
-  const [rulesText, setRulesText] = useState("");
+  const restoredDraft = readComposerDraft();
+  const [name, setName] = useState(restoredDraft?.name ?? "我的游戏");
+  const [description, setDescription] = useState(restoredDraft?.description ?? "");
+  const [rulesText, setRulesText] = useState(restoredDraft?.rulesText ?? "");
   const [rulebook, setRulebook] = useState<File>();
   const [visualAssets, setVisualAssets] = useState<File[]>([]);
   const [visualAssetUse, setVisualAssetUse] = useState<"visual-reference" | "project-asset">(
@@ -461,6 +467,8 @@ function CreatorHome() {
   const [stageLabel, setStageLabel] = useState("");
   const [completedStages, setCompletedStages] = useState(0);
   const [exampleBusy, setExampleBusy] = useState<DefaultExampleId | null>(null);
+  const resumeAfterLogin = useRef(restoredDraft?.resume ?? null);
+  const resumeExampleId = useRef(restoredDraft?.exampleId);
 
   useEffect(() => {
     listProjects().then(setProjects).catch((reason: Error) => {
@@ -468,6 +476,35 @@ function CreatorHome() {
       if (/<!doctype|unexpected token/i.test(reason.message)) return;
       setError(reason.message);
     });
+  }, []);
+
+  useEffect(() => {
+    writeComposerDraft({
+      name,
+      description,
+      rulesText,
+      resume: readComposerDraft()?.resume ?? null,
+      exampleId: readComposerDraft()?.exampleId,
+    });
+  }, [name, description, rulesText]);
+
+  useEffect(() => {
+    const resume = resumeAfterLogin.current;
+    resumeAfterLogin.current = null;
+    if (!shouldOfferWebLogin() || !resume) return;
+    writeComposerDraft({
+      name: restoredDraft?.name ?? "我的游戏",
+      description: restoredDraft?.description ?? "",
+      rulesText: restoredDraft?.rulesText ?? "",
+      resume: null,
+    });
+    if (resume === "generate") {
+      void submit({ preventDefault() {} } as React.FormEvent);
+      return;
+    }
+    if (resume === "example" && resumeExampleId.current) {
+      void copyExample(resumeExampleId.current);
+    }
   }, []);
 
   async function createAndOpenSession(buildId: string) {
@@ -556,6 +593,12 @@ function CreatorHome() {
       );
     } catch (reason) {
       if (isUnauthorized(reason) && shouldOfferWebLogin()) {
+        writeComposerDraft({
+          name,
+          description,
+          rulesText,
+          resume: "generate",
+        });
         beginWebLogin("/");
         return;
       }
@@ -595,6 +638,13 @@ function CreatorHome() {
       await createAndOpenSession(build.id);
     } catch (reason) {
       if (isUnauthorized(reason) && shouldOfferWebLogin()) {
+        writeComposerDraft({
+          name,
+          description,
+          rulesText,
+          resume: "example",
+          exampleId,
+        });
         beginWebLogin("/");
         return;
       }
@@ -643,7 +693,23 @@ function CreatorHome() {
     <main className="studio-home" id="main">
       <aside className="studio-sidebar">
         <Brand />
-        <a className="studio-new" href="/">＋ 新游戏</a>
+        <a
+          className="studio-new"
+          href="/"
+          onClick={(event) => {
+            clearComposerDraft();
+            if (window.location.pathname !== "/") return;
+            event.preventDefault();
+            setName("我的游戏");
+            setDescription("");
+            setRulesText("");
+            setRulebook(undefined);
+            setVisualAssets([]);
+            setError("");
+          }}
+        >
+          ＋ 新游戏
+        </a>
         <nav aria-label="最近项目">
           <span>我的游戏</span>
           {projects.slice(0, 8).map((project) => (

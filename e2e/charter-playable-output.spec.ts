@@ -67,6 +67,18 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(idea).toHaveValue(/放工人获得 2 分/);
     await expect(generate).toBeEnabled();
 
+    await page.reload();
+    await expect(idea).toHaveValue(/放工人获得 2 分/);
+    await expect(page.getByRole("button", { name: "轻桌游" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(generate).toBeEnabled();
+
+    await page.getByRole("link", { name: "＋ 新游戏" }).click();
+    await expect(idea).toHaveValue("");
+    await expect(generate).toBeDisabled();
+
     await expect(page.getByRole("button", { name: "先玩这一局" })).toHaveCount(3);
   });
 
