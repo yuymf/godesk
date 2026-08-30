@@ -2245,6 +2245,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                 {humanFinding && (
                   <p className="human-attest-done" role="status">
                     已记下：这是真人一起打的一局。
+                    <code className="human-attest-id">{humanFinding.id}</code>
                   </p>
                 )}
                 {canAttestHuman && friendSession && (

@@ -588,6 +588,13 @@ summary:focus-visible {
   color: var(--forest-deep);
 }
 
+.human-attest-id {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .human-attest label {
   display: grid;
   gap: 4px;

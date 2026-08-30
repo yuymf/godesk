@@ -197,7 +197,10 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await page.getByLabel("座位 1 的称呼").fill("朋友");
     await page.getByLabel("我确认这两位是真人").check();
     await page.getByRole("button", { name: "记下这是真人局" }).click();
-    await expect(page.locator(".human-attest-done")).toHaveText("已记下：这是真人一起打的一局。");
+    await expect(page.locator(".human-attest-done")).toContainText(
+      "已记下：这是真人一起打的一局。",
+    );
+    await expect(page.locator(".human-attest-id")).toHaveText(/^finding_/);
   });
 
   test("港口十三号 opens a light harbor table and accepts a waiter", async ({ page }) => {
