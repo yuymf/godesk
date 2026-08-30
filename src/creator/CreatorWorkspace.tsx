@@ -23,6 +23,9 @@ import {
   getSources,
   getValidation,
   listProjects,
+  beginWebLogin,
+  isUnauthorized,
+  shouldOfferWebLogin,
   ProjectApiError,
   retryJob,
   restoreBuild,
@@ -461,6 +464,7 @@ function CreatorHome() {
 
   useEffect(() => {
     listProjects().then(setProjects).catch((reason: Error) => {
+      if (isUnauthorized(reason)) return;
       if (/<!doctype|unexpected token/i.test(reason.message)) return;
       setError(reason.message);
     });
@@ -551,6 +555,10 @@ function CreatorHome() {
         [...uploadedImages, ...rulebookImages],
       );
     } catch (reason) {
+      if (isUnauthorized(reason) && shouldOfferWebLogin()) {
+        beginWebLogin("/");
+        return;
+      }
       setError(reason instanceof Error ? reason.message : "生成项目失败。");
       setCompletedStages(0);
     } finally {
@@ -586,6 +594,10 @@ function CreatorHome() {
       setProjects(await listProjects());
       await createAndOpenSession(build.id);
     } catch (reason) {
+      if (isUnauthorized(reason) && shouldOfferWebLogin()) {
+        beginWebLogin("/");
+        return;
+      }
       setError(reason instanceof Error ? reason.message : "复制案例失败。");
       setCompletedStages(0);
     } finally {
@@ -648,7 +660,7 @@ function CreatorHome() {
       <section className="studio-stage">
         <header className="studio-topbar">
           <span>桌游 · 剧本杀 · 棋牌</span>
-          <div><span className="studio-status-dot" /> 本地工作台</div>
+          <div><span className="studio-status-dot" /> 创作台</div>
         </header>
         <div className="studio-welcome">
           <div className="studio-orbit" aria-hidden="true"><span>GD</span></div>

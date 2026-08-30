@@ -1601,6 +1601,13 @@ describe("Game Project HTTP seam", () => {
     );
   });
 
+  it("lets a visitor open the hobbyist home page without login", async () => {
+    const response = await SELF.fetch("https://godesk.example/");
+    expect(response.status).not.toBe(401);
+    expect(response.headers.get("www-authenticate")).toBeNull();
+    expect(response.status).not.toBe(302);
+  });
+
   it("publishes protected resource metadata at the MCP-specific discovery path", async () => {
     const response = await SELF.fetch(
       "https://godesk.example/.well-known/oauth-protected-resource/mcp",

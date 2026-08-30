@@ -31,6 +31,8 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.getByText("别人能立刻打开、立刻玩、还能联机的游戏")).toBeVisible();
     await expect(page.locator("body")).not.toContainText("可编辑、可分享、可验证");
     await expect(page.getByText("分享联机")).toBeVisible();
+    await expect(page.getByText("创作台")).toBeVisible();
+    await expect(page.locator(".studio-home")).not.toContainText("GoDesk 服务暂时不可用");
 
     const sidebar = page.locator(".studio-sidebar");
     await expect(sidebar).toBeVisible();

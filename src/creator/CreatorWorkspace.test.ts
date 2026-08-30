@@ -24,6 +24,8 @@ import type { CreatorJob, PlayableBuild, PlaytestRun, SharedSession } from "./pr
 import { normalizeAppPathname } from "../App";
 import { DEFAULT_EXAMPLES } from "./default-examples";
 import {
+  isUnauthorized,
+  ProjectApiError,
   publicSharedSession,
   sharedSessionSocketUrl,
 } from "./project-api";
@@ -337,6 +339,12 @@ describe("Creator Studio optimistic draft baseline", () => {
       "三个人在别墅里互相怀疑谁是凶手".slice(0, 16),
     );
     expect(hobbyistProjectName("雾岭山庄", "随便写点想法")).toBe("雾岭山庄");
+  });
+
+  it("treats only HTTP 401 as a login handoff", () => {
+    expect(isUnauthorized(new ProjectApiError("需要登录后才能继续。", 401, {}))).toBe(true);
+    expect(isUnauthorized(new ProjectApiError("GoDesk 服务暂时不可用。", 503, {}))).toBe(false);
+    expect(isUnauthorized(new Error("network"))).toBe(false);
   });
 
   it("puts play first once a joinable game exists", () => {

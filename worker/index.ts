@@ -5143,10 +5143,7 @@ export default {
         identity.mode === "oauth" ? "oauth" : "local-development-only",
       );
     }
-    if (
-      url.pathname === "/" ||
-      /^\/(studio|play|room|replay)\//.test(url.pathname)
-    ) {
+    if (/^\/(studio|play|room|replay)\//.test(url.pathname)) {
       const identity = await authorizeRequest(request, env, ["godesk:read"]);
       if (identity instanceof Response) {
         const login = new URL("/login", url.origin);

@@ -32,6 +32,20 @@ export class ProjectApiError extends Error {
   }
 }
 
+export function shouldOfferWebLogin() {
+  const host = window.location.hostname;
+  return host !== "127.0.0.1" && host !== "localhost" && host !== "godesk.test";
+}
+
+export function beginWebLogin(returnTo = "/") {
+  const next = returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/";
+  window.location.assign(`/login?returnTo=${encodeURIComponent(next)}`);
+}
+
+export function isUnauthorized(reason: unknown) {
+  return reason instanceof ProjectApiError && reason.status === 401;
+}
+
 async function readJson<T>(response: Response) {
   if (!response.ok) {
     const body = await response.json().catch(() => ({})) as { error?: string };
