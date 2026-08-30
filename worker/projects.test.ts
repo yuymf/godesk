@@ -131,6 +131,36 @@ function nextSocketSnapshot(socket: WebSocket, label = "Room snapshot") {
   });
 }
 
+async function applyKitPresentation(
+  projectId: string,
+  expectedVersion: number,
+  idempotencyKey: string,
+  theme = "idea-relay",
+) {
+  const response = await SELF.fetch(
+    `https://godesk.test/api/projects/${projectId}/changes`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        expectedVersion,
+        idempotencyKey,
+        operations: [{
+          op: "update_rule_system",
+          fields: {
+            presentation: {
+              theme,
+              visuals: [{ provenance: "kit", label: "程序化主题 kit" }],
+            },
+          },
+        }],
+      }),
+    },
+  );
+  expect(response.status).toBe(200);
+  return response.json<{ project: { version: number } }>();
+}
+
 async function approveGenerationPlan(
   projectId: string,
   expectedVersion: number,
@@ -220,13 +250,18 @@ describe("Game Project HTTP seam", () => {
     }).then((response) => response.json<{
       project: { id: string; version: number };
     }>());
+    const prepared = await applyKitPresentation(
+      created.project.id,
+      created.project.version,
+      "stable-playtest-kit",
+    );
     const compiled = await SELF.fetch(
       `https://godesk.test/api/projects/${created.project.id}/builds`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          expectedVersion: created.project.version,
+          expectedVersion: prepared.project.version,
           idempotencyKey: "stable-playtest-build",
         }),
       },
@@ -350,10 +385,28 @@ describe("Game Project HTTP seam", () => {
       name: "MCP 固定试玩入口",
       templateId: "idea-relay",
     });
+    const prepared = await callMcpTool<{ project: { version: number } }>(
+      9011,
+      "apply_project_patch",
+      {
+        projectId: created.project.id,
+        expectedVersion: created.project.version,
+        idempotencyKey: "mcp-stable-playtest-kit",
+        operations: [{
+          op: "update_rule_system",
+          fields: {
+            presentation: {
+              theme: "idea-relay",
+              visuals: [{ provenance: "kit", label: "程序化主题 kit" }],
+            },
+          },
+        }],
+      },
+    );
     const submitted = await callMcpTool<{ id: string }>(902, "submit_job", {
       kind: "compile-build",
       projectId: created.project.id,
-      expectedVersion: created.project.version,
+      expectedVersion: prepared.project.version,
       idempotencyKey: "mcp-stable-playtest-build",
     });
     const finished = await waitForJob(submitted.id);
@@ -679,6 +732,11 @@ describe("Game Project HTTP seam", () => {
       layout: "prompt-and-response",
       regions: [],
     });
+    const prepared = await applyKitPresentation(
+      created.project.id,
+      created.project.version,
+      "idea-relay-kit",
+    );
 
     const { build } = await SELF.fetch(
       `https://godesk.test/api/projects/${created.project.id}/builds`,
@@ -686,7 +744,7 @@ describe("Game Project HTTP seam", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          expectedVersion: created.project.version,
+          expectedVersion: prepared.project.version,
           idempotencyKey: "idea-relay-build",
         }),
       },
@@ -748,13 +806,18 @@ describe("Game Project HTTP seam", () => {
     }).then((response) => response.json<{
       project: { id: string; version: number };
     }>());
+    const prepared = await applyKitPresentation(
+      created.project.id,
+      created.project.version,
+      "room-websocket-kit",
+    );
     const { build } = await SELF.fetch(
       `https://godesk.test/api/projects/${created.project.id}/builds`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          expectedVersion: created.project.version,
+          expectedVersion: prepared.project.version,
           idempotencyKey: "room-websocket-build",
         }),
       },
@@ -854,13 +917,18 @@ describe("Game Project HTTP seam", () => {
     }).then((response) => response.json<{
       project: { id: string; version: number; activeRuleSystemId: string };
     }>());
+    const prepared = await applyKitPresentation(
+      created.project.id,
+      created.project.version,
+      "feedback-kit",
+    );
     const { build } = await SELF.fetch(
       `https://godesk.test/api/projects/${created.project.id}/builds`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          expectedVersion: created.project.version,
+          expectedVersion: prepared.project.version,
           idempotencyKey: "feedback-build",
         }),
       },
@@ -1048,13 +1116,18 @@ describe("Game Project HTTP seam", () => {
     }).then((response) => response.json<{
       project: { id: string; version: number };
     }>());
+    const prepared = await applyKitPresentation(
+      created.project.id,
+      created.project.version,
+      "idea-relay-validation-kit",
+    );
     const hypothesisChange = await SELF.fetch(
       `https://godesk.test/api/projects/${created.project.id}/changes`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          expectedVersion: created.project.version,
+          expectedVersion: prepared.project.version,
           idempotencyKey: "idea-relay-hypothesis",
           operations: [{
             op: "add_design_hypothesis",
@@ -1284,13 +1357,18 @@ describe("Game Project HTTP seam", () => {
       project: { id: string; version: number };
       hypotheses: Array<{ id: string; question: string; successSignal: string }>;
     }>());
+    const prepared = await applyKitPresentation(
+      created.project.id,
+      hypothesis.project.version,
+      "participant-feedback-kit",
+    );
     const compiled = await SELF.fetch(
       `https://godesk.test/api/projects/${created.project.id}/builds`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          expectedVersion: hypothesis.project.version,
+          expectedVersion: prepared.project.version,
           idempotencyKey: "participant-feedback-build",
         }),
       },
