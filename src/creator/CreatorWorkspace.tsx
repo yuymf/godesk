@@ -739,6 +739,7 @@ function CreatorHome() {
 
         <form
           aria-busy={busy}
+          autoComplete="off"
           className={`studio-composer${description.trim() ? " is-filled" : ""}${hasGenerationInput ? " is-ready" : ""}`}
           onSubmit={submit}
         >
