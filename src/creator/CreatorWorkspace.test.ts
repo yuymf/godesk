@@ -161,15 +161,20 @@ describe("Creator Studio optimistic draft baseline", () => {
     )).toEqual({ build: latestBuild, session: newestLatestBuildSession });
   });
 
-  it("opens a Shared Session only for executable Builds that pass the visual floor", () => {
+  it("opens a Shared Session only for executable Builds that pass both floors", () => {
     const build = {
       ruleSystem: { runtimeSupport: { status: "executable" } },
       presentationFloor: { status: "passed" },
+      playabilityFloor: { status: "passed" },
     } as PlayableBuild;
     expect(buildCanOpenSharedSession(build)).toBe(true);
     expect(buildCanOpenSharedSession({
       ...build,
       presentationFloor: { status: "failed" },
+    } as PlayableBuild)).toBe(false);
+    expect(buildCanOpenSharedSession({
+      ...build,
+      playabilityFloor: { status: "failed" },
     } as PlayableBuild)).toBe(false);
     expect(buildCanOpenSharedSession({
       ...build,

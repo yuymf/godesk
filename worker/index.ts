@@ -15,7 +15,11 @@ import {
   executableRuntime,
   initialSessionState,
   runBotSimulation,
+  scopeSessionState,
 } from "./runtime";
+import { inferSourceGenre } from "../src/runtime/genre";
+import { playabilityFloor } from "../src/runtime/playability-floor";
+import { defaultHiddenRoles } from "../src/runtime/hidden-role";
 import type {
   ApplyProjectChangesInput,
   ApplyProjectChangesResult,
@@ -133,6 +137,8 @@ type StoredSharedSession = Omit<SharedSession, "sessionUrl" | "replayUrl" | "sea
 type StoredPlaytestLink = Omit<PlaytestLink, "url">;
 interface SessionSocketAttachment {
   sessionId: string;
+  seat?: number;
+  seatTokenHash?: string;
 }
 type StoredReplay = GameReplay;
 type StoredCompileBuildResult = Omit<
@@ -242,13 +248,14 @@ function sameRuleSystemContent(left: RuleSystem, right: RuleSystem) {
 }
 
 function normalizedBuild(build: StoredPlayableBuild): StoredPlayableBuild {
-  if (!build.presentationFloor) {
+  if (!build.presentationFloor || !build.playabilityFloor) {
     throw new Error("unsupported_build_shape");
   }
   return {
     ...build,
     ruleSystem: normalizedRuleSystem(build.ruleSystem),
     presentationFloor: build.presentationFloor,
+    playabilityFloor: build.playabilityFloor,
   };
 }
 
@@ -396,13 +403,109 @@ type RuntimeConfiguration =
     }
   | Extract<ProjectChangeOperation, { op: "configure_harbor_voyage" }> & {
       op: "configure_harbor_voyage";
+    }
+  | Extract<ProjectChangeOperation, { op: "configure_hidden_role" }> & {
+      op: "configure_hidden_role";
+    }
+  | Extract<ProjectChangeOperation, { op: "configure_hand_play" }> & {
+      op: "configure_hand_play";
+    }
+  | Extract<ProjectChangeOperation, { op: "configure_conversation_relay" }> & {
+      op: "configure_conversation_relay";
     };
+
+function configureDedicatedKernel(
+  record: ProjectRecord,
+  op: string,
+  kernel: Extract<
+    Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
+    { type: "harbor-voyage-v1" | "hidden-role-v1" | "hand-play-v1" | "conversation-relay-v1" }
+  >,
+  unsupported: string[],
+  config: unknown,
+  affectedEntities: string[],
+) {
+  const runtimeSource: SourceLibraryEntry = {
+    id: `source_${crypto.randomUUID()}`,
+    kind: "brief",
+    name: `${record.ruleSystem.name} · ${kernel.type} 配置`,
+    content: JSON.stringify(config),
+    readiness: "ready",
+    provenance: {
+      origin: "system-generated",
+      locator: `${op} operation`,
+      confidence: 1,
+    },
+    createdAt: new Date().toISOString(),
+  };
+  record.sources.push(runtimeSource);
+  record.ruleSystem = {
+    ...record.ruleSystem,
+    runtimeSupport: {
+      status: "executable",
+      unsupported,
+      kernel,
+    },
+  };
+  affectedEntities.push(`source:${runtimeSource.id}`);
+  affectedEntities.push(`runtime:${record.ruleSystem.id}`);
+}
 
 function configureRuntimeKernel(
   record: ProjectRecord,
   configuration: RuntimeConfiguration,
   affectedEntities: string[],
 ) {
+  if (configuration.op === "configure_hidden_role") {
+    configureDedicatedKernel(
+      record,
+      configuration.op,
+      {
+        type: "hidden-role-v1",
+        playerCount: configuration.config.playerCount,
+        roles: configuration.config.roles,
+      },
+      configuration.config.unsupported?.map((item) => item.trim()) ?? [],
+      configuration.config,
+      affectedEntities,
+    );
+    return;
+  }
+  if (configuration.op === "configure_hand_play") {
+    configureDedicatedKernel(
+      record,
+      configuration.op,
+      {
+        type: "hand-play-v1",
+        playerCount: configuration.config.playerCount,
+        cardValues: configuration.config.cardValues,
+        copiesPerValue: configuration.config.copiesPerValue,
+        handSize: configuration.config.handSize,
+        victoryTarget: configuration.config.victoryTarget,
+        actions: configuration.config.actions,
+      },
+      configuration.config.unsupported?.map((item) => item.trim()) ?? [],
+      configuration.config,
+      affectedEntities,
+    );
+    return;
+  }
+  if (configuration.op === "configure_conversation_relay") {
+    configureDedicatedKernel(
+      record,
+      configuration.op,
+      {
+        type: "conversation-relay-v1",
+        victoryTarget: configuration.config.victoryTarget,
+        maxTurns: configuration.config.maxTurns,
+        actions: configuration.config.actions,
+      },
+      configuration.config.unsupported?.map((item) => item.trim()) ?? [],
+      configuration.config,
+      affectedEntities,
+    );
+    return;
+  }
   if (configuration.op === "configure_harbor_voyage") {
     const unsupported = configuration.config.unsupported?.map((item) => item.trim()) ?? [];
     const runtimeSource: SourceLibraryEntry = {
@@ -1557,6 +1660,70 @@ function applyOperation(
     return;
   }
 
+  if (operation.op === "configure_hidden_role") {
+    const { config } = operation;
+    if (
+      !config ||
+      typeof config !== "object" ||
+      !Number.isInteger(config.playerCount) ||
+      config.playerCount < 2 ||
+      config.playerCount > 6 ||
+      !Array.isArray(config.roles) ||
+      config.roles.length !== config.playerCount ||
+      config.roles.filter((role) => role.alignment === "culprit").length !== 1 ||
+      config.roles.some((role) =>
+        !role ||
+        typeof role.id !== "string" ||
+        !/^[a-z0-9-]{1,40}$/.test(role.id) ||
+        typeof role.name !== "string" ||
+        !role.name.trim() ||
+        (role.alignment !== "culprit" && role.alignment !== "town")
+      )
+    ) throw new Error("invalid_runtime");
+    configureRuntimeKernel(record, operation, affectedEntities);
+    return;
+  }
+
+  if (operation.op === "configure_hand_play") {
+    const { config } = operation;
+    if (
+      !config ||
+      typeof config !== "object" ||
+      !Number.isInteger(config.playerCount) ||
+      config.playerCount < 2 ||
+      config.playerCount > 6 ||
+      !Array.isArray(config.cardValues) ||
+      config.cardValues.length < 1 ||
+      !Number.isInteger(config.copiesPerValue) ||
+      !Number.isInteger(config.handSize) ||
+      !Number.isInteger(config.victoryTarget) ||
+      !Array.isArray(config.actions) ||
+      config.actions.length !== 1 ||
+      config.actions[0]?.id !== "play"
+    ) throw new Error("invalid_runtime");
+    configureRuntimeKernel(record, operation, affectedEntities);
+    return;
+  }
+
+  if (operation.op === "configure_conversation_relay") {
+    const { config } = operation;
+    if (
+      !config ||
+      typeof config !== "object" ||
+      !Number.isInteger(config.victoryTarget) ||
+      !Number.isInteger(config.maxTurns) ||
+      !Array.isArray(config.actions) ||
+      config.actions.length < 1 ||
+      config.actions.some((action) =>
+        !action ||
+        typeof action.id !== "string" ||
+        !Number.isInteger(action.points)
+      )
+    ) throw new Error("invalid_runtime");
+    configureRuntimeKernel(record, operation, affectedEntities);
+    return;
+  }
+
   if (operation.op === "activate_rule_system") {
     if (typeof operation.ruleSystemId !== "string") {
       throw new Error("invalid_rule_system");
@@ -1890,9 +2057,20 @@ function presentationFloor(ruleSystem: RuleSystem): PresentationFloorReadiness {
   };
 }
 
-function visibleSession(session: StoredSharedSession): SharedSessionSnapshot {
-  return {
+function visibleSession(
+  session: StoredSharedSession,
+  viewerSeat: number | null = null,
+): SharedSessionSnapshot {
+  const scoped = {
     ...session,
+    state: scopeSessionState(session.state, viewerSeat),
+    acceptedActions: session.acceptedActions.map((action) => ({
+      ...action,
+      state: scopeSessionState(action.state, viewerSeat),
+    })),
+  };
+  return {
+    ...scoped,
     seats: publicSeats(session.seats),
   };
 }
@@ -2133,10 +2311,6 @@ async function publicJob(
 
 export class CreatorProjects extends DurableObject<Env> {
   private broadcastSession(session: StoredSharedSession) {
-    const message = JSON.stringify({
-      type: "session.snapshot",
-      session: visibleSession(session),
-    } satisfies SharedSessionSnapshotEvent);
     for (const socket of this.ctx.getWebSockets()) {
       const attachment = socket.deserializeAttachment() as
         | SessionSocketAttachment
@@ -2146,6 +2320,10 @@ export class CreatorProjects extends DurableObject<Env> {
         socket.readyState === WebSocket.OPEN
       ) {
         try {
+          const message = JSON.stringify({
+            type: "session.snapshot",
+            session: visibleSession(session, attachment.seat ?? null),
+          } satisfies SharedSessionSnapshotEvent);
           socket.send(message);
         } catch {
           try {
@@ -2273,6 +2451,9 @@ export class CreatorProjects extends DurableObject<Env> {
               ? [{ id: action.id, label: action.label, value }]
               : [];
         });
+        const sourceGenre = inferSourceGenre(
+          `${input.name?.trim() || ""}\n${authoredMaterial}`,
+        );
         const sharedGoal = isSharedGoalDescription(authoredMaterial);
         const turnTaking = isTurnTakingDescription(authoredMaterial);
         const takeAwayRule = inferredTakeAwayRule(authoredMaterial);
@@ -2307,7 +2488,17 @@ export class CreatorProjects extends DurableObject<Env> {
                 generatedRuleSystem.participants.default * 2,
             ),
           );
+        const hiddenRoleRuntimeConfigured = sourceGenre === "hidden-role";
+        const handPlayRuntimeConfigured = sourceGenre === "hand-play";
+        const conversationRelayRuntimeConfigured =
+          sourceGenre === "conversation" &&
+          sourceRuntimeActions.length > 0 &&
+          sourceRuntimeActions.length === generatedRuleSystem.actions.length &&
+          generatedRuleSystem.actions.length <= 12 &&
+          Number.isInteger(victoryTarget) &&
+          victoryTarget > 0;
         const scoreRaceRuntimeConfigured =
+          sourceGenre === "generic" &&
           !sharedGoal &&
           sourceRuntimeActions.length > 0 &&
           sourceRuntimeActions.length === generatedRuleSystem.actions.length &&
@@ -2348,6 +2539,9 @@ export class CreatorProjects extends DurableObject<Env> {
           generatedRuleSystem.actions.length > 0 &&
           generatedRuleSystem.actions.length <= 12;
         generationRuntimeConfigured =
+          hiddenRoleRuntimeConfigured ||
+          handPlayRuntimeConfigured ||
+          conversationRelayRuntimeConfigured ||
           scoreRaceRuntimeConfigured ||
           sharedGoalRuntimeConfigured ||
           takeAwayRuntimeConfigured ||
@@ -2359,7 +2553,51 @@ export class CreatorProjects extends DurableObject<Env> {
           200,
           (pushYourLuckRule?.victoryTarget ?? 0) * generatedRuleSystem.participants.default * 5,
         ));
-        const runtimeOperation = pushYourLuckRuntimeConfigured
+        const runtimeOperation = hiddenRoleRuntimeConfigured
+          ? {
+              op: "configure_hidden_role" as const,
+              config: {
+                playerCount: generatedRuleSystem.participants.default,
+                roles: defaultHiddenRoles(generatedRuleSystem.participants.default),
+                unsupported: [
+                  "hidden-role-v1 executes secret role assignment, one public speech per seat, one accusation per seat, and majority reveal; narrative quality is judged by people.",
+                ],
+              },
+            }
+          : handPlayRuntimeConfigured
+          ? {
+              op: "configure_hand_play" as const,
+              config: {
+                playerCount: generatedRuleSystem.participants.default,
+                cardValues: [1, 2, 3, 4, 5],
+                copiesPerValue: 4,
+                handSize: 3,
+                victoryTarget: Number.isInteger(victoryTarget) && victoryTarget > 0
+                  ? victoryTarget
+                  : 12,
+                actions: [{ id: "play" as const, label: /[\u4e00-\u9fff]/.test(authoredMaterial) ? "打出一张手牌" : "Play a card" }],
+                unsupported: [
+                  "hand-play-v1 executes a shuffled deck, hidden hands, play-to-score, and first-to-target or highest score when hands empty.",
+                ],
+              },
+            }
+          : conversationRelayRuntimeConfigured
+          ? {
+              op: "configure_conversation_relay" as const,
+              config: {
+                victoryTarget,
+                maxTurns,
+                actions: sourceRuntimeActions.map((action) => ({
+                  id: action.id,
+                  label: action.label,
+                  points: action.value,
+                })),
+                unsupported: [
+                  "conversation-relay-v1 records required speech into the transcript and scores the chosen action; prose quality is judged by people.",
+                ],
+              },
+            }
+          : pushYourLuckRuntimeConfigured
           ? {
               op: "configure_push_your_luck" as const,
               config: {
@@ -2640,7 +2878,13 @@ export class CreatorProjects extends DurableObject<Env> {
         operationBody.generationPlan = generationPlan;
         operationBody.generationMode = "deterministic-rule-system-materialization";
         operationBody.warnings = [generationRuntimeConfigured
-          ? proposedRuntime?.op === "configure_roll_and_move"
+          ? proposedRuntime?.op === "configure_hidden_role"
+            ? "规则结构来自体裁识别；秘密身份、公开发言与指控将在批准 Generation Plan 后配置为 hidden-role-v1。"
+            : proposedRuntime?.op === "configure_hand_play"
+            ? "规则结构来自体裁识别；牌库、隐藏手牌与出牌计分将在批准 Generation Plan 后配置为 hand-play-v1。"
+            : proposedRuntime?.op === "configure_conversation_relay"
+            ? "规则结构来自体裁识别；发言必须写入记录，并按行动计分，将在批准 Generation Plan 后配置为 conversation-relay-v1。"
+          : proposedRuntime?.op === "configure_roll_and_move"
             ? "规则结构来自确定性文本抽取；骰子面数、按点数前进与先到终点获胜将在批准 Generation Plan 后配置为可复现的 roll-and-move-v1。"
             : proposedRuntime?.op === "configure_push_your_luck"
             ? "规则结构来自确定性文本抽取；继续掷、爆掉、未存分、收手存分与目标胜利将在批准 Generation Plan 后配置为 push-your-luck-v1。"
@@ -3237,7 +3481,10 @@ export class CreatorProjects extends DurableObject<Env> {
               operation.op === "configure_roll_and_move" ||
               operation.op === "configure_draw_and_score" ||
               operation.op === "configure_push_your_luck" ||
-              operation.op === "configure_harbor_voyage",
+              operation.op === "configure_harbor_voyage" ||
+              operation.op === "configure_hidden_role" ||
+              operation.op === "configure_hand_play" ||
+              operation.op === "configure_conversation_relay",
           );
           const affectedEntities: string[] = [];
           const now = new Date().toISOString();
@@ -3278,6 +3525,7 @@ export class CreatorProjects extends DurableObject<Env> {
                 !session ||
                 !build ||
                 build.presentationFloor.status !== "passed" ||
+                build.playabilityFloor.status !== "passed" ||
                 build.ruleSystem.runtimeSupport.status !== "executable"
               ) {
                 throw new Error("invalid_playtest_link");
@@ -3794,6 +4042,7 @@ export class CreatorProjects extends DurableObject<Env> {
               : ["rule-execution"]),
           ],
           presentationFloor: presentationFloor(record.ruleSystem),
+          playabilityFloor: playabilityFloor(record.ruleSystem),
           createdAt: now,
         };
         const previousVersion = record.project.version;
@@ -4002,6 +4251,15 @@ export class CreatorProjects extends DurableObject<Env> {
             },
           };
         }
+        if (build.playabilityFloor.status !== "passed") {
+          return {
+            status: 422,
+            value: {
+              error: "playability_floor_unmet",
+              playabilityFloor: build.playabilityFloor,
+            },
+          };
+        }
         if (!executableRuntime(build.ruleSystem)) {
           return {
             status: 422,
@@ -4112,7 +4370,7 @@ export class CreatorProjects extends DurableObject<Env> {
           if (!existingHash || claimed.seatTokenHash !== existingHash) {
             return { status: 409, value: { error: "seat_claimed" } };
           }
-          return { status: 200, value: { session: room, seatToken: existingToken } };
+          return { status: 200, value: { session: visibleSession(room, seat), seatToken: existingToken } };
         }
         if (existingHash) {
           const other = otherSeatForHash(room.seats, seat, existingHash);
@@ -4147,10 +4405,13 @@ export class CreatorProjects extends DurableObject<Env> {
           [roomKey]: updatedRoom,
           [projectKey]: record,
         });
-        return { status: 200, value: { session: updatedRoom, seatToken } };
+        return { status: 200, value: { session: visibleSession(updatedRoom, seat), seatToken } };
       });
       if (outcome.status === 200 && "session" in outcome.value && outcome.value.session) {
-        this.broadcastSession(outcome.value.session);
+        const stored = await this.ctx.storage.get<StoredSharedSession>(
+          `session:${outcome.value.session.id}`,
+        );
+        if (stored) this.broadcastSession(stored);
       }
       return json(outcome.value, outcome.status);
     }
@@ -4271,10 +4532,13 @@ export class CreatorProjects extends DurableObject<Env> {
           [`replay:${room.replayId}`]: updatedReplay,
           [projectKey]: record,
         });
-        return { status: 200, value: updatedRoom };
+        return { status: 200, value: visibleSession(updatedRoom, Number(input.seat)) };
       });
       if (outcome.status === 200 && "id" in outcome.value) {
-        this.broadcastSession(outcome.value);
+        const stored = await this.ctx.storage.get<StoredSharedSession>(
+          `session:${outcome.value.id}`,
+        );
+        if (stored) this.broadcastSession(stored);
       }
       return json(outcome.value, outcome.status);
     }
@@ -4405,7 +4669,7 @@ export class CreatorProjects extends DurableObject<Env> {
       );
       const build = storedBuild ? normalizedBuild(storedBuild) : undefined;
       if (!build) return error("Shared Session 引用的 Build 不存在。", 500);
-      return json(reconstructSession(room, build));
+      return json(visibleSession(reconstructSession(room, build)));
     }
 
     const replayMatch = url.pathname.match(/^\/replays\/([^/]+)$/);
@@ -4583,7 +4847,18 @@ export class CreatorProjects extends DurableObject<Env> {
   }
 
   async webSocketMessage(socket: WebSocket, message: string | ArrayBuffer) {
-    if (message !== '{"type":"session.sync"}') {
+    let parsed: { type?: unknown; seat?: unknown; seatToken?: unknown };
+    try {
+      parsed = JSON.parse(String(message)) as {
+        type?: unknown;
+        seat?: unknown;
+        seatToken?: unknown;
+      };
+    } catch {
+      socket.close(1008, "unsupported_session_event");
+      return;
+    }
+    if (parsed.type !== "session.sync") {
       socket.close(1008, "unsupported_session_event");
       return;
     }
@@ -4609,9 +4884,24 @@ export class CreatorProjects extends DurableObject<Env> {
       socket.close(1011, "session_build_not_found");
       return;
     }
+    let viewerSeat = attachment.seat ?? null;
+    if (Number.isInteger(parsed.seat) && typeof parsed.seatToken === "string") {
+      const hash = await hashSeatToken(parsed.seatToken);
+      const claimed = room.seats.find(
+        (entry) => entry.seat === parsed.seat && entry.seatTokenHash === hash,
+      );
+      if (claimed) {
+        viewerSeat = claimed.seat;
+        socket.serializeAttachment({
+          sessionId: attachment.sessionId,
+          seat: claimed.seat,
+          seatTokenHash: hash,
+        } satisfies SessionSocketAttachment);
+      }
+    }
     socket.send(JSON.stringify({
       type: "session.snapshot",
-      session: visibleSession(reconstructSession(room, build)),
+      session: visibleSession(reconstructSession(room, build), viewerSeat),
     } satisfies SharedSessionSnapshotEvent));
   }
 

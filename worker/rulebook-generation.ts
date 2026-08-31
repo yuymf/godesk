@@ -3,6 +3,8 @@ import type {
   GenerationPlan,
   RuleSystem,
 } from "../src/creator/project-contract";
+import { inferSourceGenre } from "../src/runtime/genre";
+import { defaultHiddenRoles } from "../src/runtime/hidden-role";
 
 function cleanLines(text: string) {
   return text
@@ -368,7 +370,84 @@ function expandScoredActions(lines: string[]) {
   return expandedChoices.length >= 2 ? expandedChoices : lines;
 }
 
+function genreEntities(
+  genre: ReturnType<typeof inferSourceGenre>,
+  playerCount: number,
+  sourceId: string,
+  image?: BoundImage,
+) {
+  const anchored = { sourceId, provenance: "source-anchored" as const, confidence: 0.72 };
+  if (genre === "hidden-role") {
+    return [
+      {
+        id: "entity-role-card",
+        name: "身份牌",
+        kind: "card" as const,
+        quantity: playerCount,
+        ...(image ? { image } : {}),
+        ...anchored,
+      },
+      {
+        id: "entity-transcript",
+        name: "发言记录",
+        kind: "object" as const,
+        quantity: 1,
+        ...anchored,
+      },
+    ];
+  }
+  if (genre === "hand-play") {
+    return [
+      {
+        id: "entity-hand",
+        name: "手牌",
+        kind: "card" as const,
+        quantity: playerCount * 3,
+        ...(image ? { image } : {}),
+        ...anchored,
+      },
+      {
+        id: "entity-deck",
+        name: "牌库",
+        kind: "card" as const,
+        quantity: 20,
+        ...anchored,
+      },
+      {
+        id: "entity-play-area",
+        name: "出牌区",
+        kind: "object" as const,
+        quantity: 1,
+        ...anchored,
+      },
+    ];
+  }
+  if (genre === "conversation") {
+    return [{
+      id: "entity-transcript",
+      name: "发言记录",
+      kind: "object" as const,
+      quantity: 1,
+      ...anchored,
+    }];
+  }
+  return [];
+}
+
 function inferPlaySurface(corpus: string) {
+  const genre = inferSourceGenre(corpus);
+  if (genre === "hidden-role") {
+    return { kind: "conversation" as const, layout: "accusation-table" };
+  }
+  if (genre === "hand-play") {
+    return { kind: "cards" as const, layout: "hand-and-play-area" };
+  }
+  if (genre === "placement") {
+    return { kind: "table" as const, layout: "worker-placement" };
+  }
+  if (genre === "conversation") {
+    return { kind: "conversation" as const, layout: "prompt-and-response" };
+  }
   if (/\b(conversation|speak|tell|ask|debate|story|idea|prompt)\b|讨论|发言|故事|创意|口述/i.test(corpus)) {
     return { kind: "conversation" as const, layout: "prompt-and-response" };
   }
@@ -395,6 +474,7 @@ export function materializeRuleSystem(input: {
 }): Pick<RuleSystem, "name" | "pitch" | "participants" | "durationMinutes" | "rules" | "constraints" | "entities" | "setup" | "actions" | "playSurface" | "stages" | "outcomes" | "presentation"> {
   const authoredText = input.sourceText.trim() || input.description.trim();
   const corpus = `${input.description}\n${authoredText}`;
+  const genre = inferSourceGenre(`${input.name}\n${corpus}`);
   const lines = unique(cleanLines(authoredText)).filter((line) => !isBoilerplate(line));
   const takeAwayRule = inferredTakeAwayRule(corpus);
   const rollAndMoveRule = inferredRollAndMoveRule(corpus);
@@ -431,13 +511,41 @@ export function materializeRuleSystem(input: {
   const outcomeLines = lines
     .filter((line) => /\b(winner|wins?|victory|game end|ends? when|goal)\b|获胜|胜利|结束条件|目标|揭晓|率先达到/i.test(line))
     .slice(0, 4);
-  const surface = inferPlaySurface(corpus);
+  const surface = inferPlaySurface(`${input.name}\n${corpus}`);
   const anchored = { sourceId: input.sourceId, provenance: "source-anchored" as const, confidence: 0.72 };
+  const ownedEntities = genreEntities(genre, participants.default, input.sourceId, input.image);
+  const extractedEntities = componentLines.map((line, index) => ({
+    id: `source-entity-${index + 1}`,
+    name: line.slice(0, 120),
+    kind: /cards?|张牌/i.test(line)
+      ? "card" as const
+      : /tokens?|markers?|pawns?|stones?|matches?|枚标记|个棋子|枚石子|根火柴/i.test(line)
+        ? "token" as const
+        : "object" as const,
+    quantity: Number(line.match(/\d+/)?.[0]) || 1,
+    ...(input.image ? { image: input.image } : {}),
+    ...anchored,
+  }));
+  const entities = [
+    ...ownedEntities,
+    ...extractedEntities.filter((entity) =>
+      !ownedEntities.some((owned) => owned.name === entity.name),
+    ),
+  ];
 
   return {
     name: input.name.trim().slice(0, 120),
     pitch: input.description.trim().slice(0, 2_000),
-    participants: { ...participants, roles: [] },
+    participants: {
+      ...participants,
+      roles: genre === "hidden-role"
+        ? defaultHiddenRoles(participants.default).map((role) => ({
+            id: role.id,
+            name: role.name,
+            description: role.alignment === "culprit" ? "隐藏的凶手。" : "找出凶手。",
+          }))
+        : [],
+    },
     durationMinutes,
     rules: ruleLines.map((text, index) => ({ id: `source-rule-${index + 1}`, text, ...anchored })),
     constraints: constraintLines.map((text, index) => ({
@@ -445,20 +553,37 @@ export function materializeRuleSystem(input: {
       text,
       ...anchored,
     })),
-    entities: componentLines.map((line, index) => ({
-      id: `source-entity-${index + 1}`,
-      name: line.slice(0, 120),
-      kind: /cards?|张牌/i.test(line)
-        ? "card" as const
-        : /tokens?|markers?|pawns?|stones?|matches?|枚标记|个棋子|枚石子|根火柴/i.test(line)
-          ? "token" as const
-          : "object" as const,
-      quantity: Number(line.match(/\d+/)?.[0]) || 1,
-      ...(input.image ? { image: input.image } : {}),
-      ...anchored,
-    })),
+    entities,
     setup: setup.length ? setup : ruleLines.slice(0, 3),
-    actions: pushYourLuckRule
+    actions: genre === "hidden-role"
+      ? [
+          {
+            id: "speak",
+            label: /[\u4e00-\u9fff]/.test(corpus) ? "发言" : "Speak",
+            description: /[\u4e00-\u9fff]/.test(corpus)
+              ? "公开说一句对本局的判断，写入发言记录。"
+              : "Speak one public judgment into the transcript.",
+            ...anchored,
+          },
+          {
+            id: "accuse",
+            label: /[\u4e00-\u9fff]/.test(corpus) ? "指控" : "Accuse",
+            description: /[\u4e00-\u9fff]/.test(corpus)
+              ? "指控一名其他玩家。被指控最多的人被揭晓。"
+              : "Accuse another player. The most accused seat is revealed.",
+            ...anchored,
+          },
+        ]
+      : genre === "hand-play"
+      ? [{
+          id: "play",
+          label: /[\u4e00-\u9fff]/.test(corpus) ? "打出一张手牌" : "Play a card",
+          description: /[\u4e00-\u9fff]/.test(corpus)
+            ? "从手牌打出一张到出牌区，点数计入分数。"
+            : "Play one card from hand into the play area and score its value.",
+          ...anchored,
+        }]
+      : pushYourLuckRule
       ? [
           {
             id: "roll",
@@ -543,11 +668,27 @@ export function createGenerationPlan(input: {
   proposedRuntime?: GenerationPlan["proposedRuntime"];
 }): GenerationPlan {
   const { ruleSystem } = input;
+  const genre = inferSourceGenre([
+    ruleSystem.name,
+    ruleSystem.pitch,
+    ...ruleSystem.rules.map((rule) => rule.text),
+    ...ruleSystem.actions.map((action) => `${action.label} ${action.description}`),
+  ].join("\n"));
   const unsupported = [...ruleSystem.runtimeSupport.unsupported];
   const assumptions = [
     "识别出的规则、行动与结果仍需创作者在同一项目中审阅。",
     "来源锚点决定了可追溯内容；未从来源中识别出的裁判、随机与资源语义不会被隐式补全。",
+    `将呈现的 Play Surface 是 ${ruleSystem.playSurface.kind}，必须改变交互，不能只换文案。`,
   ];
+  const genreLoop = genre === "hidden-role"
+    ? ["秘密发放身份牌", "轮流公开发言", "互相指控", "揭晓并按身份结算"]
+    : genre === "hand-play"
+    ? ["发给隐藏手牌", "从手牌打出到出牌区", "从牌库补牌", "先到目标分或牌库耗尽"]
+    : genre === "conversation"
+    ? ["写下可记录的发言", "发言进入对局状态与 Replay", "按行动计分直到目标"]
+    : genre === "placement"
+    ? ["在共享区域放置工人", "占用格子", "按放置结果结算"]
+    : [];
   if (ruleSystem.runtimeSupport.status === "draft" && input.proposedRuntime) {
     assumptions.push(`批准 Generation Plan 后才会把可执行范围配置为 ${input.proposedRuntime.op}；在此之前 Rule System 保持 draft。`);
     unsupported.push("Executable Kernel 仍待创作者批准 Generation Plan。");
@@ -557,6 +698,19 @@ export function createGenerationPlan(input: {
   } else {
     const kernel = ruleSystem.runtimeSupport.kernel.type;
     assumptions.push(`当前可执行范围限定为 ${kernel}；其余来源行为保留为未支持说明。`);
+  }
+  if (input.proposedRuntime?.op === "configure_hidden_role") {
+    assumptions.push("Playability Floor 验收：每人看到自己的身份、发言写入记录、指控改变终局。");
+    unsupported.push("不把剧本杀换成计分赛；LLM 不裁定凶手。");
+  } else if (input.proposedRuntime?.op === "configure_hand_play") {
+    assumptions.push("Playability Floor 验收：手牌区可见、出牌针对具体牌、他人手牌保持隐藏。");
+    unsupported.push("不把出牌变成计分按钮。");
+  } else if (input.proposedRuntime?.op === "configure_conversation_relay") {
+    assumptions.push("Playability Floor 验收：每次行动必须带文本，发言进入 Session State 与 Replay。");
+    unsupported.push("不把对话游戏收成无文本的计分按钮。");
+  } else if (!input.proposedRuntime && genre !== "generic") {
+    assumptions.push("来源体裁还没有可执行内核。Playability Floor 不会放行换皮分享。");
+    unsupported.push("诚实缺口：不能用另一种更简单的游戏顶替。");
   }
   if (!ruleSystem.entities.length) {
     assumptions.push("来源中尚未识别到可编辑 Game Entity。");
@@ -576,6 +730,7 @@ export function createGenerationPlan(input: {
     loop: unique([
       ...ruleSystem.setup,
       ...ruleSystem.stages.map((stage) => stage.name),
+      ...genreLoop,
     ]).slice(0, 8),
     actions: ruleSystem.actions.slice(0, 8).map((action) => ({
       label: action.label,

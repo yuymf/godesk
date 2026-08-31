@@ -219,7 +219,7 @@ export function instantiateDefaultExample(
         source(
           sourceId,
           "灵感接力原创玩法简述",
-          "参与者轮流扩展共同创意、加入新约束或连接前文。每次行动获得不同分数，率先达到目标分者获胜。游戏只需要共享提示与对话，不使用棋盘或实体道具。",
+          "灵感接力：参与者轮流公开发言，扩展共同创意、加入新约束或连接前文。每句发言写入记录，并按行动计分。率先达到目标分者获胜。游戏只需要共享提示与对话，不使用棋盘或实体道具。",
           createdAt,
         ),
       ],
@@ -233,7 +233,7 @@ export function instantiateDefaultExample(
         rules: [
           {
             id: "rule_idea_turn",
-            text: "参与者按座位顺序轮流选择一个创意行动。",
+            text: "参与者按座位顺序轮流选择一个创意行动，并必须写出一句发言。",
             sourceId,
             provenance: "source-anchored",
             confidence: 1,
@@ -275,6 +275,14 @@ export function instantiateDefaultExample(
             id: "entity_constraints",
             name: "当前约束",
             kind: "concept",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+          {
+            id: "entity_transcript",
+            name: "发言记录",
+            kind: "object",
             sourceId,
             provenance: "source-anchored",
             confidence: 1,
@@ -323,9 +331,9 @@ export function instantiateDefaultExample(
         },
         runtimeSupport: {
           status: "executable",
-          unsupported: ["文本内容的质量与约束一致性由真人评议；内核只执行轮次、行动与计分。"],
+          unsupported: ["文本内容的质量与约束一致性由真人评议；内核记录发言、轮次与计分。"],
           kernel: {
-            type: "score-race-v1",
+            type: "conversation-relay-v1",
             victoryTarget: 8,
             maxTurns: 18,
             actions: [
@@ -342,31 +350,40 @@ export function instantiateDefaultExample(
   const sourceId = "source_mistpeak_lodge_original_brief";
   return {
     sources: [
-      source(
-        sourceId,
-        "雾岭山庄原创玩法简述",
-        "调查员共同探索一座被雾气包围的原创山庄，通过调查、协作和封印行动累计线索。此机制切片不含隐藏背叛、第三方角色、房间、剧本、规则文字或美术。",
-        createdAt,
-      ),
+        source(
+          sourceId,
+          "雾岭山庄原创玩法简述",
+          "三到四名调查员在雾岭山庄找出隐藏的凶手。每人秘密拿到身份牌。先轮流公开发言，再互相指控。被指控最多的人被揭晓：若是凶手则其余人获胜。",
+          createdAt,
+        ),
     ],
     ruleSystem: {
       id: ruleSystemId,
       version: 1,
       name: "雾岭山庄",
-      pitch: "在雾气封锁出口前，合作调查房间并封印山庄里的异响。",
-      participants: { min: 2, max: 4, default: 4, roles: [] },
+        pitch: "在雾气封锁出口前，靠发言和指控找出藏在调查员里的凶手。",
+        participants: {
+          min: 3,
+          max: 4,
+          default: 3,
+          roles: [
+            { id: "culprit", name: "凶手", description: "隐藏身份，误导指控。" },
+            { id: "detective", name: "侦探", description: "组织发言并找出凶手。" },
+            { id: "civilian-2", name: "平民", description: "提供证词并投票。" },
+          ],
+        },
       durationMinutes: 30,
       rules: [
         {
           id: "rule_lodge_turn",
-          text: "轮到你时选择调查、协作或封印，并将所得线索加入团队总分。",
+            text: "先轮流公开发言，每人必须说一句对山庄异响的判断。",
           sourceId,
           provenance: "source-anchored",
           confidence: 1,
         },
         {
           id: "rule_lodge_victory",
-          text: "团队在 14 回合内累计 18 条线索即获胜，否则雾气吞没出口。",
+            text: "所有人发言后每人指控一名其他玩家；揭晓被指控最多的人。",
           sourceId,
           provenance: "source-anchored",
           confidence: 1,
@@ -375,13 +392,31 @@ export function instantiateDefaultExample(
       constraints: [
         {
           id: "constraint_lodge_limit",
-          text: "团队必须在 14 回合内累计 18 条线索。",
+            text: "每人只能发言一次、指控一次，不能指控自己。",
           sourceId,
           provenance: "source-anchored",
           confidence: 1,
         },
       ],
       entities: [
+        {
+          id: "entity_lodge_roles",
+          name: "身份牌",
+          kind: "card",
+          quantity: 3,
+          sourceId,
+          provenance: "source-anchored",
+          confidence: 1,
+        },
+        {
+          id: "entity_lodge_transcript",
+          name: "发言记录",
+          kind: "object",
+          quantity: 1,
+          sourceId,
+          provenance: "source-anchored",
+          confidence: 1,
+        },
         {
           id: "entity_lodge_map",
           name: "山庄房间图",
@@ -391,55 +426,35 @@ export function instantiateDefaultExample(
           provenance: "source-anchored",
           confidence: 1,
         },
-        {
-          id: "entity_lodge_clues",
-          name: "线索标记",
-          kind: "token",
-          quantity: 18,
-          sourceId,
-          provenance: "source-anchored",
-          confidence: 1,
-        },
       ],
-      setup: ["将团队线索设为 0。", "所有调查员从门厅开始。"],
-      actions: [
-        {
-          id: "investigate",
-          label: "调查房间",
-          description: "检查当前房间，获得 2 条线索。",
-          sourceId,
-          provenance: "source-anchored",
-          confidence: 1,
-        },
-        {
-          id: "cooperate",
-          label: "结伴协作",
-          description: "交换发现并获得 1 条线索。",
-          sourceId,
-          provenance: "source-anchored",
-          confidence: 1,
-        },
-        {
-          id: "seal-anomaly",
-          label: "封印异象",
-          description: "冒险处理异响，获得 3 条线索。",
-          sourceId,
-          provenance: "source-anchored",
-          confidence: 1,
-        },
-      ],
-      playSurface: {
-        kind: "table",
-        layout: "门厅连接书房、温室与阁楼的原创固定地图。",
-        regions: [
-          { id: "foyer", name: "门厅", description: "调查员的共同起点。" },
-          { id: "study", name: "旧书房", description: "散落着住客记录。" },
-          { id: "greenhouse", name: "雾温室", description: "玻璃外只有白雾。" },
-          { id: "attic", name: "阁楼", description: "异响最密集的区域。" },
+        setup: ["秘密发放一张凶手、一张侦探，其余为平民。", "从座位 0 开始发言。"],
+        actions: [
+          {
+            id: "speak",
+            label: "发言",
+            description: "公开说一句对本局的判断，写入发言记录。",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+          {
+            id: "accuse",
+            label: "指控",
+            description: "指控一名其他玩家。",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
         ],
-      },
-      stages: [{ id: "explore", name: "调查行动" }, { id: "fog", name: "雾气推进" }],
-      outcomes: [{ id: "sealed-bell", name: "封住午夜钟声" }],
+        playSurface: {
+          kind: "conversation",
+          layout: "山庄会客厅里的发言与指控。",
+          regions: [
+            { id: "parlor", name: "会客厅", description: "调查员对质的地方。" },
+          ],
+        },
+        stages: [{ id: "discuss", name: "发言" }, { id: "accuse", name: "指控" }],
+        outcomes: [{ id: "reveal", name: "揭晓被指控最多的人" }],
       presentation: {
         theme: "mistpeak-archive",
         visuals: [{
@@ -449,17 +464,16 @@ export function instantiateDefaultExample(
       },
       runtimeSupport: {
         status: "executable",
-        unsupported: ["这是合作计分机制切片，不包含隐藏身份或中途背叛系统。"],
-        kernel: {
-          type: "score-race-v1",
-          victoryTarget: 18,
-          maxTurns: 14,
-          actions: [
-            { id: "investigate", label: "调查房间", points: 2 },
-            { id: "cooperate", label: "结伴协作", points: 1 },
-            { id: "seal-anomaly", label: "封印异象", points: 3 },
-          ],
-        },
+          unsupported: ["山庄叙事质量由真人评议；内核只执行身份、发言与指控。"],
+          kernel: {
+            type: "hidden-role-v1",
+            playerCount: 3,
+            roles: [
+              { id: "culprit", name: "凶手", alignment: "culprit" },
+              { id: "detective", name: "侦探", alignment: "town" },
+              { id: "civilian-2", name: "平民", alignment: "town" },
+            ],
+          },
       },
     },
   };

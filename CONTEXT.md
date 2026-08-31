@@ -8,9 +8,13 @@ people join a Shared Session through a URL and play together.
 It covers rule-orchestrated games. Tabletop play is one possible presentation,
 not the product boundary.
 
-The success bar is `source in → playable game out → others can play together`.
+The success bar is `source in → playable finished game out → others can play together`.
+A Demo, mechanism slice, or themed score-race stand-in is not that output.
 Web Studio and Codex operate the same Game Project. Validation Findings are
 optional iteration tools, not the product.
+
+First principles live in `docs/product/first-principles.md`. The share gate is
+the Playability Floor (ADR 0012), above the Presentation Floor.
 
 ## Language
 
@@ -135,3 +139,10 @@ Creator attests that.
 The minimum legible and intentional presentation required before a Shared
 Session invitation can be exposed.
 _Avoid_: Visual Floor
+
+**Playability Floor**:
+The minimum genre-faithful, decision-dense, surface-faithful executable loop
+required before a Shared Session or Playtest Link can be exposed. A disclosed
+subset may run, but it must still be the requested game's core loop, not a
+different simpler game.
+_Avoid_: Visual Floor, prototype slice, themed scoreboard

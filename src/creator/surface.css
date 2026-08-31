@@ -1314,3 +1314,52 @@ summary:focus-visible {
   }
 }
 
+.studio-play-gap {
+  padding: 1.1rem 1.2rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+
+.studio-play-gap h3 {
+  margin: 0 0 0.45rem;
+  font-size: 1.05rem;
+}
+
+.studio-play-gap p {
+  margin: 0 0 0.45rem;
+  color: var(--muted);
+}
+
+.hidden-role-board,
+.hand-play-board,
+.conversation-board {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+
+.speech-transcript,
+.accusation-log {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.own-hand,
+.hand-play-actions,
+.accusation-targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.genre-action-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.genre-action-form textarea {
+  width: 100%;
+}
+

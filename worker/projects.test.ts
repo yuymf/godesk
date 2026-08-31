@@ -780,6 +780,7 @@ describe("Game Project HTTP seam", () => {
             seat,
             seatToken: seats.get(seat),
             actionId,
+            payload: { text: `座位 ${seat} 接上一句共同创意。` },
           }),
         },
       );
@@ -897,6 +898,7 @@ describe("Game Project HTTP seam", () => {
           seat: 0,
           seatToken: claimed.seatToken,
           actionId: "connect",
+          payload: { text: "把雨夜和码头连起来。" },
         }),
       },
     );
@@ -973,6 +975,7 @@ describe("Game Project HTTP seam", () => {
           seat: 0,
           seatToken: claim.seatToken,
           actionId: "connect",
+          payload: { text: "把雨夜和码头连起来。" },
         }),
       },
     );
@@ -1227,6 +1230,7 @@ describe("Game Project HTTP seam", () => {
         seat: 0,
         seatToken: creatorSeat.seatToken,
         actionId: "constraint",
+        payload: { text: "之后每句话都要提到雾。" },
       }),
     });
 
@@ -1411,6 +1415,7 @@ describe("Game Project HTTP seam", () => {
         seat: 0,
         seatToken: participantSeat.seatToken,
         actionId: "extend",
+        payload: { text: "共同创意里多了一把湿伞。" },
       }),
     });
     const feedbackRoom = await SELF.fetch(
@@ -1705,6 +1710,7 @@ describe("Game Project HTTP seam", () => {
           seat: 0,
           seatToken: seated.seatToken,
           actionId: "extend",
+          payload: { text: "朋友接上一句共同创意。" },
         }),
       },
     );
@@ -4098,6 +4104,79 @@ describe("Game Project HTTP seam", () => {
     });
   });
 
+  it("compiles a hidden-role source on score-race but refuses to share it", async () => {
+    const created = await SELF.fetch("https://godesk.test/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "换皮剧本杀" }),
+    }).then((response) => response.json<{
+      project: { id: string; version: number };
+    }>());
+    const configured = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/changes`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          expectedVersion: created.project.version,
+          idempotencyKey: "playability-floor-reskin",
+          operations: [{
+            op: "configure_score_race",
+            config: {
+              victoryTarget: 4,
+              maxTurns: 6,
+              actions: [{ id: "advance", label: "质问", points: 2 }],
+            },
+          }, {
+            op: "update_rule_system",
+            fields: {
+              name: "别墅剧本杀",
+              pitch: "三个人找出凶手，发言后指控。",
+              presentation: {
+                theme: "harbor-kit",
+                visuals: [{ provenance: "kit", label: "Harbor ink presentation kit" }],
+              },
+            },
+          }],
+        }),
+      },
+    ).then((response) => response.json<{ project: { version: number } }>());
+    const compiled = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/builds`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          expectedVersion: configured.project.version,
+          idempotencyKey: "playability-floor-reskin-build",
+        }),
+      },
+    ).then((response) => response.json<{
+      build: {
+        id: string;
+        playabilityFloor: { status: string; reason: string; genre: string };
+      };
+    }>());
+    expect(compiled.build.playabilityFloor.status).toBe("failed");
+    expect(compiled.build.playabilityFloor.genre).toBe("hidden-role");
+    const refused = await SELF.fetch(
+      `https://godesk.test/api/builds/${compiled.build.id}/sessions`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          seed: 42,
+          idempotencyKey: "playability-floor-refused",
+        }),
+      },
+    );
+    expect(refused.status).toBe(422);
+    await expect(refused.json()).resolves.toMatchObject({
+      error: "playability_floor_unmet",
+      playabilityFloor: { status: "failed", genre: "hidden-role" },
+    });
+  });
+
   it("uses the invitation URL for two clients to claim seats and take authoritative turns", async () => {
     const created = await SELF.fetch("https://godesk.test/api/projects", {
       method: "POST",
@@ -4144,18 +4223,21 @@ describe("Game Project HTTP seam", () => {
         }),
       },
     ).then((response) => response.json<{ build: { id: string } }>());
-    const room = await SELF.fetch(
+    const roomResponse = await SELF.fetch(
       `https://godesk.test/api/builds/${compiled.build.id}/sessions`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ seed: 42, idempotencyKey: "two-browser-room" }),
       },
-    ).then((response) => response.json<{
+    );
+    const room = await roomResponse.json<{
       id: string;
       sessionUrl: string;
       replayId: string;
-    }>());
+      error?: string;
+    }>();
+    expect(roomResponse.status, JSON.stringify(room)).toBe(201);
     expect(new URL(room.sessionUrl).pathname).toBe(`/room/${room.id}`);
     expect(new URL(room.sessionUrl).searchParams.get("share")).toBeTruthy();
     expect(new URL(room.sessionUrl).searchParams.has("creator")).toBe(false);
@@ -4164,7 +4246,10 @@ describe("Game Project HTTP seam", () => {
     publicRoomUrl.hostname = "friend.godesk.example";
     const publicShare = publicRoomUrl.toString();
     const publicRoomPage = await SELF.fetch(publicRoomUrl);
-    expect(publicRoomPage.status, await publicRoomPage.text()).toBe(200);
+    expect(
+      publicRoomPage.status,
+      `${publicRoomUrl.toString()} ${await publicRoomPage.text()}`,
+    ).toBe(200);
     const publicSession = await SELF.fetch(shareApi(publicShare, `/api/sessions/${room.id}`));
     expect(publicSession.status, await publicSession.clone().text()).toBe(200);
     const publicBuild = await SELF.fetch(shareApi(publicShare, `/api/builds/${compiled.build.id}`));
@@ -5654,7 +5739,7 @@ describe("Game Project HTTP seam", () => {
     expect((finished.result as { generationPlan: unknown }).generationPlan).toMatchObject({
       status: "pending",
       proposedRuntime: {
-        op: "configure_score_race",
+        op: "configure_conversation_relay",
         config: {
           maxTurns: 18,
           actions: [{ points: 1 }, { points: 2 }],
@@ -5663,7 +5748,12 @@ describe("Game Project HTTP seam", () => {
     });
   });
 
-  it("turns each hobbyist starter into a pending score-race plan", async () => {
+  it("turns each hobbyist starter into a genre-faithful pending plan", async () => {
+    const expected = {
+      script: { op: "configure_hidden_role" },
+      cards: { op: "configure_hand_play" },
+      board: undefined,
+    } as const;
     for (const starter of HOBBYIST_STARTERS) {
       const created = await SELF.fetch("https://godesk.test/api/projects", {
         method: "POST",
@@ -5688,15 +5778,15 @@ describe("Game Project HTTP seam", () => {
       ).then((response) => response.json<{ id: string }>());
       const finished = await waitForJob(submitted.id);
       expect(finished.status, starter.label).toBe("succeeded");
-      expect((finished.result as { generationPlan: unknown }).generationPlan).toMatchObject({
-        status: "pending",
-        proposedRuntime: {
-          op: "configure_score_race",
-          config: {
-            actions: [{ points: 2 }, { points: 1 }],
-          },
-        },
-      });
+      const plan = (finished.result as {
+        generationPlan: { status: string; proposedRuntime?: { op: string } };
+      }).generationPlan;
+      expect(plan.status, starter.label).toBe("pending");
+      if (starter.id === "board") {
+        expect(plan.proposedRuntime, starter.label).toBeUndefined();
+      } else {
+        expect(plan.proposedRuntime?.op, starter.label).toBe(expected[starter.id].op);
+      }
       const participants = (
         finished.result as {
           ruleSystem: { participants: { min: number; max: number; default: number } };
@@ -5843,7 +5933,7 @@ describe("Game Project HTTP seam", () => {
     const created = await SELF.fetch("https://godesk.test/api/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "灵感接力轮流生成回归" }),
+      body: JSON.stringify({ name: "轮流行动生成回归" }),
     }).then((response) => response.json<{
       project: { id: string; version: number };
     }>());
@@ -5856,7 +5946,7 @@ describe("Game Project HTTP seam", () => {
           kind: "generate-rule-system",
           projectId: created.project.id,
           expectedVersion: created.project.version,
-          idea: "三位玩家轮流扩展一个共同创意或加入约束，最多 4 回合。",
+          idea: "三位玩家轮流扩展创意或加入约束，最多 4 回合。",
           sourceContent: [
             "三位玩家轮流行动。",
             "扩展创意。",
@@ -5864,8 +5954,8 @@ describe("Game Project HTTP seam", () => {
             "最多 4 回合。",
           ].join("\n"),
           sourceKind: "brief",
-          sourceName: "idea-relay.txt",
-          name: "灵感接力轮流生成回归",
+          sourceName: "turn-taking.txt",
+          name: "轮流行动生成回归",
           idempotencyKey: "turn-taking-generation-001",
         }),
       },

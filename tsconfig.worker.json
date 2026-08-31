@@ -18,6 +18,11 @@
     "src/creator/default-examples.ts",
     "src/creator/hobbyist-starters.ts",
     "src/public-mount.ts",
-    "src/runtime/harbor-voyage.ts"
+    "src/runtime/harbor-voyage.ts",
+    "src/runtime/genre.ts",
+    "src/runtime/playability-floor.ts",
+    "src/runtime/hidden-role.ts",
+    "src/runtime/hand-play.ts",
+    "src/runtime/conversation-relay.ts"
   ]
 }

@@ -48,7 +48,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(generate).toBeDisabled();
 
     await page.getByRole("button", { name: "3人剧本杀" }).click();
-    await expect(idea).toHaveValue(/质问获得 2 分/);
+    await expect(idea).toHaveValue(/身份牌/);
     await expect(page.getByRole("button", { name: "3人剧本杀" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -56,7 +56,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(generate).toBeEnabled();
 
     await page.getByRole("button", { name: "聚会卡牌" }).click();
-    await expect(idea).toHaveValue(/打出一张牌获得 2 分/);
+    await expect(idea).toHaveValue(/手牌/);
     await expect(page.getByRole("button", { name: "聚会卡牌" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -64,17 +64,17 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(generate).toBeEnabled();
 
     await page.getByRole("button", { name: "轻桌游" }).click();
-    await expect(idea).toHaveValue(/放工人获得 2 分/);
+    await expect(idea).toHaveValue(/放置工人/);
     await expect(generate).toBeEnabled();
 
     await expect
       .poll(async () => page.evaluate(() => sessionStorage.getItem("godesk-composer-draft")))
-      .toContain("放工人获得 2 分");
+      .toContain("放置工人");
     await page.reload();
     await expect
       .poll(async () => page.evaluate(() => sessionStorage.getItem("godesk-composer-draft")))
-      .toContain("放工人获得 2 分");
-    await expect(idea).toHaveValue(/放工人获得 2 分/);
+      .toContain("放置工人");
+    await expect(idea).toHaveValue(/放置工人/);
     await expect(page.getByRole("button", { name: "轻桌游" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -139,8 +139,10 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.getByText("轮到你了")).toBeVisible();
     await expect(page.getByText("加入约束")).toBeVisible();
 
-    await page.getByRole("button", { name: "行动 2 +2 创意分" }).click();
+    await page.getByLabel("写下你的发言").fill("先把场景定在雨夜码头。");
+    await page.getByRole("button", { name: "加入约束" }).click();
     await expect(page.getByText(/已提交/)).toBeVisible();
+    await expect(page.getByText("座位 0 · 先把场景定在雨夜码头。")).toBeVisible();
     await expect(
       page.getByRole("paragraph").filter({ hasText: "等待另一位玩家完成行动" }),
     ).toBeVisible();
@@ -151,8 +153,10 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(friendPage.getByRole("heading", { name: "灵感接力" })).toBeVisible();
     await friendPage.getByLabel("你的席位").selectOption("1");
     await expect(friendPage.getByText("轮到你了")).toBeVisible();
-    await friendPage.getByRole("button", { name: "行动 1 +1 创意分" }).click();
+    await friendPage.getByLabel("写下你的发言").fill("雨夜里多了一盏不肯灭的灯。");
+    await friendPage.getByRole("button", { name: "扩展创意" }).click();
     await expect(friendPage.getByText(/已提交/)).toBeVisible();
+    await expect(friendPage.getByText("座位 1 · 雨夜里多了一盏不肯灭的灯。")).toBeVisible();
     await friendContext.close();
 
     await page.getByRole("button", { name: "5 / 5" }).click();
@@ -195,12 +199,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.locator(".generation-plan-panel")).not.toContainText("这局还做不到");
     await expect(page.locator("body")).not.toContainText("Executable Kernel");
     await expect(page.locator("body")).not.toContainText("requires reconfiguration");
-    await expect(
-      page
-        .locator(".generation-plan-columns > section")
-        .filter({ has: page.locator("strong", { hasText: "怎么分胜负" }) })
-        .getByRole("listitem"),
-    ).toHaveText("率先达到 8 分的人揭晓真相，最多 12 回合。");
+    await expect(page.locator(".generation-plan-panel")).toContainText("指控");
     await page.getByRole("button", { name: "确认玩法并开始试玩" }).click();
     await expect(page.getByRole("heading", { name: "现在就开玩" })).toBeVisible({
       timeout: 90_000,
@@ -221,17 +220,41 @@ test.describe("ChatCut charter: source in, playable game out", () => {
 
     await page.getByLabel("你的席位").selectOption("0");
     await expect(page.getByText("轮到你了")).toBeVisible();
-    await page.getByRole("button", { name: /行动 1/ }).click();
-    await expect(page.getByText(/已提交/)).toBeVisible();
+    await expect(page.getByTestId("own-role")).toBeVisible();
+    const creatorRole = await page.getByTestId("own-role").innerText();
+    await page.getByLabel("这一轮你要说什么").fill("我觉得要先看谁在回避窗口。");
+    await page.getByRole("button", { name: "发言" }).click();
+    await expect(page.getByText("座位 0：我觉得要先看谁在回避窗口。")).toBeVisible();
 
     const friendContext = await browser.newContext();
     const friendPage = await friendContext.newPage();
     await friendPage.goto(inviteUrl);
     await friendPage.getByLabel("你的席位").selectOption("1");
     await expect(friendPage.getByText("轮到你了")).toBeVisible();
-    await friendPage.getByRole("button", { name: /行动 2/ }).click();
-    await expect(friendPage.getByText(/已提交/)).toBeVisible();
+    await expect(friendPage.getByTestId("own-role")).toBeVisible();
+    const friendRole = await friendPage.getByTestId("own-role").innerText();
+    expect(friendRole).not.toEqual(creatorRole);
+    await friendPage.getByLabel("这一轮你要说什么").fill("窗口那边的人一直不看我们。");
+    await friendPage.getByRole("button", { name: "发言" }).click();
+    await expect(friendPage.getByText("座位 1：窗口那边的人一直不看我们。")).toBeVisible();
+
+    const thirdContext = await browser.newContext();
+    const thirdPage = await thirdContext.newPage();
+    await thirdPage.goto(inviteUrl);
+    await thirdPage.getByLabel("你的席位").selectOption("2");
+    await expect(thirdPage.getByText("轮到你了")).toBeVisible();
+    await thirdPage.getByLabel("这一轮你要说什么").fill("那我们就进入指控。");
+    await thirdPage.getByRole("button", { name: "发言" }).click();
+    await expect(page.getByText("阶段：指控")).toBeVisible();
+    await expect(page.getByText("轮到你了")).toBeVisible();
+    await page.getByRole("button", { name: "指控座位 1" }).click();
+    await expect(friendPage.getByText("轮到你了")).toBeVisible();
+    await friendPage.getByRole("button", { name: "指控座位 0" }).click();
+    await expect(thirdPage.getByText("轮到你了")).toBeVisible();
+    await thirdPage.getByRole("button", { name: "指控座位 0" }).click();
+    await expect(page.getByText(/获胜/)).toBeVisible();
     await friendContext.close();
+    await thirdContext.close();
 
     await page.goto(studioUrl);
     await expect(page.getByRole("heading", { name: "现在就开玩" })).toBeVisible();
@@ -274,7 +297,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.getByText(/放置 1\/4 · 座位 1/)).toBeVisible();
   });
 
-  test("雾岭山庄 becomes a joinable score race", async ({ page, browser }) => {
+  test("雾岭山庄 becomes a joinable hidden-role game", async ({ page, browser }) => {
     await page.goto("/chatgpt-plugin/new");
     const lodge = page.locator("article").filter({ hasText: "雾岭山庄" });
     await lodge.getByRole("button", { name: "先玩这一局" }).click();
@@ -282,21 +305,44 @@ test.describe("ChatCut charter: source in, playable game out", () => {
 
     await expect(page.getByRole("heading", { name: "雾岭山庄" })).toBeVisible();
     await expectLightPlaySurface(page);
-    await expect(page.getByText("调查房间")).toBeVisible();
+    await expect(page.getByText("阶段：公开发言")).toBeVisible();
 
     const inviteUrl = await page.getByLabel("邀请链接").inputValue();
     await page.getByLabel("你的席位").selectOption("0");
     await expect(page.getByText("轮到你了")).toBeVisible();
-    await page.getByRole("button", { name: /行动 1/ }).click();
-    await expect(page.getByText(/已提交/)).toBeVisible();
+    const creatorRole = await page.getByTestId("own-role").innerText();
+    await page.getByLabel("这一轮你要说什么").fill("阁楼的脚步不是风。");
+    await page.getByRole("button", { name: "发言" }).click();
+    await expect(page.getByText("座位 0：阁楼的脚步不是风。")).toBeVisible();
 
     const friendContext = await browser.newContext();
     const friendPage = await friendContext.newPage();
     await friendPage.goto(inviteUrl);
     await friendPage.getByLabel("你的席位").selectOption("1");
     await expect(friendPage.getByText("轮到你了")).toBeVisible();
-    await friendPage.getByRole("button", { name: /行动 2/ }).click();
-    await expect(friendPage.getByText(/已提交/)).toBeVisible();
+    expect(await friendPage.getByTestId("own-role").innerText()).not.toEqual(creatorRole);
+    await friendPage.getByLabel("这一轮你要说什么").fill("门厅的灯灭得太整齐。");
+    await friendPage.getByRole("button", { name: "发言" }).click();
+    await expect(friendPage.getByText("座位 1：门厅的灯灭得太整齐。")).toBeVisible();
     await friendContext.close();
+  });
+
+  test("聚会卡牌 starter deals hidden hands and plays a card", async ({ page }) => {
+    await page.goto("/chatgpt-plugin/new");
+    await page.getByRole("button", { name: "聚会卡牌" }).click();
+    await page.getByRole("button", { name: "生成可玩版本" }).click();
+    await page.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 90_000 });
+    await page.getByRole("button", { name: "确认玩法并开始试玩" }).click();
+    await expect(page.getByRole("heading", { name: "现在就开玩" })).toBeVisible({
+      timeout: 90_000,
+    });
+    await page.getByRole("button", { name: "发布邀请链接" }).click();
+    const tryUrl = await page.getByLabel("固定好友试玩链接").inputValue();
+    await page.goto(tryUrl);
+    await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
+    await page.getByLabel("你的席位").selectOption("0");
+    await expect(page.getByLabel("你的手牌")).toBeVisible();
+    await page.getByRole("button", { name: /打出 / }).first().click();
+    await expect(page.getByText(/打出/)).toBeVisible();
   });
 });

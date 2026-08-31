@@ -185,6 +185,37 @@ const ruleSystemSchema = z.object({
           type: z.literal("harbor-voyage-v1"),
           playerCount: z.number().int().min(2).max(3),
         }),
+        z.object({
+          type: z.literal("hidden-role-v1"),
+          playerCount: z.number().int().min(2).max(6),
+          roles: z.array(z.object({
+            id: z.string(),
+            name: z.string(),
+            alignment: z.enum(["culprit", "town"]),
+          })).min(2).max(6),
+        }),
+        z.object({
+          type: z.literal("hand-play-v1"),
+          playerCount: z.number().int().min(2).max(6),
+          cardValues: z.array(z.number().int()).min(1),
+          copiesPerValue: z.number().int().min(1),
+          handSize: z.number().int().min(1).max(8),
+          victoryTarget: z.number().int().min(1),
+          actions: z.array(z.object({
+            id: z.literal("play"),
+            label: z.string(),
+          })).length(1),
+        }),
+        z.object({
+          type: z.literal("conversation-relay-v1"),
+          victoryTarget: z.number().int(),
+          maxTurns: z.number().int(),
+          actions: z.array(z.object({
+            id: z.string(),
+            label: z.string(),
+            points: z.number().int(),
+          })),
+        }),
       ]),
     }),
   ]),
@@ -310,6 +341,12 @@ const buildSchema = z.object({
       label: z.string(),
     })),
   }),
+  playabilityFloor: z.object({
+    status: z.enum(["passed", "failed"]),
+    reason: z.string(),
+    genre: z.enum(["hidden-role", "hand-play", "conversation", "placement", "generic"]),
+    kernelType: z.string().nullable(),
+  }),
   createdAt: z.string(),
   playableUrl: z.string(),
 });
@@ -396,6 +433,49 @@ const sessionStateSchema = z.object({
     maxActions: z.number().int(),
   }).optional(),
   voyage: harborVoyageSchema.optional(),
+  hiddenRole: z.object({
+    phase: z.enum(["discuss", "accuse", "resolved"]),
+    playerCount: z.number().int(),
+    roles: z.array(z.object({
+      seat: z.number().int(),
+      roleId: z.string(),
+      name: z.string(),
+      alignment: z.enum(["culprit", "town"]),
+    })),
+    spoken: z.array(z.number().int()),
+    accused: z.array(z.number().int()),
+    transcript: z.array(z.object({
+      seat: z.number().int(),
+      text: z.string(),
+    })),
+    accusations: z.array(z.object({
+      seat: z.number().int(),
+      targetSeat: z.number().int(),
+    })),
+    condemnedSeat: z.number().int().nullable(),
+    winnerAlignment: z.enum(["culprit", "town"]).nullable(),
+  }).optional(),
+  handPlay: z.object({
+    playerCount: z.number().int(),
+    deck: z.array(z.number().int()),
+    deckRemaining: z.number().int(),
+    hands: z.array(z.array(z.number().int())),
+    playArea: z.array(z.object({
+      seat: z.number().int(),
+      card: z.number().int(),
+    })),
+    lastPlay: z.object({
+      seat: z.number().int(),
+      card: z.number().int(),
+    }).nullable(),
+  }).optional(),
+  conversation: z.object({
+    transcript: z.array(z.object({
+      seat: z.number().int(),
+      actionId: z.string(),
+      text: z.string(),
+    })),
+  }).optional(),
 });
 
 const acceptedActionSchema = z.object({
@@ -888,6 +968,51 @@ const operationSchema = z.discriminatedUnion("op", [
     op: z.literal("configure_harbor_voyage"),
     config: z.object({
       playerCount: z.number().int().min(2).max(3),
+      unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
+    }),
+  }),
+  z.object({
+    op: z.literal("configure_hidden_role"),
+    config: z.object({
+      playerCount: z.number().int().min(2).max(6),
+      roles: z.array(z.object({
+        id: z.string().regex(/^[a-z0-9-]{1,40}$/),
+        name: z.string().min(1).max(40),
+        alignment: z.enum(["culprit", "town"]),
+      })).min(2).max(6),
+      unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
+    }),
+  }),
+  z.object({
+    op: z.literal("configure_hand_play"),
+    config: z.object({
+      playerCount: z.number().int().min(2).max(6),
+      cardValues: z.array(z.number().int().min(1).max(20)).min(1).max(20),
+      copiesPerValue: z.number().int().min(1).max(20),
+      handSize: z.number().int().min(1).max(8),
+      victoryTarget: z.number().int().min(1).max(1_000),
+      actions: z.array(z.object({
+        id: z.literal("play"),
+        label: z.string().min(1).max(80),
+      })).length(1),
+      unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
+    }),
+  }),
+  z.object({
+    op: z.literal("configure_conversation_relay"),
+    config: z.object({
+      victoryTarget: z.number().int().min(1).max(1_000),
+      maxTurns: z.number().int().min(1).max(1_000),
+      actions: z
+        .array(
+          z.object({
+            id: z.string().regex(/^[a-z0-9-]{1,40}$/),
+            label: z.string().min(1).max(80),
+            points: z.number().int().min(1).max(100),
+          }),
+        )
+        .min(1)
+        .max(12),
       unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
     }),
   }),

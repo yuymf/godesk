@@ -84,6 +84,42 @@ export function pushYourLuckKernel(
     : null;
 }
 
+export function hiddenRoleKernel(
+  ruleSystem: RuleSystem,
+): Extract<
+  Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
+  { type: "hidden-role-v1" }
+> | null {
+  return ruleSystem.runtimeSupport.status === "executable" &&
+    ruleSystem.runtimeSupport.kernel.type === "hidden-role-v1"
+    ? ruleSystem.runtimeSupport.kernel
+    : null;
+}
+
+export function handPlayKernel(
+  ruleSystem: RuleSystem,
+): Extract<
+  Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
+  { type: "hand-play-v1" }
+> | null {
+  return ruleSystem.runtimeSupport.status === "executable" &&
+    ruleSystem.runtimeSupport.kernel.type === "hand-play-v1"
+    ? ruleSystem.runtimeSupport.kernel
+    : null;
+}
+
+export function conversationRelayKernel(
+  ruleSystem: RuleSystem,
+): Extract<
+  Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
+  { type: "conversation-relay-v1" }
+> | null {
+  return ruleSystem.runtimeSupport.status === "executable" &&
+    ruleSystem.runtimeSupport.kernel.type === "conversation-relay-v1"
+    ? ruleSystem.runtimeSupport.kernel
+    : null;
+}
+
 export function isHarborVoyage(ruleSystem: RuleSystem): boolean {
   return (
     ruleSystem.runtimeSupport.status === "executable" &&

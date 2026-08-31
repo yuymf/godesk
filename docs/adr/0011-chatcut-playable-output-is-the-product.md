@@ -35,10 +35,11 @@ install GoDesk in Codex, or open the website
   -> that game can be shared so others play together in a Shared Session
 ```
 
-Success is a playable, shareable output. Web Studio and Codex operate the same
-Game Project. Generation Plan review, unsupported-behavior honesty, immutable
-Builds, and Findings remain implementation contracts; they must not replace the
-shareable game as the outcome.
+Success is a playable, shareable finished game, not a Demo or themed
+scoreboard. Web Studio and Codex operate the same Game Project. Generation
+Plan review, unsupported-behavior honesty, immutable Builds, and Findings
+remain implementation contracts; they must not replace the shareable game as
+the outcome. ADR 0012 adds Playability Floor as the share gate.
 
 ## Consequences
 

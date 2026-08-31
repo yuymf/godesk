@@ -10,6 +10,26 @@ import {
   pickHarborBotActionId,
   type HarborVoyageState,
 } from "../src/runtime/harbor-voyage";
+import {
+  applyHiddenRoleIntent,
+  createHiddenRoleState,
+  hiddenRoleActiveSeat,
+  hiddenRoleWinnerSeat,
+  pickHiddenRoleBotAction,
+  scopeHiddenRoleState,
+} from "../src/runtime/hidden-role";
+import {
+  applyHandPlayIntent,
+  createHandPlayState,
+  handPlayExhausted,
+  pickHandPlayBotAction,
+  scopeHandPlayState,
+  type HandPlayState,
+} from "../src/runtime/hand-play";
+import {
+  applyConversationRelayIntent,
+  createConversationRelayState,
+} from "../src/runtime/conversation-relay";
 
 type ExecutableRuntime = Extract<
   RuleSystem["runtimeSupport"],
@@ -56,6 +76,55 @@ export function initialSessionState(
       createHarborVoyageState(runtime.kernel.playerCount),
       0,
     );
+  }
+  if (runtime?.kernel.type === "hidden-role-v1") {
+    const hiddenRole = createHiddenRoleState(
+      runtime.kernel.playerCount,
+      runtime.kernel.roles,
+      _seed,
+    );
+    return {
+      turn: 0,
+      activeSeat: hiddenRoleActiveSeat(hiddenRole),
+      scores: Array.from({ length: runtime.kernel.playerCount }, () => 0),
+      status: "active",
+      winnerSeat: null,
+      hiddenRole,
+    };
+  }
+  if (runtime?.kernel.type === "hand-play-v1") {
+    const handPlay = createHandPlayState({
+      playerCount: runtime.kernel.playerCount,
+      cardValues: runtime.kernel.cardValues,
+      copiesPerValue: runtime.kernel.copiesPerValue,
+      handSize: runtime.kernel.handSize,
+      seed: _seed,
+    });
+    return {
+      turn: 0,
+      activeSeat: 0,
+      scores: Array.from({ length: runtime.kernel.playerCount }, () => 0),
+      status: "active",
+      winnerSeat: null,
+      handPlay: {
+        playerCount: handPlay.playerCount,
+        deck: handPlay.deck,
+        deckRemaining: handPlay.deck.length,
+        hands: handPlay.hands,
+        playArea: handPlay.playArea,
+        lastPlay: handPlay.lastPlay,
+      },
+    };
+  }
+  if (runtime?.kernel.type === "conversation-relay-v1") {
+    return {
+      turn: 0,
+      activeSeat: 0,
+      scores: Array.from({ length: ruleSystem.participants.default }, () => 0),
+      status: "active",
+      winnerSeat: null,
+      conversation: createConversationRelayState(),
+    };
   }
   if (runtime?.kernel.type === "shared-goal-v1") {
     return {
@@ -180,6 +249,126 @@ export function acceptIntent(
       actionId: applied.canonicalActionId,
       points: applied.points,
       state: voyageToTableState(applied.state, state.turn + 1),
+    };
+  }
+
+  if (runtime.kernel.type === "hidden-role-v1") {
+    if (state.status !== "active" || !state.hiddenRole) return null;
+    if (intent.seat !== hiddenRoleActiveSeat(state.hiddenRole)) return null;
+    const applied = applyHiddenRoleIntent(
+      state.hiddenRole,
+      intent.seat,
+      intent.actionId,
+      intent.payload,
+    );
+    if (!applied) return null;
+    const complete = applied.state.phase === "resolved";
+    return {
+      sequence,
+      intentId: intent.intentId,
+      seat: intent.seat,
+      actionId: intent.actionId,
+      points: applied.points,
+      payload: intent.payload,
+      state: {
+        turn: state.turn + 1,
+        activeSeat: hiddenRoleActiveSeat(applied.state),
+        scores: [...state.scores],
+        status: complete ? "complete" : "active",
+        winnerSeat: hiddenRoleWinnerSeat(applied.state),
+        hiddenRole: applied.state,
+      },
+    };
+  }
+
+  if (runtime.kernel.type === "hand-play-v1") {
+    if (state.status !== "active" || !state.handPlay || intent.seat !== state.activeSeat) {
+      return null;
+    }
+    if (intent.actionId !== "play") return null;
+    const current: HandPlayState = {
+      playerCount: state.handPlay.playerCount,
+      deck: state.handPlay.deck,
+      hands: state.handPlay.hands,
+      playArea: state.handPlay.playArea,
+      lastPlay: state.handPlay.lastPlay,
+    };
+    const applied = applyHandPlayIntent(current, intent.seat, intent.payload);
+    if (!applied) return null;
+    const scores = state.scores.map((score, seat) =>
+      seat === intent.seat ? score + applied.points : score,
+    );
+    const reachedTarget = scores[intent.seat] >= runtime.kernel.victoryTarget;
+    const exhausted = handPlayExhausted(applied.state);
+    const complete = reachedTarget || exhausted;
+    return {
+      sequence,
+      intentId: intent.intentId,
+      seat: intent.seat,
+      actionId: intent.actionId,
+      points: applied.points,
+      payload: intent.payload,
+      state: {
+        turn: state.turn + 1,
+        activeSeat: complete
+          ? intent.seat
+          : (intent.seat + 1) % state.scores.length,
+        scores,
+        status: complete ? "complete" : "active",
+        winnerSeat: complete ? uniqueWinnerSeat(scores) : null,
+        handPlay: {
+          playerCount: applied.state.playerCount,
+          deck: applied.state.deck,
+          deckRemaining: applied.state.deck.length,
+          hands: applied.state.hands,
+          playArea: applied.state.playArea,
+          lastPlay: applied.state.lastPlay,
+        },
+      },
+    };
+  }
+
+  if (runtime.kernel.type === "conversation-relay-v1") {
+    const action = runtime.kernel.actions.find(
+      (candidate) => candidate.id === intent.actionId,
+    );
+    if (
+      state.status !== "active" ||
+      intent.seat !== state.activeSeat ||
+      !action ||
+      !state.conversation
+    ) {
+      return null;
+    }
+    const spoken = applyConversationRelayIntent(
+      state.conversation,
+      intent.seat,
+      intent.actionId,
+      intent.payload,
+    );
+    if (!spoken) return null;
+    const scores = state.scores.map((score, seat) =>
+      seat === intent.seat ? score + action.points : score,
+    );
+    const turn = state.turn + 1;
+    const reachedTarget = scores[intent.seat] >= runtime.kernel.victoryTarget;
+    const reachedLimit = turn >= runtime.kernel.maxTurns;
+    const complete = reachedTarget || reachedLimit;
+    return {
+      sequence,
+      intentId: intent.intentId,
+      seat: intent.seat,
+      actionId: intent.actionId,
+      points: action.points,
+      payload: { ...intent.payload, text: spoken.text },
+      state: {
+        turn,
+        activeSeat: complete ? intent.seat : (intent.seat + 1) % state.scores.length,
+        scores,
+        status: complete ? "complete" : "active",
+        winnerSeat: complete ? uniqueWinnerSeat(scores) : null,
+        conversation: spoken.state,
+      },
     };
   }
 
@@ -545,6 +734,100 @@ export function runBotSimulation(
   let state = initialState;
   let random = seed >>> 0 || 1;
 
+  if (runtime.kernel.type === "hidden-role-v1") {
+    while (state.status === "active" && state.hiddenRole) {
+      const picked = pickHiddenRoleBotAction(state.hiddenRole, state.activeSeat);
+      if (!picked) throw new Error("bot_action_unavailable");
+      const accepted = acceptIntent(
+        state,
+        runtime,
+        {
+          intentId: `bot_${acceptedActions.length + 1}`,
+          seat: state.activeSeat,
+          actionId: picked.actionId,
+          payload: picked.payload,
+        },
+        acceptedActions.length + 1,
+        seed,
+      );
+      if (!accepted) throw new Error("bot_action_rejected");
+      acceptedActions.push(accepted);
+      state = accepted.state;
+    }
+    return {
+      initialState,
+      acceptedActions,
+      finalState: state,
+      terminalStatus: "complete" as const,
+    };
+  }
+
+  if (runtime.kernel.type === "hand-play-v1") {
+    while (state.status === "active" && state.handPlay) {
+      const current: HandPlayState = {
+        playerCount: state.handPlay.playerCount,
+        deck: state.handPlay.deck,
+        hands: state.handPlay.hands,
+        playArea: state.handPlay.playArea,
+        lastPlay: state.handPlay.lastPlay,
+      };
+      const picked = pickHandPlayBotAction(current, state.activeSeat);
+      if (!picked) throw new Error("bot_action_unavailable");
+      const accepted = acceptIntent(
+        state,
+        runtime,
+        {
+          intentId: `bot_${acceptedActions.length + 1}`,
+          seat: state.activeSeat,
+          actionId: picked.actionId,
+          payload: picked.payload,
+        },
+        acceptedActions.length + 1,
+        seed,
+      );
+      if (!accepted) throw new Error("bot_action_rejected");
+      acceptedActions.push(accepted);
+      state = accepted.state;
+    }
+    return {
+      initialState,
+      acceptedActions,
+      finalState: state,
+      terminalStatus: "complete" as const,
+    };
+  }
+
+  if (runtime.kernel.type === "conversation-relay-v1") {
+    while (state.status === "active") {
+      random = nextRandom(random);
+      const action =
+        runtime.kernel.actions[random % runtime.kernel.actions.length];
+      const accepted = acceptIntent(
+        state,
+        runtime,
+        {
+          intentId: `bot_${acceptedActions.length + 1}`,
+          seat: state.activeSeat,
+          actionId: action.id,
+          payload: { text: `座位 ${state.activeSeat} 接上一句：继续这个共同创意。` },
+        },
+        acceptedActions.length + 1,
+        seed,
+      );
+      if (!accepted) throw new Error("bot_action_rejected");
+      acceptedActions.push(accepted);
+      state = accepted.state;
+    }
+    return {
+      initialState,
+      acceptedActions,
+      finalState: state,
+      terminalStatus: state.winnerSeat === null
+        ? ("turn-limit" as const)
+        : ("complete" as const),
+    };
+  }
+
   if (runtime.kernel.type === "harbor-voyage-v1") {
     while (state.status === "active" && state.voyage) {
       const actionId = pickHarborBotActionId(state.voyage as HarborVoyageState);
@@ -772,5 +1055,29 @@ export function runBotSimulation(
     terminalStatus: reachedTarget
       ? ("complete" as const)
       : ("turn-limit" as const),
+  };
+}
+
+export function scopeSessionState(
+  state: SessionState,
+  viewerSeat: number | null,
+): SessionState {
+  return {
+    ...state,
+    hiddenRole: state.hiddenRole
+      ? scopeHiddenRoleState(state.hiddenRole, viewerSeat)
+      : undefined,
+    handPlay: state.handPlay
+      ? {
+          ...scopeHandPlayState({
+            playerCount: state.handPlay.playerCount,
+            deck: state.handPlay.deck,
+            hands: state.handPlay.hands,
+            playArea: state.handPlay.playArea,
+            lastPlay: state.handPlay.lastPlay,
+          }, viewerSeat),
+          deckRemaining: state.handPlay.deckRemaining,
+        }
+      : undefined,
   };
 }
