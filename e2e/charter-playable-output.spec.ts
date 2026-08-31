@@ -137,7 +137,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
 
     await page.getByLabel("你的席位").selectOption("0");
     await expect(page.getByText("轮到你了")).toBeVisible();
-    await expect(page.getByText("加入约束")).toBeVisible();
+    await expect(page.getByRole("button", { name: /加入约束/ })).toBeVisible();
 
     await page.getByLabel("写下你的发言").fill("先把场景定在雨夜码头。");
     await page.getByRole("button", { name: "加入约束" }).click();
@@ -252,7 +252,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await friendPage.getByRole("button", { name: "指控座位 0" }).click();
     await expect(thirdPage.getByText("轮到你了")).toBeVisible();
     await thirdPage.getByRole("button", { name: "指控座位 0" }).click();
-    await expect(page.getByText(/获胜/)).toBeVisible();
+    await expect(page.getByText(/凶手获胜|侦探与平民获胜/)).toBeVisible();
     await friendContext.close();
     await thirdContext.close();
 
@@ -343,6 +343,6 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await page.getByLabel("你的席位").selectOption("0");
     await expect(page.getByLabel("你的手牌")).toBeVisible();
     await page.getByRole("button", { name: /打出 / }).first().click();
-    await expect(page.getByText(/打出/)).toBeVisible();
+    await expect(page.getByText(/座位 0 打出/)).toBeVisible();
   });
 });
