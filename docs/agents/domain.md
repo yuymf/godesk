@@ -6,7 +6,9 @@ How the engineering skills should consume this repository's domain documentation
 
 - **`AGENTS.md`** — product charter and Playwright verification rule.
 - **`CONTEXT.md`** at the repository root.
+- **`docs/product/first-principles.md`** — product constitution.
 - **`docs/adr/0011-chatcut-playable-output-is-the-product.md`** — current product identity.
+- **`docs/adr/0012-playability-floor-is-the-share-gate.md`** — share gate.
 - **`docs/adr/`** — other ADRs that touch the area about to be changed.
 
 If any of these files do not exist, proceed silently. The `/domain-modeling` skill creates them lazily when terms or decisions are actually resolved.
@@ -18,6 +20,7 @@ This repository uses a single-context layout:
 ```text
 /
 ├── CONTEXT.md
+├── docs/product/first-principles.md
 ├── docs/adr/
 └── src/
 ```

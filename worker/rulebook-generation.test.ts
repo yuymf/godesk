@@ -83,7 +83,7 @@ describe("rulebook Rule System materialization", () => {
       provenance: "kit",
       label: "程序化主题 kit",
     }]);
-    expect(ruleSystem.entities).toEqual([]);
+    expect(ruleSystem.entities.map((entity) => entity.name)).toEqual(["发言记录"]);
     expect(ruleSystem.rules.length).toBeGreaterThan(0);
     expect(ruleSystem.constraints).toEqual([
       expect.objectContaining({
@@ -330,15 +330,20 @@ describe("rulebook Rule System materialization", () => {
     });
   });
 
-  it("keeps a reveal-the-truth score race as an outcome", () => {
+  it("materializes hidden-role actions for the murder-mystery starter", () => {
     const ruleSystem = materializeRuleSystem({
       name: HOBBYIST_STARTERS[0].label,
       description: HOBBYIST_STARTERS[0].text,
       sourceId: "source_hobbyist_script",
       sourceText: "",
     });
-    expect(ruleSystem.outcomes.map((outcome) => outcome.name)).toEqual([
-      "率先达到 8 分的人揭晓真相，最多 12 回合。",
+    expect(ruleSystem.actions.map((action) => action.id)).toEqual(["speak", "accuse"]);
+    expect(ruleSystem.entities.map((entity) => entity.name)).toEqual(["身份牌", "发言记录"]);
+    expect(ruleSystem.playSurface.kind).toBe("conversation");
+    expect(ruleSystem.participants.roles.map((role) => role.id)).toEqual([
+      "culprit",
+      "detective",
+      "civilian-2",
     ]);
   });
 

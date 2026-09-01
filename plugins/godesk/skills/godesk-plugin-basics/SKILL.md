@@ -75,8 +75,16 @@ iteration tools, not the destination.
 
 ## Executable Kernel choice
 
+- `hidden-role-v1` executes secret roles, one public speech per seat, one
+  accusation per seat, and majority reveal. Use it for 剧本杀 / hidden-role
+  sources. Do not substitute a score race.
+- `hand-play-v1` executes a shuffled deck, hidden hands, play-to-score, and
+  first-to-target or highest score when hands empty.
+- `conversation-relay-v1` records required speech into the transcript and
+  scores the chosen action.
+- `harbor-voyage-v1` executes worker placement on a harbor table.
 - `score-race-v1` executes explicit per-seat point actions, a victory target,
-  and a turn limit.
+  and a turn limit. Use it only when the source itself is a point race.
 - `shared-goal-v1` executes explicit turn-taking actions that add to one shared
   progress track, a shared target, and a turn limit. It has no winner seat;
   completion means the shared target was reached.

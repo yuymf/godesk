@@ -5,10 +5,11 @@ description: Turn a game idea or source into a presentable GoDesk Shared Session
 
 # Create a Shareable Prototype
 
-The success path is Idea or Source → playable game → invitation URL that
-others can open and play. Presentation Floor, immutable Build, Studio
-embedded Shared Session, and a stable Playtest Link exist to make that
-output real. A Finding is optional.
+The success path is Idea or Source → playable finished game → invitation URL
+that others can open and play. Presentation Floor and Playability Floor,
+immutable Build, Studio embedded Shared Session, and a stable Playtest Link
+exist to make that output real. A themed score-race stand-in is not delivery.
+A Finding is optional.
 
 ## Workflow
 
@@ -20,13 +21,17 @@ output real. A Finding is optional.
    loop, actions, assumptions, and unsupported behavior. If its runtime support is still `draft`,
    use one version-checked `apply_project_patch` to make the requested prototype
    explicit: update the Rule System fields and configure the smallest meaningful
-   supported Kernel (`score-race-v1` for competitive scoring,
+   supported Kernel that matches the source genre (`hidden-role-v1` for secret
+   identities and accusations, `hand-play-v1` for hidden hands, `conversation-relay-v1`
+   for recorded speech, `harbor-voyage-v1` for placement, `score-race-v1` only
+   when the source itself is a point race,
    `shared-goal-v1` for cooperative progress, or `turn-taking-v1` for an
    explicit bounded round-robin action loop with no inferred winner, or
    `take-away-v1` for an explicit finite shared pool and last-taken-wins loop,
    or `roll-and-move-v1` when die sides, movement by the roll, and a finish
    position are explicit, or `draw-and-score-v1` for an explicit finite shuffled
-   deck, top-card draws, score-by-value, target, and exhaustion result). Give
+   deck, top-card draws, score-by-value, target, and exhaustion result). Do not
+   substitute score-race for another genre. Give
    roll-and-move a visible safety turn limit with no invented winner;
    use `push-your-luck-v1` when repeated rolls, one bust face, unbanked score,
    voluntary banking, and a banked-score target are explicit. Give it a visible
@@ -40,8 +45,9 @@ output real. A Finding is optional.
    apply typographic/programmatic presentation or a theme kit so the
    Presentation Floor supports the selected play surface.
 4. Submit `compile-build` with the latest version and track it to terminal.
-   Inspect warnings, unsupported behavior, and `presentationFloor`. If the floor is
-   unmet, fix presentation and compile again; do not create a Shared Session.
+   Inspect warnings, unsupported behavior, `presentationFloor`, and
+   `playabilityFloor`. If either floor is unmet, fix the gap and compile
+   again; do not create a Shared Session.
 5. If the creator named a question to test, persist it as a Design Hypothesis
    before sharing. Call `create_shared_session` with the immutable Build ID,
    explicit seed, stable idempotency key, and that exact `hypothesisId`.

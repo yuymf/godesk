@@ -62,6 +62,13 @@ export interface PresentationFloorReadiness {
   visuals: VisualTreatment[];
 }
 
+export interface PlayabilityFloorReadiness {
+  status: "passed" | "failed";
+  reason: string;
+  genre: "hidden-role" | "hand-play" | "conversation" | "placement" | "generic";
+  kernelType: string | null;
+}
+
 export type PlaySurfaceKind =
   | "table"
   | "cards"
@@ -201,6 +208,30 @@ export interface RuleSystem {
           | {
               type: "harbor-voyage-v1";
               playerCount: number;
+            }
+          | {
+              type: "hidden-role-v1";
+              playerCount: number;
+              roles: Array<{
+                id: string;
+                name: string;
+                alignment: "culprit" | "town";
+              }>;
+            }
+          | {
+              type: "hand-play-v1";
+              playerCount: number;
+              cardValues: number[];
+              copiesPerValue: number;
+              handSize: number;
+              victoryTarget: number;
+              actions: Array<{ id: "play"; label: string }>;
+            }
+          | {
+              type: "conversation-relay-v1";
+              victoryTarget: number;
+              maxTurns: number;
+              actions: Array<{ id: string; label: string; points: number }>;
             };
   };
 }
@@ -428,6 +459,39 @@ export type ProjectChangeOperation =
       };
     }
   | {
+      op: "configure_hidden_role";
+      config: {
+        playerCount: number;
+        roles: Array<{
+          id: string;
+          name: string;
+          alignment: "culprit" | "town";
+        }>;
+        unsupported?: string[];
+      };
+    }
+  | {
+      op: "configure_hand_play";
+      config: {
+        playerCount: number;
+        cardValues: number[];
+        copiesPerValue: number;
+        handSize: number;
+        victoryTarget: number;
+        actions: Array<{ id: "play"; label: string }>;
+        unsupported?: string[];
+      };
+    }
+  | {
+      op: "configure_conversation_relay";
+      config: {
+        victoryTarget: number;
+        maxTurns: number;
+        actions: Array<{ id: string; label: string; points: number }>;
+        unsupported?: string[];
+      };
+    }
+  | {
       op: "activate_rule_system";
       ruleSystemId: string;
     }
@@ -511,6 +575,7 @@ export interface PlayableBuild {
   warnings: string[];
   unsupportedBehavior: string[];
   presentationFloor: PresentationFloorReadiness;
+  playabilityFloor: PlayabilityFloorReadiness;
   createdAt: string;
   playableUrl: string;
 }
@@ -641,6 +706,36 @@ export interface SessionState {
   };
   /** Present when the build kernel is harbor-voyage-v1. */
   voyage?: HarborVoyageTableState;
+  /** Present when the build kernel is hidden-role-v1. Other seats' roles stay hidden. */
+  hiddenRole?: {
+    phase: "discuss" | "accuse" | "resolved";
+    playerCount: number;
+    roles: Array<{
+      seat: number;
+      roleId: string;
+      name: string;
+      alignment: "culprit" | "town";
+    }>;
+    spoken: number[];
+    accused: number[];
+    transcript: Array<{ seat: number; text: string }>;
+    accusations: Array<{ seat: number; targetSeat: number }>;
+    condemnedSeat: number | null;
+    winnerAlignment: "culprit" | "town" | null;
+  };
+  /** Present when the build kernel is hand-play-v1. Other seats' hands stay hidden. */
+  handPlay?: {
+    playerCount: number;
+    deck: number[];
+    deckRemaining: number;
+    hands: number[][];
+    playArea: Array<{ seat: number; card: number }>;
+    lastPlay: { seat: number; card: number } | null;
+  };
+  /** Present when the build kernel is conversation-relay-v1. */
+  conversation?: {
+    transcript: Array<{ seat: number; actionId: string; text: string }>;
+  };
 }
 
 export interface AcceptedAction {

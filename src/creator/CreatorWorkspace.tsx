@@ -83,9 +83,12 @@ import {
 } from "../runtime/harbor-voyage";
 import {
   CARD_SYMBOLS,
+  conversationRelayKernel,
   displayActionDescription,
   displayUnsupported,
   drawAndScoreKernel,
+  handPlayKernel,
+  hiddenRoleKernel,
   isHarborVoyage,
   localizedRoomError,
   pushYourLuckKernel,
@@ -238,7 +241,8 @@ export function latestStudioPlayTarget(
 
 export function buildCanOpenSharedSession(build: PlayableBuild) {
   return build.ruleSystem.runtimeSupport.status === "executable" &&
-    build.presentationFloor.status === "passed";
+    build.presentationFloor.status === "passed" &&
+    build.playabilityFloor.status === "passed";
 }
 
 function playtestOutcome(playtest: PlaytestRun) {
@@ -1410,7 +1414,19 @@ function ProjectStudio({ projectId }: { projectId: string }) {
         setNotice(`Studio 试玩已创建 · ${room.id}`);
       }
     } catch (reason) {
-      setFormError(reason instanceof Error ? reason.message : "创建 Shared Session 失败。");
+      if (reason instanceof ProjectApiError && reason.status === 422) {
+        const details = reason.details as {
+          playabilityFloor?: { reason?: string };
+          presentationFloor?: { reason?: string };
+        };
+        setFormError(
+          details.playabilityFloor?.reason
+            ?? details.presentationFloor?.reason
+            ?? reason.message,
+        );
+      } else {
+        setFormError(reason instanceof Error ? reason.message : "创建 Shared Session 失败。");
+      }
     } finally {
       setBusy(false);
     }
@@ -2257,6 +2273,20 @@ function ProjectStudio({ projectId }: { projectId: string }) {
               </form>
             </section>
 
+            {studioPlayTarget.build && !buildCanOpenSharedSession(studioPlayTarget.build) && (
+              <section className="studio-play-gap" id="play-gap">
+                <h3>这一版还不能分享</h3>
+                <p>
+                  {studioPlayTarget.build.playabilityFloor.status === "failed"
+                    ? studioPlayTarget.build.playabilityFloor.reason
+                    : studioPlayTarget.build.presentationFloor.status === "failed"
+                      ? studioPlayTarget.build.presentationFloor.reason
+                      : "还没有可执行内核，不能把未完成的规则当作可玩成品分享。"}
+                </p>
+                <p>Immutable Build 已经留下。补上该游戏的核心环之后再开 Shared Session。</p>
+              </section>
+            )}
+
             {studioPlayTarget.build && buildCanOpenSharedSession(studioPlayTarget.build) && (
               <section className="studio-play" id="play" aria-labelledby="studio-play-title">
                 <header>
@@ -2498,7 +2528,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                             自动试玩
                           </button>
                           <button
-                            disabled={busy}
+                            disabled={busy || !buildCanOpenSharedSession(build)}
                             onClick={() => startRoom(build)}
                             type="button"
                           >
@@ -3422,7 +3452,7 @@ function PlayablePreview({ buildId }: { buildId: string }) {
         </dl>
       </section>
       {harbor ? (
-        <section className="preview-board" aria-label="航次桌面预览">
+        <section className="preview-board" aria-label="航次可玩桌面">
           <HarborVoyageBoard
             readOnly
             voyage={createHarborVoyageState(
@@ -3432,9 +3462,9 @@ function PlayablePreview({ buildId }: { buildId: string }) {
         </section>
       ) : (
         <>
-          <section className="preview-board" aria-label="结构化桌面预览">
+          <section className="preview-board" aria-label="结构化可玩桌面">
             <div className="preview-section-heading">
-              <span>桌面预览</span>
+              <span>可玩桌面</span>
               <strong>{build.ruleSystem.playSurface.layout || "未配置桌面布局"}</strong>
             </div>
             {build.ruleSystem.presentation.image && (
@@ -3541,7 +3571,7 @@ function PlayablePreview({ buildId }: { buildId: string }) {
           </>
         )}
         <p>
-          这是按当前版本生成的桌面预览，不是截图，也不等于已经真人试过。
+          这是按当前版本生成的可玩桌面，不是截图，也不等于已经真人试过。
         </p>
       </aside>
     </main>
@@ -3555,6 +3585,7 @@ function RoomView({ sessionId }: { sessionId: string }) {
   const [feedback, setFeedback] = useState("");
   const [feedbackRating, setFeedbackRating] = useState<0 | 1 | 2 | 3 | 4 | 5>(0);
   const [feedbackComment, setFeedbackComment] = useState("");
+  const [speechText, setSpeechText] = useState("");
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [seat, setSeat] = useState<number | null>(
@@ -3583,7 +3614,10 @@ function RoomView({ sessionId }: { sessionId: string }) {
       socket = new WebSocket(sharedSessionSocketUrl(sessionId, shareToken));
       socket.addEventListener("open", () => {
         setError((current) => current === connectionError ? "" : current);
-        socket?.send('{"type":"session.sync"}');
+        socket?.send(JSON.stringify({
+          type: "session.sync",
+          ...(seat !== null && seatToken ? { seat, seatToken } : {}),
+        }));
       });
       socket.addEventListener("message", (event) => {
         try {
@@ -3628,7 +3662,7 @@ function RoomView({ sessionId }: { sessionId: string }) {
       if (reconnectTimer !== undefined) window.clearTimeout(reconnectTimer);
       socket?.close(1000, "room_view_closed");
     };
-  }, [locale, sessionId, shareToken]);
+  }, [locale, sessionId, shareToken, seat, seatToken]);
 
   useEffect(() => {
     if (!room?.buildId) return;
@@ -3805,6 +3839,9 @@ function RoomView({ sessionId }: { sessionId: string }) {
   const drawAndScore = drawAndScoreKernel(build.ruleSystem);
   const pushYourLuck = pushYourLuckKernel(build.ruleSystem);
   const turnTaking = turnTakingKernel(build.ruleSystem);
+  const hiddenRole = hiddenRoleKernel(build.ruleSystem);
+  const handPlay = handPlayKernel(build.ruleSystem);
+  const conversationRelay = conversationRelayKernel(build.ruleSystem);
   const voyage = room.state.voyage;
   const harbor = isHarborVoyage(build.ruleSystem) && voyage;
   const gameName = build.ruleSystem.name;
@@ -3813,7 +3850,11 @@ function RoomView({ sessionId }: { sessionId: string }) {
   const latestOwnAction = seat === null
     ? undefined
     : [...room.acceptedActions].reverse().find((action) => action.seat === seat);
-  const runtimeActions: Array<{ id: string; label: string; value: number | null }> = race?.actions.map((action) => ({
+  const runtimeActions: Array<{ id: string; label: string; value: number | null }> = conversationRelay?.actions.map((action) => ({
+    id: action.id,
+    label: action.label,
+    value: action.points,
+  })) ?? race?.actions.map((action) => ({
     id: action.id,
     label: action.label,
     value: action.points,
@@ -3863,7 +3904,7 @@ function RoomView({ sessionId }: { sessionId: string }) {
         : copy.points;
 
   return (
-    <main className={`room-view ${harbor ? "room-view-voyage" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
+    <main className={`room-view ${harbor ? "room-view-voyage" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
       <header className="room-shell-header">
         <div className="room-title-block">
           <span className="room-brand-mark" aria-hidden="true">GD</span>
@@ -4011,6 +4052,72 @@ function RoomView({ sessionId }: { sessionId: string }) {
               <span className="visual-floor-badge">✦ {surface.visual}</span>
             </header>
 
+            {hiddenRole && room.state.hiddenRole && (
+              <section className="hidden-role-board" aria-label="身份与发言">
+                <p className="hidden-role-phase">
+                  {room.state.hiddenRole.phase === "discuss"
+                    ? "阶段：公开发言"
+                    : room.state.hiddenRole.phase === "accuse"
+                      ? "阶段：指控"
+                      : "阶段：已揭晓"}
+                </p>
+                {seat !== null && (
+                  <p className="hidden-role-self" data-testid="own-role">
+                    你的身份：{room.state.hiddenRole.roles.find((role) => role.seat === seat)?.name ?? "未揭示"}
+                  </p>
+                )}
+                <ol className="speech-transcript">
+                  {room.state.hiddenRole.transcript.map((entry, index) => (
+                    <li key={`${entry.seat}-${index}`}>
+                      座位 {entry.seat}：{entry.text}
+                    </li>
+                  ))}
+                </ol>
+                {room.state.hiddenRole.accusations.length > 0 && (
+                  <ul className="accusation-log">
+                    {room.state.hiddenRole.accusations.map((entry) => (
+                      <li key={`${entry.seat}-${entry.targetSeat}`}>
+                        座位 {entry.seat} 指控座位 {entry.targetSeat}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {room.state.hiddenRole.phase === "resolved" && (
+                  <p>
+                    被揭晓的是座位 {room.state.hiddenRole.condemnedSeat}。
+                    {room.state.hiddenRole.winnerAlignment === "town" ? "侦探与平民获胜。" : "凶手获胜。"}
+                  </p>
+                )}
+              </section>
+            )}
+            {handPlay && room.state.handPlay && (
+              <section className="hand-play-board" aria-label="手牌与出牌区">
+                <p>牌库剩余 {room.state.handPlay.deckRemaining} 张</p>
+                <div className="play-area">
+                  {room.state.handPlay.playArea.map((card, index) => (
+                    <span key={`${card.seat}-${index}`}>座位 {card.seat} 打出 {card.card}</span>
+                  ))}
+                </div>
+                {seat !== null && (
+                  <div className="own-hand" aria-label="你的手牌">
+                    {(room.state.handPlay.hands[seat] ?? []).map((card, index) => (
+                      <span key={`${card}-${index}`}>手牌 {card}</span>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+            {conversationRelay && room.state.conversation && (
+              <section className="conversation-board" aria-label="发言记录">
+                <ol className="speech-transcript">
+                  {room.state.conversation.transcript.map((entry, index) => (
+                    <li key={`${entry.seat}-${index}`}>
+                      座位 {entry.seat} · {entry.text}
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            )}
             <div className="surface-action-grid">
               {runtimeActions.slice(0, 4).map((action, index) => {
                 const detail = build.ruleSystem.actions.find((item) => item.id === action.id);
@@ -4236,7 +4343,89 @@ function RoomView({ sessionId }: { sessionId: string }) {
               <div className="action-reminder is-muted">◷ {copy.waitForOther}</div>
             )}
             {feedback && <div aria-live="polite" className="action-feedback">✓ {feedback}</div>}
-            {runtimeActions.length > 0 ? (
+            {hiddenRole && room.state.hiddenRole ? (
+              <div className="genre-action-form">
+                {room.state.hiddenRole.phase === "discuss" ? (
+                  <>
+                    <label>
+                      <span>这一轮你要说什么</span>
+                      <textarea
+                        aria-label="这一轮你要说什么"
+                        onChange={(event) => setSpeechText(event.currentTarget.value)}
+                        rows={3}
+                        value={speechText}
+                      />
+                    </label>
+                    <button
+                      disabled={busy || !isMyTurn || speechText.trim().length < 2}
+                      onClick={() => {
+                        void act("speak", -1, { text: speechText.trim() }).then(() => setSpeechText(""));
+                      }}
+                      type="button"
+                    >
+                      发言
+                    </button>
+                  </>
+                ) : room.state.hiddenRole.phase === "accuse" ? (
+                  <div className="accusation-targets">
+                    {room.state.scores.map((_score, target) => (
+                      target === seat ? null : (
+                        <button
+                          disabled={busy || !isMyTurn}
+                          key={target}
+                          onClick={() => void act("accuse", -1, { targetSeat: target })}
+                          type="button"
+                        >
+                          指控座位 {target}
+                        </button>
+                      )
+                    ))}
+                  </div>
+                ) : (
+                  <p>对局已揭晓。</p>
+                )}
+              </div>
+            ) : handPlay && room.state.handPlay && seat !== null ? (
+              <div className="hand-play-actions">
+                {(room.state.handPlay.hands[seat] ?? []).map((card, index) => (
+                  <button
+                    disabled={busy || !isMyTurn}
+                    key={`${card}-${index}`}
+                    onClick={() => void act("play", -1, { cardIndex: index })}
+                    type="button"
+                  >
+                    打出 {card}
+                  </button>
+                ))}
+              </div>
+            ) : conversationRelay ? (
+              <div className="genre-action-form">
+                <label>
+                  <span>写下你的发言</span>
+                  <textarea
+                    aria-label="写下你的发言"
+                    onChange={(event) => setSpeechText(event.currentTarget.value)}
+                    rows={3}
+                    value={speechText}
+                  />
+                </label>
+                <div className="room-action-cards">
+                  {runtimeActions.map((action, index) => (
+                    <button
+                      disabled={busy || !isMyTurn || speechText.trim().length < 2}
+                      key={action.id}
+                      onClick={() => {
+                        void act(action.id, index, { text: speechText.trim() }).then(() => setSpeechText(""));
+                      }}
+                      type="button"
+                    >
+                      <b>{action.label}</b>
+                      <strong>+{action.value} 创意分</strong>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : runtimeActions.length > 0 ? (
               <div className="room-action-cards">
                 {runtimeActions.map((action, index) => {
                   const detail = build.ruleSystem.actions.find((item) => item.id === action.id);
@@ -4349,6 +4538,7 @@ function RoomView({ sessionId }: { sessionId: string }) {
                   const actionIndex = runtimeActions.findIndex((candidate) => candidate.id === action.actionId);
                   return actionIndex >= 0 ? roomActionTitle(locale, actionIndex) : action.actionId;
                 })()}
+                {typeof action.payload?.text === "string" ? ` · ${action.payload.text}` : ""}
                 {action.state.pushYourLuck ? action.actionId === "roll" ? ` · 🎲 ${action.points}${action.points === action.state.pushYourLuck.bustFace ? ` · ${copy.bust}` : ` · ${copy.unbanked} ${action.state.pushYourLuck.turnScore}`}` : ` · +${action.points} ${copy.points}` : action.points ? action.state.rollAndMove ? ` · 🎲 ${action.points} · +${action.points} ${copy.move}` : action.state.drawAndScore ? ` · 🎴 ${action.points} · +${action.points} ${copy.points}` : ` · ${action.state.takeAway ? "−" : "+"}${action.points} ${scoreLabel}` : ""}
               </li>
             ))}
