@@ -166,8 +166,8 @@ test.describe("ChatCut charter: source in, playable game out", () => {
 
     await page.getByRole("link", { name: "只读回放" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/replay\//, { timeout: 30_000 });
-    await expect(page.getByRole("heading", { name: "这一局怎么打完的" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "灵感接力" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "灵感接力", level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "这一局怎么打完的", level: 2 })).toBeVisible();
     await expect(page.locator("body")).not.toContainText("Read-only Replay");
     await expect(page.locator("body")).not.toContainText("Accepted actions");
     await expect

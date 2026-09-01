@@ -4571,12 +4571,12 @@ function ReplayView({ replayId }: { replayId: string }) {
   useEffect(() => {
     getReplay(replayId, shareToken)
       .then(async (record) => {
-        setReplay(record);
         try {
           setBuild(await getBuild(record.buildId, shareToken));
         } catch {
           setBuild(undefined);
         }
+        setReplay(record);
       })
       .catch((reason: Error) => {
         setError(reason.message);
@@ -4609,7 +4609,7 @@ function ReplayView({ replayId }: { replayId: string }) {
           <span className="room-brand-mark" aria-hidden="true">GD</span>
           <div>
             <span className="room-kicker">只读 · 不能改这一局</span>
-            <h1>{build?.ruleSystem.name ?? "这一局怎么打完的"}</h1>
+            <h1>{build?.ruleSystem.name ?? "回放"}</h1>
           </div>
         </div>
         <div className="room-header-actions">
