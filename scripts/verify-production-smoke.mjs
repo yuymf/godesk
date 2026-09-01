@@ -244,6 +244,7 @@ const played = await fetchPage(
       seat: 0,
       seatToken: seated.seatToken,
       actionId: "extend",
+      payload: { text: "朋友接上一句共同创意。" },
     }),
   },
 );
