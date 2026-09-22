@@ -5,25 +5,18 @@ export const INGESTION_LIMITS = {
   maxRulebookBytes: 25 * 1024 * 1024,
   maxAssetFileBytes: 25 * 1024 * 1024,
   maxAssetBytes: 100 * 1024 * 1024,
-  maxAssetFiles: 40,
   maxGenerationImages: 8,
   maxGenerationImageDataUrlLength: 100_000,
   maxPdfPages: 200,
 } as const;
 
-export type SourceRole = "rulebook" | "asset";
-export type GenerationRunStatus =
-  | "ingesting"
-  | "ready-for-compilation"
-  | "failed";
-
-export interface SourceAnchor {
+interface SourceAnchor {
   fileId: string;
   fileName: string;
   pageNumber?: number;
 }
 
-export interface ExtractedPage {
+interface ExtractedPage {
   id: string;
   kind: "pdf-page";
   sourceAnchor: SourceAnchor;
@@ -32,50 +25,6 @@ export interface ExtractedPage {
   height: number;
   hasEmbeddedImage: boolean;
   preview: Blob;
-}
-
-export interface ExtractedImage {
-  id: string;
-  kind: "image";
-  sourceAnchor: SourceAnchor;
-  width: number;
-  height: number;
-  image: Blob;
-}
-
-export type ExtractedArtifact = ExtractedPage | ExtractedImage;
-
-export interface IngestedSourceFile {
-  id: string;
-  role: SourceRole;
-  name: string;
-  mimeType: string;
-  size: number;
-  sha256: string;
-  original: Blob;
-  artifacts: ExtractedArtifact[];
-}
-
-export interface GenerationRun {
-  id: string;
-  status: GenerationRunStatus;
-  createdAt: string;
-  updatedAt: string;
-  privacy: "browser-local";
-  retention: "until-player-deletes-browser-data";
-  sources: IngestedSourceFile[];
-  error?: string;
-}
-
-export interface IngestionInput {
-  rulebook: File;
-  assets: File[];
-}
-
-export interface IngestionProgress {
-  currentFile: string;
-  completedFiles: number;
-  totalFiles: number;
 }
 
 const PDF_TYPES = new Set(["application/pdf"]);
@@ -153,54 +102,6 @@ export async function extractRulebookText(file: File) {
   } finally {
     await loadingTask?.destroy();
   }
-}
-
-export function validateSourceBundle(input: IngestionInput) {
-  const errors: string[] = [];
-  const rulebookType = normalizedMimeType(input.rulebook);
-
-  if (!PDF_TYPES.has(rulebookType)) {
-    errors.push("规则书必须是 PDF 文件。");
-  }
-  if (input.rulebook.size === 0) {
-    errors.push("规则书是空文件。");
-  }
-  if (input.rulebook.size > INGESTION_LIMITS.maxRulebookBytes) {
-    errors.push("规则书不能超过 25 MB。");
-  }
-  if (input.assets.length === 0) {
-    errors.push("请至少添加一份素材 PDF 或图片。");
-  }
-  if (input.assets.length > INGESTION_LIMITS.maxAssetFiles) {
-    errors.push(`素材文件不能超过 ${INGESTION_LIMITS.maxAssetFiles} 个。`);
-  }
-
-  let totalAssetBytes = 0;
-  for (const file of input.assets) {
-    totalAssetBytes += file.size;
-    const mimeType = normalizedMimeType(file);
-    if (!PDF_TYPES.has(mimeType) && !IMAGE_TYPES.has(mimeType)) {
-      errors.push(`${file.name} 不是支持的 PDF、JPG、PNG、WebP 或 GIF。`);
-    }
-    if (file.size === 0) {
-      errors.push(`${file.name} 是空文件。`);
-    }
-    if (file.size > INGESTION_LIMITS.maxAssetFileBytes) {
-      errors.push(`${file.name} 超过单文件 25 MB 限制。`);
-    }
-  }
-  if (totalAssetBytes > INGESTION_LIMITS.maxAssetBytes) {
-    errors.push("素材包总大小不能超过 100 MB。");
-  }
-
-  return errors;
-}
-
-export async function sha256Hex(data: ArrayBuffer) {
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
 }
 
 function assertPdfHeader(bytes: Uint8Array, name: string) {
@@ -377,11 +278,7 @@ function blobDataUrl(blob: Blob) {
   });
 }
 
-/**
- * Renders rulebook pages using the same PDF path as ingestion. Oversized page
- * previews are deliberately skipped: no Source Library image is claimed unless
- * it can be persisted by the project contract.
- */
+/** Oversized page previews are skipped so only persistable images are claimed. */
 export async function harvestRulebookPageImages(file: File) {
   if (normalizedMimeType(file) !== "application/pdf") return [];
   const pages = await extractPdf(file, crypto.randomUUID());
@@ -396,95 +293,4 @@ export async function harvestRulebookPageImages(file: File) {
     .filter((image, index) => pages[index].hasEmbeddedImage)
     .filter((image) => image.content.length <= 100_000)
     .slice(0, 8);
-}
-
-async function extractImage(
-  file: File,
-  fileId: string,
-): Promise<ExtractedImage> {
-  let bitmap: ImageBitmap;
-  try {
-    bitmap = await createImageBitmap(file);
-  } catch {
-    throw new Error(`${file.name} 无法解码，可能已损坏或格式不受支持。`);
-  }
-
-  const artifact: ExtractedImage = {
-    id: crypto.randomUUID(),
-    kind: "image",
-    sourceAnchor: { fileId, fileName: file.name },
-    width: bitmap.width,
-    height: bitmap.height,
-    image: file,
-  };
-  bitmap.close();
-  return artifact;
-}
-
-async function ingestFile(
-  file: File,
-  role: SourceRole,
-): Promise<IngestedSourceFile> {
-  const id = crypto.randomUUID();
-  const mimeType = normalizedMimeType(file);
-  const buffer = await file.arrayBuffer();
-  const sha256 = await sha256Hex(buffer);
-  const artifacts = PDF_TYPES.has(mimeType)
-    ? await extractPdf(file, id)
-    : [await extractImage(file, id)];
-
-  return {
-    id,
-    role,
-    name: file.name,
-    mimeType,
-    size: file.size,
-    sha256,
-    original: file,
-    artifacts,
-  };
-}
-
-export async function ingestGameSourceBundle(
-  input: IngestionInput,
-  onProgress?: (progress: IngestionProgress) => void,
-): Promise<GenerationRun> {
-  const validationErrors = validateSourceBundle(input);
-  if (validationErrors.length) {
-    throw new Error(validationErrors.join(" "));
-  }
-
-  const now = new Date().toISOString();
-  const files = [
-    { file: input.rulebook, role: "rulebook" as const },
-    ...input.assets.map((file) => ({ file, role: "asset" as const })),
-  ];
-  const run: GenerationRun = {
-    id: crypto.randomUUID(),
-    status: "ingesting",
-    createdAt: now,
-    updatedAt: now,
-    privacy: "browser-local",
-    retention: "until-player-deletes-browser-data",
-    sources: [],
-  };
-
-  try {
-    for (const [index, entry] of files.entries()) {
-      onProgress?.({
-        currentFile: entry.file.name,
-        completedFiles: index,
-        totalFiles: files.length,
-      });
-      run.sources.push(await ingestFile(entry.file, entry.role));
-    }
-    run.status = "ready-for-compilation";
-    run.updatedAt = new Date().toISOString();
-    return run;
-  } catch (error) {
-    run.status = "failed";
-    run.updatedAt = new Date().toISOString();
-    run.error = error instanceof Error ? error.message : String(error);
-    return run;
-  }
 }
