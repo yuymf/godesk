@@ -286,7 +286,7 @@ describe("Creator Studio optimistic draft baseline", () => {
       evidenceType: "automated-playtest",
       evidenceId: "playtest_demo",
     })).toBe(
-      "/studio/project_demo?build=build_demo&evidenceType=automated-playtest&evidence=playtest_demo#validation",
+      "/studio/project_demo?build=build_demo&evidenceType=automated-playtest&evidence=playtest_demo",
     );
   });
 
@@ -297,7 +297,7 @@ describe("Creator Studio optimistic draft baseline", () => {
       evidenceId: "room_demo",
       hypothesisId: "hypothesis_demo",
     })).toBe(
-      "/studio/project_demo?build=build_demo&evidenceType=participant-feedback&evidence=room_demo&hypothesis=hypothesis_demo#validation",
+      "/studio/project_demo?build=build_demo&evidenceType=participant-feedback&evidence=room_demo&hypothesis=hypothesis_demo",
     );
   });
 

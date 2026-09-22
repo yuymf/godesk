@@ -178,7 +178,7 @@ export function validationStudioHref(
   if (context.evidenceId) params.set("evidence", context.evidenceId);
   if (context.hypothesisId) params.set("hypothesis", context.hypothesisId);
   const query = params.toString();
-  return `/studio/${encodeURIComponent(projectId)}${query ? `?${query}` : ""}#validation`;
+  return `/studio/${encodeURIComponent(projectId)}${query ? `?${query}` : ""}`;
 }
 
 export function findingContinuationPrompt(
