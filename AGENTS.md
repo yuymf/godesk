@@ -23,9 +23,10 @@ tools. They are not the product. A change that does not get someone closer to a
 playable, shareable game is the wrong change.
 
 Read `CONTEXT.md`, `docs/product/first-principles.md`, and
-`docs/adr/0011-chatcut-playable-output-is-the-product.md` before exploring or
-editing. Playability Floor (ADR 0012) is the share gate. Use glossary terms from `CONTEXT.md`. If work
-contradicts an accepted ADR, surface it; do not silently override it.
+`docs/adr/README.md` (0011 / 0012 first) before exploring or editing.
+Playability Floor (ADR 0012) is the share gate. Use glossary terms from
+`CONTEXT.md`. If work contradicts an accepted ADR, surface it; do not
+silently override it.
 
 ## Playwright verification
 

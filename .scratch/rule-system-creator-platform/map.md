@@ -5,6 +5,8 @@
 Product identity is the ChatCut-style charter in `AGENTS.md` and ADR 0011:
 source in → playable shareable game out → others can play together. This map
 is a historical delivery log. Do not revive "validation loop as the product."
+Decision numbers match `issues/NN-*.md` (45 descriptive edits, 46 Chinese
+materialization, 47 local Plugin verification).
 
 ## Decisions-so-far
 
@@ -144,18 +146,18 @@ is a historical delivery log. Do not revive "validation loop as the product."
   Moment and participant-feedback evidence boundary, while one action pre-fills
   the same hypothesis, Build, Room, and feedback snapshot for the next focused
   iteration.
-- 45: The standard local Plugin verification command must exercise both the
-  bundle manifest/Skill contract and the current local distribution set. The
-  public distribution check remains separate and may fail only at the external
-  publication boundary; it must not hide local Skill-count drift.
-- 46: Executable runtime invalidation is structural: participant, rule,
+- 45: Executable runtime invalidation is structural: participant, rule,
   constraint, or action identity/label changes require Kernel reconfiguration;
   description-only action edits preserve the executable Kernel so a focused
   feedback iteration can compile and self-play without manual repair.
-- 47: Chinese natural-language materialization must preserve action boundaries
+- 46: Chinese natural-language materialization must preserve action boundaries
   and names. Explicit action point values unlock `score-race-v1`; a target or
   winner statement without action values remains `turn-taking-v1` with the
   unsupported boundary visible.
+- 47: The standard local Plugin verification command must exercise both the
+  bundle manifest/Skill contract and the current local distribution set. The
+  public distribution check remains separate and may fail only at the external
+  publication boundary; it must not hide local Skill-count drift.
 - 48: Web Studio follow-up is a bounded same-project `iterate-rule-system` job:
   one explicit action-description rewrite is source-traceable, version-checked,
   compiled, and self-played with seed 42; unsupported rule-value or action-shape
