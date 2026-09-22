@@ -84,7 +84,20 @@ export function ReplayView({ replayId }: { replayId: string }) {
           {replay.acceptedActions.map((action) => (
             <li key={action.sequence}>
               #{action.sequence} · 座位 {action.seat} · {actionLabel(action.actionId)}
-              {action.state.pushYourLuck ? action.actionId === "roll" ? ` · 🎲 ${action.points} · 未存 ${action.state.pushYourLuck.turnScore}` : ` · 收手 +${action.points}` : action.points ? action.state.rollAndMove ? ` · 🎲 ${action.points} · +${action.points} 格` : action.state.drawAndScore ? ` · 🎴 ${action.points} · +${action.points}` : ` · ${action.state.takeAway ? "−" : "+"}${action.points}` : ""}
+              {typeof action.payload?.text === "string" ? ` · ${action.payload.text}` : ""}
+              {action.state.conversation
+                ? ""
+                : action.state.pushYourLuck
+                  ? action.actionId === "roll"
+                    ? ` · 🎲 ${action.points} · 未存 ${action.state.pushYourLuck.turnScore}`
+                    : ` · 收手 +${action.points}`
+                  : action.points
+                    ? action.state.rollAndMove
+                      ? ` · 🎲 ${action.points} · +${action.points} 格`
+                      : action.state.drawAndScore
+                        ? ` · 🎴 ${action.points} · +${action.points}`
+                        : ` · ${action.state.takeAway ? "−" : "+"}${action.points}`
+                    : ""}
             </li>
           ))}
         </ol>
@@ -112,7 +125,30 @@ function ReplayStateCard({
         <div><dt>状态</dt><dd>{state.status === "complete" ? "已结束" : "进行中"}</dd></div>
       </dl>
       <div className="score-grid">
-        {state.sharedGoal ? (
+        {state.conversation ? (
+          <article className="conversation-replay-card">
+            <span>发言记录</span>
+            {state.conversation.transcript.length === 0 ? (
+              <strong>尚无发言</strong>
+            ) : (
+              <ol className="speech-transcript">
+                {state.conversation.transcript.map((entry, index) => (
+                  <li key={`${entry.seat}-${index}`}>
+                    座位 {entry.seat} · {entry.text}
+                  </li>
+                ))}
+              </ol>
+            )}
+            <details className="conversation-score-secondary">
+              <summary>内核计分（次要）</summary>
+              <ul>
+                {state.scores.map((score, seat) => (
+                  <li key={seat}>座位 {seat} · {score}</li>
+                ))}
+              </ul>
+            </details>
+          </article>
+        ) : state.sharedGoal ? (
           <article className="shared-goal-replay-card">
             <span>共同目标</span>
             <strong>{state.sharedGoal.progress} / {state.sharedGoal.target}</strong>

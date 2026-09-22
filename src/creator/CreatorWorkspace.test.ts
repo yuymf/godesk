@@ -324,9 +324,9 @@ describe("Creator Studio optimistic draft baseline", () => {
 
   it("renders conversation games without tabletop presentation labels", () => {
     expect(roomSurfaceCopy("conversation", "zh")).toEqual({
-      label: "对话游戏",
-      title: "共同创作区",
-      visual: "这一局的对话桌",
+      label: "对话接力",
+      title: "发言记录",
+      visual: "这一局的接力记录",
     });
     expect(roomSurfaceCopy("table", "zh").label).toBe("桌面游戏");
     expect(roomSurfaceCopy("scene", "zh").label).toBe("场景游戏");

@@ -3262,7 +3262,8 @@ summary:focus-visible {
   animation: deal-in 700ms var(--ease-out) both;
 }
 
-.room-game-table.is-conversation {
+.room-game-table.is-conversation,
+.room-game-table.is-transcript-first {
   background: var(--paper);
   border-color: var(--line);
   box-shadow: 0 1.3rem 3rem rgb(44 60 55 / 7%);
@@ -3274,8 +3275,29 @@ summary:focus-visible {
   box-shadow: 0.2rem 0.28rem 0 #b9d1c2;
 }
 
-.room-game-table.is-conversation .visual-floor-badge {
+.room-game-table.is-conversation .visual-floor-badge,
+.room-game-table.is-transcript-first .visual-floor-badge {
   color: #31624a;
+  opacity: 0.72;
+  font-size: 0.72rem;
+}
+
+.room-view-conversation .room-game-table.is-transcript-first {
+  display: grid;
+  gap: 1rem;
+}
+
+.room-view-conversation .table-section-header {
+  order: 0;
+}
+
+.room-view-conversation .conversation-board {
+  order: 1;
+}
+
+.room-view-conversation .source-zone-details {
+  order: 2;
+  opacity: 0.85;
 }
 
 .table-section-header h2,
@@ -4323,6 +4345,96 @@ summary:focus-visible {
   padding: 1rem 1.1rem;
   background: var(--paper);
   border: 1px solid var(--line);
+}
+
+.conversation-board {
+  min-height: 14rem;
+  padding: 1.15rem 1.25rem 1.35rem;
+  background:
+    linear-gradient(180deg, #fbfefc 0%, #f4faf6 100%);
+  border: 1px solid #c7d9ce;
+  border-radius: 0.9rem;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 70%);
+}
+
+.conversation-board-header {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.conversation-board-header strong {
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.conversation-empty {
+  margin: 0;
+  padding: 1.25rem 1rem;
+  color: var(--muted);
+  background: rgb(255 255 255 / 55%);
+  border: 1px dashed #c7d9ce;
+  border-radius: 0.75rem;
+  text-align: center;
+}
+
+.conversation-board .speech-transcript {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.conversation-board .speech-transcript > li {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  background: #fff;
+  border: 1px solid #d7e5dc;
+  border-radius: 0.85rem;
+  box-shadow: 0 0.35rem 0.9rem rgb(44 60 55 / 5%);
+}
+
+.conversation-board .speech-action {
+  color: #31624a;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.conversation-board .speech-transcript > li > p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.conversation-score-secondary {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.conversation-score-secondary summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.conversation-score-secondary summary::-webkit-details-marker {
+  display: none;
+}
+
+.conversation-score-secondary ul {
+  margin: 0.45rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.conversation-replay-card {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 0.75rem;
 }
 
 .speech-transcript,

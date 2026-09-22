@@ -322,7 +322,7 @@ export function instantiateDefaultExample(
           theme: "idea-relay",
           visuals: [{
             provenance: "kit",
-            label: "程序化提示卡与共享分数界面",
+            label: "程序化提示卡与发言记录界面",
           }],
         },
         runtimeSupport: {

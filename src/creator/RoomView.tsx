@@ -31,6 +31,8 @@ import {
   sharedGoalKernel,
   takeAwayKernel,
   turnTakingKernel,
+  showsAcceptedActionPointChrome,
+  usesConversationTranscriptSurface,
   usesScoreTrackSurface,
   type RoomLocale,
 } from "./room-presentation";
@@ -352,6 +354,8 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   const surface = roomSurfaceCopy(build.ruleSystem.playSurface.kind, locale);
   const isConversation = build.ruleSystem.playSurface.kind === "conversation";
   const scoreTrackSurface = usesScoreTrackSurface(build.ruleSystem);
+  const conversationTranscript = usesConversationTranscriptSurface(build.ruleSystem);
+  const showActionPointChrome = showsAcceptedActionPointChrome(build.ruleSystem);
   const scoreLabel = takeAway
     ? copy.take
     : rollAndMove
@@ -484,6 +488,10 @@ export function RoomView({ sessionId }: { sessionId: string }) {
                     ? `${copy.gameOver} · ${copy.turnLimitReached}`
                     : sharedGoal
                       ? `${copy.gameOver} · ${copy.goalReached}`
+                      : conversationRelay
+                        ? room.state.winnerSeat === null
+                          ? `${copy.relayEnded} · ${copy.turnLimitReached}`
+                          : `${copy.relayEnded} · ${copy.winner} ${locale === "zh" ? "座位" : "Seat"} ${room.state.winnerSeat}`
                       : rollAndMove && room.state.winnerSeat === null
                         ? `${copy.gameOver} · ${copy.turnLimitReached}`
                       : drawAndScore && room.state.winnerSeat === null
@@ -505,7 +513,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
 
           <section
             aria-label={surface.label}
-            className={`room-game-table ${isConversation ? "is-conversation" : ""}`}
+            className={`room-game-table ${isConversation ? "is-conversation" : ""} ${conversationTranscript ? "is-transcript-first" : ""}`}
           >
             <header className="table-section-header">
               <div>
@@ -571,14 +579,51 @@ export function RoomView({ sessionId }: { sessionId: string }) {
               </section>
             )}
             {conversationRelay && room.state.conversation && (
-              <section className="conversation-board" aria-label="发言记录">
-                <ol className="speech-transcript">
-                  {room.state.conversation.transcript.map((entry, index) => (
-                    <li key={`${entry.seat}-${index}`}>
-                      座位 {entry.seat} · {entry.text}
-                    </li>
-                  ))}
-                </ol>
+              <section className="conversation-board" aria-label={copy.transcript}>
+                <header className="conversation-board-header">
+                  <span className="room-kicker">{copy.transcript}</span>
+                  <strong>
+                    {room.state.conversation.transcript.length
+                      ? locale === "zh"
+                        ? `${room.state.conversation.transcript.length} 句发言`
+                        : `${room.state.conversation.transcript.length} lines`
+                      : copy.transcriptEmpty}
+                  </strong>
+                </header>
+                {room.state.conversation.transcript.length === 0 ? (
+                  <p className="conversation-empty">{copy.transcriptEmpty}</p>
+                ) : (
+                  <ol className="speech-transcript">
+                    {room.state.conversation.transcript.map((entry, index) => {
+                      const actionLabel = conversationRelay.actions.find((action) => action.id === entry.actionId)?.label
+                        ?? runtimeActions.find((action) => action.id === entry.actionId)?.label
+                        ?? entry.actionId;
+                      return (
+                        <li key={`${entry.seat}-${index}`}>
+                          <span className="speech-action">{actionLabel}</span>
+                          <p>
+                            {locale === "zh" ? "座位" : "Seat"} {entry.seat}
+                            {" · "}
+                            {entry.text}
+                          </p>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                )}
+                <details className="conversation-score-secondary">
+                  <summary>{copy.relaySecondary}</summary>
+                  <ul>
+                    {room.state.scores.map((score, seatIndex) => (
+                      <li key={seatIndex}>
+                        {locale === "zh" ? "座位" : "Seat"} {seatIndex}
+                        {" · "}
+                        {score}
+                        {conversationRelay ? ` / ${conversationRelay.victoryTarget}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
               </section>
             )}
             {scoreTrackSurface && (
@@ -822,7 +867,19 @@ export function RoomView({ sessionId }: { sessionId: string }) {
                   return actionIndex >= 0 ? roomActionTitle(locale, actionIndex) : action.actionId;
                 })()}
                 {typeof action.payload?.text === "string" ? ` · ${action.payload.text}` : ""}
-                {action.state.pushYourLuck ? action.actionId === "roll" ? ` · 🎲 ${action.points}${action.points === action.state.pushYourLuck.bustFace ? ` · ${copy.bust}` : ` · ${copy.unbanked} ${action.state.pushYourLuck.turnScore}`}` : ` · +${action.points} ${copy.points}` : action.points ? action.state.rollAndMove ? ` · 🎲 ${action.points} · +${action.points} ${copy.move}` : action.state.drawAndScore ? ` · 🎴 ${action.points} · +${action.points} ${copy.points}` : ` · ${action.state.takeAway ? "−" : "+"}${action.points} ${scoreLabel}` : ""}
+                {showActionPointChrome
+                  ? action.state.pushYourLuck
+                    ? action.actionId === "roll"
+                      ? ` · 🎲 ${action.points}${action.points === action.state.pushYourLuck.bustFace ? ` · ${copy.bust}` : ` · ${copy.unbanked} ${action.state.pushYourLuck.turnScore}`}`
+                      : ` · +${action.points} ${copy.points}`
+                    : action.points
+                      ? action.state.rollAndMove
+                        ? ` · 🎲 ${action.points} · +${action.points} ${copy.move}`
+                        : action.state.drawAndScore
+                          ? ` · 🎴 ${action.points} · +${action.points} ${copy.points}`
+                          : ` · ${action.state.takeAway ? "−" : "+"}${action.points} ${scoreLabel}`
+                      : ""
+                  : ""}
               </li>
             ))}
           </ol>

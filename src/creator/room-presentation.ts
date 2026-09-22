@@ -140,6 +140,19 @@ export function usesScoreTrackSurface(ruleSystem: RuleSystem): boolean {
   );
 }
 
+/** Conversation-relay rooms are transcript/relay first (ADR 0012 surface fidelity). */
+export function usesConversationTranscriptSurface(ruleSystem: RuleSystem): boolean {
+  return Boolean(conversationRelayKernel(ruleSystem));
+}
+
+/**
+ * Conversation-relay still awards kernel points, but action-log / toast chrome
+ * must not read as a score race (ADR 0012). Score-track and other genres keep point chrome.
+ */
+export function showsAcceptedActionPointChrome(ruleSystem: RuleSystem): boolean {
+  return !usesConversationTranscriptSurface(ruleSystem);
+}
+
 export type RoomLocale = "zh" | "en";
 
 export const ROOM_COPY = {
@@ -197,6 +210,10 @@ export const ROOM_COPY = {
     sourceText: "规则来源",
     log: "行动记录",
     noLog: "尚无行动。合法行动会出现在这里。",
+    transcript: "发言记录",
+    transcriptEmpty: "还没有发言。写下你的一句，接力从这里开始。",
+    relaySecondary: "内核计分（次要）",
+    relayEnded: "接力结束",
     unsupported: "尚未覆盖",
     feedbackTitle: "试玩反馈",
     feedbackHint: "完成一次行动后，留下评分和一句话感受；这会回到创作者的同一项目。",
@@ -268,6 +285,10 @@ export const ROOM_COPY = {
     sourceText: "Source text",
     log: "Action log",
     noLog: "No actions yet. Legal moves will show up here.",
+    transcript: "Speech transcript",
+    transcriptEmpty: "No speech yet. Write a line — the relay starts here.",
+    relaySecondary: "Kernel scoring (secondary)",
+    relayEnded: "Relay ended",
     unsupported: "Not covered",
     feedbackTitle: "Playtest feedback",
     feedbackHint: "After one action, leave a rating and one sentence. It returns to the creator's same project.",
@@ -308,8 +329,8 @@ export function roomSurfaceCopy(kind: PlaySurfaceKind, locale: RoomLocale) {
       en: { label: "Card game", title: "Shared cards", visual: "Rule System card surface" },
     },
     conversation: {
-      zh: { label: "对话游戏", title: "共同创作区", visual: "这一局的对话桌" },
-      en: { label: "Conversation game", title: "Shared creation space", visual: "Rule System conversation surface" },
+      zh: { label: "对话接力", title: "发言记录", visual: "这一局的接力记录" },
+      en: { label: "Conversation relay", title: "Speech transcript", visual: "This session's relay transcript" },
     },
     screen: {
       zh: { label: "屏幕游戏", title: "共享状态", visual: "这一局的屏幕" },
