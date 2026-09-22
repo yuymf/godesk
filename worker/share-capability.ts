@@ -1,4 +1,5 @@
 import { mountHref } from "../src/public-mount";
+import { base64UrlToBytes, bytesToBase64Url } from "./base64url";
 
 const encoder = new TextEncoder();
 
@@ -21,18 +22,6 @@ export function shareSecret(env: Env, hostname: string) {
   if (configured) return configured;
   if (LOCAL_HOSTS.has(hostname)) return LOCAL_SHARE_SECRET;
   throw new Error("GODESK_SHARE_SECRET is required");
-}
-
-function bytesToBase64Url(bytes: Uint8Array) {
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
-}
-
-function base64UrlToBytes(value: string) {
-  const padded = value.replaceAll("-", "+").replaceAll("_", "/");
-  const binary = atob(padded.padEnd(Math.ceil(padded.length / 4) * 4, "="));
-  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
 async function hmacKey(secret: string) {

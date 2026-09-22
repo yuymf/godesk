@@ -1,5 +1,6 @@
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
 import { isPublicMount, mountHref } from "../src/public-mount";
+import { bytesToBase64Url } from "./base64url";
 
 const READ_SCOPE = "godesk:read";
 const WRITE_SCOPE = "godesk:write";
@@ -292,14 +293,8 @@ export function protectedResourceMetadata(request: Request, env: Env) {
   });
 }
 
-function base64Url(bytes: Uint8Array) {
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
 function randomToken() {
-  return base64Url(crypto.getRandomValues(new Uint8Array(32)));
+  return bytesToBase64Url(crypto.getRandomValues(new Uint8Array(32)));
 }
 
 function loginCookie(name: string, value: string, maxAge = 600) {
@@ -317,7 +312,7 @@ export async function startWebLogin(request: Request, env: Env) {
   const metadata = await authorizationMetadata(env);
   const state = randomToken();
   const verifier = randomToken();
-  const challenge = base64Url(
+  const challenge = bytesToBase64Url(
     new Uint8Array(
       await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
     ),
