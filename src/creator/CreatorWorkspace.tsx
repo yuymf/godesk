@@ -5,28 +5,6 @@ import { ProjectStudio } from "./ProjectStudio";
 import { ReplayView } from "./ReplayView";
 import { RoomView } from "./RoomView";
 
-export {
-  buildCanOpenSharedSession,
-  draftExpectedVersion,
-  findingContinuationPrompt,
-  generationSourceFields,
-  hobbyistProjectName,
-  latestActiveCreatorJob,
-  latestBuildPlaytestComparison,
-  latestStudioPlayTarget,
-  parseRuleSystemStructure,
-  participantFeedbackFindingNotes,
-  participantFeedbackInbox,
-  projectActivityRequiresFullRefresh,
-  shouldStartRuleSystemDraft,
-  studioHobbyistFocus,
-  upsertCreatorJob,
-  validationStudioHref,
-  visibleCreatorJob,
-} from "./studio-utils";
-
-export { roomActionTitle, roomSurfaceCopy } from "./room-presentation";
-
 export function CreatorWorkspace() {
   const pathname = logicalPathname(window.location.pathname);
   const studioMatch = pathname.match(/^\/studio\/([^/]+)$/);

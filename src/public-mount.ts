@@ -20,17 +20,3 @@ export function mountHref(path: string, currentPathname: string) {
   if (!isPublicMount(currentPathname)) return path;
   return path === "/" ? PUBLIC_HOME_PATH : `${INSTALL_PATH}${path}`;
 }
-
-export function workerMountPath(pathname: string) {
-  const logical = logicalPathname(pathname);
-  if (
-    logical === "/login" ||
-    logical === "/oauth/callback" ||
-    logical === "/mcp" ||
-    logical.startsWith("/api/") ||
-    logical.startsWith("/try/")
-  ) {
-    return logical;
-  }
-  return pathname;
-}

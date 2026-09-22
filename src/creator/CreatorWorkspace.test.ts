@@ -12,16 +12,15 @@ import {
   participantFeedbackFindingNotes,
   participantFeedbackInbox,
   projectActivityRequiresFullRefresh,
-  roomActionTitle,
-  roomSurfaceCopy,
   shouldStartRuleSystemDraft,
   studioHobbyistFocus,
   upsertCreatorJob,
   validationStudioHref,
   visibleCreatorJob,
-} from "./CreatorWorkspace";
+} from "./studio-utils";
+import { roomActionTitle, roomSurfaceCopy } from "./room-presentation";
 import type { CreatorJob, PlayableBuild, PlaytestRun, SharedSession } from "./project-contract";
-import { normalizeAppPathname } from "../App";
+import { logicalPathname } from "../public-mount";
 import { DEFAULT_EXAMPLES } from "./default-examples";
 import {
   isUnauthorized,
@@ -191,8 +190,8 @@ describe("Creator Studio optimistic draft baseline", () => {
   });
 
   it("keeps the installation surface on a trailing-slash URL", () => {
-    expect(normalizeAppPathname("/chatgpt-plugin/")).toBe("/chatgpt-plugin");
-    expect(normalizeAppPathname("////")).toBe("/");
+    expect(logicalPathname("/chatgpt-plugin/")).toBe("/chatgpt-plugin");
+    expect(logicalPathname("////")).toBe("/");
   });
 
   it("builds Room WebSocket and share URLs from a signed share token", () => {

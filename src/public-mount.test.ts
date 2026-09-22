@@ -5,7 +5,6 @@ import {
   isPublicMount,
   logicalPathname,
   mountHref,
-  workerMountPath,
 } from "./public-mount";
 
 describe("public plugin mount", () => {
@@ -25,16 +24,10 @@ describe("public plugin mount", () => {
     expect(mountHref("/room/room_1?share=tok", PUBLIC_HOME_PATH)).toBe(
       `${INSTALL_PATH}/room/room_1?share=tok`,
     );
-    expect(workerMountPath(`${INSTALL_PATH}/api/projects`)).toBe("/api/projects");
-    expect(workerMountPath(`${INSTALL_PATH}/try/project_1`)).toBe("/try/project_1");
-    expect(workerMountPath(`${INSTALL_PATH}/login`)).toBe("/login");
-    expect(workerMountPath(`${INSTALL_PATH}/mcp`)).toBe("/mcp");
-    expect(workerMountPath(`${INSTALL_PATH}/oauth/callback`)).toBe("/oauth/callback");
   });
 
   it("leaves the unprefixed local studio alone", () => {
     expect(isPublicMount("/")).toBe(false);
     expect(mountHref("/room/room_1", "/")).toBe("/room/room_1");
-    expect(workerMountPath("/api/projects")).toBe("/api/projects");
   });
 });
