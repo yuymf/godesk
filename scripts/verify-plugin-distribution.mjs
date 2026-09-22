@@ -1,19 +1,14 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createVerifyHelpers } from "./verify-helpers.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const remote = process.argv.includes("--remote");
 const publicRepo = "https://raw.githubusercontent.com/yuymf/godesk-plugin/main";
 const publicTree = "https://api.github.com/repos/yuymf/godesk-plugin/git/trees/main?recursive=1";
 
-function fail(message) {
-  throw new Error(`GoDesk plugin distribution verification failed: ${message}`);
-}
-
-function assert(condition, message) {
-  if (!condition) fail(message);
-}
+const { fail, assert } = createVerifyHelpers("GoDesk plugin distribution verification failed");
 
 async function localJson(relativePath) {
   return JSON.parse(await readFile(path.join(root, relativePath), "utf8"));

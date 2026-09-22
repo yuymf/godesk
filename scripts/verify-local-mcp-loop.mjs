@@ -1,12 +1,7 @@
 import { withTempWorker } from "./local-worker.mjs";
+import { createVerifyHelpers } from "./verify-helpers.mjs";
 
-function fail(message) {
-  throw new Error(`Local MCP loop verification failed: ${message}`);
-}
-
-function ensure(condition, message) {
-  if (!condition) fail(message);
-}
+const { fail, ensure } = createVerifyHelpers("Local MCP loop verification failed");
 
 function delay(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
