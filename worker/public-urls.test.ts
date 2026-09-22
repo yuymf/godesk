@@ -4,6 +4,7 @@ import {
   publicJob,
   publicMutation,
   publicSession,
+  publicizeProjectViewData,
 } from "./public-urls";
 
 describe("public URLs", () => {
@@ -70,3 +71,60 @@ describe("public URLs", () => {
     });
   });
 });
+
+describe("publicizeProjectViewData", () => {
+  const ctx = {
+    origin: "https://godesk.test",
+    creatorId: "creator-a",
+    secret: "share-secret",
+    mount: "/chatgpt-plugin",
+  };
+
+  it("publicizes builds list and entity build the same way", async () => {
+    const listed = await publicizeProjectViewData(
+      "builds",
+      { builds: [{ id: "build_1" }], page: { cursor: 0 } },
+      ctx,
+    );
+    expect(listed.page).toEqual({ cursor: 0 });
+    expect(new URL((listed.builds as unknown as Array<{ playableUrl: string }>)[0].playableUrl).pathname)
+      .toBe("/chatgpt-plugin/play/build_1");
+
+    const entity = await publicizeProjectViewData(
+      "entity",
+      { id: "build_1", name: "Alpha" },
+      ctx,
+      "build",
+    );
+    expect(entity.name).toBe("Alpha");
+    expect(new URL((entity as unknown as { playableUrl: string }).playableUrl).pathname)
+      .toBe("/chatgpt-plugin/play/build_1");
+  });
+
+  it("keeps playtest-link null and preserves sibling keys", async () => {
+    const empty = await publicizeProjectViewData(
+      "playtest-link",
+      { playtestLink: null, note: "keep-me" },
+      ctx,
+    );
+    expect(empty).toEqual({ playtestLink: null, note: "keep-me" });
+
+    const linked = await publicizeProjectViewData(
+      "playtest-link",
+      {
+        playtestLink: {
+          projectId: "p1",
+          sessionId: "s1",
+          buildId: "b1",
+          replayId: "r1",
+        },
+        extra: true,
+      },
+      ctx,
+    );
+    expect(linked.extra).toBe(true);
+    expect(new URL((linked.playtestLink as unknown as { url: string }).url).pathname)
+      .toBe("/chatgpt-plugin/try/p1");
+  });
+});
+

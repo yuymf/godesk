@@ -12,13 +12,12 @@ import {
   publicBuild,
   publicPlaytest,
   publicSession,
-  publicPlaytestLink,
   publicMutation,
   publicJob,
+  publicizeProjectViewData,
   type StoredPlayableBuild,
   type StoredPlaytest,
   type StoredSharedSession,
-  type StoredPlaytestLink,
   type StoredApplyProjectChangesResult,
   type StoredCompileBuildResult,
   type StoredDuplicateRuleSystemResult,
@@ -115,76 +114,25 @@ async function publicizeProjectView(
   mount: string,
 ) {
   const view = url.searchParams.get("view");
-  if (view === "builds") {
-    const body = await response.json<{
-      builds: StoredPlayableBuild[];
-      page: unknown;
-    }>();
-    return json({
-      ...body,
-      builds: await Promise.all(
-        body.builds.map((build) => publicBuild(build, url.origin, creatorId, secret, mount)),
-      ),
-    });
+  if (
+    view !== "builds" &&
+    view !== "playtests" &&
+    view !== "sessions" &&
+    view !== "playtest-link" &&
+    view !== "jobs" &&
+    view !== "activity"
+  ) {
+    return response;
   }
-  if (view === "playtests") {
-    const body = await response.json<{ playtests: StoredPlaytest[] }>();
-    return json({
-      ...body,
-      playtests: await Promise.all(
-        body.playtests.map((playtest) =>
-          publicPlaytest(playtest, url.origin, creatorId, secret, mount),
-        ),
-      ),
-    });
-  }
-  if (view === "sessions") {
-    const body = await response.json<{ sessions: StoredSharedSession[] }>();
-    return json({
-      ...body,
-      sessions: await Promise.all(
-        body.sessions.map((room) => publicSession(room, url.origin, creatorId, secret, mount)),
-      ),
-    });
-  }
-  if (view === "playtest-link") {
-    const body = await response.json<{
-      playtestLink: StoredPlaytestLink | null;
-    }>();
-    return json({
-      playtestLink: body.playtestLink
-        ? await publicPlaytestLink(body.playtestLink, url.origin, creatorId, secret, mount)
-        : null,
-    });
-  }
-  if (view === "jobs") {
-    const body = await response.json<{ jobs: CreatorJob[] }>();
-    return json({
-      ...body,
-      jobs: await Promise.all(
-        body.jobs.map((job) => publicJob(job, url.origin, creatorId, secret, mount)),
-      ),
-    });
-  }
-  if (view === "activity") {
-    const body = await response.json<{
-      project: GameProject;
-      jobs: CreatorJob[];
-      sessions: StoredSharedSession[];
-    }>();
-    return json({
-      project: body.project,
-      jobs: await Promise.all(
-        body.jobs.map((job) => publicJob(job, url.origin, creatorId, secret, mount)),
-      ),
-      sessions: await Promise.all(
-        body.sessions.map((room) =>
-          publicSession(room, url.origin, creatorId, secret, mount)
-        ),
-      ),
-    });
-  }
-  return response;
+  const body = await response.json<Record<string, unknown>>();
+  return json(
+    await publicizeProjectViewData(view, body, {
+      origin: url.origin,
+      creatorId,
+      secret,
+      mount,
+    }),
+  );
 }
 
 export async function projectApi(

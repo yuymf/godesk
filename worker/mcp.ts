@@ -7,8 +7,8 @@ import {
   publicJob,
   publicMutation,
   publicPlaytest,
-  publicPlaytestLink,
   publicSession,
+  publicizeProjectViewData,
 } from "./public-urls";
 import { shareSecret } from "./share-capability";
 
@@ -714,16 +714,6 @@ function asSession(value: JsonObject) {
   };
 }
 
-function asPlaytestLink(value: JsonObject) {
-  return {
-    ...value,
-    projectId: String(value.projectId ?? ""),
-    sessionId: String(value.sessionId ?? ""),
-    buildId: String(value.buildId ?? ""),
-    replayId: String(value.replayId ?? ""),
-  };
-}
-
 function asJob(value: JsonObject) {
   return {
     ...value,
@@ -917,57 +907,15 @@ export function createGodeskMcpServer(
             : `?view=${view}&cursor=${cursor}&limit=${limit}${
                 entityType ? `&entityType=${entityType}` : ""
               }${entityId ? `&entityId=${encodeURIComponent(entityId)}` : ""}`;
-        const data = await bodyOrError(
+        let data = await bodyOrError(
           await projectRequest(`/projects/${projectId}${query}`),
         );
-        if (view === "builds" && Array.isArray(data.builds)) {
-          data.builds = await Promise.all(
-            data.builds.map((build: unknown) =>
-              publicBuild(asBuild(build as JsonObject), origin, creatorId, secret, mount),
-            ),
-          );
-        }
-        if (view === "playtests" && Array.isArray(data.playtests)) {
-          data.playtests = await Promise.all(
-            data.playtests.map((playtest: unknown) =>
-              publicPlaytest(asPlaytest(playtest as JsonObject), origin, creatorId, secret, mount),
-            ),
-          );
-        }
-        if (view === "sessions" && Array.isArray(data.sessions)) {
-          data.sessions = await Promise.all(
-            data.sessions.map((session: unknown) =>
-              publicSession(asSession(session as JsonObject), origin, creatorId, secret, mount),
-            ),
-          );
-        }
-        if (view === "playtest-link" && data.playtestLink) {
-          data.playtestLink = await publicPlaytestLink(
-            asPlaytestLink(data.playtestLink as JsonObject),
-            origin,
-            creatorId,
-            secret,
-            mount,
-          );
-        }
-        if (view === "jobs" && Array.isArray(data.jobs)) {
-          data.jobs = await Promise.all(
-            data.jobs.map((job: unknown) =>
-              publicJob(asJob(job as JsonObject), origin, creatorId, secret, mount),
-            ),
-          );
-        }
-        if (view === "entity") {
-          if (entityType === "build") {
-            Object.assign(data, await publicBuild(asBuild(data), origin, creatorId, secret, mount));
-          } else if (entityType === "playtest") {
-            Object.assign(data, await publicPlaytest(asPlaytest(data), origin, creatorId, secret, mount));
-          } else if (entityType === "session") {
-            Object.assign(data, await publicSession(asSession(data), origin, creatorId, secret, mount));
-          } else if (entityType === "job") {
-            Object.assign(data, await publicJob(asJob(data), origin, creatorId, secret, mount));
-          }
-        }
+        data = await publicizeProjectViewData(
+          view,
+          data,
+          { origin, creatorId, secret, mount },
+          entityType,
+        );
         return result({ projectId, view, data });
       } catch (reason) {
         return toolError(reason);
