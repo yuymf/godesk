@@ -9,6 +9,7 @@ import type {
   SharedSession,
   ValidationFinding,
 } from "./project-contract";
+import { buildMeetsShareGate } from "../runtime/share-gate";
 
 export function href(path: string) {
   return mountHref(path, window.location.pathname);
@@ -147,9 +148,7 @@ export function latestStudioPlayTarget(
 }
 
 export function buildCanOpenSharedSession(build: PlayableBuild) {
-  return build.ruleSystem.runtimeSupport.status === "executable" &&
-    build.presentationFloor.status === "passed" &&
-    build.playabilityFloor.status === "passed";
+  return buildMeetsShareGate(build);
 }
 
 export function playtestOutcome(playtest: PlaytestRun) {

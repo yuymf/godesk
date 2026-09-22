@@ -6,6 +6,7 @@ import {
   runBotSimulation,
 } from "./runtime";
 import { playabilityFloor } from "../src/runtime/playability-floor";
+import { buildMeetsShareGate, shareGateRefusal } from "../src/runtime/share-gate";
 import type {
   ApplyProjectChangesInput,
   Changeset,
@@ -241,13 +242,7 @@ export class CreatorProjects extends DurableObject<Env> {
               const build = session
                 ? record.builds.find((candidate) => candidate.id === session.buildId)
                 : undefined;
-              if (
-                !session ||
-                !build ||
-                build.presentationFloor.status !== "passed" ||
-                build.playabilityFloor.status !== "passed" ||
-                build.ruleSystem.runtimeSupport.status !== "executable"
-              ) {
+              if (!session || !build || !buildMeetsShareGate(build)) {
                 throw new Error("invalid_playtest_link");
               }
               publishedPlaytestLink = {
@@ -1479,28 +1474,11 @@ export class CreatorProjects extends DurableObject<Env> {
         if (!build) {
           return { status: 404, value: { error: "build_not_found" } };
         }
-        if (build.presentationFloor.status !== "passed") {
+        const refusal = shareGateRefusal(build);
+        if (refusal) {
           return {
             status: 422,
-            value: {
-              error: "visual_floor_unmet",
-              presentationFloor: build.presentationFloor,
-            },
-          };
-        }
-        if (build.playabilityFloor.status !== "passed") {
-          return {
-            status: 422,
-            value: {
-              error: "playability_floor_unmet",
-              playabilityFloor: build.playabilityFloor,
-            },
-          };
-        }
-        if (!executableRuntime(build.ruleSystem)) {
-          return {
-            status: 422,
-            value: { error: "runtime_not_executable" },
+            value: refusal,
           };
         }
         const projectKey = `${PROJECT_PREFIX}${build.projectId}`;
