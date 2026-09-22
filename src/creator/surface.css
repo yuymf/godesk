@@ -38,13 +38,6 @@ textarea {
   font: inherit;
 }
 
-.panel-label {
-  color: #756f61;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
 
 .studio-header > div > span {
   color: #756f61;
@@ -1079,14 +1072,6 @@ summary:focus-visible {
   animation: pulse-dot 1.8s var(--ease-out) infinite;
 }
 
-.studio-topbar kbd {
-  padding: 3px 6px;
-  color: var(--muted);
-  background: var(--paper);
-  border: 1px solid #c5d4cc;
-  border-radius: 5px;
-  border-color: var(--line);
-}
 
 .studio-welcome {
   position: relative;
@@ -1563,11 +1548,6 @@ summary:focus-visible {
   justify-content: space-between;
 }
 
-.creator-studio .panel-label {
-  color: var(--muted);
-  font-size: 10px;
-  letter-spacing: .07em;
-}
 
 .studio-section-heading h2,
 .build-workflow h2,
