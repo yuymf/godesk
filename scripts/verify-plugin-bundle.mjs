@@ -3,15 +3,11 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { createVerifyHelpers } from "./verify-helpers.mjs";
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-function fail(message) {
-  throw new Error(`Plugin bundle verification failed: ${message}`);
-}
-
-function assert(condition, message) {
-  if (!condition) fail(message);
-}
+const { fail, assert } = createVerifyHelpers("Plugin bundle verification failed");
 
 async function readJson(relativePath) {
   const absolutePath = path.join(root, relativePath);
