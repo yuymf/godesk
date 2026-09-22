@@ -126,16 +126,41 @@ for (const requiredTerm of [
 const createSkillNames = ["create-game-project", "create-shareable-prototype"];
 for (const skillName of createSkillNames) {
   assert(skillNames.includes(skillName), `plugin must keep ${skillName} as a Skill directory`);
-  const createSkill = await readFile(
-    path.join(root, `plugins/godesk/skills/${skillName}/SKILL.md`),
-    "utf8",
+}
+const basicsSkill = await readFile(
+  path.join(root, "plugins/godesk/skills/godesk-plugin-basics/SKILL.md"),
+  "utf8",
+);
+assert(
+  basicsSkill.includes("## Executable Kernel choice"),
+  "godesk-plugin-basics must own the Executable Kernel choice table",
+);
+for (const kernel of ["hidden-role-v1", "hand-play-v1", "conversation-relay-v1"]) {
+  assert(
+    basicsSkill.includes(kernel),
+    `godesk-plugin-basics is missing ADR 0012 kernel: ${kernel}`,
   );
-  for (const kernel of ["hidden-role-v1", "hand-play-v1", "conversation-relay-v1"]) {
-    assert(
-      createSkill.includes(kernel),
-      `${skillName} is missing ADR 0012 kernel: ${kernel}`,
-    );
-  }
+}
+const kernelHeadingHits = skillText.filter((body) =>
+  body.includes("## Executable Kernel choice"),
+).length;
+assert(
+  kernelHeadingHits === 1,
+  `Executable Kernel choice table must appear once across Skills (found ${kernelHeadingHits})`,
+);
+const createShareable = await readFile(
+  path.join(root, "plugins/godesk/skills/create-shareable-prototype/SKILL.md"),
+  "utf8",
+);
+assert(
+  createShareable.includes("godesk-plugin-basics"),
+  "create-shareable-prototype must cross-reference godesk-plugin-basics for the Kernel table",
+);
+for (const kernel of ["hidden-role-v1", "hand-play-v1", "conversation-relay-v1"]) {
+  assert(
+    createShareable.includes(kernel),
+    `create-shareable-prototype must still name ADR 0012 kernel: ${kernel}`,
+  );
 }
 const createDelegate = await readFile(
   path.join(root, "plugins/godesk/skills/create-game-project/SKILL.md"),
@@ -144,6 +169,10 @@ const createDelegate = await readFile(
 assert(
   createDelegate.includes("create-shareable-prototype"),
   "create-game-project must delegate to create-shareable-prototype",
+);
+assert(
+  createDelegate.includes("godesk-plugin-basics"),
+  "create-game-project must point Kernel gate at godesk-plugin-basics",
 );
 
 console.log(
