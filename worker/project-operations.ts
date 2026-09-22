@@ -42,6 +42,7 @@ export {
   publicPlaytest,
   publicPlaytestLink,
   publicSession,
+  publicizeProjectViewData,
   signedShareToken,
 } from "./public-urls";
 export type {

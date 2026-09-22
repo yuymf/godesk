@@ -192,3 +192,123 @@ export async function publicJob<T extends JobLike>(
   }
   return job;
 }
+
+export type PublicizeViewContext = {
+  origin: string;
+  creatorId: string;
+  secret: string;
+  mount?: string;
+};
+
+/** Shared data-level publicize for project list/entity views (HTTP + MCP). */
+export async function publicizeProjectViewData<
+  T extends Record<string, unknown>,
+>(
+  view: string | null | undefined,
+  data: T,
+  ctx: PublicizeViewContext,
+  entityType?: string | null,
+): Promise<T> {
+  const mount = ctx.mount ?? "/";
+  const { origin, creatorId, secret } = ctx;
+
+  if (view === "builds" && Array.isArray(data.builds)) {
+    return {
+      ...data,
+      builds: await Promise.all(
+        data.builds.map((build) =>
+          publicBuild(build as BuildLike, origin, creatorId, secret, mount),
+        ),
+      ),
+    };
+  }
+  if (view === "playtests" && Array.isArray(data.playtests)) {
+    return {
+      ...data,
+      playtests: await Promise.all(
+        data.playtests.map((playtest) =>
+          publicPlaytest(playtest as PlaytestLike, origin, creatorId, secret, mount),
+        ),
+      ),
+    };
+  }
+  if (view === "sessions" && Array.isArray(data.sessions)) {
+    return {
+      ...data,
+      sessions: await Promise.all(
+        data.sessions.map((session) =>
+          publicSession(session as SessionLike, origin, creatorId, secret, mount),
+        ),
+      ),
+    };
+  }
+  if (view === "playtest-link") {
+    const link = data.playtestLink;
+    return {
+      ...data,
+      playtestLink: link
+        ? await publicPlaytestLink(
+            link as PlaytestLinkLike,
+            origin,
+            creatorId,
+            secret,
+            mount,
+          )
+        : null,
+    };
+  }
+  if (view === "jobs" && Array.isArray(data.jobs)) {
+    return {
+      ...data,
+      jobs: await Promise.all(
+        data.jobs.map((job) =>
+          publicJob(job as JobLike, origin, creatorId, secret, mount),
+        ),
+      ),
+    };
+  }
+  if (view === "activity") {
+    const jobs = Array.isArray(data.jobs) ? data.jobs : [];
+    const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+    return {
+      ...data,
+      jobs: await Promise.all(
+        jobs.map((job) =>
+          publicJob(job as JobLike, origin, creatorId, secret, mount),
+        ),
+      ),
+      sessions: await Promise.all(
+        sessions.map((session) =>
+          publicSession(session as SessionLike, origin, creatorId, secret, mount),
+        ),
+      ),
+    };
+  }
+  if (view === "entity") {
+    if (entityType === "build") {
+      return Object.assign(
+        data,
+        await publicBuild(data as unknown as BuildLike, origin, creatorId, secret, mount),
+      );
+    }
+    if (entityType === "playtest") {
+      return Object.assign(
+        data,
+        await publicPlaytest(data as unknown as PlaytestLike, origin, creatorId, secret, mount),
+      );
+    }
+    if (entityType === "session") {
+      return Object.assign(
+        data,
+        await publicSession(data as unknown as SessionLike, origin, creatorId, secret, mount),
+      );
+    }
+    if (entityType === "job") {
+      return Object.assign(
+        data,
+        await publicJob(data as unknown as JobLike, origin, creatorId, secret, mount),
+      );
+    }
+  }
+  return data;
+}
