@@ -12,5 +12,7 @@ Read the current charter instead:
   Playability Floor is the share gate
 - [ADR index](../../docs/adr/README.md) — read 0011 / 0012 first
 
-Tickets under `issues/` are a historical delivery log. Do not revive
-"validation platform" or "learning loop as the product."
+Resolved delivery tickets for this effort were removed from the tree; recover
+them from git history if needed. Do not revive "validation platform" or
+"learning loop as the product." The only remaining tracker file under
+`issues/` is the open human gate for public Plugin publication.
