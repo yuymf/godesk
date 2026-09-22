@@ -9,7 +9,7 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
-    "test:worker": "vitest run --config vitest.worker.config.ts",
+    "test:worker": "test -f .dev.vars || cp .dev.vars.example .dev.vars; vitest run --config vitest.worker.config.ts",
     "test:e2e": "playwright test",
     "verify:local-routes": "node scripts/verify-local-routes.mjs",
     "verify:local-loop": "pnpm build && node scripts/verify-local-loop.mjs",
