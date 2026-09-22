@@ -1,0 +1,4 @@
+# Local-only placeholders. Production must set these with `wrangler secret put`.
+GODESK_SHARE_SECRET=godesk-local-share-secret
+GODESK_WEB_CLIENT_ID=godesk-local-web-client
+GODESK_WEB_CLIENT_SECRET=godesk-local-web-client-secret

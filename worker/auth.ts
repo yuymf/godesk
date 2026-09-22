@@ -5,13 +5,6 @@ const READ_SCOPE = "godesk:read";
 const WRITE_SCOPE = "godesk:write";
 const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost", "godesk.test"]);
 
-interface AuthEnv {
-  GODESK_AUTH_ISSUER?: string;
-  GODESK_AUTH_AUDIENCE?: string;
-  GODESK_WEB_CLIENT_ID?: string;
-  GODESK_WEB_CLIENT_SECRET?: string;
-}
-
 interface AuthorizationMetadata {
   issuer: string;
   authorization_endpoint: string;
@@ -29,12 +22,8 @@ export interface CreatorIdentity {
 const jwksByUri = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 const metadataByIssuer = new Map<string, Promise<AuthorizationMetadata>>();
 
-function authEnv(env: Env): AuthEnv {
-  return env as Env & AuthEnv;
-}
-
 function configuredIssuer(env: Env) {
-  return authEnv(env).GODESK_AUTH_ISSUER?.trim();
+  return env.GODESK_AUTH_ISSUER.trim();
 }
 
 function cookie(request: Request, name: string) {
@@ -227,9 +216,8 @@ export async function authorizeRequest(
 ): Promise<CreatorIdentity | Response> {
   const local = localIdentity(request);
   if (local) return local;
-  const config = authEnv(env);
   const issuer = configuredIssuer(env);
-  if (!issuer || !config.GODESK_AUTH_AUDIENCE) {
+  if (!issuer || !env.GODESK_AUTH_AUDIENCE) {
     return challenge(request, requiredScopes.join(" "), "OAuth is not configured.");
   }
   const accessAssertion = request.headers.get("cf-access-jwt-assertion");
@@ -243,11 +231,11 @@ export async function authorizeRequest(
       }
       const verified = await jwtVerify(accessAssertion, jwks, {
         issuer,
-        audience: config.GODESK_AUTH_AUDIENCE,
+        audience: env.GODESK_AUTH_AUDIENCE,
       });
       const identity = validateAccessClaims(verified.payload, {
         issuer,
-        audience: config.GODESK_AUTH_AUDIENCE,
+        audience: env.GODESK_AUTH_AUDIENCE,
       });
       if (requiredScopes.some((scope) => !identity.scopes.includes(scope))) {
         return challenge(request, requiredScopes.join(" "), "insufficient_scope");
@@ -275,11 +263,11 @@ export async function authorizeRequest(
     }
     const verified = await jwtVerify(token, jwks, {
       issuer,
-      audience: config.GODESK_AUTH_AUDIENCE,
+      audience: env.GODESK_AUTH_AUDIENCE,
     });
     return validateTokenClaims(verified.payload, {
       issuer,
-      audience: config.GODESK_AUTH_AUDIENCE,
+      audience: env.GODESK_AUTH_AUDIENCE,
       requiredScopes,
     });
   } catch (reason) {
@@ -323,8 +311,7 @@ function safeReturnTo(value: string | null) {
 }
 
 export async function startWebLogin(request: Request, env: Env) {
-  const config = authEnv(env);
-  if (!config.GODESK_WEB_CLIENT_ID || !config.GODESK_AUTH_AUDIENCE) {
+  if (!env.GODESK_WEB_CLIENT_ID || !env.GODESK_AUTH_AUDIENCE) {
     return new Response("GoDesk web OAuth is not configured.", { status: 503 });
   }
   const metadata = await authorizationMetadata(env);
@@ -337,10 +324,10 @@ export async function startWebLogin(request: Request, env: Env) {
   );
   const url = new URL(metadata.authorization_endpoint);
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("client_id", config.GODESK_WEB_CLIENT_ID);
+  url.searchParams.set("client_id", env.GODESK_WEB_CLIENT_ID);
   url.searchParams.set("redirect_uri", oauthCallbackUrl(request));
   url.searchParams.set("scope", `openid profile ${READ_SCOPE} ${WRITE_SCOPE}`);
-  url.searchParams.set("audience", config.GODESK_AUTH_AUDIENCE);
+  url.searchParams.set("audience", env.GODESK_AUTH_AUDIENCE);
   url.searchParams.set("resource", mcpResourceUrl(request));
   url.searchParams.set("state", state);
   url.searchParams.set("code_challenge", challenge);
@@ -363,7 +350,6 @@ export async function startWebLogin(request: Request, env: Env) {
 }
 
 export async function finishWebLogin(request: Request, env: Env) {
-  const config = authEnv(env);
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
@@ -375,9 +361,9 @@ export async function finishWebLogin(request: Request, env: Env) {
     !storedState ||
     state !== storedState ||
     !verifier ||
-    !config.GODESK_WEB_CLIENT_ID ||
-    !config.GODESK_WEB_CLIENT_SECRET ||
-    !config.GODESK_AUTH_AUDIENCE
+    !env.GODESK_WEB_CLIENT_ID ||
+    !env.GODESK_WEB_CLIENT_SECRET ||
+    !env.GODESK_AUTH_AUDIENCE
   ) {
     return new Response("Invalid OAuth callback.", { status: 400 });
   }
@@ -387,8 +373,8 @@ export async function finishWebLogin(request: Request, env: Env) {
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "authorization_code",
-      client_id: config.GODESK_WEB_CLIENT_ID,
-      client_secret: config.GODESK_WEB_CLIENT_SECRET,
+      client_id: env.GODESK_WEB_CLIENT_ID,
+      client_secret: env.GODESK_WEB_CLIENT_SECRET,
       code,
       code_verifier: verifier,
       redirect_uri: oauthCallbackUrl(request),

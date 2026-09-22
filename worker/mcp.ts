@@ -1272,7 +1272,7 @@ export function createGodeskMcpServer(
       },
       callback,
     )) as typeof server.registerTool;
-  const secret = shareSecret(env);
+  const secret = shareSecret(env, new URL(origin).hostname);
   const projectRequest = (path: string, init?: RequestInit) =>
     internalRequest(env, creatorId, path, init);
 

@@ -114,10 +114,19 @@ journey succeeds when the invitation URL lets someone else sit down and play.
 
 ## Production configuration
 
-The production Worker validates Cloudflare Access JWTs using:
+Public Worker vars (in `wrangler.jsonc`):
 
 - `GODESK_AUTH_ISSUER`
 - `GODESK_AUTH_AUDIENCE`
+
+Required Worker secrets. Set each with `wrangler secret put <NAME>` before
+deploy. Production fail-closes if they are missing; localhost may omit
+`GODESK_SHARE_SECRET` and use the local default. Copy `.dev.vars.example` to
+`.dev.vars` for local OAuth.
+
+- `GODESK_SHARE_SECRET`
+- `GODESK_WEB_CLIENT_ID`
+- `GODESK_WEB_CLIENT_SECRET`
 
 GitHub Actions also requires `CLOUDFLARE_ACCOUNT_ID` and
 `CLOUDFLARE_API_TOKEN`. Never store secrets in the repository.

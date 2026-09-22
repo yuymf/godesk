@@ -24,7 +24,7 @@ export default defineConfig({
   ],
   webServer: {
     command:
-      "pnpm build && pnpm exec wrangler dev --local --ip 127.0.0.1 --port 8799 --persist-to .wrangler/e2e",
+      "(test -f .dev.vars || cp .dev.vars.example .dev.vars) && pnpm build && pnpm exec wrangler dev --local --ip 127.0.0.1 --port 8799 --persist-to .wrangler/e2e",
     url: origin,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
