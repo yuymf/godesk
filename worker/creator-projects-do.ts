@@ -6,6 +6,7 @@ import {
   runBotSimulation,
 } from "./runtime";
 import { playabilityFloor } from "../src/runtime/playability-floor";
+import { presentationFloor } from "../src/runtime/presentation-floor";
 import { buildMeetsShareGate, shareGateRefusal } from "../src/runtime/share-gate";
 import type {
   ApplyProjectChangesInput,
@@ -51,7 +52,6 @@ import {
   buildId,
   referencedSourceIds,
   buildWarnings,
-  presentationFloor,
   visibleSession,
   reconstructSession,
   reconstructReplay,
