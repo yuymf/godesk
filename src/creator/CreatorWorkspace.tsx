@@ -947,6 +947,12 @@ function ProjectStudio({ projectId }: { projectId: string }) {
   const [playtestLinkCopied, setPlaytestLinkCopied] = useState(false);
   const [humanNames, setHumanNames] = useState<Record<number, string>>({});
   const [humanAttested, setHumanAttested] = useState(false);
+  const [advancedValidationOpen, setAdvancedValidationOpen] = useState(
+    Boolean(validationRouteContext.buildId),
+  );
+  const [validationOpen, setValidationOpen] = useState(
+    Boolean(validationRouteContext.buildId),
+  );
   const [sourceDraft, setSourceDraft] = useState("");
   const [structureDraft, setStructureDraft] = useState("");
   const [ruleSystemDirty, setRuleSystemDirty] = useState(false);
@@ -1028,9 +1034,6 @@ function ProjectStudio({ projectId }: { projectId: string }) {
     setHypotheses(nextValidation.hypotheses);
     setFindings(nextValidation.findings);
     setFindingHypothesisId((current) =>
-      current || nextValidation.hypotheses.at(-1)?.id || ""
-    );
-    setSessionHypothesisId((current) =>
       current || nextValidation.hypotheses.at(-1)?.id || ""
     );
     } finally {
@@ -1144,26 +1147,19 @@ function ProjectStudio({ projectId }: { projectId: string }) {
         nextProject.version,
         basedOnFindingId,
       );
-      let playtestJob: CreatorJob | undefined;
       let room: SharedSession | undefined;
-      if (build.ruleSystem.runtimeSupport.status === "executable") {
-        playtestJob = await completeBotPlaytest(build.id);
-      }
       if (buildCanOpenSharedSession(build)) {
         room = await createSharedSession(build.id, {
           seed: 42,
           idempotencyKey: crypto.randomUUID(),
-          ...(sessionHypothesisId ? { hypothesisId: sessionHypothesisId } : {}),
         });
       }
       await loadProject();
       setIterationPrompt("");
       setIterationFindingId("");
       setNotice(
-        `${iteration?.summary ?? "聚焦改动已应用"} · Build ${build.id} · ${
-          playtestJob
-            ? `自动试玩 ${playtestJob.id}${room ? ` · Studio 试玩 ${room.id}` : ""}`
-            : `编译任务 ${buildJob.id} 已完成`
+        `${iteration?.summary ?? "改动已写进这一版"} · ${
+          room ? "现在就能开玩。" : `可玩版本已生成（${buildJob.id}）。`
         }`,
       );
     } catch (reason) {
@@ -1221,24 +1217,18 @@ function ProjectStudio({ projectId }: { projectId: string }) {
       setChangesets((current) => [...current, result.changeset]);
       const { build, job: buildJob } = await compileBuild(result.project.version);
       if (buildCanOpenSharedSession(build)) {
-        const playtestJob = await completeBotPlaytest(build.id);
         const room = await createSharedSession(build.id, {
           seed: 42,
           idempotencyKey: crypto.randomUUID(),
-          ...(sessionHypothesisId
-            ? { hypothesisId: sessionHypothesisId }
-            : {}),
         });
         setSessions((current) => [room, ...current]);
         await loadProject();
-        setNotice(
-          `计划已确认 · Build ${build.id} · 自动试玩 ${playtestJob.id} · Studio 试玩 ${room.id}`,
-        );
+        setNotice("玩法已确认，可玩版本已生成。现在就能开玩。");
         return;
       }
       await loadProject();
       setNotice(
-        `计划已确认并完成 Build ${build.id}（任务 ${buildJob.id}）。当前规则或视觉门槛不支持 Shared Session，请查看 unsupported behavior。`,
+        `玩法已确认并生成了这一版（${buildJob.id}）。核心玩法还没齐，先别发给朋友。`,
       );
     } catch (reason) {
       if (reason instanceof ProjectApiError && reason.status === 409) {
@@ -1249,7 +1239,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
         setFormError(
           reason instanceof Error
             ? reason.message
-            : "确认、构建或自动试玩失败。",
+            : "确认玩法或生成可玩版本失败。",
         );
       }
     } finally {
@@ -1425,7 +1415,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
             ?? reason.message,
         );
       } else {
-        setFormError(reason instanceof Error ? reason.message : "创建 Shared Session 失败。");
+        setFormError(reason instanceof Error ? reason.message : "没能开出这一局。");
       }
     } finally {
       setBusy(false);
@@ -1584,10 +1574,9 @@ function ProjectStudio({ projectId }: { projectId: string }) {
       setFindings(result.findings);
       setChangesets((current) => [...current, result.changeset]);
       setFindingHypothesisId(result.hypotheses.at(-1)?.id ?? "");
-      setSessionHypothesisId(result.hypotheses.at(-1)?.id ?? "");
       setHypothesisQuestion("");
       setHypothesisSignal("");
-      setNotice("设计假设已记录。下一步请选择试玩证据并写下结论。");
+      setNotice("问题已记下。打开高级后，可以选一局反馈并写下结论。");
     } catch (reason) {
       setFormError(reason instanceof Error ? reason.message : "设计假设保存失败。");
     } finally {
@@ -1697,10 +1686,11 @@ function ProjectStudio({ projectId }: { projectId: string }) {
     setFindingVerdict("inconclusive");
     setFindingNotes(participantFeedbackFindingNotes(feedback, actionLabel));
     setFindingNextChange("");
+    setAdvancedValidationOpen(true);
     setNotice(
       session.experiment
-        ? `已带入 ${session.id} 的 ${session.feedback.length} 条反馈；请判断结论并写下一版聚焦改动。`
-        : `已带入探索性 Room ${session.id}；请先选择或新建设计假设，再判断结论。`,
+        ? `已带入这局的 ${session.feedback.length} 条反馈。在高级里写下你的结论就行。`
+        : "已带入这局反馈。先在高级里选一个问题，再写下结论。",
     );
     window.location.hash = "validation-finding";
   }
@@ -1901,7 +1891,9 @@ function ProjectStudio({ projectId }: { projectId: string }) {
     studioPlayTarget.build && buildCanOpenSharedSession(studioPlayTarget.build),
   );
   const hobbyistFocus = studioHobbyistFocus(generationPlan?.status, canPlayLatest);
-  const showValidationOpen = unreviewedFeedbackCount > 0 || Boolean(validationRouteContext.buildId);
+  const showValidationOpen =
+    validationOpen ||
+    unreviewedFeedbackCount > 0;
   const friendSession = playtestLink
     ? sessions.find((session) => session.id === playtestLink.sessionId)
     : undefined;
@@ -1935,7 +1927,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
       <section className="studio-canvas">
         <header className="studio-header">
           <div>
-            <span>Game Project</span>
+            <span>这款游戏</span>
             <h1>{project.name}</h1>
           </div>
           <div className="project-version">
@@ -1957,7 +1949,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
             role="status"
           >
             <div>
-              <span>GoDesk Agent</span>
+              <span>正在处理</span>
               <strong>
                 {CREATOR_JOB_LABELS[visibleJob.kind]} · {CREATOR_JOB_STATUS_LABELS[visibleJob.status]}
               </strong>
@@ -2120,7 +2112,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
               </div>
 
               <details className="studio-optional">
-                <summary>编辑完整 Rule System <small>JSON</small></summary>
+                <summary>高级：完整规则 JSON</summary>
                 <label className="ruleSystem-field" htmlFor="ruleSystem-structure">
                   <span>角色、规则、约束、实体、行动、Play Surface、阶段、结果与呈现</span>
                   <textarea
@@ -2218,7 +2210,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
               <header>
                 <div>
                   <h3 id="iteration-title">下一版想改什么？</h3>
-                  <p>像聊天一样写一句改动。GoDesk 会生成下一版，并自动试一局。</p>
+                  <p>像聊天一样写一句改动。出下一版之后就能马上开玩。</p>
                 </div>
               </header>
               <form onSubmit={iterateFromPrompt}>
@@ -2264,7 +2256,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                     {busy ? "正在改下一版…" : "改下一版并试玩"}
                   </button>
                   {builds.length === 0 && generationPlan?.status !== "pending" && (
-                    <small>先做成可玩版本，才能对比下一版。</small>
+                    <small>先做成可玩版本，才能改下一版。</small>
                   )}
                   {generationPlan?.status === "pending" && (
                     <small>先确认这一局怎么玩。</small>
@@ -2283,7 +2275,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                       ? studioPlayTarget.build.presentationFloor.reason
                       : "还没有可执行内核，不能把未完成的规则当作可玩成品分享。"}
                 </p>
-                <p>Immutable Build 已经留下。补上该游戏的核心环之后再开 Shared Session。</p>
+                <p>这一版已经留下。把核心玩法补齐之后，再发给朋友。</p>
               </section>
             )}
 
@@ -2354,64 +2346,71 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                     <p>点「开始试玩」后即可在这里落座和行动。朋友只能使用已发布的邀请链接。</p>
                   </div>
                 )}
-                {humanFinding && friendSession && (
-                  <p className="human-attest-done" role="status">
-                    已记下：这是真人一起打的一局。
-                    <code className="human-attest-id">{humanFinding.id}</code>
-                    <code className="human-attest-session">{friendSession.id}</code>
-                    <code className="human-attest-replay">{friendSession.replayId}</code>
-                    <code className="human-attest-hypothesis">{humanFinding.hypothesisId}</code>
-                  </p>
-                )}
-                {canAttestHuman && friendSession && (
-                  <form
-                    className="human-attest"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      void attestHumanSession();
-                    }}
-                  >
-                    <strong>这局是真人一起打的？</strong>
-                    <p>固定邀请链接上已经有两位玩家各走了一步。写下称呼并确认后记下。</p>
-                    {friendSession.seats.map((seat) => (
-                      <label key={seat.seat}>
-                        <span>座位 {seat.seat} 的称呼</span>
-                        <input
-                          aria-label={`座位 ${seat.seat} 的称呼`}
-                          onChange={(event) => {
-                            const name = event.currentTarget.value;
-                            setHumanNames((current) => ({ ...current, [seat.seat]: name }));
-                          }}
-                          placeholder={`玩家 ${seat.seat}`}
-                          value={humanNames[seat.seat] ?? ""}
-                        />
-                      </label>
-                    ))}
-                    <label className="human-attest-check">
-                      <input
-                        aria-label="我确认这两位是真人"
-                        checked={humanAttested}
-                        onChange={(event) => setHumanAttested(event.currentTarget.checked)}
-                        type="checkbox"
-                      />
-                      <span>我确认这两位是真人，不是脚本或机器人。</span>
-                    </label>
-                    <button disabled={busy || !humanAttested} type="submit">
-                      记下这是真人局
-                    </button>
-                  </form>
+                {(humanFinding || canAttestHuman) && friendSession && (
+                  <details className="studio-optional" id="human-attest">
+                    <summary>高级：记下这是真人局</summary>
+                    {humanFinding && (
+                      <p className="human-attest-done" role="status">
+                        已记下：这是真人一起打的一局。
+                        <code className="human-attest-id">{humanFinding.id}</code>
+                        <code className="human-attest-session">{friendSession.id}</code>
+                        <code className="human-attest-replay">{friendSession.replayId}</code>
+                        <code className="human-attest-hypothesis">{humanFinding.hypothesisId}</code>
+                      </p>
+                    )}
+                    {canAttestHuman && (
+                      <form
+                        className="human-attest"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          void attestHumanSession();
+                        }}
+                      >
+                        <strong>这局是朋友一起打的？</strong>
+                        <p>固定邀请链接上已经有两位玩家各走了一步。写下称呼并确认后记下。</p>
+                        {friendSession.seats.map((seat) => (
+                          <label key={seat.seat}>
+                            <span>座位 {seat.seat} 的称呼</span>
+                            <input
+                              aria-label={`座位 ${seat.seat} 的称呼`}
+                              onChange={(event) => {
+                                const name = event.currentTarget.value;
+                                setHumanNames((current) => ({ ...current, [seat.seat]: name }));
+                              }}
+                              placeholder={`玩家 ${seat.seat}`}
+                              value={humanNames[seat.seat] ?? ""}
+                            />
+                          </label>
+                        ))}
+                        <label className="human-attest-check">
+                          <input
+                            aria-label="我确认这两位是真人"
+                            checked={humanAttested}
+                            onChange={(event) => setHumanAttested(event.currentTarget.checked)}
+                            type="checkbox"
+                          />
+                          <span>我确认这两位是真人，不是脚本或机器人。</span>
+                        </label>
+                        <button disabled={busy || !humanAttested} type="submit">
+                          记下这是真人局
+                        </button>
+                      </form>
+                    )}
+                  </details>
                 )}
               </section>
             )}
 
             {buildComparison && (
-              <section className="build-comparison" aria-labelledby="build-comparison-title">
+              <details className="studio-optional build-comparison" aria-labelledby="build-comparison-title">
+                <summary>
+                  <span>高级：同种子自动试玩对比</span>
+                  <code>seed {buildComparison.candidatePlaytest.seed}</code>
+                </summary>
                 <header>
                   <div>
-                    <span className="panel-label">固定 seed 自动试玩</span>
                     <h3 id="build-comparison-title">最新两个版本对比</h3>
                   </div>
-                  <code>seed {buildComparison.candidatePlaytest.seed}</code>
                 </header>
                 <div className="build-comparison-versions">
                   {([
@@ -2449,30 +2448,33 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                         - buildComparison.baselinePlaytest.metrics.turns,
                     )}
                   </strong>
-                  <small>这是同 seed bot simulation 对比，不是真人验证，也不自动证明新版更好。</small>
+                  <small>这是同种子自动试玩对比，不是朋友真的觉得更好。</small>
                 </footer>
-              </section>
+              </details>
             )}
 
             {builds.length > 0 ? (
               <>
               {hypotheses.length > 0 && (
-              <label className="session-hypothesis-selector">
-                <span>这次开局要看什么？</span>
-                <select
-                  disabled={busy}
-                  onChange={(event) =>
-                    setSessionHypothesisId(event.currentTarget.value)}
-                  value={sessionHypothesisId}
-                >
-                  <option value="">先玩着看，不绑定问题</option>
-                  {hypotheses.map((hypothesis) => (
-                    <option key={hypothesis.id} value={hypothesis.id}>
-                      {hypothesis.question}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <details className="studio-optional">
+                <summary>高级：开局时绑定一个问题</summary>
+                <label className="session-hypothesis-selector">
+                  <span>这局想特别听朋友说什么？</span>
+                  <select
+                    disabled={busy}
+                    onChange={(event) =>
+                      setSessionHypothesisId(event.currentTarget.value)}
+                    value={sessionHypothesisId}
+                  >
+                    <option value="">先玩着看，不绑定问题</option>
+                    {hypotheses.map((hypothesis) => (
+                      <option key={hypothesis.id} value={hypothesis.id}>
+                        {hypothesis.question}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </details>
               )}
               <details className="build-history">
                 <summary>查看可玩版本与操作 <span>{builds.length}</span></summary>
@@ -2532,7 +2534,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                             onClick={() => startRoom(build)}
                             type="button"
                           >
-                            创建 Shared Session
+                            单独开一局
                           </button>
                         </div>
                       )}
@@ -2546,7 +2548,12 @@ function ProjectStudio({ projectId }: { projectId: string }) {
             )}
           </section>
 
-          <details className="validation-workflow" id="validation" open={showValidationOpen}>
+          <details
+            className="validation-workflow"
+            id="validation"
+            open={showValidationOpen}
+            onToggle={(event) => setValidationOpen(event.currentTarget.open)}
+          >
             <summary className="studio-section-heading">
               <div>
                 <h2>朋友怎么说</h2>
@@ -2561,10 +2568,9 @@ function ProjectStudio({ projectId }: { projectId: string }) {
             <section className="feedback-inbox" aria-labelledby="feedback-inbox-title">
               <header>
                 <div>
-                  <span className="panel-label">Feedback Inbox</span>
-                  <h3 id="feedback-inbox-title">试玩反馈收件箱</h3>
+                  <h3 id="feedback-inbox-title">朋友刚说的</h3>
                 </div>
-                <strong>{unreviewedFeedbackCount} 条待归纳</strong>
+                <strong>{unreviewedFeedbackCount} 条还没看</strong>
               </header>
               {feedbackInbox.length ? (
                 <ul>
@@ -2585,8 +2591,8 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                         </p>
                         <small>
                           {session.experiment
-                            ? `验证：${session.experiment.question}`
-                            : "探索性试玩 · 尚未绑定 Design Hypothesis"}
+                            ? `想听：${session.experiment.question}`
+                            : "普通一局，没有指定问题"}
                         </small>
                         <div className="feedback-inbox-actions">
                           <a href={session.replayUrl}>看回放</a>
@@ -2614,11 +2620,19 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                 </div>
               )}
             </section>
+            <details
+              className="studio-optional advanced-validation"
+              open={advancedValidationOpen}
+              onToggle={(event) =>
+                setAdvancedValidationOpen(event.currentTarget.open)
+              }
+            >
+              <summary>高级：记下问题和结论</summary>
             <div className="validation-columns">
               <form onSubmit={addDesignHypothesis}>
-                <strong>1. 提出设计假设</strong>
+                <strong>1. 写下你想听的问题</strong>
                 <label htmlFor="hypothesis-question">
-                  <span>想验证的问题</span>
+                  <span>想听朋友说的问题</span>
                   <textarea
                     id="hypothesis-question"
                     maxLength={500}
@@ -2648,7 +2662,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
               </form>
 
               <form id="validation-finding" onSubmit={recordValidationFinding}>
-                <strong>2. 记录验证结论</strong>
+                <strong>2. 记下这局的结论</strong>
                 <label htmlFor="finding-hypothesis">
                   <span>设计假设</span>
                   <select
@@ -2665,7 +2679,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                   </select>
                 </label>
                 <label htmlFor="finding-build">
-                  <span>验证的 Build</span>
+                  <span>对应的可玩版本</span>
                   <select
                     id="finding-build"
                     onChange={(event) => setFindingBuildId(event.currentTarget.value)}
@@ -2699,8 +2713,8 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                     {findingEvidenceType === "automated-playtest"
                       ? "自动试玩记录"
                       : findingEvidenceType === "participant-feedback"
-                        ? "有反馈的 Shared Session"
-                        : "真人 Shared Session"}
+                        ? "有反馈的那一局"
+                        : "真人一起打的那一局"}
                   </span>
                   <select
                     id="finding-evidence"
@@ -2819,7 +2833,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                   }
                   type="submit"
                 >
-                  保存验证结论
+                  保存结论
                 </button>
               </form>
             </div>
@@ -2856,6 +2870,7 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                 })}
               </ul>
             )}
+            </details>
           </details>
           </div>
 

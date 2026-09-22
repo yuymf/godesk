@@ -109,6 +109,9 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     });
     await expect(page.getByText("3–3 人")).toBeVisible();
     await expect(page.getByRole("button", { name: "确认玩法并开始试玩" })).toBeVisible();
+    await expect(page.locator("body")).not.toContainText("Game Project");
+    await expect(page.locator("body")).not.toContainText("GoDesk Agent");
+    await expect(page.locator("body")).not.toContainText("Feedback Inbox");
   });
 
   test("install page stays a light ChatCut contract", async ({ page }) => {
@@ -117,6 +120,10 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.getByRole("heading", { name: "让 Codex 直接使用 GoDesk。" })).toBeVisible();
     await expect(page.getByText("Codex Plugin · 0.2.0+codex.20260830")).toBeVisible();
     await expect(page.getByText("对标 ChatCut")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "装进 Codex，上传剧本或规则，得到别人能一起玩的游戏。" })).toBeVisible();
+    await expect(page.locator(".install-steps")).toHaveCount(0);
+    await expect(page.locator("body")).not.toContainText("不可变 Build");
+    await expect(page.locator("body")).not.toContainText("五项状态全部成立");
     await expect(page.locator("body")).not.toContainText("开始制作并验证我的第一个规则游戏");
     await expect(page.locator("body")).not.toContainText("记录一条明确标注证据类型的验证结论");
     await expect
@@ -144,6 +151,8 @@ test.describe("ChatCut charter: source in, playable game out", () => {
 
     await expect(page.getByRole("heading", { name: "灵感接力" })).toBeVisible();
     await expect(page.getByText("对方直接用浏览器加入，无需安装 Codex")).toBeVisible();
+    await expect(page.locator("body")).not.toContainText("这次试玩要验证");
+    await expect(page.locator(".room-experiment-brief")).toHaveCount(0);
     await expectLightPlaySurface(page);
 
     const inviteUrl = await page.getByLabel("邀请链接").inputValue();
@@ -219,7 +228,15 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.getByRole("heading", { name: "现在就开玩" })).toBeVisible({
       timeout: 90_000,
     });
-    const studioUrl = page.url();
+    await expect(page.locator("body")).not.toContainText("Game Project");
+    await expect(page.locator("body")).not.toContainText("GoDesk Agent");
+    await expect(page.locator("body")).not.toContainText("Feedback Inbox");
+    await expect(page.locator("body")).not.toContainText("Create Shared Session");
+    await expect(page.getByText("高级：完整规则 JSON")).toBeVisible();
+    await expect(page.locator("#ruleSystem-structure")).toBeHidden();
+    await expect(page.locator("#validation")).not.toHaveAttribute("open");
+    await expect(page.locator("#hypothesis-question")).toBeHidden();
+    await expect(page.locator(".session-hypothesis-selector")).toBeHidden();
     await page.getByRole("button", { name: "发布邀请链接" }).click();
     const tryLink = page.getByLabel("固定好友试玩链接");
     await expect(tryLink).toHaveValue(/\/chatgpt-plugin\/try\//, { timeout: 30_000 });
@@ -229,6 +246,8 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
 
     await expect(page.getByText("对方直接用浏览器加入，无需安装 Codex")).toBeVisible();
+    await expect(page.locator("body")).not.toContainText("这次试玩要验证");
+    await expect(page.locator(".room-experiment-brief")).toHaveCount(0);
     await expectLightPlaySurface(page);
     const inviteUrl = await page.getByLabel("邀请链接").inputValue();
     expect(inviteUrl).toMatch(/\/chatgpt-plugin\/room\//);
@@ -270,21 +289,6 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.getByText(/凶手获胜|侦探与平民获胜/)).toBeVisible();
     await friendContext.close();
     await thirdContext.close();
-
-    await page.goto(studioUrl);
-    await expect(page.getByRole("heading", { name: "现在就开玩" })).toBeVisible();
-    await expect(page.getByLabel("座位 0 的称呼")).toBeVisible({ timeout: 20_000 });
-    await page.getByLabel("座位 0 的称呼").fill("创作者");
-    await page.getByLabel("座位 1 的称呼").fill("朋友");
-    await page.getByLabel("我确认这两位是真人").check();
-    await page.getByRole("button", { name: "记下这是真人局" }).click();
-    await expect(page.locator(".human-attest-done")).toContainText(
-      "已记下：这是真人一起打的一局。",
-    );
-    await expect(page.locator(".human-attest-id")).toHaveText(/^finding_/);
-    await expect(page.locator(".human-attest-session")).toHaveText(/^room_/);
-    await expect(page.locator(".human-attest-replay")).toHaveText(/^replay_/);
-    await expect(page.locator(".human-attest-hypothesis")).toHaveText(/^hypothesis_/);
   });
 
   test("港口十三号 opens a light harbor table and accepts a waiter", async ({ page }) => {

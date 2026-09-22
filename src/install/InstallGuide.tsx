@@ -52,84 +52,46 @@ export function InstallGuide() {
 
       <section className="install-contract">
         <div className="contract-heading">
-          <p className="install-kicker">给 Codex 的执行契约</p>
-          <h2>安装不是一串命令成功，而是五项状态全部成立。</h2>
+          <p className="install-kicker">怎么开始</p>
+          <h2>装进 Codex，上传剧本或规则，得到别人能一起玩的游戏。</h2>
         </div>
 
-        <ol className="install-steps">
-          <li>
-            <span>01</span>
-            <div>
-              <h3>确认当前宿主</h3>
-              <p>
-                只在 Codex Desktop 继续。定位桌面应用自带的 CLI，并以
-                <code>{defaultMacCli}</code> 作为 macOS 首个候选；若不存在，
-                从当前 Codex Desktop 应用包定位 Resources/codex。必须对最终绝对路径
-                执行 <code>plugin --help</code>，不要使用 PATH 中可能过旧的全局 CLI。
-              </p>
-            </div>
-          </li>
-          <li>
-            <span>02</span>
-            <div>
-              <h3>安装 Marketplace 与 Plugin</h3>
-              <pre>
-                <code>{`${resolvedCli} plugin marketplace add yuymf/godesk-plugin --ref main\n${resolvedCli} plugin add godesk@godesk --json`}</code>
-              </pre>
-              <p>
-                若 Marketplace 已存在，先执行 upgrade，再重试 Plugin 安装；不得手改
-                Codex 配置冒充安装完成。
-              </p>
-            </div>
-          </li>
-          <li>
-            <span>03</span>
-            <div>
-              <h3>完成 GoDesk OAuth</h3>
-              <pre>
-                <code>{`${resolvedCli} mcp login godesk`}</code>
-              </pre>
-              <p>
-                在打开的 Cloudflare Access 登录页用邮箱验证码完成授权。只有 Access
-                JWT 能通过发行方、受众、期限和 creator 校验，才算登录完成。
-              </p>
-            </div>
-          </li>
-          <li>
-            <span>04</span>
-            <div>
-              <h3>验证真实能力</h3>
-              <p>
-                检查 GoDesk Plugin 已启用、MCP 可发现，并实际调用
-                <code>list_projects</code>。还要确认当前任务能打开内置浏览器；只看到
-                Plugin 名称或命令退出码不算完成。
-              </p>
-            </div>
-          </li>
-          <li>
-            <span>05</span>
-            <div>
-              <h3>自动进入新任务</h3>
-              <p>
-                使用 Codex 的任务管理能力新建并打开一个任务，发送：
-                “使用 GoDesk，根据我的剧本或规则生成一款可玩的规则游戏，尽早打开 Web Studio，
-                编译一个不可变 Build，创建可分享的会话，并把邀请链接发给别人联机游玩。”
-                必须取得新任务 ID、打开该任务，并在新任务内实际调用
-                <code>list_projects</code>；不能只在当前任务里复述这段提示。
-              </p>
-            </div>
-          </li>
-        </ol>
+        <div className="install-prose">
+          <p>
+            只在 Codex Desktop 里继续。先找到桌面应用自带的 CLI，macOS 第一个候选是
+            {" "}<code>{defaultMacCli}</code>
+            ；没有的话，从当前应用包里定位 Resources/codex。对这个绝对路径执行
+            {" "}<code>plugin --help</code>
+            ，不要用 PATH 里可能过旧的全局命令。
+          </p>
+          <p>加上 Marketplace 和 Plugin：</p>
+          <pre>
+            <code>{`${resolvedCli} plugin marketplace add yuymf/godesk-plugin --ref main\n${resolvedCli} plugin add godesk@godesk --json`}</code>
+          </pre>
+          <p>
+            若 Marketplace 已经在，先 upgrade 再重试。不要手改 Codex 配置来冒充装好。
+          </p>
+          <p>登录 GoDesk：</p>
+          <pre>
+            <code>{`${resolvedCli} mcp login godesk`}</code>
+          </pre>
+          <p>
+            在打开的 Cloudflare Access 页面用邮箱验证码授权。只有登录成功，并且当前任务真的能调用
+            {" "}<code>list_projects</code>
+            、能打开内置浏览器，才算可用。
+          </p>
+          <p>
+            然后新建一个 Codex 任务，让它根据你的剧本或规则生成一款别人能立刻打开、立刻玩、还能联机的游戏。尽早打开网站创作台，发出邀请链接。朋友只打开 URL，不装 Codex。
+          </p>
+        </div>
       </section>
 
       <section className="install-recovery">
-        <p className="install-kicker">恢复规则</p>
+        <p className="install-kicker">出问题时</p>
         <h2>失败就停在准确的位置。</h2>
         <p>
-          报告失败的阶段、实际命令或工具、原始错误和下一步。OAuth
-          未配置、远程仓库尚未发布、MCP 不可达或无法新建任务时，都必须明确标记为
-          “未安装完成”。若连续重试仍失败，使用任务管理能力新建并打开一个恢复任务，
-          写入失败阶段与原始错误；不得降级成一份让用户自己猜的教程。
+          报告失败发生在哪一步、实际命令或工具、原始错误和下一步。登录没配好、远程仓库还没发布、连不上
+          GoDesk，或没法新建任务时，都要明确说“还没装好”。若连续重试仍失败，新建一个恢复任务，写上失败位置和原始错误；不要降级成一份让人自己猜的教程。
         </p>
       </section>
     </main>
