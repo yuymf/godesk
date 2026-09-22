@@ -9,9 +9,9 @@ Live acceptance is the user-visible charter path, not this directory.
 
 Share gate is the Playability Floor (ADR 0012), not a dated evidence log.
 
-The previous ~1380-line snapshot of IDs and one-off browser runs lived on this
-path. Recover it from git history if needed. Do not treat those IDs as current
-acceptance.
+Historical per-ticket acceptance lived under `issues/` and in an older long
+`acceptance.md`; recover from git history if needed. Do not treat those IDs as
+current acceptance.
 
 Remaining human gates stay open:
 
