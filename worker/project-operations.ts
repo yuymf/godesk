@@ -170,15 +170,7 @@ export function normalizedRuleSystem(ruleSystem: RuleSystem): RuleSystem {
   return structuredClone(ruleSystem);
 }
 
-export function sameRuleSystemContent(left: RuleSystem, right: RuleSystem) {
-  const comparable = (ruleSystem: RuleSystem) => ({
-    ...structuredClone(ruleSystem),
-    id: "",
-    version: 0,
-    restoredFromBuildId: undefined,
-  });
-  return JSON.stringify(comparable(left)) === JSON.stringify(comparable(right));
-}
+export { sameRuleSystemContent } from "../src/creator/rule-system-compare";
 
 export function normalizedBuild(build: StoredPlayableBuild): StoredPlayableBuild {
   if (!build.presentationFloor || !build.playabilityFloor) {
