@@ -1,4 +1,4 @@
-import type { DefaultExampleId } from "./default-examples";
+import { isDefaultExampleId, type DefaultExampleId } from "./default-examples";
 
 export const COMPOSER_DRAFT_KEY = "godesk-composer-draft";
 
@@ -25,10 +25,6 @@ function defaultStorage(): DraftStorage | undefined {
   }
 }
 
-function isExampleId(value: unknown): value is DefaultExampleId {
-  return value === "harbor-13" || value === "mistpeak-lodge" || value === "idea-relay";
-}
-
 export function readComposerDraft(storage: DraftStorage | undefined = defaultStorage()) {
   if (!storage) return undefined;
   try {
@@ -46,7 +42,7 @@ export function readComposerDraft(storage: DraftStorage | undefined = defaultSto
       description: parsed.description,
       rulesText: parsed.rulesText,
       resume,
-      exampleId: resume === "example" && isExampleId(parsed.exampleId) ? parsed.exampleId : undefined,
+      exampleId: resume === "example" && isDefaultExampleId(parsed.exampleId) ? parsed.exampleId : undefined,
     } satisfies ComposerDraft;
   } catch {
     return undefined;

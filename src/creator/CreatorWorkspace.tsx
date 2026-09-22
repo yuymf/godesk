@@ -568,7 +568,7 @@ function CreatorHome() {
     setCompletedStages(2);
     setStageLabel("打开这局游戏");
     setProjects(await listProjects());
-    window.location.assign(`${created.studioUrl}?plan=pending`);
+    window.location.assign(created.studioUrl);
   }
 
   async function submit(event: React.FormEvent) {

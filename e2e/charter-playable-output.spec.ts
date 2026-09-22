@@ -103,6 +103,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await page.getByRole("button", { name: "3人剧本杀" }).click();
     await generate.click();
     await page.waitForURL(/\/studio\//, { timeout: 90_000 });
+    await expect(page).not.toHaveURL(/[?&]plan=/);
     await expect(page.getByRole("heading", { name: "先看这一局怎么玩" })).toBeVisible({
       timeout: 30_000,
     });
@@ -205,6 +206,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await page.getByRole("button", { name: "3人剧本杀" }).click();
     await page.getByRole("button", { name: "生成可玩版本" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 90_000 });
+    await expect(page).not.toHaveURL(/[?&]plan=/);
     await expect(page.getByRole("heading", { name: "先看这一局怎么玩" })).toBeVisible({
       timeout: 30_000,
     });

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   INGESTION_LIMITS,
+  extractRulebookText,
+  harvestRulebookPageImages,
   normalizedMimeType,
   validateImageAssets,
-  sha256Hex,
   validateRulebookFile,
-  validateSourceBundle,
 } from "./ingestion";
 
 function testFile(
@@ -16,19 +16,7 @@ function testFile(
   return new File([new Uint8Array(size)], name, { type });
 }
 
-describe("source bundle validation", () => {
-  it("accepts a PDF rulebook and supported image assets", () => {
-    expect(
-      validateSourceBundle({
-        rulebook: testFile("rules.pdf", "application/pdf"),
-        assets: [
-          testFile("board.png", "image/png"),
-          testFile("cards.webp", "image/webp"),
-        ],
-      }),
-    ).toEqual([]);
-  });
-
+describe("home rulebook extraction", () => {
   it("normalizes types from file extensions when browsers omit MIME", () => {
     expect(normalizedMimeType({ name: "RULES.PDF", type: "" })).toBe(
       "application/pdf",
@@ -39,32 +27,47 @@ describe("source bundle validation", () => {
     expect(normalizedMimeType({ name: "rules.md", type: "" })).toBe(
       "text/markdown",
     );
+    expect(normalizedMimeType({ name: "notes.txt", type: "" })).toBe(
+      "text/plain",
+    );
   });
 
   it("accepts PDF and text rulebooks for the creator-first flow", () => {
     expect(validateRulebookFile(testFile("rules.pdf", "application/pdf"))).toBe("");
     expect(validateRulebookFile(testFile("rules.txt", "text/plain"))).toBe("");
+    expect(validateRulebookFile(testFile("rules.md", "text/markdown"))).toBe("");
     expect(validateRulebookFile(testFile("rules.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))).toContain("PDF、TXT 或 Markdown");
+    expect(validateRulebookFile(testFile("empty.txt", "text/plain", 0))).toBe("规则文档是空文件。");
   });
 
-  it("reports unsupported, empty, oversized, and missing inputs together", () => {
-    const errors = validateSourceBundle({
-      rulebook: testFile("rules.txt", "text/plain", 0),
-      assets: [
-        testFile(
-          "huge.bmp",
-          "image/bmp",
-          INGESTION_LIMITS.maxAssetFileBytes + 1,
-        ),
-      ],
-    });
-
-    expect(errors).toContain("规则书必须是 PDF 文件。");
-    expect(errors).toContain("规则书是空文件。");
-    expect(errors).toContain("huge.bmp 不是支持的 PDF、JPG、PNG、WebP 或 GIF。");
-    expect(errors).toContain("huge.bmp 超过单文件 25 MB 限制。");
+  it("extracts TXT and Markdown as the home path does", async () => {
+    await expect(
+      extractRulebookText(new File(["三个人在别墅里讨论谁是凶手。"], "idea.txt", { type: "text/plain" })),
+    ).resolves.toBe("三个人在别墅里讨论谁是凶手。");
+    await expect(
+      extractRulebookText(new File(["# 港口竞速\n派遣伙计。"], "rules.md", { type: "text/markdown" })),
+    ).resolves.toBe("# 港口竞速\n派遣伙计。");
   });
 
+  it("rejects empty or unsupported files before extraction", async () => {
+    await expect(extractRulebookText(testFile("empty.txt", "text/plain", 0)))
+      .rejects.toThrow("规则文档是空文件。");
+    await expect(
+      extractRulebookText(testFile("rules.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")),
+    ).rejects.toThrow("PDF、TXT 或 Markdown");
+  });
+
+  it("does not harvest page images from text rulebooks", async () => {
+    await expect(
+      harvestRulebookPageImages(new File(["# 规则"], "rules.md", { type: "text/markdown" })),
+    ).resolves.toEqual([]);
+    await expect(
+      harvestRulebookPageImages(new File(["plain idea"], "notes.txt", { type: "text/plain" })),
+    ).resolves.toEqual([]);
+  });
+});
+
+describe("home visual assets", () => {
   it("validates standalone visual assets for prompt generation", () => {
     expect(validateImageAssets([
       testFile("board.png", "image/png"),
@@ -83,14 +86,5 @@ describe("source bundle validation", () => {
     const files = Array.from({ length: INGESTION_LIMITS.maxGenerationImages + 1 }, (_, index) =>
       testFile(`image-${index}.png`, "image/png"));
     expect(validateImageAssets(files)).toContain("一次最多添加 8 张图片素材。");
-  });
-});
-
-describe("source hashing", () => {
-  it("produces the known SHA-256 for abc", async () => {
-    const bytes = new TextEncoder().encode("abc");
-    await expect(sha256Hex(bytes.buffer)).resolves.toBe(
-      "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
-    );
   });
 });

@@ -60,6 +60,21 @@ describe("hobbyist composer draft", () => {
     expect(readComposerDraft(storage)?.exampleId).toBe("idea-relay");
   });
 
+  it("drops an unknown example id instead of keeping a stale resume target", () => {
+    const storage = memoryStorage();
+    storage.setItem(
+      COMPOSER_DRAFT_KEY,
+      JSON.stringify({
+        name: "我的游戏",
+        description: "",
+        rulesText: "",
+        resume: "example",
+        exampleId: "not-a-real-example",
+      }),
+    );
+    expect(readComposerDraft(storage)?.exampleId).toBeUndefined();
+  });
+
   it("ignores a broken payload instead of blocking the composer", () => {
     const storage = memoryStorage();
     storage.setItem(COMPOSER_DRAFT_KEY, "{not-json");
