@@ -507,6 +507,91 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
     });
   });
 
+  it("proposes harbor-voyage for placement genre and configures it on approve", async () => {
+    const created = await SELF.fetch("https://godesk.test/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Placement harbor generation" }),
+    }).then((response) => response.json<{
+      project: { id: string; version: number };
+    }>());
+    const brief = [
+      "3 players take turns on a shared worker placement board.",
+      "On your turn place one worker onto a resource region;",
+      "occupied spaces cannot be reused.",
+      "First to finish two buildings wins.",
+    ].join(" ");
+    const queued = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/jobs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          kind: "generate-rule-system",
+          expectedVersion: created.project.version,
+          idea: brief,
+          sourceContent: brief,
+          sourceKind: "brief",
+          sourceName: "placement-brief.txt",
+          name: "Placement harbor generation",
+          idempotencyKey: "generate-placement-harbor-001",
+        }),
+      },
+    ).then((response) => response.json<{ id: string; status: string }>());
+    expect(queued.status).toBe("queued");
+    const finished = await waitForJob(queued.id);
+    expect(finished.status).toBe("succeeded");
+    const generated = finished.result as {
+      project: { version: number };
+      ruleSystem: {
+        playSurface: { kind: string; layout?: string };
+        runtimeSupport: { status: string };
+        participants: { default: number };
+      };
+      generationPlan: {
+        status: string;
+        proposedRuntime?: {
+          op: string;
+          config: { playerCount: number; unsupported?: string[] };
+        };
+      };
+    };
+    expect(generated.ruleSystem.runtimeSupport).toMatchObject({ status: "draft" });
+    expect(generated.ruleSystem.playSurface).toMatchObject({
+      kind: "table",
+      layout: "worker-placement",
+    });
+    expect(generated.generationPlan).toMatchObject({
+      status: "pending",
+      proposedRuntime: {
+        op: "configure_harbor_voyage",
+        config: {
+          playerCount: 3,
+          unsupported: expect.arrayContaining([
+            expect.stringContaining("harbor-voyage-v1"),
+          ]),
+        },
+      },
+    });
+    const approved = await approveGenerationPlan(
+      created.project.id,
+      generated.project.version,
+      "placement-harbor-approve-plan",
+    );
+    expect(approved.project.version).toBeGreaterThan(generated.project.version);
+    const ruleSystem = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}?view=rule-system`,
+    ).then((response) => response.json<{
+      runtimeSupport:
+        | { status: "draft" }
+        | { status: "executable"; kernel: { type: string; playerCount: number } };
+    }>());
+    expect(ruleSystem.runtimeSupport).toMatchObject({
+      status: "executable",
+      kernel: { type: "harbor-voyage-v1", playerCount: 3 },
+    });
+  });
+
   it("keeps an over-limit action set in draft instead of dropping source actions", async () => {
     const created = await SELF.fetch("https://godesk.test/api/projects", {
       method: "POST",

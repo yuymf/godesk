@@ -178,6 +178,7 @@ export async function runCreatorJob(
         );
       const hiddenRoleRuntimeConfigured = sourceGenre === "hidden-role";
       const handPlayRuntimeConfigured = sourceGenre === "hand-play";
+      const harborVoyageRuntimeConfigured = sourceGenre === "placement";
       const conversationRelayRuntimeConfigured =
         sourceGenre === "conversation" &&
         sourceRuntimeActions.length > 0 &&
@@ -229,6 +230,7 @@ export async function runCreatorJob(
       generationRuntimeConfigured =
         hiddenRoleRuntimeConfigured ||
         handPlayRuntimeConfigured ||
+        harborVoyageRuntimeConfigured ||
         conversationRelayRuntimeConfigured ||
         scoreRaceRuntimeConfigured ||
         sharedGoalRuntimeConfigured ||
@@ -282,6 +284,28 @@ export async function runCreatorJob(
               })),
               unsupported: [
                 "conversation-relay-v1 records required speech into the transcript and scores the chosen action; prose quality is judged by people.",
+              ],
+            },
+          }
+        : harborVoyageRuntimeConfigured
+        ? {
+            op: "configure_harbor_voyage" as const,
+            config: {
+              playerCount: Math.max(
+                2,
+                Math.min(3, generatedRuleSystem.participants.default),
+              ),
+              unsupported: [
+                "harbor-voyage-v1 executes a fixed 2–3 player harbor table placement, movement, pilot, and settlement loop; source-specific boards, resources, buildings, and victory conditions remain unsupported.",
+                ...(generatedRuleSystem.participants.default > 3
+                  ? [
+                      `The source asked for ${generatedRuleSystem.participants.default} players; harbor-voyage-v1 clamps to 3 without inventing a larger table.`,
+                    ]
+                  : generatedRuleSystem.participants.default < 2
+                    ? [
+                        `The source asked for ${generatedRuleSystem.participants.default} players; harbor-voyage-v1 requires at least 2.`,
+                      ]
+                    : []),
               ],
             },
           }
@@ -536,6 +560,8 @@ export async function runCreatorJob(
           ? "规则结构来自体裁识别；牌库、隐藏手牌与出牌计分将在批准 Generation Plan 后配置为 hand-play-v1。"
           : proposedRuntime?.op === "configure_conversation_relay"
           ? "规则结构来自体裁识别；发言必须写入记录，并按行动计分，将在批准 Generation Plan 后配置为 conversation-relay-v1。"
+          : proposedRuntime?.op === "configure_harbor_voyage"
+          ? "规则结构来自体裁识别；共享桌面放置环将在批准 Generation Plan 后配置为 harbor-voyage-v1；来源专属棋盘与资源结算仍保持未支持说明。"
         : proposedRuntime?.op === "configure_roll_and_move"
           ? "规则结构来自确定性文本抽取；骰子面数、按点数前进与先到终点获胜将在批准 Generation Plan 后配置为可复现的 roll-and-move-v1。"
           : proposedRuntime?.op === "configure_push_your_luck"

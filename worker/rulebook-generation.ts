@@ -670,6 +670,9 @@ export function createGenerationPlan(input: {
   } else if (input.proposedRuntime?.op === "configure_conversation_relay") {
     assumptions.push("Playability Floor 验收：每次行动必须带文本，发言进入 Session State 与 Replay。");
     unsupported.push("不把对话游戏收成无文本的计分按钮。");
+  } else if (input.proposedRuntime?.op === "configure_harbor_voyage") {
+    assumptions.push("Playability Floor 验收：共享桌面可见、放置占用具体位置、航行与结算写入 Session State 与 Replay。");
+    unsupported.push("不把工人放置换成计分赛；不把来源棋盘假装成已完整执行。");
   } else if (!input.proposedRuntime && genre !== "generic") {
     assumptions.push("来源体裁还没有可执行内核。Playability Floor 不会放行换皮分享。");
     unsupported.push("诚实缺口：不能用另一种更简单的游戏顶替。");

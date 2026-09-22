@@ -1151,7 +1151,7 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
     const expected = {
       script: { op: "configure_hidden_role" },
       cards: { op: "configure_hand_play" },
-      board: undefined,
+      board: { op: "configure_harbor_voyage" },
     } as const;
     for (const starter of HOBBYIST_STARTERS) {
       const created = await SELF.fetch("https://godesk.test/api/projects", {
@@ -1181,11 +1181,7 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
         generationPlan: { status: string; proposedRuntime?: { op: string } };
       }).generationPlan;
       expect(plan.status, starter.label).toBe("pending");
-      if (starter.id === "board") {
-        expect(plan.proposedRuntime, starter.label).toBeUndefined();
-      } else {
-        expect(plan.proposedRuntime?.op, starter.label).toBe(expected[starter.id].op);
-      }
+      expect(plan.proposedRuntime?.op, starter.label).toBe(expected[starter.id].op);
       const participants = (
         finished.result as {
           ruleSystem: { participants: { min: number; max: number; default: number } };
