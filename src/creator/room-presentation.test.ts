@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { RuleSystem } from "./project-contract";
-import { usesScoreTrackSurface } from "./room-presentation";
+import {
+  showsAcceptedActionPointChrome,
+  usesConversationTranscriptSurface,
+  usesScoreTrackSurface,
+} from "./room-presentation";
 
 type ExecutableKernel = Extract<
   Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
@@ -109,5 +113,53 @@ describe("usesScoreTrackSurface", () => {
       type: "harbor-voyage-v1",
       playerCount: 4,
     }))).toBe(false);
+  });
+});
+
+const conversationKernel = {
+  type: "conversation-relay-v1" as const,
+  victoryTarget: 8,
+  maxTurns: 8,
+  actions: [{ id: "speak", label: "发言", points: 1 }],
+};
+
+describe("usesConversationTranscriptSurface", () => {
+  it("is true only for conversation-relay", () => {
+    expect(usesConversationTranscriptSurface(base(conversationKernel))).toBe(true);
+    expect(usesConversationTranscriptSurface(base({
+      type: "score-race-v1",
+      victoryTarget: 8,
+      maxTurns: 12,
+      actions: [{ id: "a", label: "得分", points: 2 }],
+    }))).toBe(false);
+    expect(usesConversationTranscriptSurface(base({
+      type: "harbor-voyage-v1",
+      playerCount: 4,
+    }))).toBe(false);
+  });
+});
+
+describe("showsAcceptedActionPointChrome", () => {
+  it("hides point chrome for conversation even though the kernel awards points", () => {
+    expect(showsAcceptedActionPointChrome(base(conversationKernel))).toBe(false);
+    expect(usesScoreTrackSurface(base(conversationKernel))).toBe(false);
+  });
+
+  it("keeps point chrome for score-track and non-conversation genre kernels", () => {
+    expect(showsAcceptedActionPointChrome(base({
+      type: "score-race-v1",
+      victoryTarget: 8,
+      maxTurns: 12,
+      actions: [{ id: "a", label: "得分", points: 2 }],
+    }))).toBe(true);
+    expect(showsAcceptedActionPointChrome(base({
+      type: "hand-play-v1",
+      playerCount: 2,
+      cardValues: [1, 2, 3],
+      copiesPerValue: 2,
+      handSize: 3,
+      victoryTarget: 10,
+      actions: [{ id: "play", label: "出牌" }],
+    }))).toBe(true);
   });
 });
