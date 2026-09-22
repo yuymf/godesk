@@ -1,12 +1,11 @@
-import type { PlaySurfaceKind, RuleSystem } from "../creator/project-contract";
-import { inferSourceGenre, type SourceGenre } from "./genre";
+import type {
+  PlayabilityFloorReadiness,
+  PlaySurfaceKind,
+  RuleSystem,
+} from "../creator/project-contract";
+import { inferSourceGenre } from "./genre";
 
-export interface PlayabilityFloorReadiness {
-  status: "passed" | "failed";
-  reason: string;
-  genre: SourceGenre;
-  kernelType: string | null;
-}
+export type { PlayabilityFloorReadiness };
 
 const SHAREABLE_KERNELS = new Set([
   "hidden-role-v1",
