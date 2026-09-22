@@ -123,6 +123,29 @@ for (const requiredTerm of [
   assert(contractText.includes(requiredTerm), `current protocol term is missing: ${requiredTerm}`);
 }
 
+const createSkillNames = ["create-game-project", "create-shareable-prototype"];
+for (const skillName of createSkillNames) {
+  assert(skillNames.includes(skillName), `plugin must keep ${skillName} as a Skill directory`);
+  const createSkill = await readFile(
+    path.join(root, `plugins/godesk/skills/${skillName}/SKILL.md`),
+    "utf8",
+  );
+  for (const kernel of ["hidden-role-v1", "hand-play-v1", "conversation-relay-v1"]) {
+    assert(
+      createSkill.includes(kernel),
+      `${skillName} is missing ADR 0012 kernel: ${kernel}`,
+    );
+  }
+}
+const createDelegate = await readFile(
+  path.join(root, "plugins/godesk/skills/create-game-project/SKILL.md"),
+  "utf8",
+);
+assert(
+  createDelegate.includes("create-shareable-prototype"),
+  "create-game-project must delegate to create-shareable-prototype",
+);
+
 console.log(
   `GoDesk plugin bundle verified: ${skillNames.length} Skills, version ${plugin.version}.`,
 );
