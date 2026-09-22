@@ -127,6 +127,19 @@ export function isHarborVoyage(ruleSystem: RuleSystem): boolean {
   );
 }
 
+/** Score-track family only — themed scoreboard UI must not stand in for other genres (ADR 0012). */
+export function usesScoreTrackSurface(ruleSystem: RuleSystem): boolean {
+  return Boolean(
+    scoreRaceKernel(ruleSystem) ||
+      sharedGoalKernel(ruleSystem) ||
+      takeAwayKernel(ruleSystem) ||
+      rollAndMoveKernel(ruleSystem) ||
+      drawAndScoreKernel(ruleSystem) ||
+      pushYourLuckKernel(ruleSystem) ||
+      turnTakingKernel(ruleSystem),
+  );
+}
+
 export type RoomLocale = "zh" | "en";
 
 export const ROOM_COPY = {

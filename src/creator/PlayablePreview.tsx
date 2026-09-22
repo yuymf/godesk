@@ -11,6 +11,7 @@ import {
   sharedGoalKernel,
   takeAwayKernel,
   turnTakingKernel,
+  usesScoreTrackSurface,
 } from "./room-presentation";
 import { HarborVoyageBoard } from "./HarborVoyageBoard";
 import { href, readShareToken } from "./studio-utils";
@@ -50,6 +51,7 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
   const pushYourLuck = pushYourLuckKernel(build.ruleSystem);
   const turnTaking = turnTakingKernel(build.ruleSystem);
   const harbor = isHarborVoyage(build.ruleSystem);
+  const scoreTrackSurface = usesScoreTrackSurface(build.ruleSystem);
   const runtimeValues = new Map(
     race?.actions.map((action) => [action.id, action.points]) ??
       sharedGoal?.actions.map((action) => [action.id, action.progress]) ??
@@ -130,6 +132,7 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
               ) : (
                 <p className="preview-empty">这个 Rule System 还没有可展示的游戏区域。</p>
               )}
+              {scoreTrackSurface && (
               <div
                 className="preview-score-track"
                 aria-label={takeAway ? "共享拿取池" : rollAndMove ? "位置轨道" : drawAndScore ? "抽牌牌库与分数" : pushYourLuck ? "未存分与总分" : turnTaking ? "回合轨道" : sharedGoal ? "共享目标进度" : "分数轨道"}
@@ -158,6 +161,7 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
                     : "尚未配置确定性运行时"}
                 </small>
               </div>
+              )}
             </div>
           </section>
           <section className="preview-actions" aria-label="可用行动预览">
