@@ -1,9 +1,11 @@
 ---
 name: create-shareable-prototype
-description: Turn a game idea or source into a presentable GoDesk Shared Session and return its invitation URL. Use when a creator asks to make, share, or quickly test a rule-orchestrated game with friends.
+description: Turn a game idea or source into a playable GoDesk Shared Session and return its invitation URL. Use when a creator asks to make, prototype, generate, share, or quickly test a rule-orchestrated game with friends.
 ---
 
 # Create a Shareable Prototype
+
+The only create path. `$create-game-project` delegates here.
 
 The success path is Idea or Source → playable finished game → invitation URL
 that others can open and play. Presentation Floor and Playability Floor,
@@ -11,35 +13,69 @@ immutable Build, Studio embedded Shared Session, and a stable Playtest Link
 exist to make that output real. A themed score-race stand-in is not delivery.
 A Finding is optional.
 
+## Executable Kernel choice
+
+Use the same table as `godesk-plugin-basics`. Configure exactly one Kernel
+that matches the source genre. Do not substitute `score-race-v1` for another
+genre.
+
+- `hidden-role-v1` executes secret roles, one public speech per seat, one
+  accusation per seat, and majority reveal. Use it for 剧本杀 / hidden-role
+  sources. Do not substitute a score race.
+- `hand-play-v1` executes a shuffled deck, hidden hands, play-to-score, and
+  first-to-target or highest score when hands empty.
+- `conversation-relay-v1` records required speech into the transcript and
+  scores the chosen action.
+- `harbor-voyage-v1` executes worker placement on a harbor table.
+- `score-race-v1` executes explicit per-seat point actions, a victory target,
+  and a turn limit. Use it only when the source itself is a point race.
+- `shared-goal-v1` executes explicit turn-taking actions that add to one shared
+  progress track, a shared target, and a turn limit. It has no winner seat;
+  completion means the shared target was reached.
+- `turn-taking-v1` executes an explicit bounded action list in round-robin seat
+  order until its turn limit. It exposes turn state but does not infer a
+  winner, score, resources, or other rule resolution.
+- `take-away-v1` executes an explicit finite shared pool, legal positive take
+  amounts, round-robin turns, and a last-taken-wins condition. Do not select it
+  when the source omits any of those semantics.
+- `roll-and-move-v1` executes one explicit die, deterministic fixed-seed rolls,
+  movement by each result, round-robin turns, and a first-to-position target.
+  Its safety turn limit ends without a winner when nobody reaches the target.
+- `draw-and-score-v1` executes a finite shuffled deck, deterministic fixed-seed
+  top-card draws without replacement, score by card value, first-to-target
+  victory, and unique-high-score deck exhaustion. Public Session State exposes
+  only counts and the last draw; an exhaustion tie has no winner seat.
+- `push-your-luck-v1` executes repeated deterministic rolls, one bust face,
+  an unbanked turn score, voluntary banking, round-robin turns, and a
+  banked-score victory target. Empty banking is illegal; its action safety
+  limit ends without a winner.
+- Keep unsupported source behavior visible. Do not convert a cooperative goal
+  into a competitive score race merely because both actions carry numbers.
+
+Scoring, shared-goal, and turn-taking Kernels require a turn limit. Take-away
+and draw-and-score terminate from finite resources. Give roll-and-move a
+visible safety turn limit with no invented winner. Give push-your-luck a
+visible action safety limit with no invented winner.
+
 ## Workflow
 
-1. Call `create_project`, then submit and track `generate-rule-system` with the
-   idea and optional source content. Include harvested page images as
-   `project-asset` entries in `visualInputs` when a PDF is
-   supplied.
+1. Call `create_project` once and immediately open its returned Web Studio URL.
+   Submit and track `generate-rule-system` with the idea and optional source
+   content. Classify every supplied image before submission: `visual-reference`
+   when it only guides style or composition, `project-asset` when the creator
+   wants the exact pixels in the game. Include harvested page images as
+   `project-asset` entries in `visualInputs` when a PDF is supplied. Make
+   conservative defaults for working name, participant range, and duration
+   when those details are non-blocking, and state them.
 2. Read `generation-plan`, Sources, and the Rule System. Review the plan's
-   loop, actions, assumptions, and unsupported behavior. If its runtime support is still `draft`,
-   use one version-checked `apply_project_patch` to make the requested prototype
-   explicit: update the Rule System fields and configure the smallest meaningful
-   supported Kernel that matches the source genre (`hidden-role-v1` for secret
-   identities and accusations, `hand-play-v1` for hidden hands, `conversation-relay-v1`
-   for recorded speech, `harbor-voyage-v1` for placement, `score-race-v1` only
-   when the source itself is a point race,
-   `shared-goal-v1` for cooperative progress, or `turn-taking-v1` for an
-   explicit bounded round-robin action loop with no inferred winner, or
-   `take-away-v1` for an explicit finite shared pool and last-taken-wins loop,
-   or `roll-and-move-v1` when die sides, movement by the roll, and a finish
-   position are explicit, or `draw-and-score-v1` for an explicit finite shuffled
-   deck, top-card draws, score-by-value, target, and exhaustion result). Do not
-   substitute score-race for another genre. Give
-   roll-and-move a visible safety turn limit with no invented winner;
-   use `push-your-luck-v1` when repeated rolls, one bust face, unbanked score,
-   voluntary banking, and a banked-score target are explicit. Give it a visible
-   action safety limit with no invented winner. Mark Codex-proposed rules as
-   `ai-proposed`, keep every unsupported behavior visible, and disclose the
-   assumptions in the handoff. Then approve the pending plan with
-   `approve_generation_plan` using the latest project version. Compile only an
-   approved, executable Rule System.
+   loop, actions, assumptions, and unsupported behavior. If its runtime support
+   is still `draft`, use one version-checked `apply_project_patch` to make the
+   requested game explicit: update the Rule System fields and configure the
+   Kernel from the table above. Mark Codex-proposed rules as `ai-proposed`,
+   keep every unsupported behavior visible, and disclose the assumptions in
+   the handoff. Then approve the pending plan with `approve_generation_plan`
+   using the latest project version. Compile only an approved, executable
+   Rule System.
 3. Harvest and bind extracted art first. Use
    `generate-visual-fill` for missing art; without host generation capacity,
    apply typographic/programmatic presentation or a theme kit so the
