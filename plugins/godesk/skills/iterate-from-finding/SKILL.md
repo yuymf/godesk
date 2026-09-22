@@ -26,8 +26,11 @@ same GoDesk Game Project.
    or the matching `configure_score_race` / `configure_shared_goal` /
    `configure_turn_taking` / `configure_take_away` /
    `configure_roll_and_move` / `configure_draw_and_score` /
-   `configure_push_your_luck` operation when the
-   Executable Kernel values change.
+   `configure_push_your_luck` / `configure_hidden_role` /
+   `configure_hand_play` / `configure_conversation_relay` /
+   `configure_harbor_voyage` operation when the Executable Kernel values
+   change. Choose the Kernel with the table in `$godesk-plugin-basics`; do
+   not substitute a score-track `configure_*` for a genre Kernel.
    Preserve source anchors,
    unsupported behavior, and the existing Play Surface unless the Finding
    explicitly tests one of them.
@@ -35,7 +38,7 @@ same GoDesk Game Project.
    `iterate-rule-system` path is intentionally narrower: it accepts only one
    explicit action-description rewrite and records the original prompt. Use
    the structured operations above for score, progress, turn-limit, action
-   shape, or victory-condition changes.
+   shape, roles/hands/speech/placement, or victory-condition changes.
 4. Before mutating, re-read the current project version and use it as
    `expectedVersion` with a fresh idempotency key. Re-read the affected Rule
    System view after the patch. On a version conflict, reconcile the visible
