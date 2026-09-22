@@ -76,10 +76,9 @@ export async function extractRulebookText(file: File) {
   assertPdfHeader(new Uint8Array(buffer), file.name);
   let loadingTask: PDFDocumentLoadingTask | undefined;
   try {
-    const { getDocument, GlobalWorkerOptions } = await import("pdfjs-dist");
-    GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
-    loadingTask = getDocument({ data: new Uint8Array(buffer) });
-    const pdfDocument = await loadingTask.promise;
+    const opened = await openPdfDocument(new Uint8Array(buffer));
+    loadingTask = opened.loadingTask;
+    const pdfDocument = opened.pdfDocument;
     if (pdfDocument.numPages > INGESTION_LIMITS.maxPdfPages) {
       throw new Error(`${file.name} 有 ${pdfDocument.numPages} 页，超过 200 页限制。`);
     }
@@ -110,6 +109,21 @@ function assertPdfHeader(bytes: Uint8Array, name: string) {
     throw new Error(`${name} 不是可读取的 PDF：文件头无效。`);
   }
 }
+
+
+async function openPdfDocument(bytes: Uint8Array) {
+  const { getDocument, GlobalWorkerOptions, OPS } = await import("pdfjs-dist");
+  GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+  const loadingTask = getDocument({ data: new Uint8Array(bytes) });
+  try {
+    const pdfDocument = await loadingTask.promise;
+    return { pdfDocument, loadingTask, OPS };
+  } catch (error) {
+    await loadingTask.destroy();
+    throw error;
+  }
+}
+
 
 function canvasToBlob(canvas: HTMLCanvasElement) {
   return new Promise<Blob>((resolve, reject) => {
@@ -206,10 +220,10 @@ async function extractPdf(
 
   let loadingTask: PDFDocumentLoadingTask | undefined;
   try {
-    const { getDocument, GlobalWorkerOptions, OPS } = await import("pdfjs-dist");
-    GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
-    loadingTask = getDocument({ data: new Uint8Array(buffer.slice(0)) });
-    const pdfDocument = await loadingTask.promise;
+    const opened = await openPdfDocument(bytes);
+    loadingTask = opened.loadingTask;
+    const pdfDocument = opened.pdfDocument;
+    const { OPS } = opened;
     if (pdfDocument.numPages > INGESTION_LIMITS.maxPdfPages) {
       throw new Error(
         `${file.name} 有 ${pdfDocument.numPages} 页，超过 200 页限制。`,
