@@ -346,6 +346,26 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await friendContext.close();
   });
 
+  test("opening preview from a compiled Build goes to the play URL", async ({
+    page,
+  }) => {
+    await page.goto("/chatgpt-plugin/new");
+    await page.getByRole("button", { name: "聚会卡牌" }).click();
+    await page.getByRole("button", { name: "生成可玩版本" }).click();
+    await page.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 90_000 });
+    await page.getByRole("button", { name: "确认玩法并开始试玩" }).click();
+    await expect(page.getByRole("heading", { name: "现在就开玩" })).toBeVisible({
+      timeout: 90_000,
+    });
+
+    await page.getByText("查看可玩版本与操作").click();
+    await page.getByRole("button", { name: "打开预览" }).click();
+    await page.waitForURL(/\/chatgpt-plugin\/play\//);
+    await expect(page.getByText("这个版本长什么样")).toBeVisible();
+    await expect(page.getByText("hand-play-v1", { exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "回工作室" })).toBeVisible();
+  });
+
   test("聚会卡牌 starter deals hidden hands and plays a card", async ({ page }) => {
     await page.goto("/chatgpt-plugin/new");
     await page.getByRole("button", { name: "聚会卡牌" }).click();

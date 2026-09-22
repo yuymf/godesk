@@ -152,7 +152,6 @@ const CREATOR_JOB_LABELS: Record<CreatorJob["kind"], string> = {
   "iterate-rule-system": "应用自然语言迭代",
   "compile-build": "编译可玩版本",
   "bot-playtest": "自动试玩",
-  "render-preview": "生成预览",
   "export-build": "导出 Build",
 };
 
@@ -1356,26 +1355,20 @@ function ProjectStudio({ projectId }: { projectId: string }) {
     }
   }
 
-  async function submitBuildHandoff(
-    build: PlayableBuild,
-    kind: "render-preview" | "export-build",
-  ) {
+  async function exportBuild(build: PlayableBuild) {
     if (!project) return;
     setBusy(true);
     setFormError("");
     try {
       const submitted = await submitJob(project.id, {
-        kind,
+        kind: "export-build",
         buildId: build.id,
         idempotencyKey: crypto.randomUUID(),
       });
       const job = await trackJob(submitted);
       if (job.status === "failed") throw new Error(job.error ?? "任务失败。");
       await loadProject();
-      const url =
-        kind === "render-preview"
-          ? job.result?.previewUrl
-          : job.result?.artifactUrl;
+      const url = job.result?.artifactUrl;
       if (typeof url === "string") window.location.assign(url);
     } catch (reason) {
       setFormError(reason instanceof Error ? reason.message : "任务失败。");
@@ -2504,16 +2497,14 @@ function ProjectStudio({ projectId }: { projectId: string }) {
                         </button>
                         <button
                           disabled={busy}
-                          onClick={() =>
-                            submitBuildHandoff(build, "render-preview")}
+                          onClick={() => window.location.assign(build.playableUrl)}
                           type="button"
                         >
                             打开预览
                         </button>
                         <button
                           disabled={busy}
-                          onClick={() =>
-                            submitBuildHandoff(build, "export-build")}
+                          onClick={() => exportBuild(build)}
                           type="button"
                         >
                             导出项目

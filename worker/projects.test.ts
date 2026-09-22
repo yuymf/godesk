@@ -3205,13 +3205,27 @@ describe("Game Project HTTP seam", () => {
       ".godesk.json",
     );
 
-    const failedJob = await SELF.fetch(
+    const rejectedPreview = await SELF.fetch(
       `https://godesk.test/api/projects/${project.id}/jobs`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           kind: "render-preview",
+          buildId: submitted.result.build.id,
+          idempotencyKey: "durable-preview-gone-001",
+        }),
+      },
+    );
+    expect(rejectedPreview.status).toBe(400);
+
+    const failedJob = await SELF.fetch(
+      `https://godesk.test/api/projects/${project.id}/jobs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          kind: "export-build",
           buildId: "build_missing",
           idempotencyKey: "durable-retry-001",
         }),
@@ -4684,8 +4698,12 @@ describe("Game Project HTTP seam", () => {
       (tool) => tool.name === "track_job",
     )?.outputSchema;
     expect(JSON.stringify(jobOutputSchema)).toContain("generationMode");
-    expect(JSON.stringify(jobOutputSchema)).toContain("previewUrl");
+    expect(JSON.stringify(jobOutputSchema)).not.toContain("previewUrl");
     expect(JSON.stringify(jobOutputSchema)).toContain("artifactUrl");
+    const submitJobSchema = payload.result.tools.find(
+      (tool) => tool.name === "submit_job",
+    )?.inputSchema;
+    expect(JSON.stringify(submitJobSchema)).not.toContain("render-preview");
     const mutationOutputSchema = payload.result.tools.find(
       (tool) => tool.name === "apply_project_patch",
     )?.outputSchema;

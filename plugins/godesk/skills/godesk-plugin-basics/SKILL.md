@@ -33,7 +33,9 @@ iteration tools, not the destination.
    `project-asset` images as bindable Rule System material. A generated Project
    Asset must retain its creator brief and every influencing Visual Reference
    in `basedOnSourceIds`.
-7. Submit compilation, bot playtest, preview, and export work with `submit_job`.
+7. Submit compilation, bot playtest, and export work with `submit_job`.
+   Open a Build preview at the compile or `read_build` `playableUrl`; do not
+   enqueue a preview job.
    The Web Studio also exposes a bounded `iterate-rule-system` job for one
    explicit action-description rewrite; it records the prompt as a creator
    source, applies one versioned patch, and must be followed by compile and
