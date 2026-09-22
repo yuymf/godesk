@@ -109,6 +109,11 @@ iteration tools, not the destination.
   limit ends without a winner.
 - Keep unsupported source behavior visible. Do not convert a cooperative goal
   into a competitive score race merely because both actions carry numbers.
+- To revise Kernel values on an existing project, use the matching
+  `configure_*` op via `apply_project_patch`: genre kernels use
+  `configure_hidden_role`, `configure_hand_play`,
+  `configure_conversation_relay`, or `configure_harbor_voyage`; score-track
+  and related ops are listed in `$edit-and-compile-game`.
 
 ## Authority boundaries
 
