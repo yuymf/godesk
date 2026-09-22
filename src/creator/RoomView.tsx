@@ -13,7 +13,6 @@ import type {
   SharedSessionSnapshot,
 } from "./project-contract";
 import {
-  CARD_SYMBOLS,
   conversationRelayKernel,
   displayActionDescription,
   displayUnsupported,
@@ -32,8 +31,10 @@ import {
   sharedGoalKernel,
   takeAwayKernel,
   turnTakingKernel,
+  usesScoreTrackSurface,
   type RoomLocale,
 } from "./room-presentation";
+import { ScoreTrackRoom } from "./ScoreTrackRoom";
 import type { HarborVoyageState } from "../runtime/harbor-voyage";
 import { HarborVoyageBoard } from "./HarborVoyageBoard";
 import {
@@ -235,9 +236,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
           ? copy.turnAction
           : sharedGoal
             ? copy.progress
-            : build.ruleSystem.playSurface.kind === "conversation"
-              ? locale === "zh" ? "创意分" : "idea points"
-              : copy.points;
+            : copy.points;
         const roll = nextRoom.state.rollAndMove?.lastRoll;
         const draw = nextRoom.state.drawAndScore?.lastDraw;
         const pushState = nextRoom.state.pushYourLuck;
@@ -352,6 +351,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   const trackLength = Math.min(20, Math.max(8, runtimeTarget));
   const surface = roomSurfaceCopy(build.ruleSystem.playSurface.kind, locale);
   const isConversation = build.ruleSystem.playSurface.kind === "conversation";
+  const scoreTrackSurface = usesScoreTrackSurface(build.ruleSystem);
   const scoreLabel = takeAway
     ? copy.take
     : rollAndMove
@@ -364,9 +364,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
     ? copy.turnAction
     : sharedGoal
       ? copy.progress
-      : isConversation
-        ? locale === "zh" ? "创意分" : "idea points"
-        : copy.points;
+      : copy.points;
 
   return (
     <main className={`room-view ${harbor ? "room-view-voyage" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
@@ -583,207 +581,26 @@ export function RoomView({ sessionId }: { sessionId: string }) {
                 </ol>
               </section>
             )}
-            <div className="surface-action-grid">
-              {runtimeActions.slice(0, 4).map((action, index) => {
-                const detail = build.ruleSystem.actions.find((item) => item.id === action.id);
-                return (
-                  <article className={`surface-action-card surface-action-card-${index + 1}`} key={action.id}>
-                    <span className="surface-action-symbol" aria-hidden="true">{CARD_SYMBOLS[index]}</span>
-                    <span className="surface-action-index">{roomActionTitle(locale, index)}</span>
-                    <strong>{action.label}</strong>
-                    <b>{rollAndMove ? `${copy.roll} D${rollAndMove.dieSides}` : drawAndScore ? copy.draw : pushYourLuck ? action.label : action.value === null ? scoreLabel : `${takeAway ? "−" : "+"}${action.value} ${scoreLabel}`}</b>
-                    <small>{displayActionDescription(detail?.description ?? action.label, locale)}</small>
-                  </article>
-                );
-              })}
-            </div>
-
-            <section aria-label={copy.playerArea} className="player-mat-grid">
-              {sharedGoal ? (
-                <article className="player-mat shared-goal-mat">
-                  <header>
-                    <span className="player-token" aria-hidden="true">✦</span>
-                    <div>
-                      <strong>{copy.progress}</strong>
-                      <small>{copy.goalReached}</small>
-                    </div>
-                    <b>
-                      {room.state.sharedGoal?.progress ?? 0}
-                      <small> / {sharedGoal.goalTarget}</small>
-                    </b>
-                  </header>
-                  <div
-                    aria-label={`${copy.progress}: ${room.state.sharedGoal?.progress ?? 0}`}
-                    className="score-track"
-                  >
-                    {Array.from({ length: trackLength }, (_, index) => (
-                      <span
-                        className={index < (room.state.sharedGoal?.progress ?? 0) ? "filled" : ""}
-                        key={index}
-                      />
-                    ))}
-                  </div>
-                </article>
-              ) : takeAway ? (
-                <article className="player-mat take-away-mat">
-                  <header>
-                    <span className="player-token" aria-hidden="true">●</span>
-                    <div>
-                      <strong>{copy.remaining}</strong>
-                      <small>
-                        {room.state.status === "complete"
-                          ? `${copy.winner} ${locale === "zh" ? "座位" : "Seat"} ${room.state.winnerSeat}`
-                          : `${copy.currentTurn}: ${locale === "zh" ? "座位" : "Seat"} ${activeSeat}`}
-                      </small>
-                    </div>
-                    <b>
-                      {room.state.takeAway?.remaining ?? takeAway.initialPool}
-                      <small> / {takeAway.initialPool}</small>
-                    </b>
-                  </header>
-                  <div aria-label={`${copy.remaining}: ${room.state.takeAway?.remaining ?? takeAway.initialPool}`} className="score-track">
-                    {Array.from({ length: trackLength }, (_, index) => (
-                      <span className={index < (room.state.takeAway?.remaining ?? takeAway.initialPool) ? "filled" : ""} key={index} />
-                    ))}
-                  </div>
-                </article>
-              ) : rollAndMove ? (
-                room.state.rollAndMove?.positions.map((position, seatIndex) => {
-                  const isYou = seat === seatIndex;
-                  const isActive = room.state.status === "active" && activeSeat === seatIndex;
-                  return (
-                    <article className={`player-mat ${isActive ? "is-active" : ""} ${isYou ? "is-you" : ""}`} key={seatIndex}>
-                      <header>
-                        <span className="player-token" aria-hidden="true">{seatIndex + 1}</span>
-                        <div>
-                          <strong>{isYou ? copy.you : `${locale === "zh" ? "座位" : "Seat"} ${seatIndex}`}</strong>
-                          <small>{isActive ? copy.currentTurn : copy.position}</small>
-                        </div>
-                        <b>{position}<small> / {rollAndMove.targetPosition}</small></b>
-                      </header>
-                      <div aria-label={`${copy.position}: ${position}`} className="score-track">
-                        {Array.from({ length: trackLength }, (_, index) => (
-                          <span className={index < position ? "filled" : ""} key={index} />
-                        ))}
-                      </div>
-                    </article>
-                  );
-                }) ?? null
-              ) : drawAndScore ? (
-                <>
-                  <article className="player-mat shared-goal-mat">
-                    <header>
-                      <span className="player-token" aria-hidden="true">🎴</span>
-                      <div>
-                        <strong>{copy.deckRemaining}</strong>
-                        <small>{copy.lastDraw}: {room.state.drawAndScore?.lastDraw ?? "—"}</small>
-                      </div>
-                      <b>{room.state.drawAndScore?.remainingCards ?? 0}<small> / {room.state.drawAndScore?.totalCards ?? 0}</small></b>
-                    </header>
-                  </article>
-                  {room.state.scores.map((score, seatIndex) => {
-                    const isYou = seat === seatIndex;
-                    const isActive = room.state.status === "active" && activeSeat === seatIndex;
-                    return (
-                      <article className={`player-mat ${isActive ? "is-active" : ""} ${isYou ? "is-you" : ""}`} key={seatIndex}>
-                        <header>
-                          <span className="player-token" aria-hidden="true">{seatIndex + 1}</span>
-                          <div>
-                            <strong>{isYou ? copy.you : `${locale === "zh" ? "座位" : "Seat"} ${seatIndex}`}</strong>
-                            <small>{isActive ? copy.currentTurn : copy.points}</small>
-                          </div>
-                          <b>{score}<small> / {drawAndScore.victoryTarget}</small></b>
-                        </header>
-                        <div aria-label={`${copy.points}: ${score}`} className="score-track">
-                          {Array.from({ length: trackLength }, (_, index) => (
-                            <span className={index < score ? "filled" : ""} key={index} />
-                          ))}
-                        </div>
-                      </article>
-                    );
-                  })}
-                </>
-              ) : pushYourLuck ? (
-                <>
-                  <article className="player-mat shared-goal-mat">
-                    <header>
-                      <span className="player-token" aria-hidden="true">🎲</span>
-                      <div>
-                        <strong>{copy.unbanked}</strong>
-                        <small>{room.state.pushYourLuck?.lastRoll === pushYourLuck.bustFace ? copy.bust : `${copy.roll}: ${room.state.pushYourLuck?.lastRoll ?? "—"}`}</small>
-                      </div>
-                      <b>{room.state.pushYourLuck?.turnScore ?? 0}</b>
-                    </header>
-                  </article>
-                  {room.state.scores.map((score, seatIndex) => {
-                    const isYou = seat === seatIndex;
-                    const isActive = room.state.status === "active" && activeSeat === seatIndex;
-                    return (
-                      <article className={`player-mat ${isActive ? "is-active" : ""} ${isYou ? "is-you" : ""}`} key={seatIndex}>
-                        <header>
-                          <span className="player-token" aria-hidden="true">{seatIndex + 1}</span>
-                          <div>
-                            <strong>{isYou ? copy.you : `${locale === "zh" ? "座位" : "Seat"} ${seatIndex}`}</strong>
-                            <small>{isActive ? copy.currentTurn : copy.points}</small>
-                          </div>
-                          <b>{score}<small> / {pushYourLuck.victoryTarget}</small></b>
-                        </header>
-                        <div aria-label={`${copy.points}: ${score}`} className="score-track">
-                          {Array.from({ length: trackLength }, (_, index) => (
-                            <span className={index < score ? "filled" : ""} key={index} />
-                          ))}
-                        </div>
-                      </article>
-                    );
-                  })}
-                </>
-              ) : turnTaking ? (
-                <article className="player-mat turn-taking-mat">
-                  <header>
-                    <span className="player-token" aria-hidden="true">↻</span>
-                    <div>
-                      <strong>{copy.turn}</strong>
-                      <small>
-                        {room.state.status === "complete"
-                          ? copy.turnLimitReached
-                          : isMyTurn
-                            ? copy.yourTurn
-                            : `${copy.currentTurn}: ${locale === "zh" ? "座位" : "Seat"} ${activeSeat}`}
-                      </small>
-                    </div>
-                    <b>
-                      {room.state.turn}
-                      <small> / {turnTaking.maxTurns}</small>
-                    </b>
-                  </header>
-                  <div aria-label={`${copy.turn}: ${room.state.turn}`} className="score-track">
-                    {Array.from({ length: trackLength }, (_, index) => (
-                      <span className={index < room.state.turn ? "filled" : ""} key={index} />
-                    ))}
-                  </div>
-                </article>
-              ) : room.state.scores.map((score, seatIndex) => {
-                const isYou = seat === seatIndex;
-                const isActive = room.state.status === "active" && activeSeat === seatIndex;
-                return (
-                  <article className={`player-mat ${isActive ? "is-active" : ""} ${isYou ? "is-you" : ""}`} key={seatIndex}>
-                    <header>
-                      <span className="player-token" aria-hidden="true">{seatIndex + 1}</span>
-                      <div>
-                        <strong>{isYou ? copy.you : `${locale === "zh" ? "座位" : "Seat"} ${seatIndex}`}</strong>
-                        <small>{isActive ? copy.currentTurn : copy.playerArea}</small>
-                      </div>
-                      <b>{score}<small> / {race?.victoryTarget ?? "—"}</small></b>
-                    </header>
-                    <div aria-label={`${scoreLabel}: ${score}`} className="score-track">
-                      {Array.from({ length: trackLength }, (_, index) => (
-                        <span className={index < score ? "filled" : ""} key={index} />
-                      ))}
-                    </div>
-                  </article>
-                );
-              })}
-            </section>
+            {scoreTrackSurface && (
+              <ScoreTrackRoom
+                activeSeat={activeSeat}
+                build={build}
+                copy={copy}
+                drawAndScore={drawAndScore}
+                locale={locale}
+                pushYourLuck={pushYourLuck}
+                race={race}
+                rollAndMove={rollAndMove}
+                runtimeActions={runtimeActions}
+                scoreLabel={scoreLabel}
+                seat={seat}
+                sharedGoal={sharedGoal}
+                state={room.state}
+                takeAway={takeAway}
+                trackLength={trackLength}
+                turnTaking={turnTaking}
+              />
+            )}
 
             <details className="source-zone-details">
               <summary>{copy.sourceText}</summary>
