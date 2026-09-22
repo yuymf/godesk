@@ -2288,25 +2288,16 @@ async function publicJob(
       },
     };
   }
-  if (job.kind === "render-preview") {
+  if (job.kind === "export-build") {
     return {
       ...job,
       result: {
         ...job.result,
-        previewUrl: new URL(
-          `/play/${String(job.result.buildId)}`,
-          origin,
-        ).toString(),
+        artifactUrl: new URL(`/api/jobs/${job.id}/artifact`, origin).toString(),
       },
     };
   }
-  return {
-    ...job,
-    result: {
-      ...job.result,
-      artifactUrl: new URL(`/api/jobs/${job.id}/artifact`, origin).toString(),
-    },
-  };
+  return job;
 }
 
 export class CreatorProjects extends DurableObject<Env> {
@@ -3702,12 +3693,10 @@ export class CreatorProjects extends DurableObject<Env> {
         "iterate-rule-system",
         "compile-build",
         "bot-playtest",
-        "render-preview",
         "export-build",
       ].includes(String(input.kind));
       const validBuildInput =
         input.kind === "bot-playtest" ||
-        input.kind === "render-preview" ||
         input.kind === "export-build";
       if (
         !validKind ||

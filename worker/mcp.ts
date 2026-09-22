@@ -658,13 +658,6 @@ const jobSchema = z.union([
     result: playtestSchema.optional(),
   }),
   jobBaseSchema.extend({
-    kind: z.literal("render-preview"),
-    result: z.object({
-      buildId: z.string(),
-      previewUrl: z.string(),
-    }).optional(),
-  }),
-  jobBaseSchema.extend({
     kind: z.literal("export-build"),
     result: z.object({
       buildId: z.string(),
@@ -1212,14 +1205,6 @@ async function playableJob(value: JsonObject, origin: string, creatorId: string,
     }, origin);
   } else if (value.kind === "bot-playtest") {
     job.result = await playablePlaytest(jobResult, origin, creatorId, secret);
-  } else if (value.kind === "render-preview") {
-    job.result = {
-      ...jobResult,
-      previewUrl: new URL(
-        `/play/${String(jobResult.buildId)}`,
-        origin,
-      ).toString(),
-    };
   } else if (value.kind === "export-build") {
     job.result = {
       ...jobResult,
@@ -1552,7 +1537,7 @@ export function createGodeskMcpServer(
     {
       title: "Submit durable GoDesk work",
       description:
-        "Submit idea-or-source Rule System materialization, a bounded natural-language Studio iteration, compilation, fixed-seed bot playtest, preview render, or build export work and return a durable job ID for tracking.",
+        "Submit idea-or-source Rule System materialization, a bounded natural-language Studio iteration, compilation, fixed-seed bot playtest, or build export work and return a durable job ID for tracking. Open a Build preview at the compile or read_build playableUrl; do not enqueue a preview job.",
       inputSchema: z.discriminatedUnion("kind", [
         z.object({
           kind: z.literal("generate-rule-system"),
@@ -1601,7 +1586,7 @@ export function createGodeskMcpServer(
           idempotencyKey: z.string().min(1).max(200),
         }),
         z.object({
-          kind: z.enum(["render-preview", "export-build"]),
+          kind: z.literal("export-build"),
           projectId: z.string().min(1),
           buildId: z.string().min(1),
           idempotencyKey: z.string().min(1).max(200),

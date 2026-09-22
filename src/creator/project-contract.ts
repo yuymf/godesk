@@ -599,7 +599,6 @@ export type CreatorJobKind =
   | "iterate-rule-system"
   | "compile-build"
   | "bot-playtest"
-  | "render-preview"
   | "export-build";
 
 export interface CreatorJob {
@@ -653,7 +652,7 @@ export type SubmitJobInput =
       idempotencyKey: string;
     }
   | {
-      kind: "render-preview" | "export-build";
+      kind: "export-build";
       buildId: string;
       idempotencyKey: string;
     };

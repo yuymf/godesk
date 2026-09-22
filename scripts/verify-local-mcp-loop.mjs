@@ -332,14 +332,7 @@ async function verifyLoop(origin) {
     "Build did not retain generated image, visual brief, and reference provenance",
   );
 
-  const previewJob = await callTool("submit_job", {
-    kind: "render-preview",
-    projectId,
-    buildId: build.id,
-    idempotencyKey: "local-mcp-preview-001",
-  });
-  const preview = await waitForJob(previewJob.id);
-  ensure(pathOf(preview.result?.previewUrl) === `/play/${build.id}`, "MCP preview did not return the exact Build URL");
+  ensure(pathOf(buildRead.playableUrl) === `/play/${build.id}`, "read_build did not return the exact Build preview URL");
 
   const playtestJob = await callTool("submit_job", {
     kind: "bot-playtest",
