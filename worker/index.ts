@@ -4919,7 +4919,7 @@ async function projectApi(
   const url = new URL(request.url);
   const mount = request.headers.get("x-godesk-mount") ?? url.pathname;
   const stub = env.CREATOR_PROJECTS.getByName(creatorId);
-  const secret = shareSecret(env);
+  const secret = shareSecret(env, url.hostname);
   const shareToken = shareTokenFromUrl(url);
   const forwardRoomRequest = (target: string) =>
     shareToken
@@ -5374,7 +5374,7 @@ export default {
     routed.headers.set("x-godesk-mount", mount);
     const shareToken = shareTokenFromUrl(url);
     const shareCapability = shareToken
-      ? await verifyShareToken(shareToken, shareSecret(env))
+      ? await verifyShareToken(shareToken, shareSecret(env, url.hostname))
       : null;
     const shareResource = resourceKindFromPath(url.pathname);
     const validShare = Boolean(

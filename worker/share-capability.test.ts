@@ -3,6 +3,7 @@ import {
   capabilityMatches,
   publicShareUrl,
   resourceKindFromPath,
+  shareSecret,
   signShareToken,
   verifyShareToken,
 } from "./share-capability";
@@ -26,6 +27,29 @@ describe("share capability", () => {
     expect(await verifyShareToken(token, "other-secret")).toBeNull();
     expect(publicShareUrl("/room/room_1", "https://godesk.test", token)).toContain("share=");
     expect(publicShareUrl("/room/room_1", "https://godesk.test", token)).not.toContain("creator=");
+  });
+
+  it("uses the local default only on localhost when the secret is missing", () => {
+    const env = { GODESK_SHARE_SECRET: "  " } as Env;
+    expect(shareSecret(env, "localhost")).toBe("godesk-local-share-secret");
+    expect(shareSecret(env, "127.0.0.1")).toBe("godesk-local-share-secret");
+    expect(shareSecret(env, "godesk.test")).toBe("godesk-local-share-secret");
+  });
+
+  it("fails closed on non-local hosts when the secret is missing", () => {
+    const env = { GODESK_SHARE_SECRET: "" } as Env;
+    expect(() => shareSecret(env, "godesk.yumengfan220.workers.dev")).toThrow(
+      "GODESK_SHARE_SECRET is required",
+    );
+    expect(() => shareSecret({} as Env, "example.com")).toThrow(
+      "GODESK_SHARE_SECRET is required",
+    );
+  });
+
+  it("uses the configured secret on any host", () => {
+    const env = { GODESK_SHARE_SECRET: " prod-share-secret " } as Env;
+    expect(shareSecret(env, "example.com")).toBe("prod-share-secret");
+    expect(shareSecret(env, "localhost")).toBe("prod-share-secret");
   });
 
   it("maps public paths to resource kinds", () => {

@@ -13,10 +13,14 @@ export interface ShareCapability {
   project?: string;
 }
 
-export function shareSecret(env: Env) {
-  const configured = (env as Env & { GODESK_SHARE_SECRET?: string })
-    .GODESK_SHARE_SECRET?.trim();
-  return configured || "godesk-local-share-secret";
+const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost", "godesk.test"]);
+const LOCAL_SHARE_SECRET = "godesk-local-share-secret";
+
+export function shareSecret(env: Env, hostname: string) {
+  const configured = env.GODESK_SHARE_SECRET?.trim();
+  if (configured) return configured;
+  if (LOCAL_HOSTS.has(hostname)) return LOCAL_SHARE_SECRET;
+  throw new Error("GODESK_SHARE_SECRET is required");
 }
 
 function bytesToBase64Url(bytes: Uint8Array) {

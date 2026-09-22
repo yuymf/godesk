@@ -11,6 +11,13 @@
     "GODESK_AUTH_ISSUER": "https://godesk-yumengfan220.cloudflareaccess.com",
     "GODESK_AUTH_AUDIENCE": "065b23e01718a7c613297ac38777e54223ef02e1ed5a697861f750f326e3bcfe"
   },
+  "secrets": {
+    "required": [
+      "GODESK_SHARE_SECRET",
+      "GODESK_WEB_CLIENT_ID",
+      "GODESK_WEB_CLIENT_SECRET"
+    ]
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
