@@ -694,6 +694,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
                 <div className="room-action-cards">
                   {runtimeActions.map((action, index) => (
                     <button
+                      aria-label={action.label}
                       disabled={busy || !isMyTurn || speechText.trim().length < 2}
                       key={action.id}
                       onClick={() => {
@@ -701,8 +702,8 @@ export function RoomView({ sessionId }: { sessionId: string }) {
                       }}
                       type="button"
                     >
-                      <b>{action.label}</b>
-                      <strong>+{action.value} 创意分</strong>
+                      <b>{roomActionTitle(locale, index)}</b>
+                      <strong>{action.label}</strong>
                     </button>
                   ))}
                 </div>
