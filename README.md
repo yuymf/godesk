@@ -72,17 +72,22 @@ pnpm deploy:dry-run
 `pnpm dev:worker` builds the client and starts the full local Worker + Assets +
 Durable Objects flow at `http://127.0.0.1:8799`. `pnpm dev` remains a static Vite-only UI server; it
 does not proxy `/api`, `/mcp`, or OAuth routes and is not a valid end-to-end
-creator flow. `pnpm verify:local-routes` starts an isolated temporary Worker
-state and checks the OAuth metadata, login/callback, and MCP route contracts.
-`pnpm verify:local-loop` starts another isolated temporary Worker and exercises
-the complete prompt → Generation Plan → approval → Build → fixed-seed self-play
-→ Finding → revised Build → Shared Session → Replay loop against real HTTP
-routes. `pnpm test:e2e` starts the local Worker and drives the user-visible charter
-path in Chromium: home → playable Shared Session → friend join → action.
-Unit tests and HTTP verifiers are not a substitute. `pnpm verify:local-mcp`
-drives an isolated Worker through the Streamable HTTP MCP route, including
-tool discovery, durable jobs, plan approval, Build/preview, self-play, Shared
-Session, and Replay.
+creator flow. CI (`verify.yml` and `deploy.yml`) runs `test`, `build`, `test:worker`,
+`typecheck`, `verify:plugin`, and Playwright. Deploy then smokes production
+after the Worker publish. `verify:plugin:public` stays out of CI until the
+public Plugin repository matches the current contract.
+`pnpm verify:local-routes`, `pnpm verify:local-loop`, and `pnpm verify:local-mcp`
+are release-only local HTTP/MCP smokes. They share one temporary Worker
+bootstrap and overlap `test:worker` plus Playwright, so they are not in CI.
+`pnpm verify:local-routes` checks OAuth metadata, login/callback, and MCP route
+contracts. `pnpm verify:local-loop` exercises the complete prompt → Generation
+Plan → approval → Build → fixed-seed self-play → Finding → revised Build →
+Shared Session → Replay loop against real HTTP routes. `pnpm test:e2e` starts
+the local Worker and drives the user-visible charter path in Chromium: home →
+playable Shared Session → friend join → action. Unit tests and HTTP verifiers
+are not a substitute. `pnpm verify:local-mcp` drives an isolated Worker through
+the Streamable HTTP MCP route, including tool discovery, durable jobs, plan
+approval, Build/preview, self-play, Shared Session, and Replay.
 `pnpm verify:plugin:public` compares the separately published thin Plugin with
 the local manifest, MCP declaration, Skill set, and current contract terms; it
 is expected to fail while the public repository is on an older release.
