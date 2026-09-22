@@ -262,15 +262,7 @@ export type RuleSystemStructureDraft = Pick<
   | "presentation"
 > & { roles: RuleSystem["participants"]["roles"] };
 
-export function sameRuleSystemContent(left: RuleSystem, right: RuleSystem) {
-  const comparable = (candidate: RuleSystem) => ({
-    ...structuredClone(candidate),
-    id: "",
-    version: 0,
-    restoredFromBuildId: undefined,
-  });
-  return JSON.stringify(comparable(left)) === JSON.stringify(comparable(right));
-}
+export { sameRuleSystemContent } from "./rule-system-compare";
 
 function ruleSystemStructure(ruleSystem: RuleSystem): RuleSystemStructureDraft {
   return {
