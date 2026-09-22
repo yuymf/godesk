@@ -3,7 +3,7 @@ import type {
   PlaySurfaceKind,
   RuleSystem,
 } from "../creator/project-contract";
-import { inferSourceGenre } from "./genre";
+import { inferSourceGenre, type SourceGenre } from "./genre";
 
 export type { PlayabilityFloorReadiness };
 
