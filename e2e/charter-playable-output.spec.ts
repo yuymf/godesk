@@ -42,6 +42,19 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect
       .poll(async () => page.evaluate(() => getComputedStyle(document.body).backgroundColor))
       .toBe("rgb(232, 240, 235)");
+    await expect
+      .poll(async () =>
+        page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--canvas").trim()),
+      )
+      .toBe("#e8f0eb");
+    await expect
+      .poll(async () => page.evaluate(() => getComputedStyle(document.documentElement).fontFamily))
+      .not.toMatch(/Inter/i);
+    const exampleCard = page.locator(".studio-examples .example-grid article").first();
+    await expect(exampleCard).toBeVisible();
+    await expect
+      .poll(async () => exampleCard.evaluate((el) => getComputedStyle(el).backgroundColor))
+      .toBe("rgb(255, 255, 255)");
 
     const idea = page.getByRole("textbox", { name: "描述你的游戏想法" });
     const generate = page.getByRole("button", { name: "生成可玩版本" });
