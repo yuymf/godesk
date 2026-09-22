@@ -13,49 +13,21 @@ immutable Build, Studio embedded Shared Session, and a stable Playtest Link
 exist to make that output real. A themed score-race stand-in is not delivery.
 A Finding is optional.
 
-## Executable Kernel choice
+## Kernel selection
 
-Use the same table as `godesk-plugin-basics`. Configure exactly one Kernel
-that matches the source genre. Do not substitute `score-race-v1` for another
-genre.
+Use the **Executable Kernel choice** table in `$godesk-plugin-basics` as the
+single source of truth. Configure exactly one Kernel that matches the source
+genre (`hidden-role-v1`, `hand-play-v1`, `conversation-relay-v1`, and the rest
+of that table). Do not substitute `score-race-v1` for another genre.
 
-- `hidden-role-v1` executes secret roles, one public speech per seat, one
-  accusation per seat, and majority reveal. Use it for 剧本杀 / hidden-role
-  sources. Do not substitute a score race.
-- `hand-play-v1` executes a shuffled deck, hidden hands, play-to-score, and
-  first-to-target or highest score when hands empty.
-- `conversation-relay-v1` records required speech into the transcript and
-  scores the chosen action.
-- `harbor-voyage-v1` executes worker placement on a harbor table.
-- `score-race-v1` executes explicit per-seat point actions, a victory target,
-  and a turn limit. Use it only when the source itself is a point race.
-- `shared-goal-v1` executes explicit turn-taking actions that add to one shared
-  progress track, a shared target, and a turn limit. It has no winner seat;
-  completion means the shared target was reached.
-- `turn-taking-v1` executes an explicit bounded action list in round-robin seat
-  order until its turn limit. It exposes turn state but does not infer a
-  winner, score, resources, or other rule resolution.
-- `take-away-v1` executes an explicit finite shared pool, legal positive take
-  amounts, round-robin turns, and a last-taken-wins condition. Do not select it
-  when the source omits any of those semantics.
-- `roll-and-move-v1` executes one explicit die, deterministic fixed-seed rolls,
-  movement by each result, round-robin turns, and a first-to-position target.
-  Its safety turn limit ends without a winner when nobody reaches the target.
-- `draw-and-score-v1` executes a finite shuffled deck, deterministic fixed-seed
-  top-card draws without replacement, score by card value, first-to-target
-  victory, and unique-high-score deck exhaustion. Public Session State exposes
-  only counts and the last draw; an exhaustion tie has no winner seat.
-- `push-your-luck-v1` executes repeated deterministic rolls, one bust face,
-  an unbanked turn score, voluntary banking, round-robin turns, and a
-  banked-score victory target. Empty banking is illegal; its action safety
-  limit ends without a winner.
+Turn-limit / termination reminders (also owned by that table's semantics):
+
+- Scoring, shared-goal, and turn-taking Kernels require a turn limit.
+- Take-away and draw-and-score terminate from finite resources.
+- Give roll-and-move a visible safety turn limit with no invented winner.
+- Give push-your-luck a visible action safety limit with no invented winner.
 - Keep unsupported source behavior visible. Do not convert a cooperative goal
   into a competitive score race merely because both actions carry numbers.
-
-Scoring, shared-goal, and turn-taking Kernels require a turn limit. Take-away
-and draw-and-score terminate from finite resources. Give roll-and-move a
-visible safety turn limit with no invented winner. Give push-your-luck a
-visible action safety limit with no invented winner.
 
 ## Workflow
 
