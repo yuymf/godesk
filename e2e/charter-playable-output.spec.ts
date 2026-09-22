@@ -362,7 +362,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await page.getByRole("button", { name: "打开预览" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/play\//);
     await expect(page.getByText("这个版本长什么样")).toBeVisible();
-    await expect(page.getByText("hand-play-v1")).toBeVisible();
+    await expect(page.getByText("hand-play-v1", { exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "回工作室" })).toBeVisible();
   });
 
