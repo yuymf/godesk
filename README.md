@@ -136,5 +136,7 @@ deploy. Production fail-closes if they are missing; localhost may omit
 GitHub Actions also requires `CLOUDFLARE_ACCOUNT_ID` and
 `CLOUDFLARE_API_TOKEN`. Never store secrets in the repository.
 
-See [AGENTS.md](AGENTS.md), [ADR 0011](docs/adr/0011-chatcut-playable-output-is-the-product.md),
-and the [Rule System specification](.scratch/rule-system-creator-platform/spec.md).
+See [AGENTS.md](AGENTS.md), [CONTEXT.md](CONTEXT.md),
+[ADR 0011](docs/adr/0011-chatcut-playable-output-is-the-product.md),
+[ADR 0012](docs/adr/0012-playability-floor-is-the-share-gate.md),
+and the [ADR index](docs/adr/README.md) (read 0011 / 0012 first).

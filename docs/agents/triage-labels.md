@@ -1,15 +1,18 @@
 # Triage Labels
 
-The skills speak in terms of five canonical triage roles. This file maps those roles to the status strings used by the local Markdown issue tracker.
+The skills speak in terms of five canonical triage roles. This file maps those
+roles to the `Status:` strings this repository actually uses.
 
-| Label in mattpocock/skills | Label in our tracker | Meaning                                  |
-| -------------------------- | -------------------- | ---------------------------------------- |
-| `needs-triage`             | `needs-triage`       | Maintainer needs to evaluate this issue  |
+| Label in mattpocock/skills | Label in our tracker | Meaning |
+| -------------------------- | -------------------- | ------- |
+| `needs-triage`             | `needs-triage`       | Maintainer needs to evaluate this issue |
 | `needs-info`               | `needs-info`         | Waiting on reporter for more information |
-| `ready-for-agent`          | `ready-for-agent`    | Fully specified, ready for an AFK agent  |
-| `ready-for-human`          | `ready-for-human`    | Requires human implementation            |
-| `wontfix`                  | `wontfix`            | Will not be actioned                     |
+| `ready-for-agent`          | `claimed`            | Specified; an agent may take it or already holds it |
+| `ready-for-human`          | `ready-for-human`    | External or human gate (publish, OAuth, real playtest) |
+| `wontfix`                  | `wontfix`            | Will not be actioned |
 
-When a skill mentions a role, use the corresponding status string from this table.
+Completion is not a skill label. Closed tickets use `Status: resolved`.
 
-Edit the right-hand column to match whatever vocabulary this repository actually uses.
+Live statuses in `.scratch/` today are `resolved`, `ready-for-human`, and
+(when work is in progress) `claimed`. Do not write `ready-for-agent` on a
+new ticket; use `claimed` or leave the ticket unclaimed until work starts.

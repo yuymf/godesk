@@ -32,8 +32,8 @@ unit and contract tests had not exercised.
 
 Production OAuth/fresh-task installation and real two-person playtesting remain
 `ready-for-human`. They are exact external acceptance procedures, not failed
-agent implementation tasks. See `../acceptance.md` for IDs, URLs, evidence, and
-procedures.
+agent implementation tasks. Live evidence is `pnpm test:e2e` and CI
+(`.github/workflows/verify.yml`); see `../acceptance.md`.
 
 ## Verification
 
