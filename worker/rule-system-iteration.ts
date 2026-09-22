@@ -2,6 +2,7 @@ import type {
   ProjectChangeOperation,
   RuleSystem,
 } from "../src/creator/project-contract";
+import { parseRuleNumber, RULE_NUMBER_TOKEN } from "./rule-numbers";
 
 export interface ActionDescriptionIterationPlan {
   prompt: string;
@@ -22,36 +23,7 @@ export class IterationPlanError extends Error {
 }
 
 const quotedValue = `[“「『"](.+?)[”」』"]`;
-const actionNumber = "[0-9一二两三四五六七八九十]+";
-
-const chineseDigits: Record<string, number> = {
-  一: 1,
-  二: 2,
-  两: 2,
-  三: 3,
-  四: 4,
-  五: 5,
-  六: 6,
-  七: 7,
-  八: 8,
-  九: 9,
-  十: 10,
-};
-
-function parseActionNumber(value: string) {
-  const numeric = Number(value);
-  if (Number.isInteger(numeric)) return numeric;
-  if (value.length === 1) return chineseDigits[value] ?? Number.NaN;
-  if (value.startsWith("十")) {
-    const ones = chineseDigits[value.slice(1)];
-    return Number.isInteger(ones) ? 10 + ones : Number.NaN;
-  }
-  if (value.endsWith("十")) {
-    const tens = chineseDigits[value.slice(0, -1)];
-    return Number.isInteger(tens) ? tens * 10 : Number.NaN;
-  }
-  return Number.NaN;
-}
+const actionNumber = RULE_NUMBER_TOKEN;
 
 function normalizeLabel(value: string) {
   return value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
@@ -90,7 +62,7 @@ function parseDescriptionRequest(prompt: string) {
     const firstTarget = chineseOrdinal[1] || chineseOrdinal[2];
     const nextDescription = chineseOrdinal[3];
     const ordinal = chineseOrdinal[1]
-      ? parseActionNumber(chineseOrdinal[1])
+      ? parseRuleNumber(chineseOrdinal[1])
       : undefined;
     if (!nextDescription?.trim()) return undefined;
     return {

@@ -21,10 +21,8 @@ import type {
   SharedSessionSnapshotEvent,
   SubmitJobInput,
 } from "../src/creator/project-contract";
-import {
-  instantiateDefaultExample,
-  isDefaultExampleId,
-} from "./default-examples";
+import { isDefaultExampleId } from "../src/creator/default-examples";
+import { instantiateDefaultExample } from "./default-examples";
 import { createGenerationPlan } from "./rulebook-generation";
 import { runCreatorJob } from "./job-runner";
 import {

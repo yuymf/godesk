@@ -1,8 +1,16 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp";
 import { z } from "zod";
-import { isDefaultExampleId } from "./default-examples";
-import { publicShareUrl, signShareToken, shareSecret } from "./share-capability";
+import { isDefaultExampleId } from "../src/creator/default-examples";
+import {
+  publicBuild,
+  publicJob,
+  publicMutation,
+  publicPlaytest,
+  publicPlaytestLink,
+  publicSession,
+} from "./public-urls";
+import { shareSecret } from "./share-capability";
 
 const projectSchema = z.object({
   id: z.string(),
@@ -94,131 +102,11 @@ const ruleSystemSchema = z.object({
       label: z.string(),
     })).min(1).max(8).optional(),
   }),
-  runtimeSupport: z.union([
-    z.object({
-      status: z.literal("draft"),
-      unsupported: z.array(z.string()),
-    }),
-    z.object({
-      status: z.literal("executable"),
-      unsupported: z.array(z.string()),
-      kernel: z.union([
-        z.object({
-          type: z.literal("score-race-v1"),
-          victoryTarget: z.number().int(),
-          maxTurns: z.number().int(),
-          actions: z.array(
-            z.object({
-              id: z.string(),
-              label: z.string(),
-              points: z.number().int(),
-            }),
-          ),
-        }),
-        z.object({
-          type: z.literal("shared-goal-v1"),
-          goalTarget: z.number().int(),
-          maxTurns: z.number().int(),
-          actions: z.array(
-            z.object({
-              id: z.string(),
-              label: z.string(),
-              progress: z.number().int(),
-            }),
-          ),
-        }),
-        z.object({
-          type: z.literal("turn-taking-v1"),
-          maxTurns: z.number().int(),
-          actions: z.array(
-            z.object({
-              id: z.string(),
-              label: z.string(),
-            }),
-          ),
-        }),
-        z.object({
-          type: z.literal("take-away-v1"),
-          initialPool: z.number().int(),
-          actions: z.array(
-            z.object({
-              id: z.string(),
-              label: z.string(),
-              take: z.number().int(),
-            }),
-          ),
-        }),
-        z.object({
-          type: z.literal("roll-and-move-v1"),
-          dieSides: z.number().int(),
-          targetPosition: z.number().int(),
-          maxTurns: z.number().int(),
-          actions: z.array(
-            z.object({
-              id: z.string(),
-              label: z.string(),
-            }),
-          ),
-        }),
-        z.object({
-          type: z.literal("draw-and-score-v1"),
-          cardValues: z.array(z.number().int()),
-          copiesPerValue: z.number().int(),
-          victoryTarget: z.number().int(),
-          actions: z.array(z.object({
-            id: z.string(),
-            label: z.string(),
-          })),
-        }),
-        z.object({
-          type: z.literal("push-your-luck-v1"),
-          dieSides: z.number().int(),
-          bustFace: z.number().int(),
-          victoryTarget: z.number().int(),
-          maxActions: z.number().int(),
-          actions: z.array(z.object({
-            id: z.enum(["roll", "bank"]),
-            label: z.string(),
-          })),
-        }),
-        z.object({
-          type: z.literal("harbor-voyage-v1"),
-          playerCount: z.number().int().min(2).max(3),
-        }),
-        z.object({
-          type: z.literal("hidden-role-v1"),
-          playerCount: z.number().int().min(2).max(6),
-          roles: z.array(z.object({
-            id: z.string(),
-            name: z.string(),
-            alignment: z.enum(["culprit", "town"]),
-          })).min(2).max(6),
-        }),
-        z.object({
-          type: z.literal("hand-play-v1"),
-          playerCount: z.number().int().min(2).max(6),
-          cardValues: z.array(z.number().int()).min(1),
-          copiesPerValue: z.number().int().min(1),
-          handSize: z.number().int().min(1).max(8),
-          victoryTarget: z.number().int().min(1),
-          actions: z.array(z.object({
-            id: z.literal("play"),
-            label: z.string(),
-          })).length(1),
-        }),
-        z.object({
-          type: z.literal("conversation-relay-v1"),
-          victoryTarget: z.number().int(),
-          maxTurns: z.number().int(),
-          actions: z.array(z.object({
-            id: z.string(),
-            label: z.string(),
-            points: z.number().int(),
-          })),
-        }),
-      ]),
-    }),
-  ]),
+  runtimeSupport: z.object({
+    status: z.enum(["draft", "executable"]),
+    unsupported: z.array(z.string()),
+    kernel: z.unknown().optional(),
+  }),
 });
 
 const generationPlanSchema = z.object({
@@ -351,132 +239,13 @@ const buildSchema = z.object({
   playableUrl: z.string(),
 });
 
-const harborVoyageSchema = z.object({
-  phase: z.enum(["placement", "movement", "pilot", "resolved"]),
-  placementRound: z.number().int(),
-  movementRound: z.number().int(),
-  activeSeat: z.number().int(),
-  players: z.array(z.object({
-    seat: z.number().int(),
-    name: z.string(),
-    color: z.string(),
-    cash: z.number().int(),
-    workers: z.number().int(),
-  })),
-  punts: z.array(z.object({
-    cargoId: z.enum(["amber", "cobalt", "cedar"]),
-    name: z.string(),
-    color: z.string(),
-    die: z.number().int(),
-    position: z.number().int(),
-    value: z.number().int(),
-    result: z.enum(["port", "shipyard", "pirates"]).optional(),
-  })),
-  placements: z.array(z.object({
-    id: z.string(),
-    seat: z.number().int(),
-    targetId: z.enum([
-      "amber",
-      "cobalt",
-      "cedar",
-      "port-a",
-      "port-b",
-      "port-c",
-      "yard-a",
-      "yard-b",
-      "yard-c",
-      "pirates",
-      "pilot-small",
-      "pilot-large",
-      "insurance",
-    ]),
-    cost: z.number().int(),
-  })),
-  lastRoll: z.record(z.string(), z.number().int()),
-  boardedPirates: z.record(z.string(), z.array(z.number().int())),
-  log: z.array(z.string()),
-  winnerSeat: z.number().int().nullable(),
-});
-
 const sessionStateSchema = z.object({
   turn: z.number().int(),
   activeSeat: z.number().int(),
   scores: z.array(z.number().int()),
   status: z.enum(["active", "complete"]),
   winnerSeat: z.number().int().nullable(),
-  sharedGoal: z.object({
-    progress: z.number().int(),
-    target: z.number().int(),
-  }).optional(),
-  turnTaking: z.object({
-    maxTurns: z.number().int(),
-  }).optional(),
-  takeAway: z.object({
-    initialPool: z.number().int(),
-    remaining: z.number().int(),
-  }).optional(),
-  rollAndMove: z.object({
-    positions: z.array(z.number().int()),
-    targetPosition: z.number().int(),
-    lastRoll: z.number().int().nullable(),
-  }).optional(),
-  drawAndScore: z.object({
-    totalCards: z.number().int(),
-    remainingCards: z.number().int(),
-    lastDraw: z.number().int().nullable(),
-  }).optional(),
-  pushYourLuck: z.object({
-    turnScore: z.number().int(),
-    dieSides: z.number().int(),
-    bustFace: z.number().int(),
-    lastRoll: z.number().int().nullable(),
-    maxActions: z.number().int(),
-  }).optional(),
-  voyage: harborVoyageSchema.optional(),
-  hiddenRole: z.object({
-    phase: z.enum(["discuss", "accuse", "resolved"]),
-    playerCount: z.number().int(),
-    roles: z.array(z.object({
-      seat: z.number().int(),
-      roleId: z.string(),
-      name: z.string(),
-      alignment: z.enum(["culprit", "town"]),
-    })),
-    spoken: z.array(z.number().int()),
-    accused: z.array(z.number().int()),
-    transcript: z.array(z.object({
-      seat: z.number().int(),
-      text: z.string(),
-    })),
-    accusations: z.array(z.object({
-      seat: z.number().int(),
-      targetSeat: z.number().int(),
-    })),
-    condemnedSeat: z.number().int().nullable(),
-    winnerAlignment: z.enum(["culprit", "town"]).nullable(),
-  }).optional(),
-  handPlay: z.object({
-    playerCount: z.number().int(),
-    deck: z.array(z.number().int()),
-    deckRemaining: z.number().int(),
-    hands: z.array(z.array(z.number().int())),
-    playArea: z.array(z.object({
-      seat: z.number().int(),
-      card: z.number().int(),
-    })),
-    lastPlay: z.object({
-      seat: z.number().int(),
-      card: z.number().int(),
-    }).nullable(),
-  }).optional(),
-  conversation: z.object({
-    transcript: z.array(z.object({
-      seat: z.number().int(),
-      actionId: z.string(),
-      text: z.string(),
-    })),
-  }).optional(),
-});
+}).catchall(z.unknown());
 
 const acceptedActionSchema = z.object({
   sequence: z.number().int(),
@@ -518,36 +287,7 @@ const playtestSchema = z.object({
     turns: z.number().int(),
     winnerSeat: z.number().int().nullable(),
     finalScores: z.array(z.number().int()),
-    sharedGoal: z.object({
-      progress: z.number().int(),
-      target: z.number().int(),
-    }).optional(),
-    turnTaking: z.object({
-      turns: z.number().int(),
-      maxTurns: z.number().int(),
-    }).optional(),
-    takeAway: z.object({
-      initialPool: z.number().int(),
-      remaining: z.number().int(),
-    }).optional(),
-    rollAndMove: z.object({
-      positions: z.array(z.number().int()),
-      targetPosition: z.number().int(),
-      lastRoll: z.number().int().nullable(),
-    }).optional(),
-    drawAndScore: z.object({
-      totalCards: z.number().int(),
-      remainingCards: z.number().int(),
-      lastDraw: z.number().int().nullable(),
-    }).optional(),
-    pushYourLuck: z.object({
-      turnScore: z.number().int(),
-      dieSides: z.number().int(),
-      bustFace: z.number().int(),
-      lastRoll: z.number().int().nullable(),
-      maxActions: z.number().int(),
-    }).optional(),
-  }),
+  }).catchall(z.unknown()),
   replayId: z.string(),
   createdAt: z.string(),
   replayUrl: z.string(),
@@ -574,15 +314,6 @@ const sharedSessionSchema = z.object({
   createdAt: z.string(),
   sessionUrl: z.string(),
   replayUrl: z.string(),
-});
-
-const playtestLinkSchema = z.object({
-  projectId: z.string(),
-  sessionId: z.string(),
-  buildId: z.string(),
-  replayId: z.string(),
-  updatedAt: z.string(),
-  url: z.string(),
 });
 
 const replaySchema = z.object({
@@ -666,140 +397,11 @@ const jobSchema = z.union([
   }),
 ]);
 
-const pageSchema = z.object({
-  cursor: z.number().int().nonnegative(),
-  limit: z.number().int().positive(),
-  nextCursor: z.number().int().nonnegative().nullable(),
-  total: z.number().int().nonnegative(),
+const projectViewSchema = z.object({
+  projectId: z.string(),
+  view: z.string(),
+  data: z.unknown(),
 });
-
-const projectViewSchema = z.discriminatedUnion("view", [
-  z.object({
-    projectId: z.string(),
-    view: z.literal("overview"),
-    data: projectSchema,
-  }),
-  z.object({
-    projectId: z.string(),
-    view: z.literal("rule-system"),
-    data: ruleSystemSchema,
-  }),
-  z.object({
-    projectId: z.string(),
-    view: z.literal("generation-plan"),
-    data: z.object({
-      generationPlan: generationPlanSchema.nullable(),
-    }),
-  }),
-  z.object({
-    projectId: z.string(),
-    view: z.literal("playtest-link"),
-    data: z.object({ playtestLink: playtestLinkSchema.nullable() }),
-  }),
-  z.object({
-    projectId: z.string(),
-    view: z.literal("rules"),
-    data: z.object({
-      rules: ruleSystemSchema.shape.rules,
-      page: pageSchema,
-    }),
-  }),
-  z.object({
-    projectId: z.string(),
-    view: z.literal("constraints"),
-    data: z.object({
-      constraints: ruleSystemSchema.shape.constraints,
-      page: pageSchema,
-    }),
-  }),
-  z.object({
-    projectId: z.string(),
-    view: z.literal("entities"),
-    data: z.object({
-      entities: ruleSystemSchema.shape.entities,
-      page: pageSchema,
-    }),
-  }),
-  z.object({
-    projectId: z.string(),
-    view: z.literal("surface"),
-    data: ruleSystemSchema.shape.playSurface,
-  }),
-  z.object({
-    projectId: z.string(),
-    view: z.literal("outcomes"),
-    data: z.object({
-      outcomes: ruleSystemSchema.shape.outcomes,
-      page: pageSchema,
-    }),
-  }),
-  z.object({
-    projectId: z.string(),
-    view: z.literal("entity"),
-    data: z.union([
-      sourceSchema,
-      ruleSystemSchema.shape.rules.element,
-      ruleSystemSchema.shape.constraints.element,
-      ruleSystemSchema.shape.entities.element,
-      ruleSystemSchema.shape.outcomes.element,
-      buildSchema,
-      playtestSchema,
-      sharedSessionSchema,
-      designHypothesisSchema,
-      validationFindingSchema,
-      jobSchema,
-    ]),
-  }),
-  z.object({
-    projectId: z.string(),
-    view: z.literal("rule-systems"),
-    data: z.object({
-      ruleSystems: z.array(ruleSystemSchema),
-      page: pageSchema,
-    }),
-  }),
-  z.object({
-    projectId: z.string(),
-    view: z.literal("sources"),
-    data: z.object({ sources: z.array(sourceSchema), page: pageSchema }),
-  }),
-  z.object({
-    projectId: z.string(),
-    view: z.literal("changesets"),
-    data: z.object({
-      changesets: z.array(changesetSchema),
-      page: pageSchema,
-    }),
-  }),
-  z.object({
-    projectId: z.string(),
-    view: z.literal("builds"),
-    data: z.object({ builds: z.array(buildSchema), page: pageSchema }),
-  }),
-  z.object({
-    projectId: z.string(),
-    view: z.literal("playtests"),
-    data: z.object({ playtests: z.array(playtestSchema), page: pageSchema }),
-  }),
-  z.object({
-    projectId: z.string(),
-    view: z.literal("sessions"),
-    data: z.object({ sessions: z.array(sharedSessionSchema), page: pageSchema }),
-  }),
-  z.object({
-    projectId: z.string(),
-    view: z.literal("validation"),
-    data: z.object({
-      hypotheses: z.array(designHypothesisSchema),
-      findings: z.array(validationFindingSchema),
-    }),
-  }),
-  z.object({
-    projectId: z.string(),
-    view: z.literal("jobs"),
-    data: z.object({ jobs: z.array(jobSchema), page: pageSchema }),
-  }),
-]);
 
 const operationSchema = z.discriminatedUnion("op", [
   z.object({
@@ -1092,137 +694,53 @@ function studioUrl(origin: string, projectId: string) {
   return new URL(`/studio/${projectId}`, origin).toString();
 }
 
-async function playableBuild(
-  value: JsonObject,
-  origin: string,
-  creatorId: string,
-  secret: string,
-) {
-  const token = await signShareToken(
-    { v: 1, c: creatorId, build: String(value.id) },
-    secret,
-  );
+function asBuild(value: JsonObject) {
+  return { ...value, id: String(value.id ?? "") };
+}
+
+function asPlaytest(value: JsonObject) {
+  return { ...value, replayId: String(value.replayId ?? "") };
+}
+
+function asSession(value: JsonObject) {
   return {
     ...value,
-    playableUrl: publicShareUrl(`/play/${String(value.id)}`, origin, token),
+    id: String(value.id ?? ""),
+    buildId: String(value.buildId ?? ""),
+    replayId: String(value.replayId ?? ""),
+    seats: Array.isArray(value.seats)
+      ? value.seats as Array<{ seat: number; displayName?: string }>
+      : undefined,
   };
 }
 
-async function playablePlaytest(
-  value: JsonObject,
-  origin: string,
-  creatorId: string,
-  secret: string,
-) {
-  const token = await signShareToken(
-    { v: 1, c: creatorId, replay: String(value.replayId) },
-    secret,
-  );
+function asPlaytestLink(value: JsonObject) {
   return {
     ...value,
-    replayUrl: publicShareUrl(
-      `/replay/${String(value.replayId)}`,
-      origin,
-      token,
-    ),
+    projectId: String(value.projectId ?? ""),
+    sessionId: String(value.sessionId ?? ""),
+    buildId: String(value.buildId ?? ""),
+    replayId: String(value.replayId ?? ""),
   };
 }
 
-async function playableSession(
-  value: JsonObject,
-  origin: string,
-  creatorId: string,
-  secret: string,
-) {
-  const token = await signShareToken(
-    {
-      v: 1,
-      c: creatorId,
-      room: String(value.id),
-      build: String(value.buildId),
-      replay: String(value.replayId),
-    },
-    secret,
-  );
-  const seats = Array.isArray(value.seats)
-    ? value.seats.map((entry) => {
-        const seat = entry as { seat: number; displayName?: string };
-        return {
-          seat: seat.seat,
-          ...(seat.displayName ? { displayName: seat.displayName } : {}),
-        };
-      })
-    : [];
+function asJob(value: JsonObject) {
   return {
     ...value,
-    seats,
-    sessionUrl: publicShareUrl(`/room/${String(value.id)}`, origin, token),
-    replayUrl: publicShareUrl(
-      `/replay/${String(value.replayId)}`,
-      origin,
-      token,
-    ),
+    id: String(value.id ?? ""),
+    projectId: String(value.projectId ?? ""),
+    kind: String(value.kind ?? ""),
+    result: value.result && typeof value.result === "object"
+      ? value.result as Record<string, unknown>
+      : undefined,
   };
 }
 
-async function playablePlaytestLink(
-  value: JsonObject,
-  origin: string,
-  creatorId: string,
-  secret: string,
-) {
-  const token = await signShareToken(
-    {
-      v: 1,
-      c: creatorId,
-      project: String(value.projectId),
-      room: String(value.sessionId),
-      build: String(value.buildId),
-      replay: String(value.replayId),
-    },
-    secret,
-  );
+function asStudio(value: JsonObject) {
   return {
     ...value,
-    url: publicShareUrl(
-      `/try/${String(value.projectId)}`,
-      origin,
-      token,
-    ),
+    studioPath: typeof value.studioPath === "string" ? value.studioPath : "/",
   };
-}
-
-async function playableJob(value: JsonObject, origin: string, creatorId: string, secret: string) {
-  const job = { ...value };
-  const jobResult = value.result as JsonObject | undefined;
-  if (!jobResult) return job;
-  if (value.kind === "generate-rule-system" || value.kind === "iterate-rule-system") {
-    job.result = playableMutation(jobResult, origin);
-  } else if (value.kind === "compile-build" && jobResult.build) {
-    job.result = playableMutation({
-      ...jobResult,
-      build: await playableBuild(jobResult.build as JsonObject, origin, creatorId, secret),
-    }, origin);
-  } else if (value.kind === "bot-playtest") {
-    job.result = await playablePlaytest(jobResult, origin, creatorId, secret);
-  } else if (value.kind === "export-build") {
-    job.result = {
-      ...jobResult,
-      artifactUrl: new URL(
-        `/api/jobs/${String(value.id)}/artifact`,
-        origin,
-      ).toString(),
-    };
-  }
-  return job;
-}
-
-function playableMutation(value: JsonObject, origin: string) {
-  const result = { ...value };
-  const studioPath = String(result.studioPath ?? "");
-  delete result.studioPath;
-  result.studioUrl = new URL(studioPath || "/", origin).toString();
-  return result;
 }
 
 export function createGodeskMcpServer(
@@ -1230,6 +748,7 @@ export function createGodeskMcpServer(
   origin: string,
   creatorId: string,
   authentication: "local-development-only" | "oauth",
+  mount = "/",
 ) {
   const server = new McpServer({
     name: "godesk",
@@ -1404,48 +923,49 @@ export function createGodeskMcpServer(
         if (view === "builds" && Array.isArray(data.builds)) {
           data.builds = await Promise.all(
             data.builds.map((build: unknown) =>
-              playableBuild(build as JsonObject, origin, creatorId, secret),
+              publicBuild(asBuild(build as JsonObject), origin, creatorId, secret, mount),
             ),
           );
         }
         if (view === "playtests" && Array.isArray(data.playtests)) {
           data.playtests = await Promise.all(
             data.playtests.map((playtest: unknown) =>
-              playablePlaytest(playtest as JsonObject, origin, creatorId, secret),
+              publicPlaytest(asPlaytest(playtest as JsonObject), origin, creatorId, secret, mount),
             ),
           );
         }
         if (view === "sessions" && Array.isArray(data.sessions)) {
           data.sessions = await Promise.all(
             data.sessions.map((session: unknown) =>
-              playableSession(session as JsonObject, origin, creatorId, secret),
+              publicSession(asSession(session as JsonObject), origin, creatorId, secret, mount),
             ),
           );
         }
         if (view === "playtest-link" && data.playtestLink) {
-          data.playtestLink = await playablePlaytestLink(
-            data.playtestLink as JsonObject,
+          data.playtestLink = await publicPlaytestLink(
+            asPlaytestLink(data.playtestLink as JsonObject),
             origin,
             creatorId,
             secret,
+            mount,
           );
         }
         if (view === "jobs" && Array.isArray(data.jobs)) {
           data.jobs = await Promise.all(
             data.jobs.map((job: unknown) =>
-              playableJob(job as JsonObject, origin, creatorId, secret),
+              publicJob(asJob(job as JsonObject), origin, creatorId, secret, mount),
             ),
           );
         }
         if (view === "entity") {
           if (entityType === "build") {
-            Object.assign(data, await playableBuild(data, origin, creatorId, secret));
+            Object.assign(data, await publicBuild(asBuild(data), origin, creatorId, secret, mount));
           } else if (entityType === "playtest") {
-            Object.assign(data, await playablePlaytest(data, origin, creatorId, secret));
+            Object.assign(data, await publicPlaytest(asPlaytest(data), origin, creatorId, secret, mount));
           } else if (entityType === "session") {
-            Object.assign(data, await playableSession(data, origin, creatorId, secret));
+            Object.assign(data, await publicSession(asSession(data), origin, creatorId, secret, mount));
           } else if (entityType === "job") {
-            Object.assign(data, await playableJob(data, origin, creatorId, secret));
+            Object.assign(data, await publicJob(asJob(data), origin, creatorId, secret, mount));
           }
         }
         return result({ projectId, view, data });
@@ -1518,13 +1038,13 @@ export function createGodeskMcpServer(
     async ({ projectId, ...input }) => {
       try {
         return result(
-          playableMutation(await bodyOrError(
+          publicMutation(asStudio(await bodyOrError(
             await projectRequest(`/projects/${projectId}/changes`, {
               method: "POST",
               headers: { "content-type": "application/json" },
               body: JSON.stringify(input),
             }),
-          ), origin),
+          )), origin, mount),
         );
       } catch (reason) {
         return toolError(reason);
@@ -1609,7 +1129,7 @@ export function createGodeskMcpServer(
             body: JSON.stringify(input),
           }),
         );
-        return result(await playableJob(job, origin, creatorId, secret));
+        return result(await publicJob(asJob(job), origin, creatorId, secret, mount));
       } catch (reason) {
         return toolError(reason);
       }
@@ -1636,7 +1156,7 @@ export function createGodeskMcpServer(
         const job = await bodyOrError(
           await projectRequest(`/jobs/${jobId}`),
         );
-        return result(await playableJob(job, origin, creatorId, secret));
+        return result(await publicJob(asJob(job), origin, creatorId, secret, mount));
       } catch (reason) {
         return toolError(reason);
       }
@@ -1663,7 +1183,7 @@ export function createGodeskMcpServer(
         const job = await bodyOrError(
           await projectRequest(`/jobs/${jobId}/retry`, { method: "POST" }),
         );
-        return result(await playableJob(job, origin, creatorId, secret));
+        return result(await publicJob(asJob(job), origin, creatorId, secret, mount));
       } catch (reason) {
         return toolError(reason);
       }
@@ -1690,7 +1210,7 @@ export function createGodeskMcpServer(
         const build = await bodyOrError(
           await projectRequest(`/builds/${buildId}`),
         );
-        return result(await playableBuild(build, origin, creatorId, secret));
+        return result(await publicBuild(asBuild(build), origin, creatorId, secret, mount));
       } catch (reason) {
         return toolError(reason);
       }
@@ -1726,7 +1246,7 @@ export function createGodeskMcpServer(
             body: JSON.stringify(input),
           }),
         );
-        return result(await playableSession(room, origin, creatorId, secret));
+        return result(await publicSession(asSession(room), origin, creatorId, secret, mount));
       } catch (reason) {
         return toolError(reason);
       }
@@ -1753,7 +1273,7 @@ export function createGodeskMcpServer(
         const room = await bodyOrError(
           await projectRequest(`/sessions/${sessionId}`),
         );
-        return result(await playableSession(room, origin, creatorId, secret));
+        return result(await publicSession(asSession(room), origin, creatorId, secret, mount));
       } catch (reason) {
         return toolError(reason);
       }
@@ -1790,7 +1310,7 @@ export function createGodeskMcpServer(
             body: JSON.stringify(input),
           }),
         );
-        return result(await playableSession(room, origin, creatorId, secret));
+        return result(await publicSession(asSession(room), origin, creatorId, secret, mount));
       } catch (reason) {
         return toolError(reason);
       }
@@ -1856,7 +1376,7 @@ export function createGodeskMcpServer(
     async ({ projectId, ruleSystemId, ...input }) => {
       try {
         return result(
-          playableMutation(await bodyOrError(
+          publicMutation(asStudio(await bodyOrError(
             await projectRequest(
               `/projects/${projectId}/rule-systems/${ruleSystemId}/duplicate`,
               {
@@ -1865,7 +1385,7 @@ export function createGodeskMcpServer(
                 body: JSON.stringify(input),
               },
             ),
-          ), origin),
+          )), origin, mount),
         );
       } catch (reason) {
         return toolError(reason);
@@ -1904,7 +1424,7 @@ export function createGodeskMcpServer(
     async ({ projectId, buildId, ...input }) => {
       try {
         return result(
-          playableMutation(await bodyOrError(
+          publicMutation(asStudio(await bodyOrError(
             await projectRequest(
               `/projects/${projectId}/builds/${buildId}/restore`,
               {
@@ -1913,7 +1433,7 @@ export function createGodeskMcpServer(
                 body: JSON.stringify(input),
               },
             ),
-          ), origin),
+          )), origin, mount),
         );
       } catch (reason) {
         return toolError(reason);
@@ -2012,6 +1532,7 @@ export function godeskMcpHandler(
   authentication: "local-development-only" | "oauth",
 ) {
   const origin = new URL(request.url).origin;
+  const mount = request.headers.get("x-godesk-mount") ?? "/";
   return createMcpHandler(
     () =>
       createGodeskMcpServer(
@@ -2019,6 +1540,7 @@ export function godeskMcpHandler(
         origin,
         creatorId,
         authentication,
+        mount,
       ),
     { route: "/mcp" },
   );

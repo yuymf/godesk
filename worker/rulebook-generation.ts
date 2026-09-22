@@ -5,6 +5,11 @@ import type {
 } from "../src/creator/project-contract";
 import { inferSourceGenre } from "../src/runtime/genre";
 import { defaultHiddenRoles } from "../src/runtime/hidden-role";
+import {
+  parseRuleNumber,
+  RULE_NUMBER_TOKEN,
+  RULE_NUMBER_WORD_TOKEN,
+} from "./rule-numbers";
 
 function cleanLines(text: string) {
   return text
@@ -36,49 +41,6 @@ function isBoilerplate(line: string) {
   ].some((pattern) => pattern.test(line));
 }
 
-const chineseDigits: Record<string, number> = {
-  零: 0,
-  〇: 0,
-  一: 1,
-  二: 2,
-  两: 2,
-  三: 3,
-  四: 4,
-  五: 5,
-  六: 6,
-  七: 7,
-  八: 8,
-  九: 9,
-  one: 1,
-  two: 2,
-  three: 3,
-  four: 4,
-  five: 5,
-  six: 6,
-  seven: 7,
-  eight: 8,
-  nine: 9,
-};
-
-function parseRuleNumber(value: string | undefined) {
-  if (!value) return Number.NaN;
-  const numeric = Number(value);
-  if (Number.isInteger(numeric)) return numeric;
-  const tenIndex = value.indexOf("十");
-  if (tenIndex >= 0) {
-    const tens = tenIndex === 0
-      ? 1
-      : chineseDigits[value[tenIndex - 1]];
-    const ones = value.slice(tenIndex + 1)
-      ? chineseDigits[value.slice(tenIndex + 1)]
-      : 0;
-    if (Number.isInteger(tens) && Number.isInteger(ones)) {
-      return tens * 10 + ones;
-    }
-  }
-  return chineseDigits[value];
-}
-
 export function inferredNumber(
   text: string,
   patterns: RegExp[],
@@ -92,7 +54,7 @@ export function inferredNumber(
 }
 
 export function inferredParticipantRange(text: string, defaultValue = 2) {
-  const numberToken = "[0-9一二两三四五六七八九十]+";
+  const numberToken = RULE_NUMBER_TOKEN;
   const range = text.match(
     new RegExp(
       `(${numberToken})\\s*(?:[-–—－]|to|至|到)\\s*(${numberToken})\\s*(?:players?|人|(?:位|名)[\\u4e00-\\u9fff]{1,12})`,
@@ -137,7 +99,7 @@ export function inferredTakeAwayRule(text: string): {
   initialPool: number;
   takes: number[];
 } | null {
-  const numberToken = "[0-9一二两三四五六七八九十]+|one|two|three|four|five|six|seven|eight|nine";
+  const numberToken = RULE_NUMBER_WORD_TOKEN;
   const actionClause = text.match(
     /(?:每(?:一)?回合|轮到[^。.!?\n]{0,20}|on (?:each|your|their) turn|each turn)[^。.!?\n]{0,80}?(?:拿走?|取走?|移除|take|remove)[^。.!?\n]{0,80}/i,
   )?.[0];
@@ -177,7 +139,7 @@ export function inferredRollAndMoveRule(text: string): {
   dieSides: number;
   targetPosition: number;
 } | null {
-  const numberToken = "[0-9一二两三四五六七八九十]+|one|two|three|four|five|six|seven|eight|nine";
+  const numberToken = RULE_NUMBER_WORD_TOKEN;
   const dieSides = inferredNumber(
     text,
     [
@@ -218,7 +180,7 @@ export function inferredDrawAndScoreRule(text: string): {
   copiesPerValue: number;
   victoryTarget: number;
 } | null {
-  const numberToken = "[0-9一二两三四五六七八九十]+|one|two|three|four|five|six|seven|eight|nine";
+  const numberToken = RULE_NUMBER_WORD_TOKEN;
   const valueRange = text.match(new RegExp(
     `(?:点数|values?)\\s*(${numberToken})\\s*(?:到|至|[-–—]|to)\\s*(${numberToken})`,
     "i",
@@ -269,7 +231,7 @@ export function inferredPushYourLuckRule(text: string): {
   bustFace: number;
   victoryTarget: number;
 } | null {
-  const numberToken = "[0-9一二两三四五六七八九十]+|one|two|three|four|five|six|seven|eight|nine";
+  const numberToken = RULE_NUMBER_WORD_TOKEN;
   const dieSides = inferredNumber(text, [
     new RegExp(`(${numberToken})\\s*面\\s*骰子`, "i"),
     new RegExp(`(${numberToken})[- ]?sided\\s+(?:die|dice)`, "i"),
@@ -304,7 +266,7 @@ export function inferredPushYourLuckRule(text: string): {
 }
 
 export function inferredSharedGoalTarget(text: string) {
-  const numberToken = "[0-9一二两三四五六七八九十]+";
+  const numberToken = RULE_NUMBER_TOKEN;
   return inferredNumber(
     text,
     [
@@ -480,7 +442,7 @@ export function materializeRuleSystem(input: {
   const rollAndMoveRule = inferredRollAndMoveRule(corpus);
   const drawAndScoreRule = inferredDrawAndScoreRule(corpus);
   const pushYourLuckRule = inferredPushYourLuckRule(corpus);
-  const numberToken = "[0-9一二两三四五六七八九十]+";
+  const numberToken = RULE_NUMBER_TOKEN;
   const participants = input.playerCount === undefined
     ? inferredParticipantRange(corpus)
     : { min: input.playerCount, max: input.playerCount, default: input.playerCount };

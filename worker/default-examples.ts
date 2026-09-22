@@ -3,13 +3,9 @@ import type {
   SourceLibraryEntry,
 } from "../src/creator/project-contract";
 import {
-  DEFAULT_EXAMPLES,
   isDefaultExampleId,
   type DefaultExampleId,
 } from "../src/creator/default-examples";
-
-export { DEFAULT_EXAMPLES, isDefaultExampleId };
-export type { DefaultExampleId };
 
 function source(
   id: string,

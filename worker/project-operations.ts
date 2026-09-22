@@ -1,4 +1,3 @@
-import { mountHref } from "../src/public-mount";
 import {
   acceptIntent,
   executableRuntime,
@@ -17,11 +16,7 @@ import type {
   RestoreBuildResult,
   GameProject,
   GameReplay,
-  SharedSession,
   SharedSessionSnapshot,
-  PlaytestRun,
-  PlayableBuild,
-  PlaytestLink,
   ProjectChangeOperation,
   SourceLibraryEntry,
   PresentationFloorReadiness,
@@ -30,14 +25,31 @@ import type {
   RuleSystem,
 } from "../src/creator/project-contract";
 import {
-  publicShareUrl,
-  signShareToken,
-  type ShareCapability,
-} from "./share-capability";
-import {
   publicSeats,
   type StoredSessionSeat,
 } from "./seat-capability";
+import type {
+  StoredPlayableBuild,
+  StoredPlaytest,
+  StoredPlaytestLink,
+  StoredSharedSession,
+} from "./public-urls";
+
+export {
+  publicBuild,
+  publicJob,
+  publicMutation,
+  publicPlaytest,
+  publicPlaytestLink,
+  publicSession,
+  signedShareToken,
+} from "./public-urls";
+export type {
+  StoredPlayableBuild,
+  StoredPlaytest,
+  StoredPlaytestLink,
+  StoredSharedSession,
+} from "./public-urls";
 
 export const PROJECT_PREFIX = "/projects/";
 export const GENERATION_PLAN_PREFIX = "generation-plan:";
@@ -56,12 +68,6 @@ export interface ProjectRecord {
   findings: ValidationFinding[];
 }
 
-export type StoredPlayableBuild = Omit<PlayableBuild, "playableUrl">;
-export type StoredPlaytest = Omit<PlaytestRun, "replayUrl">;
-export type StoredSharedSession = Omit<SharedSession, "sessionUrl" | "replayUrl" | "seats"> & {
-  seats: StoredSessionSeat[];
-};
-export type StoredPlaytestLink = Omit<PlaytestLink, "url">;
 export interface SessionSocketAttachment {
   sessionId: string;
   seat?: number;
@@ -1898,100 +1904,6 @@ export function visibleSession(
   };
 }
 
-export async function signedShareToken(
-  secret: string,
-  creatorId: string,
-  capability: Omit<ShareCapability, "v" | "c">,
-) {
-  return signShareToken({ v: 1, c: creatorId, ...capability }, secret);
-}
-
-export async function publicBuild(
-  build: StoredPlayableBuild,
-  origin: string,
-  creatorId?: string,
-  secret?: string,
-  mount = "/",
-): Promise<PlayableBuild> {
-  const normalized = normalizedBuild(build);
-  const token = creatorId && secret
-    ? await signedShareToken(secret, creatorId, { build: normalized.id })
-    : null;
-  return {
-    ...normalized,
-    playableUrl: token
-      ? publicShareUrl(`/play/${normalized.id}`, origin, token, mount)
-      : new URL(mountHref(`/play/${normalized.id}`, mount), origin).toString(),
-  };
-}
-
-export async function publicPlaytest(
-  playtest: StoredPlaytest,
-  origin: string,
-  creatorId?: string,
-  secret?: string,
-  mount = "/",
-): Promise<PlaytestRun> {
-  const token = creatorId && secret
-    ? await signedShareToken(secret, creatorId, { replay: playtest.replayId })
-    : null;
-  return {
-    ...playtest,
-    replayUrl: token
-      ? publicShareUrl(`/replay/${playtest.replayId}`, origin, token, mount)
-      : new URL(mountHref(`/replay/${playtest.replayId}`, mount), origin).toString(),
-  };
-}
-
-export async function publicSession(
-  session: StoredSharedSession,
-  origin: string,
-  creatorId: string,
-  secret: string,
-  mount = "/",
-): Promise<SharedSession> {
-  const token = await signedShareToken(secret, creatorId, {
-    room: session.id,
-    build: session.buildId,
-    replay: session.replayId,
-  });
-  return {
-    ...session,
-    seats: publicSeats(session.seats),
-    sessionUrl: publicShareUrl(`/room/${session.id}`, origin, token, mount),
-    replayUrl: publicShareUrl(`/replay/${session.replayId}`, origin, token, mount),
-  };
-}
-
-export async function publicPlaytestLink(
-  link: StoredPlaytestLink,
-  origin: string,
-  creatorId: string,
-  secret: string,
-  mount = "/",
-): Promise<PlaytestLink> {
-  const token = await signedShareToken(secret, creatorId, {
-    project: link.projectId,
-    room: link.sessionId,
-    build: link.buildId,
-    replay: link.replayId,
-  });
-  return {
-    ...link,
-    url: publicShareUrl(`/try/${link.projectId}`, origin, token, mount),
-  };
-}
-
-export function publicMutation<
-  T extends { studioPath: string },
->(value: T, origin: string, mount = "/"): Omit<T, "studioPath"> & { studioUrl: string } {
-  const { studioPath, ...rest } = value;
-  return {
-    ...rest,
-    studioUrl: new URL(mountHref(studioPath, mount), origin).toString(),
-  };
-}
-
 export function reconstructActions(
   build: StoredPlayableBuild,
   acceptedActions: GameReplay["acceptedActions"],
@@ -2053,72 +1965,3 @@ export function reconstructReplay(
   };
 }
 
-export async function publicJob(
-  job: CreatorJob,
-  origin: string,
-  creatorId?: string,
-  secret?: string,
-  mount = "/",
-): Promise<CreatorJob> {
-  if (!job.result) return job;
-  if (job.kind === "compile-build" && job.result.build) {
-    const build = await publicBuild(
-      job.result.build as unknown as StoredPlayableBuild,
-      origin,
-      creatorId,
-      secret,
-      mount,
-    );
-    return {
-      ...job,
-      result: {
-        ...job.result,
-        build,
-        warnings: build.warnings,
-        studioUrl: new URL(
-          `/studio/${job.projectId}`,
-          origin,
-        ).toString(),
-      },
-    };
-  }
-  if (
-    job.kind === "generate-rule-system" &&
-    typeof job.result.studioPath === "string"
-  ) {
-    const { studioPath, ...result } = job.result;
-    return {
-      ...job,
-      result: {
-        ...result,
-        studioUrl: new URL(studioPath, origin).toString(),
-      },
-    };
-  }
-  if (job.kind === "bot-playtest") {
-    const token = creatorId && secret
-      ? await signedShareToken(secret, creatorId, {
-          replay: String(job.result.replayId),
-        })
-      : null;
-    return {
-      ...job,
-      result: {
-        ...job.result,
-        replayUrl: token
-          ? publicShareUrl(`/replay/${String(job.result.replayId)}`, origin, token, mount)
-          : new URL(mountHref(`/replay/${String(job.result.replayId)}`, mount), origin).toString(),
-      },
-    };
-  }
-  if (job.kind === "export-build") {
-    return {
-      ...job,
-      result: {
-        ...job.result,
-        artifactUrl: new URL(`/api/jobs/${job.id}/artifact`, origin).toString(),
-      },
-    };
-  }
-  return job;
-}
