@@ -127,39 +127,23 @@
   line-height: 1.1;
 }
 
-.install-steps {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.install-prose {
+  max-width: 50rem;
 }
 
-.install-steps li {
-  display: grid;
-  grid-template-columns: 5rem minmax(0, 1fr);
-  gap: 1.5rem;
-  padding: 2rem 0;
-  border-top: 1px solid rgb(28 38 34 / 8%);
-}
-
-.install-steps li > span {
-  color: #0f6b4c;
-  font-size: 0.8rem;
-}
-
-.install-steps h3 {
-  margin: 0 0 0.8rem;
-  font-size: 1.2rem;
-}
-
-.install-steps p,
+.install-prose p,
 .install-recovery > p:last-child {
   max-width: 50rem;
-  margin: 0;
+  margin: 0 0 1.1rem;
   color: #5a6b63;
   line-height: 1.7;
 }
 
-.install-steps code {
+.install-prose p:last-child {
+  margin-bottom: 0;
+}
+
+.install-prose code {
   padding: 0.15rem 0.35rem;
   color: #0a4d37;
   background: #d4efe3;
@@ -168,16 +152,16 @@
   font-size: 0.83em;
 }
 
-.install-steps pre {
+.install-prose pre {
   overflow-x: auto;
-  margin: 1rem 0;
+  margin: 0.4rem 0 1.1rem;
   padding: 1.1rem;
   color: #1c2622;
   background: #f3f8f5;
   border-radius: 0.5rem;
 }
 
-.install-steps pre code {
+.install-prose pre code {
   padding: 0;
   color: inherit;
   background: transparent;
@@ -205,8 +189,8 @@
     width: 100%;
   }
 
-  .install-steps li {
-    grid-template-columns: 2.5rem minmax(0, 1fr);
-    gap: 0.75rem;
+  .install-prose pre {
+    margin-left: -0.25rem;
+    margin-right: -0.25rem;
   }
 }
