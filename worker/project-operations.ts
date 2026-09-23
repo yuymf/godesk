@@ -424,9 +424,11 @@ export function configureRuntimeKernel(
       configuration.op,
       {
         type: "conversation-relay-v1",
-        victoryTarget: configuration.config.victoryTarget,
         maxTurns: configuration.config.maxTurns,
-        actions: configuration.config.actions,
+        actions: configuration.config.actions.map((action) => ({
+          id: action.id,
+          label: action.label,
+        })),
       },
       configuration.config.unsupported?.map((item) => item.trim()) ?? [],
       configuration.config,
@@ -1230,15 +1232,20 @@ const RUNTIME_HANDLERS: {
     validate: (config) =>
       Boolean(config) &&
       typeof config === "object" &&
-      Number.isInteger(config.victoryTarget) &&
       Number.isInteger(config.maxTurns) &&
+      config.maxTurns >= 1 &&
+      config.maxTurns <= 1_000 &&
       Array.isArray(config.actions) &&
       config.actions.length >= 1 &&
+      config.actions.length <= 12 &&
       !config.actions.some((action) =>
         !action ||
         typeof action.id !== "string" ||
-        !Number.isInteger(action.points)
-      ),
+        !/^[a-z0-9-]{1,40}$/.test(action.id) ||
+        typeof action.label !== "string" ||
+        !action.label.trim()
+      ) &&
+      validUnsupported(config.unsupported),
   },
 };
 

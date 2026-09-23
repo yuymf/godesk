@@ -1141,10 +1141,18 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
         op: "configure_conversation_relay",
         config: {
           maxTurns: 18,
-          actions: [{ points: 1 }, { points: 2 }],
+          actions: [
+            { id: expect.any(String), label: "扩展创意" },
+            { id: expect.any(String), label: "加入约束" },
+          ],
         },
       },
     });
+    const proposed = (finished.result as {
+      generationPlan: { proposedRuntime: { config: { actions: Array<Record<string, unknown>>; victoryTarget?: number } } };
+    }).generationPlan.proposedRuntime.config;
+    expect(proposed.actions.every((action) => !("points" in action))).toBe(true);
+    expect(proposed.victoryTarget).toBeUndefined();
   });
 
   it("turns each hobbyist starter into a genre-faithful pending plan", async () => {

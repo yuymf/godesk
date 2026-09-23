@@ -107,8 +107,8 @@ describe("rulebook Rule System materialization", () => {
       default: 3,
     });
     expect(ruleSystem.actions).toMatchObject([
-      { label: "扩展创意", description: "扩展创意获得 1 分" },
-      { label: "加入约束", description: "加入约束获得 2 分" },
+      { label: "扩展创意", description: "扩展创意" },
+      { label: "加入约束", description: "加入约束" },
     ]);
     expect(ruleSystem.constraints).toContainEqual(
       expect.objectContaining({ text: "每次行动必须回应已有内容。" }),

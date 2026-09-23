@@ -146,14 +146,7 @@ function ReplayStateCard({
                 ))}
               </ol>
             )}
-            <details className="conversation-score-secondary">
-              <summary>内核计分（次要）</summary>
-              <ul>
-                {state.scores.map((score, seat) => (
-                  <li key={seat}>座位 {seat} · {score}</li>
-                ))}
-              </ul>
-            </details>
+
           </article>
         ) : state.sharedGoal ? (
           <article className="shared-goal-replay-card">

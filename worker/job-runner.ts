@@ -188,13 +188,11 @@ export async function runCreatorJob(
       const workerPlacementRuntimeConfigured =
         sourceGenre === "placement" && !harborLikePlacement;
       const harborVoyageRuntimeConfigured = harborLikePlacement;
+      // Conversation needs text-bearing speech acts, not a point harvest (W3-02 / W3-05).
       const conversationRelayRuntimeConfigured =
         sourceGenre === "conversation" &&
-        sourceRuntimeActions.length > 0 &&
-        sourceRuntimeActions.length === generatedRuleSystem.actions.length &&
-        generatedRuleSystem.actions.length <= 12 &&
-        Number.isInteger(victoryTarget) &&
-        victoryTarget > 0;
+        generatedRuleSystem.actions.length > 0 &&
+        generatedRuleSystem.actions.length <= 12;
       const scoreRaceRuntimeConfigured =
         sourceGenre === "generic" &&
         !sharedGoal &&
@@ -228,6 +226,7 @@ export async function runCreatorJob(
       const turnTakingRuntimeConfigured =
         !sharedGoal &&
         !scoreRaceRuntimeConfigured &&
+        !conversationRelayRuntimeConfigured &&
         !takeAwayRuntimeConfigured &&
         !rollAndMoveRuntimeConfigured &&
         !drawAndScoreRuntimeConfigured &&
@@ -285,15 +284,13 @@ export async function runCreatorJob(
         ? {
             op: "configure_conversation_relay" as const,
             config: {
-              victoryTarget,
               maxTurns,
-              actions: sourceRuntimeActions.map((action) => ({
+              actions: generatedRuleSystem.actions.map((action) => ({
                 id: action.id,
                 label: action.label,
-                points: action.value,
               })),
               unsupported: [
-                "conversation-relay-v1 records required speech into the transcript and scores the chosen action; prose quality is judged by people.",
+                "conversation-relay-v1 records required speech into the transcript and ends on the turn budget; prose quality is judged by people (no kernel score race).",
               ],
             },
           }
@@ -608,7 +605,7 @@ export async function runCreatorJob(
           : proposedRuntime?.op === "configure_hand_play"
           ? "规则结构来自体裁识别；牌库、隐藏手牌与出牌计分将在批准 Generation Plan 后配置为 hand-play-v1。"
           : proposedRuntime?.op === "configure_conversation_relay"
-          ? "规则结构来自体裁识别；发言必须写入记录，并按行动计分，将在批准 Generation Plan 后配置为 conversation-relay-v1。"
+          ? "规则结构来自体裁识别；发言必须写入记录，回合预算内完成接力，将在批准 Generation Plan 后配置为 conversation-relay-v1（不计分赛）。"
           : proposedRuntime?.op === "configure_harbor_voyage"
           ? "规则结构来自体裁识别；港口主题放置环将在批准 Generation Plan 后配置为 harbor-voyage-v1；来源专属棋盘与资源结算仍保持未支持说明。"
           : proposedRuntime?.op === "configure_worker_placement"

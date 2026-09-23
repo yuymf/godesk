@@ -83,7 +83,7 @@ iteration tools, not the destination.
 - `hand-play-v1` executes a shuffled deck, hidden hands, play-to-score, and
   first-to-target or highest score when hands empty.
 - `conversation-relay-v1` records required speech into the transcript and
-  scores the chosen action.
+  ends on a turn budget; people judge prose (no kernel score race).
 - `harbor-voyage-v1` executes worker placement on a **harbor-themed** table (cargo / berths / pilot). Use it only for harbor-like sources.
 - `worker-placement-v1` executes source-derived named regions with capacity, workers per seat, place→occupy→resolve scoring. Use it for generic placement; do **not** map non-harbor briefs onto harbor cargo IDs.
 - `score-race-v1` executes explicit per-seat point actions, a victory target,

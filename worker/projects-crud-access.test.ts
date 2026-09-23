@@ -615,7 +615,17 @@ describe("Game Project HTTP seam — CRUD, access, examples, sessions", () => {
       "connect",
       "constraint",
     ]);
-    expect(replay.finalState).toMatchObject({ turn: 2, scores: [3, 2, 0] });
+    expect(replay.finalState).toMatchObject({
+      turn: 2,
+      scores: [0, 0, 0],
+      winnerSeat: null,
+      conversation: {
+        transcript: [
+          { seat: 0, actionId: "connect", text: "座位 0 接上一句共同创意。" },
+          { seat: 1, actionId: "constraint", text: "座位 1 接上一句共同创意。" },
+        ],
+      },
+    });
   });
 
   it("pushes persisted Room snapshots through isolated hibernation-compatible WebSockets", async () => {

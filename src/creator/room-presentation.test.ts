@@ -105,9 +105,8 @@ describe("usesScoreTrackSurface", () => {
     }))).toBe(false);
     expect(usesScoreTrackSurface(base({
       type: "conversation-relay-v1",
-      victoryTarget: 8,
       maxTurns: 8,
-      actions: [{ id: "speak", label: "发言", points: 1 }],
+      actions: [{ id: "speak", label: "发言" }],
     }))).toBe(false);
     expect(usesScoreTrackSurface(base({
       type: "harbor-voyage-v1",
@@ -129,9 +128,8 @@ describe("usesScoreTrackSurface", () => {
 
 const conversationKernel = {
   type: "conversation-relay-v1" as const,
-  victoryTarget: 8,
   maxTurns: 8,
-  actions: [{ id: "speak", label: "发言", points: 1 }],
+  actions: [{ id: "speak", label: "发言" }],
 };
 
 describe("usesConversationTranscriptSurface", () => {
@@ -151,7 +149,7 @@ describe("usesConversationTranscriptSurface", () => {
 });
 
 describe("showsAcceptedActionPointChrome", () => {
-  it("hides point chrome for conversation even though the kernel awards points", () => {
+  it("hides point chrome for conversation (transcript-only kernel)", () => {
     expect(showsAcceptedActionPointChrome(base(conversationKernel))).toBe(false);
     expect(usesScoreTrackSurface(base(conversationKernel))).toBe(false);
   });

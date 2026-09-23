@@ -47,6 +47,44 @@ const conversationRuleSystem: RuleSystem = {
   },
 };
 
+
+const conversationRelayRuleSystem: RuleSystem = {
+  id: "rule_system_conversation_relay",
+  version: 1,
+  name: "灵感接力",
+  pitch: "用逐步增加的约束共同完成一个创意。",
+  participants: { min: 2, max: 6, default: 3, roles: [] },
+  durationMinutes: 12,
+  rules: [],
+  constraints: [],
+  entities: [],
+  setup: [],
+  actions: [
+    { id: "extend", label: "扩展创意", description: "写出一句扩展。", sourceId: null, provenance: "system-generated", confidence: 1 },
+    { id: "constraint", label: "加入约束", description: "写出一句约束。", sourceId: null, provenance: "system-generated", confidence: 1 },
+  ],
+  stages: [{ id: "create", name: "创意接力" }],
+  outcomes: [{ id: "budget", name: "回合预算用尽" }],
+  playSurface: {
+    kind: "conversation",
+    layout: "prompt-and-response",
+    regions: [],
+  },
+  presentation: { theme: "idea-relay" },
+  runtimeSupport: {
+    status: "executable",
+    unsupported: [],
+    kernel: {
+      type: "conversation-relay-v1",
+      maxTurns: 3,
+      actions: [
+        { id: "extend", label: "扩展创意" },
+        { id: "constraint", label: "加入约束" },
+      ],
+    },
+  },
+};
+
 const ruleSystem: RuleSystem = {
   id: "rule_system_test",
   version: 1,
@@ -277,6 +315,86 @@ describe("deterministic score-race runtime", () => {
       state: { turn: 1, activeSeat: 1, scores: [2, 0, 0] },
     });
     expect(state).toEqual(initialSessionState(ruleSystem));
+  });
+});
+
+
+describe("conversation-relay-v1 runtime", () => {
+  it("records speech into the transcript without awarding points", () => {
+    const runtime = executableRuntime(conversationRelayRuleSystem)!;
+    const state = initialSessionState(conversationRelayRuleSystem);
+    expect(state.conversation?.transcript).toEqual([]);
+    const accepted = acceptIntent(
+      state,
+      runtime,
+      {
+        intentId: "speak-1",
+        seat: 0,
+        actionId: "extend",
+        payload: { text: "雨夜里多了一盏灯。" },
+      },
+      1,
+    );
+    expect(accepted).toMatchObject({
+      points: 0,
+      state: {
+        turn: 1,
+        activeSeat: 1,
+        scores: [0, 0, 0],
+        status: "active",
+        winnerSeat: null,
+        conversation: {
+          transcript: [{ seat: 0, actionId: "extend", text: "雨夜里多了一盏灯。" }],
+        },
+      },
+    });
+  });
+
+  it("completes on the turn budget without a score race or kernel winner", () => {
+    const runtime = executableRuntime(conversationRelayRuleSystem)!;
+    let state = initialSessionState(conversationRelayRuleSystem);
+    const lines = ["第一句足够长。", "第二句足够长。", "第三句足够长。"];
+    for (let i = 0; i < lines.length; i += 1) {
+      const accepted = acceptIntent(
+        state,
+        runtime,
+        {
+          intentId: `speak-${i + 1}`,
+          seat: state.activeSeat,
+          actionId: "extend",
+          payload: { text: lines[i] },
+        },
+        i + 1,
+      );
+      expect(accepted).not.toBeNull();
+      state = accepted!.state;
+    }
+    expect(state).toMatchObject({
+      turn: 3,
+      status: "complete",
+      winnerSeat: null,
+      scores: [0, 0, 0],
+    });
+    expect(state.conversation?.transcript).toHaveLength(3);
+  });
+
+  it("rejects empty speech and reproduces bot evidence without winners", () => {
+    const runtime = executableRuntime(conversationRelayRuleSystem)!;
+    const state = initialSessionState(conversationRelayRuleSystem);
+    expect(
+      acceptIntent(
+        state,
+        runtime,
+        { intentId: "empty", seat: 0, actionId: "extend", payload: { text: " " } },
+        1,
+      ),
+    ).toBeNull();
+    const bot = runBotSimulation(conversationRelayRuleSystem, 42);
+    expect(bot.terminalStatus).toBe("complete");
+    expect(bot.finalState.winnerSeat).toBeNull();
+    expect(bot.finalState.conversation?.transcript.length).toBe(3);
+    expect(bot.acceptedActions.every((action) => action.points === 0)).toBe(true);
+    expect(runBotSimulation(conversationRelayRuleSystem, 42)).toEqual(bot);
   });
 });
 

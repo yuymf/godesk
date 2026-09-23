@@ -399,26 +399,21 @@ export function acceptIntent(
       intent.payload,
     );
     if (!spoken) return null;
-    const scores = state.scores.map((score, seat) =>
-      seat === intent.seat ? score + action.points : score,
-    );
     const turn = state.turn + 1;
-    const reachedTarget = scores[intent.seat] >= runtime.kernel.victoryTarget;
-    const reachedLimit = turn >= runtime.kernel.maxTurns;
-    const complete = reachedTarget || reachedLimit;
+    const complete = turn >= runtime.kernel.maxTurns;
     return {
       sequence,
       intentId: intent.intentId,
       seat: intent.seat,
       actionId: intent.actionId,
-      points: action.points,
+      points: 0,
       payload: { ...intent.payload, text: spoken.text },
       state: {
         turn,
         activeSeat: complete ? intent.seat : (intent.seat + 1) % state.scores.length,
-        scores,
+        scores: state.scores,
         status: complete ? "complete" : "active",
-        winnerSeat: complete ? uniqueWinnerSeat(scores) : null,
+        winnerSeat: null,
         conversation: spoken.state,
       },
     };
@@ -874,9 +869,8 @@ export function runBotSimulation(
       initialState,
       acceptedActions,
       finalState: state,
-      terminalStatus: state.winnerSeat === null
-        ? ("turn-limit" as const)
-        : ("complete" as const),
+      // Turn budget is the designed end; people judge prose (no kernel winner).
+      terminalStatus: "complete" as const,
     };
   }
 

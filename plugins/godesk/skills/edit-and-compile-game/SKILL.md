@@ -33,8 +33,8 @@ Keep Codex edits and manual Web Studio edits on the same optimistic-version path
    (culprit/town), player count, and majority-reveal play. Use
    `configure_hand_play` for shuffled deck, hidden hands, hand size,
    play-to-score, and first-to-target (canonical `play` action). Use
-   `configure_conversation_relay` for scored speech actions recorded into the
-   transcript, victory target, and turn limit. Use `configure_harbor_voyage`
+   `configure_conversation_relay` for speech acts recorded into the
+   transcript with a turn budget (no victory points). Use `configure_harbor_voyage`
    for harbor-like corpus (player count 2–3). Use `configure_worker_placement`
    for generic placement with source-derived regions/workers. Do not silently
    change Kernel semantics.

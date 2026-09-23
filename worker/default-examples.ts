@@ -215,7 +215,7 @@ export function instantiateDefaultExample(
         source(
           sourceId,
           "灵感接力原创玩法简述",
-          "灵感接力：参与者轮流公开发言，扩展共同创意、加入新约束或连接前文。每句发言写入记录，并按行动计分。率先达到目标分者获胜。游戏只需要共享提示与对话，不使用棋盘或实体道具。",
+          "灵感接力：参与者轮流公开发言，扩展共同创意、加入新约束或连接前文。每句发言写入共享记录。回合预算用尽后接力结束；文本质量与约束一致性由真人评议，内核不跑计分赛。游戏只需要共享提示与对话，不使用棋盘或实体道具。",
           createdAt,
         ),
       ],
@@ -242,8 +242,8 @@ export function instantiateDefaultExample(
             confidence: 1,
           },
           {
-            id: "rule_idea_win",
-            text: "率先达到 8 分者获胜；18 回合后仍无人达到时最高分获胜。",
+            id: "rule_idea_end",
+            text: "18 回合预算用尽后接力结束；胜负与文采由真人评议，内核只记录发言。",
             sourceId,
             provenance: "source-anchored",
             confidence: 1,
@@ -289,7 +289,7 @@ export function instantiateDefaultExample(
           {
             id: "extend",
             label: "扩展创意",
-            description: "增加一个与现有内容一致的新元素，获得 1 分。",
+            description: "增加一个与现有内容一致的新元素，并写出一句发言。",
             sourceId,
             provenance: "source-anchored",
             confidence: 1,
@@ -297,7 +297,7 @@ export function instantiateDefaultExample(
           {
             id: "constraint",
             label: "加入约束",
-            description: "增加一个之后所有人都必须遵守的约束，获得 2 分。",
+            description: "增加一个之后所有人都必须遵守的约束，并写出一句发言。",
             sourceId,
             provenance: "source-anchored",
             confidence: 1,
@@ -305,7 +305,7 @@ export function instantiateDefaultExample(
           {
             id: "connect",
             label: "连接前文",
-            description: "把两个已有元素组合成一个新关系，获得 3 分。",
+            description: "把两个已有元素组合成一个新关系，并写出一句发言。",
             sourceId,
             provenance: "source-anchored",
             confidence: 1,
@@ -317,7 +317,7 @@ export function instantiateDefaultExample(
           regions: [],
         },
         stages: [{ id: "relay", name: "创意接力" }],
-        outcomes: [{ id: "target-score", name: "率先达到 8 分" }],
+        outcomes: [{ id: "relay-complete", name: "回合预算用尽，发言记录可供评议" }],
         presentation: {
           theme: "idea-relay",
           visuals: [{
@@ -327,15 +327,14 @@ export function instantiateDefaultExample(
         },
         runtimeSupport: {
           status: "executable",
-          unsupported: ["文本内容的质量与约束一致性由真人评议；内核记录发言、轮次与计分。"],
+          unsupported: ["文本内容的质量与约束一致性由真人评议；内核记录发言与轮次，不跑计分赛。"],
           kernel: {
             type: "conversation-relay-v1",
-            victoryTarget: 8,
             maxTurns: 18,
             actions: [
-              { id: "extend", label: "扩展创意", points: 1 },
-              { id: "constraint", label: "加入约束", points: 2 },
-              { id: "connect", label: "连接前文", points: 3 },
+              { id: "extend", label: "扩展创意" },
+              { id: "constraint", label: "加入约束" },
+              { id: "connect", label: "连接前文" },
             ],
           },
         },
