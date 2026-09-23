@@ -643,7 +643,16 @@ export function materializeRuleSystem(input: {
     playSurface: {
       kind: surface.kind,
       layout: surface.layout,
-      regions: surface.kind === "table" || surface.kind === "scene"
+      regions: genre === "placement"
+        ? deriveWorkerPlacementRegions(`${input.name}\n${corpus}`).map((region) => ({
+            id: region.id,
+            name: region.name,
+            description: /[\u4e00-\u9fff]/.test(corpus)
+              ? "来源具名放置区域。"
+              : "Source-derived placement region.",
+            ...(input.image ? { image: input.image } : {}),
+          }))
+        : surface.kind === "table" || surface.kind === "scene"
         ? headings.slice(0, 4).map((heading, index) => ({
         id: `source-zone-${index + 1}`,
         name: heading.slice(0, 80),
@@ -700,7 +709,7 @@ export function createGenerationPlan(input: {
     : genre === "hand-play"
     ? ["发给隐藏手牌", "从手牌打出到出牌区", "从牌库补牌", "先到目标分或牌库耗尽"]
     : genre === "conversation"
-    ? ["写下可记录的发言", "发言进入对局状态与 Replay", "按行动计分直到目标"]
+    ? ["写下可记录的发言", "发言进入对局状态与 Replay", "按回合预算结束接力"]
     : genre === "placement"
     ? ["在共享区域放置工人", "占用格子", "按放置结果结算"]
     : [];
@@ -735,6 +744,14 @@ export function createGenerationPlan(input: {
   }
   if (!ruleSystem.entities.length) {
     assumptions.push("来源中尚未识别到可编辑 Game Entity。");
+  }
+  if (
+    (genre === "conversation" && !ruleSystem.entities.some((entity) => /transcript|发言/i.test(`${entity.id} ${entity.name}`))) ||
+    (genre === "hand-play" && !ruleSystem.entities.some((entity) => /hand|play-area|手牌|出牌/i.test(`${entity.id} ${entity.name}`))) ||
+    (genre === "placement" && !ruleSystem.playSurface.regions.some((region) => region.name.trim()) &&
+      !ruleSystem.entities.some((entity) => entity.id.startsWith("entity-region-")))
+  ) {
+    assumptions.push("桌子好看但还不是那款游戏：主题 kit 不够，还需要该体裁的可见物件（发言记录 / 手牌出牌区 / 具名区域）。");
   }
 
   return {

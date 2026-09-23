@@ -550,7 +550,7 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
     const generated = finished.result as {
       project: { version: number };
       ruleSystem: {
-        playSurface: { kind: string; layout?: string };
+        playSurface: { kind: string; layout?: string; regions?: Array<{ id: string; name: string }> };
         runtimeSupport: { status: string };
         participants: { default: number };
         entities: Array<{ id: string; name: string }>;
@@ -572,6 +572,7 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
       kind: "table",
       layout: "worker-placement",
     });
+    expect(generated.ruleSystem.playSurface.regions?.length ?? 0).toBeGreaterThanOrEqual(2);
     expect(generated.ruleSystem.entities.length).toBeGreaterThan(0);
     expect(generated.ruleSystem.entities.some((entity) => /worker|工人/i.test(entity.name))).toBe(true);
     const proposed = generated.generationPlan.proposedRuntime;

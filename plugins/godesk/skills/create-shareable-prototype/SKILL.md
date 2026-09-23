@@ -51,7 +51,9 @@ Turn-limit / termination reminders (also owned by that table's semantics):
 3. Harvest and bind extracted art first. Use
    `generate-visual-fill` for missing art; without host generation capacity,
    apply typographic/programmatic presentation or a theme kit so the
-   Presentation Floor supports the selected play surface.
+   Presentation Floor supports the selected play surface. A kit alone is not
+   enough for conversation / cards / placement: friends must also see transcript,
+   hand/play areas, or named regions ("桌子好看但还不是那款游戏").
 4. Submit `compile-build` with the latest version and track it to terminal.
    Inspect warnings, unsupported behavior, `presentationFloor`, and
    `playabilityFloor`. If either floor is unmet, fix the gap and compile
