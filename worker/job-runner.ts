@@ -12,7 +12,10 @@ import {
   hasWeakGenreScoreRaceLeak,
   inferSourceGenre,
 } from "../src/runtime/genre";
-import { defaultHiddenRoles } from "../src/runtime/hidden-role";
+import {
+  deriveHiddenRoles,
+  isMultiActHiddenRoleCorpus,
+} from "../src/runtime/hidden-role";
 import {
   deriveHandPlayDeck,
   isNonScoreHandLoopCorpus,
@@ -103,6 +106,7 @@ export async function runCreatorJob(
     let proposedRuntime: RuntimeConfigureOperation | null = null;
     let nonScoreHandLoopRefused = false;
     let weakGenreScoreRaceRefused = false;
+    let multiActHiddenRoleRefused = false;
     if (input.kind === "generate-rule-system") {
       const pendingPlan = await host.ctx.storage.get<GenerationPlan>(
         generationPlanKey(job.projectId),
@@ -192,7 +196,11 @@ export async function runCreatorJob(
               generatedRuleSystem.participants.default * 2,
           ),
         );
-      const hiddenRoleRuntimeConfigured = sourceGenre === "hidden-role";
+      multiActHiddenRoleRefused =
+        sourceGenre === "hidden-role" &&
+        isMultiActHiddenRoleCorpus(authoredMaterial);
+      const hiddenRoleRuntimeConfigured =
+        sourceGenre === "hidden-role" && !multiActHiddenRoleRefused;
       nonScoreHandLoopRefused =
         sourceGenre === "hand-play" &&
         drawAndScoreRule === null &&
@@ -289,21 +297,28 @@ export async function runCreatorJob(
       if (weakGenreScoreRaceRefused) {
         generationRuntimeConfigured = false;
       }
+      // W4-06: multi-act / clue-board scripts must not wear one-shot speak→accuse.
+      if (multiActHiddenRoleRefused) {
+        generationRuntimeConfigured = false;
+      }
       const pushMaxActions = Math.min(10_000, Math.max(
         200,
         (pushYourLuckRule?.victoryTarget ?? 0) * generatedRuleSystem.participants.default * 5,
       ));
       // Refuse configure for non-score hand loops (no silent play-to-score / turn-taking fallthrough).
-      const runtimeOperation = nonScoreHandLoopRefused || weakGenreScoreRaceRefused
+      const runtimeOperation = nonScoreHandLoopRefused || weakGenreScoreRaceRefused || multiActHiddenRoleRefused
         ? null
         : hiddenRoleRuntimeConfigured
         ? {
             op: "configure_hidden_role" as const,
             config: {
               playerCount: generatedRuleSystem.participants.default,
-              roles: defaultHiddenRoles(generatedRuleSystem.participants.default),
+              roles: deriveHiddenRoles(
+                authoredMaterial,
+                generatedRuleSystem.participants.default,
+              ),
               unsupported: [
-                "hidden-role-v1 executes secret role assignment, one public speech per seat, one accusation per seat, and majority reveal; narrative quality is judged by people.",
+                "hidden-role-v1 executes source-derived secret roles (defaults 凶手/侦探/平民), one public speech per seat, one accusation per seat, and majority reveal; multi-act scripts, clue boards, and LLM-judged narrative wins remain unsupported.",
               ],
             },
           }
@@ -679,6 +694,8 @@ export async function runCreatorJob(
             : "规则结构来自确定性文本抽取；来源明确写出的轮流行动将在批准 Generation Plan 后配置为 turn-taking-v1，回合上限来自来源或可见的保守原型默认值。"
         : nonScoreHandLoopRefused
           ? "来源是吃墩/出完手牌/花色效果等非计分手牌环；hand-play-v1 仅支持出牌计分，Rule System 保持 draft，不会用出牌计分顶替分享。"
+          : multiActHiddenRoleRefused
+          ? "来源是多幕/线索板剧本杀；hidden-role-v1 仅支持单轮发言→指控→揭晓，Rule System 保持 draft，不会用单轮环顶替分享。"
           : weakGenreScoreRaceRefused
           ? "来源含弱体裁信号（卡牌/放置/身份/对话），不能静默配置 score-race-v1；Rule System 保持 draft，请改写为明确体裁或纯计分赛。"
           : generatedRuleSystem.actions.length > 12

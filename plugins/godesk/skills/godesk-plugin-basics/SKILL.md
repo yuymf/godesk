@@ -82,9 +82,13 @@ density**: a named Kernel with an empty contract (no hands, fewer than 2
 placeable regions, no speech actions, no roles/accuse path) must fail the
 floor.
 
-- `hidden-role-v1` executes secret roles, one public speech per seat, one
-  accusation per seat, and majority reveal. Use it for 剧本杀 / hidden-role
-  sources. Do not substitute a score race.
+- `hidden-role-v1` executes **source-derived** secret roles (defaults 凶手 /
+  侦探 / 平民 when unnamed), one public speech per seat, one accusation per
+  seat, and majority reveal. Use it for 剧本杀 / hidden-role sources. Do not
+  substitute a score race. Multi-act scripts, clue boards, and staged evidence
+  loops must **not** share as the one-shot speak→accuse subset — refuse
+  configure / fail Playability Floor until a faithful subset exists. Do not
+  invent LLM-judged narrative wins.
 - `hand-play-v1` executes a **source-derived** shuffled deck, hidden hands,
   play-to-score, and first-to-target or highest score when hands empty.
   Derive `cardValues` / `copiesPerValue` / `handSize` / `victoryTarget` from

@@ -734,6 +734,108 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
     expect(result.warnings?.join(" ") ?? "").toMatch(/非计分|出牌计分/);
   });
 
+
+  it("parameterizes hidden-role roles from corpus (not always 凶手/侦探/平民)", async () => {
+    const created = await SELF.fetch("https://godesk.test/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Hidden-role parameterized generation" }),
+    }).then((response) => response.json<{
+      project: { id: string; version: number };
+    }>());
+    const brief =
+      "三位玩家找出凶手。身份牌：毒蛇（凶手阵营）、医师（好人）、守卫（好人）。先轮流公开发言，再互相指控。被指控最多的人被揭晓。";
+    const queued = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/jobs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          kind: "generate-rule-system",
+          expectedVersion: created.project.version,
+          idea: brief,
+          sourceContent: brief,
+          sourceKind: "brief",
+          sourceName: "hidden-role-param.txt",
+          name: "Hidden-role parameterized generation",
+          idempotencyKey: "generate-hidden-role-param-001",
+        }),
+      },
+    ).then((response) => response.json<{ id: string; status: string }>());
+    expect(queued.status).toBe("queued");
+    const finished = await waitForJob(queued.id);
+    expect(finished.status).toBe("succeeded");
+    const proposed = (finished.result as {
+      generationPlan: {
+        proposedRuntime?: {
+          op: string;
+          config: {
+            roles: Array<{ id: string; name: string; alignment: string }>;
+            unsupported?: string[];
+          };
+        };
+      };
+    }).generationPlan.proposedRuntime;
+    expect(proposed?.op).toBe("configure_hidden_role");
+    expect(proposed?.config.roles.map((role) => role.name)).toEqual([
+      "毒蛇",
+      "医师",
+      "守卫",
+    ]);
+    expect(proposed?.config.roles.filter((role) => role.alignment === "culprit")).toHaveLength(1);
+    expect(proposed?.config.roles.find((role) => role.name === "毒蛇")?.alignment).toBe("culprit");
+    expect(proposed?.config.unsupported).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("source-derived"),
+        expect.stringContaining("multi-act"),
+      ]),
+    );
+  });
+
+  it("refuses configure_hidden_role for multi-act / clue-board briefs", async () => {
+    const created = await SELF.fetch("https://godesk.test/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Multi-act hidden-role refuse generation" }),
+    }).then((response) => response.json<{
+      project: { id: string; version: number };
+    }>());
+    const brief =
+      "三幕剧本杀。第一幕搜证，第二幕讨论，第三幕投票。桌上有线索板。每人有隐藏身份，发言后互相指控。";
+    const queued = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/jobs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          kind: "generate-rule-system",
+          expectedVersion: created.project.version,
+          idea: brief,
+          sourceContent: brief,
+          sourceKind: "brief",
+          sourceName: "multi-act-script.txt",
+          name: "Multi-act hidden-role refuse generation",
+          idempotencyKey: "generate-hidden-role-refuse-multiact-001",
+        }),
+      },
+    ).then((response) => response.json<{ id: string; status: string }>());
+    expect(queued.status).toBe("queued");
+    const finished = await waitForJob(queued.id);
+    expect(finished.status).toBe("succeeded");
+    const result = finished.result as {
+      ruleSystem: { runtimeSupport: { status: string } };
+      generationPlan: {
+        proposedRuntime?: { op: string };
+        unsupported: string[];
+      };
+      warnings?: string[];
+    };
+    expect(result.generationPlan.proposedRuntime).toBeUndefined();
+    expect(result.ruleSystem.runtimeSupport.status).toBe("draft");
+    expect(result.warnings?.join(" ") ?? "").toMatch(/多幕|线索板|单轮/);
+  });
+
+
   it("W4-05: near-miss 出牌计分 configures hand-play, not score-race", async () => {
     const created = await SELF.fetch("https://godesk.test/api/projects", {
       method: "POST",
