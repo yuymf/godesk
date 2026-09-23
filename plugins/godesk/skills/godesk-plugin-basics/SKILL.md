@@ -85,7 +85,7 @@ iteration tools, not the destination.
 - `conversation-relay-v1` records required speech into the transcript and
   ends on a turn budget; people judge prose (no kernel score race).
 - `harbor-voyage-v1` executes worker placement on a **harbor-themed** table (cargo / berths / pilot). Use it only for harbor-like sources.
-- `worker-placement-v1` executes source-derived named regions with capacity, workers per seat, place→occupy→resolve scoring. Use it for generic placement; do **not** map non-harbor briefs onto harbor cargo IDs.
+- `worker-placement-v1` executes source-derived named regions with capacity and workers per seat. Pure score briefs use place→occupy→resolvePoints. Economy briefs (wood yield + workshop convert + build-N) use the economy subset and win by buildings — never share resolvePoints-as-building. Do **not** map non-harbor briefs onto harbor cargo IDs.
 - `score-race-v1` executes explicit per-seat point actions, a victory target,
   and a turn limit. Use it only when the source itself is a point race.
 - `shared-goal-v1` executes explicit turn-taking actions that add to one shared

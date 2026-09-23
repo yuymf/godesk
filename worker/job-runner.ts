@@ -11,8 +11,10 @@ import type {
 import { inferSourceGenre } from "../src/runtime/genre";
 import { defaultHiddenRoles } from "../src/runtime/hidden-role";
 import {
+  deriveVictoryBuildings,
   deriveWorkerPlacementRegions,
   deriveWorkersPerSeat,
+  isEconomyPlacementCorpus,
   isHarborLikeCorpus,
 } from "../src/runtime/worker-placement";
 import {
@@ -322,13 +324,19 @@ export async function runCreatorJob(
               2,
               Math.min(6, generatedRuleSystem.participants.default),
             );
+            const economy = isEconomyPlacementCorpus(authoredMaterial);
             const regions = deriveWorkerPlacementRegions(authoredMaterial);
             const workersPerSeat = deriveWorkersPerSeat(
               authoredMaterial,
               playerCount,
             );
+            const victoryBuildings = economy
+              ? deriveVictoryBuildings(authoredMaterial)
+              : null;
             const earlyTarget =
-              Number.isInteger(victoryTarget) && victoryTarget > 0
+              !economy &&
+              Number.isInteger(victoryTarget) &&
+              victoryTarget > 0
                 ? victoryTarget
                 : null;
             return {
@@ -339,8 +347,11 @@ export async function runCreatorJob(
                 startingCoins: 0,
                 regions,
                 victoryTarget: earlyTarget,
+                victoryBuildings,
                 unsupported: [
-                  "worker-placement-v1 executes source-derived named regions with capacity, worker placement, occupation, and resolve scoring on that board; multi-resource conversion, building trees, dice movement, and other advanced placement engines remain unsupported.",
+                  economy
+                    ? "worker-placement-v1 economy subset executes region wood yields, one wood→building convert, and victory by buildings built; multi-resource graphs and building trees remain unsupported."
+                    : "worker-placement-v1 executes source-derived named regions with capacity, worker placement, occupation, and resolve scoring on that board; multi-resource conversion, building trees, dice movement, and other advanced placement engines remain unsupported.",
                   "Generic placement briefs are not mapped onto harbor cargo IDs (amber/cobalt/cedar or 琥珀货/东栈桥).",
                   ...(generatedRuleSystem.participants.default > 6
                     ? [

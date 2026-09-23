@@ -4,6 +4,10 @@ import type {
   RuleSystem,
 } from "../creator/project-contract";
 import { inferSourceGenre, type SourceGenre } from "./genre";
+import {
+  isEconomyPlacementCorpus,
+  kernelHasPlacementEconomy,
+} from "./worker-placement";
 
 export type { PlayabilityFloorReadiness };
 
@@ -85,6 +89,25 @@ export function playabilityFloor(ruleSystem: RuleSystem): PlayabilityFloorReadin
         genre,
         kernelType,
       };
+    }
+    if (
+      kernelType === "worker-placement-v1" &&
+      ruleSystem.runtimeSupport.status === "executable" &&
+      isEconomyPlacementCorpus(ruleSystemCorpus(ruleSystem))
+    ) {
+      const kernel = ruleSystem.runtimeSupport.kernel;
+      if (
+        kernel.type !== "worker-placement-v1" ||
+        !kernelHasPlacementEconomy(kernel)
+      ) {
+        return {
+          status: "failed",
+          reason:
+            "来源要求资源兑换/建成建筑，不能用放置计分冒充建筑胜利。",
+          genre,
+          kernelType,
+        };
+      }
     }
     return {
       status: "passed",

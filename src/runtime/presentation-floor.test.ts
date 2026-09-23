@@ -190,6 +190,7 @@ describe("presentationFloor", () => {
             { id: "spot-a", name: "资源区甲", capacity: 2, cost: 0, resolvePoints: 1 },
           ],
           victoryTarget: null,
+      victoryBuildings: null,
         },
       },
     });
