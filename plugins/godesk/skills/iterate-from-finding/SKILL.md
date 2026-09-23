@@ -28,7 +28,7 @@ same GoDesk Game Project.
    `configure_roll_and_move` / `configure_draw_and_score` /
    `configure_push_your_luck` / `configure_hidden_role` /
    `configure_hand_play` / `configure_conversation_relay` /
-   `configure_harbor_voyage` operation when the Executable Kernel values
+   `configure_harbor_voyage` / `configure_worker_placement` operation when the Executable Kernel values
    change. Choose the Kernel with the table in `$godesk-plugin-basics`; do
    not substitute a score-track `configure_*` for a genre Kernel.
    Preserve source anchors,

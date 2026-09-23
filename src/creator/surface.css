@@ -515,6 +515,7 @@ textarea {
 .studio-examples .example-grid small,
 .studio-examples .example-grid dt,
 .harbor-voyage-board .game-log,
+.worker-placement-board .game-log,
 .room-view:not(.room-view-voyage) > .action-log code,
 .room-view:not(.room-view-voyage) > .action-log p,
 .room-view:not(.room-view-voyage) > .action-log li,
@@ -2689,6 +2690,106 @@ summary:focus-visible {
   gap: 16px;
 }
 
+.worker-placement-board {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
+}
+
+.worker-placement-instruction {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
+.worker-placement-regions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.worker-placement-region {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f7f4ee;
+}
+
+.worker-placement-region.is-open {
+  border-color: #8ec9ae;
+  box-shadow: inset 0 0 0 1px #8ec9ae;
+}
+
+.worker-placement-region header {
+  display: grid;
+  gap: 2px;
+}
+
+.worker-placement-region small {
+  color: var(--muted);
+}
+
+.worker-placement-slots {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.worker-placement-slots span {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px dashed var(--line);
+  background: #fff;
+}
+
+.worker-placement-slots span.is-filled {
+  border-style: solid;
+}
+
+.worker-placement-region button {
+  justify-self: start;
+}
+
+.worker-placement-seats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.worker-placement-seats > div {
+  display: grid;
+  grid-template-columns: 12px 1fr;
+  gap: 4px 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: #fbfaf7;
+}
+
+.worker-placement-seats > div.is-active {
+  border-color: #d6a637;
+}
+
+.worker-placement-seats > div > span {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  grid-row: span 2;
+}
+
+.worker-placement-seats small {
+  grid-column: 2;
+  color: var(--muted);
+}
+
 .harbor-voyage-board {
   display: grid;
   gap: 14px;
@@ -2952,7 +3053,8 @@ summary:focus-visible {
   font-size: 12px;
 }
 
-.harbor-voyage-board .game-log ol {
+.harbor-voyage-board .game-log ol,
+.worker-placement-board .game-log ol {
   margin: 8px 0 0;
   padding: 0;
   list-style: none;
@@ -2962,7 +3064,8 @@ summary:focus-visible {
   overflow: auto;
 }
 
-.harbor-voyage-board .game-log li {
+.harbor-voyage-board .game-log li,
+.worker-placement-board .game-log li {
   display: grid;
   grid-template-columns: 28px 1fr;
   gap: 8px;

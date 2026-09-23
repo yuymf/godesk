@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { getBuild, getReplay } from "./project-api";
 import type { GameReplay, PlayableBuild } from "./project-contract";
 import type { HarborVoyageState } from "../runtime/harbor-voyage";
+import type { WorkerPlacementState } from "../runtime/worker-placement";
 import { HarborVoyageBoard } from "./HarborVoyageBoard";
+import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import { readShareToken, validationStudioHref } from "./studio-utils";
 
 export function ReplayView({ replayId }: { replayId: string }) {
@@ -71,6 +73,11 @@ export function ReplayView({ replayId }: { replayId: string }) {
         </p>
         {replay.finalState.voyage ? (
           <HarborVoyageBoard readOnly voyage={replay.finalState.voyage as HarborVoyageState} />
+        ) : replay.finalState.workerPlacement ? (
+          <WorkerPlacementBoard
+            readOnly
+            board={replay.finalState.workerPlacement as WorkerPlacementState}
+          />
         ) : (
           <div className="replay-state-columns">
             <ReplayStateCard label="开局" state={replay.initialState} />

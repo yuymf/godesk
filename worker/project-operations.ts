@@ -329,6 +329,9 @@ export type RuntimeConfiguration =
   | Extract<ProjectChangeOperation, { op: "configure_harbor_voyage" }> & {
       op: "configure_harbor_voyage";
     }
+  | Extract<ProjectChangeOperation, { op: "configure_worker_placement" }> & {
+      op: "configure_worker_placement";
+    }
   | Extract<ProjectChangeOperation, { op: "configure_hidden_role" }> & {
       op: "configure_hidden_role";
     }
@@ -344,7 +347,7 @@ export function configureDedicatedKernel(
   op: string,
   kernel: Extract<
     Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
-    { type: "harbor-voyage-v1" | "hidden-role-v1" | "hand-play-v1" | "conversation-relay-v1" }
+    { type: "harbor-voyage-v1" | "worker-placement-v1" | "hidden-role-v1" | "hand-play-v1" | "conversation-relay-v1" }
   >,
   unsupported: string[],
   config: unknown,
@@ -438,6 +441,27 @@ export function configureRuntimeKernel(
       {
         type: "harbor-voyage-v1",
         playerCount: configuration.config.playerCount,
+      },
+      configuration.config.unsupported?.map((item) => item.trim()) ?? [],
+      configuration.config,
+      affectedEntities,
+    );
+    return;
+  }
+  if (configuration.op === "configure_worker_placement") {
+    configureDedicatedKernel(
+      record,
+      configuration.op,
+      {
+        type: "worker-placement-v1",
+        playerCount: configuration.config.playerCount,
+        workersPerSeat: configuration.config.workersPerSeat,
+        startingCoins: configuration.config.startingCoins,
+        regions: configuration.config.regions,
+        victoryTarget:
+          configuration.config.victoryTarget == null
+            ? null
+            : configuration.config.victoryTarget,
       },
       configuration.config.unsupported?.map((item) => item.trim()) ?? [],
       configuration.config,
@@ -1129,6 +1153,45 @@ const RUNTIME_HANDLERS: {
       config.playerCount <= 3 &&
       validUnsupported(config.unsupported),
   },
+  configure_worker_placement: {
+    validate: (config) =>
+      Boolean(config) &&
+      typeof config === "object" &&
+      Number.isInteger(config.playerCount) &&
+      config.playerCount >= 2 &&
+      config.playerCount <= 6 &&
+      Number.isInteger(config.workersPerSeat) &&
+      config.workersPerSeat >= 1 &&
+      config.workersPerSeat <= 8 &&
+      Number.isInteger(config.startingCoins) &&
+      config.startingCoins >= 0 &&
+      config.startingCoins <= 100 &&
+      Array.isArray(config.regions) &&
+      config.regions.length >= 2 &&
+      config.regions.length <= 12 &&
+      !config.regions.some((region) =>
+        !region ||
+        !validActionId(region.id) ||
+        typeof region.name !== "string" ||
+        !region.name.trim() ||
+        region.name.length > 40 ||
+        !Number.isInteger(region.capacity) ||
+        region.capacity < 1 ||
+        region.capacity > 8 ||
+        !Number.isInteger(region.cost) ||
+        region.cost < 0 ||
+        region.cost > 20 ||
+        !Number.isInteger(region.resolvePoints) ||
+        region.resolvePoints < 0 ||
+        region.resolvePoints > 20
+      ) &&
+      uniqueBy(config.regions, (region) => region.id) &&
+      (config.victoryTarget == null ||
+        (Number.isInteger(config.victoryTarget) &&
+          config.victoryTarget >= 1 &&
+          config.victoryTarget <= 1_000)) &&
+      validUnsupported(config.unsupported),
+  },
   configure_hidden_role: {
     validate: (config) =>
       Boolean(config) &&
@@ -1742,7 +1805,8 @@ export function proposedAffectedEntities(
       operation.op === "configure_roll_and_move" ||
       operation.op === "configure_draw_and_score" ||
       operation.op === "configure_push_your_luck" ||
-      operation.op === "configure_harbor_voyage"
+      operation.op === "configure_harbor_voyage" ||
+      operation.op === "configure_worker_placement"
     ) {
       return `runtime:${ruleSystemId}`;
     }

@@ -113,6 +113,17 @@ describe("usesScoreTrackSurface", () => {
       type: "harbor-voyage-v1",
       playerCount: 4,
     }))).toBe(false);
+    expect(usesScoreTrackSurface(base({
+      type: "worker-placement-v1",
+      playerCount: 3,
+      workersPerSeat: 3,
+      startingCoins: 0,
+      regions: [
+        { id: "spot-a", name: "A", capacity: 2, cost: 0, resolvePoints: 1 },
+        { id: "spot-b", name: "B", capacity: 2, cost: 0, resolvePoints: 1 },
+      ],
+      victoryTarget: null,
+    }))).toBe(false);
   });
 });
 

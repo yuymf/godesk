@@ -210,6 +210,21 @@ export interface RuleSystem {
               playerCount: number;
             }
           | {
+              type: "worker-placement-v1";
+              playerCount: number;
+              workersPerSeat: number;
+              startingCoins: number;
+              regions: Array<{
+                id: string;
+                name: string;
+                capacity: number;
+                cost: number;
+                resolvePoints: number;
+                tag?: string;
+              }>;
+              victoryTarget: number | null;
+            }
+          | {
               type: "hidden-role-v1";
               playerCount: number;
               roles: Array<{
@@ -296,6 +311,36 @@ export type HarborVoyageTableState = {
   }>;
   lastRoll: Partial<Record<"amber" | "cobalt" | "cedar", number>>;
   boardedPirates: Partial<Record<"amber" | "cobalt" | "cedar", number[]>>;
+  log: string[];
+  winnerSeat: number | null;
+};
+
+export type WorkerPlacementTableState = {
+  phase: "placement" | "resolved";
+  activeSeat: number;
+  players: Array<{
+    seat: number;
+    name: string;
+    color: string;
+    workers: number;
+    coins: number;
+    score: number;
+  }>;
+  regions: Array<{
+    id: string;
+    name: string;
+    capacity: number;
+    cost: number;
+    resolvePoints: number;
+    tag?: string;
+  }>;
+  placements: Array<{
+    id: string;
+    seat: number;
+    regionId: string;
+    cost: number;
+  }>;
+  victoryTarget: number | null;
   log: string[];
   winnerSeat: number | null;
 };
@@ -455,6 +500,24 @@ export type ProjectChangeOperation =
       op: "configure_harbor_voyage";
       config: {
         playerCount: number;
+        unsupported?: string[];
+      };
+    }
+  | {
+      op: "configure_worker_placement";
+      config: {
+        playerCount: number;
+        workersPerSeat: number;
+        startingCoins: number;
+        regions: Array<{
+          id: string;
+          name: string;
+          capacity: number;
+          cost: number;
+          resolvePoints: number;
+          tag?: string;
+        }>;
+        victoryTarget?: number | null;
         unsupported?: string[];
       };
     }
@@ -705,6 +768,8 @@ export interface SessionState {
   };
   /** Present when the build kernel is harbor-voyage-v1. */
   voyage?: HarborVoyageTableState;
+  /** Present when the build kernel is worker-placement-v1. */
+  workerPlacement?: WorkerPlacementTableState;
   /** Present when the build kernel is hidden-role-v1. Other seats' roles stay hidden. */
   hiddenRole?: {
     phase: "discuss" | "accuse" | "resolved";

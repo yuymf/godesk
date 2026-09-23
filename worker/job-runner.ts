@@ -11,6 +11,11 @@ import type {
 import { inferSourceGenre } from "../src/runtime/genre";
 import { defaultHiddenRoles } from "../src/runtime/hidden-role";
 import {
+  deriveWorkerPlacementRegions,
+  deriveWorkersPerSeat,
+  isHarborLikeCorpus,
+} from "../src/runtime/worker-placement";
+import {
   inferredNumber,
   inferredDrawAndScoreRule,
   inferredPushYourLuckRule,
@@ -178,7 +183,11 @@ export async function runCreatorJob(
         );
       const hiddenRoleRuntimeConfigured = sourceGenre === "hidden-role";
       const handPlayRuntimeConfigured = sourceGenre === "hand-play";
-      const harborVoyageRuntimeConfigured = sourceGenre === "placement";
+      const harborLikePlacement =
+        sourceGenre === "placement" && isHarborLikeCorpus(authoredMaterial);
+      const workerPlacementRuntimeConfigured =
+        sourceGenre === "placement" && !harborLikePlacement;
+      const harborVoyageRuntimeConfigured = harborLikePlacement;
       const conversationRelayRuntimeConfigured =
         sourceGenre === "conversation" &&
         sourceRuntimeActions.length > 0 &&
@@ -231,6 +240,7 @@ export async function runCreatorJob(
         hiddenRoleRuntimeConfigured ||
         handPlayRuntimeConfigured ||
         harborVoyageRuntimeConfigured ||
+        workerPlacementRuntimeConfigured ||
         conversationRelayRuntimeConfigured ||
         scoreRaceRuntimeConfigured ||
         sharedGoalRuntimeConfigured ||
@@ -309,6 +319,45 @@ export async function runCreatorJob(
               ],
             },
           }
+        : workerPlacementRuntimeConfigured
+        ? (() => {
+            const playerCount = Math.max(
+              2,
+              Math.min(6, generatedRuleSystem.participants.default),
+            );
+            const regions = deriveWorkerPlacementRegions(authoredMaterial);
+            const workersPerSeat = deriveWorkersPerSeat(
+              authoredMaterial,
+              playerCount,
+            );
+            const earlyTarget =
+              Number.isInteger(victoryTarget) && victoryTarget > 0
+                ? victoryTarget
+                : null;
+            return {
+              op: "configure_worker_placement" as const,
+              config: {
+                playerCount,
+                workersPerSeat,
+                startingCoins: 0,
+                regions,
+                victoryTarget: earlyTarget,
+                unsupported: [
+                  "worker-placement-v1 executes source-derived named regions with capacity, worker placement, occupation, and resolve scoring on that board; multi-resource conversion, building trees, dice movement, and other advanced placement engines remain unsupported.",
+                  "Generic placement briefs are not mapped onto harbor cargo IDs (amber/cobalt/cedar or 琥珀货/东栈桥).",
+                  ...(generatedRuleSystem.participants.default > 6
+                    ? [
+                        `The source asked for ${generatedRuleSystem.participants.default} players; worker-placement-v1 clamps to 6.`,
+                      ]
+                    : generatedRuleSystem.participants.default < 2
+                      ? [
+                          `The source asked for ${generatedRuleSystem.participants.default} players; worker-placement-v1 requires at least 2.`,
+                        ]
+                      : []),
+                ],
+              },
+            };
+          })()
         : pushYourLuckRuntimeConfigured
         ? {
             op: "configure_push_your_luck" as const,
@@ -561,7 +610,9 @@ export async function runCreatorJob(
           : proposedRuntime?.op === "configure_conversation_relay"
           ? "规则结构来自体裁识别；发言必须写入记录，并按行动计分，将在批准 Generation Plan 后配置为 conversation-relay-v1。"
           : proposedRuntime?.op === "configure_harbor_voyage"
-          ? "规则结构来自体裁识别；共享桌面放置环将在批准 Generation Plan 后配置为 harbor-voyage-v1；来源专属棋盘与资源结算仍保持未支持说明。"
+          ? "规则结构来自体裁识别；港口主题放置环将在批准 Generation Plan 后配置为 harbor-voyage-v1；来源专属棋盘与资源结算仍保持未支持说明。"
+          : proposedRuntime?.op === "configure_worker_placement"
+          ? "规则结构来自体裁识别；来源具名区域的工人放置环将在批准 Generation Plan 后配置为 worker-placement-v1；不会静默换成港口货船 ID。"
         : proposedRuntime?.op === "configure_roll_and_move"
           ? "规则结构来自确定性文本抽取；骰子面数、按点数前进与先到终点获胜将在批准 Generation Plan 后配置为可复现的 roll-and-move-v1。"
           : proposedRuntime?.op === "configure_push_your_luck"

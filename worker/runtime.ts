@@ -11,6 +11,13 @@ import {
   type HarborVoyageState,
 } from "../src/runtime/harbor-voyage";
 import {
+  applyWorkerPlacementIntent,
+  createWorkerPlacementState,
+  pickWorkerPlacementBotActionId,
+  workerPlacementScores,
+  type WorkerPlacementState,
+} from "../src/runtime/worker-placement";
+import {
   applyHiddenRoleIntent,
   createHiddenRoleState,
   hiddenRoleActiveSeat,
@@ -66,6 +73,21 @@ function voyageToTableState(
   };
 }
 
+function workerPlacementToTableState(
+  workerPlacement: WorkerPlacementState,
+  turn: number,
+): SessionState {
+  const complete = workerPlacement.phase === "resolved";
+  return {
+    turn,
+    activeSeat: workerPlacement.activeSeat,
+    scores: workerPlacementScores(workerPlacement),
+    status: complete ? "complete" : "active",
+    winnerSeat: complete ? workerPlacement.winnerSeat : null,
+    workerPlacement,
+  };
+}
+
 export function initialSessionState(
   ruleSystem: RuleSystem,
   _seed = 42,
@@ -74,6 +96,18 @@ export function initialSessionState(
   if (runtime?.kernel.type === "harbor-voyage-v1") {
     return voyageToTableState(
       createHarborVoyageState(runtime.kernel.playerCount),
+      0,
+    );
+  }
+  if (runtime?.kernel.type === "worker-placement-v1") {
+    return workerPlacementToTableState(
+      createWorkerPlacementState({
+        playerCount: runtime.kernel.playerCount,
+        workersPerSeat: runtime.kernel.workersPerSeat,
+        startingCoins: runtime.kernel.startingCoins,
+        regions: runtime.kernel.regions,
+        victoryTarget: runtime.kernel.victoryTarget,
+      }),
       0,
     );
   }
@@ -249,6 +283,24 @@ export function acceptIntent(
       actionId: applied.canonicalActionId,
       points: applied.points,
       state: voyageToTableState(applied.state, state.turn + 1),
+    };
+  }
+
+  if (runtime.kernel.type === "worker-placement-v1") {
+    if (state.status !== "active" || !state.workerPlacement) return null;
+    const applied = applyWorkerPlacementIntent(
+      state.workerPlacement as WorkerPlacementState,
+      intent.seat,
+      intent.actionId,
+    );
+    if (!applied) return null;
+    return {
+      sequence,
+      intentId: intent.intentId,
+      seat: intent.seat,
+      actionId: applied.canonicalActionId,
+      points: applied.points,
+      state: workerPlacementToTableState(applied.state, state.turn + 1),
     };
   }
 
@@ -852,6 +904,37 @@ export function runBotSimulation(
       acceptedActions,
       finalState: state,
       terminalStatus: "complete" as const,
+    };
+  }
+
+  if (runtime.kernel.type === "worker-placement-v1") {
+    while (state.status === "active" && state.workerPlacement) {
+      const actionId = pickWorkerPlacementBotActionId(
+        state.workerPlacement as WorkerPlacementState,
+      );
+      if (!actionId) throw new Error("bot_action_unavailable");
+      const accepted = acceptIntent(
+        state,
+        runtime,
+        {
+          intentId: `bot_${acceptedActions.length + 1}`,
+          seat: state.activeSeat,
+          actionId,
+        },
+        acceptedActions.length + 1,
+        seed,
+      );
+      if (!accepted) throw new Error("bot_action_rejected");
+      acceptedActions.push(accepted);
+      state = accepted.state;
+    }
+    return {
+      initialState,
+      acceptedActions,
+      finalState: state,
+      terminalStatus: state.winnerSeat === null
+        ? ("turn-limit" as const)
+        : ("complete" as const),
     };
   }
 

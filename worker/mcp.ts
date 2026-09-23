@@ -567,6 +567,24 @@ const operationSchema = z.discriminatedUnion("op", [
     }),
   }),
   z.object({
+    op: z.literal("configure_worker_placement"),
+    config: z.object({
+      playerCount: z.number().int().min(2).max(6),
+      workersPerSeat: z.number().int().min(1).max(8),
+      startingCoins: z.number().int().min(0).max(100),
+      regions: z.array(z.object({
+        id: z.string().regex(/^[a-z0-9-]{1,40}$/),
+        name: z.string().min(1).max(40),
+        capacity: z.number().int().min(1).max(8),
+        cost: z.number().int().min(0).max(20),
+        resolvePoints: z.number().int().min(0).max(20),
+        tag: z.string().min(1).max(40).optional(),
+      })).min(2).max(12),
+      victoryTarget: z.number().int().min(1).max(1_000).nullable().optional(),
+      unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
+    }),
+  }),
+  z.object({
     op: z.literal("configure_hidden_role"),
     config: z.object({
       playerCount: z.number().int().min(2).max(6),

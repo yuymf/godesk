@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { getBuild } from "./project-api";
 import type { PlayableBuild } from "./project-contract";
 import { createHarborVoyageState } from "../runtime/harbor-voyage";
+import { createWorkerPlacementState } from "../runtime/worker-placement";
 import {
   drawAndScoreKernel,
   isHarborVoyage,
+  workerPlacementKernel,
   pushYourLuckKernel,
   rollAndMoveKernel,
   scoreRaceKernel,
@@ -14,6 +16,7 @@ import {
   usesScoreTrackSurface,
 } from "./room-presentation";
 import { HarborVoyageBoard } from "./HarborVoyageBoard";
+import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import { href, readShareToken } from "./studio-utils";
 
 export function PlayablePreview({ buildId }: { buildId: string }) {
@@ -51,6 +54,7 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
   const pushYourLuck = pushYourLuckKernel(build.ruleSystem);
   const turnTaking = turnTakingKernel(build.ruleSystem);
   const harbor = isHarborVoyage(build.ruleSystem);
+  const workerPlacement = workerPlacementKernel(build.ruleSystem);
   const scoreTrackSurface = usesScoreTrackSurface(build.ruleSystem);
   const runtimeValues = new Map(
     race?.actions.map((action) => [action.id, action.points]) ??
@@ -103,6 +107,19 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
             voyage={createHarborVoyageState(
               build.ruleSystem.participants.default,
             )}
+          />
+        </section>
+      ) : workerPlacement ? (
+        <section className="preview-board" aria-label="工人放置可玩桌面">
+          <WorkerPlacementBoard
+            readOnly
+            board={createWorkerPlacementState({
+              playerCount: workerPlacement.playerCount,
+              workersPerSeat: workerPlacement.workersPerSeat,
+              startingCoins: workerPlacement.startingCoins,
+              regions: workerPlacement.regions,
+              victoryTarget: workerPlacement.victoryTarget,
+            })}
           />
         </section>
       ) : (

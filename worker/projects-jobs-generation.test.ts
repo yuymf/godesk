@@ -507,11 +507,11 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
     });
   });
 
-  it("proposes harbor-voyage for placement genre and configures it on approve", async () => {
+  it("proposes worker-placement for generic placement and never emits harbor cargo IDs", async () => {
     const created = await SELF.fetch("https://godesk.test/api/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Placement harbor generation" }),
+      body: JSON.stringify({ name: "Placement generic generation" }),
     }).then((response) => response.json<{
       project: { id: string; version: number };
     }>());
@@ -533,8 +533,8 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
           sourceContent: brief,
           sourceKind: "brief",
           sourceName: "placement-brief.txt",
-          name: "Placement harbor generation",
-          idempotencyKey: "generate-placement-harbor-001",
+          name: "Placement generic generation",
+          idempotencyKey: "generate-placement-generic-001",
         }),
       },
     ).then((response) => response.json<{ id: string; status: string }>());
@@ -547,12 +547,17 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
         playSurface: { kind: string; layout?: string };
         runtimeSupport: { status: string };
         participants: { default: number };
+        entities: Array<{ id: string; name: string }>;
       };
       generationPlan: {
         status: string;
         proposedRuntime?: {
           op: string;
-          config: { playerCount: number; unsupported?: string[] };
+          config: {
+            playerCount: number;
+            regions: Array<{ id: string; name: string }>;
+            unsupported?: string[];
+          };
         };
       };
     };
@@ -561,17 +566,92 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
       kind: "table",
       layout: "worker-placement",
     });
-    expect(generated.generationPlan).toMatchObject({
-      status: "pending",
-      proposedRuntime: {
-        op: "configure_harbor_voyage",
-        config: {
-          playerCount: 3,
-          unsupported: expect.arrayContaining([
-            expect.stringContaining("harbor-voyage-v1"),
-          ]),
-        },
+    expect(generated.ruleSystem.entities.length).toBeGreaterThan(0);
+    expect(generated.ruleSystem.entities.some((entity) => /worker|工人/i.test(entity.name))).toBe(true);
+    const proposed = generated.generationPlan.proposedRuntime;
+    expect(proposed?.op).toBe("configure_worker_placement");
+    expect(proposed?.config.playerCount).toBe(3);
+    expect(proposed?.config.regions?.length).toBeGreaterThanOrEqual(2);
+    const regionBlob = JSON.stringify(proposed?.config.regions ?? []);
+    expect(regionBlob).not.toMatch(/amber|cobalt|cedar|port-a|琥珀货|东栈桥/);
+    expect(proposed?.config.unsupported).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("worker-placement-v1"),
+        expect.stringContaining("harbor cargo"),
+      ]),
+    );
+    const approved = await approveGenerationPlan(
+      created.project.id,
+      generated.project.version,
+      "placement-generic-approve-plan",
+    );
+    expect(approved.project.version).toBeGreaterThan(generated.project.version);
+    const ruleSystem = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}?view=rule-system`,
+    ).then((response) => response.json<{
+      runtimeSupport:
+        | { status: "draft" }
+        | {
+            status: "executable";
+            kernel: {
+              type: string;
+              playerCount: number;
+              regions: Array<{ id: string; name: string }>;
+            };
+          };
+    }>());
+    expect(ruleSystem.runtimeSupport).toMatchObject({
+      status: "executable",
+      kernel: { type: "worker-placement-v1", playerCount: 3 },
+    });
+    if (ruleSystem.runtimeSupport.status === "executable") {
+      const ids = ruleSystem.runtimeSupport.kernel.regions.map((region) => region.id);
+      expect(ids).not.toContain("amber");
+      expect(ids).not.toContain("port-a");
+    }
+  });
+
+  it("still proposes harbor-voyage for harbor-like placement corpus", async () => {
+    const created = await SELF.fetch("https://godesk.test/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Placement harbor generation" }),
+    }).then((response) => response.json<{
+      project: { id: string; version: number };
+    }>());
+    const brief = [
+      "3 players race on a harbor voyage board with 琥珀货, 钴蓝绸, and 雪松木.",
+      "Place workers on 东栈桥 and cargo berths; sail and settle the voyage.",
+    ].join(" ");
+    const queued = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/jobs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          kind: "generate-rule-system",
+          expectedVersion: created.project.version,
+          idea: brief,
+          sourceContent: brief,
+          sourceKind: "brief",
+          sourceName: "harbor-brief.txt",
+          name: "Placement harbor generation",
+          idempotencyKey: "generate-placement-harbor-001",
+        }),
       },
+    ).then((response) => response.json<{ id: string; status: string }>());
+    expect(queued.status).toBe("queued");
+    const finished = await waitForJob(queued.id);
+    expect(finished.status).toBe("succeeded");
+    const generated = finished.result as {
+      project: { version: number };
+      generationPlan: {
+        proposedRuntime?: { op: string; config: { playerCount: number } };
+      };
+    };
+    expect(generated.generationPlan.proposedRuntime).toMatchObject({
+      op: "configure_harbor_voyage",
+      config: { playerCount: 3 },
     });
     const approved = await approveGenerationPlan(
       created.project.id,

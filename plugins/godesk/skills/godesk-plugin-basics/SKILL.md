@@ -84,7 +84,8 @@ iteration tools, not the destination.
   first-to-target or highest score when hands empty.
 - `conversation-relay-v1` records required speech into the transcript and
   scores the chosen action.
-- `harbor-voyage-v1` executes worker placement on a harbor table.
+- `harbor-voyage-v1` executes worker placement on a **harbor-themed** table (cargo / berths / pilot). Use it only for harbor-like sources.
+- `worker-placement-v1` executes source-derived named regions with capacity, workers per seat, place→occupy→resolve scoring. Use it for generic placement; do **not** map non-harbor briefs onto harbor cargo IDs.
 - `score-race-v1` executes explicit per-seat point actions, a victory target,
   and a turn limit. Use it only when the source itself is a point race.
 - `shared-goal-v1` executes explicit turn-taking actions that add to one shared
@@ -112,7 +113,8 @@ iteration tools, not the destination.
 - To revise Kernel values on an existing project, use the matching
   `configure_*` op via `apply_project_patch`: genre kernels use
   `configure_hidden_role`, `configure_hand_play`,
-  `configure_conversation_relay`, or `configure_harbor_voyage`; score-track
+  `configure_conversation_relay`, `configure_harbor_voyage`, or
+  `configure_worker_placement`; score-track
   and related ops are listed in `$edit-and-compile-game`.
 
 ## Authority boundaries
