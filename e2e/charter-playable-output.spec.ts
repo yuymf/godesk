@@ -291,7 +291,10 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await thirdContext.close();
   });
 
-  test("港口十三号 opens a light harbor table and accepts a waiter", async ({ page }) => {
+  test("港口十三号 opens a light harbor table and accepts a waiter", async ({
+    page,
+    browser,
+  }) => {
     await page.goto("/chatgpt-plugin/new");
     const harbor = page.locator("article").filter({ hasText: "港口十三号" });
     await harbor.getByRole("button", { name: "先玩这一局" }).click();
@@ -300,14 +303,38 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.getByRole("heading", { name: "港口十三号" })).toBeVisible();
     await expectLightPlaySurface(page);
     await expect(page.getByRole("heading", { name: "派遣伙计" })).toBeVisible();
-    await expect(page.locator(".harbor-voyage-board")).toBeVisible();
+    await expect(page.getByTestId("harbor-voyage-board")).toBeVisible();
+    await expect(page.getByTestId("harbor-phase-chrome")).toBeVisible();
+    await expect(page.getByTestId("harbor-phase-label")).toHaveText("放置阶段");
+    await expect(page.getByTestId("harbor-cargo-tracks")).toBeVisible();
+    await expect(page.getByTestId("harbor-cargo-track-amber")).toContainText("琥珀货");
+    await expect(page.getByTestId("harbor-cargo-track-cobalt")).toContainText("钴蓝绸");
+    await expect(page.getByTestId("harbor-cargo-track-cedar")).toContainText("雪松木");
+    await expect(page.getByTestId("harbor-dock-group-cargo")).toBeVisible();
+    await expect(page.getByTestId("harbor-dock-group-port")).toContainText("东栈桥");
+    await expect(page.getByTestId("harbor-dock-group-yard")).toContainText("干坞甲");
+    await expect(page.getByTestId("harbor-dock-group-special")).toContainText("小领航");
     await expect
       .poll(async () =>
         page
-          .locator(".harbor-voyage-board")
+          .getByTestId("harbor-voyage-board")
           .evaluate((el) => getComputedStyle(el).backgroundColor),
       )
       .toBe("rgb(255, 255, 255)");
+
+    const inviteUrl = await page.getByLabel("邀请链接").inputValue();
+    const friendContext = await browser.newContext();
+    const friendPage = await friendContext.newPage();
+    await friendPage.goto(inviteUrl);
+    await expect(friendPage.getByTestId("harbor-cargo-tracks")).toBeVisible();
+    await expect(friendPage.getByTestId("harbor-cargo-track-cedar")).toContainText(
+      "雪松木",
+    );
+    await expect(friendPage.getByTestId("harbor-dock-group-port")).toContainText(
+      "东栈桥",
+    );
+    await expect(friendPage.getByTestId("harbor-phase-label")).toHaveText("放置阶段");
+    await friendContext.close();
 
     await page.getByLabel("你的席位").selectOption("0");
     await expect(page.getByText(/放置 1\/4 · 座位 0/)).toBeVisible();

@@ -53,7 +53,9 @@ Turn-limit / termination reminders (also owned by that table's semantics):
    apply typographic/programmatic presentation or a theme kit so the
    Presentation Floor supports the selected play surface. A kit alone is not
    enough for conversation / cards / placement: friends must also see transcript,
-   hand/play areas, or named regions ("桌子好看但还不是那款游戏").
+   hand/play areas, or named regions ("桌子好看但还不是那款游戏"). Harbor /
+   `港口十三号` aims at the settlecoast **2D presentation bar** on the invite
+   URL (labeled cargo tracks + dock groups) — not a 3D / GameFactory port.
 4. Submit `compile-build` with the latest version and track it to terminal.
    Inspect warnings, unsupported behavior, `presentationFloor`, and
    `playabilityFloor`. If either floor is unmet, fix the gap and compile

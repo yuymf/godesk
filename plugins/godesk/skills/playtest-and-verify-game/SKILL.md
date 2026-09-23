@@ -30,6 +30,9 @@ Separate structural, deterministic, visual, and human evidence in every report.
    policy, and same-seed Replay reconstruction.
    For `harbor-voyage-v1`, inspect and report the returned `state.voyage`
    phase, active seat, placements, cargo positions, log, and final settlement;
+   treat `港口十三号` Room chrome as the settlecoast **2D presentation bar**
+   (labeled cargo tracks + dock groups visible on the invite URL) — never a 3D
+   / GameFactory engine target;
    for `worker-placement-v1`, inspect `state.workerPlacement` regions, placements, wood/buildings when economy,
    scores, and resolve outcome;
    do not reduce a voyage to its derived score array.
