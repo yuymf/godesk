@@ -5,6 +5,11 @@ import type {
 } from "../src/creator/project-contract";
 import { inferSourceGenre } from "../src/runtime/genre";
 import { defaultHiddenRoles } from "../src/runtime/hidden-role";
+import { genreObjectFidelity } from "../src/runtime/presentation-floor";
+import {
+  genreObjectSatisfiedPlanAssumption,
+  shareGatePlanAssumption,
+} from "../src/runtime/share-gate-copy";
 import {
   deriveWorkerPlacementRegions,
   deriveWorkersPerSeat,
@@ -745,13 +750,14 @@ export function createGenerationPlan(input: {
   if (!ruleSystem.entities.length) {
     assumptions.push("来源中尚未识别到可编辑 Game Entity。");
   }
-  if (
-    (genre === "conversation" && !ruleSystem.entities.some((entity) => /transcript|发言/i.test(`${entity.id} ${entity.name}`))) ||
-    (genre === "hand-play" && !ruleSystem.entities.some((entity) => /hand|play-area|手牌|出牌/i.test(`${entity.id} ${entity.name}`))) ||
-    (genre === "placement" && !ruleSystem.playSurface.regions.some((region) => region.name.trim()) &&
-      !ruleSystem.entities.some((entity) => entity.id.startsWith("entity-region-")))
-  ) {
-    assumptions.push("桌子好看但还不是那款游戏：主题 kit 不够，还需要该体裁的可见物件（发言记录 / 手牌出牌区 / 具名区域）。");
+  // Presentation / share honesty (W3-06): reuse Presentation Floor reason SSOT.
+  assumptions.push(shareGatePlanAssumption());
+  const genreObjects = genreObjectFidelity(ruleSystem);
+  if (genreObjects.status === "failed") {
+    assumptions.push(genreObjects.reason);
+  } else {
+    const satisfied = genreObjectSatisfiedPlanAssumption(genreObjects.family);
+    if (satisfied) assumptions.push(satisfied);
   }
 
   return {

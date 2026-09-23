@@ -48,7 +48,11 @@ Keep Codex edits and manual Web Studio edits on the same optimistic-version path
    Finding, pass that Finding as `basedOnFindingId`; otherwise leave the field
    absent.
 9. Read and open the immutable build from the terminal result. Report its
-   Rule System version, warnings, and unsupported behavior.
+   Rule System version, warnings, `presentationFloor`, `playabilityFloor`, and
+   unsupported behavior. Share gate is playability + genre fidelity (ADR 0012),
+   not kit cosmetics. If Presentation Floor cites "桌子好看但还不是那款游戏",
+   add/fix transcript, hand/play areas, named regions, or seat roles — do not
+   tell the creator to paste another kit or change the theme.
 
 ## Build discipline
 

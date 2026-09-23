@@ -33,6 +33,11 @@ billing are explicitly out of scope.
    the Build includes the full source dependency closure and passes its
    Presentation Floor. Do not promise a share
    link before those read-backs pass.
+6. A theme kit only makes the table legible. Share still requires Playability
+   Floor plus genre objects (ADR 0012): conversation → transcript; cards →
+   hand/play areas; placement → named regions; hidden-role → seats + private
+   role. If Presentation Floor fails with "桌子好看但还不是那款游戏", add or
+   fix those objects — do not apply another kit or swap the theme.
 
 Generated output remains replaceable Source Library material; it never rewrites
 rules or removes source provenance.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HOBBYIST_STARTERS } from "../src/creator/hobbyist-starters";
 import {
+  createGenerationPlan,
   inferredDrawAndScoreRule,
   inferredPushYourLuckRule,
   inferredSharedGoalTarget,
@@ -11,6 +12,8 @@ import {
   isTurnTakingDescription,
   materializeRuleSystem,
 } from "./rulebook-generation";
+import { GENRE_OBJECT_GAP_PREFIX } from "../src/runtime/presentation-floor";
+import { shareGatePlanAssumption } from "../src/runtime/share-gate-copy";
 
 describe("rulebook Rule System materialization", () => {
   it("extracts editable structure and anchors it to the uploaded rulebook", () => {
@@ -394,5 +397,58 @@ describe("rulebook Rule System materialization", () => {
     expect(ruleSystem.playSurface.regions.every((region) => region.name.trim())).toBe(true);
     expect(ruleSystem.entities.some((entity) => /worker|工人/i.test(entity.name))).toBe(true);
     expect(ruleSystem.entities.some((entity) => entity.id.startsWith("entity-region-"))).toBe(true);
+  });
+});
+
+
+describe("createGenerationPlan presentation/share assumptions (W3-06)", () => {
+  it("surfaces ADR 0012 share-gate copy and floor reason when kit-ok but objects missing", () => {
+    const materialized = materializeRuleSystem({
+      name: "灵感接力缺记录",
+      description: "3 players take turns speaking ideas aloud in a conversation relay.",
+      sourceId: "source_conversation_gap",
+      sourceText: "",
+    });
+    // Strip transcript entities to simulate kit-only conversation table.
+    const ruleSystem = {
+      id: "rs_w3_06",
+      version: 1,
+      ...materialized,
+      entities: materialized.entities.filter(
+        (entity) => !/transcript|发言/i.test(`${entity.id} ${entity.name}`),
+      ),
+      runtimeSupport: {
+        status: "executable" as const,
+        unsupported: [] as string[],
+        kernel: {
+          type: "conversation-relay-v1" as const,
+          maxTurns: 12,
+          actions: [{ id: "speak", label: "发言" }],
+        },
+      },
+    };
+
+    const plan = createGenerationPlan({
+      id: "plan_w3_06",
+      projectId: "proj_w3_06",
+      generationJobId: "job_w3_06",
+      ruleSystem,
+      sourceIds: ["source_conversation_gap"],
+      createdAt: "2026-09-23T00:00:00.000Z",
+      proposedRuntime: {
+        op: "configure_conversation_relay",
+        config: {
+          maxTurns: 12,
+          actions: [{ id: "speak", label: "发言" }],
+        },
+      },
+    });
+
+    expect(plan.assumptions).toContain(shareGatePlanAssumption());
+    const objectGap = plan.assumptions.find((item) => item.includes(GENRE_OBJECT_GAP_PREFIX));
+    expect(objectGap).toBeTruthy();
+    expect(objectGap).toMatch(/发言记录|transcript/);
+    expect(objectGap).toMatch(/不能只靠主题 kit/);
+    expect(plan.assumptions.some((item) => /再贴一个 kit就能|换主题就能过/.test(item))).toBe(false);
   });
 });

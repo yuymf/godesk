@@ -51,6 +51,14 @@ export function StudioGenerationPlanPanel({
             <ul>{generationPlan.outcomes.map((outcome) => <li key={outcome}>{outcome}</li>)}</ul>
           ) : <p>还没识别到明确结果。</p>}
         </section>
+        {generationPlan.assumptions.length > 0 && (
+        <section>
+          <strong>分享前要诚实面对</strong>
+          <ul>
+            {generationPlan.assumptions.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        </section>
+        )}
         {generationPlan.status === "approved" && generationPlan.unsupported.length > 0 && (
         <section>
           <strong>这局还做不到</strong>
