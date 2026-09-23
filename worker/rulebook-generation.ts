@@ -4,7 +4,7 @@ import type {
   RuleSystem,
 } from "../src/creator/project-contract";
 import { inferSourceGenre } from "../src/runtime/genre";
-import { defaultHiddenRoles } from "../src/runtime/hidden-role";
+import { deriveHiddenRoles } from "../src/runtime/hidden-role";
 import { genreObjectFidelity } from "../src/runtime/presentation-floor";
 import {
   genreObjectSatisfiedPlanAssumption,
@@ -563,7 +563,7 @@ export function materializeRuleSystem(input: {
     participants: {
       ...participants,
       roles: genre === "hidden-role"
-        ? defaultHiddenRoles(participants.default).map((role) => ({
+        ? deriveHiddenRoles(corpus, participants.default).map((role) => ({
             id: role.id,
             name: role.name,
             description: role.alignment === "culprit" ? "隐藏的凶手。" : "找出凶手。",

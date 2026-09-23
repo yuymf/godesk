@@ -472,4 +472,43 @@ describe("playabilityFloor", () => {
     expect(floor.status).toBe("failed");
     expect(floor.reason).toMatch(/决策密度|指控/);
   });
+
+  it("fails hidden-role-v1 for multi-act / clue-board corpus (W4-06)", () => {
+    const brief =
+      "三幕剧本杀。第一幕搜证，第二幕讨论，第三幕投票。桌上有线索板。发言后互相指控。";
+    const floor = playabilityFloor(
+      base({
+        name: "多幕剧本杀",
+        pitch: brief,
+        playSurface: { kind: "conversation", layout: "talk", regions: [] },
+        actions: [
+          { id: "speak", label: "发言", description: "公开发言", sourceId: "s", provenance: "source-anchored", confidence: 1 },
+          { id: "accuse", label: "指控", description: "指控一人", sourceId: "s", provenance: "source-anchored", confidence: 1 },
+        ],
+        stages: [
+          { id: "discuss", name: "发言" },
+          { id: "accuse", name: "指控" },
+        ],
+        rules: [
+          { id: "r1", text: brief, sourceId: "s", provenance: "source-anchored", confidence: 1 },
+        ],
+        runtimeSupport: {
+          status: "executable",
+          unsupported: [],
+          kernel: {
+            type: "hidden-role-v1",
+            playerCount: 3,
+            roles: [
+              { id: "culprit", name: "凶手", alignment: "culprit" },
+              { id: "detective", name: "侦探", alignment: "town" },
+              { id: "civilian-2", name: "平民", alignment: "town" },
+            ],
+          },
+        },
+      }),
+    );
+    expect(floor.status).toBe("failed");
+    expect(floor.reason).toMatch(/多幕|线索/);
+  });
+
 });

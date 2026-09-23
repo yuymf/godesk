@@ -9,6 +9,7 @@ import {
   type SourceGenre,
 } from "./genre";
 import { isNonScoreHandLoopCorpus } from "./hand-play";
+import { isMultiActHiddenRoleCorpus } from "./hidden-role";
 import {
   isEconomyPlacementCorpus,
   kernelHasPlacementEconomy,
@@ -222,6 +223,18 @@ export function playabilityFloor(ruleSystem: RuleSystem): PlayabilityFloorReadin
         status: "failed",
         reason:
           "来源是吃墩/出完手牌/花色效果等非计分手牌环，不能用出牌计分冒充分享。",
+        genre,
+        kernelType,
+      };
+    }
+    if (
+      kernelType === "hidden-role-v1" &&
+      isMultiActHiddenRoleCorpus(ruleSystemCorpus(ruleSystem))
+    ) {
+      return {
+        status: "failed",
+        reason:
+          "来源是多幕/线索板剧本杀，不能用单轮发言指控冒充分享。",
         genre,
         kernelType,
       };
