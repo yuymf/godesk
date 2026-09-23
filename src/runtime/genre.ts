@@ -16,8 +16,10 @@ export function inferSourceGenre(corpus: string): SourceGenre {
   // W4-05: carefully broaden hand-play cues so near-misses like「出牌计分」「打牌」
   // do not fall through to generic → silent score-race. False-positive budget:
   // these tokens strongly imply a card loop in hobbyist briefs.
+  // Do NOT include bare「牌库」here: finite shuffled draw-and-score briefs also
+  // say 牌库 / deck; that path must stay source-anchored draw-and-score, not hand-play.
   if (
-    /手牌|出牌区|出牌|打牌|卡牌|牌库|从手牌打出|play (?:a |one )?card from (?:your )?hand|hidden hands?|card game|playing cards?/i
+    /手牌|出牌区|出牌|打牌|卡牌|从手牌打出|play (?:a |one )?card from (?:your )?hand|hidden hands?|card game|playing cards?/i
       .test(text)
   ) {
     return "hand-play";

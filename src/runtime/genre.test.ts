@@ -17,6 +17,14 @@ describe("inferSourceGenre (W4-05 near-miss cues)", () => {
     );
   });
 
+
+  it("does not classify finite shuffled 抽牌计分 as hand-play", () => {
+    const brief =
+      "两名玩家轮流从洗牌后的牌库顶抽一张牌。牌库里有点数1到6的牌，每个点数各2张。玩家把抽到的点数加入自己的总分。率先达到15分者获胜；牌库用完仍无人达到时，总分最高者获胜。";
+    expect(inferSourceGenre(brief)).not.toBe("hand-play");
+    expect(inferSourceGenre(`抽牌竞分\n${brief}`)).not.toBe("hand-play");
+  });
+
   it("still classifies strong hand-play cues", () => {
     expect(inferSourceGenre("从手牌打出一张到出牌区。")).toBe("hand-play");
   });

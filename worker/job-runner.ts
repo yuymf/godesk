@@ -195,9 +195,13 @@ export async function runCreatorJob(
       const hiddenRoleRuntimeConfigured = sourceGenre === "hidden-role";
       nonScoreHandLoopRefused =
         sourceGenre === "hand-play" &&
+        drawAndScoreRule === null &&
         isNonScoreHandLoopCorpus(authoredMaterial);
+      // Finite shuffled draw-and-score wins over hand-play genre cues (W4-05).
       const handPlayRuntimeConfigured =
-        sourceGenre === "hand-play" && !nonScoreHandLoopRefused;
+        sourceGenre === "hand-play" &&
+        drawAndScoreRule === null &&
+        !nonScoreHandLoopRefused;
       const harborLikePlacement =
         sourceGenre === "placement" && isHarborLikeCorpus(authoredMaterial);
       const workerPlacementRuntimeConfigured =
@@ -210,6 +214,10 @@ export async function runCreatorJob(
         generatedRuleSystem.actions.length <= 12;
       weakGenreScoreRaceRefused =
         sourceGenre === "generic" &&
+        drawAndScoreRule === null &&
+        pushYourLuckRule === null &&
+        takeAwayRule === null &&
+        rollAndMoveRule === null &&
         hasWeakGenreScoreRaceLeak(authoredMaterial) &&
         !sharedGoal &&
         sourceRuntimeActions.length > 0 &&
