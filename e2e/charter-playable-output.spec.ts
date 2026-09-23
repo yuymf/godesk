@@ -446,8 +446,9 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.locator(".conversation-replay-card")).toHaveCount(0);
   });
 
-  test("轻桌游 places a worker on a named region and Replay keeps genre objects", async ({
+  test("轻桌游 gathers wood, converts at 工坊, and Replay keeps genre objects", async ({
     page,
+    browser,
   }) => {
     await page.goto("/chatgpt-plugin/new");
     await page.getByRole("button", { name: "轻桌游" }).click();
@@ -472,16 +473,47 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(board).toBeVisible();
     await expect(page.getByRole("button", { name: "放置到资源区" })).toBeVisible();
     await expect(page.getByRole("button", { name: "放置到工坊" })).toBeVisible();
+    await expect(board).toContainText(/兑换\s*1\s*木材→建筑/);
 
     await page.getByLabel("你的席位").selectOption("0");
     const placeResource = page.getByRole("button", { name: "放置到资源区" });
     await expect(placeResource).toBeEnabled();
     await placeResource.click();
 
-    // Genre action: place-on-region (not score-only chrome).
+    // Genre action: place-on-region gathers wood (not score-only chrome).
     await expect(page.locator(".action-log")).toContainText(/place:region-\d+/);
     await expect(board).toContainText("派工人前往资源区");
     await expect(board.locator(".worker-placement-seats")).toContainText(/木材\s*1/);
+    // Convert needs wood; after P0 gathers, turn advances — workshop stays closed for empty-wood seats.
+    await expect(page.getByRole("button", { name: "放置到工坊" })).toBeDisabled();
+
+    // W5-03 / W4-01 FP8: friend seat advances turn so P0 can convert at 工坊.
+    const inviteUrl = await page.getByLabel("邀请链接").inputValue();
+    const friendContext = await browser.newContext();
+    const friendPage = await friendContext.newPage();
+    await friendPage.goto(inviteUrl);
+    await expect(friendPage.locator(".worker-placement-board")).toBeVisible();
+    await friendPage.getByLabel("你的席位").selectOption("1");
+    const friendPlaceResource = friendPage.getByRole("button", { name: "放置到资源区" });
+    await expect(friendPlaceResource).toBeEnabled();
+    await friendPlaceResource.click();
+    await expect(friendPage.locator(".action-log")).toContainText(/place:region-\d+/);
+    await expect(
+      friendPage.locator(".worker-placement-board .worker-placement-seats"),
+    ).toContainText(/木材\s*1/);
+    await friendContext.close();
+
+    // P0 converts wood → building at 工坊 (genre convert action).
+    const placeWorkshop = page.getByRole("button", { name: "放置到工坊" });
+    await expect(placeWorkshop).toBeEnabled({ timeout: 30_000 });
+    await placeWorkshop.click();
+    await expect(page.locator(".action-log")).toContainText(/place:region-\d+/);
+    await expect(board.locator(".game-log")).toContainText(/花费木材\s*1.*建成\s*1\s*座建筑/);
+    const seatZero = board.locator(".worker-placement-seats > div").first();
+    await expect(seatZero).toContainText(/木材\s*0/);
+    await expect(seatZero).toContainText(/建筑\s*1/);
+    // Economy progress is buildings, not resolvePoints theater.
+    await expect(board.locator(".worker-placement-seats")).not.toContainText(/·\s*分\s*\d/);
 
     await page.getByRole("link", { name: "只读回放" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/replay\//, { timeout: 30_000 });
@@ -489,7 +521,11 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     const replayBoard = page.locator(".worker-placement-board");
     await expect(replayBoard).toBeVisible();
     await expect(replayBoard).toContainText("资源区");
-    await expect(replayBoard).toContainText("派工人前往资源区");
+    await expect(replayBoard).toContainText("工坊");
+    await expect(replayBoard).toContainText(/兑换\s*1\s*木材→建筑/);
+    await expect(replayBoard).toContainText("派工人前往");
+    await expect(replayBoard.locator(".game-log")).toContainText(/建成\s*1\s*座建筑/);
+    await expect(replayBoard.locator(".worker-placement-seats")).toContainText(/建筑\s*1/);
     await expect(page.locator(".action-log")).toContainText(/place:region-\d+/);
     await expect(page.locator(".score-grid")).toHaveCount(0);
   });
