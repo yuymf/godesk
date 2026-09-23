@@ -614,14 +614,12 @@ const operationSchema = z.discriminatedUnion("op", [
   z.object({
     op: z.literal("configure_conversation_relay"),
     config: z.object({
-      victoryTarget: z.number().int().min(1).max(1_000),
       maxTurns: z.number().int().min(1).max(1_000),
       actions: z
         .array(
           z.object({
             id: z.string().regex(/^[a-z0-9-]{1,40}$/),
             label: z.string().min(1).max(80),
-            points: z.number().int().min(1).max(100),
           }),
         )
         .min(1)

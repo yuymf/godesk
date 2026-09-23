@@ -162,8 +162,8 @@ export function usesConversationTranscriptSurface(ruleSystem: RuleSystem): boole
 }
 
 /**
- * Conversation-relay still awards kernel points, but action-log / toast chrome
- * must not read as a score race (ADR 0012). Score-track and other genres keep point chrome.
+ * Conversation-relay records speech without a score race (W3-02). Hide point
+ * chrome so Room/Replay stay transcript-first (ADR 0012).
  */
 export function showsAcceptedActionPointChrome(ruleSystem: RuleSystem): boolean {
   return !usesConversationTranscriptSurface(ruleSystem);
@@ -228,7 +228,7 @@ export const ROOM_COPY = {
     noLog: "尚无行动。合法行动会出现在这里。",
     transcript: "发言记录",
     transcriptEmpty: "还没有发言。写下你的一句，接力从这里开始。",
-    relaySecondary: "内核计分（次要）",
+    relaySecondary: "回合预算",
     relayEnded: "接力结束",
     unsupported: "尚未覆盖",
     feedbackTitle: "试玩反馈",
@@ -303,7 +303,7 @@ export const ROOM_COPY = {
     noLog: "No actions yet. Legal moves will show up here.",
     transcript: "Speech transcript",
     transcriptEmpty: "No speech yet. Write a line — the relay starts here.",
-    relaySecondary: "Kernel scoring (secondary)",
+    relaySecondary: "Turn budget",
     relayEnded: "Relay ended",
     unsupported: "Not covered",
     feedbackTitle: "Playtest feedback",

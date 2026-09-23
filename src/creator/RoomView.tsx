@@ -325,7 +325,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   const runtimeActions: Array<{ id: string; label: string; value: number | null }> = conversationRelay?.actions.map((action) => ({
     id: action.id,
     label: action.label,
-    value: action.points,
+    value: null,
   })) ?? race?.actions.map((action) => ({
     id: action.id,
     label: action.label,
@@ -623,19 +623,11 @@ export function RoomView({ sessionId }: { sessionId: string }) {
                     })}
                   </ol>
                 )}
-                <details className="conversation-score-secondary">
-                  <summary>{copy.relaySecondary}</summary>
-                  <ul>
-                    {room.state.scores.map((score, seatIndex) => (
-                      <li key={seatIndex}>
-                        {locale === "zh" ? "座位" : "Seat"} {seatIndex}
-                        {" · "}
-                        {score}
-                        {conversationRelay ? ` / ${conversationRelay.victoryTarget}` : ""}
-                      </li>
-                    ))}
-                  </ul>
-                </details>
+                <p className="conversation-turn-budget">
+                  {locale === "zh"
+                    ? `回合预算 ${room.state.turn} / ${conversationRelay.maxTurns}`
+                    : `Turn budget ${room.state.turn} / ${conversationRelay.maxTurns}`}
+                </p>
               </section>
             )}
             {scoreTrackSurface && (

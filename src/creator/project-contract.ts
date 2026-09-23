@@ -244,9 +244,8 @@ export interface RuleSystem {
             }
           | {
               type: "conversation-relay-v1";
-              victoryTarget: number;
               maxTurns: number;
-              actions: Array<{ id: string; label: string; points: number }>;
+              actions: Array<{ id: string; label: string }>;
             };
   };
 }
@@ -548,9 +547,8 @@ export type ProjectChangeOperation =
   | {
       op: "configure_conversation_relay";
       config: {
-        victoryTarget: number;
         maxTurns: number;
-        actions: Array<{ id: string; label: string; points: number }>;
+        actions: Array<{ id: string; label: string }>;
         unsupported?: string[];
       };
     }

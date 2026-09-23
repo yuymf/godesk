@@ -36,7 +36,7 @@ export const DEFAULT_EXAMPLES: DefaultExample[] = [
     id: "idea-relay",
     title: "灵感接力",
     kicker: "无棋盘的对话创作游戏",
-    summary: "轮流扩展一个共同创意、加入约束并连接前文，率先达到目标分。",
+    summary: "轮流扩展一个共同创意、加入约束并连接前文；发言写入记录，由真人评议。",
     players: "2–6 人",
     duration: "12 分钟",
     status: "可分享对话游戏",

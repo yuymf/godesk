@@ -407,17 +407,23 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
         generationPlan: {
           status: "pending",
           proposedRuntime: {
-            op: "configure_turn_taking",
+            op: "configure_conversation_relay",
             config: {
               maxTurns: 18,
-              unsupported: expect.arrayContaining([
-                expect.stringContaining("conservative 18-turn prototype limit"),
+              actions: expect.arrayContaining([
+                expect.objectContaining({ label: expect.any(String) }),
               ]),
             },
           },
         },
       },
     });
+    const finished = await waitForJob(queued.id);
+    const proposed = (finished.result as {
+      generationPlan: { proposedRuntime: { config: { actions: Array<{ id: string; label: string; points?: number }> } } };
+    }).generationPlan.proposedRuntime;
+    expect(proposed.config.actions.every((action) => action.points === undefined)).toBe(true);
+    expect("victoryTarget" in proposed.config).toBe(false);
   });
 
   it("preserves a natural-language player range in the generated project", async () => {

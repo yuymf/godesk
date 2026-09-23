@@ -320,6 +320,26 @@ function splitChineseActionChoices(line: string) {
   return choices.length >= 2 ? choices : [line];
 }
 
+
+function expandConversationSpeechActs(lines: string[]) {
+  const choiceLines = lines.filter((line) => /(?:可以|可|能够|能)\s*/.test(line) || /\bor\b|\bchoose\b/i.test(line));
+  const expandedChoices = choiceLines.flatMap(splitChineseActionChoices);
+  if (expandedChoices.length >= 2) {
+    return expandedChoices.map((choice) =>
+      choice
+        .replace(/\s*(?:获得|得|推进|增加|贡献)\s*[0-9一二两三四五六七八九十]+\s*(?:分|点|进度).*$/u, "")
+        .replace(/\s+(?:for|to gain|earn|get)\s*[0-9]+\s*points?.*$/i, "")
+        .trim(),
+    ).filter((choice) => choice.length >= 2);
+  }
+  return lines.map((line) =>
+    line
+      .replace(/\s*(?:获得|得|推进|增加|贡献)\s*[0-9一二两三四五六七八九十]+\s*(?:分|点|进度)/gu, "")
+      .replace(/\s+(?:for|to gain|earn|get)\s*[0-9]+\s*points?/gi, "")
+      .trim(),
+  ).filter((line) => line.length >= 2);
+}
+
 function expandScoredActions(lines: string[]) {
   const scoredActions = lines.flatMap((line) => {
     const chineseMatches = [...line.matchAll(
@@ -486,10 +506,17 @@ export function materializeRuleSystem(input: {
     .slice(0, 12);
   const explicitActionLines = lines
     .filter((line) => /(?:^|[•·]\s*)(?:take|reserve|purchase|draw|bid|buy|sell|roll|pass|trade|collect|build|claim|select)\b|^(?:可以|选择|移动|抽取|出牌|竞价|购买|保留|收集|扩展|加入)/i.test(line));
-  const actionLines = expandScoredActions(explicitActionLines.length >= 2
+  const candidateActionLines = explicitActionLines.length >= 2
     ? explicitActionLines
-    : lines.filter((line) => /\b(may|can|choose|take|place|move|draw|play|bid|buy|sell|roll)\b|可以|选择|移动|抽取|出牌|竞价|购买|保留|收集|扩展|加入|轮流|(?:获得|得|推进|增加|贡献)\s*[0-9一二两三四五六七八九十]+\s*(?:分|点|进度)/i.test(line)),
-  );
+    : lines.filter((line) =>
+      genre === "conversation"
+        ? /\b(may|can|choose|speak|say|tell|extend(?:ing)?|add(?:ing)?|connect(?:ing)?|reply|respond|debate|turns?|idea|constraint|prompt)\b|可以|选择|扩展|加入|连接|发言|回应|轮流|接力|约束|创意|点子/i.test(line)
+        : /\b(may|can|choose|take|place|move|draw|play|bid|buy|sell|roll)\b|可以|选择|移动|抽取|出牌|竞价|购买|保留|收集|扩展|加入|轮流|(?:获得|得|推进|增加|贡献)\s*[0-9一二两三四五六七八九十]+\s*(?:分|点|进度)/i.test(line),
+    );
+  // Conversation: keep speech-act labels; score harvest stays on generic / score-race only (W3-05).
+  const actionLines = genre === "conversation"
+    ? expandConversationSpeechActs(candidateActionLines)
+    : expandScoredActions(candidateActionLines);
   const componentLines = lines
     .filter((line) => /\b\d+[^.\n]{0,40}\b(?:cards?|tokens?|tiles?|cubes?|markers?|dice|boards?|pawns?|coins?|stones?|matches?)\b|\d+\s*(?:张牌|枚标记|个棋子|颗骰子|枚石子|根火柴)/i.test(line))
     .slice(0, 8);
@@ -695,7 +722,7 @@ export function createGenerationPlan(input: {
     unsupported.push("不把出牌变成计分按钮。");
   } else if (input.proposedRuntime?.op === "configure_conversation_relay") {
     assumptions.push("Playability Floor 验收：每次行动必须带文本，发言进入 Session State 与 Replay。");
-    unsupported.push("不把对话游戏收成无文本的计分按钮。");
+    unsupported.push("不把对话游戏收成计分赛或无文本按钮；文采由人评议。");
   } else if (input.proposedRuntime?.op === "configure_harbor_voyage") {
     assumptions.push("Playability Floor 验收：共享桌面可见、放置占用具体位置、航行与结算写入 Session State 与 Replay。");
     unsupported.push("不把工人放置换成计分赛；不把来源棋盘假装成已完整执行。");
