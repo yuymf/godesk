@@ -276,7 +276,28 @@ describe("playabilityFloor", () => {
     ).toBe("passed");
   });
 
-});
+
+  it("W4-05: fails score-race when weak placement cues leak on a table surface", () => {
+    const floor = playabilityFloor(
+      base({
+        name: "资源区得点",
+        pitch: "在资源区行动得 2 分，整理得 1 分，先到 8 分。",
+        playSurface: { kind: "table", layout: "track", regions: [] },
+      }),
+    );
+    expect(floor.status).toBe("failed");
+    expect(floor.reason).toMatch(/弱体裁|计分赛|换皮/);
+  });
+
+  it("W4-05: still accepts a true generic point race", () => {
+    const floor = playabilityFloor(
+      base({
+        name: "线索赛",
+        pitch: "调查线索得 2 分或整理线索得 1 分。先到 6 分。",
+      }),
+    );
+    expect(floor.status).toBe("passed");
+  });
 
   it("fails worker-placement-v1 with fewer than 2 regions (decision density)", () => {
     const floor = playabilityFloor(
@@ -451,3 +472,4 @@ describe("playabilityFloor", () => {
     expect(floor.status).toBe("failed");
     expect(floor.reason).toMatch(/决策密度|指控/);
   });
+});

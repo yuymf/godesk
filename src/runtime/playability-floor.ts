@@ -3,7 +3,11 @@ import type {
   PlaySurfaceKind,
   RuleSystem,
 } from "../creator/project-contract";
-import { inferSourceGenre, type SourceGenre } from "./genre";
+import {
+  hasWeakGenreScoreRaceLeak,
+  inferSourceGenre,
+  type SourceGenre,
+} from "./genre";
 import { isNonScoreHandLoopCorpus } from "./hand-play";
 import {
   isEconomyPlacementCorpus,
@@ -151,6 +155,20 @@ export function playabilityFloor(ruleSystem: RuleSystem): PlayabilityFloorReadin
     return {
       status: "failed",
       reason: "对话或卡牌表面不能用计分器内核顶替该游戏的核心环。",
+      genre,
+      kernelType,
+    };
+  }
+
+  // W4-05: weak genre cues + score-race = silent leakage. Refuse share.
+  if (
+    kernelType === "score-race-v1" &&
+    hasWeakGenreScoreRaceLeak(ruleSystemCorpus(ruleSystem))
+  ) {
+    return {
+      status: "failed",
+      reason:
+        "来源含弱体裁信号（卡牌/放置/身份/对话），不能静默用计分赛换皮分享。",
       genre,
       kernelType,
     };

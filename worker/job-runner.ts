@@ -8,7 +8,10 @@ import type {
   SourceLibraryEntry,
   SubmitJobInput,
 } from "../src/creator/project-contract";
-import { inferSourceGenre } from "../src/runtime/genre";
+import {
+  hasWeakGenreScoreRaceLeak,
+  inferSourceGenre,
+} from "../src/runtime/genre";
 import { defaultHiddenRoles } from "../src/runtime/hidden-role";
 import {
   deriveHandPlayDeck,
@@ -99,6 +102,7 @@ export async function runCreatorJob(
     let generationRuntimeConfigured = false;
     let proposedRuntime: RuntimeConfigureOperation | null = null;
     let nonScoreHandLoopRefused = false;
+    let weakGenreScoreRaceRefused = false;
     if (input.kind === "generate-rule-system") {
       const pendingPlan = await host.ctx.storage.get<GenerationPlan>(
         generationPlanKey(job.projectId),
@@ -204,8 +208,18 @@ export async function runCreatorJob(
         sourceGenre === "conversation" &&
         generatedRuleSystem.actions.length > 0 &&
         generatedRuleSystem.actions.length <= 12;
+      weakGenreScoreRaceRefused =
+        sourceGenre === "generic" &&
+        hasWeakGenreScoreRaceLeak(authoredMaterial) &&
+        !sharedGoal &&
+        sourceRuntimeActions.length > 0 &&
+        sourceRuntimeActions.length === generatedRuleSystem.actions.length &&
+        generatedRuleSystem.actions.length <= 12 &&
+        Number.isInteger(victoryTarget) &&
+        victoryTarget > 0;
       const scoreRaceRuntimeConfigured =
         sourceGenre === "generic" &&
+        !weakGenreScoreRaceRefused &&
         !sharedGoal &&
         sourceRuntimeActions.length > 0 &&
         sourceRuntimeActions.length === generatedRuleSystem.actions.length &&
@@ -263,12 +277,16 @@ export async function runCreatorJob(
       if (nonScoreHandLoopRefused) {
         generationRuntimeConfigured = false;
       }
+      // W4-05: weak genre cues must not silently configure score-race.
+      if (weakGenreScoreRaceRefused) {
+        generationRuntimeConfigured = false;
+      }
       const pushMaxActions = Math.min(10_000, Math.max(
         200,
         (pushYourLuckRule?.victoryTarget ?? 0) * generatedRuleSystem.participants.default * 5,
       ));
       // Refuse configure for non-score hand loops (no silent play-to-score / turn-taking fallthrough).
-      const runtimeOperation = nonScoreHandLoopRefused
+      const runtimeOperation = nonScoreHandLoopRefused || weakGenreScoreRaceRefused
         ? null
         : hiddenRoleRuntimeConfigured
         ? {
@@ -653,6 +671,8 @@ export async function runCreatorJob(
             : "规则结构来自确定性文本抽取；来源明确写出的轮流行动将在批准 Generation Plan 后配置为 turn-taking-v1，回合上限来自来源或可见的保守原型默认值。"
         : nonScoreHandLoopRefused
           ? "来源是吃墩/出完手牌/花色效果等非计分手牌环；hand-play-v1 仅支持出牌计分，Rule System 保持 draft，不会用出牌计分顶替分享。"
+          : weakGenreScoreRaceRefused
+          ? "来源含弱体裁信号（卡牌/放置/身份/对话），不能静默配置 score-race-v1；Rule System 保持 draft，请改写为明确体裁或纯计分赛。"
           : generatedRuleSystem.actions.length > 12
           ? "来源识别出超过 Kernel 上限的行动；为避免静默丢弃规则，Rule System 保持 draft，等待创作者明确缩减或配置 Executable Kernel。"
           : "规则结构来自确定性文本抽取；来源不足以证明可执行语义，Rule System 保持 draft，等待显式配置 Executable Kernel。"];
