@@ -216,4 +216,56 @@ describe("playabilityFloor", () => {
     ).toBe("passed");
   });
 
+
+  it("fails non-score hand loops when kernel is play-to-score hand-play", () => {
+    const floor = playabilityFloor(
+      base({
+        name: "吃墩打牌",
+        pitch: "四人跟牌吃墩，必须跟同花色，赢得最多墩者获胜。从手牌打出。",
+        playSurface: { kind: "cards", layout: "hand-and-play-area", regions: [] },
+        runtimeSupport: {
+          status: "executable",
+          unsupported: [],
+          kernel: {
+            type: "hand-play-v1",
+            playerCount: 4,
+            cardValues: [1, 2, 3, 4, 5],
+            copiesPerValue: 4,
+            handSize: 3,
+            victoryTarget: 12,
+            actions: [{ id: "play", label: "打出一张手牌" }],
+          },
+        },
+      }),
+    );
+    expect(floor.status).toBe("failed");
+    expect(floor.reason).toMatch(/非计分|出牌计分/);
+  });
+
+  it("still accepts play-to-score hand-play when the source is that race", () => {
+    expect(
+      playabilityFloor(
+        base({
+          name: "聚会卡牌",
+          pitch:
+            "点数 1 到 5 各 4 张。从手牌打出一张到出牌区，该牌点数加入分数，先到 12 分。",
+          playSurface: { kind: "cards", layout: "hand-and-play-area", regions: [] },
+          runtimeSupport: {
+            status: "executable",
+            unsupported: [],
+            kernel: {
+              type: "hand-play-v1",
+              playerCount: 4,
+              cardValues: [1, 2, 3, 4, 5],
+              copiesPerValue: 4,
+              handSize: 3,
+              victoryTarget: 12,
+              actions: [{ id: "play", label: "打出一张手牌" }],
+            },
+          },
+        }),
+      ).status,
+    ).toBe("passed");
+  });
+
 });

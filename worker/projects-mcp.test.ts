@@ -1219,6 +1219,21 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
           starter.label,
         ).toBe(true);
       }
+      if (starter.id === "cards") {
+        const cardsRuntime = plan.proposedRuntime as {
+          op: string;
+          config: {
+            cardValues: number[];
+            copiesPerValue: number;
+            handSize: number;
+            victoryTarget: number;
+          };
+        };
+        expect(cardsRuntime.config.cardValues, starter.label).toEqual([1, 2, 3, 4, 5]);
+        expect(cardsRuntime.config.copiesPerValue, starter.label).toBe(4);
+        expect(cardsRuntime.config.handSize, starter.label).toBe(3);
+        expect(cardsRuntime.config.victoryTarget, starter.label).toBe(12);
+      }
       const participants = (
         finished.result as {
           ruleSystem: { participants: { min: number; max: number; default: number } };
