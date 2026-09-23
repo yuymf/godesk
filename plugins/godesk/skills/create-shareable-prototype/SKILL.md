@@ -18,7 +18,7 @@ A Finding is optional.
 Use the **Executable Kernel choice** table in `$godesk-plugin-basics` as the
 single source of truth. Configure exactly one Kernel that matches the source
 genre (`hidden-role-v1`, `hand-play-v1`, `conversation-relay-v1`, and the rest
-of that table). Do not substitute `score-race-v1` for another genre.
+of that table). Do not substitute `score-race-v1` for another genre. Weak genre near-misses must refuse silent score-race share (draft or Floor fail).
 
 Turn-limit / termination reminders (also owned by that table's semantics):
 

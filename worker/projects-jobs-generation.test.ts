@@ -734,6 +734,126 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
     expect(result.warnings?.join(" ") ?? "").toMatch(/非计分|出牌计分/);
   });
 
+  it("W4-05: near-miss 出牌计分 configures hand-play, not score-race", async () => {
+    const created = await SELF.fetch("https://godesk.test/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "出牌计分 near-miss" }),
+    }).then((response) => response.json<{
+      project: { id: string; version: number };
+    }>());
+    const brief =
+      "四人轮流出牌计分。每次出牌得该牌点数，先到 15 分的人获胜。";
+    const queued = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/jobs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          kind: "generate-rule-system",
+          expectedVersion: created.project.version,
+          idea: brief,
+          sourceContent: brief,
+          sourceKind: "brief",
+          sourceName: "play-cards-score-near-miss.txt",
+          name: "出牌计分 near-miss",
+          idempotencyKey: "generate-w405-card-near-miss-001",
+        }),
+      },
+    ).then((response) => response.json<{ id: string; status: string }>());
+    expect(queued.status).toBe("queued");
+    const finished = await waitForJob(queued.id);
+    expect(finished.status).toBe("succeeded");
+    const result = finished.result as {
+      generationPlan: { proposedRuntime?: { op: string } };
+    };
+    expect(result.generationPlan.proposedRuntime?.op).not.toBe("configure_score_race");
+    expect(result.generationPlan.proposedRuntime?.op).toBe("configure_hand_play");
+  });
+
+  it("W4-05: finite shuffled 抽牌计分 configures draw-and-score, not hand-play", async () => {
+    const created = await SELF.fetch("https://godesk.test/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "抽牌计分" }),
+    }).then((response) => response.json<{
+      project: { id: string; version: number };
+    }>());
+    const brief =
+      "两名玩家轮流从洗牌后的牌库顶抽一张牌。牌库里有点数1到6的牌，每个点数各2张。玩家把抽到的点数加入自己的总分。率先达到15分者获胜；牌库用完仍无人达到时，总分最高者获胜。";
+    const queued = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/jobs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          kind: "generate-rule-system",
+          expectedVersion: created.project.version,
+          idea: brief,
+          sourceContent: brief,
+          sourceKind: "brief",
+          sourceName: "draw-and-score.txt",
+          name: "抽牌竞分",
+          idempotencyKey: "generate-w405-draw-and-score-001",
+        }),
+      },
+    ).then((response) => response.json<{ id: string; status: string }>());
+    expect(queued.status).toBe("queued");
+    const finished = await waitForJob(queued.id);
+    expect(finished.status).toBe("succeeded");
+    const result = finished.result as {
+      ruleSystem: { actions: Array<{ id: string; label: string }> };
+      generationPlan: { proposedRuntime?: { op: string } };
+    };
+    expect(result.ruleSystem.actions).toEqual([
+      expect.objectContaining({ id: "source-action-1", label: "抽牌计分" }),
+    ]);
+    expect(result.generationPlan.proposedRuntime?.op).toBe("configure_draw_and_score");
+    expect(result.generationPlan.proposedRuntime?.op).not.toBe("configure_hand_play");
+  });
+
+
+  it("W4-05: weak placement cues refuse silent score-race configure", async () => {
+    const created = await SELF.fetch("https://godesk.test/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "资源区弱体裁" }),
+    }).then((response) => response.json<{
+      project: { id: string; version: number };
+    }>());
+    const brief =
+      "三人可以在资源区行动得 2 分，或整理物资得 1 分。先到 8 分的人获胜，共 12 回合。";
+    const queued = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/jobs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          kind: "generate-rule-system",
+          expectedVersion: created.project.version,
+          idea: brief,
+          sourceContent: brief,
+          sourceKind: "brief",
+          sourceName: "weak-placement-score.txt",
+          name: "资源区弱体裁",
+          idempotencyKey: "generate-w405-weak-placement-001",
+        }),
+      },
+    ).then((response) => response.json<{ id: string; status: string }>());
+    expect(queued.status).toBe("queued");
+    const finished = await waitForJob(queued.id);
+    expect(finished.status).toBe("succeeded");
+    const result = finished.result as {
+      ruleSystem: { runtimeSupport: { status: string } };
+      generationPlan: { proposedRuntime?: { op: string } };
+      warnings?: string[];
+    };
+    expect(result.generationPlan.proposedRuntime).toBeUndefined();
+    expect(result.ruleSystem.runtimeSupport.status).toBe("draft");
+    expect(result.warnings?.join(" ") ?? "").toMatch(/弱体裁|score-race/);
+  });
+
+
   it("still proposes harbor-voyage for harbor-like placement corpus", async () => {
     const created = await SELF.fetch("https://godesk.test/api/projects", {
       method: "POST",

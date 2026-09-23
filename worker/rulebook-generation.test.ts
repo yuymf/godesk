@@ -259,6 +259,7 @@ describe("rulebook Rule System materialization", () => {
       sourceId: "source_draw_and_score",
       sourceText: brief,
     });
+    // W4-05 regression: 牌库 / card cues must not steal this into hand-play `play`.
     expect(ruleSystem.actions).toEqual([
       expect.objectContaining({
         id: "source-action-1",
@@ -267,6 +268,8 @@ describe("rulebook Rule System materialization", () => {
         provenance: "source-anchored",
       }),
     ]);
+    expect(ruleSystem.actions.some((action) => action.id === "play")).toBe(false);
+    expect(ruleSystem.actions[0]?.label).not.toBe("打出一张手牌");
     expect(ruleSystem.playSurface.kind).toBe("cards");
   });
 

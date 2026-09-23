@@ -97,6 +97,7 @@ floor.
 - `worker-placement-v1` executes source-derived named regions with capacity and workers per seat. Pure score briefs use place→occupy→resolvePoints. Economy briefs (wood yield + workshop convert + build-N) use the economy subset and win by buildings — never share resolvePoints-as-building. Do **not** map non-harbor briefs onto harbor cargo IDs.
 - `score-race-v1` executes explicit per-seat point actions, a victory target,
   and a turn limit. Use it only when the source itself is a point race.
+- Do **not** silently map weak/ambiguous genre cues (near-miss card verbs like 「出牌/打牌」, placement 「资源区」, role/conversation hints) onto `score-race-v1`. Broaden to the faithful genre kernel when cues are clear enough, otherwise keep the Rule System draft / fail Playability Floor with an honest unsupported gap. True generic point races remain shareable.
 - `shared-goal-v1` executes explicit turn-taking actions that add to one shared
   progress track, a shared target, and a turn limit. It has no winner seat;
   completion means the shared target was reached.

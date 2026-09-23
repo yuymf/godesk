@@ -533,7 +533,11 @@ export function materializeRuleSystem(input: {
     .slice(0, 4);
   const surface = inferPlaySurface(`${input.name}\n${corpus}`);
   const anchored = { sourceId: input.sourceId, provenance: "source-anchored" as const, confidence: 0.72 };
-  const ownedEntities = genreEntities(genre, participants.default, input.sourceId, input.image, `${input.name}\n${corpus}`);
+  // Clear draw-and-score / push-your-luck must not inherit hand-play objects.
+  const entityGenre = (drawAndScoreRule || pushYourLuckRule) && genre === "hand-play"
+    ? "generic" as const
+    : genre;
+  const ownedEntities = genreEntities(entityGenre, participants.default, input.sourceId, input.image, `${input.name}\n${corpus}`);
   const extractedEntities = componentLines.map((line, index) => ({
     id: `source-entity-${index + 1}`,
     name: line.slice(0, 120),
@@ -575,6 +579,8 @@ export function materializeRuleSystem(input: {
     })),
     entities,
     setup: setup.length ? setup : ruleLines.slice(0, 3),
+    // Prefer finite shuffled draw-and-score / push-your-luck extractions over
+    // hand-play genre cues (W4-05 broadened 出牌/打牌 must not steal 抽牌计分).
     actions: genre === "hidden-role"
       ? [
           {
@@ -594,15 +600,6 @@ export function materializeRuleSystem(input: {
             ...anchored,
           },
         ]
-      : genre === "hand-play"
-      ? [{
-          id: "play",
-          label: /[\u4e00-\u9fff]/.test(corpus) ? "打出一张手牌" : "Play a card",
-          description: /[\u4e00-\u9fff]/.test(corpus)
-            ? "从手牌打出一张到出牌区，点数计入分数。"
-            : "Play one card from hand into the play area and score its value.",
-          ...anchored,
-        }]
       : pushYourLuckRule
       ? [
           {
@@ -623,6 +620,15 @@ export function materializeRuleSystem(input: {
           id: "source-action-1",
           label: /[\u4e00-\u9fff]/.test(corpus) ? "抽牌计分" : "Draw and score",
           description: actionLines[0] ?? authoredText,
+          ...anchored,
+        }]
+      : genre === "hand-play"
+      ? [{
+          id: "play",
+          label: /[\u4e00-\u9fff]/.test(corpus) ? "打出一张手牌" : "Play a card",
+          description: /[\u4e00-\u9fff]/.test(corpus)
+            ? "从手牌打出一张到出牌区，点数计入分数。"
+            : "Play one card from hand into the play area and score its value.",
           ...anchored,
         }]
       : rollAndMoveRule
@@ -646,8 +652,8 @@ export function materializeRuleSystem(input: {
           ...anchored,
         })),
     playSurface: {
-      kind: surface.kind,
-      layout: surface.layout,
+      kind: drawAndScoreRule ? "cards" as const : surface.kind,
+      layout: drawAndScoreRule ? "card-layout" : surface.layout,
       regions: genre === "placement"
         ? deriveWorkerPlacementRegions(`${input.name}\n${corpus}`).map((region) => ({
             id: region.id,
