@@ -312,7 +312,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await thirdContext.close();
   });
 
-  test("港口十三号 opens a light harbor table and accepts a waiter", async ({
+  test("港口十三号 reaches mid-voyage roll with friend seats (W5-05)", async ({
     page,
     browser,
   }) => {
@@ -342,6 +342,10 @@ test.describe("ChatCut charter: source in, playable game out", () => {
           .evaluate((el) => getComputedStyle(el).backgroundColor),
       )
       .toBe("rgb(255, 255, 255)");
+    // W4-03 / W5-05: settlecoast is a 2D presentation bar — never invent 3D.
+    await expect(page.locator("canvas")).toHaveCount(0);
+    await expect(page.locator("body")).not.toContainText("WebGL");
+    await expect(page.locator("body")).not.toContainText("GameFactory-3D");
 
     const inviteUrl = await page.getByLabel("邀请链接").inputValue();
     const friendContext = await browser.newContext();
@@ -355,13 +359,63 @@ test.describe("ChatCut charter: source in, playable game out", () => {
       "东栈桥",
     );
     await expect(friendPage.getByTestId("harbor-phase-label")).toHaveText("放置阶段");
-    await friendContext.close();
 
+    const thirdContext = await browser.newContext();
+    const thirdPage = await thirdContext.newPage();
+    await thirdPage.goto(inviteUrl);
+    await expect(thirdPage.getByTestId("harbor-voyage-board")).toBeVisible();
+
+    // Three seats claim; two placement rounds (6 places) unlock movement → roll.
     await page.getByLabel("你的席位").selectOption("0");
-    await expect(page.getByText(/放置 1\/4 · 座位 0/)).toBeVisible();
-    await page.getByRole("button", { name: /雪松木/ }).click();
-    await expect(page.getByText("place:cedar")).toBeVisible();
-    await expect(page.getByText(/放置 1\/4 · 座位 1/)).toBeVisible();
+    await friendPage.getByLabel("你的席位").selectOption("1");
+    await thirdPage.getByLabel("你的席位").selectOption("2");
+
+    async function placeHarborTarget(
+      actor: Page,
+      targetId: string,
+      seat: number,
+      placementRound: number,
+    ) {
+      await expect(actor.getByTestId("harbor-phase-label")).toHaveText("放置阶段");
+      await expect(
+        actor.getByText(new RegExp(`放置 ${placementRound}/4 · 座位 ${seat}`)),
+      ).toBeVisible();
+      const target = actor.locator(`[data-target-id="${targetId}"]`);
+      await expect(target).toBeEnabled();
+      await target.click();
+      await expect(actor.locator(".action-log")).toContainText(`place:${targetId}`);
+    }
+
+    // Round 1 — cargo docks.
+    await placeHarborTarget(page, "cedar", 0, 1);
+    await placeHarborTarget(friendPage, "cobalt", 1, 1);
+    await placeHarborTarget(thirdPage, "amber", 2, 1);
+
+    // Round 2 — port / yard / pilot; last seat ends round → 航行阶段.
+    await placeHarborTarget(page, "port-c", 0, 2);
+    await placeHarborTarget(friendPage, "yard-c", 1, 2);
+    await placeHarborTarget(thirdPage, "pilot-small", 2, 2);
+
+    // W5-05: non-place genre action (roll / move) after friend seats finish placement.
+    await expect(page.getByTestId("harbor-phase-label")).toHaveText("航行阶段", {
+      timeout: 30_000,
+    });
+    await expect(page.getByTestId("harbor-phase-detail")).toContainText(/第\s*1\/3\s*轮掷骰/);
+    await expect(page.getByTestId("harbor-movement-console")).toContainText(/航行\s*1\/3/);
+    const roll = page.getByRole("button", { name: /掷骰并航行/ });
+    await expect(roll).toBeEnabled();
+    await roll.click();
+    await expect(page.locator(".action-log")).toContainText(/roll:\d+,\d+,\d+/);
+    await expect(page.getByTestId("harbor-cargo-tracks")).toContainText(/本轮\s*\+/);
+    // First sail returns to placement round 3 — mid-voyage progressed without settle/3D.
+    await expect(page.getByTestId("harbor-phase-label")).toHaveText("放置阶段", {
+      timeout: 30_000,
+    });
+    await expect(page.getByText(/放置 3\/4 · 座位 0/)).toBeVisible();
+    await expect(page.locator("canvas")).toHaveCount(0);
+
+    await friendContext.close();
+    await thirdContext.close();
   });
 
   test("雾岭山庄 speaks mid-game and Replay hides roles", async ({ page, browser }) => {
