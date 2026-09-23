@@ -84,3 +84,11 @@ same GoDesk Game Project.
   immutable Room, not an inferred latest Session.
 - Any new conclusion names its evidence type and keeps human attestation
   separate from automated self-play.
+
+## Share gate reminder
+
+After compiling, inspect `presentationFloor` and `playabilityFloor`. Share is
+playability + genre fidelity (ADR 0012). A kit-ok Build that fails with
+"桌子好看但还不是那款游戏" needs genre objects (transcript / hand areas /
+named regions / seat roles), not another theme kit.
+

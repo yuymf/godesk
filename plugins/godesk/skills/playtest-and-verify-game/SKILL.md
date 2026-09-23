@@ -43,21 +43,27 @@ Separate structural, deterministic, visual, and human evidence in every report.
 
 ## Shared Session verification
 
-1. Read the project's Design Hypotheses. Create a Shared Session from one
+1. Before creating a Shared Session, confirm both floors on the immutable Build
+   (`presentationFloor` and `playabilityFloor`). Kit theme alone is not enough
+   for conversation / cards / placement / hidden-role — genre objects must be
+   present (ADR 0012). If the floor reason starts with
+   "桌子好看但还不是那款游戏", refuse to share and direct the creator to those
+   objects, not another kit.
+2. Read the project's Design Hypotheses. Create a Shared Session from one
    immutable Build and an explicit seed; pass the exact `hypothesisId` when the
    creator is testing a named question, or leave it absent for exploratory play.
    Re-read the Session and verify the Experiment Brief is an exact snapshot.
-2. For Creator self-play, open Web Studio and use its embedded Shared Session;
+3. For Creator self-play, open Web Studio and use its embedded Shared Session;
    for a friend handoff, open or return the exact independent Shared Session
    URL. Both surfaces must name the same Room ID.
-3. Claim one seat per browser/client before submitting an Intent. Submit only
+4. Claim one seat per browser/client before submitting an Intent. Submit only
    legal active-seat intents. Treat rejected pre-claim, wrong-seat, and illegal
    intents as evidence that authority is working, not as accepted actions.
-4. Re-read the Shared Session and verify ordered Accepted Actions and current
+5. Re-read the Shared Session and verify ordered Accepted Actions and current
    Session State. Read the Replay and verify the same sequence, action ID, and
    resulting state before claiming that Studio self-play is authoritative.
-5. Refresh or reopen the Shared Session to verify reconnect behavior when requested.
-6. For a repeatable friend handoff, create a fresh Room, re-read the project
+6. Refresh or reopen the Shared Session to verify reconnect behavior when requested.
+7. For a repeatable friend handoff, create a fresh Room, re-read the project
    version, apply `publish_shared_session`, and read `playtest-link`. Verify the
    stable URL redirects to that exact Room before returning it. Repointing the
    link must not mutate previous Rooms or Replays. After their seat is
@@ -66,7 +72,7 @@ Separate structural, deterministic, visual, and human evidence in every report.
    is attached to the same Room. For a hypothesis-bound Room, verify the visible
    question and success signal, then record any Finding against that same
    hypothesis; a mismatched hypothesis must be rejected.
-7. Read the replay and verify that replay access does not mutate the live Shared Session.
+8. Read the replay and verify that replay access does not mutate the live Shared Session.
 
 ## Evidence labels
 

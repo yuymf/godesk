@@ -37,6 +37,7 @@ import type {
   SourceLibraryEntry,
   ValidationFinding,
 } from "./project-contract";
+import { studioShareGateMessage } from "../runtime/share-gate-copy";
 import { Brand } from "./CreatorBrand";
 import { StudioBuildPlayPanel } from "./StudioBuildPlayPanel";
 import { StudioGenerationPlanPanel } from "./StudioGenerationPlanPanel";
@@ -589,14 +590,11 @@ export function ProjectStudio({ projectId }: { projectId: string }) {
       }
     } catch (reason) {
       if (reason instanceof ProjectApiError && reason.status === 422) {
-        const details = reason.details as {
-          playabilityFloor?: { reason?: string };
-          presentationFloor?: { reason?: string };
-        };
+        const copy = studioShareGateMessage(build);
         setFormError(
-          details.playabilityFloor?.reason
-            ?? details.presentationFloor?.reason
-            ?? reason.message,
+          copy.kind === "ok"
+            ? reason.message
+            : [copy.reason, copy.nextStep].filter(Boolean).join(" "),
         );
       } else {
         setFormError(reason instanceof Error ? reason.message : "没能开出这一局。");

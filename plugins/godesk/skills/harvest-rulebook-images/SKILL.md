@@ -27,3 +27,6 @@ Treat extracted material as creator-supplied evidence, never as generated art.
 
 Do not claim that a page was harvested when it has no usable image bytes. If no
 image can be extracted, continue through the Presentation Floor kit path.
+   Remember: kit / extracted art make the table legible; conversation, cards,
+   and placement still need genre objects before share (ADR 0012 /
+   "桌子好看但还不是那款游戏").

@@ -22,6 +22,9 @@ export type GenreObjectFidelity = {
   missing: string[];
 };
 
+/** Distinctive Presentation Floor fail prefix — Studio copy keys off this (W3-06). */
+export const GENRE_OBJECT_GAP_PREFIX = "桌子好看但还不是那款游戏";
+
 export function hasBoundImage(ruleSystem: RuleSystem) {
   return Boolean(
     ruleSystem.presentation.image?.url ||
@@ -132,7 +135,7 @@ export function genreObjectFidelity(ruleSystem: RuleSystem): GenreObjectFidelity
     return {
       status: "failed",
       reason:
-        "桌子好看但还不是那款游戏：对话体裁需要可见的发言记录区域（transcript），不能只靠主题 kit。",
+        `${GENRE_OBJECT_GAP_PREFIX}：对话体裁需要可见的发言记录区域（transcript），不能只靠主题 kit。`,
       family,
       missing: ["transcript"],
     };
@@ -149,7 +152,7 @@ export function genreObjectFidelity(ruleSystem: RuleSystem): GenreObjectFidelity
     return {
       status: "failed",
       reason:
-        "桌子好看但还不是那款游戏：卡牌体裁需要手牌和/或出牌区，不能只靠主题 kit。",
+        `${GENRE_OBJECT_GAP_PREFIX}：卡牌体裁需要手牌和/或出牌区，不能只靠主题 kit。`,
       family,
       missing: ["hand-or-play-area"],
     };
@@ -166,7 +169,7 @@ export function genreObjectFidelity(ruleSystem: RuleSystem): GenreObjectFidelity
     return {
       status: "failed",
       reason:
-        "桌子好看但还不是那款游戏：放置 / 桌面体裁需要具名区域或槽位，不能只靠主题 kit。",
+        `${GENRE_OBJECT_GAP_PREFIX}：放置 / 桌面体裁需要具名区域或槽位，不能只靠主题 kit。`,
       family,
       missing: ["named-regions"],
     };
@@ -183,7 +186,7 @@ export function genreObjectFidelity(ruleSystem: RuleSystem): GenreObjectFidelity
   return {
     status: "failed",
     reason:
-      "桌子好看但还不是那款游戏：隐藏身份体裁需要席位与私密身份牌/角色，不能只靠主题 kit。",
+      `${GENRE_OBJECT_GAP_PREFIX}：隐藏身份体裁需要席位与私密身份牌/角色，不能只靠主题 kit。`,
     family,
     missing: ["seat-role"],
   };

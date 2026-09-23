@@ -22,9 +22,12 @@ human playtesting.
    Also return the exact playable URL and Web Studio URL so the creator can keep
    working in GoDesk.
 5. When "publish" means a stable friend playtest rather than artifact delivery,
-   create a fresh Shared Session from the inspected Build, re-read the project
-   version, apply `publish_shared_session`, and verify the `playtest-link` URL
-   resolves to that Room. Repointing must leave old Rooms and Replays intact.
+   first confirm both floors. Do not publish when Presentation Floor fails with
+   "桌子好看但还不是那款游戏" — that is a genre-object gap, not a missing kit
+   (ADR 0012). Then create a fresh Shared Session from the inspected Build,
+   re-read the project version, apply `publish_shared_session`, and verify the
+   `playtest-link` URL resolves to that Room. Repointing must leave old Rooms
+   and Replays intact.
 6. State warnings and unsupported behavior exactly. Do not call an exported
    mechanics slice a complete or human-validated game.
 

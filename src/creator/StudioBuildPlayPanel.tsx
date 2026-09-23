@@ -9,6 +9,7 @@ import type {
   SharedSession,
   ValidationFinding,
 } from "./project-contract";
+import { studioShareGateMessage } from "../runtime/share-gate-copy";
 import {
   buildCanOpenSharedSession,
   playtestOutcome,
@@ -108,6 +109,10 @@ export function StudioBuildPlayPanel({
   exportBuild,
   startBotPlaytest,
 }: StudioBuildPlayPanelProps) {
+  const blockedShareCopy = studioPlayTarget.build &&
+    !buildCanOpenSharedSession(studioPlayTarget.build)
+    ? studioShareGateMessage(studioPlayTarget.build)
+    : null;
   return (
     <section className={`build-workflow ${hobbyistFocus === "play" ? "studio-secondary-panel" : ""}`} id="builds">
       <header className="studio-section-heading">
@@ -193,17 +198,11 @@ export function StudioBuildPlayPanel({
         </form>
       </section>
 
-      {studioPlayTarget.build && !buildCanOpenSharedSession(studioPlayTarget.build) && (
+      {blockedShareCopy && (
         <section className="studio-play-gap" id="play-gap">
-          <h3>这一版还不能分享</h3>
-          <p>
-            {studioPlayTarget.build.playabilityFloor.status === "failed"
-              ? studioPlayTarget.build.playabilityFloor.reason
-              : studioPlayTarget.build.presentationFloor.status === "failed"
-                ? studioPlayTarget.build.presentationFloor.reason
-                : "还没有可执行内核，不能把未完成的规则当作可玩成品分享。"}
-          </p>
-          <p>这一版已经留下。把核心玩法补齐之后，再发给朋友。</p>
+          <h3>{blockedShareCopy.title}</h3>
+          <p>{blockedShareCopy.reason}</p>
+          <p>{blockedShareCopy.nextStep}</p>
         </section>
       )}
 

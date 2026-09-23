@@ -24,6 +24,7 @@
     "src/runtime/playability-floor.ts",
     "src/runtime/presentation-floor.ts",
     "src/runtime/share-gate.ts",
+    "src/runtime/share-gate-copy.ts",
     "src/runtime/hidden-role.ts",
     "src/runtime/hand-play.ts",
     "src/runtime/conversation-relay.ts"
