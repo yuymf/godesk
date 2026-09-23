@@ -283,6 +283,9 @@ export class CreatorProjects extends DurableObject<Env> {
                 ]),
               ],
               proposedRuntime: generationPlan.proposedRuntime,
+              ...(generationPlan.generationRefuse
+                ? { generationRefuse: generationPlan.generationRefuse }
+                : {}),
               createdAt: generationPlan.createdAt,
             });
             generationPlan = {

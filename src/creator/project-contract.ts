@@ -271,6 +271,8 @@ export interface GenerationPlan {
   unsupported: string[];
   sourceIds: string[];
   proposedRuntime?: RuntimeConfigureOperation;
+  /** Wave4 refuse kind surfaced on pending 「这局还做不到」 (W5-01). */
+  generationRefuse?: "non-score-hand" | "multi-act-hidden-role" | "weak-genre-score-race";
   createdAt: string;
   approvedAt?: string;
 }

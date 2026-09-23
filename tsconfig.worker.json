@@ -28,6 +28,7 @@
     "src/runtime/share-gate-copy.ts",
     "src/runtime/hidden-role.ts",
     "src/runtime/hand-play.ts",
+    "src/runtime/generation-refuse.ts",
     "src/runtime/conversation-relay.ts"
   ]
 }

@@ -13,6 +13,11 @@ import {
   materializeRuleSystem,
 } from "./rulebook-generation";
 import { GENRE_OBJECT_GAP_PREFIX } from "../src/runtime/presentation-floor";
+import {
+  REFUSE_MULTI_ACT_HIDDEN_ROLE,
+  REFUSE_NON_SCORE_HAND,
+  REFUSE_WEAK_GENRE_SCORE_RACE,
+} from "../src/runtime/generation-refuse";
 import { shareGatePlanAssumption } from "../src/runtime/share-gate-copy";
 
 describe("rulebook Rule System materialization", () => {
@@ -453,5 +458,120 @@ describe("createGenerationPlan presentation/share assumptions (W3-06)", () => {
     expect(objectGap).toMatch(/发言记录|transcript/);
     expect(objectGap).toMatch(/不能只靠主题 kit/);
     expect(plan.assumptions.some((item) => /再贴一个 kit就能|换主题就能过/.test(item))).toBe(false);
+  });
+});
+
+
+describe("createGenerationPlan refuse honesty (W5-01)", () => {
+  it("stamps non-score hand refuse onto unsupported and does not invent play-to-score loop", () => {
+    const materialized = materializeRuleSystem({
+      name: "吃墩卡牌",
+      description: "四人各有手牌。轮流出牌必须跟牌，同花色最大者吃墩。最终赢得最多墩的人获胜。",
+      sourceId: "source_trick",
+      sourceText: "四人各有手牌。轮流出牌必须跟牌，同花色最大者吃墩。最终赢得最多墩的人获胜。",
+    });
+    const plan = createGenerationPlan({
+      id: "plan_refuse_hand",
+      projectId: "proj_refuse_hand",
+      generationJobId: "job_refuse_hand",
+      ruleSystem: {
+        id: "rs_refuse_hand",
+        version: 1,
+        ...materialized,
+        runtimeSupport: { status: "draft", unsupported: [] },
+      },
+      sourceIds: ["source_trick"],
+      createdAt: "2026-09-24T00:00:00.000Z",
+      generationRefuse: "non-score-hand",
+    });
+    expect(plan.proposedRuntime).toBeUndefined();
+    expect(plan.unsupported[0]).toBe(REFUSE_NON_SCORE_HAND);
+    expect(plan.assumptions).toContain(REFUSE_NON_SCORE_HAND);
+    expect(plan.loop.some((step) => /先到目标分|牌库耗尽/.test(step))).toBe(false);
+  });
+
+  it("stamps multi-act hidden-role refuse and skips one-shot accuse loop", () => {
+    const materialized = materializeRuleSystem({
+      name: "三幕剧本",
+      description: "三幕剧本杀。第一幕搜证，第二幕讨论，第三幕投票。桌上有线索板。每人有隐藏身份，发言后互相指控。",
+      sourceId: "source_multiact",
+      sourceText: "三幕剧本杀。第一幕搜证，第二幕讨论，第三幕投票。桌上有线索板。每人有隐藏身份，发言后互相指控。",
+    });
+    const plan = createGenerationPlan({
+      id: "plan_refuse_role",
+      projectId: "proj_refuse_role",
+      generationJobId: "job_refuse_role",
+      ruleSystem: {
+        id: "rs_refuse_role",
+        version: 1,
+        ...materialized,
+        runtimeSupport: { status: "draft", unsupported: [] },
+      },
+      sourceIds: ["source_multiact"],
+      createdAt: "2026-09-24T00:00:00.000Z",
+      generationRefuse: "multi-act-hidden-role",
+    });
+    expect(plan.unsupported[0]).toBe(REFUSE_MULTI_ACT_HIDDEN_ROLE);
+    expect(plan.loop.some((step) => /互相指控|揭晓并按身份结算/.test(step))).toBe(false);
+  });
+
+  it("stamps weak-genre score-race refuse", () => {
+    const materialized = materializeRuleSystem({
+      name: "资源区弱体裁",
+      description: "在资源区得分，先到 10 分获胜。",
+      sourceId: "source_weak",
+      sourceText: "在资源区得分，先到 10 分获胜。",
+    });
+    const plan = createGenerationPlan({
+      id: "plan_refuse_weak",
+      projectId: "proj_refuse_weak",
+      generationJobId: "job_refuse_weak",
+      ruleSystem: {
+        id: "rs_refuse_weak",
+        version: 1,
+        ...materialized,
+        runtimeSupport: { status: "draft", unsupported: [] },
+      },
+      sourceIds: ["source_weak"],
+      createdAt: "2026-09-24T00:00:00.000Z",
+      generationRefuse: "weak-genre-score-race",
+    });
+    expect(plan.unsupported[0]).toBe(REFUSE_WEAK_GENRE_SCORE_RACE);
+  });
+
+  it("still describes hand-play loop when configure_hand_play is proposed", () => {
+    const materialized = materializeRuleSystem({
+      name: "聚会卡牌",
+      description: "四个人各从洗好的牌库抽 3 张手牌。牌库里点数 1 到 5 各 4 张。轮到你时从手牌打出一张到出牌区。",
+      sourceId: "source_party",
+      sourceText: "四个人各从洗好的牌库抽 3 张手牌。牌库里点数 1 到 5 各 4 张。轮到你时从手牌打出一张到出牌区，该牌点数加入你的分数。率先达到 12 分的人获胜。",
+    });
+    const plan = createGenerationPlan({
+      id: "plan_ok_hand",
+      projectId: "proj_ok_hand",
+      generationJobId: "job_ok_hand",
+      ruleSystem: {
+        id: "rs_ok_hand",
+        version: 1,
+        ...materialized,
+        runtimeSupport: { status: "draft", unsupported: [] },
+      },
+      sourceIds: ["source_party"],
+      createdAt: "2026-09-24T00:00:00.000Z",
+      proposedRuntime: {
+        op: "configure_hand_play",
+        config: {
+          playerCount: 4,
+          cardValues: [1, 2, 3, 4, 5],
+          copiesPerValue: 4,
+          handSize: 3,
+          victoryTarget: 12,
+          actions: [{ id: "play", label: "打出一张手牌" }],
+          unsupported: [],
+        },
+      },
+    });
+    expect(plan.loop.some((step) => /先到目标分|牌库耗尽|隐藏手牌|出牌区/.test(step))).toBe(true);
+    expect(plan.unsupported.some((item) => item.includes("吃墩"))).toBe(false);
   });
 });

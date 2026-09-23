@@ -4,6 +4,10 @@ import type {
   RuleSystem,
 } from "../src/creator/project-contract";
 import { inferSourceGenre } from "../src/runtime/genre";
+import {
+  generationRefuseReason,
+  type GenerationRefuseKind,
+} from "../src/runtime/generation-refuse";
 import { deriveHiddenRoles } from "../src/runtime/hidden-role";
 import { genreObjectFidelity } from "../src/runtime/presentation-floor";
 import {
@@ -701,6 +705,8 @@ export function createGenerationPlan(input: {
   sourceIds: string[];
   createdAt: string;
   proposedRuntime?: GenerationPlan["proposedRuntime"];
+  /** W5-01: Wave4 refuse must land on plan.unsupported, not only job warnings. */
+  generationRefuse?: GenerationRefuseKind;
 }): GenerationPlan {
   const { ruleSystem } = input;
   const genre = inferSourceGenre([
@@ -715,7 +721,19 @@ export function createGenerationPlan(input: {
     "来源锚点决定了可追溯内容；未从来源中识别出的裁判、随机与资源语义不会被隐式补全。",
     `将呈现的 Play Surface 是 ${ruleSystem.playSurface.kind}，必须改变交互，不能只换文案。`,
   ];
-  const genreLoop = genre === "hidden-role"
+  if (input.generationRefuse) {
+    const reason = generationRefuseReason(input.generationRefuse);
+    unsupported.unshift(reason);
+    assumptions.push(reason);
+  }
+  // Only invent the shareable subset loop when a Kernel is proposed or already executable.
+  // Refuse drafts must not claim "先到目标分" / one-shot 指控 as the plan loop (W5-01 / FP2).
+  const mayDescribeShareableLoop =
+    Boolean(input.proposedRuntime) ||
+    ruleSystem.runtimeSupport.status === "executable";
+  const genreLoop = !mayDescribeShareableLoop
+    ? []
+    : genre === "hidden-role"
     ? ["秘密发放身份牌", "轮流公开发言", "互相指控", "揭晓并按身份结算"]
     : genre === "hand-play"
     ? ["发给隐藏手牌", "从手牌打出到出牌区", "从牌库补牌", "先到目标分或牌库耗尽"]
@@ -777,11 +795,14 @@ export function createGenerationPlan(input: {
     participants: structuredClone(ruleSystem.participants),
     durationMinutes: ruleSystem.durationMinutes,
     playSurface: structuredClone(ruleSystem.playSurface),
-    loop: unique([
-      ...ruleSystem.setup,
-      ...ruleSystem.stages.map((stage) => stage.name),
-      ...genreLoop,
-    ]).slice(0, 8),
+    // Refuse: do not echo extracted setup/stages that describe the unsupported loop (W5-01).
+    loop: input.generationRefuse
+      ? []
+      : unique([
+          ...ruleSystem.setup,
+          ...ruleSystem.stages.map((stage) => stage.name),
+          ...genreLoop,
+        ]).slice(0, 8),
     actions: ruleSystem.actions.slice(0, 8).map((action) => ({
       label: action.label,
       description: action.description,
@@ -791,6 +812,7 @@ export function createGenerationPlan(input: {
     unsupported: unique(unsupported),
     sourceIds: [...new Set(input.sourceIds)].sort(),
     ...(input.proposedRuntime ? { proposedRuntime: input.proposedRuntime } : {}),
+    ...(input.generationRefuse ? { generationRefuse: input.generationRefuse } : {}),
     createdAt: input.createdAt,
   };
 }

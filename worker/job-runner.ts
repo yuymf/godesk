@@ -13,6 +13,10 @@ import {
   inferSourceGenre,
 } from "../src/runtime/genre";
 import {
+  generationRefuseReason,
+  type GenerationRefuseKind,
+} from "../src/runtime/generation-refuse";
+import {
   deriveHiddenRoles,
   isMultiActHiddenRoleCorpus,
 } from "../src/runtime/hidden-role";
@@ -653,6 +657,13 @@ export async function runCreatorJob(
       if (!generatedRuleSystem || !Array.isArray(generatedSources)) {
         throw new Error("generation_plan_materialization_missing");
       }
+      const generationRefuse: GenerationRefuseKind | undefined = nonScoreHandLoopRefused
+        ? "non-score-hand"
+        : multiActHiddenRoleRefused
+          ? "multi-act-hidden-role"
+          : weakGenreScoreRaceRefused
+            ? "weak-genre-score-race"
+            : undefined;
       const generationPlan = createGenerationPlan({
         id: `generation_plan_${job.id}`,
         projectId: job.projectId,
@@ -660,6 +671,7 @@ export async function runCreatorJob(
         ruleSystem: generatedRuleSystem,
         sourceIds: generatedSources.map((source) => source.id),
         proposedRuntime: proposedRuntime ?? undefined,
+        ...(generationRefuse ? { generationRefuse } : {}),
         createdAt: new Date().toISOString(),
       });
       await host.ctx.storage.put(
@@ -693,11 +705,11 @@ export async function runCreatorJob(
             ? "规则结构来自确定性文本抽取；仅来源中明确写出的计分行动与胜利目标将在批准 Generation Plan 后配置为 score-race-v1。"
             : "规则结构来自确定性文本抽取；来源明确写出的轮流行动将在批准 Generation Plan 后配置为 turn-taking-v1，回合上限来自来源或可见的保守原型默认值。"
         : nonScoreHandLoopRefused
-          ? "来源是吃墩/出完手牌/花色效果等非计分手牌环；hand-play-v1 仅支持出牌计分，Rule System 保持 draft，不会用出牌计分顶替分享。"
+          ? generationRefuseReason("non-score-hand")
           : multiActHiddenRoleRefused
-          ? "来源是多幕/线索板剧本杀；hidden-role-v1 仅支持单轮发言→指控→揭晓，Rule System 保持 draft，不会用单轮环顶替分享。"
+          ? generationRefuseReason("multi-act-hidden-role")
           : weakGenreScoreRaceRefused
-          ? "来源含弱体裁信号（卡牌/放置/身份/对话），不能静默配置 score-race-v1；Rule System 保持 draft，请改写为明确体裁或纯计分赛。"
+          ? generationRefuseReason("weak-genre-score-race")
           : generatedRuleSystem.actions.length > 12
           ? "来源识别出超过 Kernel 上限的行动；为避免静默丢弃规则，Rule System 保持 draft，等待创作者明确缩减或配置 Executable Kernel。"
           : "规则结构来自确定性文本抽取；来源不足以证明可执行语义，Rule System 保持 draft，等待显式配置 Executable Kernel。"];

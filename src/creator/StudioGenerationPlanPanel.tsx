@@ -1,5 +1,9 @@
 import type { GenerationPlan } from "./project-contract";
 import type { StudioHobbyistFocus } from "./studio-panel-types";
+import {
+  generationPlanAllowsApprove,
+  generationPlanShowsUnsupported,
+} from "./generation-plan-honesty";
 
 export type StudioGenerationPlanPanelProps = {
   generationPlan: GenerationPlan;
@@ -18,6 +22,11 @@ export function StudioGenerationPlanPanel({
   sourceDraft,
   approveGenerationPlan,
 }: StudioGenerationPlanPanelProps) {
+  const showUnsupported = generationPlanShowsUnsupported(generationPlan);
+  const allowsApprove = generationPlanAllowsApprove(generationPlan);
+  const approveBlocked =
+    busy || ruleSystemDirty || Boolean(sourceDraft.trim()) || !allowsApprove;
+
   return (
     <section className={`generation-plan-panel ${generationPlan.status}`} id="plan">
       <header className="studio-section-heading">
@@ -59,8 +68,8 @@ export function StudioGenerationPlanPanel({
           </ul>
         </section>
         )}
-        {generationPlan.status === "approved" && generationPlan.unsupported.length > 0 && (
-        <section>
+        {showUnsupported && (
+        <section data-testid="generation-plan-unsupported">
           <strong>这局还做不到</strong>
           <ul>
             {generationPlan.unsupported.map((item) => <li key={item}>{item}</li>)}
@@ -71,9 +80,15 @@ export function StudioGenerationPlanPanel({
       )}
       {generationPlan.status === "pending" ? (
         <div className="generation-plan-actions">
-          <p>确认后立刻生成可玩版本。之后还能改规则、再开新一局。</p>
+          {allowsApprove ? (
+            <p>确认后立刻生成可玩版本。之后还能改规则、再开新一局。</p>
+          ) : (
+            <p role="status">
+              当前还没有可执行内核，不能确认成可玩版本。请先看「这局还做不到」，改写来源后再生成。
+            </p>
+          )}
           <button
-            disabled={busy || ruleSystemDirty || Boolean(sourceDraft.trim())}
+            disabled={approveBlocked}
             onClick={approveGenerationPlan}
             type="button"
           >

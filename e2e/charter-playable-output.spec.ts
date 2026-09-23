@@ -468,4 +468,29 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.locator(".action-log")).toContainText(/place:region-\d+/);
     await expect(page.locator(".score-grid")).toHaveCount(0);
   });
+
+  test("trick-taking refuse shows 这局还做不到 on pending plan (W5-01)", async ({
+    page,
+  }) => {
+    await page.goto("/chatgpt-plugin/new");
+    const idea = page.getByRole("textbox", { name: "描述你的游戏想法" });
+    await idea.fill(
+      "四人各有手牌。轮流出牌必须跟牌，同花色最大者吃墩。最终赢得最多墩的人获胜。",
+    );
+    await page.getByRole("button", { name: "生成可玩版本" }).click();
+    await page.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 90_000 });
+    await expect(page.getByRole("heading", { name: "先看这一局怎么玩" })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const unsupported = page.getByTestId("generation-plan-unsupported");
+    await expect(unsupported).toBeVisible();
+    await expect(unsupported.getByText("这局还做不到")).toBeVisible();
+    await expect(unsupported).toContainText(/非计分手牌环|出牌计分|不会用出牌计分顶替/);
+    await expect(page.locator(".generation-plan-panel")).not.toContainText("先到目标分");
+
+    const approve = page.getByRole("button", { name: "确认玩法并开始试玩" });
+    await expect(approve).toBeDisabled();
+    await expect(page.getByText(/当前还没有可执行内核/)).toBeVisible();
+  });
 });

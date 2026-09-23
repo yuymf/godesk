@@ -5,6 +5,11 @@ import {
   runInDurableObject,
   SELF,
 } from "cloudflare:test";
+import {
+  REFUSE_MULTI_ACT_HIDDEN_ROLE,
+  REFUSE_NON_SCORE_HAND,
+  REFUSE_WEAK_GENRE_SCORE_RACE,
+} from "../src/runtime/generation-refuse";
 import { describe, expect, it } from "vitest";
 import {
   callMcpTool,
@@ -726,12 +731,15 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
       generationPlan: {
         proposedRuntime?: { op: string };
         unsupported: string[];
+        loop: string[];
       };
       warnings?: string[];
     };
     expect(result.generationPlan.proposedRuntime).toBeUndefined();
     expect(result.ruleSystem.runtimeSupport.status).toBe("draft");
     expect(result.warnings?.join(" ") ?? "").toMatch(/非计分|出牌计分/);
+    expect(result.generationPlan.unsupported[0]).toBe(REFUSE_NON_SCORE_HAND);
+    expect(result.generationPlan.loop.some((step) => /先到目标分/.test(step))).toBe(false);
   });
 
 
@@ -833,6 +841,7 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
     expect(result.generationPlan.proposedRuntime).toBeUndefined();
     expect(result.ruleSystem.runtimeSupport.status).toBe("draft");
     expect(result.warnings?.join(" ") ?? "").toMatch(/多幕|线索板|单轮/);
+    expect(result.generationPlan.unsupported[0]).toBe(REFUSE_MULTI_ACT_HIDDEN_ROLE);
   });
 
 
@@ -947,12 +956,16 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
     expect(finished.status).toBe("succeeded");
     const result = finished.result as {
       ruleSystem: { runtimeSupport: { status: string } };
-      generationPlan: { proposedRuntime?: { op: string } };
+      generationPlan: {
+        proposedRuntime?: { op: string };
+        unsupported: string[];
+      };
       warnings?: string[];
     };
     expect(result.generationPlan.proposedRuntime).toBeUndefined();
     expect(result.ruleSystem.runtimeSupport.status).toBe("draft");
     expect(result.warnings?.join(" ") ?? "").toMatch(/弱体裁|score-race/);
+    expect(result.generationPlan.unsupported[0]).toBe(REFUSE_WEAK_GENRE_SCORE_RACE);
   });
 
 
