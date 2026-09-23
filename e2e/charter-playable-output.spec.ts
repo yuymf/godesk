@@ -155,6 +155,12 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.locator(".room-experiment-brief")).toHaveCount(0);
     await expectLightPlaySurface(page);
 
+    // W4-08 / W3-02: conversation Room is transcript + turn-budget first — no primary score race chrome.
+    await expect(page.locator(".conversation-board")).toBeVisible();
+    await expect(page.locator(".conversation-turn-budget")).toContainText(/回合预算\s*\d+\s*\/\s*\d+/);
+    await expect(page.locator(".score-track")).toHaveCount(0);
+    await expect(page.locator(".score-grid")).toHaveCount(0);
+
     const inviteUrl = await page.getByLabel("邀请链接").inputValue();
     expect(inviteUrl).toMatch(/\/chatgpt-plugin\/room\//);
 
@@ -166,6 +172,9 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await page.getByRole("button", { name: "加入约束" }).click();
     await expect(page.getByText(/已提交/)).toBeVisible();
     await expect(page.getByText("座位 0 · 先把场景定在雨夜码头。")).toBeVisible();
+    await expect(page.locator(".speech-transcript")).toContainText("先把场景定在雨夜码头。");
+    await expect(page.locator(".score-track")).toHaveCount(0);
+    await expect(page.locator(".action-log")).not.toContainText(/[＋+]\d+\s*分/);
     await expect(
       page.getByRole("paragraph").filter({ hasText: "等待另一位玩家完成行动" }),
     ).toBeVisible();
@@ -410,5 +419,53 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.getByLabel("你的手牌")).toBeVisible();
     await page.getByRole("button", { name: /打出 / }).first().click();
     await expect(page.getByText(/座位 0 打出/)).toBeVisible();
+  });
+
+  test("轻桌游 places a worker on a named region and Replay keeps genre objects", async ({
+    page,
+  }) => {
+    await page.goto("/chatgpt-plugin/new");
+    await page.getByRole("button", { name: "轻桌游" }).click();
+    await page.getByRole("button", { name: "生成可玩版本" }).click();
+    await page.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 90_000 });
+    await expect(page.getByRole("heading", { name: "先看这一局怎么玩" })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.locator(".generation-plan-panel")).not.toContainText("这局还做不到");
+    await page.getByRole("button", { name: "确认玩法并开始试玩" }).click();
+    await expect(page.getByRole("heading", { name: "现在就开玩" })).toBeVisible({
+      timeout: 90_000,
+    });
+    await page.getByRole("button", { name: "发布邀请链接" }).click();
+    const tryUrl = await page.getByLabel("固定好友试玩链接").inputValue();
+    expect(tryUrl).toMatch(/\/chatgpt-plugin\/try\//);
+    await page.goto(tryUrl);
+    await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
+
+    await expectLightPlaySurface(page);
+    const board = page.locator(".worker-placement-board");
+    await expect(board).toBeVisible();
+    await expect(page.getByRole("button", { name: "放置到资源区" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "放置到工坊" })).toBeVisible();
+
+    await page.getByLabel("你的席位").selectOption("0");
+    const placeResource = page.getByRole("button", { name: "放置到资源区" });
+    await expect(placeResource).toBeEnabled();
+    await placeResource.click();
+
+    // Genre action: place-on-region (not score-only chrome).
+    await expect(page.locator(".action-log")).toContainText(/place:region-\d+/);
+    await expect(board).toContainText("派工人前往资源区");
+    await expect(board.locator(".worker-placement-seats")).toContainText(/木材\s*1/);
+
+    await page.getByRole("link", { name: "只读回放" }).click();
+    await page.waitForURL(/\/chatgpt-plugin\/replay\//, { timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: "这一局怎么打完的", level: 2 })).toBeVisible();
+    const replayBoard = page.locator(".worker-placement-board");
+    await expect(replayBoard).toBeVisible();
+    await expect(replayBoard).toContainText("资源区");
+    await expect(replayBoard).toContainText("派工人前往资源区");
+    await expect(page.locator(".action-log")).toContainText(/place:region-\d+/);
+    await expect(page.locator(".score-grid")).toHaveCount(0);
   });
 });
