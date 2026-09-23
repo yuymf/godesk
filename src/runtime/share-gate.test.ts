@@ -54,4 +54,24 @@ describe("shareGate", () => {
       ruleSystem: { runtimeSupport: { status: "draft", unsupported: [] } },
     }))).toEqual({ error: "runtime_not_executable" });
   });
+
+  it("prefers playability when both floors fail (ADR 0012 share SSOT)", () => {
+    expect(shareGateRefusal(build({
+      presentationFloor: { status: "failed", reason: "no visual", visuals: [] },
+      playabilityFloor: {
+        status: "failed",
+        reason: "reskin",
+        genre: "hidden-role",
+        kernelType: "score-race-v1",
+      },
+    }))).toEqual({
+      error: "playability_floor_unmet",
+      playabilityFloor: {
+        status: "failed",
+        reason: "reskin",
+        genre: "hidden-role",
+        kernelType: "score-race-v1",
+      },
+    });
+  });
 });

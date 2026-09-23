@@ -236,4 +236,22 @@ describe("presentationFloor", () => {
     expect(genreObjectFidelity(ruleSystem).missing).toContain("hand-or-play-area");
     expect(presentationFloor(ruleSystem).status).toBe("failed");
   });
+
+  it("keeps score-race kit legible even when corpus reads as hidden-role", () => {
+    // Genre honesty for the reskin is Playability Floor (ADR 0012), not Presentation.
+    const ruleSystem = base({
+      name: "别墅剧本杀",
+      pitch: "三个人找出凶手，发言后指控。",
+      presentation: {
+        theme: "harbor-kit",
+        visuals: [{ provenance: "kit", label: "Harbor ink presentation kit" }],
+      },
+    });
+    expect(genreObjectFidelity(ruleSystem)).toMatchObject({
+      status: "passed",
+      family: "generic",
+    });
+    expect(presentationFloor(ruleSystem).status).toBe("passed");
+  });
+
 });

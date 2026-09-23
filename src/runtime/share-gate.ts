@@ -21,18 +21,22 @@ export type ShareGateRefusal =
     }
   | { error: "runtime_not_executable" };
 
-/** Studio + worker share gate: both floors passed and an executable kernel. */
+/**
+ * Studio + worker share gate: both floors passed and an executable kernel.
+ * When both floors fail, prefer playability (ADR 0012: share gate is genre
+ * honesty / that-game fidelity, not merely visual kit or genre-object gaps).
+ */
 export function shareGateRefusal(build: ShareGateBuild): ShareGateRefusal | null {
-  if (build.presentationFloor.status !== "passed") {
-    return {
-      error: "visual_floor_unmet",
-      presentationFloor: build.presentationFloor,
-    };
-  }
   if (build.playabilityFloor.status !== "passed") {
     return {
       error: "playability_floor_unmet",
       playabilityFloor: build.playabilityFloor,
+    };
+  }
+  if (build.presentationFloor.status !== "passed") {
+    return {
+      error: "visual_floor_unmet",
+      presentationFloor: build.presentationFloor,
     };
   }
   if (build.ruleSystem.runtimeSupport.status !== "executable") {
