@@ -13,7 +13,18 @@ function build(
       genre: "generic",
       kernelType: "score-race-v1",
     },
-    ruleSystem: { runtimeSupport: { status: "executable", kernel: { type: "score-race-v1" }, unsupported: [] } } as ShareGateBuild["ruleSystem"],
+    ruleSystem: {
+      runtimeSupport: {
+        status: "executable",
+        unsupported: [],
+        kernel: {
+          type: "score-race-v1",
+          victoryTarget: 8,
+          maxTurns: 12,
+          actions: [{ id: "a", label: "得分", points: 2 }],
+        },
+      },
+    },
     ...overrides,
   };
 }
