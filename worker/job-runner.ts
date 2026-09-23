@@ -11,6 +11,10 @@ import type {
 import { inferSourceGenre } from "../src/runtime/genre";
 import { defaultHiddenRoles } from "../src/runtime/hidden-role";
 import {
+  deriveHandPlayDeck,
+  isNonScoreHandLoopCorpus,
+} from "../src/runtime/hand-play";
+import {
   deriveVictoryBuildings,
   deriveWorkerPlacementRegions,
   deriveWorkersPerSeat,
@@ -94,6 +98,7 @@ export async function runCreatorJob(
     let operation: Response;
     let generationRuntimeConfigured = false;
     let proposedRuntime: RuntimeConfigureOperation | null = null;
+    let nonScoreHandLoopRefused = false;
     if (input.kind === "generate-rule-system") {
       const pendingPlan = await host.ctx.storage.get<GenerationPlan>(
         generationPlanKey(job.projectId),
@@ -184,7 +189,11 @@ export async function runCreatorJob(
           ),
         );
       const hiddenRoleRuntimeConfigured = sourceGenre === "hidden-role";
-      const handPlayRuntimeConfigured = sourceGenre === "hand-play";
+      nonScoreHandLoopRefused =
+        sourceGenre === "hand-play" &&
+        isNonScoreHandLoopCorpus(authoredMaterial);
+      const handPlayRuntimeConfigured =
+        sourceGenre === "hand-play" && !nonScoreHandLoopRefused;
       const harborLikePlacement =
         sourceGenre === "placement" && isHarborLikeCorpus(authoredMaterial);
       const workerPlacementRuntimeConfigured =
@@ -250,11 +259,18 @@ export async function runCreatorJob(
         drawAndScoreRuntimeConfigured ||
         pushYourLuckRuntimeConfigured ||
         turnTakingRuntimeConfigured;
+      // Non-score hand loop: refuse all kernels (no turn-taking fallthrough warning either).
+      if (nonScoreHandLoopRefused) {
+        generationRuntimeConfigured = false;
+      }
       const pushMaxActions = Math.min(10_000, Math.max(
         200,
         (pushYourLuckRule?.victoryTarget ?? 0) * generatedRuleSystem.participants.default * 5,
       ));
-      const runtimeOperation = hiddenRoleRuntimeConfigured
+      // Refuse configure for non-score hand loops (no silent play-to-score / turn-taking fallthrough).
+      const runtimeOperation = nonScoreHandLoopRefused
+        ? null
+        : hiddenRoleRuntimeConfigured
         ? {
             op: "configure_hidden_role" as const,
             config: {
@@ -266,22 +282,23 @@ export async function runCreatorJob(
             },
           }
         : handPlayRuntimeConfigured
-        ? {
-            op: "configure_hand_play" as const,
-            config: {
-              playerCount: generatedRuleSystem.participants.default,
-              cardValues: [1, 2, 3, 4, 5],
-              copiesPerValue: 4,
-              handSize: 3,
-              victoryTarget: Number.isInteger(victoryTarget) && victoryTarget > 0
-                ? victoryTarget
-                : 12,
-              actions: [{ id: "play" as const, label: /[\u4e00-\u9fff]/.test(authoredMaterial) ? "打出一张手牌" : "Play a card" }],
-              unsupported: [
-                "hand-play-v1 executes a shuffled deck, hidden hands, play-to-score, and first-to-target or highest score when hands empty.",
-              ],
-            },
-          }
+        ? (() => {
+            const deck = deriveHandPlayDeck(authoredMaterial);
+            return {
+              op: "configure_hand_play" as const,
+              config: {
+                playerCount: generatedRuleSystem.participants.default,
+                cardValues: deck.cardValues,
+                copiesPerValue: deck.copiesPerValue,
+                handSize: deck.handSize,
+                victoryTarget: deck.victoryTarget,
+                actions: [{ id: "play" as const, label: /[\u4e00-\u9fff]/.test(authoredMaterial) ? "打出一张手牌" : "Play a card" }],
+                unsupported: [
+                  "hand-play-v1 executes a source-derived shuffled deck, hidden hands, play-to-score, and first-to-target or highest score when hands empty; trick-taking, shedding, suits, and card effects remain unsupported.",
+                ],
+              },
+            };
+          })()
         : conversationRelayRuntimeConfigured
         ? {
             op: "configure_conversation_relay" as const,
@@ -634,7 +651,9 @@ export async function runCreatorJob(
           : proposedRuntime?.op === "configure_score_race"
             ? "规则结构来自确定性文本抽取；仅来源中明确写出的计分行动与胜利目标将在批准 Generation Plan 后配置为 score-race-v1。"
             : "规则结构来自确定性文本抽取；来源明确写出的轮流行动将在批准 Generation Plan 后配置为 turn-taking-v1，回合上限来自来源或可见的保守原型默认值。"
-        : generatedRuleSystem.actions.length > 12
+        : nonScoreHandLoopRefused
+          ? "来源是吃墩/出完手牌/花色效果等非计分手牌环；hand-play-v1 仅支持出牌计分，Rule System 保持 draft，不会用出牌计分顶替分享。"
+          : generatedRuleSystem.actions.length > 12
           ? "来源识别出超过 Kernel 上限的行动；为避免静默丢弃规则，Rule System 保持 draft，等待创作者明确缩减或配置 Executable Kernel。"
           : "规则结构来自确定性文本抽取；来源不足以证明可执行语义，Rule System 保持 draft，等待显式配置 Executable Kernel。"];
     }

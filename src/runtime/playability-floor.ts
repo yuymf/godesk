@@ -4,6 +4,7 @@ import type {
   RuleSystem,
 } from "../creator/project-contract";
 import { inferSourceGenre, type SourceGenre } from "./genre";
+import { isNonScoreHandLoopCorpus } from "./hand-play";
 import {
   isEconomyPlacementCorpus,
   kernelHasPlacementEconomy,
@@ -108,6 +109,18 @@ export function playabilityFloor(ruleSystem: RuleSystem): PlayabilityFloorReadin
           kernelType,
         };
       }
+    }
+    if (
+      kernelType === "hand-play-v1" &&
+      isNonScoreHandLoopCorpus(ruleSystemCorpus(ruleSystem))
+    ) {
+      return {
+        status: "failed",
+        reason:
+          "来源是吃墩/出完手牌/花色效果等非计分手牌环，不能用出牌计分冒充分享。",
+        genre,
+        kernelType,
+      };
     }
     return {
       status: "passed",

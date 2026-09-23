@@ -633,6 +633,107 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
     }
   });
 
+
+  it("parameterizes hand-play deck from corpus (not hardcoded 1–5×4 / 12)", async () => {
+    const created = await SELF.fetch("https://godesk.test/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Hand-play parameterized generation" }),
+    }).then((response) => response.json<{
+      project: { id: string; version: number };
+    }>());
+    const brief =
+      "四个人轮流打牌。牌库里点数 1–10 各 2 张。开局各抽 5 张手牌。轮到你时从手牌打出一张到出牌区，该牌点数加入你的分数，然后从牌库补一张。手牌始终对其他玩家隐藏。先到 20 分的人获胜。";
+    const queued = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/jobs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          kind: "generate-rule-system",
+          expectedVersion: created.project.version,
+          idea: brief,
+          sourceContent: brief,
+          sourceKind: "brief",
+          sourceName: "hand-play-param.txt",
+          name: "Hand-play parameterized generation",
+          idempotencyKey: "generate-hand-play-param-001",
+        }),
+      },
+    ).then((response) => response.json<{ id: string; status: string }>());
+    expect(queued.status).toBe("queued");
+    const finished = await waitForJob(queued.id);
+    expect(finished.status).toBe("succeeded");
+    const proposed = (finished.result as {
+      generationPlan: {
+        proposedRuntime?: {
+          op: string;
+          config: {
+            cardValues: number[];
+            copiesPerValue: number;
+            handSize: number;
+            victoryTarget: number;
+            unsupported?: string[];
+          };
+        };
+      };
+    }).generationPlan.proposedRuntime;
+    expect(proposed?.op).toBe("configure_hand_play");
+    expect(proposed?.config.cardValues).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(proposed?.config.copiesPerValue).toBe(2);
+    expect(proposed?.config.handSize).toBe(5);
+    expect(proposed?.config.victoryTarget).toBe(20);
+    expect(proposed?.config.unsupported).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("source-derived"),
+        expect.stringContaining("trick-taking"),
+      ]),
+    );
+  });
+
+  it("refuses configure_hand_play for trick-taking / shedding briefs", async () => {
+    const created = await SELF.fetch("https://godesk.test/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Trick-taking refuse generation" }),
+    }).then((response) => response.json<{
+      project: { id: string; version: number };
+    }>());
+    const brief =
+      "四人各有手牌。轮流出牌必须跟牌，同花色最大者吃墩。最终赢得最多墩的人获胜。";
+    const queued = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/jobs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          kind: "generate-rule-system",
+          expectedVersion: created.project.version,
+          idea: brief,
+          sourceContent: brief,
+          sourceKind: "brief",
+          sourceName: "trick-taking.txt",
+          name: "Trick-taking refuse generation",
+          idempotencyKey: "generate-hand-play-refuse-trick-001",
+        }),
+      },
+    ).then((response) => response.json<{ id: string; status: string }>());
+    expect(queued.status).toBe("queued");
+    const finished = await waitForJob(queued.id);
+    expect(finished.status).toBe("succeeded");
+    const result = finished.result as {
+      ruleSystem: { runtimeSupport: { status: string } };
+      generationPlan: {
+        proposedRuntime?: { op: string };
+        unsupported: string[];
+      };
+      warnings?: string[];
+    };
+    expect(result.generationPlan.proposedRuntime).toBeUndefined();
+    expect(result.ruleSystem.runtimeSupport.status).toBe("draft");
+    expect(result.warnings?.join(" ") ?? "").toMatch(/非计分|出牌计分/);
+  });
+
   it("still proposes harbor-voyage for harbor-like placement corpus", async () => {
     const created = await SELF.fetch("https://godesk.test/api/projects", {
       method: "POST",

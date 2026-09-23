@@ -80,8 +80,12 @@ iteration tools, not the destination.
 - `hidden-role-v1` executes secret roles, one public speech per seat, one
   accusation per seat, and majority reveal. Use it for 剧本杀 / hidden-role
   sources. Do not substitute a score race.
-- `hand-play-v1` executes a shuffled deck, hidden hands, play-to-score, and
-  first-to-target or highest score when hands empty.
+- `hand-play-v1` executes a **source-derived** shuffled deck, hidden hands,
+  play-to-score, and first-to-target or highest score when hands empty.
+  Derive `cardValues` / `copiesPerValue` / `handSize` / `victoryTarget` from
+  the brief (defaults match hobbyist 聚会卡牌). Trick-taking, shedding, suit,
+  and effect loops must **not** share as play-to-score — refuse configure /
+  fail Playability Floor until a faithful subset exists.
 - `conversation-relay-v1` records required speech into the transcript and
   ends on a turn budget; people judge prose (no kernel score race).
 - `harbor-voyage-v1` executes worker placement on a **harbor-themed** table (cargo / berths / pilot). Use it only for harbor-like sources.
