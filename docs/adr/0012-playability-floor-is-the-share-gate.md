@@ -72,3 +72,6 @@ LLM-authored briefs remain allowed. Accepted Actions remain Kernel-only
   click a scored button.
 - GameFactory-3A is a process reference (plan, mechanic/UI contract, play to
   validate). It is not a 3D engine target.
+- `港口十三号` / settlecoast visual quality is the **2D presentation bar** for
+  harbor Room tables (token hierarchy, cargo/dock affordances, spectator
+  legibility). It is not a settlecoast port and not a GameFactory-3D build.

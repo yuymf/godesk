@@ -2792,53 +2792,164 @@ summary:focus-visible {
 
 .harbor-voyage-board {
   display: grid;
-  gap: 14px;
-  padding: 16px;
+  gap: 16px;
+  padding: 18px;
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 14px;
   box-shadow: var(--shadow-card);
   animation: deal-in 720ms var(--ease-out) both;
+}
+
+.harbor-phase-chrome {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgb(15 107 76 / 18%);
+  background:
+    linear-gradient(135deg, rgb(15 107 76 / 10%), transparent 42%),
+    #f3faf6;
+  box-shadow: inset 0 -3px 0 var(--forest);
+}
+
+.harbor-phase-badge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.55rem 0.85rem;
+}
+
+.harbor-phase-kicker {
+  color: var(--forest-deep);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.harbor-phase-badge b {
+  color: var(--ink);
+  font-size: 1.15rem;
+}
+
+.harbor-phase-detail {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
 }
 
 .harbor-instruction {
   margin: 0;
   color: var(--ink);
-  font-size: 1.05rem;
+  font-size: 1.02rem;
+  font-weight: 600;
 }
 
 .sea-chart {
   display: grid;
-  gap: 10px;
-  padding: 14px;
-  background: #f6faf7;
-  border-radius: 10px;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgb(40 106 138 / 16%);
+  background:
+    radial-gradient(ellipse 70% 55% at 12% 0%, rgb(40 106 138 / 14%), transparent 55%),
+    radial-gradient(ellipse 55% 45% at 92% 100%, rgb(15 107 76 / 12%), transparent 50%),
+    linear-gradient(180deg, #eef6f4, #e4f0ea);
 }
 
 .chart-labels {
   display: flex;
   justify-content: space-between;
+  gap: 8px;
   color: var(--muted);
   font-size: 11px;
+  font-weight: 600;
+}
+
+.chart-mark-pirate {
+  color: #8a3f3a;
+}
+
+.chart-mark-port {
+  color: var(--forest-deep);
+}
+
+.punt-lane {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgb(28 38 34 / 8%);
+  background: rgb(255 255 255 / 78%);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 70%) inset;
+}
+
+.punt-lane[data-cargo="amber"] {
+  border-left: 4px solid #8c4d32;
+}
+
+.punt-lane[data-cargo="cobalt"] {
+  border-left: 4px solid #286a8a;
+}
+
+.punt-lane[data-cargo="cedar"] {
+  border-left: 4px solid #d6a637;
 }
 
 .punt-title {
   display: grid;
-  grid-template-columns: 12px 1fr auto;
-  gap: 8px;
+  grid-template-columns: 16px 1fr auto;
+  gap: 10px;
   align-items: center;
   color: var(--ink);
 }
 
-.punt-title > span {
-  width: 12px;
-  height: 12px;
+.cargo-swatch,
+.punt-title > span.cargo-swatch {
+  width: 16px;
+  height: 16px;
   border-radius: 999px;
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 85%), 0 0 0 3px rgb(28 38 34 / 12%);
 }
 
-.punt-title small {
+.cargo-identity {
+  min-width: 0;
+}
+
+.cargo-name {
   display: block;
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+}
+
+.cargo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 2px;
   color: var(--muted);
+}
+
+.cargo-die,
+.cargo-value {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: rgb(28 38 34 / 5%);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.cargo-position {
+  min-width: 1.8rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 8px;
+  background: #0f6b4c;
+  color: #fff;
+  font-size: 0.95rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .track {
@@ -2846,50 +2957,74 @@ summary:focus-visible {
   display: grid;
   grid-template-columns: repeat(15, 1fr);
   gap: 2px;
-  min-height: 28px;
-  padding-bottom: 18px;
+  min-height: 34px;
+  padding-bottom: 22px;
 }
 
 .track > span {
-  height: 8px;
-  background: #d5e4db;
-  border-radius: 2px;
+  position: relative;
+  height: 10px;
+  background: #c9ddd2;
+  border-radius: 3px;
+}
+
+.track > span > i {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--faint);
+  font-size: 9px;
+  font-style: normal;
+  opacity: 0.7;
 }
 
 .track > span.pirate-line {
   background: #d9a3a0;
+  box-shadow: 0 0 0 1px rgb(138 63 58 / 35%);
 }
 
 .track > span.port-line {
-  background: #8ec9ae;
+  background: #6fbf9a;
+  box-shadow: 0 0 0 1px rgb(15 107 76 / 35%);
 }
 
 .punt-token {
   position: absolute;
   bottom: 0;
   transform: translateX(-50%);
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
   display: grid;
   place-items: center;
   color: #111;
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 800;
+  border: 2px solid rgb(255 255 255 / 92%);
+  box-shadow: 0 4px 10px rgb(28 38 34 / 22%);
   animation: float-mark 3.6s ease-in-out infinite;
+  z-index: 1;
 }
 
 .punt-footer {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
+  align-items: center;
   color: var(--muted);
   font-size: 12px;
 }
 
-.punt-footer b,
-.punt-footer em,
+.punt-footer .cargo-aboard b,
+.punt-footer .cargo-roll,
+.punt-footer .cargo-result,
 .human-attest p {
   color: var(--forest-deep);
+}
+
+.cargo-result.is-pirates {
+  color: #8a3f3a;
 }
 
 .movement-console {
@@ -2897,10 +3032,21 @@ summary:focus-visible {
   justify-content: space-between;
   gap: 12px;
   align-items: center;
-  padding-top: 8px;
-  border-top: 1px solid #242830;
+  flex-wrap: wrap;
+  padding-top: 10px;
+  border-top: 1px dashed rgb(28 38 34 / 14%);
   color: var(--ink);
-  border-top-color: var(--line);
+}
+
+.movement-console-status {
+  display: grid;
+  gap: 2px;
+}
+
+.movement-console-status > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .roll-button {
@@ -2912,6 +3058,7 @@ summary:focus-visible {
   border: 0;
   border-radius: 8px;
   cursor: pointer;
+  box-shadow: 0 8px 18px rgb(15 107 76 / 22%);
 }
 
 .roll-button small {
@@ -2928,56 +3075,111 @@ summary:focus-visible {
 .pilot-console button {
   padding: 8px 10px;
   border-radius: 6px;
-  border: 1px solid #30333a;
+  border: 1px solid var(--line);
   background: var(--paper);
   color: var(--ink);
-  border-color: var(--line);
 }
 
 .action-board {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .action-board-heading {
   display: flex;
   justify-content: space-between;
   align-items: end;
+  gap: 12px;
   color: var(--ink);
 }
 
 .action-board-heading h2 {
-  margin: 0.2rem 0 0;
+  margin: 0;
   color: var(--ink);
-  font-size: 1.1rem;
+  font-size: 1.15rem;
+}
+
+.action-board-heading small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+}
+
+.action-board-active {
+  color: var(--forest-deep);
+  font-weight: 600;
+  font-size: 0.92rem;
 }
 
 .target-groups {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
-.target-groups > section > header {
-  margin-bottom: 6px;
+.dock-group {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #f7faf8;
+}
+
+.dock-group > header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 12px;
+  align-items: baseline;
+  color: var(--ink);
+}
+
+.dock-group > header b {
+  font-size: 0.98rem;
+}
+
+.dock-group-hint {
   color: var(--muted);
+  font-size: 11px;
 }
 
+.dock-group-cargo {
+  background: linear-gradient(180deg, #fff9f2, #f6f0e6);
+  border-color: rgb(140 77 50 / 22%);
+}
+
+.dock-group-port {
+  background: linear-gradient(180deg, #f2faf6, #e7f3ec);
+  border-color: rgb(15 107 76 / 22%);
+}
+
+.dock-group-yard {
+  background: linear-gradient(180deg, #f4f7fb, #e8eef5);
+  border-color: rgb(40 106 138 / 20%);
+}
+
+.dock-group-special {
+  background: linear-gradient(180deg, #faf6f2, #f3ebe4);
+  border-color: rgb(184 115 51 / 22%);
+}
+
+.dock-group-targets,
 .target-groups > section > div {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
   gap: 8px;
 }
 
 .target-space {
   display: grid;
-  gap: 4px;
-  padding: 10px;
+  gap: 6px;
+  padding: 11px;
   text-align: left;
   color: var(--ink);
-  background: #f6faf7;
-  border: 1px solid #30333a;
-  border-radius: 8px;
-  border-color: var(--line);
+  background: rgb(255 255 255 / 88%);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 80%) inset;
 }
 
 .target-space.available {
@@ -2985,11 +3187,12 @@ summary:focus-visible {
   border-color: var(--forest);
   cursor: pointer;
   background: var(--forest-soft);
+  box-shadow: 0 0 0 1px rgb(15 107 76 / 25%), 0 8px 16px rgb(15 107 76 / 12%);
   animation: chip-lock 360ms var(--ease-out);
 }
 
 .target-space:disabled {
-  opacity: 0.55;
+  opacity: 0.58;
   cursor: not-allowed;
 }
 
@@ -2997,6 +3200,28 @@ summary:focus-visible {
   display: flex;
   justify-content: space-between;
   gap: 6px;
+  align-items: start;
+}
+
+.space-cost {
+  flex: none;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: rgb(28 38 34 / 6%);
+  color: var(--muted);
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.target-space.available .space-cost {
+  background: rgb(15 107 76 / 14%);
+  color: var(--forest-deep);
+}
+
+.space-payout {
+  color: var(--muted);
+  line-height: 1.35;
 }
 
 .worker-slots {
@@ -3004,16 +3229,24 @@ summary:focus-visible {
   gap: 4px;
 }
 
-.worker-slots i {
+.worker-slots i,
+.worker-chip {
   font-style: normal;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 999px;
   display: grid;
   place-items: center;
   font-size: 10px;
   background: #d5e4db;
   color: var(--ink);
+  border: 1px solid rgb(28 38 34 / 10%);
+}
+
+.worker-chip.is-filled {
+  color: #111;
+  border-color: rgb(255 255 255 / 70%);
+  box-shadow: 0 1px 2px rgb(28 38 34 / 20%);
 }
 
 .player-ledger {
@@ -3029,14 +3262,14 @@ summary:focus-visible {
   align-items: center;
   padding: 10px;
   background: #f6faf7;
-  border: 1px solid #30333a;
+  border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--ink);
-  border-color: var(--line);
 }
 
 .player-ledger article.active {
   border-color: var(--forest);
+  box-shadow: inset 0 0 0 1px rgb(15 107 76 / 25%);
 }
 
 .player-seal {
@@ -4858,6 +5091,7 @@ summary:focus-visible {
   .room-game-table,
   .surface-action-card,
   .harbor-voyage-board,
+  .harbor-phase-chrome,
   .punt-token,
   .turn-callout.is-your-turn,
   .room-action-panel .room-action-cards button.is-available,
