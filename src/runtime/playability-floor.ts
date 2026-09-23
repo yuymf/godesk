@@ -12,6 +12,7 @@ const SHAREABLE_KERNELS = new Set([
   "hand-play-v1",
   "conversation-relay-v1",
   "harbor-voyage-v1",
+  "worker-placement-v1",
 ]);
 
 const SURFACES_FOR_KERNEL: Record<string, PlaySurfaceKind[]> = {
@@ -19,13 +20,14 @@ const SURFACES_FOR_KERNEL: Record<string, PlaySurfaceKind[]> = {
   "hand-play-v1": ["cards"],
   "conversation-relay-v1": ["conversation"],
   "harbor-voyage-v1": ["table"],
+  "worker-placement-v1": ["table"],
 };
 
-const GENRE_KERNEL: Record<Exclude<SourceGenre, "generic">, string> = {
+const GENRE_KERNEL: Record<Exclude<SourceGenre, "generic">, string | readonly string[]> = {
   "hidden-role": "hidden-role-v1",
   "hand-play": "hand-play-v1",
   conversation: "conversation-relay-v1",
-  placement: "harbor-voyage-v1",
+  placement: ["harbor-voyage-v1", "worker-placement-v1"],
 };
 
 export function ruleSystemCorpus(ruleSystem: RuleSystem) {
@@ -51,13 +53,16 @@ export function playabilityFloor(ruleSystem: RuleSystem): PlayabilityFloorReadin
   }
   const kernelType = ruleSystem.runtimeSupport.kernel.type;
   const required = genre === "generic" ? null : GENRE_KERNEL[genre];
-  if (required && kernelType !== required) {
-    return {
-      status: "failed",
-      reason: `来源体裁是 ${genre}，不能用 ${kernelType} 换皮分享。`,
-      genre,
-      kernelType,
-    };
+  if (required) {
+    const allowed = typeof required === "string" ? [required] : required;
+    if (!allowed.includes(kernelType)) {
+      return {
+        status: "failed",
+        reason: `来源体裁是 ${genre}，不能用 ${kernelType} 换皮分享。`,
+        genre,
+        kernelType,
+      };
+    }
   }
   if (
     (ruleSystem.playSurface.kind === "conversation" ||

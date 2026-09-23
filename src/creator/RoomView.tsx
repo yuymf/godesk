@@ -20,6 +20,7 @@ import {
   handPlayKernel,
   hiddenRoleKernel,
   isHarborVoyage,
+  isWorkerPlacement,
   localizedRoomError,
   pushYourLuckKernel,
   readRoomLocale,
@@ -38,7 +39,9 @@ import {
 } from "./room-presentation";
 import { ScoreTrackRoom } from "./ScoreTrackRoom";
 import type { HarborVoyageState } from "../runtime/harbor-voyage";
+import type { WorkerPlacementState } from "../runtime/worker-placement";
 import { HarborVoyageBoard } from "./HarborVoyageBoard";
+import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import {
   readShareToken,
   readStoredSeatClaim,
@@ -310,6 +313,9 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   const conversationRelay = conversationRelayKernel(build.ruleSystem);
   const voyage = room.state.voyage;
   const harbor = isHarborVoyage(build.ruleSystem) && voyage;
+  const workerPlacementState = room.state.workerPlacement;
+  const workerPlacement =
+    isWorkerPlacement(build.ruleSystem) && workerPlacementState;
   const gameName = build.ruleSystem.name;
   const activeSeat = room.state.activeSeat;
   const isMyTurn = room.state.status === "active" && seat === activeSeat;
@@ -371,7 +377,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       : copy.points;
 
   return (
-    <main className={`room-view ${harbor ? "room-view-voyage" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
+    <main className={`room-view ${harbor || workerPlacement ? "room-view-voyage" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
       <header className="room-shell-header">
         <div className="room-title-block">
           <span className="room-brand-mark" aria-hidden="true">GD</span>
@@ -476,6 +482,12 @@ export function RoomView({ sessionId }: { sessionId: string }) {
           busy={busy}
           onAct={act}
           voyage={voyage as HarborVoyageState}
+        />
+      ) : workerPlacement ? (
+        <WorkerPlacementBoard
+          board={workerPlacementState as WorkerPlacementState}
+          busy={busy}
+          onAct={act}
         />
       ) : (
         <section className="room-main">

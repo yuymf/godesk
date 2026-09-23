@@ -98,4 +98,52 @@ describe("playabilityFloor", () => {
       },
     })).status).toBe("passed");
   });
+
+  it("accepts placement on harbor-voyage or worker-placement table kernels", () => {
+    const placementBase = {
+      name: "工人放置桌游",
+      pitch: "在共享桌面放置工人到资源区。",
+      playSurface: { kind: "table" as const, layout: "worker-placement", regions: [] },
+    };
+    expect(playabilityFloor(base({
+      ...placementBase,
+      runtimeSupport: {
+        status: "executable",
+        unsupported: [],
+        kernel: { type: "harbor-voyage-v1", playerCount: 3 },
+      },
+    })).status).toBe("passed");
+    expect(playabilityFloor(base({
+      ...placementBase,
+      runtimeSupport: {
+        status: "executable",
+        unsupported: [],
+        kernel: {
+          type: "worker-placement-v1",
+          playerCount: 3,
+          workersPerSeat: 3,
+          startingCoins: 0,
+          regions: [
+            { id: "spot-a", name: "Resource Spot A", capacity: 2, cost: 0, resolvePoints: 1 },
+            { id: "spot-b", name: "Resource Spot B", capacity: 2, cost: 0, resolvePoints: 1 },
+          ],
+          victoryTarget: null,
+        },
+      },
+    })).status).toBe("passed");
+    expect(playabilityFloor(base({
+      ...placementBase,
+      runtimeSupport: {
+        status: "executable",
+        unsupported: [],
+        kernel: {
+          type: "score-race-v1",
+          victoryTarget: 8,
+          maxTurns: 12,
+          actions: [{ id: "a", label: "得分", points: 2 }],
+        },
+      },
+    })).status).toBe("failed");
+  });
+
 });

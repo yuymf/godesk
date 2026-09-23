@@ -19,6 +19,7 @@
     "src/creator/hobbyist-starters.ts",
     "src/public-mount.ts",
     "src/runtime/harbor-voyage.ts",
+    "src/runtime/worker-placement.ts",
     "src/runtime/genre.ts",
     "src/runtime/playability-floor.ts",
     "src/runtime/presentation-floor.ts",

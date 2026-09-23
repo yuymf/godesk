@@ -36,7 +36,7 @@ Playability Floor passes only when all of the following hold:
 - **Genre fidelity.** The Executable Kernel is the game the source asked for.
   A hidden-role source must run `hidden-role-v1`. A hand-play source must run
   `hand-play-v1`. A conversation source must run `conversation-relay-v1`. A
-  placement source must run `harbor-voyage-v1`. `score-race-v1` may execute a
+  placement source must run `harbor-voyage-v1` (harbor-like) or `worker-placement-v1` (source-parameterized regions). `score-race-v1` may execute a
   source that is itself a point race. It must not stand in for another genre.
 - **Decision density.** The core loop changes non-scalar state: roles, hands,
   spoken text, spatial placements, or an equivalent genre object. Two score

@@ -127,6 +127,22 @@ export function isHarborVoyage(ruleSystem: RuleSystem): boolean {
   );
 }
 
+export function workerPlacementKernel(
+  ruleSystem: RuleSystem,
+): Extract<
+  Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
+  { type: "worker-placement-v1" }
+> | null {
+  return ruleSystem.runtimeSupport.status === "executable" &&
+    ruleSystem.runtimeSupport.kernel.type === "worker-placement-v1"
+    ? ruleSystem.runtimeSupport.kernel
+    : null;
+}
+
+export function isWorkerPlacement(ruleSystem: RuleSystem): boolean {
+  return Boolean(workerPlacementKernel(ruleSystem));
+}
+
 /** Score-track family only — themed scoreboard UI must not stand in for other genres (ADR 0012). */
 export function usesScoreTrackSurface(ruleSystem: RuleSystem): boolean {
   return Boolean(

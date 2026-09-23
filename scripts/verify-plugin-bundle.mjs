@@ -131,7 +131,7 @@ assert(
   basicsSkill.includes("## Executable Kernel choice"),
   "godesk-plugin-basics must own the Executable Kernel choice table",
 );
-for (const kernel of ["hidden-role-v1", "hand-play-v1", "conversation-relay-v1"]) {
+for (const kernel of ["hidden-role-v1", "hand-play-v1", "conversation-relay-v1", "harbor-voyage-v1", "worker-placement-v1"]) {
   assert(
     basicsSkill.includes(kernel),
     `godesk-plugin-basics is missing ADR 0012 kernel: ${kernel}`,

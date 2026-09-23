@@ -6,6 +6,10 @@ import type {
 import { inferSourceGenre } from "../src/runtime/genre";
 import { defaultHiddenRoles } from "../src/runtime/hidden-role";
 import {
+  deriveWorkerPlacementRegions,
+  deriveWorkersPerSeat,
+} from "../src/runtime/worker-placement";
+import {
   parseRuleNumber,
   RULE_NUMBER_TOKEN,
   RULE_NUMBER_WORD_TOKEN,
@@ -337,6 +341,7 @@ function genreEntities(
   playerCount: number,
   sourceId: string,
   image?: BoundImage,
+  corpus = "",
 ) {
   const anchored = { sourceId, provenance: "source-anchored" as const, confidence: 0.72 };
   if (genre === "hidden-role") {
@@ -392,6 +397,27 @@ function genreEntities(
       quantity: 1,
       ...anchored,
     }];
+  }
+  if (genre === "placement") {
+    const regions = deriveWorkerPlacementRegions(corpus);
+    const workersPerSeat = deriveWorkersPerSeat(corpus, playerCount);
+    return [
+      {
+        id: "entity-workers",
+        name: /[一-鿿]/.test(corpus) ? "工人" : "Workers",
+        kind: "token" as const,
+        quantity: playerCount * workersPerSeat,
+        ...(image ? { image } : {}),
+        ...anchored,
+      },
+      ...regions.map((region) => ({
+        id: `entity-region-${region.id}`,
+        name: region.name,
+        kind: "object" as const,
+        quantity: region.capacity,
+        ...anchored,
+      })),
+    ];
   }
   return [];
 }
@@ -475,7 +501,7 @@ export function materializeRuleSystem(input: {
     .slice(0, 4);
   const surface = inferPlaySurface(`${input.name}\n${corpus}`);
   const anchored = { sourceId: input.sourceId, provenance: "source-anchored" as const, confidence: 0.72 };
-  const ownedEntities = genreEntities(genre, participants.default, input.sourceId, input.image);
+  const ownedEntities = genreEntities(genre, participants.default, input.sourceId, input.image, `${input.name}\n${corpus}`);
   const extractedEntities = componentLines.map((line, index) => ({
     id: `source-entity-${index + 1}`,
     name: line.slice(0, 120),
@@ -673,6 +699,9 @@ export function createGenerationPlan(input: {
   } else if (input.proposedRuntime?.op === "configure_harbor_voyage") {
     assumptions.push("Playability Floor 验收：共享桌面可见、放置占用具体位置、航行与结算写入 Session State 与 Replay。");
     unsupported.push("不把工人放置换成计分赛；不把来源棋盘假装成已完整执行。");
+  } else if (input.proposedRuntime?.op === "configure_worker_placement") {
+    assumptions.push("Playability Floor 验收：具名区域可见、放置占用具体区域、结算写入 Session State 与 Replay。");
+    unsupported.push("不把通用工人放置静默映射成港口货船 ID；高级资源兑换与建筑树仍保持未支持说明。");
   } else if (!input.proposedRuntime && genre !== "generic") {
     assumptions.push("来源体裁还没有可执行内核。Playability Floor 不会放行换皮分享。");
     unsupported.push("诚实缺口：不能用另一种更简单的游戏顶替。");

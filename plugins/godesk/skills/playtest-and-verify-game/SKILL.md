@@ -30,6 +30,8 @@ Separate structural, deterministic, visual, and human evidence in every report.
    policy, and same-seed Replay reconstruction.
    For `harbor-voyage-v1`, inspect and report the returned `state.voyage`
    phase, active seat, placements, cargo positions, log, and final settlement;
+   for `worker-placement-v1`, inspect `state.workerPlacement` regions, placements,
+   scores, and resolve outcome;
    do not reduce a voyage to its derived score array.
 5. Open the replay URL and inspect its visible initial state, accepted actions,
    and final state.

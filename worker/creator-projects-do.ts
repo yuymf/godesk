@@ -203,6 +203,7 @@ export class CreatorProjects extends DurableObject<Env> {
               operation.op === "configure_draw_and_score" ||
               operation.op === "configure_push_your_luck" ||
               operation.op === "configure_harbor_voyage" ||
+              operation.op === "configure_worker_placement" ||
               operation.op === "configure_hidden_role" ||
               operation.op === "configure_hand_play" ||
               operation.op === "configure_conversation_relay",

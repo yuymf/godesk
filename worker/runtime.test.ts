@@ -89,6 +89,29 @@ const harborRuleSystem: RuleSystem = {
   },
 };
 
+const workerPlacementRuleSystem: RuleSystem = {
+  ...ruleSystem,
+  id: "rule_system_worker_placement",
+  name: "资源区放置",
+  pitch: "在共享桌面放置工人到资源区。",
+  playSurface: { kind: "table", layout: "worker-placement", regions: [] },
+  runtimeSupport: {
+    status: "executable",
+    unsupported: ["高级资源兑换未覆盖"],
+    kernel: {
+      type: "worker-placement-v1",
+      playerCount: 2,
+      workersPerSeat: 2,
+      startingCoins: 0,
+      regions: [
+        { id: "spot-a", name: "Resource Spot A", capacity: 2, cost: 0, resolvePoints: 1 },
+        { id: "spot-b", name: "Resource Spot B", capacity: 2, cost: 0, resolvePoints: 3 },
+      ],
+      victoryTarget: null,
+    },
+  },
+};
+
 const sharedGoalRuleSystem: RuleSystem = {
   ...ruleSystem,
   id: "rule_system_shared_goal",
@@ -316,6 +339,45 @@ describe("harbor-voyage-v1 runtime", () => {
     expect(result.finalState.voyage?.phase).toBe("resolved");
     expect(result.finalState.winnerSeat).not.toBeNull();
     expect(result.acceptedActions.length).toBeGreaterThan(10);
+  });
+});
+
+describe("worker-placement-v1 runtime", () => {
+  it("accepts place-on-region then rejects wrong-seat placement", () => {
+    const runtime = executableRuntime(workerPlacementRuleSystem)!;
+    const state = initialSessionState(workerPlacementRuleSystem, 42);
+    expect(state.workerPlacement?.phase).toBe("placement");
+    const accepted = acceptIntent(
+      state,
+      runtime,
+      { intentId: "p1", seat: 0, actionId: "place:spot-b" },
+      1,
+      42,
+    );
+    expect(accepted?.state.workerPlacement?.placements).toHaveLength(1);
+    expect(accepted?.actionId).toBe("place:spot-b");
+    expect(accepted?.state.activeSeat).toBe(1);
+    expect(
+      acceptIntent(
+        accepted!.state,
+        runtime,
+        { intentId: "bad", seat: 0, actionId: "place:spot-a" },
+        2,
+        42,
+      ),
+    ).toBeNull();
+  });
+
+  it("finishes a bot placement without harbor cargo IDs", () => {
+    const result = runBotSimulation(workerPlacementRuleSystem, 11);
+    expect(result.finalState.status).toBe("complete");
+    expect(result.finalState.workerPlacement?.phase).toBe("resolved");
+    const regionIds = result.finalState.workerPlacement?.regions.map((region) => region.id) ?? [];
+    expect(regionIds).not.toContain("amber");
+    expect(regionIds).not.toContain("port-a");
+    expect(
+      result.acceptedActions.every((action) => !/amber|cobalt|cedar|port-a/.test(action.actionId)),
+    ).toBe(true);
   });
 });
 

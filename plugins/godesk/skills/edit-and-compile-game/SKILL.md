@@ -35,7 +35,8 @@ Keep Codex edits and manual Web Studio edits on the same optimistic-version path
    play-to-score, and first-to-target (canonical `play` action). Use
    `configure_conversation_relay` for scored speech actions recorded into the
    transcript, victory target, and turn limit. Use `configure_harbor_voyage`
-   for harbor-table worker placement with player count 2–3. Do not silently
+   for harbor-like corpus (player count 2–3). Use `configure_worker_placement`
+   for generic placement with source-derived regions/workers. Do not silently
    change Kernel semantics.
 5. Pass the latest version as `expectedVersion` and a stable idempotency key.
 6. If the server rejects a stale version, re-read and reconcile. Preserve

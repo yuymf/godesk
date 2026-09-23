@@ -14,7 +14,7 @@ Session → Playtest Link.
 Use the Executable Kernel choice table in `$godesk-plugin-basics` (not a
 copy here). A hidden-role source must run `hidden-role-v1`. A hand-play
 source must run `hand-play-v1`. A conversation source must run
-`conversation-relay-v1`. A placement source must run `harbor-voyage-v1`.
+`conversation-relay-v1`. A placement source must run `harbor-voyage-v1` (harbor-like corpus) or `worker-placement-v1` (generic placement).
 `score-race-v1` may execute a source that is itself a point race. It must
 not stand in for another genre.
 
