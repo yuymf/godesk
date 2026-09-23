@@ -77,6 +77,11 @@ iteration tools, not the destination.
 
 ## Executable Kernel choice
 
+Playability Floor (ADR 0012) gates share on genre fidelity **and decision
+density**: a named Kernel with an empty contract (no hands, fewer than 2
+placeable regions, no speech actions, no roles/accuse path) must fail the
+floor.
+
 - `hidden-role-v1` executes secret roles, one public speech per seat, one
   accusation per seat, and majority reveal. Use it for 剧本杀 / hidden-role
   sources. Do not substitute a score race.
