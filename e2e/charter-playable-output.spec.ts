@@ -214,6 +214,18 @@ test.describe("ChatCut charter: source in, playable game out", () => {
       .toBe("rgb(244, 250, 246)");
     await expect(page.getByText(/座位 0 · 加入约束/)).toBeVisible();
     await expect(page.getByText(/座位 1 · 扩展创意/)).toBeVisible();
+
+    // W5-02 / W4-07: conversation Replay is transcript genre surface — not score-grid chrome.
+    const conversationReplay = page.locator(".conversation-replay-card");
+    await expect(conversationReplay.first()).toBeVisible();
+    await expect(conversationReplay.first()).toContainText("发言记录");
+    const replayTranscript = page
+      .locator(".conversation-replay-card .speech-transcript")
+      .filter({ hasText: "先把场景定在雨夜码头。" });
+    await expect(replayTranscript).toBeVisible();
+    await expect(replayTranscript).toContainText("雨夜里多了一盏不肯灭的灯。");
+    await expect(page.locator(".score-grid")).toHaveCount(0);
+    await expect(page.locator(".hand-play-replay-card")).toHaveCount(0);
   });
 
   test("a starter chip generates a plan, then two people can play", async ({
@@ -402,7 +414,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.getByRole("link", { name: "回工作室" })).toBeVisible();
   });
 
-  test("聚会卡牌 starter deals hidden hands and plays a card", async ({ page }) => {
+  test("聚会卡牌 plays a card and Replay keeps hand-play genre objects", async ({ page }) => {
     await page.goto("/chatgpt-plugin/new");
     await page.getByRole("button", { name: "聚会卡牌" }).click();
     await page.getByRole("button", { name: "生成可玩版本" }).click();
@@ -419,6 +431,19 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.getByLabel("你的手牌")).toBeVisible();
     await page.getByRole("button", { name: /打出 / }).first().click();
     await expect(page.getByText(/座位 0 打出/)).toBeVisible();
+
+    // W5-02 / W4-07: Replay primary surface is hand-play genre objects, not score-grid.
+    await page.getByRole("link", { name: "只读回放" }).click();
+    await page.waitForURL(/\/chatgpt-plugin\/replay\//, { timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: "这一局怎么打完的", level: 2 })).toBeVisible();
+    const handReplay = page.locator(".hand-play-replay-card");
+    await expect(handReplay.first()).toBeVisible();
+    await expect(handReplay.first()).toContainText("手牌对局");
+    await expect(page.locator(".play-area").filter({ hasText: /座位 0 打出/ }).first()).toBeVisible();
+    await expect(page.locator(".replay-hands").first()).toBeVisible();
+    await expect(page.locator(".action-log")).toContainText(/座位 0 ·/);
+    await expect(page.locator(".score-grid")).toHaveCount(0);
+    await expect(page.locator(".conversation-replay-card")).toHaveCount(0);
   });
 
   test("轻桌游 places a worker on a named region and Replay keeps genre objects", async ({
