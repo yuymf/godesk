@@ -378,4 +378,21 @@ describe("rulebook Rule System materialization", () => {
       description: "action 12 for 1 point",
     });
   });
+
+  it("emits named placement regions and worker entities for worker-placement briefs", () => {
+    const ruleSystem = materializeRuleSystem({
+      name: "Shared board placement",
+      description: "3 players take turns on a shared worker placement board. Place workers onto resource spots.",
+      sourceId: "source_placement",
+      sourceText: "On your turn place one worker onto a resource region.",
+    });
+    expect(ruleSystem.playSurface).toMatchObject({
+      kind: "table",
+      layout: "worker-placement",
+    });
+    expect(ruleSystem.playSurface.regions.length).toBeGreaterThanOrEqual(2);
+    expect(ruleSystem.playSurface.regions.every((region) => region.name.trim())).toBe(true);
+    expect(ruleSystem.entities.some((entity) => /worker|工人/i.test(entity.name))).toBe(true);
+    expect(ruleSystem.entities.some((entity) => entity.id.startsWith("entity-region-"))).toBe(true);
+  });
 });
