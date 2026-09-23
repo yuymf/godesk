@@ -1186,10 +1186,39 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
       const finished = await waitForJob(submitted.id);
       expect(finished.status, starter.label).toBe("succeeded");
       const plan = (finished.result as {
-        generationPlan: { status: string; proposedRuntime?: { op: string } };
+        generationPlan: {
+          status: string;
+          proposedRuntime?: {
+            op: string;
+            config?: {
+              victoryBuildings?: number | null;
+              regions?: Array<Record<string, unknown>>;
+            };
+          };
+        };
       }).generationPlan;
       expect(plan.status, starter.label).toBe("pending");
       expect(plan.proposedRuntime?.op, starter.label).toBe(expected[starter.id].op);
+      if (starter.id === "board") {
+        const boardRuntime = plan.proposedRuntime as {
+          op: string;
+          config: {
+            victoryBuildings?: number | null;
+            regions: Array<Record<string, unknown>>;
+          };
+        };
+        expect(boardRuntime.config.victoryBuildings, starter.label).toBe(2);
+        expect(
+          boardRuntime.config.regions.some((region) => (region.yieldWood as number) > 0),
+          starter.label,
+        ).toBe(true);
+        expect(
+          boardRuntime.config.regions.some(
+            (region) => (region.convertWoodToBuilding as number) > 0,
+          ),
+          starter.label,
+        ).toBe(true);
+      }
       const participants = (
         finished.result as {
           ruleSystem: { participants: { min: number; max: number; default: number } };

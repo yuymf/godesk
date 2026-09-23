@@ -464,6 +464,10 @@ export function configureRuntimeKernel(
           configuration.config.victoryTarget == null
             ? null
             : configuration.config.victoryTarget,
+        victoryBuildings:
+          configuration.config.victoryBuildings == null
+            ? null
+            : configuration.config.victoryBuildings,
       },
       configuration.config.unsupported?.map((item) => item.trim()) ?? [],
       configuration.config,
@@ -1192,6 +1196,20 @@ const RUNTIME_HANDLERS: {
         (Number.isInteger(config.victoryTarget) &&
           config.victoryTarget >= 1 &&
           config.victoryTarget <= 1_000)) &&
+      (config.victoryBuildings == null ||
+        (Number.isInteger(config.victoryBuildings) &&
+          config.victoryBuildings >= 1 &&
+          config.victoryBuildings <= 20)) &&
+      !config.regions.some((region) =>
+        (region.yieldWood != null &&
+          (!Number.isInteger(region.yieldWood) ||
+            region.yieldWood < 0 ||
+            region.yieldWood > 20)) ||
+        (region.convertWoodToBuilding != null &&
+          (!Number.isInteger(region.convertWoodToBuilding) ||
+            region.convertWoodToBuilding < 1 ||
+            region.convertWoodToBuilding > 20))
+      ) &&
       validUnsupported(config.unsupported),
   },
   configure_hidden_role: {

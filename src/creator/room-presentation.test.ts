@@ -122,6 +122,7 @@ describe("usesScoreTrackSurface", () => {
         { id: "spot-b", name: "B", capacity: 2, cost: 0, resolvePoints: 1 },
       ],
       victoryTarget: null,
+      victoryBuildings: null,
     }))).toBe(false);
   });
 });

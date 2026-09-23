@@ -59,6 +59,11 @@ export function presentationGenreFamily(ruleSystem: RuleSystem): GenreObjectFami
       return "placement";
     }
     if (kernel.type === "hidden-role-v1") return "hidden-role";
+    // score-race / shared-goal: Presentation Floor is legibility (kit / image).
+    // Genre honesty for a mismatched source is Playability Floor (ADR 0012).
+    if (kernel.type === "score-race-v1" || kernel.type === "shared-goal-v1") {
+      return "generic";
+    }
   }
   const genre: SourceGenre = inferSourceGenre(ruleSystemCorpus(ruleSystem));
   if (genre === "generic") return "generic";

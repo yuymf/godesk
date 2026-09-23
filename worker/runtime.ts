@@ -107,6 +107,7 @@ export function initialSessionState(
         startingCoins: runtime.kernel.startingCoins,
         regions: runtime.kernel.regions,
         victoryTarget: runtime.kernel.victoryTarget,
+        victoryBuildings: runtime.kernel.victoryBuildings,
       }),
       0,
     );

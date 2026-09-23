@@ -221,8 +221,11 @@ export interface RuleSystem {
                 cost: number;
                 resolvePoints: number;
                 tag?: string;
+                yieldWood?: number;
+                convertWoodToBuilding?: number;
               }>;
               victoryTarget: number | null;
+              victoryBuildings: number | null;
             }
           | {
               type: "hidden-role-v1";
@@ -324,6 +327,8 @@ export type WorkerPlacementTableState = {
     workers: number;
     coins: number;
     score: number;
+    wood: number;
+    buildings: number;
   }>;
   regions: Array<{
     id: string;
@@ -332,6 +337,8 @@ export type WorkerPlacementTableState = {
     cost: number;
     resolvePoints: number;
     tag?: string;
+    yieldWood?: number;
+    convertWoodToBuilding?: number;
   }>;
   placements: Array<{
     id: string;
@@ -340,6 +347,7 @@ export type WorkerPlacementTableState = {
     cost: number;
   }>;
   victoryTarget: number | null;
+  victoryBuildings: number | null;
   log: string[];
   winnerSeat: number | null;
 };
@@ -515,8 +523,11 @@ export type ProjectChangeOperation =
           cost: number;
           resolvePoints: number;
           tag?: string;
+          yieldWood?: number;
+          convertWoodToBuilding?: number;
         }>;
         victoryTarget?: number | null;
+        victoryBuildings?: number | null;
         unsupported?: string[];
       };
     }

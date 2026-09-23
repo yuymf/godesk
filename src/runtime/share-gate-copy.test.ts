@@ -118,7 +118,27 @@ describe("studioShareGateMessage", () => {
     expect(message.reason).toBe(objects.reason);
     expect(message.kind).toBe("presentation-genre-objects");
   });
+
+  it("prefers playability copy when both floors fail", () => {
+    const message = studioShareGateMessage(build({
+      presentationFloor: {
+        status: "failed",
+        reason: kitOkObjectsMissingReason,
+        visuals: [{ provenance: "kit", label: "程序化主题 kit" }],
+      },
+      playabilityFloor: {
+        status: "failed",
+        reason: "来源体裁是 hidden-role，不能用 score-race-v1 换皮分享。",
+        genre: "hidden-role",
+        kernelType: "score-race-v1",
+      },
+    }));
+    expect(message.kind).toBe("playability");
+    expect(message.reason).toMatch(/hidden-role/);
+    expect(message.nextStep).toMatch(/ADR 0012/);
+  });
 });
+
 
 describe("shareGatePlanAssumption", () => {
   it("states ADR 0012 share gate and rejects kit-as-fix", () => {

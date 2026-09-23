@@ -146,6 +146,7 @@ const workerPlacementRuleSystem: RuleSystem = {
         { id: "spot-b", name: "Resource Spot B", capacity: 2, cost: 0, resolvePoints: 3 },
       ],
       victoryTarget: null,
+      victoryBuildings: null,
     },
   },
 };

@@ -525,7 +525,7 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
       "3 players take turns on a shared worker placement board.",
       "On your turn place one worker onto a resource region;",
       "occupied spaces cannot be reused.",
-      "First to finish two buildings wins.",
+      "First to finish 2 buildings wins.",
     ].join(" ");
     const queued = await SELF.fetch(
       `https://godesk.test/api/projects/${created.project.id}/jobs`,
@@ -575,16 +575,31 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
     expect(generated.ruleSystem.playSurface.regions?.length ?? 0).toBeGreaterThanOrEqual(2);
     expect(generated.ruleSystem.entities.length).toBeGreaterThan(0);
     expect(generated.ruleSystem.entities.some((entity) => /worker|工人/i.test(entity.name))).toBe(true);
-    const proposed = generated.generationPlan.proposedRuntime;
+    const proposed = generated.generationPlan.proposedRuntime as {
+      op: string;
+      config: {
+        playerCount: number;
+        regions: Array<Record<string, unknown>>;
+        victoryBuildings?: number | null;
+        unsupported?: string[];
+      };
+    };
     expect(proposed?.op).toBe("configure_worker_placement");
     expect(proposed?.config.playerCount).toBe(3);
     expect(proposed?.config.regions?.length).toBeGreaterThanOrEqual(2);
     const regionBlob = JSON.stringify(proposed?.config.regions ?? []);
     expect(regionBlob).not.toMatch(/amber|cobalt|cedar|port-a|琥珀货|东栈桥/);
+    // Building-victory placement brief ships the honest economy subset.
+    expect(proposed?.config.victoryBuildings).toBe(2);
+    expect(proposed?.config.regions.some((region) => (region.yieldWood as number) > 0)).toBe(true);
+    expect(
+      proposed?.config.regions.some((region) => (region.convertWoodToBuilding as number) > 0),
+    ).toBe(true);
     expect(proposed?.config.unsupported).toEqual(
       expect.arrayContaining([
         expect.stringContaining("worker-placement-v1"),
         expect.stringContaining("harbor cargo"),
+        expect.stringContaining("economy subset"),
       ]),
     );
     const approved = await approveGenerationPlan(

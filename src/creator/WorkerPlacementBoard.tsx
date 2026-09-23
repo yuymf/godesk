@@ -41,9 +41,13 @@ export function WorkerPlacementBoard({
                 <small>
                   容量 {occupied.length}/{region.capacity}
                   {region.cost > 0 ? ` · 费用 ${region.cost}` : ""}
-                  {region.resolvePoints > 0
-                    ? ` · 结算 ${region.resolvePoints}`
-                    : ""}
+                  {(region.yieldWood ?? 0) > 0
+                    ? ` · 木材 +${region.yieldWood}`
+                    : (region.convertWoodToBuilding ?? 0) > 0
+                      ? ` · 兑换 ${region.convertWoodToBuilding} 木材→建筑`
+                      : region.resolvePoints > 0
+                        ? ` · 结算 ${region.resolvePoints}`
+                        : ""}
                 </small>
               </header>
               <div className="worker-placement-slots" aria-label={`${region.name} 占用`}>
@@ -88,7 +92,10 @@ export function WorkerPlacementBoard({
             <span style={{ background: player.color }} />
             <b>{player.name}</b>
             <small>
-              工人 {player.workers} · 分 {player.score}
+              工人 {player.workers}
+              {board.victoryBuildings != null
+                ? ` · 木材 ${player.wood} · 建筑 ${player.buildings}`
+                : ` · 分 ${player.score}`}
               {player.coins > 0 ? ` · 币 ${player.coins}` : ""}
             </small>
           </div>

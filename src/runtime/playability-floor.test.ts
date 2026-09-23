@@ -128,6 +128,7 @@ describe("playabilityFloor", () => {
             { id: "spot-b", name: "Resource Spot B", capacity: 2, cost: 0, resolvePoints: 1 },
           ],
           victoryTarget: null,
+          victoryBuildings: null,
         },
       },
     })).status).toBe("passed");
@@ -144,6 +145,75 @@ describe("playabilityFloor", () => {
         },
       },
     })).status).toBe("failed");
+  });
+
+
+  it("fails economy placement corpus when worker-placement kernel is score-only", () => {
+    const economyPitch =
+      "资源区给木材，工坊把木材换成建筑。先建成 2 座建筑的人获胜。放置工人。";
+    expect(
+      playabilityFloor(
+        base({
+          name: "轻桌游",
+          pitch: economyPitch,
+          playSurface: { kind: "table" as const, layout: "worker-placement", regions: [] },
+          runtimeSupport: {
+            status: "executable",
+            unsupported: [],
+            kernel: {
+              type: "worker-placement-v1",
+              playerCount: 2,
+              workersPerSeat: 3,
+              startingCoins: 0,
+              regions: [
+                { id: "a", name: "资源区甲", capacity: 2, cost: 0, resolvePoints: 1 },
+                { id: "b", name: "建筑场", capacity: 3, cost: 0, resolvePoints: 2, tag: "building" },
+              ],
+              victoryTarget: null,
+              victoryBuildings: null,
+            },
+          },
+        }),
+      ).status,
+    ).toBe("failed");
+  });
+
+  it("passes economy placement when kernel has wood yield, convert, and building victory", () => {
+    const economyPitch =
+      "资源区给木材，工坊把木材换成建筑。先建成 2 座建筑的人获胜。放置工人。";
+    expect(
+      playabilityFloor(
+        base({
+          name: "轻桌游",
+          pitch: economyPitch,
+          playSurface: { kind: "table" as const, layout: "worker-placement", regions: [] },
+          runtimeSupport: {
+            status: "executable",
+            unsupported: [],
+            kernel: {
+              type: "worker-placement-v1",
+              playerCount: 2,
+              workersPerSeat: 3,
+              startingCoins: 0,
+              regions: [
+                { id: "woods", name: "资源区", capacity: 2, cost: 0, resolvePoints: 0, yieldWood: 1 },
+                {
+                  id: "workshop",
+                  name: "工坊",
+                  capacity: 3,
+                  cost: 0,
+                  resolvePoints: 0,
+                  convertWoodToBuilding: 1,
+                  tag: "workshop",
+                },
+              ],
+              victoryTarget: null,
+              victoryBuildings: 2,
+            },
+          },
+        }),
+      ).status,
+    ).toBe("passed");
   });
 
 });

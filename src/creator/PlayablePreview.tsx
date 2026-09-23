@@ -119,6 +119,7 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
               startingCoins: workerPlacement.startingCoins,
               regions: workerPlacement.regions,
               victoryTarget: workerPlacement.victoryTarget,
+              victoryBuildings: workerPlacement.victoryBuildings,
             })}
           />
         </section>
