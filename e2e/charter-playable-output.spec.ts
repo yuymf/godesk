@@ -364,7 +364,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.getByText(/放置 1\/4 · 座位 1/)).toBeVisible();
   });
 
-  test("雾岭山庄 becomes a joinable hidden-role game", async ({ page, browser }) => {
+  test("雾岭山庄 speaks mid-game and Replay hides roles", async ({ page, browser }) => {
     await page.goto("/chatgpt-plugin/new");
     const lodge = page.locator("article").filter({ hasText: "雾岭山庄" });
     await lodge.getByRole("button", { name: "先玩这一局" }).click();
@@ -392,6 +392,24 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await friendPage.getByRole("button", { name: "发言" }).click();
     await expect(friendPage.getByText("座位 1：门厅的灯灭得太整齐。")).toBeVisible();
     await friendContext.close();
+
+    // W5-04 / W4-07: mid-game Replay shows transcript genre surface; roles stay hidden until resolved.
+    await page.getByRole("link", { name: "只读回放" }).click();
+    await page.waitForURL(/\/chatgpt-plugin\/replay\//, { timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: "这一局怎么打完的", level: 2 })).toBeVisible();
+    const hiddenRoleReplay = page.locator(".hidden-role-replay-card");
+    await expect(hiddenRoleReplay.first()).toBeVisible();
+    await expect(hiddenRoleReplay.first()).toContainText("身份对局");
+    await expect(hiddenRoleReplay.first()).toContainText(/阶段：公开发言/);
+    const lodgeTranscript = page
+      .locator(".hidden-role-replay-card .speech-transcript")
+      .filter({ hasText: "阁楼的脚步不是风。" });
+    await expect(lodgeTranscript).toBeVisible();
+    await expect(lodgeTranscript).toContainText("门厅的灯灭得太整齐。");
+    await expect(page.locator(".hidden-role-replay-roles")).toHaveCount(0);
+    await expect(page.locator(".score-grid")).toHaveCount(0);
+    await expect(page.locator(".conversation-replay-card")).toHaveCount(0);
+    await expect(page.locator(".hand-play-replay-card")).toHaveCount(0);
   });
 
   test("opening preview from a compiled Build goes to the play URL", async ({
