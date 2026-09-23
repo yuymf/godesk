@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildMeetsShareGate, shareGateRefusal } from "./share-gate";
 import type { ShareGateBuild } from "./share-gate";
+import { playabilityFloor } from "./playability-floor";
+import type { RuleSystem } from "../creator/project-contract";
 
 function build(
   overrides: Partial<ShareGateBuild> = {},
@@ -74,4 +76,49 @@ describe("shareGate", () => {
       },
     });
   });
+
+  it("refuses share when Playability Floor fails decision density (W4-04 wire)", () => {
+    const ruleSystem = {
+      id: "rs",
+      version: 1,
+      name: "轻放置",
+      pitch: "在共享桌面放置工人到资源区。",
+      participants: { min: 2, max: 2, default: 2, roles: [] },
+      durationMinutes: 10,
+      rules: [],
+      constraints: [],
+      entities: [],
+      setup: [],
+      actions: [],
+      playSurface: { kind: "table" as const, layout: "worker-placement", regions: [] },
+      stages: [],
+      outcomes: [],
+      presentation: { theme: "kit", visuals: [{ provenance: "kit" as const, label: "kit" }] },
+      runtimeSupport: {
+        status: "executable" as const,
+        unsupported: [],
+        kernel: {
+          type: "worker-placement-v1" as const,
+          playerCount: 2,
+          workersPerSeat: 2,
+          startingCoins: 0,
+          regions: [],
+          victoryTarget: null,
+          victoryBuildings: null,
+        },
+      },
+    } satisfies RuleSystem;
+    const floor = playabilityFloor(ruleSystem);
+    expect(floor.status).toBe("failed");
+    expect(floor.reason).toMatch(/决策密度|区域/);
+    const gateBuild = build({
+      playabilityFloor: floor,
+      ruleSystem: { runtimeSupport: ruleSystem.runtimeSupport },
+    });
+    expect(shareGateRefusal(gateBuild)).toMatchObject({
+      error: "playability_floor_unmet",
+    });
+    expect(buildMeetsShareGate(gateBuild)).toBe(false);
+  });
+
 });

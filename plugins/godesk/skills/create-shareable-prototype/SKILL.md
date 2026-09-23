@@ -58,8 +58,11 @@ Turn-limit / termination reminders (also owned by that table's semantics):
    URL (labeled cargo tracks + dock groups) — not a 3D / GameFactory port.
 4. Submit `compile-build` with the latest version and track it to terminal.
    Inspect warnings, unsupported behavior, `presentationFloor`, and
-   `playabilityFloor`. If either floor is unmet, fix the gap and compile
-   again; do not create a Shared Session.
+   `playabilityFloor`. Playability Floor also requires **decision density**
+   (non-empty hands; worker-placement `regions.length ≥ 2` with capacity;
+   conversation speech actions; hidden-role roles + accuse path) — kernel
+   type alone is not enough. If either floor is unmet, fix the gap and
+   compile again; do not create a Shared Session.
 5. If the creator named a question to test, persist it as a Design Hypothesis
    before sharing. Call `create_shared_session` with the immutable Build ID,
    explicit seed, stable idempotency key, and that exact `hypothesisId`.
