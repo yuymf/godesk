@@ -1,5 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const nodeMajor = Number.parseInt(process.versions.node.split(".")[0] ?? "0", 10);
+if (!Number.isFinite(nodeMajor) || nodeMajor < 22) {
+  throw new Error(
+    `GoDesk Playwright e2e needs Node.js >= 22 (Wrangler). Current: ${process.versions.node}. ` +
+      `On the cloud computer: export PATH="/home/box/.local/node22/bin:$PATH" (see docs/NIGHTLY-E2E.md).`,
+  );
+}
+
 const port = 8799;
 const origin = `http://127.0.0.1:${port}`;
 
