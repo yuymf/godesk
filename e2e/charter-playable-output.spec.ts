@@ -443,6 +443,137 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await thirdContext.close();
   });
 
+  test("港口十三号 seats through to settle / late-voyage end (W6-03)", async ({
+    page,
+    browser,
+  }) => {
+    // Kernel settle is unit-tested; charter still lacked voyage-end / 已结算 surface.
+    // No short-voyage hook — drive the honest 4 placement + 3 sail + pilot path.
+    test.setTimeout(180_000);
+
+    await page.goto("/chatgpt-plugin/new");
+    const harbor = page.locator("article").filter({ hasText: "港口十三号" });
+    await harbor.getByRole("button", { name: "先玩这一局" }).click();
+    await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 90_000 });
+
+    await expect(page.getByRole("heading", { name: "港口十三号" })).toBeVisible();
+    await expect(page.getByTestId("harbor-voyage-board")).toBeVisible();
+    await expect(page.getByTestId("harbor-phase-label")).toHaveText("放置阶段");
+    // ADR 0012: settlecoast / 港口十三号 = 2D presentation bar, never 3D.
+    await expect(page.locator("canvas")).toHaveCount(0);
+    await expect(page.locator("body")).not.toContainText("WebGL");
+    await expect(page.locator("body")).not.toContainText("GameFactory-3D");
+
+    const inviteUrl = await page.getByLabel("邀请链接").inputValue();
+    const friendContext = await browser.newContext();
+    const friendPage = await friendContext.newPage();
+    await friendPage.goto(inviteUrl);
+    const thirdContext = await browser.newContext();
+    const thirdPage = await thirdContext.newPage();
+    await thirdPage.goto(inviteUrl);
+
+    await page.getByLabel("你的席位").selectOption("0");
+    await friendPage.getByLabel("你的席位").selectOption("1");
+    await thirdPage.getByLabel("你的席位").selectOption("2");
+
+    async function placeHarborTarget(
+      actor: Page,
+      targetId: string,
+      seat: number,
+      placementRound: number,
+    ) {
+      await expect(actor.getByTestId("harbor-phase-label")).toHaveText("放置阶段");
+      await expect(
+        actor.getByText(new RegExp(`放置 ${placementRound}/4 · 座位 ${seat}`)),
+      ).toBeVisible();
+      const target = actor.locator(`[data-target-id="${targetId}"]`);
+      await expect(target).toBeEnabled();
+      await target.click();
+      await expect(actor.locator(".action-log")).toContainText(`place:${targetId}`);
+    }
+
+    async function rollSail(expectedRound: number) {
+      await expect(page.getByTestId("harbor-phase-label")).toHaveText("航行阶段", {
+        timeout: 30_000,
+      });
+      await expect(page.getByTestId("harbor-phase-detail")).toContainText(
+        new RegExp(`第\\s*${expectedRound}/3\\s*轮掷骰`),
+      );
+      await expect(page.getByTestId("harbor-movement-console")).toContainText(
+        new RegExp(`航行\\s*${expectedRound}/3`),
+      );
+      const roll = page.getByRole("button", { name: /掷骰并航行/ });
+      await expect(roll).toBeEnabled();
+      await roll.click();
+      await expect(page.locator(".action-log")).toContainText(/roll:\d+,\d+,\d+/);
+    }
+
+    // Round 1–2 → first sail (same mid-voyage unlock as W5-05).
+    await placeHarborTarget(page, "cedar", 0, 1);
+    await placeHarborTarget(friendPage, "cobalt", 1, 1);
+    await placeHarborTarget(thirdPage, "amber", 2, 1);
+    await placeHarborTarget(page, "port-c", 0, 2);
+    await placeHarborTarget(friendPage, "yard-c", 1, 2);
+    await placeHarborTarget(thirdPage, "pilot-small", 2, 2);
+    await rollSail(1);
+
+    // Round 3 → second sail.
+    await expect(page.getByTestId("harbor-phase-label")).toHaveText("放置阶段", {
+      timeout: 30_000,
+    });
+    await placeHarborTarget(page, "insurance", 0, 3);
+    await placeHarborTarget(friendPage, "port-a", 1, 3);
+    await placeHarborTarget(thirdPage, "yard-a", 2, 3);
+    await rollSail(2);
+
+    // Round 4 → pilot (seat 0 never took pilot → skip) → final sail → settle.
+    await expect(page.getByTestId("harbor-phase-label")).toHaveText("放置阶段", {
+      timeout: 30_000,
+    });
+    await placeHarborTarget(page, "port-b", 0, 4);
+    await placeHarborTarget(friendPage, "yard-b", 1, 4);
+    await placeHarborTarget(thirdPage, "pirates", 2, 4);
+
+    await expect(page.getByTestId("harbor-phase-label")).toHaveText("领航阶段", {
+      timeout: 30_000,
+    });
+    await expect(page.getByTestId("harbor-phase-detail")).toContainText("末次移动前调整");
+    const skipPilot = page.getByRole("button", { name: "跳过领航" });
+    await expect(skipPilot).toBeEnabled();
+    await skipPilot.click();
+    await expect(page.locator(".action-log")).toContainText("pilot:skip");
+
+    await rollSail(3);
+
+    // W6-03: late-voyage settle surface — 已结算 + cargo outcomes + 2D bar only.
+    await expect(page.getByTestId("harbor-voyage-board")).toHaveAttribute(
+      "data-harbor-phase",
+      "resolved",
+    );
+    await expect(page.getByTestId("harbor-phase-label")).toHaveText("已结算", {
+      timeout: 30_000,
+    });
+    await expect(page.getByTestId("harbor-phase-detail")).toContainText(/座位\s*\d+\s*领先/);
+    await expect(page.getByTestId("harbor-movement-console")).toContainText("已结算");
+    await expect(page.getByTestId("harbor-cargo-tracks")).toContainText(
+      /抵达港口|进入干坞|遭私掠截获/,
+    );
+    await expect(page.locator(".game-log")).toContainText(/航次结算/);
+    await expect(page.getByTestId("harbor-player-ledger")).toBeVisible();
+    await expect(page.getByTestId("harbor-dock-group-port")).toBeVisible();
+    await expect(page.locator("canvas")).toHaveCount(0);
+    await expect(page.locator("body")).not.toContainText("WebGL");
+    await expect(page.locator("body")).not.toContainText("GameFactory-3D");
+    // Friend seats still see the same 2D settle surface (no 3D).
+    await expect(friendPage.getByTestId("harbor-phase-label")).toHaveText("已结算", {
+      timeout: 30_000,
+    });
+    await expect(friendPage.locator("canvas")).toHaveCount(0);
+
+    await friendContext.close();
+    await thirdContext.close();
+  });
+
   test("雾岭山庄 speaks mid-game and Replay hides roles", async ({ page, browser }) => {
     await page.goto("/chatgpt-plugin/new");
     const lodge = page.locator("article").filter({ hasText: "雾岭山庄" });
