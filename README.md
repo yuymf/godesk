@@ -79,6 +79,8 @@ public Plugin repository matches the current contract.
 `pnpm verify:local-routes`, `pnpm verify:local-loop`, and `pnpm verify:local-mcp`
 are release-only local HTTP/MCP smokes. They share one temporary Worker
 bootstrap and overlap `test:worker` plus Playwright, so they are not in CI.
+Cloud-computer / Asia/Shanghai nightly one-shot (Node ≥ 22, no real Worker secrets):
+[docs/NIGHTLY-E2E.md](docs/NIGHTLY-E2E.md).
 `pnpm verify:local-routes` checks OAuth metadata, login/callback, and MCP route
 contracts. `pnpm verify:local-loop` exercises the complete prompt → Generation
 Plan → approval → Build → fixed-seed self-play → Finding → revised Build →
