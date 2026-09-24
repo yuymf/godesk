@@ -1,61 +1,93 @@
-# GoDesk — upload rules, get a playable game
+<div align="center">
+  <img src="docs/assets/logo.svg" alt="GoDesk" width="72" height="72">
 
-GoDesk is a ChatCut-style Codex Plugin and hosted runtime. ChatCut lets someone
-install a Plugin, upload a video, and receive a finished film. GoDesk is the
-same shape for rule-orchestrated games: a Creator or hobbyist uploads a script,
-a rulebook, or a written idea and receives a playable, shareable game. Other
-people join through a URL and play together. They do not install Codex.
+# GoDesk
 
-The success bar is `source in → playable game out → others can play together`.
-Design Hypotheses and Validation Findings are optional iteration tools, not
-the product. Codex is the natural-language control plane. GoDesk owns
-authenticated Game Projects, versioned Rule Systems, immutable Playable Builds,
-authoritative Shared Sessions, and Replays. The same project stays visible in
-Web Studio.
+**Upload rules. Get a playable game.**
 
-Rule Systems describe participants, rules, entities, setup, actions, play
-surfaces, stages, outcomes, presentation, and explicit runtime support. A play
-surface may be a conversation, cards, a screen, a scene, a table, or a hybrid;
-tabletop is one presentation, not the product boundary. Long-running work is
-persisted as recoverable jobs. Web Studio polls authoritative state while
-preserving unsaved creator drafts.
+[![CI](https://github.com/yuymf/godesk/actions/workflows/verify.yml/badge.svg?style=flat-square)](https://github.com/yuymf/godesk/actions/workflows/verify.yml)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](https://nodejs.org)
+[![pnpm](https://img.shields.io/badge/pnpm-10.15.1-f69220?style=flat-square)](https://pnpm.io)
+[![Cloudflare Workers](https://img.shields.io/badge/runtime-Cloudflare%20Workers-F38020?style=flat-square)](https://workers.cloudflare.com)
 
-Natural-language and source-driven generation also produces a durable
-Generation Plan. The creator reviews its proposed loop, actions, assumptions,
-and unsupported behavior in Web Studio or through MCP; GoDesk refuses a new
-immutable Build for that generation until `approve_generation_plan` is recorded.
-After approval, the same Rule System remains editable and can return to the
-normal compile → play → feedback → focused iteration loop.
+[English](#)
+</div>
 
-After an executable Build exists, Web Studio can create and show the latest
-Shared Session inline. The Creator can claim a seat and take an action without
-leaving the project; that action persists in the same Session State and Replay
-used by the friend invitation URL. The invitation URL is the product handoff.
+GoDesk is a ChatCut-style Codex Plugin and hosted runtime. ChatCut lets someone install a Plugin, upload a video, and receive a finished film. GoDesk is the same shape for rule-orchestrated games: a Creator uploads a script, a rulebook, or a written idea and receives a playable, shareable game. Other people join through a URL and play together. They do not install Codex.
 
-The creator home includes three rights-safe default examples:
+```
+source in  →  playable game out  →  others can play together
+```
 
-- `港口十三号`, an original competitive harbor-voyage game.
-- `雾岭山庄`, an original cooperative exploration mechanism slice.
-- `灵感接力`, an original conversation game with no board or physical-component
-  requirement.
+Codex is the natural-language control plane. GoDesk owns authenticated Game Projects, versioned Rule Systems, immutable Playable Builds, authoritative Shared Sessions, and Replays — the same project stays visible in Web Studio. Design Hypotheses and Validation Findings are optional iteration tools, not the product.
 
-All three copy into real editable projects and contain only GoDesk-authored
-rules and programmatic presentation.
+## Quick start
 
-## Product routes
-
-- `/` — creator project home
-- `/studio/:projectId` — authoritative project workspace with embedded Creator self-play
-- `/play/:buildId` — immutable Build preview
-- `/room/:roomId` — authoritative Shared Session and friend invitation
-- `/replay/:replayId` — read-only replay
-- `/chatgpt-plugin` — one-sentence Codex installation contract
-
-## Run and verify
+Requirements: **Node.js ≥ 22**, [pnpm](https://pnpm.io) `10.15.1` (see `packageManager` in `package.json`).
 
 ```bash
 pnpm install
 pnpm dev:worker
+```
+
+`pnpm dev:worker` builds the client and starts the full local Worker + Assets + Durable Objects flow at `http://127.0.0.1:8799`. `pnpm dev` is a static Vite-only UI server; it does not proxy `/api`, `/mcp`, or OAuth and is not a valid end-to-end creator flow.
+
+Localhost uses an explicit development identity. It is not live OAuth evidence. Copy `.dev.vars.example` → `.dev.vars` for local OAuth placeholders.
+
+### Codex Plugin
+
+Public install is distributed from [`yuymf/godesk-plugin`](https://github.com/yuymf/godesk-plugin) (Marketplace manifest + thin Plugin bundle only). The intended public install sentence is hosted at `/chatgpt-plugin`.
+
+Repo-local Marketplace: [`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json). Thin package: [`plugins/godesk`](plugins/godesk) — brand metadata, workflow Skills, and the remote MCP declaration. No project truth or rules execution lives in the Plugin.
+
+Friends joining a Shared Session only need its URL; they do not install Codex or GoDesk.
+
+### Default examples
+
+Creator home ships three rights-safe originals. Each copies into a real editable project with GoDesk-authored rules and programmatic presentation only:
+
+| Example | Shape |
+|:---|:---|
+| `港口十三号` | Competitive harbor-voyage game |
+| `雾岭山庄` | Cooperative exploration mechanism slice |
+| `灵感接力` | Conversation game — no board or physical components |
+
+## Why this repo exists
+
+| Without GoDesk | With GoDesk |
+|:---|:---|
+| Rules live in a doc or chat | **Versioned Rule System** — editable, compilable |
+| “Looks playable” is subjective | **Immutable Playable Build** — share gate is playability |
+| Friends need the same tooling | **URL-only Shared Session** — join and act in the browser |
+| Feedback evaporates | **Replay + optional findings** — iteration input, not the product |
+
+Success is the invitation URL letting someone else sit down and play. Ratings and comments on a Shared Session are optional; they are not the criterion.
+
+## Product routes
+
+| Route | Role |
+|:---|:---|
+| `/` | Creator project home |
+| `/studio/:projectId` | Authoritative workspace with embedded Creator self-play |
+| `/play/:buildId` | Immutable Build preview |
+| `/room/:roomId` | Shared Session and friend invitation |
+| `/replay/:replayId` | Read-only replay |
+| `/chatgpt-plugin` | One-sentence Codex installation contract |
+
+## How it works
+
+Rule Systems describe participants, rules, entities, setup, actions, play surfaces, stages, outcomes, presentation, and explicit runtime support. A play surface may be a conversation, cards, a screen, a scene, a table, or a hybrid — tabletop is one presentation, not the product boundary.
+
+Natural-language and source-driven generation produces a durable **Generation Plan**. The creator reviews its proposed loop, actions, assumptions, and unsupported behavior in Web Studio or through MCP. GoDesk refuses a new immutable Build for that generation until `approve_generation_plan` is recorded. After approval, the Rule System stays editable for the normal compile → play → feedback → focused iteration loop.
+
+After an executable Build exists, Web Studio can create and show the latest Shared Session inline. The Creator claims a seat and takes an action without leaving the project; that action persists in the same Session State and Replay used by the friend invitation URL. Long-running work is persisted as recoverable jobs. Web Studio polls authoritative state while preserving unsaved creator drafts.
+
+Further reading: [AGENTS.md](AGENTS.md), [CONTEXT.md](CONTEXT.md), [ADR 0011](docs/adr/0011-chatcut-playable-output-is-the-product.md), [ADR 0012](docs/adr/0012-playability-floor-is-the-share-gate.md), [ADR index](docs/adr/README.md).
+
+## Develop
+
+```bash
+pnpm install
 pnpm test
 pnpm test:worker
 pnpm test:e2e
@@ -69,76 +101,36 @@ pnpm verify:local-mcp
 pnpm deploy:dry-run
 ```
 
-`pnpm dev:worker` builds the client and starts the full local Worker + Assets +
-Durable Objects flow at `http://127.0.0.1:8799`. `pnpm dev` remains a static Vite-only UI server; it
-does not proxy `/api`, `/mcp`, or OAuth routes and is not a valid end-to-end
-creator flow. CI (`verify.yml` and `deploy.yml`) runs `test`, `build`, `test:worker`,
-`typecheck`, `verify:plugin`, and Playwright. Deploy then smokes production
-after the Worker publish. `verify:plugin:public` stays out of CI until the
-public Plugin repository matches the current contract.
-`pnpm verify:local-routes`, `pnpm verify:local-loop`, and `pnpm verify:local-mcp`
-are release-only local HTTP/MCP smokes. They share one temporary Worker
-bootstrap and overlap `test:worker` plus Playwright, so they are not in CI.
-Cloud-computer / Asia/Shanghai nightly one-shot (Node ≥ 22, no real Worker secrets):
-[docs/NIGHTLY-E2E.md](docs/NIGHTLY-E2E.md).
-`pnpm verify:local-routes` checks OAuth metadata, login/callback, and MCP route
-contracts. `pnpm verify:local-loop` exercises the complete prompt → Generation
-Plan → approval → Build → fixed-seed self-play → Finding → revised Build →
-Shared Session → Replay loop against real HTTP routes. `pnpm test:e2e` starts
-the local Worker and drives the user-visible charter path in Chromium: home →
-playable Shared Session → friend join → action. Unit tests and HTTP verifiers
-are not a substitute. `pnpm verify:local-mcp` drives an isolated Worker through
-the Streamable HTTP MCP route, including tool discovery, durable jobs, plan
-approval, Build/preview, self-play, Shared Session, and Replay.
-`pnpm verify:plugin:public` compares the separately published thin Plugin with
-the local manifest, MCP declaration, Skill set, and current contract terms; it
-is expected to fail while the public repository is on an older release.
-Set repository secret `GODESK_PLUGIN_SYNC_TOKEN` (write access to
-`yuymf/godesk-plugin`) so a push to `main` publishes the current bundle.
+| Command | Role |
+|:---|:---|
+| `pnpm test` / `pnpm test:worker` / `pnpm typecheck` / `pnpm build` / `pnpm verify:plugin` | CI (`verify.yml`, `deploy.yml`) plus Playwright |
+| `pnpm test:e2e` | Starts the local Worker; Chromium charter path: home → playable Shared Session → friend join → action |
+| `pnpm verify:local-routes` | OAuth metadata, login/callback, MCP route contracts |
+| `pnpm verify:local-loop` | Full prompt → Generation Plan → approval → Build → fixed-seed self-play → Finding → revised Build → Shared Session → Replay |
+| `pnpm verify:local-mcp` | Streamable HTTP MCP: tools, durable jobs, plan approval, Build/preview, self-play, Session, Replay |
+| `pnpm verify:plugin:public` | Compares published thin Plugin to local contract (expected to fail while public repo lags) |
 
-Localhost uses an explicit development identity. It is not live OAuth evidence.
+`verify:local-routes`, `verify:local-loop`, and `verify:local-mcp` are release-only local smokes (shared temporary Worker bootstrap; overlap `test:worker` + Playwright) — not in CI. `verify:plugin:public` stays out of CI until the public Plugin repo matches the current contract.
 
-## Codex Plugin
+Cloud-computer / Asia/Shanghai nightly one-shot (Node ≥ 22, no real Worker secrets): **[docs/NIGHTLY-E2E.md](docs/NIGHTLY-E2E.md)**.
 
-The repo-local Marketplace is [`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json)
-and the thin plugin package is [`plugins/godesk`](plugins/godesk). It contains
-brand metadata, workflow Skills, and the remote MCP declaration; no project
-truth or rules execution lives in the Plugin.
+Set repository secret `GODESK_PLUGIN_SYNC_TOKEN` (write access to `yuymf/godesk-plugin`) so a push to `main` publishes the current bundle.
 
-Public installation is distributed from
-[`yuymf/godesk-plugin`](https://github.com/yuymf/godesk-plugin), which contains
-only the Marketplace manifest and thin Plugin bundle.
+### Production configuration
 
-The intended public install sentence is hosted at `/chatgpt-plugin`. Friends
-joining a Shared Session only need its URL; they do not install Codex or GoDesk.
-A durable
-public install additionally requires this repository revision to be pushed,
-the Worker to be deployed, and a production OAuth provider to be configured.
-
-Friends can leave a rating and short comment on the URL-only Shared Session.
-That feedback is an optional iteration input, not the success criterion. The
-journey succeeds when the invitation URL lets someone else sit down and play.
-
-## Production configuration
-
-Public Worker vars (in `wrangler.jsonc`):
+Public Worker vars (`wrangler.jsonc`):
 
 - `GODESK_AUTH_ISSUER`
 - `GODESK_AUTH_AUDIENCE`
 
-Required Worker secrets. Set each with `wrangler secret put <NAME>` before
-deploy. Production fail-closes if they are missing; localhost may omit
-`GODESK_SHARE_SECRET` and use the local default. Copy `.dev.vars.example` to
-`.dev.vars` for local OAuth.
+Required Worker secrets (`wrangler secret put <NAME>` before deploy; production fail-closes if missing). Localhost may omit `GODESK_SHARE_SECRET` and use the local default:
 
 - `GODESK_SHARE_SECRET`
 - `GODESK_WEB_CLIENT_ID`
 - `GODESK_WEB_CLIENT_SECRET`
 
-GitHub Actions also requires `CLOUDFLARE_ACCOUNT_ID` and
-`CLOUDFLARE_API_TOKEN`. Never store secrets in the repository.
+GitHub Actions also needs `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`. Never store secrets in the repository.
 
-See [AGENTS.md](AGENTS.md), [CONTEXT.md](CONTEXT.md),
-[ADR 0011](docs/adr/0011-chatcut-playable-output-is-the-product.md),
-[ADR 0012](docs/adr/0012-playability-floor-is-the-share-gate.md),
-and the [ADR index](docs/adr/README.md) (read 0011 / 0012 first).
+## License
+
+No SPDX license file is published in this repository yet.
