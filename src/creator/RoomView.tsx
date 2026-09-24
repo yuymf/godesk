@@ -566,10 +566,20 @@ export function RoomView({ sessionId }: { sessionId: string }) {
                   </ul>
                 )}
                 {room.state.hiddenRole.phase === "resolved" && (
-                  <p>
-                    被揭晓的是座位 {room.state.hiddenRole.condemnedSeat}。
-                    {room.state.hiddenRole.winnerAlignment === "town" ? "侦探与平民获胜。" : "凶手获胜。"}
-                  </p>
+                  <>
+                    <ul className="hidden-role-revealed-roles" aria-label="揭晓身份">
+                      {room.state.hiddenRole.roles.map((role) => (
+                        <li key={role.seat}>
+                          座位 {role.seat}：{role.name}
+                          {role.alignment === "culprit" ? "（凶手阵营）" : "（侦探阵营）"}
+                        </li>
+                      ))}
+                    </ul>
+                    <p>
+                      被揭晓的是座位 {room.state.hiddenRole.condemnedSeat}。
+                      {room.state.hiddenRole.winnerAlignment === "town" ? "侦探与平民获胜。" : "凶手获胜。"}
+                    </p>
+                  </>
                 )}
               </section>
             )}

@@ -308,6 +308,31 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(thirdPage.getByText("轮到你了")).toBeVisible();
     await thirdPage.getByRole("button", { name: "指控座位 0" }).click();
     await expect(page.getByText(/凶手获胜|侦探与平民获胜/)).toBeVisible();
+    await expect(page.getByText("阶段：已揭晓")).toBeVisible();
+
+    // W6-01: resolve must surface all seats' identities on Room (not only winner sentence).
+    const roomRoles = page.getByLabel("揭晓身份");
+    await expect(roomRoles).toBeVisible();
+    await expect(roomRoles).toContainText("座位 0：");
+    await expect(roomRoles).toContainText("座位 1：");
+    await expect(roomRoles).toContainText("座位 2：");
+    await expect(roomRoles).toContainText(/凶手阵营|侦探阵营/);
+
+    // W6-01 / W4-07: resolved Replay reveals roles; mid-game hide (W5-04) stays separate.
+    await page.getByRole("link", { name: "只读回放" }).click();
+    await page.waitForURL(/\/chatgpt-plugin\/replay\//, { timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: "这一局怎么打完的", level: 2 })).toBeVisible();
+    const hiddenRoleReplay = page.locator(".hidden-role-replay-card");
+    await expect(hiddenRoleReplay.filter({ hasText: "阶段：已揭晓" }).first()).toBeVisible();
+    const revealed = page.locator(".hidden-role-replay-roles");
+    await expect(revealed.first()).toBeVisible();
+    await expect(revealed.first()).toContainText(/凶手|侦探|平民/);
+    await expect(revealed.first()).toContainText("座位 0：");
+    await expect(page.locator(".accusation-log").first()).toBeVisible();
+    await expect(page.locator(".score-grid")).toHaveCount(0);
+    await expect(page.locator(".hand-play-replay-card")).toHaveCount(0);
+    await expect(page.locator(".conversation-replay-card")).toHaveCount(0);
+
     await friendContext.close();
     await thirdContext.close();
   });

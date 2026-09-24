@@ -90,7 +90,7 @@ describe("replayPrimarySurface (W4-07)", () => {
     expect(replayOmitsPrimaryScoreGrid(state)).toBe(true);
   });
 
-  it("reveals roles and resolution only when hidden-role phase is resolved", () => {
+  it("reveals roles and resolution only when hidden-role phase is resolved (W6-01 Room+Replay gate)", () => {
     const state = baseState({
       status: "complete",
       winnerSeat: 1,
