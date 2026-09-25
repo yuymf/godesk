@@ -15,25 +15,23 @@ No production `wrangler secret` values are required. `playwright.config.ts`
 copies `.dev.vars.example` → `.dev.vars` when the latter is missing; the
 example file holds localhost placeholders only.
 
-## Clone paths
+## Clone path
 
-Prefer:
+On the cloud computer nightly box use:
 
 ```bash
 /workspace/godesk-cleanup/godesk
 ```
 
-Fallback:
-
-```bash
-/workspace/nightly-audit/godesk
-```
+(There is no `/workspace/nightly-audit/godesk` clone on this box; if you need a
+second checkout, `git clone https://github.com/yuymf/godesk.git` wherever you
+prefer and `cd` there instead.)
 
 ## One-shot recipe (Asia/Shanghai nightly)
 
 ```bash
 export PATH="/home/box/.local/node22/bin:$PATH"
-cd /workspace/godesk-cleanup/godesk   # or /workspace/nightly-audit/godesk
+cd /workspace/godesk-cleanup/godesk
 git fetch origin && git checkout main && git pull --ff-only origin main
 test -f .dev.vars || cp .dev.vars.example .dev.vars
 CI=true pnpm i --frozen-lockfile
