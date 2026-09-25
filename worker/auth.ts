@@ -118,12 +118,19 @@ export async function authorizationMetadata(env: Env) {
       async (response) => {
         if (!response.ok) throw new Error("oauth_discovery_failed");
         const value = await response.json<AuthorizationMetadata>();
+        const pkceMethods = value.code_challenge_methods_supported;
+        // Cloudflare Access SaaS OIDC often omits code_challenge_methods_supported
+        // even when PKCE S256 is accepted. Require S256 only when the claim is present.
+        const pkceOk =
+          !pkceMethods ||
+          pkceMethods.length === 0 ||
+          pkceMethods.includes("S256");
         if (
           value.issuer !== issuer ||
           !value.authorization_endpoint ||
           !value.token_endpoint ||
           !value.jwks_uri ||
-          !value.code_challenge_methods_supported?.includes("S256")
+          !pkceOk
         ) {
           throw new Error("oauth_metadata_invalid");
         }
@@ -309,7 +316,16 @@ export async function startWebLogin(request: Request, env: Env) {
   if (!env.GODESK_WEB_CLIENT_ID || !env.GODESK_AUTH_AUDIENCE) {
     return new Response("GoDesk web OAuth is not configured.", { status: 503 });
   }
-  const metadata = await authorizationMetadata(env);
+  let metadata: AuthorizationMetadata;
+  try {
+    metadata = await authorizationMetadata(env);
+  } catch (reason) {
+    const detail =
+      reason instanceof Error ? reason.message : "oauth_unavailable";
+    return new Response(`GoDesk web OAuth unavailable: ${detail}`, {
+      status: 503,
+    });
+  }
   const state = randomToken();
   const verifier = randomToken();
   const challenge = bytesToBase64Url(

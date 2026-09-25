@@ -43,16 +43,27 @@ describe("OAuth token claim validation", () => {
 });
 
 describe("OAuth discovery", () => {
+  function discoveryBody(
+    issuer: string,
+    extras: Record<string, unknown> = {},
+  ) {
+    return {
+      issuer,
+      authorization_endpoint: `${issuer.replace(/\/+$/, "")}/authorize`,
+      token_endpoint: `${issuer.replace(/\/+$/, "")}/oauth/token`,
+      jwks_uri: `${issuer.replace(/\/+$/, "")}/.well-known/jwks.json`,
+      ...extras,
+    };
+  }
+
   it("preserves a trailing slash issuer while building one valid discovery URL", async () => {
     const issuer = "https://tenant.example.test/";
     const fetchMock = vi.fn().mockResolvedValue(
-      Response.json({
-        issuer,
-        authorization_endpoint: `${issuer}authorize`,
-        token_endpoint: `${issuer}oauth/token`,
-        jwks_uri: `${issuer}.well-known/jwks.json`,
-        code_challenge_methods_supported: ["S256"],
-      }),
+      Response.json(
+        discoveryBody(issuer, {
+          code_challenge_methods_supported: ["S256"],
+        }),
+      ),
     );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -62,6 +73,54 @@ describe("OAuth discovery", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       `${issuer}.well-known/openid-configuration`,
     );
+    vi.unstubAllGlobals();
+  });
+
+  it("accepts Access-style metadata that omits code_challenge_methods_supported", async () => {
+    const issuer = "https://access-omit-pkce.example.test";
+    const fetchMock = vi.fn().mockResolvedValue(
+      Response.json(discoveryBody(issuer)),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      authorizationMetadata({ GODESK_AUTH_ISSUER: issuer } as unknown as Env),
+    ).resolves.toMatchObject({
+      issuer,
+      authorization_endpoint: `${issuer}/authorize`,
+    });
+    vi.unstubAllGlobals();
+  });
+
+  it("accepts metadata with an empty code_challenge_methods_supported list", async () => {
+    const issuer = "https://access-empty-pkce.example.test";
+    const fetchMock = vi.fn().mockResolvedValue(
+      Response.json(
+        discoveryBody(issuer, { code_challenge_methods_supported: [] }),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      authorizationMetadata({ GODESK_AUTH_ISSUER: issuer } as unknown as Env),
+    ).resolves.toMatchObject({ issuer });
+    vi.unstubAllGlobals();
+  });
+
+  it("rejects metadata that advertises PKCE without S256", async () => {
+    const issuer = "https://access-plain-pkce.example.test";
+    const fetchMock = vi.fn().mockResolvedValue(
+      Response.json(
+        discoveryBody(issuer, {
+          code_challenge_methods_supported: ["plain"],
+        }),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      authorizationMetadata({ GODESK_AUTH_ISSUER: issuer } as unknown as Env),
+    ).rejects.toThrow("oauth_metadata_invalid");
     vi.unstubAllGlobals();
   });
 });
