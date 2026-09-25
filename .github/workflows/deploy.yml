@@ -72,6 +72,24 @@ jobs:
             exit 1
           fi
 
+      - name: Sync Worker OAuth secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GODESK_SHARE_SECRET: ${{ secrets.GODESK_SHARE_SECRET }}
+          GODESK_WEB_CLIENT_ID: ${{ secrets.GODESK_WEB_CLIENT_ID }}
+          GODESK_WEB_CLIENT_SECRET: ${{ secrets.GODESK_WEB_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          for name in GODESK_SHARE_SECRET GODESK_WEB_CLIENT_ID GODESK_WEB_CLIENT_SECRET; do
+            val="${!name}"
+            if [ -z "$val" ]; then
+              echo "::error::Repository secret $name is empty"
+              exit 1
+            fi
+            printf '%s' "$val" | pnpm exec wrangler secret put "$name"
+          done
+
       - name: Deploy to Cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

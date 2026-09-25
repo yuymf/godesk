@@ -8,8 +8,8 @@
   "workers_dev": true,
   "preview_urls": false,
   "vars": {
-    "GODESK_AUTH_ISSUER": "https://godesk-yumengfan220.cloudflareaccess.com",
-    "GODESK_AUTH_AUDIENCE": "065b23e01718a7c613297ac38777e54223ef02e1ed5a697861f750f326e3bcfe"
+    "GODESK_AUTH_ISSUER": "https://godesk-yumengfan220.cloudflareaccess.com/cdn-cgi/access/sso/oidc/00a3b1a12321f401c42152caca8027e7ac0049578ca7680893d8c80aca60be59",
+    "GODESK_AUTH_AUDIENCE": "00a3b1a12321f401c42152caca8027e7ac0049578ca7680893d8c80aca60be59"
   },
   "secrets": {
     "required": [
