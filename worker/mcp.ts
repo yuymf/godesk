@@ -11,6 +11,13 @@ import {
   publicizeProjectViewData,
 } from "./public-urls";
 import { shareSecret } from "./share-capability";
+import {
+  applyCodeModeSurface,
+  isCodeModeEnabled,
+  tagsForToolName,
+  type CodeModeOp,
+  type CodeModeOptions,
+} from "./mcp-code-mode";
 
 const projectSchema = z.object({
   id: z.string(),
@@ -755,7 +762,10 @@ export function createGodeskMcpServer(
   creatorId: string,
   authentication: "local-development-only" | "oauth",
   mount = "/",
+  options?: CodeModeOptions,
 ) {
+  const codeMode = isCodeModeEnabled(env, options);
+  const catalog: CodeModeOp[] = [];
   const server = new McpServer({
     name: "godesk",
     version: "0.2.0",
@@ -763,8 +773,8 @@ export function createGodeskMcpServer(
   const registerTool = server.registerTool.bind(server);
   server.registerTool = ((
     ...[name, config, callback]: Parameters<typeof server.registerTool>
-  ) =>
-    registerTool(
+  ) => {
+    const registered = registerTool(
       name,
       {
         ...config,
@@ -781,7 +791,23 @@ export function createGodeskMcpServer(
         },
       },
       callback,
-    )) as typeof server.registerTool;
+    );
+    catalog.push({
+      name,
+      title: config.title,
+      description: config.description,
+      tags: tagsForToolName(name),
+      annotations: config.annotations,
+      registered,
+      invoke: (args) =>
+        (
+          callback as (
+            args: Record<string, unknown>,
+          ) => Promise<unknown> | unknown
+        )(args ?? {}),
+    });
+    return registered;
+  }) as typeof server.registerTool;
   const secret = shareSecret(env, new URL(origin).hostname);
   const projectRequest = (path: string, init?: RequestInit) =>
     internalRequest(env, creatorId, path, init);
@@ -1485,6 +1511,10 @@ export function createGodeskMcpServer(
       }
     },
   );
+
+  if (codeMode) {
+    applyCodeModeSurface(server, catalog);
+  }
 
   return server;
 }

@@ -24,6 +24,7 @@ identity sections are historical. This index does not rewrite them.
 | [0008](0008-bind-playtest-feedback-to-an-experiment-brief.md) | Bind playtest feedback to an Experiment Brief | accepted |
 | [0009](0009-stable-playtest-link-pins-an-explicit-session.md) | Stable Playtest Link pins an explicit Session | accepted |
 | [0010](0010-session-share-and-seat-tokens.md) | Session share tokens and seat tokens | accepted |
+| [0013](0013-mcp-code-mode-progressive-disclosure.md) | MCP Code Mode 弱化版（渐进披露） | accepted（可选；默认关） |
 
 ## Historical identity (do not use as charter)
 
