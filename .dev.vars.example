@@ -2,3 +2,6 @@
 GODESK_SHARE_SECRET=godesk-local-share-secret
 GODESK_WEB_CLIENT_ID=godesk-local-web-client
 GODESK_WEB_CLIENT_SECRET=godesk-local-web-client-secret
+
+# Optional: MCP Code Mode（渐进披露）。设为 1 时 listTools 仅 search+execute。默认不要开。
+# GODESK_MCP_CODE_MODE=1
