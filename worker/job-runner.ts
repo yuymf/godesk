@@ -654,6 +654,7 @@ export async function runCreatorJob(
     }
     const operationBody = await operation.json<Record<string, unknown>>();
     if (operation.ok && input.kind === "generate-rule-system") {
+      let autoCompileWarning: string | undefined;
       const generatedRuleSystem = operationBody.ruleSystem as RuleSystem | undefined;
       const generatedSources = operationBody.sources as SourceLibraryEntry[] | undefined;
       if (!generatedRuleSystem || !Array.isArray(generatedSources)) {
@@ -717,12 +718,49 @@ export async function runCreatorJob(
             operationBody.ruleSystem = approved.ruleSystem;
             operationBody.sources = approved.sources;
             operationBody.generationPlan = approved.generationPlan;
+            const approvedProject = approved.project as { version: number };
+            try {
+              const compileResponse = await host.compileProjectBuild(job.projectId, {
+                expectedVersion: approvedProject.version,
+                idempotencyKey: `job:${input.idempotencyKey}:compile`,
+              });
+              if (compileResponse.ok) {
+                const compiled = await compileResponse.json<Record<string, unknown>>();
+                if (compiled.build !== undefined) {
+                  operationBody.build = compiled.build;
+                }
+                if (compiled.project !== undefined) {
+                  operationBody.project = compiled.project;
+                }
+                if (compiled.changeset !== undefined) {
+                  operationBody.changeset = compiled.changeset;
+                }
+                if (typeof compiled.studioPath === "string") {
+                  operationBody.studioPath = compiled.studioPath;
+                }
+              } else {
+                const compileBody = await compileResponse
+                  .json<Record<string, unknown>>()
+                  .catch(() => ({}) as Record<string, unknown>);
+                autoCompileWarning = String(
+                  compileBody.error ?? `http_${compileResponse.status}`,
+                );
+              }
+            } catch (compileReason) {
+              autoCompileWarning = compileReason instanceof Error
+                ? compileReason.message
+                : "compile_failed";
+            }
           }
         }
       }
       operationBody.generationMode = "deterministic-rule-system-materialization";
       operationBody.warnings = [operationBody.generationPlan !== generationPlan
-        ? "Generation Plan 已自动批准；conversation-relay-v1 可执行且通过分享门槛。"
+        ? operationBody.build
+          ? "Generation Plan 已自动批准；Build 已就绪且通过分享门槛。下一步用该 buildId 调用 create_shared_session。"
+          : autoCompileWarning
+            ? `Generation Plan 已自动批准；conversation-relay-v1 可执行且通过分享门槛。自动编译 Build 失败（${autoCompileWarning}）；可稍后单独 submit_job compile-build。`
+            : "Generation Plan 已自动批准；conversation-relay-v1 可执行且通过分享门槛。"
         : generationRuntimeConfigured
         ? proposedRuntime?.op === "configure_hidden_role"
           ? "规则结构来自体裁识别；秘密身份、公开发言与指控将在批准 Generation Plan 后配置为 hidden-role-v1。"
