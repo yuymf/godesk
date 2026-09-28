@@ -159,7 +159,7 @@ describe("Managed OAuth Access authorization", () => {
   it("fails closed when the Access AUD tag has not been configured", async () => {
     const result = await authorizeRequest(new Request("https://godesk.example/chatgpt-plugin/mcp", {
       headers: { "cf-access-jwt-assertion": "signed.jwt.value" },
-    }), { ...env, GODESK_ACCESS_AUD: "" }, ["godesk:read"]);
+    }), { ...env, GODESK_ACCESS_AUD: "" } as unknown as Env, ["godesk:read"]);
     expect(result).toBeInstanceOf(Response);
     expect((result as Response).status).toBe(401);
   });
