@@ -66,13 +66,18 @@ describe("public URLs", () => {
         presentationFloor: { status: "passed" },
         playabilityFloor: { status: "passed" },
         createdAt: "2026-09-28T00:00:00.000Z",
+        playableUrl: expect.any(String),
       },
     });
     expect(generated.result).not.toHaveProperty("studioPath");
-    const playableUrl = (generated.result as { build: { playableUrl: string } }).build.playableUrl;
+    const playableUrl = (
+      generated.result as unknown as { build: { playableUrl: string } }
+    ).build.playableUrl;
     expect(new URL(playableUrl).pathname).toBe("/play/build_slim");
     expect(new URL(playableUrl).searchParams.get("share")).toBeTruthy();
-    expect((generated.result as { build: Record<string, unknown> }).build).not.toHaveProperty("ruleSystem");
+    expect(
+      (generated.result as unknown as { build: Record<string, unknown> }).build,
+    ).not.toHaveProperty("ruleSystem");
   });
 
   it("converts generate and iterate job studioPath the same way", async () => {
