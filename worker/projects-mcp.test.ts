@@ -774,7 +774,7 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
     expect(new URL(room.sessionUrl).pathname).toMatch(/^\/room\/room_/);
   });
 
-  it("materializes an idea-only Rule System through MCP", async () => {
+  it("turns one conversation idea into an approved, playable, shareable session through MCP", async () => {
     const created = await callMcpTool<{
       project: { id: string; version: number };
     }>(40, "create_project", { name: "MCP idea-only project" });
@@ -785,7 +785,7 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
         kind: "generate-rule-system",
         projectId: created.project.id,
         expectedVersion: created.project.version,
-        idea: "3 players take turns extending a shared idea and adding constraints.",
+        idea: "三位玩家轮流发言扩展同一个点子；每回合必须写一句回应，12 回合后结束。",
         participants: { min: 2, max: 6, default: 3, roles: [] },
         idempotencyKey: "mcp-idea-only-001",
       },
@@ -795,9 +795,12 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
       status: string;
       result: {
         generationMode: string;
+        project: { version: number };
+        generationPlan: { status: string; proposedRuntime?: { op: string } };
         ruleSystem: {
           playSurface: { kind: string };
           participants: { default: number };
+          runtimeSupport: { status: string; kernel?: { type: string } };
         };
       };
     }>(42, "track_job", { jobId: submitted.id });
@@ -808,9 +811,31 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
         ruleSystem: {
           playSurface: { kind: "conversation" },
           participants: { default: 3 },
+          runtimeSupport: {
+            status: "executable",
+            kernel: { type: "conversation-relay-v1" },
+          },
         },
+        generationPlan: { status: "approved", proposedRuntime: { op: "configure_conversation_relay" } },
       },
     });
+    const compile = await callMcpTool<{ id: string }>(43, "submit_job", {
+      kind: "compile-build",
+      projectId: created.project.id,
+      expectedVersion: tracked.result.project.version,
+      idempotencyKey: "mcp-idea-only-compile-001",
+    });
+    const compiled = await waitForJob(compile.id) as unknown as {
+      result: { build: { id: string; presentationFloor: { status: string }; playabilityFloor: { status: string } } };
+    };
+    expect(compiled.result.build.presentationFloor.status).toBe("passed");
+    expect(compiled.result.build.playabilityFloor.status).toBe("passed");
+    const session = await callMcpTool<{ sessionUrl: string }>(44, "create_shared_session", {
+      buildId: compiled.result.build.id,
+      seed: 42,
+      idempotencyKey: "mcp-idea-only-session-001",
+    });
+    expect(new URL(session.sessionUrl).searchParams.get("share")).toBeTruthy();
   });
 
   it("exposes shared-goal-v1 as an explicit MCP Kernel", async () => {
@@ -1133,10 +1158,11 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
       "加入约束",
     ]);
     expect(result.ruleSystem.runtimeSupport).toMatchObject({
-      status: "draft",
+      status: "executable",
+      kernel: { type: "conversation-relay-v1" },
     });
     expect((finished.result as { generationPlan: unknown }).generationPlan).toMatchObject({
-      status: "pending",
+      status: "approved",
       proposedRuntime: {
         op: "configure_conversation_relay",
         config: {

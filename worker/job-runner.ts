@@ -12,6 +12,8 @@ import {
   hasWeakGenreScoreRaceLeak,
   inferSourceGenre,
 } from "../src/runtime/genre";
+import { playabilityFloor } from "../src/runtime/playability-floor";
+import { presentationFloor } from "../src/runtime/presentation-floor";
 import {
   generationRefuseReason,
   type GenerationRefuseKind,
@@ -679,8 +681,49 @@ export async function runCreatorJob(
         generationPlan,
       );
       operationBody.generationPlan = generationPlan;
+      // A complete conversation proposal can pass the same share gates before
+      // anyone needs to review a draft in Studio. Apply it through the normal
+      // approval mutation so the persisted Rule System and plan stay in sync.
+      if (
+        !generationRefuse &&
+        proposedRuntime?.op === "configure_conversation_relay" &&
+        generatedRuleSystem.runtimeSupport.status === "draft"
+      ) {
+        const candidate: RuleSystem = {
+          ...generatedRuleSystem,
+          runtimeSupport: {
+            status: "executable",
+            unsupported: proposedRuntime.config.unsupported ?? [],
+            kernel: {
+              type: "conversation-relay-v1",
+              maxTurns: proposedRuntime.config.maxTurns,
+              actions: proposedRuntime.config.actions.map(({ id, label }) => ({ id, label })),
+            },
+          },
+        };
+        if (
+          playabilityFloor(candidate).status === "passed" &&
+          presentationFloor(candidate).status === "passed"
+        ) {
+          const project = operationBody.project as { version: number };
+          const approval = await host.applyProjectChanges(job.projectId, {
+            expectedVersion: project.version,
+            idempotencyKey: `job:${input.idempotencyKey}:approve-plan`,
+            operations: [{ op: "approve_generation_plan", planId: generationPlan.id }],
+          });
+          if (approval.ok) {
+            const approved = await approval.json<Record<string, unknown>>();
+            operationBody.project = approved.project;
+            operationBody.ruleSystem = approved.ruleSystem;
+            operationBody.sources = approved.sources;
+            operationBody.generationPlan = approved.generationPlan;
+          }
+        }
+      }
       operationBody.generationMode = "deterministic-rule-system-materialization";
-      operationBody.warnings = [generationRuntimeConfigured
+      operationBody.warnings = [operationBody.generationPlan !== generationPlan
+        ? "Generation Plan 已自动批准；conversation-relay-v1 可执行且通过分享门槛。"
+        : generationRuntimeConfigured
         ? proposedRuntime?.op === "configure_hidden_role"
           ? "规则结构来自体裁识别；秘密身份、公开发言与指控将在批准 Generation Plan 后配置为 hidden-role-v1。"
           : proposedRuntime?.op === "configure_hand_play"
