@@ -41,6 +41,15 @@ describe("inferSourceGenre (W4-05 near-miss cues)", () => {
       ),
     ).toBe("generic");
   });
+
+  it("treats 轮流发言 / 发言扩展 as conversation", () => {
+    expect(
+      inferSourceGenre(
+        "三位玩家轮流发言扩展同一个点子；每回合必须写一句回应，12 回合后结束。",
+      ),
+    ).toBe("conversation");
+  });
+
 });
 
 describe("hasWeakGenreScoreRaceLeak (W4-05)", () => {
@@ -54,7 +63,7 @@ describe("hasWeakGenreScoreRaceLeak (W4-05)", () => {
       hasWeakGenreScoreRaceLeak("找出凶手得 3 分，先到 9 分。"),
     ).toBe(true);
     expect(
-      hasWeakGenreScoreRaceLeak("轮流发言得 1 分，先到 5 分。"),
+      hasWeakGenreScoreRaceLeak("发言得 1 分，先到 5 分。"),
     ).toBe(true);
   });
 
@@ -71,5 +80,7 @@ describe("hasWeakGenreScoreRaceLeak (W4-05)", () => {
       false,
     );
     expect(hasWeakGenreScoreRaceLeak("剧本杀：发言后指控凶手。")).toBe(false);
+    // 轮流发言 is a strong conversation cue (NL share path); not a weak leak.
+    expect(hasWeakGenreScoreRaceLeak("轮流发言得 1 分，先到 5 分。")).toBe(false);
   });
 });

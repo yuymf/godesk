@@ -31,7 +31,7 @@ export function inferSourceGenre(corpus: string): SourceGenre {
     return "placement";
   }
   if (
-    /共同创意|灵感接力|公开发言|发言记录|conversation relay|shared idea/i
+    /共同创意|灵感接力|公开发言|发言记录|轮流发言|发言扩展|conversation relay|shared idea/i
       .test(text)
   ) {
     return "conversation";

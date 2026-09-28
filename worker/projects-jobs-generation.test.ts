@@ -407,10 +407,10 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
         ruleSystem: {
           participants: { min: 2, max: 6, default: 3 },
           playSurface: { kind: "conversation", regions: [] },
-          runtimeSupport: { status: "draft" },
+          runtimeSupport: { status: "executable", kernel: { type: "conversation-relay-v1" } },
         },
         generationPlan: {
-          status: "pending",
+          status: "approved",
           proposedRuntime: {
             op: "configure_conversation_relay",
             config: {
@@ -729,6 +729,7 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
     const result = finished.result as {
       ruleSystem: { runtimeSupport: { status: string } };
       generationPlan: {
+        status: string;
         proposedRuntime?: { op: string };
         unsupported: string[];
         loop: string[];
@@ -736,6 +737,7 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
       warnings?: string[];
     };
     expect(result.generationPlan.proposedRuntime).toBeUndefined();
+    expect(result.generationPlan.status).toBe("pending");
     expect(result.ruleSystem.runtimeSupport.status).toBe("draft");
     expect(result.warnings?.join(" ") ?? "").toMatch(/非计分|出牌计分/);
     expect(result.generationPlan.unsupported[0]).toBe(REFUSE_NON_SCORE_HAND);
@@ -833,12 +835,14 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
     const result = finished.result as {
       ruleSystem: { runtimeSupport: { status: string } };
       generationPlan: {
+        status: string;
         proposedRuntime?: { op: string };
         unsupported: string[];
       };
       warnings?: string[];
     };
     expect(result.generationPlan.proposedRuntime).toBeUndefined();
+    expect(result.generationPlan.status).toBe("pending");
     expect(result.ruleSystem.runtimeSupport.status).toBe("draft");
     expect(result.warnings?.join(" ") ?? "").toMatch(/多幕|线索板|单轮/);
     expect(result.generationPlan.unsupported[0]).toBe(REFUSE_MULTI_ACT_HIDDEN_ROLE);

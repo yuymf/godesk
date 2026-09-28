@@ -1000,7 +1000,7 @@ export function createGodeskMcpServer(
     {
       title: "Apply a versioned GoDesk patch",
       description:
-        "Atomically add traceable sources or update the active Rule System. Stale expectedVersion values apply nothing.",
+        "Atomically add traceable sources or update the active Rule System. If generate-rule-system leaves a pending Generation Plan, call approve_generation_plan here with its planId before compiling; approval applies its proposedRuntime. Stale expectedVersion values apply nothing.",
       inputSchema: z.object({
         projectId: z.string().min(1),
         expectedVersion: z.number().int().positive(),
@@ -1047,7 +1047,7 @@ export function createGodeskMcpServer(
     {
       title: "Submit durable GoDesk work",
       description:
-        "Submit idea-or-source Rule System materialization, a bounded natural-language Studio iteration, compilation, fixed-seed bot playtest, or build export work and return a durable job ID for tracking. Open a Build preview at the compile or read_build playableUrl; do not enqueue a preview job.",
+        "Submit idea-or-source Rule System materialization, a bounded natural-language Studio iteration, compilation, fixed-seed bot playtest, or build export work and return a durable job ID. After generate-rule-system, track the job and inspect generationPlan: an approved plan is ready to compile; a pending plan needs approve_generation_plan via apply_project_patch before compile. iterate-rule-system only edits one action description; it cannot invent or configure a kernel and returns iteration_unsupported for that request. Open a Build preview at the compile or read_build playableUrl.",
       inputSchema: z.discriminatedUnion("kind", [
         z.object({
           kind: z.literal("generate-rule-system"),
@@ -1212,7 +1212,7 @@ export function createGodeskMcpServer(
     {
       title: "Create an authoritative GoDesk Shared Session",
       description:
-        "Create a reconnectable Shared Session from one immutable executable Build.",
+        "Create a reconnectable Shared Session from one immutable executable Build only after Presentation and Playability Floors pass. Return its sessionUrl with share= for others to join. If generationPlan is still pending, approve_generation_plan via apply_project_patch before compiling; Studio iteration cannot invent a kernel (iteration_unsupported).",
       inputSchema: z.object({
         buildId: z.string().min(1),
         seed: z.number().int(),
