@@ -126,8 +126,8 @@ test.describe("ChatCut charter: source in, playable game out", () => {
       }),
     ).toBeVisible();
     await expect(page.locator("code", { hasText: "https://godesk.yumengfan220.workers.dev/chatgpt-plugin/mcp" })).toBeVisible();
-    await expect(page.getByText("list_projects")).toBeVisible();
-    await expect(page.getByText("sessionUrl")).toBeVisible();
+    await expect(page.getByText("list_projects").first()).toBeVisible();
+    await expect(page.getByText("sessionUrl").first()).toBeVisible();
     await expect(page.getByText("只读完本 installer 网页 ≠ 安装成功")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Mac / ChatGPT.app 内 Codex 的备选装法。" })).toBeVisible();
     await expect(page.locator(".install-steps")).toHaveCount(0);
