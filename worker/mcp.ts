@@ -1047,7 +1047,7 @@ export function createGodeskMcpServer(
     {
       title: "Submit durable GoDesk work",
       description:
-        "Submit idea-or-source Rule System materialization, a bounded natural-language Studio iteration, compilation, fixed-seed bot playtest, or build export work and return a durable job ID. After generate-rule-system, track the job: if result.build exists, use that buildId for create_shared_session (do not invent buildIds); if generationPlan is approved without build, submit compile-build; a pending plan needs approve_generation_plan via apply_project_patch before compile. iterate-rule-system only edits one action description; it cannot invent or configure a kernel and returns iteration_unsupported for that request. Open a Build preview at the compile or read_build playableUrl.",
+        "Submit idea-or-source Rule System materialization, a bounded natural-language Studio iteration, compilation, fixed-seed bot playtest, or build export work and return a durable job ID. After submit, poll track_job until succeeded or failed. On succeeded generate-rule-system with result.build.id, immediately call create_shared_session with that buildId (do not invent ids). If generationPlan is approved without build, submit compile-build; a pending plan needs approve_generation_plan via apply_project_patch before compile. iterate-rule-system only edits one action description; it cannot invent or configure a kernel and returns iteration_unsupported for that request. Open a Build preview at the compile or read_build playableUrl.",
       inputSchema: z.discriminatedUnion("kind", [
         z.object({
           kind: z.literal("generate-rule-system"),
@@ -1131,7 +1131,7 @@ export function createGodeskMcpServer(
     {
       title: "Track durable GoDesk work",
       description:
-        "Read one durable job's current status, terminal result, exact preview/replay/artifact handoff, or failure.",
+        "Poll one durable job until status is succeeded or failed; then stop. On succeeded generate-rule-system with result.build.id, immediately call create_shared_session with that buildId (do not invent ids). Returns terminal result, exact preview/replay/artifact handoff, or failure.",
       inputSchema: z.object({ jobId: z.string().min(1) }),
       outputSchema: jobSchema,
       annotations: {
@@ -1212,7 +1212,7 @@ export function createGodeskMcpServer(
     {
       title: "Create an authoritative GoDesk Shared Session",
       description:
-        "Create a reconnectable Shared Session from one immutable executable Build only after Presentation and Playability Floors pass. Return its sessionUrl with share= for others to join. After track_job on generate-rule-system, if result.build exists use that buildId here (do not invent buildIds); otherwise compile-build is still available when build is missing. If generationPlan is still pending, approve_generation_plan via apply_project_patch before compiling; Studio iteration cannot invent a kernel (iteration_unsupported).",
+        "Create a reconnectable Shared Session from one immutable executable Build only after Presentation and Playability Floors pass. Return its sessionUrl with share= for others to join. After track_job succeeds on generate-rule-system with result.build.id, call this immediately with that buildId (do not invent ids); otherwise compile-build is still available when build is missing. If generationPlan is still pending, approve_generation_plan via apply_project_patch before compiling; Studio iteration cannot invent a kernel (iteration_unsupported).",
       inputSchema: z.object({
         buildId: z.string().min(1),
         seed: z.number().int(),

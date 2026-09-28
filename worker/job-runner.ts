@@ -727,7 +727,23 @@ export async function runCreatorJob(
               if (compileResponse.ok) {
                 const compiled = await compileResponse.json<Record<string, unknown>>();
                 if (compiled.build !== undefined) {
-                  operationBody.build = compiled.build;
+                  // Keep generate job results small for MCP track_job: attach a
+                  // slim build summary only (full StoredPlayableBuild + cloned
+                  // ruleSystem can stall ChatGPT Connect transfer/UI).
+                  const fullBuild = compiled.build as {
+                    id: string;
+                    projectId: string;
+                    presentationFloor: unknown;
+                    playabilityFloor: unknown;
+                    createdAt: string;
+                  };
+                  operationBody.build = {
+                    id: fullBuild.id,
+                    projectId: fullBuild.projectId,
+                    presentationFloor: fullBuild.presentationFloor,
+                    playabilityFloor: fullBuild.playabilityFloor,
+                    createdAt: fullBuild.createdAt,
+                  };
                 }
                 if (compiled.project !== undefined) {
                   operationBody.project = compiled.project;

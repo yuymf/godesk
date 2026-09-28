@@ -37,6 +37,49 @@ describe("public URLs", () => {
     expect(new URL(session.replayUrl).pathname).toBe("/chatgpt-plugin/replay/replay_1");
   });
 
+  it("adds playableUrl for generate-rule-system when slim result.build is present", async () => {
+    const generated = await publicJob(
+      {
+        id: "job_gen_build",
+        projectId: "project_1",
+        kind: "generate-rule-system",
+        result: {
+          studioPath: "/studio/project_1",
+          build: {
+            id: "build_slim",
+            projectId: "project_1",
+            presentationFloor: { status: "passed" },
+            playabilityFloor: { status: "passed" },
+            createdAt: "2026-09-28T00:00:00.000Z",
+          },
+        },
+      },
+      "https://godesk.test",
+      "creator-a",
+      "share-secret",
+    );
+    expect(generated.result).toMatchObject({
+      studioUrl: "https://godesk.test/studio/project_1",
+      build: {
+        id: "build_slim",
+        projectId: "project_1",
+        presentationFloor: { status: "passed" },
+        playabilityFloor: { status: "passed" },
+        createdAt: "2026-09-28T00:00:00.000Z",
+        playableUrl: expect.any(String),
+      },
+    });
+    expect(generated.result).not.toHaveProperty("studioPath");
+    const playableUrl = (
+      generated.result as unknown as { build: { playableUrl: string } }
+    ).build.playableUrl;
+    expect(new URL(playableUrl).pathname).toBe("/play/build_slim");
+    expect(new URL(playableUrl).searchParams.get("share")).toBeTruthy();
+    expect(
+      (generated.result as unknown as { build: Record<string, unknown> }).build,
+    ).not.toHaveProperty("ruleSystem");
+  });
+
   it("converts generate and iterate job studioPath the same way", async () => {
     const generated = await publicJob(
       {
