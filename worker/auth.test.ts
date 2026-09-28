@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   authorizationMetadata,
+  protectedResourceMetadata,
   validateAccessClaims,
   validateTokenClaims,
 } from "./auth";
@@ -42,6 +43,41 @@ describe("OAuth token claim validation", () => {
   });
 });
 
+describe("OAuth protected resource metadata", () => {
+  it.each([
+    "/.well-known/oauth-protected-resource",
+    "/.well-known/oauth-protected-resource/chatgpt-plugin/mcp",
+  ])("advertises the Access team Managed OAuth AS for DCR at %s", async (path) => {
+    const teamOrigin = "https://test-team.cloudflareaccess.com";
+    const issuer = `${teamOrigin}/cdn-cgi/access/sso/oidc/test-client`;
+    const response = protectedResourceMetadata(
+      new Request(`https://godesk.test${path}`),
+      { GODESK_AUTH_ISSUER: issuer } as unknown as Env,
+    );
+    const metadata = await response.json<{ authorization_servers: string[] }>();
+
+    expect(metadata.authorization_servers).toEqual([teamOrigin]);
+    expect(metadata.authorization_servers[0]).not.toBe(issuer);
+    expect(metadata.authorization_servers[0]).not.toContain("/cdn-cgi/access/sso/oidc/");
+  });
+
+  it.each([
+    "https://test-team.cloudflareaccess.com",
+    "https://auth.example.test/tenant/",
+    "https://test-team.cloudflareaccess.com.example.test/tenant",
+    "",
+  ])("preserves other configured issuers or no issuer: %s", async (issuer) => {
+    const response = protectedResourceMetadata(
+      new Request("https://godesk.test/.well-known/oauth-protected-resource"),
+      { GODESK_AUTH_ISSUER: issuer } as unknown as Env,
+    );
+
+    expect(await response.json()).toMatchObject({
+      authorization_servers: issuer ? [issuer] : [],
+    });
+  });
+});
+
 describe("OAuth discovery", () => {
   function discoveryBody(
     issuer: string,
@@ -76,8 +112,8 @@ describe("OAuth discovery", () => {
     vi.unstubAllGlobals();
   });
 
-  it("accepts Access-style metadata that omits code_challenge_methods_supported", async () => {
-    const issuer = "https://access-omit-pkce.example.test";
+  it("keeps web discovery on SaaS OIDC and accepts omitted PKCE methods", async () => {
+    const issuer = "https://test-team.cloudflareaccess.com/cdn-cgi/access/sso/oidc/web-client";
     const fetchMock = vi.fn().mockResolvedValue(
       Response.json(discoveryBody(issuer)),
     );
@@ -89,6 +125,9 @@ describe("OAuth discovery", () => {
       issuer,
       authorization_endpoint: `${issuer}/authorize`,
     });
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${issuer}/.well-known/openid-configuration`,
+    );
     vi.unstubAllGlobals();
   });
 

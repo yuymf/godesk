@@ -288,12 +288,17 @@ export async function authorizeRequest(
 export function protectedResourceMetadata(request: Request, env: Env) {
   const url = new URL(request.url);
   const issuer = configuredIssuer(env);
+  const issuerUrl = issuer ? new URL(issuer) : null;
+  // MCP clients need the Access team Managed OAuth AS for DCR, not SaaS OIDC.
+  const authorizationServer = issuerUrl?.hostname.endsWith(".cloudflareaccess.com")
+    ? issuerUrl.origin
+    : issuer;
   const prefixed =
     url.pathname.endsWith("/chatgpt-plugin/mcp") ||
     isPublicMount(requestMount(request));
   return Response.json({
     resource: prefixed ? `${url.origin}/chatgpt-plugin/mcp` : `${url.origin}/mcp`,
-    authorization_servers: issuer ? [issuer] : [],
+    authorization_servers: authorizationServer ? [authorizationServer] : [],
     scopes_supported: [READ_SCOPE, WRITE_SCOPE],
     resource_documentation: `${url.origin}/chatgpt-plugin`,
     bearer_methods_supported: ["header"],
