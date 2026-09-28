@@ -153,7 +153,10 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     page,
     browser,
   }) => {
-    await page.goto("/chatgpt-plugin/new");
+    await page.goto("/chatgpt-plugin");
+    await expect(page.locator("code", { hasText: "/chatgpt-plugin/mcp" })).toBeVisible();
+    await page.getByRole("link", { name: "不用 Connector，直接做一局" }).click();
+    await expect(page).toHaveURL(/\/chatgpt-plugin\/new$/);
     const ideaRelay = page.locator("article").filter({ hasText: "灵感接力" });
     await ideaRelay.getByRole("button", { name: "先玩这一局" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 90_000 });
