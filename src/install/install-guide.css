@@ -194,3 +194,45 @@
     margin-right: -0.25rem;
   }
 }
+
+.install-secondary {
+  border-top: 1px solid rgb(28 38 34 / 8%);
+}
+
+.install-criteria {
+  max-width: 50rem;
+  margin: 0 0 1.1rem;
+  padding-left: 1.25rem;
+  color: #5a6b63;
+  line-height: 1.7;
+}
+
+.install-criteria li {
+  margin-bottom: 0.45rem;
+}
+
+.install-criteria code,
+.install-note code,
+.install-recovery code {
+  padding: 0.15rem 0.35rem;
+  color: #0a4d37;
+  background: #d4efe3;
+  border-radius: 0.2rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.83em;
+}
+
+.install-inline-copy {
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  color: #0f6b4c;
+  background: #fff;
+  border: 1px solid rgb(15 107 76 / 35%);
+  border-radius: 10px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.install-inline-copy:hover {
+  background: #d4efe3;
+}

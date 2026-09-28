@@ -13,6 +13,8 @@ immutable Build, Studio embedded Shared Session, and a stable Playtest Link
 exist to make that output real. A themed score-race stand-in is not delivery.
 A Finding is optional.
 
+**First deliverable to the user must be a `sessionUrl` (with `share=`) or a Playtest Link — never only a `playableUrl` or Studio URL.**
+
 ## Kernel selection
 
 Use the **Executable Kernel choice** table in `$godesk-plugin-basics` as the
