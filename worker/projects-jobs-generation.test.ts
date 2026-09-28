@@ -404,46 +404,49 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
       status: "succeeded",
       result: {
         generationMode: "deterministic-rule-system-materialization",
-        ruleSystem: {
-          participants: { min: 2, max: 6, default: 3 },
-          playSurface: { kind: "conversation", regions: [] },
-          runtimeSupport: { status: "executable", kernel: { type: "conversation-relay-v1" } },
-        },
-        generationPlan: {
-          status: "approved",
-          proposedRuntime: {
-            op: "configure_conversation_relay",
-            config: {
-              maxTurns: 18,
-              actions: expect.arrayContaining([
-                expect.objectContaining({ label: expect.any(String) }),
-              ]),
-            },
-          },
-        },
         build: {
           presentationFloor: { status: "passed" },
           playabilityFloor: { status: "passed" },
         },
+        session: {
+          buildId: expect.stringMatching(/^build_/),
+          projectId: created.project.id,
+        },
       },
     });
     const finished = await waitForJob(queued.id);
-    const proposed = (finished.result as {
-      generationPlan: { proposedRuntime: { config: { actions: Array<{ id: string; label: string; points?: number }> } } };
-      build: { id: string };
-    }).generationPlan.proposedRuntime;
-    expect(proposed.config.actions.every((action) => action.points === undefined)).toBe(true);
-    expect("victoryTarget" in proposed.config).toBe(false);
-    const slimBuild = (finished.result as {
+    const finishedResult = finished.result as {
       build: {
         id: string;
         projectId: string;
         createdAt: string;
         presentationFloor: { status: string };
         playabilityFloor: { status: string };
+        playableUrl?: string;
         ruleSystem?: unknown;
       };
-    }).build;
+      session: {
+        id: string;
+        buildId: string;
+        projectId: string;
+        seed: number;
+        replayId: string;
+        sessionUrl: string;
+        replayUrl: string;
+      };
+      ruleSystem?: unknown;
+      sources?: unknown;
+      generationPlan?: unknown;
+      project?: unknown;
+      changeset?: unknown;
+      warnings: string[];
+    };
+    expect(finishedResult).not.toHaveProperty("ruleSystem");
+    expect(finishedResult).not.toHaveProperty("sources");
+    expect(finishedResult).not.toHaveProperty("generationPlan");
+    expect(finishedResult).not.toHaveProperty("project");
+    expect(finishedResult).not.toHaveProperty("changeset");
+    const slimBuild = finishedResult.build;
     expect(slimBuild.id).toMatch(/^build_/);
     expect(slimBuild.projectId).toBe(created.project.id);
     expect(slimBuild.createdAt).toMatch(/T/);
@@ -452,6 +455,42 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
     expect(slimBuild).not.toHaveProperty("ruleSystem");
     expect(slimBuild).not.toHaveProperty("sourceIds");
     expect(slimBuild).not.toHaveProperty("warnings");
+    expect(typeof slimBuild.playableUrl).toBe("string");
+    expect(new URL(slimBuild.playableUrl!).searchParams.get("share")).toBeTruthy();
+    expect(finishedResult.session.buildId).toBe(slimBuild.id);
+    expect(finishedResult.session.id).toMatch(/^room_/);
+    expect(new URL(finishedResult.session.sessionUrl).searchParams.get("share")).toBeTruthy();
+    expect(new URL(finishedResult.session.sessionUrl).pathname).toBe(
+      `/room/${finishedResult.session.id}`,
+    );
+    expect(finishedResult.warnings[0]).toMatch(/sessionUrl|Shared Session/i);
+    const planView = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}?view=generation-plan`,
+    ).then((response) => response.json<{
+      generationPlan: {
+        status: string;
+        proposedRuntime: { op: string; config: { actions: Array<{ points?: number }> } };
+      } | null;
+    }>());
+    expect(planView.generationPlan?.status).toBe("approved");
+    expect(planView.generationPlan?.proposedRuntime.op).toBe("configure_conversation_relay");
+    expect(
+      planView.generationPlan?.proposedRuntime.config.actions.every(
+        (action) => action.points === undefined,
+      ),
+    ).toBe(true);
+    const ruleSystem = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}?view=rule-system`,
+    ).then((response) => response.json<{
+      participants: { default: number };
+      playSurface: { kind: string };
+      runtimeSupport: { status: string; kernel?: { type: string } };
+    }>());
+    expect(ruleSystem).toMatchObject({
+      participants: { default: 3 },
+      playSurface: { kind: "conversation" },
+      runtimeSupport: { status: "executable", kernel: { type: "conversation-relay-v1" } },
+    });
   });
 
   it("preserves a natural-language player range in the generated project", async () => {

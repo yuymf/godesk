@@ -185,6 +185,27 @@ export async function publicJob<T extends JobLike>(
         ),
       };
     }
+    if (
+      job.kind === "generate-rule-system" &&
+      resultBody.session &&
+      typeof resultBody.session === "object" &&
+      typeof (resultBody.session as { id?: unknown }).id === "string" &&
+      typeof (resultBody.session as { buildId?: unknown }).buildId === "string" &&
+      typeof (resultBody.session as { replayId?: unknown }).replayId === "string" &&
+      creatorId &&
+      secret
+    ) {
+      resultBody = {
+        ...resultBody,
+        session: await publicSession(
+          resultBody.session as SessionLike,
+          origin,
+          creatorId,
+          secret,
+          mount,
+        ),
+      };
+    }
     return {
       ...job,
       result: publicMutation({
