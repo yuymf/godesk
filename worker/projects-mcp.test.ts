@@ -797,6 +797,11 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
         generationMode: string;
         project: { version: number };
         generationPlan: { status: string; proposedRuntime?: { op: string } };
+        build: {
+          id: string;
+          presentationFloor: { status: string };
+          playabilityFloor: { status: string };
+        };
         ruleSystem: {
           playSurface: { kind: string };
           participants: { default: number };
@@ -817,21 +822,15 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
           },
         },
         generationPlan: { status: "approved", proposedRuntime: { op: "configure_conversation_relay" } },
+        build: {
+          presentationFloor: { status: "passed" },
+          playabilityFloor: { status: "passed" },
+        },
       },
     });
-    const compile = await callMcpTool<{ id: string }>(43, "submit_job", {
-      kind: "compile-build",
-      projectId: created.project.id,
-      expectedVersion: tracked.result.project.version,
-      idempotencyKey: "mcp-idea-only-compile-001",
-    });
-    const compiled = await waitForJob(compile.id) as unknown as {
-      result: { build: { id: string; presentationFloor: { status: string }; playabilityFloor: { status: string } } };
-    };
-    expect(compiled.result.build.presentationFloor.status).toBe("passed");
-    expect(compiled.result.build.playabilityFloor.status).toBe("passed");
-    const session = await callMcpTool<{ sessionUrl: string }>(44, "create_shared_session", {
-      buildId: compiled.result.build.id,
+    expect(tracked.result.build.id).toMatch(/^build_/);
+    const session = await callMcpTool<{ sessionUrl: string }>(43, "create_shared_session", {
+      buildId: tracked.result.build.id,
       seed: 42,
       idempotencyKey: "mcp-idea-only-session-001",
     });

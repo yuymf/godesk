@@ -421,14 +421,20 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
             },
           },
         },
+        build: {
+          presentationFloor: { status: "passed" },
+          playabilityFloor: { status: "passed" },
+        },
       },
     });
     const finished = await waitForJob(queued.id);
     const proposed = (finished.result as {
       generationPlan: { proposedRuntime: { config: { actions: Array<{ id: string; label: string; points?: number }> } } };
+      build: { id: string };
     }).generationPlan.proposedRuntime;
     expect(proposed.config.actions.every((action) => action.points === undefined)).toBe(true);
     expect("victoryTarget" in proposed.config).toBe(false);
+    expect((finished.result as { build: { id: string } }).build.id).toMatch(/^build_/);
   });
 
   it("preserves a natural-language player range in the generated project", async () => {
