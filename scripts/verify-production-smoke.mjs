@@ -4,7 +4,7 @@ const origin = (process.env.GODESK_PUBLIC_URL ?? "https://godesk.yumengfan220.wo
 );
 
 const ACCESS_HINT =
-  "Cloudflare Access is wrapping the public plugin mount. Friends need /chatgpt-plugin/new, /chatgpt-plugin/api/*, /chatgpt-plugin/try/*, and /chatgpt-plugin/mcp open. In the Worker Access tab, keep the /chatgpt-plugin* bypass or add a Worker-level bypass (decision: bypass, include everyone).";
+  "Cloudflare Access is wrapping a public plugin path. Friends need /chatgpt-plugin/new, /chatgpt-plugin/api/*, and /chatgpt-plugin/try/* anonymously open. /chatgpt-plugin/mcp may stay Access-protected for the ChatGPT Managed OAuth path.";
 
 async function fetchPage(url, init = {}) {
   const deadline = Date.now() + 60_000;
@@ -134,13 +134,26 @@ if (api.status !== 200) {
 console.log("ok /chatgpt-plugin/api/projects 200");
 
 const mcp = await fetchPage(`${origin}/chatgpt-plugin/mcp`);
-requireOpen(mcp, "/chatgpt-plugin/mcp");
-if (mcp.status !== 401 || !mcp.authenticate.includes("oauth-protected-resource/chatgpt-plugin/mcp")) {
+// ChatGPT Managed OAuth expects Access on /chatgpt-plugin/mcp. Accept either the
+// Access edge challenge or the Worker OAuth PRM challenge (when Access is bypassed).
+const mcpAccessChallenge =
+  mcp.status === 401 &&
+  (mcp.authenticate.includes("cloudflare-access-protected-resource") ||
+    mcp.text.includes("cloudflare-access-protected-resource") ||
+    mcp.authenticate.includes("invalid_token"));
+const mcpWorkerChallenge =
+  mcp.status === 401 &&
+  mcp.authenticate.includes("oauth-protected-resource/chatgpt-plugin/mcp");
+if (!mcpAccessChallenge && !mcpWorkerChallenge) {
   throw new Error(
-    `${origin}/chatgpt-plugin/mcp: expected Worker OAuth challenge, got ${mcp.status} ${mcp.authenticate}`,
+    `${origin}/chatgpt-plugin/mcp: expected Access or Worker OAuth challenge, got ${mcp.status} ${mcp.authenticate}\n${mcp.text.slice(0, 300)}`,
   );
 }
-console.log("ok /chatgpt-plugin/mcp OAuth challenge");
+console.log(
+  mcpAccessChallenge
+    ? "ok /chatgpt-plugin/mcp Access challenge"
+    : "ok /chatgpt-plugin/mcp Worker OAuth challenge",
+);
 
 const created = await fetchPage(`${origin}/chatgpt-plugin/api/projects`, {
   method: "POST",
