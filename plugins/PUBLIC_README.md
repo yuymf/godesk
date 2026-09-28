@@ -43,12 +43,31 @@ Sessions, Replays, and Findings unchanged.
 
 ## Install
 
+### Primary path — ChatGPT Connector (cloud / ChatGPT)
+
+1. In paid ChatGPT, enable **Developer Mode**.
+2. Open **Apps / Connectors** and add a custom connector.
+3. Paste the MCP URL:
+   `https://godesk.yumengfan220.workers.dev/chatgpt-plugin/mcp`
+4. Complete Cloudflare Access login, then enable GoDesk in a **new** chat.
+
+**Success criteria:** the connector can call `list_projects`; for a minimal idea
+the agent reaches `create_shared_session` and shows the returned `sessionUrl`
+(must include `share=`). Optionally `publish_shared_session` / Playtest Link.
+Reading the installer page alone is **not** install success. A Build or Studio
+URL is **not** the invitation chain.
+
+### Secondary path — Codex Desktop (Mac / ChatGPT.app)
+
 Give Codex Desktop this sentence:
 
-> 阅读 https://godesk.yumengfan220.workers.dev/chatgpt-plugin，帮我安装 GoDesk；完成登录后，自动新建一个 Codex 任务，根据我的剧本或规则生成一款别人能立刻打开、立刻玩、还能联机的游戏。
+> 在 ChatGPT 打开 Developer Mode → Apps/Connectors，粘贴 GoDesk MCP URL https://godesk.yumengfan220.workers.dev/chatgpt-plugin/mcp，完成 Access 登录后，在新对话启用 GoDesk；用我的最小想法跑到 create_shared_session，向我出示含 share= 的 sessionUrl（或 Playtest Link）。
+
+Or install via the ChatGPT.app-bundled Codex CLI (`plugin marketplace add`
+→ `plugin add` → `mcp login godesk`). Same success criteria as above.
 
 The hosted page is the authoritative, version-specific installation contract.
-Friends who receive a Shared Session URL can join in a browser without Codex.
-After claiming a seat, they can also leave a rating and short comment on that
-same URL; the creator reads it back in the Shared Session and continues the
-same project.
+Friends who receive a Shared Session URL can join in a browser without Codex
+or a Connector. After claiming a seat, they can also leave a rating and short
+comment on that same URL; the creator reads it back in the Shared Session and
+continues the same project.

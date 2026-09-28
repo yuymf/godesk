@@ -117,10 +117,19 @@ test.describe("ChatCut charter: source in, playable game out", () => {
   test("install page stays a light ChatCut contract", async ({ page }) => {
     await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
     await page.goto("/chatgpt-plugin");
-    await expect(page.getByRole("heading", { name: "让 Codex 直接使用 GoDesk。" })).toBeVisible();
-    await expect(page.getByText("Codex Plugin · 0.2.0+codex.20260830")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "用 ChatGPT Connector 装上 GoDesk。" })).toBeVisible();
+    await expect(page.getByText("ChatGPT Connector · MCP · 0.2.0+codex.20260830")).toBeVisible();
     await expect(page.getByText("对标 ChatCut")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "装进 Codex，上传剧本或规则，得到别人能一起玩的游戏。" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: "Developer Mode → Connectors → 粘贴 MCP → Access 登录。",
+      }),
+    ).toBeVisible();
+    await expect(page.getByText("https://godesk.yumengfan220.workers.dev/chatgpt-plugin/mcp")).toBeVisible();
+    await expect(page.getByText("list_projects")).toBeVisible();
+    await expect(page.getByText("sessionUrl")).toBeVisible();
+    await expect(page.getByText("只读完本 installer 网页 ≠ 安装成功")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Mac / ChatGPT.app 内 Codex 的备选装法。" })).toBeVisible();
     await expect(page.locator(".install-steps")).toHaveCount(0);
     await expect(page.locator("body")).not.toContainText("不可变 Build");
     await expect(page.locator("body")).not.toContainText("五项状态全部成立");
@@ -135,7 +144,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await page.getByRole("button", { name: "复制这一句话" }).click();
     await expect(page.getByRole("button", { name: "已复制" })).toBeVisible();
 
-    await page.getByRole("link", { name: "不用 Codex，直接做一局" }).click();
+    await page.getByRole("link", { name: "不用 Connector，直接做一局" }).click();
     await expect(page).toHaveURL(/\/chatgpt-plugin\/new$/);
     await expect(page.getByRole("heading", { name: "今天要做一款什么游戏？" })).toBeVisible();
   });
