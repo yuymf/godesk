@@ -122,7 +122,7 @@ Public Worker vars (`wrangler.jsonc`):
 
 - `GODESK_AUTH_ISSUER`
 - `GODESK_AUTH_AUDIENCE`
-- `GODESK_ACCESS_AUD` — the MCP Access application's **AUD tag** from Zero Trust → Access → Applications → the protected application. Set the empty `wrangler.jsonc` var to that tag before deployment. The application ID `35ecc084-9dfa-48af-8e36-25c062c3e794` is only a candidate; verify the AUD tag on the application page. This is separate from the SaaS OIDC client ID in `GODESK_AUTH_AUDIENCE`.
+- `GODESK_ACCESS_AUD` — Access application **AUD tag** for *GoDesk Creator and MCP* (Zero Trust → Access → Applications → Overview). Production value is set in `wrangler.jsonc`. Do not use the application UUID (`35ecc084-9dfa-48af-8e36-25c062c3e794`) as the AUD. This is separate from the SaaS OIDC client ID in `GODESK_AUTH_AUDIENCE`.
 
 Required Worker secrets (`wrangler secret put <NAME>` before deploy; production fail-closes if missing). Localhost may omit `GODESK_SHARE_SECRET` and use the local default:
 
