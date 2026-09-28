@@ -795,8 +795,8 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
       status: string;
       result: {
         generationMode: string;
-        project: { version: number };
-        generationPlan: { status: string; proposedRuntime?: { op: string } };
+        warnings: string[];
+        studioUrl: string;
         build: {
           id: string;
           projectId: string;
@@ -807,32 +807,37 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
           ruleSystem?: unknown;
           sourceIds?: unknown;
         };
-        ruleSystem: {
-          playSurface: { kind: string };
-          participants: { default: number };
-          runtimeSupport: { status: string; kernel?: { type: string } };
+        session: {
+          id: string;
+          buildId: string;
+          sessionUrl: string;
+          replayUrl: string;
         };
+        ruleSystem?: unknown;
+        sources?: unknown;
+        generationPlan?: unknown;
+        project?: unknown;
+        changeset?: unknown;
       };
     }>(42, "track_job", { jobId: submitted.id });
     expect(tracked).toMatchObject({
       status: "succeeded",
       result: {
         generationMode: "deterministic-rule-system-materialization",
-        ruleSystem: {
-          playSurface: { kind: "conversation" },
-          participants: { default: 3 },
-          runtimeSupport: {
-            status: "executable",
-            kernel: { type: "conversation-relay-v1" },
-          },
-        },
-        generationPlan: { status: "approved", proposedRuntime: { op: "configure_conversation_relay" } },
         build: {
           presentationFloor: { status: "passed" },
           playabilityFloor: { status: "passed" },
         },
+        session: {
+          buildId: expect.stringMatching(/^build_/),
+        },
       },
     });
+    expect(tracked.result).not.toHaveProperty("ruleSystem");
+    expect(tracked.result).not.toHaveProperty("sources");
+    expect(tracked.result).not.toHaveProperty("generationPlan");
+    expect(tracked.result).not.toHaveProperty("project");
+    expect(tracked.result).not.toHaveProperty("changeset");
     expect(tracked.result.build.id).toMatch(/^build_/);
     expect(tracked.result.build).not.toHaveProperty("ruleSystem");
     expect(tracked.result.build).not.toHaveProperty("sourceIds");
@@ -841,7 +846,11 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
       presentationFloor: { status: "passed" },
       playabilityFloor: { status: "passed" },
     });
-    expect(typeof (tracked.result.build as { playableUrl?: string }).playableUrl).toBe("string");
+    expect(typeof tracked.result.build.playableUrl).toBe("string");
+    expect(tracked.result.session.buildId).toBe(tracked.result.build.id);
+    expect(new URL(tracked.result.session.sessionUrl).searchParams.get("share")).toBeTruthy();
+    expect(tracked.result.warnings[0]).toMatch(/sessionUrl|Shared Session/i);
+    // Standalone create_shared_session still works on the same build (different idempotency).
     const session = await callMcpTool<{ sessionUrl: string }>(43, "create_shared_session", {
       buildId: tracked.result.build.id,
       seed: 42,
@@ -1155,25 +1164,44 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
 
     const finished = await waitForJob(submitted.id);
     expect(finished.status).toBe("succeeded");
-    const result = finished.result as {
-      ruleSystem: {
-        participants: { default: number };
-        actions: Array<{ label: string }>;
-        runtimeSupport:
-          | { status: "draft" }
-          | { status: "executable"; kernel: { maxTurns: number; actions: Array<{ points: number }> } };
-      };
+    const slim = finished.result as {
+      build?: { id: string };
+      session?: { sessionUrl: string };
+      ruleSystem?: unknown;
+      generationPlan?: unknown;
     };
-    expect(result.ruleSystem.participants.default).toBe(3);
-    expect(result.ruleSystem.actions.map((action) => action.label)).toEqual([
+    expect(slim).not.toHaveProperty("ruleSystem");
+    expect(slim).not.toHaveProperty("generationPlan");
+    expect(slim.build?.id).toMatch(/^build_/);
+    expect(new URL(slim.session!.sessionUrl).searchParams.get("share")).toBeTruthy();
+    const ruleSystem = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}?view=rule-system`,
+    ).then((response) => response.json<{
+      participants: { default: number };
+      actions: Array<{ label: string }>;
+      runtimeSupport: { status: string; kernel?: { type: string } };
+    }>());
+    expect(ruleSystem.participants.default).toBe(3);
+    expect(ruleSystem.actions.map((action) => action.label)).toEqual([
       "扩展创意",
       "加入约束",
     ]);
-    expect(result.ruleSystem.runtimeSupport).toMatchObject({
+    expect(ruleSystem.runtimeSupport).toMatchObject({
       status: "executable",
       kernel: { type: "conversation-relay-v1" },
     });
-    expect((finished.result as { generationPlan: unknown }).generationPlan).toMatchObject({
+    const planView = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}?view=generation-plan`,
+    ).then((response) => response.json<{
+      generationPlan: {
+        status: string;
+        proposedRuntime: {
+          op: string;
+          config: { maxTurns: number; actions: Array<Record<string, unknown>>; victoryTarget?: number };
+        };
+      } | null;
+    }>());
+    expect(planView.generationPlan).toMatchObject({
       status: "approved",
       proposedRuntime: {
         op: "configure_conversation_relay",
@@ -1186,9 +1214,7 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
         },
       },
     });
-    const proposed = (finished.result as {
-      generationPlan: { proposedRuntime: { config: { actions: Array<Record<string, unknown>>; victoryTarget?: number } } };
-    }).generationPlan.proposedRuntime.config;
+    const proposed = planView.generationPlan!.proposedRuntime.config;
     expect(proposed.actions.every((action) => !("points" in action))).toBe(true);
     expect(proposed.victoryTarget).toBeUndefined();
   });

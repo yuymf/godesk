@@ -138,6 +138,8 @@ export class CreatorProjects extends DurableObject<Env> {
         this.compileProjectBuild(projectId, input),
       createBuildPlaytest: (buildId, input) =>
         this.createBuildPlaytest(buildId, input),
+      createBuildSession: (buildId, input) =>
+        this.createBuildSession(buildId, input),
     }, jobId, submittedInput);
   }
 
@@ -654,6 +656,93 @@ export class CreatorProjects extends DurableObject<Env> {
           [idempotencyKey]: playtest,
         });
         return { status: 201, value: playtest };
+      });
+      return json(outcome.value, outcome.status);
+  }
+
+
+
+  async createBuildSession(
+    buildId: string,
+    input: { seed: number; idempotencyKey: string; hypothesisId?: string },
+  ) {
+      const idempotencyKey =
+        `session:${buildId}:${input.idempotencyKey}`;
+      const outcome = await this.ctx.storage.transaction(async (transaction) => {
+        const existing = await transaction.get<StoredSharedSession>(idempotencyKey);
+        if (existing) return { status: 201, value: existing };
+        const storedBuild = await transaction.get<StoredPlayableBuild>(
+          `build:${buildId}`,
+        );
+        const build = storedBuild ? normalizedBuild(storedBuild) : undefined;
+        if (!build) {
+          return { status: 404, value: { error: "build_not_found" } };
+        }
+        const refusal = shareGateRefusal(build);
+        if (refusal) {
+          return {
+            status: 422,
+            value: refusal,
+          };
+        }
+        const projectKey = `${PROJECT_PREFIX}${build.projectId}`;
+        const storedProject = await transaction.get<ProjectRecord>(projectKey);
+        if (!storedProject) {
+          return { status: 404, value: { error: "project_not_found" } };
+        }
+        const record = normalizedProjectRecord(storedProject);
+        const hypothesis = input.hypothesisId
+          ? record.hypotheses.find(
+            (candidate) => candidate.id === input.hypothesisId,
+          )
+          : undefined;
+        if (input.hypothesisId && !hypothesis) {
+          return { status: 404, value: { error: "hypothesis_not_found" } };
+        }
+        const now = new Date().toISOString();
+        const replayId = `replay_${crypto.randomUUID()}`;
+        const state = initialSessionState(
+          build.ruleSystem,
+          Number(input.seed),
+        );
+        const room: StoredSharedSession = {
+          id: `room_${crypto.randomUUID()}`,
+          projectId: build.projectId,
+          buildId: build.id,
+          seed: Number(input.seed),
+          state,
+          seats: [],
+          acceptedActions: [],
+          feedback: [],
+          experiment: hypothesis
+            ? {
+                hypothesisId: hypothesis.id,
+                question: hypothesis.question,
+                successSignal: hypothesis.successSignal,
+              }
+            : null,
+          replayId,
+          createdAt: now,
+        };
+        const replay: StoredReplay = {
+          id: replayId,
+          projectId: build.projectId,
+          buildId: build.id,
+          seed: Number(input.seed),
+          evidenceType: "session-action-log",
+          initialState: state,
+          acceptedActions: [],
+          finalState: state,
+          createdAt: now,
+        };
+        record.sessions.push(room);
+        await transaction.put({
+          [projectKey]: record,
+          [`session:${room.id}`]: room,
+          [`replay:${replay.id}`]: replay,
+          [idempotencyKey]: room,
+        });
+        return { status: 201, value: room };
       });
       return json(outcome.value, outcome.status);
   }
@@ -1466,85 +1555,13 @@ export class CreatorProjects extends DurableObject<Env> {
       ) {
         return error("Shared Session 请求需要整数 seed 和幂等键。", 400);
       }
-      const idempotencyKey =
-        `session:${roomCreateMatch[1]}:${input.idempotencyKey}`;
-      const outcome = await this.ctx.storage.transaction(async (transaction) => {
-        const existing = await transaction.get<StoredSharedSession>(idempotencyKey);
-        if (existing) return { status: 201, value: existing };
-        const storedBuild = await transaction.get<StoredPlayableBuild>(
-          `build:${roomCreateMatch[1]}`,
-        );
-        const build = storedBuild ? normalizedBuild(storedBuild) : undefined;
-        if (!build) {
-          return { status: 404, value: { error: "build_not_found" } };
-        }
-        const refusal = shareGateRefusal(build);
-        if (refusal) {
-          return {
-            status: 422,
-            value: refusal,
-          };
-        }
-        const projectKey = `${PROJECT_PREFIX}${build.projectId}`;
-        const storedProject = await transaction.get<ProjectRecord>(projectKey);
-        if (!storedProject) {
-          return { status: 404, value: { error: "project_not_found" } };
-        }
-        const record = normalizedProjectRecord(storedProject);
-        const hypothesis = input.hypothesisId
-          ? record.hypotheses.find(
-            (candidate) => candidate.id === input.hypothesisId,
-          )
-          : undefined;
-        if (input.hypothesisId && !hypothesis) {
-          return { status: 404, value: { error: "hypothesis_not_found" } };
-        }
-        const now = new Date().toISOString();
-        const replayId = `replay_${crypto.randomUUID()}`;
-        const state = initialSessionState(
-          build.ruleSystem,
-          Number(input.seed),
-        );
-        const room: StoredSharedSession = {
-          id: `room_${crypto.randomUUID()}`,
-          projectId: build.projectId,
-          buildId: build.id,
-          seed: Number(input.seed),
-          state,
-          seats: [],
-          acceptedActions: [],
-          feedback: [],
-          experiment: hypothesis
-            ? {
-                hypothesisId: hypothesis.id,
-                question: hypothesis.question,
-                successSignal: hypothesis.successSignal,
-              }
-            : null,
-          replayId,
-          createdAt: now,
-        };
-        const replay: StoredReplay = {
-          id: replayId,
-          projectId: build.projectId,
-          buildId: build.id,
-          seed: Number(input.seed),
-          evidenceType: "session-action-log",
-          initialState: state,
-          acceptedActions: [],
-          finalState: state,
-          createdAt: now,
-        };
-        record.sessions.push(room);
-        await transaction.put({
-          [projectKey]: record,
-          [`session:${room.id}`]: room,
-          [`replay:${replay.id}`]: replay,
-          [idempotencyKey]: room,
-        });
-        return { status: 201, value: room };
+      return this.createBuildSession(roomCreateMatch[1], {
+        seed: Number(input.seed),
+        idempotencyKey: input.idempotencyKey,
+        ...(typeof input.hypothesisId === "string"
+          ? { hypothesisId: input.hypothesisId }
+          : {}),
       });
-      return json(outcome.value, outcome.status);
     }
 
     const roomSeatMatch = url.pathname.match(/^\/sessions\/([^/]+)\/seats$/);

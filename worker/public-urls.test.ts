@@ -80,6 +80,59 @@ describe("public URLs", () => {
     ).not.toHaveProperty("ruleSystem");
   });
 
+  it("publicizes slim generate result.session with share= sessionUrl", async () => {
+    const generated = await publicJob(
+      {
+        id: "job_gen_session",
+        projectId: "project_1",
+        kind: "generate-rule-system",
+        result: {
+          generationMode: "deterministic-rule-system-materialization",
+          warnings: ["ready"],
+          studioPath: "/studio/project_1",
+          build: {
+            id: "build_slim",
+            projectId: "project_1",
+            presentationFloor: { status: "passed" },
+            playabilityFloor: { status: "passed" },
+            createdAt: "2026-09-28T00:00:00.000Z",
+          },
+          session: {
+            id: "room_auto",
+            projectId: "project_1",
+            buildId: "build_slim",
+            seed: 42,
+            replayId: "replay_auto",
+            createdAt: "2026-09-28T00:00:01.000Z",
+            seats: [],
+          },
+        },
+      },
+      "https://godesk.test",
+      "creator-a",
+      "share-secret",
+    );
+    const result = generated.result as unknown as {
+      session: { sessionUrl: string; replayUrl: string; id: string };
+      build: { playableUrl: string };
+      ruleSystem?: unknown;
+      sources?: unknown;
+      generationPlan?: unknown;
+      project?: unknown;
+      changeset?: unknown;
+    };
+    expect(result.session.id).toBe("room_auto");
+    expect(new URL(result.session.sessionUrl).pathname).toBe("/room/room_auto");
+    expect(new URL(result.session.sessionUrl).searchParams.get("share")).toBeTruthy();
+    expect(new URL(result.session.replayUrl).pathname).toBe("/replay/replay_auto");
+    expect(new URL(result.build.playableUrl).searchParams.get("share")).toBeTruthy();
+    expect(result).not.toHaveProperty("ruleSystem");
+    expect(result).not.toHaveProperty("sources");
+    expect(result).not.toHaveProperty("generationPlan");
+    expect(result).not.toHaveProperty("project");
+    expect(result).not.toHaveProperty("changeset");
+  });
+
   it("converts generate and iterate job studioPath the same way", async () => {
     const generated = await publicJob(
       {

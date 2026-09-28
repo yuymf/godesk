@@ -73,6 +73,42 @@ export interface CreatorJobHost {
     buildId: string,
     input: { seed: number; idempotencyKey: string },
   ): Promise<Response>;
+  createBuildSession(
+    buildId: string,
+    input: { seed: number; idempotencyKey: string; hypothesisId?: string },
+  ): Promise<Response>;
+}
+
+
+/** Deterministic positive seed from a job idempotency key (Shared Session auto-handoff). */
+export function deterministicJobSeed(idempotencyKey: string): number {
+  let hash = 0;
+  for (let i = 0; i < idempotencyKey.length; i += 1) {
+    hash = (Math.imul(hash, 31) + idempotencyKey.charCodeAt(i)) | 0;
+  }
+  const seed = Math.abs(hash);
+  return seed === 0 ? 1 : seed;
+}
+
+/** MCP/Connect-facing generate result: drop bulky ruleSystem/sources/project blobs. */
+export function slimGenerateJobResult(
+  body: Record<string, unknown>,
+  projectId: string,
+): Record<string, unknown> {
+  const slim: Record<string, unknown> = {
+    generationMode: body.generationMode,
+    warnings: Array.isArray(body.warnings) ? body.warnings : [],
+    studioPath: typeof body.studioPath === "string"
+      ? body.studioPath
+      : `/studio/${projectId}`,
+  };
+  if (body.build && typeof body.build === "object") {
+    slim.build = body.build;
+  }
+  if (body.session && typeof body.session === "object") {
+    slim.session = body.session;
+  }
+  return slim;
 }
 
 export async function runCreatorJob(
@@ -744,6 +780,45 @@ export async function runCreatorJob(
                     playabilityFloor: fullBuild.playabilityFloor,
                     createdAt: fullBuild.createdAt,
                   };
+                  // Same path as POST /builds/:id/sessions and create_shared_session:
+                  // mint a real Shared Session so Connect gets sessionUrl with share=
+                  // without a fragile second round-trip.
+                  try {
+                    const sessionResponse = await host.createBuildSession(fullBuild.id, {
+                      seed: deterministicJobSeed(input.idempotencyKey),
+                      idempotencyKey: `job:${input.idempotencyKey}:session`,
+                    });
+                    if (sessionResponse.ok) {
+                      const room = await sessionResponse.json<{
+                        id: string;
+                        projectId: string;
+                        buildId: string;
+                        seed: number;
+                        replayId: string;
+                        createdAt: string;
+                      }>();
+                      operationBody.session = {
+                        id: room.id,
+                        projectId: room.projectId,
+                        buildId: room.buildId,
+                        seed: room.seed,
+                        replayId: room.replayId,
+                        createdAt: room.createdAt,
+                        seats: [],
+                      };
+                    } else {
+                      const sessionBody = await sessionResponse
+                        .json<Record<string, unknown>>()
+                        .catch(() => ({}) as Record<string, unknown>);
+                      autoCompileWarning = String(
+                        sessionBody.error ?? `session_http_${sessionResponse.status}`,
+                      );
+                    }
+                  } catch (sessionReason) {
+                    autoCompileWarning = sessionReason instanceof Error
+                      ? sessionReason.message
+                      : "session_create_failed";
+                  }
                 }
                 if (compiled.project !== undefined) {
                   operationBody.project = compiled.project;
@@ -772,8 +847,12 @@ export async function runCreatorJob(
       }
       operationBody.generationMode = "deterministic-rule-system-materialization";
       operationBody.warnings = [operationBody.generationPlan !== generationPlan
-        ? operationBody.build
-          ? "Generation Plan 已自动批准；Build 已就绪且通过分享门槛。下一步用该 buildId 调用 create_shared_session。"
+        ? operationBody.session
+          ? "Generation Plan 已自动批准；Build 与 Shared Session 已就绪。请粘贴 result.session.sessionUrl（含 share=）并停止；勿编造邀请文案，勿在终端成功后继续 poll。"
+          : operationBody.build
+          ? autoCompileWarning
+            ? `Generation Plan 已自动批准；Build 已就绪且通过分享门槛。自动创建 Shared Session 失败（${autoCompileWarning}）；可用 result.build.id 调用 create_shared_session。`
+            : "Generation Plan 已自动批准；Build 已就绪且通过分享门槛。下一步用该 buildId 调用 create_shared_session。"
           : autoCompileWarning
             ? `Generation Plan 已自动批准；conversation-relay-v1 可执行且通过分享门槛。自动编译 Build 失败（${autoCompileWarning}）；可稍后单独 submit_job compile-build。`
             : "Generation Plan 已自动批准；conversation-relay-v1 可执行且通过分享门槛。"
@@ -811,11 +890,20 @@ export async function runCreatorJob(
           ? "来源识别出超过 Kernel 上限的行动；为避免静默丢弃规则，Rule System 保持 draft，等待创作者明确缩减或配置 Executable Kernel。"
           : "规则结构来自确定性文本抽取；来源不足以证明可执行语义，Rule System 保持 draft，等待显式配置 Executable Kernel。"];
     }
+    // Auto-compile / Shared Session handoff path must stay MCP-slim (Connect
+    // stalls when track_job still ships full ruleSystem/project blobs). Pending
+    // generation without a build keeps the richer Studio-oriented result.
+    const succeededResult = operation.ok
+      ? input.kind === "generate-rule-system" &&
+          (operationBody.build !== undefined || operationBody.session !== undefined)
+        ? slimGenerateJobResult(operationBody, job.projectId)
+        : operationBody
+      : undefined;
     job = operation.ok
       ? {
           ...job,
           status: "succeeded",
-          result: operationBody,
+          result: succeededResult,
           updatedAt: new Date().toISOString(),
         }
       : {
