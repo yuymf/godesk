@@ -799,8 +799,13 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
         generationPlan: { status: string; proposedRuntime?: { op: string } };
         build: {
           id: string;
+          projectId: string;
+          createdAt: string;
           presentationFloor: { status: string };
           playabilityFloor: { status: string };
+          playableUrl?: string;
+          ruleSystem?: unknown;
+          sourceIds?: unknown;
         };
         ruleSystem: {
           playSurface: { kind: string };
@@ -829,6 +834,14 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
       },
     });
     expect(tracked.result.build.id).toMatch(/^build_/);
+    expect(tracked.result.build).not.toHaveProperty("ruleSystem");
+    expect(tracked.result.build).not.toHaveProperty("sourceIds");
+    expect(tracked.result.build).toMatchObject({
+      projectId: created.project.id,
+      presentationFloor: { status: "passed" },
+      playabilityFloor: { status: "passed" },
+    });
+    expect(typeof (tracked.result.build as { playableUrl?: string }).playableUrl).toBe("string");
     const session = await callMcpTool<{ sessionUrl: string }>(43, "create_shared_session", {
       buildId: tracked.result.build.id,
       seed: 42,

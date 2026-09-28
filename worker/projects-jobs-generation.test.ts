@@ -434,7 +434,24 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
     }).generationPlan.proposedRuntime;
     expect(proposed.config.actions.every((action) => action.points === undefined)).toBe(true);
     expect("victoryTarget" in proposed.config).toBe(false);
-    expect((finished.result as { build: { id: string } }).build.id).toMatch(/^build_/);
+    const slimBuild = (finished.result as {
+      build: {
+        id: string;
+        projectId: string;
+        createdAt: string;
+        presentationFloor: { status: string };
+        playabilityFloor: { status: string };
+        ruleSystem?: unknown;
+      };
+    }).build;
+    expect(slimBuild.id).toMatch(/^build_/);
+    expect(slimBuild.projectId).toBe(created.project.id);
+    expect(slimBuild.createdAt).toMatch(/T/);
+    expect(slimBuild.presentationFloor.status).toBe("passed");
+    expect(slimBuild.playabilityFloor.status).toBe("passed");
+    expect(slimBuild).not.toHaveProperty("ruleSystem");
+    expect(slimBuild).not.toHaveProperty("sourceIds");
+    expect(slimBuild).not.toHaveProperty("warnings");
   });
 
   it("preserves a natural-language player range in the generated project", async () => {

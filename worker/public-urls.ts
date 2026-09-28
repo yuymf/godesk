@@ -167,11 +167,29 @@ export async function publicJob<T extends JobLike>(
     };
   }
   if (job.kind === "generate-rule-system" || job.kind === "iterate-rule-system") {
+    let resultBody: Record<string, unknown> = { ...job.result };
+    if (
+      job.kind === "generate-rule-system" &&
+      resultBody.build &&
+      typeof resultBody.build === "object" &&
+      typeof (resultBody.build as { id?: unknown }).id === "string"
+    ) {
+      resultBody = {
+        ...resultBody,
+        build: await publicBuild(
+          resultBody.build as BuildLike,
+          origin,
+          creatorId,
+          secret,
+          mount,
+        ),
+      };
+    }
     return {
       ...job,
       result: publicMutation({
-        ...job.result,
-        studioPath: typeof job.result.studioPath === "string" ? job.result.studioPath : "/",
+        ...resultBody,
+        studioPath: typeof resultBody.studioPath === "string" ? resultBody.studioPath : "/",
       }, origin, mount),
     };
   }
