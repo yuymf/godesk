@@ -1,4 +1,4 @@
-import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
+import { createRemoteJWKSet, decodeJwt, jwtVerify, type JWTPayload } from "jose";
 import { isPublicMount, mountHref } from "../src/public-mount";
 import { bytesToBase64Url } from "./base64url";
 
@@ -25,6 +25,19 @@ const metadataByIssuer = new Map<string, Promise<AuthorizationMetadata>>();
 
 function configuredIssuer(env: Env) {
   return env.GODESK_AUTH_ISSUER.trim();
+}
+
+function accessTeamIssuer(env: Env) {
+  const issuer = configuredIssuer(env);
+  if (!issuer) return null;
+  try {
+    const url = new URL(issuer);
+    return url.protocol === "https:" && url.hostname.endsWith(".cloudflareaccess.com")
+      ? url.origin
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 function cookie(request: Request, name: string) {
@@ -228,27 +241,33 @@ export async function authorizeRequest(
   if (!issuer || !env.GODESK_AUTH_AUDIENCE) {
     return challenge(request, requiredScopes.join(" "), "OAuth is not configured.");
   }
+  const teamIssuer = accessTeamIssuer(env);
+  const accessAudience = env.GODESK_ACCESS_AUD?.trim();
+  async function verifyAccess(token: string) {
+    if (!teamIssuer || !accessAudience) throw new Error("Access is not configured.");
+    const certsUri = `${teamIssuer}/cdn-cgi/access/certs`;
+    let jwks = jwksByUri.get(certsUri);
+    if (!jwks) {
+      jwks = createRemoteJWKSet(new URL(certsUri));
+      jwksByUri.set(certsUri, jwks);
+    }
+    const verified = await jwtVerify(token, jwks, {
+      issuer: teamIssuer,
+      audience: accessAudience,
+    });
+    const identity = validateAccessClaims(verified.payload, {
+      issuer: teamIssuer,
+      audience: accessAudience,
+    });
+    if (requiredScopes.some((scope) => !identity.scopes.includes(scope))) {
+      throw new Error("insufficient_scope");
+    }
+    return identity;
+  }
   const accessAssertion = request.headers.get("cf-access-jwt-assertion");
   if (accessAssertion) {
     try {
-      const certsUri = `${issuer.replace(/\/+$/, "")}/cdn-cgi/access/certs`;
-      let jwks = jwksByUri.get(certsUri);
-      if (!jwks) {
-        jwks = createRemoteJWKSet(new URL(certsUri));
-        jwksByUri.set(certsUri, jwks);
-      }
-      const verified = await jwtVerify(accessAssertion, jwks, {
-        issuer,
-        audience: env.GODESK_AUTH_AUDIENCE,
-      });
-      const identity = validateAccessClaims(verified.payload, {
-        issuer,
-        audience: env.GODESK_AUTH_AUDIENCE,
-      });
-      if (requiredScopes.some((scope) => !identity.scopes.includes(scope))) {
-        return challenge(request, requiredScopes.join(" "), "insufficient_scope");
-      }
-      return identity;
+      return await verifyAccess(accessAssertion);
     } catch (reason) {
       const description =
         reason instanceof Error ? reason.message : "Access token validation failed.";
@@ -263,6 +282,14 @@ export async function authorizeRequest(
     return challenge(request, requiredScopes.join(" "), "Login is required.");
   }
   try {
+    // Managed OAuth normally sends an opaque Bearer token; Access resolves it
+    // into the assertion above. A directly forwarded Access JWT is also valid.
+    if (authorization?.startsWith("Bearer ")) {
+      const tokenIssuer = decodeJwt(token).iss;
+      if (teamIssuer && tokenIssuer === teamIssuer) {
+        return await verifyAccess(token);
+      }
+    }
     const metadata = await authorizationMetadata(env);
     let jwks = jwksByUri.get(metadata.jwks_uri);
     if (!jwks) {

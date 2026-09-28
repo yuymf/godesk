@@ -9,7 +9,9 @@
   "preview_urls": false,
   "vars": {
     "GODESK_AUTH_ISSUER": "https://godesk-yumengfan220.cloudflareaccess.com/cdn-cgi/access/sso/oidc/00a3b1a12321f401c42152caca8027e7ac0049578ca7680893d8c80aca60be59",
-    "GODESK_AUTH_AUDIENCE": "00a3b1a12321f401c42152caca8027e7ac0049578ca7680893d8c80aca60be59"
+    "GODESK_AUTH_AUDIENCE": "00a3b1a12321f401c42152caca8027e7ac0049578ca7680893d8c80aca60be59",
+    // Set this to the MCP Access application's AUD tag from Zero Trust > Access > Applications.
+    "GODESK_ACCESS_AUD": ""
   },
   "secrets": {
     "required": [
