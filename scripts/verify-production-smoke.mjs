@@ -103,9 +103,14 @@ if (install.text.includes("给规则，就开玩")) {
   );
 }
 const installSource = await withBundles(install);
-if (!installSource.includes("不用 Codex，直接做一局")) {
+if (!installSource.includes("用 ChatGPT Connector 装上 GoDesk。")) {
   throw new Error(
-    `${origin}/chatgpt-plugin: friends still cannot skip Codex.`,
+    `${origin}/chatgpt-plugin: expected ChatGPT Connector as the primary install heading.`,
+  );
+}
+if (!installSource.includes("不用 Connector，直接做一局")) {
+  throw new Error(
+    `${origin}/chatgpt-plugin: friends still cannot skip the Connector path.`,
   );
 }
 console.log("ok /chatgpt-plugin install");
