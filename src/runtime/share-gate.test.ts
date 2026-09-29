@@ -1,3 +1,4 @@
+import { executableSpecFixture } from "../creator/fixtures/game-spec";
 import { describe, expect, it } from "vitest";
 import { buildMeetsShareGate, shareGateRefusal } from "./share-gate";
 import type { ShareGateBuild } from "./share-gate";
@@ -16,6 +17,7 @@ function build(
       kernelType: "score-race-v1",
     },
     ruleSystem: {
+      ...executableSpecFixture(), generation: undefined, gameSpec: undefined,
       runtimeSupport: {
         status: "executable",
         unsupported: [],
@@ -53,7 +55,7 @@ describe("shareGate", () => {
       },
     }))).toMatchObject({ error: "playability_floor_unmet" });
     expect(shareGateRefusal(build({
-      ruleSystem: { runtimeSupport: { status: "draft", unsupported: [] } },
+      ruleSystem: { ...executableSpecFixture(), generation: undefined, gameSpec: undefined, runtimeSupport: { status: "draft", unsupported: [] } },
     }))).toEqual({ error: "runtime_not_executable" });
   });
 
@@ -113,7 +115,7 @@ describe("shareGate", () => {
     expect(floor.reason).toMatch(/决策密度|区域/);
     const gateBuild = build({
       playabilityFloor: floor,
-      ruleSystem: { runtimeSupport: ruleSystem.runtimeSupport },
+      ruleSystem,
     });
     expect(shareGateRefusal(gateBuild)).toMatchObject({
       error: "playability_floor_unmet",
@@ -121,4 +123,21 @@ describe("shareGate", () => {
     expect(buildMeetsShareGate(gateBuild)).toBe(false);
   });
 
+});
+
+describe("GameSpec share gate with passing presentation and playability", () => {
+  it("passes a current executable GameSpec", () => {
+    expect(shareGateRefusal(build({ ruleSystem: executableSpecFixture() }))).toBeNull();
+  });
+  it.each(["unknown-kernel", "schema", "generator", "metadata", "runtime", "content"])("refuses %s despite cached passing floors", (kind) => {
+    const rule = executableSpecFixture();
+    if (kind === "unknown-kernel") rule.gameSpec!.execution.kernelType = "unknown-v1";
+    if (kind === "schema") Object.assign(rule.gameSpec!, { schemaVersion: 99 });
+    if (kind === "generator") rule.gameSpec!.generation.generatorVersion = "obsolete";
+    if (kind === "metadata") rule.generation!.seed++;
+    if (kind === "runtime") rule.runtimeSupport = { status: "draft", unsupported: [] };
+    if (kind === "content") rule.actions[0].description = "Changed without saving";
+    expect(buildMeetsShareGate(build({ ruleSystem: rule }))).toBe(false);
+    expect(shareGateRefusal(build({ ruleSystem: rule }))).toMatchObject({ error: "playability_floor_unmet" });
+  });
 });

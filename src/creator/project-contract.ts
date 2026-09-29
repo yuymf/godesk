@@ -1,3 +1,5 @@
+import type { GameSpec, GenerationMetadata } from "./game-spec";
+
 export interface GameProject {
   id: string;
   name: string;
@@ -102,6 +104,9 @@ export interface GameEntity {
 }
 
 export interface RuleSystem {
+  /** Absent on legacy records; new generation persists a v1 contract. */
+  generation?: GenerationMetadata;
+  gameSpec?: GameSpec;
   id: string;
   version: number;
   restoredFromBuildId?: string;
@@ -424,6 +429,7 @@ export type ProjectChangeOperation =
       fields: Partial<
         Pick<
           RuleSystem,
+          | "generation"
           | "name"
           | "pitch"
           | "participants"

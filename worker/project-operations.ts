@@ -1,3 +1,4 @@
+import { generationMetadataSchema } from "../src/creator/game-spec";
 import {
   acceptIntent,
   executableRuntime,
@@ -369,6 +370,21 @@ export function configureDedicatedKernel(
   record.sources.push(runtimeSource);
   record.ruleSystem = {
     ...record.ruleSystem,
+    // Placement intents are derived from configured regions, not free-text extraction.
+    // Persist that adapter contract so GameSpec never needs an empty-actions exception.
+    ...(kernel.type === "worker-placement-v1" ? {
+      actions: [
+        ...record.ruleSystem.actions.filter((action) => !action.id.startsWith("place:")),
+        ...kernel.regions.map((region) => ({
+          id: `place:${region.id}`,
+          label: `放置到${region.name}`,
+          description: `派一名工人前往${region.name}，支付区域费用并执行该区域的收获或建造规则。`,
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        })),
+      ],
+    } : {}),
     runtimeSupport: {
       status: "executable",
       unsupported,
@@ -1362,6 +1378,9 @@ export function applyOperation(
 
   if (operation.op === "update_rule_system") {
     const fields = operation.fields;
+    if (fields?.generation !== undefined && !generationMetadataSchema.safeParse(fields.generation).success) {
+      throw new Error("invalid_rule_system");
+    }
     if (
       !fields ||
       typeof fields !== "object" ||
@@ -1568,6 +1587,7 @@ export function applyOperation(
       "改了人数、规则或行动后，需要再确认一次玩法才能继续开玩。";
     record.ruleSystem = {
       ...record.ruleSystem,
+      ...(fields.generation === undefined ? {} : { generation: structuredClone(fields.generation) }),
       ...(fields.name === undefined
         ? {}
         : { name: fields.name.trim().slice(0, 120) }),

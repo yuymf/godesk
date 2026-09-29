@@ -1,3 +1,4 @@
+import { generationMetadataSchema } from "../src/creator/game-spec";
 import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp";
 import { z } from "zod";
@@ -40,6 +41,9 @@ const boundImageSchema = z.object({
 });
 
 const ruleSystemSchema = z.object({
+  generation: generationMetadataSchema.optional(),
+  // Saved candidates may fail GameSpec validation; do not hide them on read.
+  gameSpec: z.record(z.string(), z.unknown()).optional(),
   id: z.string(),
   version: z.number().int(),
   restoredFromBuildId: z.string().optional(),
@@ -412,6 +416,12 @@ const slimGenerateSessionSchema = z.object({
 
 const generateJobResultSchema = z.object({
   generationMode: z.literal("deterministic-rule-system-materialization"),
+  artifactState: z.object({
+    status: z.enum(["built", "capability-gap", "awaiting-approval", "validation-failed", "build-failed"]),
+    ruleSystemId: z.string(),
+    ruleSystemVersion: z.number().int(),
+    issues: z.array(z.object({ path: z.string(), message: z.string() })),
+  }).optional(),
   warnings: z.array(z.string()),
   studioUrl: z.string(),
   build: slimGenerateBuildSchema.optional(),
@@ -480,6 +490,7 @@ const operationSchema = z.discriminatedUnion("op", [
     fields: z.object({
       name: z.string().min(1).max(120).optional(),
       pitch: z.string().max(2_000).optional(),
+      generation: generationMetadataSchema.optional(),
       participants: ruleSystemSchema.shape.participants.optional(),
       durationMinutes: z.number().int().min(5).max(720).optional(),
       rules: ruleSystemSchema.shape.rules.max(500).optional(),

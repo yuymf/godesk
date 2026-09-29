@@ -1,3 +1,4 @@
+import { GameSpecStatus } from "./GameSpecStatus";
 import { useEffect, useRef, useState } from "react";
 import {
   applyProjectChanges,
@@ -1143,6 +1144,7 @@ export function ProjectStudio({ projectId }: { projectId: string }) {
 
         <div className="studio-grid">
           <div className="studio-primary">
+          {ruleSystem && <GameSpecStatus ruleSystem={ruleSystem} awaitingApproval={Boolean(generationPlan?.status === "pending" && generationPlan.proposedRuntime)} />}
           {generationPlan && (
             <StudioGenerationPlanPanel
               approveGenerationPlan={approveGenerationPlan}

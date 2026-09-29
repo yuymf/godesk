@@ -79,6 +79,7 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
       (tool) => tool.name === "track_job",
     )?.outputSchema;
     expect(JSON.stringify(jobOutputSchema)).toContain("generationMode");
+    expect(JSON.stringify(jobOutputSchema)).toContain("artifactState");
     expect(JSON.stringify(jobOutputSchema)).not.toContain("previewUrl");
     expect(JSON.stringify(jobOutputSchema)).toContain("artifactUrl");
     const submitJobSchema = payload.result.tools.find(

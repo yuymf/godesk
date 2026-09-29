@@ -256,10 +256,10 @@ test.describe("ChatCut charter: source in, playable game out", () => {
       timeout: 30_000,
     });
     await expect(page.getByText("3–3 人")).toBeVisible();
-    await expect(page.locator(".generation-plan-panel")).not.toContainText("这局还做不到");
+    await expect(page.locator("#plan")).not.toContainText("这局还做不到");
     await expect(page.locator("body")).not.toContainText("Executable Kernel");
     await expect(page.locator("body")).not.toContainText("requires reconfiguration");
-    await expect(page.locator(".generation-plan-panel")).toContainText("指控");
+    await expect(page.locator("#plan")).toContainText("指控");
     await page.getByRole("button", { name: "确认玩法并开始试玩" }).click();
     await expect(page.getByRole("heading", { name: "现在就开玩" })).toBeVisible({
       timeout: 90_000,
@@ -703,7 +703,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.getByRole("heading", { name: "先看这一局怎么玩" })).toBeVisible({
       timeout: 30_000,
     });
-    await expect(page.locator(".generation-plan-panel")).not.toContainText("这局还做不到");
+    await expect(page.locator("#plan")).not.toContainText("这局还做不到");
     await page.getByRole("button", { name: "确认玩法并开始试玩" }).click();
     await expect(page.getByRole("heading", { name: "现在就开玩" })).toBeVisible({
       timeout: 90_000,
@@ -772,7 +772,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(replayBoard).toContainText("派工人前往");
     await expect(replayBoard.locator(".game-log")).toContainText(/建成\s*1\s*座建筑/);
     await expect(replayBoard.locator(".worker-placement-seats")).toContainText(/建筑\s*1/);
-    await expect(page.locator(".action-log")).toContainText(/place:region-\d+/);
+    await expect(page.locator(".action-log")).toContainText("座位 0 · 放置到工坊");
     await expect(page.locator(".score-grid")).toHaveCount(0);
   });
 
@@ -794,7 +794,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(unsupported).toBeVisible();
     await expect(unsupported.getByText("这局还做不到")).toBeVisible();
     await expect(unsupported).toContainText(/非计分手牌环|出牌计分|不会用出牌计分顶替/);
-    await expect(page.locator(".generation-plan-panel")).not.toContainText("先到目标分");
+    await expect(page.locator("#plan")).not.toContainText("先到目标分");
 
     const approve = page.getByRole("button", { name: "确认玩法并开始试玩" });
     await expect(approve).toBeDisabled();

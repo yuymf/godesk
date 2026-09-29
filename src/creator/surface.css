@@ -4101,7 +4101,8 @@ summary:focus-visible {
   line-height: 1.45;
 }
 
-.generation-plan-panel {
+.generation-plan-panel,
+.gamespec-status-panel {
   display: grid;
   gap: 1.25rem;
   margin-bottom: 1.5rem;
@@ -4434,7 +4435,8 @@ summary:focus-visible {
 }
 
 .creator-studio .generation-plan-panel,
-.creator-studio .generation-plan-panel.approved {
+.creator-studio .generation-plan-panel.approved,
+.creator-studio .gamespec-status-panel {
   background: var(--paper);
   border: 1px solid rgb(28 38 34 / 8%);
   box-shadow: 0 12px 32px rgb(28 38 34 / 6%);
@@ -5143,6 +5145,7 @@ summary:focus-visible {
   .build-workflow,
   .validation-workflow,
   .creator-studio .generation-plan-panel,
+  .creator-studio .gamespec-status-panel,
   .room-view .room-shell-header,
   .room-invitation-rich,
   .room-game-table,
