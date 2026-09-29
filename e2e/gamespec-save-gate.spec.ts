@@ -1,25 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { BASELINE_PROMPTS } from "../src/creator/fixtures/game-spec";
 
-// PR5 made Othello/disc-flipping playable; keep capability-gap e2e on still-unsupported baselines only.
-const UNSUPPORTED_BASELINE_PROMPTS = [BASELINE_PROMPTS[0]] as const;
-for (const prompt of UNSUPPORTED_BASELINE_PROMPTS) {
-  test(`unsupported baseline is saved and reopens with a capability gap: ${prompt}`, async ({ page }) => {
-    await page.goto("/chatgpt-plugin/new");
-    await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(prompt);
-    await page.getByRole("button", { name: "生成可玩版本" }).click();
-    await page.waitForURL(/\/chatgpt-plugin\/studio\//);
-    const saved = page.getByRole("region", { name: "已保存的游戏规则" });
-    await expect(saved).toContainText("草稿已保存，尚不能开局。");
-    await expect(saved).toContainText("能力缺口");
-    await expect(page.getByRole("button", { name: "新开一局" })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "独立打开这一局" })).toHaveCount(0);
-    await page.reload();
-    await expect(saved).toContainText("source-rules-v1");
-    await expect(saved).toContainText("能力缺口");
-    await expect(page.getByRole("button", { name: "新开一局" })).toHaveCount(0);
-  });
-}
+// PR5/PR6 closed Othello + Catan baseline capability gaps. Remaining e2e below
+// covers playable save/reopen and declared-mechanic mismatch refusal.
 
 test("saved validated source reopens, shares and accepts a real action", async ({ page, browser }) => {
   await page.goto("/chatgpt-plugin/new");

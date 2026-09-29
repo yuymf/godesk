@@ -81,3 +81,44 @@ export function executableOthelloSpecFixture(): RuleSystem {
   refreshGameSpec(rule);
   return rule;
 }
+
+
+/** Executable Catan / hex-settlement RuleSystem for PR6 thin bind tests. */
+export function executableCatanSpecFixture(): RuleSystem {
+  const rule: RuleSystem = {
+    id: "rule-system-catan-fixture", version: 1, name: "卡坦岛基础版", pitch: "Hex settlement",
+    generation: {
+      generatorVersion: GENERATOR_VERSION, rulesVersion: RULES_VERSION,
+      sourcePrompt: BASELINE_PROMPTS[0], assumptions: ["Basic Settlers beginner board"],
+      seed: 42, requestedMechanics: ["hex-settlement"],
+    },
+    participants: { min: 2, max: 4, default: 2, roles: [] }, durationMinutes: 45,
+    entities: [
+      { id: "settlement", name: "Settlement", kind: "token", sourceId: null, provenance: "source-anchored", confidence: 1 },
+      { id: "road", name: "Road", kind: "token", sourceId: null, provenance: "source-anchored", confidence: 1 },
+      { id: "city", name: "City", kind: "token", sourceId: null, provenance: "source-anchored", confidence: 1 },
+    ],
+    rules: [{ id: "build", text: "Build roads and settlements on a connected hex network", sourceId: null, provenance: "source-anchored", confidence: 1 }],
+    constraints: [], setup: ["Place two settlements and roads; second settlement collects resources"],
+    stages: [
+      { id: "setup", name: "Setup" }, { id: "roll", name: "Roll" }, { id: "discard", name: "Discard" },
+      { id: "robber", name: "Robber" }, { id: "main", name: "Main" }, { id: "ended", name: "Ended" },
+    ],
+    outcomes: [{ id: "vp", name: "First to 10 victory points wins" }],
+    actions: [
+      { id: "place_settlement", label: "Place settlement", description: "Build or place a settlement", sourceId: null, provenance: "source-anchored", confidence: 1 },
+      { id: "place_road", label: "Place road", description: "Build a road on an edge", sourceId: null, provenance: "source-anchored", confidence: 1 },
+      { id: "place_city", label: "Place city", description: "Upgrade a settlement to a city", sourceId: null, provenance: "source-anchored", confidence: 1 },
+      { id: "roll_dice", label: "Roll dice", description: "Roll production dice", sourceId: null, provenance: "source-anchored", confidence: 1 },
+      { id: "end_turn", label: "End turn", description: "End the current turn", sourceId: null, provenance: "source-anchored", confidence: 1 },
+    ],
+    playSurface: { kind: "table", layout: "hex-radius-2", regions: [{ id: "island", name: "Island", description: "Hex settlement board" }] },
+    presentation: { theme: "catan" },
+    runtimeSupport: {
+      status: "executable", unsupported: [],
+      kernel: { type: "hex-settlement-v1", playerCount: 2, victoryPointsToWin: 10 },
+    },
+  };
+  refreshGameSpec(rule);
+  return rule;
+}

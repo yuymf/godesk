@@ -344,6 +344,9 @@ export type RuntimeConfiguration =
     }
   | Extract<ProjectChangeOperation, { op: "configure_disc_flipping" }> & {
       op: "configure_disc_flipping";
+    }
+  | Extract<ProjectChangeOperation, { op: "configure_hex_settlement" }> & {
+      op: "configure_hex_settlement";
     };
 
 export function configureDedicatedKernel(
@@ -351,7 +354,7 @@ export function configureDedicatedKernel(
   op: string,
   kernel: Extract<
     Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
-    { type: "harbor-voyage-v1" | "worker-placement-v1" | "hidden-role-v1" | "hand-play-v1" | "conversation-relay-v1" | "disc-flipping-v1" }
+    { type: "harbor-voyage-v1" | "worker-placement-v1" | "hidden-role-v1" | "hand-play-v1" | "conversation-relay-v1" | "disc-flipping-v1" | "hex-settlement-v1" }
   >,
   unsupported: string[],
   config: unknown,
@@ -420,6 +423,90 @@ export function configureDedicatedKernel(
             id: "board",
             name: "棋盘",
             description: `${kernel.rows}×${kernel.cols} 方格翻子盘面`,
+          },
+        ],
+      },
+    } : kernel.type === "hex-settlement-v1" ? {
+      actions: [
+        {
+          id: "place_settlement",
+          label: "建造定居点",
+          description: "在合法顶点建造定居点。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+        {
+          id: "place_road",
+          label: "建造道路",
+          description: "在合法边上建造道路。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+        {
+          id: "place_city",
+          label: "升级城市",
+          description: "将定居点升级为城市。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+        {
+          id: "roll_dice",
+          label: "掷骰",
+          description: "掷骰进行资源产出或触发强盗。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+        {
+          id: "bank_trade",
+          label: "银行/港口交易",
+          description: "按港口或 4:1 与银行交易资源。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+        {
+          id: "player_trade",
+          label: "玩家交易",
+          description: "与其他玩家进行 1:1 资源交换。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+        {
+          id: "buy_dev",
+          label: "购买发展牌",
+          description: "支付羊麦矿购买一张发展牌。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+        {
+          id: "end_turn",
+          label: "结束回合",
+          description: "结束当前回合。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+      ],
+      participants: {
+        ...record.ruleSystem.participants,
+        min: 2,
+        max: 4,
+        default: kernel.playerCount,
+      },
+      playSurface: {
+        kind: "table" as const,
+        layout: "hex-radius-2",
+        regions: [
+          {
+            id: "island",
+            name: "岛屿",
+            description: "六角定居岛屿盘面",
           },
         ],
       },
@@ -500,6 +587,21 @@ export function configureRuntimeKernel(
         playerCount: configuration.config.playerCount,
         rows: configuration.config.rows,
         cols: configuration.config.cols,
+      },
+      configuration.config.unsupported?.map((item) => item.trim()) ?? [],
+      configuration.config,
+      affectedEntities,
+    );
+    return;
+  }
+  if (configuration.op === "configure_hex_settlement") {
+    configureDedicatedKernel(
+      record,
+      configuration.op,
+      {
+        type: "hex-settlement-v1",
+        playerCount: configuration.config.playerCount,
+        victoryPointsToWin: configuration.config.victoryPointsToWin,
       },
       configuration.config.unsupported?.map((item) => item.trim()) ?? [],
       configuration.config,
@@ -1350,6 +1452,18 @@ const RUNTIME_HANDLERS: {
       config.cols >= 4 &&
       config.cols <= 16 &&
       config.cols % 2 === 0 &&
+      validUnsupported(config.unsupported),
+  },
+  configure_hex_settlement: {
+    validate: (config) =>
+      Boolean(config) &&
+      typeof config === "object" &&
+      Number.isInteger(config.playerCount) &&
+      config.playerCount >= 2 &&
+      config.playerCount <= 4 &&
+      Number.isInteger(config.victoryPointsToWin) &&
+      config.victoryPointsToWin >= 5 &&
+      config.victoryPointsToWin <= 15 &&
       validUnsupported(config.unsupported),
   },
 };

@@ -260,6 +260,11 @@ export interface RuleSystem {
               playerCount: number;
               rows: number;
               cols: number;
+            }
+          | {
+              type: "hex-settlement-v1";
+              playerCount: number;
+              victoryPointsToWin: number;
             };
   };
 }
@@ -587,6 +592,14 @@ export type ProjectChangeOperation =
       };
     }
   | {
+      op: "configure_hex_settlement";
+      config: {
+        playerCount: number;
+        victoryPointsToWin: number;
+        unsupported?: string[];
+      };
+    }
+  | {
       op: "activate_rule_system";
       ruleSystemId: string;
     }
@@ -841,6 +854,41 @@ export interface SessionState {
     discCounts: [number, number];
     lastMove: { row: number; col: number; flipped: number } | null;
     lastAction: "place" | "pass" | null;
+  };
+  /** Present when the build kernel is hex-settlement-v1 (Catan). */
+  catan?: {
+    phase: string;
+    playerCount: number;
+    victoryPointsToWin: number;
+    tiles: Array<{
+      q: number;
+      r: number;
+      terrain: string;
+      number: number | null;
+    }>;
+    robberHex: string;
+    ports: Array<{ vertices: string[]; kind: string }>;
+    players: Array<{
+      resources: Record<string, number>;
+      settlements: string[];
+      cities: string[];
+      roads: string[];
+      devCards: string[];
+      knightsPlayed: number;
+      vpCards: number;
+      newDevCards: string[];
+    }>;
+    setupStep: number;
+    pendingRoadVertex: string | null;
+    lastDice: [number, number] | null;
+    discardQueue: number[];
+    discardRemaining: number;
+    devDeck: string[];
+    longestRoadOwner: number | null;
+    largestArmyOwner: number | null;
+    freeRoadsRemaining: number;
+    lastAction: string | null;
+    turnPlayer: number;
   };
 }
 

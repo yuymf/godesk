@@ -265,10 +265,13 @@ export async function runCreatorJob(
         sourceGenre === "conversation" &&
         generatedRuleSystem.actions.length > 0 &&
         generatedRuleSystem.actions.length <= 12;
-      // PR5 thin bind: Othello / disc-flipping prompts propose disc-flipping-v1.
+      // PR5/PR6 thin bind: Othello → disc-flipping-v1; Catan → hex-settlement-v1.
+      // Never silently substitute Othello for Catan (or the reverse).
       const requestedMechanics = inferRequestedMechanics(
         `${input.name ?? ""}\n${idea}\n${authoredMaterial}`,
       );
+      const hexSettlementRuntimeConfigured =
+        requestedMechanics.includes("hex-settlement");
       const discFlippingRuntimeConfigured =
         requestedMechanics.includes("disc-flipping") &&
         !requestedMechanics.includes("hex-settlement");
@@ -329,6 +332,7 @@ export async function runCreatorJob(
         generatedRuleSystem.actions.length > 0 &&
         generatedRuleSystem.actions.length <= 12;
       generationRuntimeConfigured =
+        hexSettlementRuntimeConfigured ||
         discFlippingRuntimeConfigured ||
         hiddenRoleRuntimeConfigured ||
         handPlayRuntimeConfigured ||
@@ -361,6 +365,17 @@ export async function runCreatorJob(
       // Refuse configure for non-score hand loops (no silent play-to-score / turn-taking fallthrough).
       const runtimeOperation = nonScoreHandLoopRefused || weakGenreScoreRaceRefused || multiActHiddenRoleRefused
         ? null
+        : hexSettlementRuntimeConfigured
+        ? {
+            op: "configure_hex_settlement" as const,
+            config: {
+              playerCount: 2,
+              victoryPointsToWin: 10,
+              unsupported: [
+                "hex-settlement-v1 executes beginner-board Catan basics (placement, production, robber/discard, build+connectivity, bank/port + simple player trade, development cards, VP win) on the public play-kernel; Phase 5 HUD / lobby thumbnail polish and full negotiated multi-resource trades remain out of scope.",
+              ],
+            },
+          }
         : discFlippingRuntimeConfigured
         ? {
             op: "configure_disc_flipping" as const,
@@ -898,7 +913,9 @@ export async function runCreatorJob(
             ? `Generation Plan 已自动批准；conversation-relay-v1 可执行且通过分享门槛。自动编译 Build 失败（${autoCompileWarning}）；可稍后单独 submit_job compile-build。`
             : "Generation Plan 已自动批准；conversation-relay-v1 可执行且通过分享门槛。"
         : generationRuntimeConfigured
-        ? proposedRuntime?.op === "configure_disc_flipping"
+        ? proposedRuntime?.op === "configure_hex_settlement"
+          ? "规则结构来自体裁识别；六角盘面、资源产出、道路连通建造、交易与发展牌将在批准 Generation Plan 后配置为 hex-settlement-v1（公共 play-kernel 适配器）。"
+          : proposedRuntime?.op === "configure_disc_flipping"
           ? "规则结构来自体裁识别；方格翻子、八方向翻转、强制跳过与终盘计分将在批准 Generation Plan 后配置为 disc-flipping-v1（公共 play-kernel 适配器）。"
           : proposedRuntime?.op === "configure_hidden_role"
           ? "规则结构来自体裁识别；秘密身份、公开发言与指控将在批准 Generation Plan 后配置为 hidden-role-v1。"

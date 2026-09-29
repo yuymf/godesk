@@ -53,6 +53,16 @@ import {
   type OthelloCell,
   type OthelloGenre,
 } from "../src/runtime/adapters/othello";
+import {
+  bindCatanFromRuntimeKernel,
+  catanAdapter,
+  catanToSessionFields,
+  pickCatanBotAction,
+  playActionFromCatanIntent,
+  type CatanGenre,
+  type CatanPlayer,
+  type DevCardKind
+} from "../src/runtime/adapters/catan";
 
 type ExecutableRuntime = Extract<
   RuleSystem["runtimeSupport"],
@@ -287,6 +297,25 @@ export function initialSessionState(
       status: fields.status,
       winnerSeat: fields.winnerSeat,
       othello: fields.othello,
+    };
+  }
+  if (runtime?.kernel.type === "hex-settlement-v1") {
+    const play = createInitialState(
+      catanAdapter,
+      bindCatanFromRuntimeKernel({
+        playerCount: runtime.kernel.playerCount,
+        victoryPointsToWin: runtime.kernel.victoryPointsToWin,
+      }),
+      _seed,
+    );
+    const fields = catanToSessionFields(play);
+    return {
+      turn: fields.turn,
+      activeSeat: fields.activeSeat,
+      scores: fields.scores,
+      status: fields.status,
+      winnerSeat: fields.winnerSeat,
+      catan: fields.catan,
     };
   }
   return {
@@ -818,6 +847,51 @@ export function acceptIntent(
     };
   }
 
+  if (runtime.kernel.type === "hex-settlement-v1") {
+    if (state.status !== "active" || !state.catan || intent.seat !== state.activeSeat) {
+      return null;
+    }
+    const kernelConfig = bindCatanFromRuntimeKernel({
+      playerCount: runtime.kernel.playerCount,
+      victoryPointsToWin: runtime.kernel.victoryPointsToWin,
+    });
+    const playState = {
+      seed,
+      sequence: state.turn,
+      phase: state.catan.phase,
+      activePlayerId: state.activeSeat,
+      playerCount: runtime.kernel.playerCount,
+      status: state.status,
+      winnerId: state.winnerSeat,
+      events: [] as const,
+      genre: sessionCatanToGenre(state.catan),
+    };
+    const result = applyAction(
+      catanAdapter,
+      playState,
+      playActionFromCatanIntent(intent.seat, intent.actionId, intent.payload),
+      kernelConfig,
+    );
+    if (!result.ok) return null;
+    const fields = catanToSessionFields(result.state);
+    return {
+      sequence,
+      intentId: intent.intentId,
+      seat: intent.seat,
+      actionId: intent.actionId,
+      points: 0,
+      payload: intent.payload,
+      state: {
+        turn: fields.turn,
+        activeSeat: fields.activeSeat,
+        scores: fields.scores,
+        status: fields.status,
+        winnerSeat: fields.winnerSeat,
+        catan: fields.catan,
+      },
+    };
+  }
+
   const raceKernel = runtime.kernel;
   const action = raceKernel.actions.find(
     (candidate) => candidate.id === intent.actionId,
@@ -1286,6 +1360,56 @@ export function runBotSimulation(
     };
   }
 
+  if (runtime.kernel.type === "hex-settlement-v1") {
+    const kernelConfig = bindCatanFromRuntimeKernel({
+      playerCount: runtime.kernel.playerCount,
+      victoryPointsToWin: runtime.kernel.victoryPointsToWin,
+    });
+    let guard = 0;
+    while (state.status === "active" && state.catan && guard < 8000) {
+      guard += 1;
+      const playState = {
+        seed,
+        sequence: state.turn,
+        phase: state.catan.phase,
+        activePlayerId: state.activeSeat,
+        playerCount: runtime.kernel.playerCount,
+        status: state.status,
+        winnerId: state.winnerSeat,
+        events: [] as const,
+        genre: sessionCatanToGenre(state.catan),
+      };
+      const bot = pickCatanBotAction(
+        playState,
+        kernelConfig,
+        seed,
+        state.turn + 1,
+      );
+      if (!bot) throw new Error("bot_action_unavailable");
+      const accepted = acceptIntent(
+        state,
+        runtime,
+        {
+          intentId: `bot_${acceptedActions.length + 1}`,
+          seat: state.activeSeat,
+          actionId: bot.type,
+          payload: bot.payload,
+        },
+        acceptedActions.length + 1,
+        seed,
+      );
+      if (!accepted) throw new Error("bot_action_rejected");
+      acceptedActions.push(accepted);
+      state = accepted.state;
+    }
+    return {
+      initialState,
+      acceptedActions,
+      finalState: state,
+      terminalStatus: "complete" as const,
+    };
+  }
+
   const raceKernel = runtime.kernel;
   while (state.status === "active") {
     random = nextRandom(random);
@@ -1342,3 +1466,45 @@ export function scopeSessionState(
       : undefined,
   };
 }
+
+function sessionCatanToGenre(catan: NonNullable<import("../src/creator/project-contract").SessionState["catan"]>): CatanGenre {
+  return {
+    playerCount: catan.playerCount,
+    victoryPointsToWin: catan.victoryPointsToWin,
+    tiles: catan.tiles.map((tile) => ({
+      q: tile.q,
+      r: tile.r,
+      terrain: tile.terrain as CatanGenre["tiles"][number]["terrain"],
+      number: tile.number,
+    })),
+    robberHex: catan.robberHex,
+    ports: catan.ports.map((port) => ({
+      vertices: [...port.vertices],
+      kind: port.kind as CatanGenre["ports"][number]["kind"],
+    })),
+    players: catan.players.map((player) => ({
+      resources: { ...(player.resources as CatanPlayer["resources"]) },
+      settlements: [...player.settlements],
+      cities: [...player.cities],
+      roads: [...player.roads],
+      devCards: [...player.devCards] as DevCardKind[],
+      knightsPlayed: player.knightsPlayed,
+      vpCards: player.vpCards,
+      newDevCards: [...player.newDevCards] as DevCardKind[],
+    })),
+    setupStep: catan.setupStep,
+    pendingRoadVertex: catan.pendingRoadVertex,
+    lastDice: catan.lastDice
+      ? ([...catan.lastDice] as [number, number])
+      : null,
+    discardQueue: [...catan.discardQueue],
+    discardRemaining: catan.discardRemaining,
+    devDeck: [...catan.devDeck] as DevCardKind[],
+    longestRoadOwner: catan.longestRoadOwner,
+    largestArmyOwner: catan.largestArmyOwner,
+    freeRoadsRemaining: catan.freeRoadsRemaining,
+    lastAction: catan.lastAction,
+    turnPlayer: catan.turnPlayer,
+  };
+}
+
