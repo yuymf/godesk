@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { RuleSystem } from "./project-contract";
 import {
+  isDiscFlipping,
   showsAcceptedActionPointChrome,
   usesConversationTranscriptSurface,
   usesScoreTrackSurface,
@@ -124,6 +125,44 @@ describe("usesScoreTrackSurface", () => {
       victoryTarget: null,
       victoryBuildings: null,
     }))).toBe(false);
+    expect(usesScoreTrackSurface(base({
+      type: "disc-flipping-v1",
+      playerCount: 2,
+      rows: 8,
+      cols: 8,
+    }))).toBe(false);
+  });
+});
+
+describe("isDiscFlipping", () => {
+  it("is true only for disc-flipping-v1", () => {
+    expect(isDiscFlipping(base({
+      type: "disc-flipping-v1",
+      playerCount: 2,
+      rows: 8,
+      cols: 8,
+    }))).toBe(true);
+    expect(isDiscFlipping(base({
+      type: "score-race-v1",
+      victoryTarget: 8,
+      maxTurns: 12,
+      actions: [{ id: "a", label: "得分", points: 2 }],
+    }))).toBe(false);
+    expect(isDiscFlipping(base({
+      type: "harbor-voyage-v1",
+      playerCount: 4,
+    }))).toBe(false);
+  });
+
+  it("keeps Othello off the score-track surface", () => {
+    const othello = base({
+      type: "disc-flipping-v1",
+      playerCount: 2,
+      rows: 8,
+      cols: 8,
+    });
+    expect(isDiscFlipping(othello)).toBe(true);
+    expect(usesScoreTrackSurface(othello)).toBe(false);
   });
 });
 

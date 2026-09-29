@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Brand } from "./CreatorBrand";
 import { createSharedSession, getBuilds, getSharedSessions, listProjects } from "./project-api";
 import type { GameProject, PlayableBuild, SharedSession } from "./project-contract";
+import { isDiscFlipping } from "./room-presentation";
+import { othelloStartingBoardThumbnailDataUrl } from "./othello-thumbnail";
 import { buildCanOpenSharedSession, href, latestStudioPlayTarget } from "./studio-utils";
 
 type LobbyGame = {
@@ -90,7 +92,13 @@ export function GameLobby() {
               const session = playable ? game.session : undefined;
               return (
                 <article className="lobby-card" key={game.project.id}>
-                  <div aria-hidden="true" className="lobby-card-mark">GD</div>
+                  {game.build && isDiscFlipping(game.build.ruleSystem) ? (
+                    <div aria-hidden="true" className="lobby-card-mark lobby-card-mark-othello">
+                      <img alt="" src={othelloStartingBoardThumbnailDataUrl()} />
+                    </div>
+                  ) : (
+                    <div aria-hidden="true" className="lobby-card-mark">GD</div>
+                  )}
                   <div className="lobby-card-body">
                     <h2>{game.project.name}</h2>
                     <p>{session ? "已有 Shared Session，可继续这一局。" : playable ? "可开始一局。" : "继续完成玩法后即可开局。"}</p>

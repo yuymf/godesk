@@ -143,6 +143,23 @@ export function isWorkerPlacement(ruleSystem: RuleSystem): boolean {
   return Boolean(workerPlacementKernel(ruleSystem));
 }
 
+export function discFlippingKernel(
+  ruleSystem: RuleSystem,
+): Extract<
+  Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
+  { type: "disc-flipping-v1" }
+> | null {
+  return ruleSystem.runtimeSupport.status === "executable" &&
+    ruleSystem.runtimeSupport.kernel.type === "disc-flipping-v1"
+    ? ruleSystem.runtimeSupport.kernel
+    : null;
+}
+
+/** Othello / Reversi grid — dedicated board HUD, never ScoreTrackRoom. */
+export function isDiscFlipping(ruleSystem: RuleSystem): boolean {
+  return Boolean(discFlippingKernel(ruleSystem));
+}
+
 /** Score-track family only — themed scoreboard UI must not stand in for other genres (ADR 0012). */
 export function usesScoreTrackSurface(ruleSystem: RuleSystem): boolean {
   return Boolean(
