@@ -44,6 +44,15 @@ import {
   turnTakingAdapter,
   turnTakingToSessionFields,
 } from "../src/runtime/adapters/turn-taking";
+import {
+  bindOthelloFromRuntimeKernel,
+  othelloAdapter,
+  othelloToSessionFields,
+  pickOthelloBotAction,
+  playActionFromOthelloIntent,
+  type OthelloCell,
+  type OthelloGenre,
+} from "../src/runtime/adapters/othello";
 
 type ExecutableRuntime = Extract<
   RuleSystem["runtimeSupport"],
@@ -258,6 +267,26 @@ export function initialSessionState(
         lastRoll: null,
         maxActions: runtime.kernel.maxActions,
       },
+    };
+  }
+  if (runtime?.kernel.type === "disc-flipping-v1") {
+    const play = createInitialState(
+      othelloAdapter,
+      bindOthelloFromRuntimeKernel({
+        playerCount: runtime.kernel.playerCount,
+        rows: runtime.kernel.rows,
+        cols: runtime.kernel.cols,
+      }),
+      _seed,
+    );
+    const fields = othelloToSessionFields(play);
+    return {
+      turn: fields.turn,
+      activeSeat: fields.activeSeat,
+      scores: fields.scores,
+      status: fields.status,
+      winnerSeat: fields.winnerSeat,
+      othello: fields.othello,
     };
   }
   return {
@@ -732,6 +761,63 @@ export function acceptIntent(
     };
   }
 
+
+  if (runtime.kernel.type === "disc-flipping-v1") {
+    if (state.status !== "active" || !state.othello || intent.seat !== state.activeSeat) {
+      return null;
+    }
+    const kernelConfig = bindOthelloFromRuntimeKernel({
+      playerCount: runtime.kernel.playerCount,
+      rows: runtime.kernel.rows,
+      cols: runtime.kernel.cols,
+    });
+    const playState = {
+      seed,
+      sequence: state.turn,
+      phase: "play" as const,
+      activePlayerId: state.activeSeat,
+      playerCount: runtime.kernel.playerCount,
+      status: state.status,
+      winnerId: state.winnerSeat,
+      events: [] as const,
+      genre: {
+        rows: state.othello.rows,
+        cols: state.othello.cols,
+        board: state.othello.board.map((row) => row.slice()) as OthelloCell[][],
+        consecutivePasses: state.othello.consecutivePasses,
+        discCounts: [...state.othello.discCounts] as [number, number],
+        lastMove: state.othello.lastMove
+          ? { ...state.othello.lastMove }
+          : null,
+        lastAction: state.othello.lastAction,
+      } satisfies OthelloGenre,
+    };
+    const result = applyAction(
+      othelloAdapter,
+      playState,
+      playActionFromOthelloIntent(intent.seat, intent.actionId, intent.payload),
+      kernelConfig,
+    );
+    if (!result.ok) return null;
+    const fields = othelloToSessionFields(result.state);
+    return {
+      sequence,
+      intentId: intent.intentId,
+      seat: intent.seat,
+      actionId: intent.actionId,
+      points: 0,
+      payload: intent.payload,
+      state: {
+        turn: fields.turn,
+        activeSeat: fields.activeSeat,
+        scores: fields.scores,
+        status: fields.status,
+        winnerSeat: fields.winnerSeat,
+        othello: fields.othello,
+      },
+    };
+  }
+
   const raceKernel = runtime.kernel;
   const action = raceKernel.actions.find(
     (candidate) => candidate.id === intent.actionId,
@@ -1137,6 +1223,66 @@ export function runBotSimulation(
       terminalStatus: state.winnerSeat === null
         ? ("turn-limit" as const)
         : ("complete" as const),
+    };
+  }
+
+
+  if (runtime.kernel.type === "disc-flipping-v1") {
+    const kernelConfig = bindOthelloFromRuntimeKernel({
+      playerCount: runtime.kernel.playerCount,
+      rows: runtime.kernel.rows,
+      cols: runtime.kernel.cols,
+    });
+    while (state.status === "active" && state.othello) {
+      const playState = {
+        seed,
+        sequence: state.turn,
+        phase: "play" as const,
+        activePlayerId: state.activeSeat,
+        playerCount: runtime.kernel.playerCount,
+        status: state.status,
+        winnerId: state.winnerSeat,
+        events: [] as const,
+        genre: {
+          rows: state.othello.rows,
+          cols: state.othello.cols,
+          board: state.othello.board.map((row) => row.slice()) as OthelloCell[][],
+          consecutivePasses: state.othello.consecutivePasses,
+          discCounts: [...state.othello.discCounts] as [number, number],
+          lastMove: state.othello.lastMove
+            ? { ...state.othello.lastMove }
+            : null,
+          lastAction: state.othello.lastAction,
+        } satisfies OthelloGenre,
+      };
+      const bot = pickOthelloBotAction(
+        playState,
+        kernelConfig,
+        seed,
+        state.turn + 1,
+      );
+      if (!bot) throw new Error("bot_action_unavailable");
+      const accepted = acceptIntent(
+        state,
+        runtime,
+        {
+          intentId: `bot_${acceptedActions.length + 1}`,
+          seat: state.activeSeat,
+          actionId: bot.type,
+          payload: bot.payload,
+        },
+        acceptedActions.length + 1,
+        seed,
+      );
+      if (!accepted) throw new Error("bot_action_rejected");
+      acceptedActions.push(accepted);
+      state = accepted.state;
+    }
+    return {
+      initialState,
+      acceptedActions,
+      finalState: state,
+      terminalStatus: "complete" as const,
     };
   }
 

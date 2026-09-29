@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { BASELINE_PROMPTS } from "../src/creator/fixtures/game-spec";
 
-for (const prompt of BASELINE_PROMPTS) {
+// PR5 made Othello/disc-flipping playable; keep capability-gap e2e on still-unsupported baselines only.
+const UNSUPPORTED_BASELINE_PROMPTS = [BASELINE_PROMPTS[0]] as const;
+for (const prompt of UNSUPPORTED_BASELINE_PROMPTS) {
   test(`unsupported baseline is saved and reopens with a capability gap: ${prompt}`, async ({ page }) => {
     await page.goto("/chatgpt-plugin/new");
     await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(prompt);

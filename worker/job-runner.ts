@@ -265,6 +265,13 @@ export async function runCreatorJob(
         sourceGenre === "conversation" &&
         generatedRuleSystem.actions.length > 0 &&
         generatedRuleSystem.actions.length <= 12;
+      // PR5 thin bind: Othello / disc-flipping prompts propose disc-flipping-v1.
+      const requestedMechanics = inferRequestedMechanics(
+        `${input.name ?? ""}\n${idea}\n${authoredMaterial}`,
+      );
+      const discFlippingRuntimeConfigured =
+        requestedMechanics.includes("disc-flipping") &&
+        !requestedMechanics.includes("hex-settlement");
       weakGenreScoreRaceRefused =
         sourceGenre === "generic" &&
         drawAndScoreRule === null &&
@@ -322,6 +329,7 @@ export async function runCreatorJob(
         generatedRuleSystem.actions.length > 0 &&
         generatedRuleSystem.actions.length <= 12;
       generationRuntimeConfigured =
+        discFlippingRuntimeConfigured ||
         hiddenRoleRuntimeConfigured ||
         handPlayRuntimeConfigured ||
         harborVoyageRuntimeConfigured ||
@@ -353,6 +361,18 @@ export async function runCreatorJob(
       // Refuse configure for non-score hand loops (no silent play-to-score / turn-taking fallthrough).
       const runtimeOperation = nonScoreHandLoopRefused || weakGenreScoreRaceRefused || multiActHiddenRoleRefused
         ? null
+        : discFlippingRuntimeConfigured
+        ? {
+            op: "configure_disc_flipping" as const,
+            config: {
+              playerCount: 2,
+              rows: 8,
+              cols: 8,
+              unsupported: [
+                "disc-flipping-v1 executes 8×8 (or configured) grid placement, eight-direction continuous flips, forced pass, and terminal disc-count scoring on the public play-kernel; Phase 5 HUD / lobby thumbnail polish remain out of scope.",
+              ],
+            },
+          }
         : hiddenRoleRuntimeConfigured
         ? {
             op: "configure_hidden_role" as const,
@@ -878,7 +898,9 @@ export async function runCreatorJob(
             ? `Generation Plan 已自动批准；conversation-relay-v1 可执行且通过分享门槛。自动编译 Build 失败（${autoCompileWarning}）；可稍后单独 submit_job compile-build。`
             : "Generation Plan 已自动批准；conversation-relay-v1 可执行且通过分享门槛。"
         : generationRuntimeConfigured
-        ? proposedRuntime?.op === "configure_hidden_role"
+        ? proposedRuntime?.op === "configure_disc_flipping"
+          ? "规则结构来自体裁识别；方格翻子、八方向翻转、强制跳过与终盘计分将在批准 Generation Plan 后配置为 disc-flipping-v1（公共 play-kernel 适配器）。"
+          : proposedRuntime?.op === "configure_hidden_role"
           ? "规则结构来自体裁识别；秘密身份、公开发言与指控将在批准 Generation Plan 后配置为 hidden-role-v1。"
           : proposedRuntime?.op === "configure_hand_play"
           ? "规则结构来自体裁识别；牌库、隐藏手牌与出牌计分将在批准 Generation Plan 后配置为 hand-play-v1。"

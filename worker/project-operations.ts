@@ -341,6 +341,9 @@ export type RuntimeConfiguration =
     }
   | Extract<ProjectChangeOperation, { op: "configure_conversation_relay" }> & {
       op: "configure_conversation_relay";
+    }
+  | Extract<ProjectChangeOperation, { op: "configure_disc_flipping" }> & {
+      op: "configure_disc_flipping";
     };
 
 export function configureDedicatedKernel(
@@ -348,7 +351,7 @@ export function configureDedicatedKernel(
   op: string,
   kernel: Extract<
     Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
-    { type: "harbor-voyage-v1" | "worker-placement-v1" | "hidden-role-v1" | "hand-play-v1" | "conversation-relay-v1" }
+    { type: "harbor-voyage-v1" | "worker-placement-v1" | "hidden-role-v1" | "hand-play-v1" | "conversation-relay-v1" | "disc-flipping-v1" }
   >,
   unsupported: string[],
   config: unknown,
@@ -384,6 +387,42 @@ export function configureDedicatedKernel(
           confidence: 1,
         })),
       ],
+    } : kernel.type === "disc-flipping-v1" ? {
+      actions: [
+        {
+          id: "place",
+          label: "落子",
+          description: "在合法格落子并沿八方向翻转对手棋子。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+        {
+          id: "pass",
+          label: "跳过",
+          description: "无合法落子时强制跳过回合。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+      ],
+      participants: {
+        ...record.ruleSystem.participants,
+        min: 2,
+        max: 2,
+        default: 2,
+      },
+      playSurface: {
+        kind: "table" as const,
+        layout: `grid-${kernel.rows}x${kernel.cols}`,
+        regions: [
+          {
+            id: "board",
+            name: "棋盘",
+            description: `${kernel.rows}×${kernel.cols} 方格翻子盘面`,
+          },
+        ],
+      },
     } : {}),
     runtimeSupport: {
       status: "executable",
@@ -445,6 +484,22 @@ export function configureRuntimeKernel(
           id: action.id,
           label: action.label,
         })),
+      },
+      configuration.config.unsupported?.map((item) => item.trim()) ?? [],
+      configuration.config,
+      affectedEntities,
+    );
+    return;
+  }
+  if (configuration.op === "configure_disc_flipping") {
+    configureDedicatedKernel(
+      record,
+      configuration.op,
+      {
+        type: "disc-flipping-v1",
+        playerCount: configuration.config.playerCount,
+        rows: configuration.config.rows,
+        cols: configuration.config.cols,
       },
       configuration.config.unsupported?.map((item) => item.trim()) ?? [],
       configuration.config,
@@ -1279,6 +1334,22 @@ const RUNTIME_HANDLERS: {
         typeof action.label !== "string" ||
         !action.label.trim()
       ) &&
+      validUnsupported(config.unsupported),
+  },
+  configure_disc_flipping: {
+    validate: (config) =>
+      Boolean(config) &&
+      typeof config === "object" &&
+      Number.isInteger(config.playerCount) &&
+      config.playerCount === 2 &&
+      Number.isInteger(config.rows) &&
+      config.rows >= 4 &&
+      config.rows <= 16 &&
+      config.rows % 2 === 0 &&
+      Number.isInteger(config.cols) &&
+      config.cols >= 4 &&
+      config.cols <= 16 &&
+      config.cols % 2 === 0 &&
       validUnsupported(config.unsupported),
   },
 };
