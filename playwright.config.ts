@@ -8,7 +8,7 @@ if (!Number.isFinite(nodeMajor) || nodeMajor < 22) {
   );
 }
 
-const port = 8799;
+const port = Number(process.env.GODESK_E2E_PORT ?? 8799);
 const origin = `http://127.0.0.1:${port}`;
 
 export default defineConfig({
@@ -32,7 +32,7 @@ export default defineConfig({
   ],
   webServer: {
     command:
-      "(test -f .dev.vars || cp .dev.vars.example .dev.vars) && pnpm build && pnpm exec wrangler dev --local --ip 127.0.0.1 --port 8799 --persist-to .wrangler/e2e",
+      `(test -f .dev.vars || cp .dev.vars.example .dev.vars) && pnpm build && pnpm exec wrangler dev --local --ip 127.0.0.1 --port ${port} --persist-to .wrangler/e2e`,
     url: origin,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,

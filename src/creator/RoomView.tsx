@@ -45,6 +45,7 @@ import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import {
   readShareToken,
   readStoredSeatClaim,
+  href,
   validationStudioHref,
   writeStoredSeatClaim,
 } from "./studio-utils";
@@ -52,6 +53,7 @@ import {
 export function RoomView({ sessionId }: { sessionId: string }) {
   const [room, setRoom] = useState<SharedSession>();
   const [build, setBuild] = useState<PlayableBuild>();
+  const [buildRetry, setBuildRetry] = useState(0);
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState("");
   const [feedbackRating, setFeedbackRating] = useState<0 | 1 | 2 | 3 | 4 | 5>(0);
@@ -62,16 +64,12 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   const [seat, setSeat] = useState<number | null>(
     () => readStoredSeatClaim(sessionId)?.seat ?? null,
   );
-  const [locale, setLocale] = useState<RoomLocale>(readRoomLocale);
+  const [locale] = useState<RoomLocale>(readRoomLocale);
   const shareToken = readShareToken();
   const [seatToken, setSeatToken] = useState(
     () => readStoredSeatClaim(sessionId)?.seatToken,
   );
   const copy = ROOM_COPY[locale];
-
-  useEffect(() => {
-    window.localStorage.setItem("godesk-room-locale", locale);
-  }, [locale]);
 
   useEffect(() => {
     let stopped = false;
@@ -140,7 +138,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
     getBuild(room.buildId, shareToken)
       .then(setBuild)
       .catch((reason: Error) => setError(reason.message));
-  }, [room?.buildId, shareToken]);
+  }, [room?.buildId, shareToken, buildRetry]);
 
   async function claimSeat(nextSeat: number) {
     if (!room) return;
@@ -290,8 +288,18 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       <main className="studio-status" id="main">
         <h1>{locale === "zh" ? "这个 Shared Session 打不开。" : "This Shared Session cannot be opened."}</h1>
         <p role="alert">{error}</p>
+        <button onClick={() => window.location.reload()} type="button">{locale === "zh" ? "重试" : "Retry"}</button>
+        <a href={href("/games")}>{locale === "zh" ? "返回我的游戏" : "My games"}</a>
       </main>
     );
+  }
+  if (error && room && !build) {
+    return <main className="studio-status" id="main">
+      <h1>{locale === "zh" ? "玩法暂时打不开" : "Game unavailable"}</h1>
+      <p role="alert">{error}</p>
+      <button onClick={() => { setError(""); setBuildRetry((value) => value + 1); }} type="button">{locale === "zh" ? "重试" : "Retry"}</button>
+      <a href={href("/games")}>{locale === "zh" ? "返回我的游戏" : "My games"}</a>
+    </main>;
   }
   if (!room || !build) {
     return (
@@ -387,24 +395,8 @@ export function RoomView({ sessionId }: { sessionId: string }) {
           </div>
         </div>
         <div className="room-header-actions">
-          <div aria-label={copy.language} className="room-locale-switch" role="group">
-            <button
-              aria-pressed={locale === "zh"}
-              className={locale === "zh" ? "is-selected" : ""}
-              onClick={() => setLocale("zh")}
-              type="button"
-            >
-              中文
-            </button>
-            <button
-              aria-pressed={locale === "en"}
-              className={locale === "en" ? "is-selected" : ""}
-              onClick={() => setLocale("en")}
-              type="button"
-            >
-              EN
-            </button>
-          </div>
+          <a href={href("/games")}>{locale === "zh" ? "我的游戏" : "My games"}</a>
+          <a href={href("/settings")}>{locale === "zh" ? "设置" : "Settings"}</a>
           <a
             href={validationStudioHref(room.projectId, {
               buildId: room.buildId,

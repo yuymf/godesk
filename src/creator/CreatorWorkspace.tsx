@@ -4,9 +4,13 @@ import { PlayablePreview } from "./PlayablePreview";
 import { ProjectStudio } from "./ProjectStudio";
 import { ReplayView } from "./ReplayView";
 import { RoomView } from "./RoomView";
+import { GameLobby } from "./GameLobby";
+import { CreatorSettings } from "./CreatorSettings";
 
 export function CreatorWorkspace() {
   const pathname = logicalPathname(window.location.pathname);
+  if (pathname === "/games") return <GameLobby />;
+  if (pathname === "/settings") return <CreatorSettings />;
   const studioMatch = pathname.match(/^\/studio\/([^/]+)$/);
   if (studioMatch) {
     return <ProjectStudio projectId={decodeURIComponent(studioMatch[1])} />;
