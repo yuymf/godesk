@@ -251,3 +251,56 @@ describe("all artifact entry points fail closed", () => {
     expect(await compiled.json()).toMatchObject({ error: "gamespec_invalid" });
   });
 });
+
+const UNSEEN_PROMPTS = [
+  "做一款线路网络桌游，玩家铺设路线连接城市",
+  "做一款卡牌区域控制游戏，玩家出牌争夺区域",
+  "随便做个桌游",
+] as const;
+
+describe("unseen prompts never silent-bind Catan or Othello", () => {
+  it.each(UNSEEN_PROMPTS)(
+    "generation for %s refuses hex-settlement-v1 and disc-flipping-v1",
+    async (idea) => {
+      const { project, job } = await generate(idea);
+      expect(job.status).toBe("succeeded");
+      const rule = await readRule(project.id);
+      expect(rule.generation?.requestedMechanics ?? []).not.toContain("hex-settlement");
+      expect(rule.generation?.requestedMechanics ?? []).not.toContain("disc-flipping");
+
+      const kernelType =
+        rule.runtimeSupport.status === "executable"
+          ? rule.runtimeSupport.kernel.type
+          : null;
+      expect(kernelType).not.toBe("hex-settlement-v1");
+      expect(kernelType).not.toBe("disc-flipping-v1");
+
+      const { generationPlan } = await (
+        await SELF.fetch(`${origin}/api/projects/${project.id}?view=generation-plan`)
+      ).json<{ generationPlan: GenerationPlan | null }>();
+      const proposedOp = generationPlan?.proposedRuntime?.op ?? null;
+      expect(proposedOp).not.toBe("configure_hex_settlement");
+      expect(proposedOp).not.toBe("configure_disc_flipping");
+
+      // Acceptable: explicit gap/refuse (draft, no proposed Catan/Othello runtime) OR a different correct kernel.
+      if (proposedOp === null) {
+        expect(rule.runtimeSupport.status).not.toBe("executable");
+      } else {
+        expect([
+          "configure_hand_play",
+          "configure_conversation_relay",
+          "configure_worker_placement",
+          "configure_harbor_voyage",
+          "configure_score_race",
+          "configure_shared_goal",
+          "configure_take_away",
+          "configure_roll_and_move",
+          "configure_draw_and_score",
+          "configure_push_your_luck",
+          "configure_turn_taking",
+          "configure_hidden_role",
+        ]).toContain(proposedOp);
+      }
+    },
+  );
+});

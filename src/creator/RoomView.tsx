@@ -76,7 +76,21 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   const copy = ROOM_COPY[locale];
 
   useEffect(() => {
+    const missingShareError = locale === "zh"
+      ? "缺少 share= 分享令牌，无法打开这个 Shared Session。"
+      : "Missing share= token. This Shared Session cannot be opened.";
+    const invalidShareError = locale === "zh"
+      ? "分享链接无效或已失效，无法打开这个 Shared Session。"
+      : "This share link is invalid or expired.";
+
+    // ADR 0010: guest room entry requires a signed share= capability.
+    if (!shareToken) {
+      setError(missingShareError);
+      return;
+    }
+
     let stopped = false;
+    let sawSnapshot = false;
     let socket: WebSocket | undefined;
     let reconnectTimer: number | undefined;
     const connectionError = locale === "zh"
@@ -102,6 +116,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
             message.type !== "session.snapshot" ||
             message.session?.id !== sessionId
           ) return;
+          sawSnapshot = true;
           const nextRoom = publicSharedSession(
             message.session,
             window.location.origin,
@@ -124,6 +139,12 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       });
       socket.addEventListener("close", () => {
         if (stopped) return;
+        // First-connect failure with a share token → treat as invalid/expired share
+        // rather than spinning a reconnect loop (worker returns 401 on bad share).
+        if (!sawSnapshot) {
+          setError(invalidShareError);
+          return;
+        }
         setError(connectionError);
         reconnectTimer = window.setTimeout(connect, 1_000);
       });

@@ -81,6 +81,7 @@ export default {
         302,
       );
     }
+    // Valid share= → public guest access (ADR 0010).
     if (
       validShare &&
       shareCapability &&
@@ -90,6 +91,13 @@ export default {
         return projectApi(routed, env, shareCapability.c, "oauth");
       }
       return env.ASSETS.fetch(request);
+    }
+    // Present but invalid/forged/mismatched share must not fall through to
+    // localIdentity (localhost would otherwise open any room). Missing share
+    // still allows authenticated creator access; RoomView refuses guest entry
+    // without share= on the client.
+    if (shareToken && !validShare && isPublicShareApi(routed)) {
+      return error("分享链接无效或已失效，无法打开这个 Shared Session。", 401);
     }
     if (
       url.pathname === "/.well-known/oauth-protected-resource" ||
