@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Brand } from "./CreatorBrand";
 import { createSharedSession, getBuilds, getSharedSessions, listProjects } from "./project-api";
 import type { GameProject, PlayableBuild, SharedSession } from "./project-contract";
-import { isDiscFlipping, isHexSettlement, isNetworkRoute } from "./room-presentation";
+import { isDiscFlipping, isHandPlay, isHexSettlement, isNetworkRoute } from "./room-presentation";
 import { othelloStartingBoardThumbnailDataUrl } from "./othello-thumbnail";
 import { catanStartingBoardThumbnailDataUrl } from "./catan-thumbnail";
 import { networkRouteStartingBoardThumbnailDataUrl } from "./network-route-thumbnail";
+import { handPlayStartingBoardThumbnailDataUrl } from "./hand-play-thumbnail";
 import { buildCanOpenSharedSession, href, latestStudioPlayTarget } from "./studio-utils";
 
 type LobbyGame = {
@@ -117,6 +118,14 @@ export function GameLobby() {
                       data-lobby-mark="network"
                     >
                       <img alt="" src={networkRouteStartingBoardThumbnailDataUrl()} />
+                    </div>
+                  ) : game.build && isHandPlay(game.build.ruleSystem) ? (
+                    <div
+                      aria-hidden="true"
+                      className="lobby-card-mark lobby-card-mark-card"
+                      data-lobby-mark="card"
+                    >
+                      <img alt="" src={handPlayStartingBoardThumbnailDataUrl()} />
                     </div>
                   ) : (
                     <div aria-hidden="true" className="lobby-card-mark">GD</div>

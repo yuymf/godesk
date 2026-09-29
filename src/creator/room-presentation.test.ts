@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { RuleSystem } from "./project-contract";
 import {
   isDiscFlipping,
+  isHandPlay,
   isHexSettlement,
   isNetworkRoute,
   showsAcceptedActionPointChrome,
@@ -274,5 +275,33 @@ describe("isNetworkRoute", () => {
     expect(isNetworkRoute(network)).toBe(true);
     expect(isDiscFlipping(network)).toBe(false);
     expect(isHexSettlement(network)).toBe(false);
+  });
+});
+
+describe("isHandPlay", () => {
+  it("detects hand-play-v1 only", () => {
+    expect(isHandPlay(base({
+      type: "disc-flipping-v1",
+      playerCount: 2,
+      rows: 8,
+      cols: 8,
+    }))).toBe(false);
+    expect(isHandPlay(base({
+      type: "network-route-v1",
+      playerCount: 2,
+    }))).toBe(false);
+    const hand = base({
+      type: "hand-play-v1",
+      playerCount: 2,
+      cardValues: [1, 2, 3],
+      copiesPerValue: 2,
+      handSize: 3,
+      victoryTarget: 10,
+      actions: [{ id: "play", label: "出牌" }],
+    });
+    expect(isHandPlay(hand)).toBe(true);
+    expect(isDiscFlipping(hand)).toBe(false);
+    expect(isHexSettlement(hand)).toBe(false);
+    expect(isNetworkRoute(hand)).toBe(false);
   });
 });

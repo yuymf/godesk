@@ -246,13 +246,21 @@ export async function runCreatorJob(
         isMultiActHiddenRoleCorpus(authoredMaterial);
       const hiddenRoleRuntimeConfigured =
         sourceGenre === "hidden-role" && !multiActHiddenRoleRefused;
+      // PR5/PR6/PR11/PR12 thin bind: Othello → disc-flipping-v1; Catan → hex-settlement-v1;
+      // line network → network-route-v1; card/area-control → hand-play-v1.
+      // Never silently substitute across genres.
+      const requestedMechanics = inferRequestedMechanics(
+        `${input.name ?? ""}\n${idea}\n${authoredMaterial}`,
+      );
       nonScoreHandLoopRefused =
         sourceGenre === "hand-play" &&
         drawAndScoreRule === null &&
         isNonScoreHandLoopCorpus(authoredMaterial);
       // Finite shuffled draw-and-score wins over hand-play genre cues (W4-05).
+      // PR12: also bind when requestedMechanics declares hand-play (card/area-control).
       const handPlayRuntimeConfigured =
-        sourceGenre === "hand-play" &&
+        (sourceGenre === "hand-play" ||
+          requestedMechanics.includes("hand-play")) &&
         drawAndScoreRule === null &&
         !nonScoreHandLoopRefused;
       const harborLikePlacement =
@@ -265,11 +273,6 @@ export async function runCreatorJob(
         sourceGenre === "conversation" &&
         generatedRuleSystem.actions.length > 0 &&
         generatedRuleSystem.actions.length <= 12;
-      // PR5/PR6/PR11 thin bind: Othello → disc-flipping-v1; Catan → hex-settlement-v1;
-      // line network → network-route-v1. Never silently substitute across genres.
-      const requestedMechanics = inferRequestedMechanics(
-        `${input.name ?? ""}\n${idea}\n${authoredMaterial}`,
-      );
       const hexSettlementRuntimeConfigured =
         requestedMechanics.includes("hex-settlement");
       const discFlippingRuntimeConfigured =
