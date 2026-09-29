@@ -4381,6 +4381,22 @@ summary:focus-visible {
   font-weight: 680;
 }
 
+.studio-examples > summary {
+  color: var(--forest-deep);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.studio-examples[open] > summary {
+  margin-bottom: 16px;
+}
+
+.generation-plan-state {
+  color: var(--forest-deep);
+  font-weight: 650;
+}
+
 .studio-examples .example-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }

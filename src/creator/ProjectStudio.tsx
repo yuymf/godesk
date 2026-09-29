@@ -1100,7 +1100,7 @@ export function ProjectStudio({ projectId }: { projectId: string }) {
           <span>这局游戏</span>
           {canPlayLatest && <a href="#play">开玩</a>}
           {generationPlan && <a href="#plan">{generationPlan.status === "pending" ? "确认玩法" : "玩法摘要"}</a>}
-          <a href="#iteration">改下一版</a>
+          {generationPlan?.status !== "pending" && <a href="#iteration">改下一版</a>}
           <a href="#validation">朋友反馈{unreviewedFeedbackCount ? ` · ${unreviewedFeedbackCount}` : ""}</a>
         </nav>
         <a className="back-projects" href={href("/")}>← 返回所有游戏</a>
@@ -1146,6 +1146,8 @@ export function ProjectStudio({ projectId }: { projectId: string }) {
             <StudioGenerationPlanPanel
               approveGenerationPlan={approveGenerationPlan}
               busy={busy}
+              canPlayLatest={canPlayLatest}
+              error={formError}
               generationPlan={generationPlan}
               hobbyistFocus={hobbyistFocus}
               ruleSystemDirty={ruleSystemDirty}
@@ -1308,13 +1310,13 @@ export function ProjectStudio({ projectId }: { projectId: string }) {
                 </button>
               </div>
               {notice && <p className="creator-notice" role="status">{notice}</p>}
-              {formError && (
+              {formError && !generationPlan && (
                 <p className="creator-error" role="alert">{formError}</p>
               )}
             </form>
           </section>
 
-          <StudioBuildPlayPanel
+          {generationPlan?.status !== "pending" && <StudioBuildPlayPanel
             attestHumanSession={attestHumanSession}
             buildComparison={buildComparison}
             buildComparisonFinding={buildComparisonFinding}
@@ -1352,7 +1354,7 @@ export function ProjectStudio({ projectId }: { projectId: string }) {
             startBotPlaytest={startBotPlaytest}
             startRoom={startRoom}
             studioPlayTarget={studioPlayTarget}
-          />
+          />}
 
           <StudioValidationPanel
             addDesignHypothesis={addDesignHypothesis}
