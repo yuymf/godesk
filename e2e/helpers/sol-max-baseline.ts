@@ -5,6 +5,7 @@ export const CATAN_PROMPT = "做一款可以与电脑对战的卡坦岛基础版
 export const OTHELLO_PROMPT = "做一款可以与电脑对战的黑白棋";
 export const NETWORK_PROMPT = "做一款线路网络桌游，玩家铺设路线连接城市";
 export const CARD_AREA_PROMPT = "做一款卡牌区域控制游戏，玩家出牌争夺区域";
+export const AUCTION_PROMPT = "做一款拍卖竞价桌游";
 
 /** Off-corpus prompts — must never silent-bind Catan or Othello. */
 export const UNSEEN_PROMPTS = [

@@ -156,3 +156,27 @@ export function executableNetworkRouteSpecFixture(): RuleSystem {
   refreshGameSpec(rule);
   return rule;
 }
+
+export function executableAuctionBiddingSpecFixture(): RuleSystem {
+  const rule: RuleSystem = {
+    id: "rule-system-auction-bidding-fixture", version: 1, name: "拍卖竞价", pitch: "轮流公开出价，竞得单件拍品",
+    generation: { generatorVersion: GENERATOR_VERSION, rulesVersion: RULES_VERSION,
+      sourcePrompt: "做一款拍卖竞价桌游", assumptions: ["单件拍品，公开轮流出价"],
+      seed: 42, requestedMechanics: ["auction-bidding"] },
+    participants: { min: 2, max: 2, default: 2, roles: [] }, durationMinutes: 10,
+    entities: [{ id: "lot", name: "拍品", kind: "token", sourceId: null, provenance: "source-anchored", confidence: 1 }],
+    rules: [{ id: "auction", text: "公开轮流出价或放弃；最高有效出价者获得拍品", sourceId: null, provenance: "source-anchored", confidence: 1 }],
+    constraints: [], setup: ["两席各有 20 筹码；拍品价值 10"],
+    stages: [{ id: "bidding", name: "竞价" }, { id: "ended", name: "结算" }],
+    outcomes: [{ id: "award", name: "最高出价者获得拍品" }],
+    actions: [
+      { id: "bid", label: "出价", description: "提高当前出价", sourceId: null, provenance: "source-anchored", confidence: 1 },
+      { id: "pass", label: "放弃", description: "放弃当前叫价", sourceId: null, provenance: "source-anchored", confidence: 1 },
+    ],
+    playSurface: { kind: "table", layout: "auction-table", regions: [{ id: "lot-region", name: "拍品区", description: "公开拍品与出价" }] },
+    presentation: { theme: "auction" },
+    runtimeSupport: { status: "executable", unsupported: [], kernel: { type: "auction-bidding-v1", playerCount: 2 } },
+  };
+  refreshGameSpec(rule);
+  return rule;
+}

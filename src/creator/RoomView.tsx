@@ -22,6 +22,7 @@ import {
   isDiscFlipping,
   isHexSettlement,
   isNetworkRoute,
+  isAuctionBidding,
   isHarborVoyage,
   isWorkerPlacement,
   localizedRoomError,
@@ -47,6 +48,7 @@ import { HarborVoyageBoard } from "./HarborVoyageBoard";
 import { OthelloBoard } from "./OthelloBoard";
 import { CatanBoard, type CatanBoardState } from "./CatanBoard";
 import { NetworkRouteBoard, type NetworkRouteBoardState } from "./NetworkRouteBoard";
+import { AuctionBiddingBoard } from "./AuctionBiddingBoard";
 import { HandPlayBoard } from "./HandPlayBoard";
 import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import {
@@ -361,6 +363,8 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   const networkRouteState = room.state.networkRoute;
   const networkRoute =
     isNetworkRoute(build.ruleSystem) && Boolean(networkRouteState);
+  const auctionState = room.state.auctionBidding;
+  const auction = isAuctionBidding(build.ruleSystem) && Boolean(auctionState);
   const gameName = build.ruleSystem.name;
   const activeSeat = room.state.activeSeat;
   const isMyTurn = room.state.status === "active" && seat === activeSeat;
@@ -422,7 +426,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       : copy.points;
 
   return (
-    <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-catan" : ""} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
+    <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute || auction ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-catan" : ""} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
       <header className="room-shell-header">
         <div className="room-title-block">
           <span className="room-brand-mark" aria-hidden="true">GD</span>
@@ -560,6 +564,10 @@ export function RoomView({ sessionId }: { sessionId: string }) {
           viewerSeat={seat}
           winnerSeat={room.state.winnerSeat}
         />
+      ) : auction && auctionState ? (
+        <AuctionBiddingBoard auction={auctionState} activeSeat={activeSeat}
+          enabled={isMyTurn} busy={busy} status={room.state.status} viewerSeat={seat}
+          onAct={(actionId, payload) => { void act(actionId, -1, payload); }} />
       ) : (
         <section className="room-main">
           <section aria-live="polite" className="room-command-bar">

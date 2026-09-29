@@ -9,6 +9,7 @@ import { CatanBoard } from "./CatanBoard";
 import type { CatanBoardState } from "./CatanBoard";
 import { NetworkRouteBoard } from "./NetworkRouteBoard";
 import type { NetworkRouteBoardState } from "./NetworkRouteBoard";
+import { AuctionBiddingBoard } from "./AuctionBiddingBoard";
 import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import { readShareToken, validationStudioHref } from "./studio-utils";
 import {
@@ -118,6 +119,10 @@ export function ReplayView({ replayId }: { replayId: string }) {
             viewerSeat={null}
             winnerSeat={replay.finalState.winnerSeat}
           />
+        ) : replay.finalState.auctionBidding ? (
+          <AuctionBiddingBoard auction={replay.finalState.auctionBidding}
+            activeSeat={replay.finalState.activeSeat} enabled={false} readOnly
+            status={replay.finalState.status} viewerSeat={null} />
         ) : (
           <div className="replay-state-columns">
             <ReplayStateCard label="开局" state={replay.initialState} />

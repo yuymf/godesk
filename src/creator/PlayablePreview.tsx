@@ -10,6 +10,7 @@ import {
   isDiscFlipping,
   isHexSettlement,
   isNetworkRoute,
+  isAuctionBidding,
   isHarborVoyage,
   networkRouteKernel,
   workerPlacementKernel,
@@ -28,6 +29,9 @@ import { CatanBoard } from "./CatanBoard";
 import { createInitialCatanSessionSlice } from "./catan-thumbnail";
 import { NetworkRouteBoard } from "./NetworkRouteBoard";
 import { createInitialNetworkRouteSessionSlice } from "./network-route-thumbnail";
+import { AuctionBiddingBoard } from "./AuctionBiddingBoard";
+import { auctionBiddingAdapter, createAuctionBiddingKernelConfig, auctionBiddingToSessionFields } from "../runtime/adapters/auction-bidding";
+import { createInitialState } from "../runtime/play-kernel";
 import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import { href, readShareToken } from "./studio-utils";
 
@@ -73,6 +77,7 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
   const hexKernel = hexSettlementKernel(build.ruleSystem);
   const networkRoute = isNetworkRoute(build.ruleSystem);
   const networkKernel = networkRouteKernel(build.ruleSystem);
+  const auction = isAuctionBidding(build.ruleSystem);
   const scoreTrackSurface = usesScoreTrackSurface(build.ruleSystem);
   const runtimeValues = new Map(
     race?.actions.map((action) => [action.id, action.points]) ??
@@ -172,6 +177,13 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
             readOnly
             status="active"
             viewerSeat={null}
+          />
+        </section>
+      ) : auction ? (
+        <section className="preview-board" aria-label="拍卖竞价可玩桌面">
+          <AuctionBiddingBoard
+            auction={auctionBiddingToSessionFields(createInitialState(auctionBiddingAdapter, createAuctionBiddingKernelConfig(), 42)).auctionBidding}
+            activeSeat={0} enabled={false} readOnly status="active" viewerSeat={null}
           />
         </section>
       ) : (

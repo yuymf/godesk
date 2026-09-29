@@ -282,6 +282,9 @@ export async function runCreatorJob(
         requestedMechanics.includes("route-network") &&
         !requestedMechanics.includes("hex-settlement") &&
         !requestedMechanics.includes("disc-flipping");
+      const auctionBiddingRuntimeConfigured =
+        requestedMechanics.includes("auction-bidding") &&
+        !requestedMechanics.some((mechanic) => ["hex-settlement", "disc-flipping", "route-network", "hand-play"].includes(mechanic));
       weakGenreScoreRaceRefused =
         sourceGenre === "generic" &&
         drawAndScoreRule === null &&
@@ -342,6 +345,7 @@ export async function runCreatorJob(
         hexSettlementRuntimeConfigured ||
         discFlippingRuntimeConfigured ||
         networkRouteRuntimeConfigured ||
+        auctionBiddingRuntimeConfigured ||
         hiddenRoleRuntimeConfigured ||
         handPlayRuntimeConfigured ||
         harborVoyageRuntimeConfigured ||
@@ -404,6 +408,14 @@ export async function runCreatorJob(
               unsupported: [
                 "network-route-v1 executes a fixed city graph with alternate-turn route claims and first-to-connect terminal hubs on the public play-kernel; not Ticket to Ride (no tickets deck / multi-color routes / scoring table).",
               ],
+            },
+          }
+        : auctionBiddingRuntimeConfigured
+        ? {
+            op: "configure_auction_bidding" as const,
+            config: {
+              playerCount: 2,
+              unsupported: ["auction-bidding-v1 plays one open lot with alternate raise/pass, 20 chips per seat, and award or unsold resolution; multi-lot economies and sealed bids are unsupported."],
             },
           }
         : hiddenRoleRuntimeConfigured
@@ -937,6 +949,8 @@ export async function runCreatorJob(
           ? "规则结构来自体裁识别；方格翻子、八方向翻转、强制跳过与终盘计分将在批准 Generation Plan 后配置为 disc-flipping-v1（公共 play-kernel 适配器）。"
           : proposedRuntime?.op === "configure_network_route"
           ? "规则结构来自体裁识别；城市图铺线、交替占领路线与连通枢纽获胜将在批准 Generation Plan 后配置为 network-route-v1（公共 play-kernel 适配器；非完整 Ticket to Ride）。"
+          : proposedRuntime?.op === "configure_auction_bidding"
+          ? "规则结构来自体裁识别；两人公开轮流出价或放弃，最高有效出价获得拍品，将在批准 Generation Plan 后配置为 auction-bidding-v1。"
           : proposedRuntime?.op === "configure_hidden_role"
           ? "规则结构来自体裁识别；秘密身份、公开发言与指控将在批准 Generation Plan 后配置为 hidden-role-v1。"
           : proposedRuntime?.op === "configure_hand_play"

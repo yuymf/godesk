@@ -38,6 +38,7 @@
     "src/runtime/adapters/othello.ts",
     "src/runtime/adapters/catan.ts",
     "src/runtime/adapters/network-route.ts",
+    "src/runtime/adapters/auction-bidding.ts",
     "src/runtime/topology-stub.ts"
   ]
 }

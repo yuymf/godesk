@@ -199,6 +199,11 @@ export function isNetworkRoute(ruleSystem: RuleSystem): boolean {
   return Boolean(networkRouteKernel(ruleSystem));
 }
 
+export function isAuctionBidding(ruleSystem: RuleSystem): boolean {
+  return ruleSystem.runtimeSupport.status === "executable" &&
+    ruleSystem.runtimeSupport.kernel.type === "auction-bidding-v1";
+}
+
 /** Score-track family only — themed scoreboard UI must not stand in for other genres (ADR 0012). */
 export function usesScoreTrackSurface(ruleSystem: RuleSystem): boolean {
   return Boolean(

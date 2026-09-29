@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { RuleSystem } from "../creator/project-contract";
 import { playabilityFloor } from "./playability-floor";
+import { executableAuctionBiddingSpecFixture } from "../creator/fixtures/game-spec";
 
 function base(overrides: Partial<RuleSystem> = {}): RuleSystem {
   return {
@@ -34,6 +35,12 @@ function base(overrides: Partial<RuleSystem> = {}): RuleSystem {
 }
 
 describe("playabilityFloor", () => {
+  it("shares auction only with its bid/pass table loop", () => {
+    const rule = executableAuctionBiddingSpecFixture();
+    expect(playabilityFloor(rule).status).toBe("passed");
+    rule.actions = rule.actions.filter((action) => action.id !== "pass");
+    expect(playabilityFloor(rule).status).toBe("failed");
+  });
   it("rejects a hidden-role source running score-race", () => {
     const floor = playabilityFloor(base({
       name: "别墅剧本杀",

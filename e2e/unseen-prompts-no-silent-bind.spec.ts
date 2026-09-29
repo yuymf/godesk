@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
   CARD_AREA_PROMPT,
+  AUCTION_PROMPT,
   NETWORK_PROMPT,
   OTHER_UNSEEN_PROMPTS,
   UNSEEN_PROMPTS,
@@ -12,6 +13,22 @@ import {
  * PR12: 卡牌区域控制 may now bind hand-play-v1 (still never hex/disc/network).
  */
 test.describe("PR10/PR11/PR12 unseen prompts: no silent Catan/Othello bind", () => {
+  test("auction intent binds auction-bidding only", async ({ page }) => {
+    test.setTimeout(180_000);
+    await page.goto("/chatgpt-plugin/new");
+    await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(AUCTION_PROMPT);
+    await page.getByRole("button", { name: "生成可玩版本" }).click();
+    await page.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 90_000 });
+    await expect(page.getByRole("heading", { name: /先看这一局怎么玩|这一局的玩法|现在就开玩/ })).toBeVisible({ timeout: 90_000 });
+    const projectId = new URL(page.url()).pathname.split("/").at(-1)!;
+    const rule = await (await page.request.get(`/api/projects/${projectId}?view=rule-system`)).json();
+    expect(rule.generation?.requestedMechanics).toEqual(["auction-bidding"]);
+    const plan = await (await page.request.get(`/api/projects/${projectId}?view=generation-plan`)).json();
+    expect(plan.generationPlan?.proposedRuntime?.op).toBe("configure_auction_bidding");
+    for (const kernel of ["hex-settlement-v1", "disc-flipping-v1", "network-route-v1", "hand-play-v1"]) {
+      expect(rule.runtimeSupport?.kernel?.type).not.toBe(kernel);
+    }
+  });
   test("线路网络 binds network-route (never Catan/Othello boards)", async ({
     page,
   }) => {

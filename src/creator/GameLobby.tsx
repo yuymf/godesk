@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Brand } from "./CreatorBrand";
 import { createSharedSession, getBuilds, getSharedSessions, listProjects } from "./project-api";
 import type { GameProject, PlayableBuild, SharedSession } from "./project-contract";
-import { isDiscFlipping, isHandPlay, isHexSettlement, isNetworkRoute } from "./room-presentation";
+import { isAuctionBidding, isDiscFlipping, isHandPlay, isHexSettlement, isNetworkRoute } from "./room-presentation";
 import { othelloStartingBoardThumbnailDataUrl } from "./othello-thumbnail";
 import { catanStartingBoardThumbnailDataUrl } from "./catan-thumbnail";
 import { networkRouteStartingBoardThumbnailDataUrl } from "./network-route-thumbnail";
+import { auctionBiddingThumbnailDataUrl } from "./auction-bidding-thumbnail";
 import { handPlayStartingBoardThumbnailDataUrl } from "./hand-play-thumbnail";
 import { buildCanOpenSharedSession, href, latestStudioPlayTarget } from "./studio-utils";
 
@@ -118,6 +119,10 @@ export function GameLobby() {
                       data-lobby-mark="network"
                     >
                       <img alt="" src={networkRouteStartingBoardThumbnailDataUrl()} />
+                    </div>
+                  ) : game.build && isAuctionBidding(game.build.ruleSystem) ? (
+                    <div aria-hidden="true" className="lobby-card-mark" data-lobby-mark="auction">
+                      <img alt="" src={auctionBiddingThumbnailDataUrl()} />
                     </div>
                   ) : game.build && isHandPlay(game.build.ruleSystem) ? (
                     <div

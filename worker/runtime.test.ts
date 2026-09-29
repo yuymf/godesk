@@ -1,11 +1,30 @@
 import { describe, expect, it } from "vitest";
 import type { RuleSystem } from "../src/creator/project-contract";
+import { executableAuctionBiddingSpecFixture } from "../src/creator/fixtures/game-spec";
 import {
   acceptIntent,
   executableRuntime,
   initialSessionState,
   runBotSimulation,
 } from "./runtime";
+
+describe("auction-bidding Shared Session runtime", () => {
+  it("accepts bid then pass with authoritative chips, score and replay", () => {
+    const rule = executableAuctionBiddingSpecFixture();
+    const runtime = executableRuntime(rule)!;
+    const initial = initialSessionState(rule, 42);
+    expect(initial.auctionBidding).toMatchObject({ chips: [20, 20], currentBid: 0 });
+    const bid = acceptIntent(initial, runtime, { intentId: "b1", seat: 0, actionId: "bid", payload: { amount: 7 } }, 1, 42);
+    expect(bid?.state.auctionBidding).toMatchObject({ currentBid: 7, highBidder: 0 });
+    expect(acceptIntent(bid!.state, runtime, { intentId: "bad", seat: 1, actionId: "bid", payload: { amount: 7 } }, 2, 42)).toBeNull();
+    const pass = acceptIntent(bid!.state, runtime, { intentId: "p1", seat: 1, actionId: "pass" }, 2, 42);
+    expect(pass?.state).toMatchObject({ status: "complete", winnerSeat: 0, scores: [10, 0] });
+    expect(pass?.state.auctionBidding).toMatchObject({ chips: [13, 20], awardedTo: 0 });
+    const bot = runBotSimulation(rule, 42);
+    expect(bot.terminalStatus).toBe("complete");
+    expect(bot.finalState.auctionBidding).toBeTruthy();
+  });
+});
 
 const conversationRuleSystem: RuleSystem = {
   id: "rule_system_conversation",

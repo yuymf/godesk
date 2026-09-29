@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { gameSpecSchema, validateGameSpec, gameSpecCapabilityGap, ruleSystemSpecIssues, refreshGameSpec } from "./game-spec";
-import { BASELINE_PROMPTS, structuredSpecFixture, executableSpecFixture, executableOthelloSpecFixture, executableCatanSpecFixture } from "./fixtures/game-spec";
+import { BASELINE_PROMPTS, structuredSpecFixture, executableSpecFixture, executableOthelloSpecFixture, executableCatanSpecFixture, executableAuctionBiddingSpecFixture } from "./fixtures/game-spec";
 import type { RuleSystem } from "./project-contract";
 
 describe("GameSpec v1", () => {
+  it("accepts auction fixture and rejects auction declarations on another kernel", () => {
+    const rule = executableAuctionBiddingSpecFixture();
+    expect(ruleSystemSpecIssues(rule)).toEqual([]);
+    expect(rule.gameSpec?.execution.kernelType).toBe("auction-bidding-v1");
+    const mismatch = executableAuctionBiddingSpecFixture();
+    mismatch.gameSpec!.execution.kernelType = "network-route-v1";
+    expect(validateGameSpec(mismatch.gameSpec).issues).toContainEqual(expect.objectContaining({ path: "execution" }));
+  });
   it.each(["hex", "grid", "network"] as const)("accepts %s without globally required hex/resources", (kind) => {
     expect(validateGameSpec(structuredSpecFixture(kind))).toEqual({ valid: true, issues: [] });
   });
