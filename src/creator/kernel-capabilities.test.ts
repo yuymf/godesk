@@ -5,10 +5,10 @@ import {
 } from "./kernel-capabilities";
 import { BASELINE_PROMPTS } from "./fixtures/game-spec";
 
-/** Off-corpus / unseen prompts used by Sol max PR10 release gate. */
+/** Off-corpus / unseen prompts used by Sol max PR10–PR12 release gate. */
 const NETWORK_PROMPT = "做一款线路网络桌游，玩家铺设路线连接城市";
+const CARD_AREA_PROMPT = "做一款卡牌区域控制游戏，玩家出牌争夺区域";
 const OTHER_UNSEEN_PROMPTS = [
-  "做一款卡牌区域控制游戏，玩家出牌争夺区域",
   "随便做个桌游",
 ] as const;
 
@@ -26,18 +26,28 @@ describe("inferRequestedMechanics — baseline vs unseen", () => {
     expect(mechanicsCapabilityGap(mechanics)).toBeNull();
   });
 
+  it("binds hand-play for the card-area prompt (never hex/disc/route)", () => {
+    const mechanics = inferRequestedMechanics(CARD_AREA_PROMPT);
+    expect(mechanics).toEqual(["hand-play"]);
+    expect(mechanics).not.toContain("hex-settlement");
+    expect(mechanics).not.toContain("disc-flipping");
+    expect(mechanics).not.toContain("route-network");
+    expect(mechanicsCapabilityGap(mechanics)).toBeNull();
+  });
+
   it.each(OTHER_UNSEEN_PROMPTS)(
-    "never infers hex-settlement, disc-flipping, or route-network from other unseen prompt: %s",
+    "never infers hex-settlement, disc-flipping, route-network, or hand-play from vague unseen prompt: %s",
     (prompt) => {
       const mechanics = inferRequestedMechanics(prompt);
       expect(mechanics).not.toContain("hex-settlement");
       expect(mechanics).not.toContain("disc-flipping");
       expect(mechanics).not.toContain("route-network");
+      expect(mechanics).not.toContain("hand-play");
       expect(mechanics).toEqual([]);
     },
   );
 
-  it("gameSpecCapabilityGap for other unseen prompts without declared mechanics is null", () => {
+  it("gameSpecCapabilityGap for vague unseen prompts without declared mechanics is null", () => {
     for (const prompt of OTHER_UNSEEN_PROMPTS) {
       expect(mechanicsCapabilityGap(inferRequestedMechanics(prompt))).toBeNull();
     }

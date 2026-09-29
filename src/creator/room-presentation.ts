@@ -108,6 +108,11 @@ export function handPlayKernel(
     : null;
 }
 
+/** Hand-play / card area — lobby mark card fan, never hex/disc/network boards. */
+export function isHandPlay(ruleSystem: RuleSystem): boolean {
+  return Boolean(handPlayKernel(ruleSystem));
+}
+
 export function conversationRelayKernel(
   ruleSystem: RuleSystem,
 ): Extract<

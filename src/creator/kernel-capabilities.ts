@@ -68,5 +68,13 @@ export function inferRequestedMechanics(corpus: string): string[] {
   if (/线路网络|路线连接|铺设路线|连接城市|route\s*network|connect(?:ing)?\s+cities|claim(?:ing)?\s+routes/i.test(corpus)) {
     mechanics.push("route-network");
   }
+  // Card / area-control (PR12) — reuse hand-play-v1; never also match hex/disc/route above.
+  if (
+    /卡牌区域控制|出牌争夺区域|区域控制.*(?:卡牌|出牌)|area[- ]?control|play(?:ing)? cards?.*(area|region|zone)|claim(?:ing)? areas? with cards?/i.test(
+      corpus,
+    )
+  ) {
+    mechanics.push("hand-play");
+  }
   return mechanics;
 }
