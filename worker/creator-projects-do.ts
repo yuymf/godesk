@@ -586,6 +586,10 @@ export class CreatorProjects extends DurableObject<Env> {
         if (!build) {
           return { status: 404, value: { error: "build_not_found" } };
         }
+        const specIssues = ruleSystemSpecIssues(build.ruleSystem);
+        if (specIssues.length) {
+          return { status: 409, value: { error: "gamespec_invalid", issues: specIssues } };
+        }
         if (!executableRuntime(build.ruleSystem)) {
           return {
             status: 422,

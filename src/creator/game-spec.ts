@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { inferRequestedMechanics, kernelCapabilities, kernelScoringHook, mechanicsCapabilityGap } from "./kernel-capabilities";
 import type { RuleSystem } from "./project-contract";
 
 const text = z.string().trim().min(1);
@@ -8,14 +9,18 @@ export const generationMetadataSchema = z.strictObject({
   rulesVersion: text,
   sourcePrompt: text,
   assumptions: z.array(text),
+  // Explicit requirements survive edits and do not depend on source-name heuristics.
+  requestedMechanics: z.array(text).optional(),
   seed: z.number().int().min(0).max(0xffffffff),
 });
 export type GenerationMetadata = z.infer<typeof generationMetadataSchema>;
 export const GENERATOR_VERSION = "rule-system-materializer-v1";
+export const RULES_VERSION = "source-rules-v1";
+export const SCHEMA_VERSION = 1;
 
 /** Data only. Hooks identify adapter responsibilities; they never execute scripts. */
 export const gameSpecSchema = z.strictObject({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(SCHEMA_VERSION),
   ruleSystemId: text,
   ruleSystemVersion: z.number().int().positive(),
   name: text,
@@ -63,19 +68,30 @@ export function validateGameSpec(value: unknown): SpecValidation {
   for (const action of spec.actions) if (action.phaseIds.some((id) => !phases.has(id))) fail("actions", `Unknown phase for action: ${action.id}`);
   if ((spec.scoring.kind === "none") !== (spec.scoring.hook === null)) fail("scoring", "Scoring kind and hook disagree.");
   if (spec.scoring.kind === "kernel-hook" && !spec.execution.kernelType) fail("scoring", "Scoring hook requires an executable adapter.");
+  if (spec.generation.generatorVersion !== GENERATOR_VERSION) fail("generation.generatorVersion", "Unsupported generator version; regenerate this Rule System.");
+  if (spec.generation.rulesVersion !== RULES_VERSION) fail("generation.rulesVersion", "Unsupported rules version; regenerate this Rule System.");
+  const kernelType = spec.execution.kernelType;
+  if (kernelType && !kernelCapabilities(kernelType)) fail("execution.kernelType", `Unknown Executable Kernel: ${kernelType}`);
+  if (kernelType && spec.scoring.hook !== kernelScoringHook(kernelType)) fail("scoring.hook", "Scoring hook is not registered for the selected Kernel.");
+  const gap = mechanicsCapabilityGap(spec.generation.requestedMechanics ?? [], kernelType);
+  if (gap) fail("execution", gap);
   if (!spec.setup.length) fail("setup", "Initial setup is required.");
   return { valid: issues.length === 0, issues };
 }
 
 /** Explicit gaps take precedence over the existing heuristic Kernel selector. */
-export function gameSpecCapabilityGap(corpus: string): string | null {
-  if (/\bcatan\b|settlecoast|卡坦|卡版|六角.*(?:资源|建造)|hex.*(?:resource|build)/i.test(corpus)) {
-    return "能力缺口：Catan / 卡坦基础版需要六角拓扑、资源生产、交易和建设规则；当前没有对应 Executable Kernel，不能生成可玩版本。";
-  }
-  if (/\bothello\b|\breversi\b|黑白棋|翻转棋|翻子|flipp?ing.*dis[ck]|dis[ck].*flipp?ing/i.test(corpus)) {
-    return "能力缺口：Othello / 黑白棋需要方格落子、八方向翻子、强制跳过和终盘计分；当前没有对应 Executable Kernel，不能生成可玩版本。";
-  }
-  return null;
+export function gameSpecCapabilityGap(corpus: string, declaredMechanics: readonly string[] = [], kernelType?: string | null): string | null {
+  return mechanicsCapabilityGap([...new Set([...inferRequestedMechanics(corpus), ...declaredMechanics])], kernelType);
+}
+
+/** Ignore object insertion order, preserving ordered rule lists and seed/provenance. */
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_key, item: unknown) => {
+    if (item && typeof item === "object" && !Array.isArray(item)) {
+      return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
+    }
+    return item;
+  });
 }
 
 /** Project the existing Rule System; do not introduce another generator or rules engine. */
@@ -84,7 +100,7 @@ export function createGameSpec(rule: RuleSystem, generation: GenerationMetadata)
   // Existing Kernels own setup/phase advancement/end/scoring. Keep that delegation explicit.
   const phases = kernel ? [{ id: "kernel-turn", name: `${kernel.type}: phase advancement` }] : rule.stages;
   return {
-    schemaVersion: 1, ruleSystemId: rule.id, ruleSystemVersion: rule.version, name: rule.name,
+    schemaVersion: SCHEMA_VERSION, ruleSystemId: rule.id, ruleSystemVersion: rule.version, name: rule.name,
     generation: structuredClone(generation),
     players: { min: rule.participants.min, max: rule.participants.max, default: rule.participants.default, visibility: "kernel-scoped" },
     objects: rule.entities.map(({ id, name, kind }) => ({ id, name, kind, visibility: "kernel-scoped" })),
@@ -94,7 +110,7 @@ export function createGameSpec(rule: RuleSystem, generation: GenerationMetadata)
     actions: rule.actions.map(({ id, label, description }) => ({ id, label, description, phaseIds: phases.map((phase) => phase.id) })),
     phases,
     endConditions: kernel ? [{ id: "kernel-end", description: `${kernel.type}: authoritative termination` }] : rule.outcomes.map(({ id, name }) => ({ id, description: name })),
-    scoring: kernel ? { kind: "kernel-hook", hook: `${kernel.type}: authoritative outcome` } : { kind: "none", hook: null },
+    scoring: kernel ? { kind: "kernel-hook", hook: kernelScoringHook(kernel.type) } : { kind: "none", hook: null },
     presentation: { kind: rule.playSurface.kind, layout: rule.playSurface.layout },
     execution: { kernelType: kernel?.type ?? null },
   };
@@ -106,14 +122,27 @@ export function refreshGameSpec(rule: RuleSystem): void {
 }
 
 export function ruleSystemSpecIssues(rule: RuleSystem): SpecIssue[] {
-  if (!rule.generation && !rule.gameSpec) return [];
-  const result = validateGameSpec(rule.gameSpec);
-  const issues = [...result.issues];
+  const kernelType = rule.runtimeSupport.status === "executable" ? rule.runtimeSupport.kernel?.type : null;
+  const issues: SpecIssue[] = [];
+  if (rule.runtimeSupport.status === "executable" && (!kernelType || !kernelCapabilities(kernelType))) {
+    issues.push({ path: "execution.kernelType", message: "Unknown or missing Executable Kernel." });
+  }
+  // Legacy records remain readable, but never bless an unknown runtime adapter.
+  if (!rule.generation && !rule.gameSpec) return issues;
+  issues.push(...validateGameSpec(rule.gameSpec).issues);
   if (!rule.generation) issues.push({ path: "generation", message: "Generation metadata is missing." });
   else {
-    const gap = gameSpecCapabilityGap(`${rule.generation.sourcePrompt}\n${rule.name}\n${rule.pitch}\n${rule.rules.map((item) => item.text).join("\n")}`);
+    const gap = gameSpecCapabilityGap(`${rule.generation.sourcePrompt}\n${rule.name}\n${rule.pitch}\n${rule.rules.map((item) => item.text).join("\n")}`, rule.generation.requestedMechanics, kernelType ?? null);
     if (gap) issues.unshift({ path: "execution", message: gap });
-    if (JSON.stringify(rule.gameSpec) !== JSON.stringify(createGameSpec(rule, rule.generation))) {
+    if (rule.generation.generatorVersion !== GENERATOR_VERSION) issues.push({ path: "generation.generatorVersion", message: "Unsupported generator version; regenerate this Rule System." });
+    if (rule.generation.rulesVersion !== RULES_VERSION) issues.push({ path: "generation.rulesVersion", message: "Unsupported rules version; regenerate this Rule System." });
+    if (rule.gameSpec?.ruleSystemId !== rule.id || rule.gameSpec?.ruleSystemVersion !== rule.version) {
+      issues.push({ path: "ruleSystemVersion", message: "GameSpec does not reference the current Rule System version." });
+    }
+    if (canonical(rule.gameSpec?.generation) !== canonical(rule.generation)) {
+      issues.push({ path: "generation", message: "GameSpec generation metadata is stale." });
+    }
+    if (canonical(rule.gameSpec) !== canonical(createGameSpec(rule, rule.generation))) {
       issues.push({ path: "ruleSystemVersion", message: "GameSpec is stale; save this Rule System again before building." });
     }
   }

@@ -1,4 +1,5 @@
-import type { GameSpec } from "../game-spec";
+import type { RuleSystem } from "../project-contract";
+import { GENERATOR_VERSION, RULES_VERSION, refreshGameSpec, type GameSpec } from "../game-spec";
 
 export const BASELINE_PROMPTS = [
   "做一款可以与电脑对战的卡坦岛基础版",
@@ -11,7 +12,7 @@ export function structuredSpecFixture(kind: "hex" | "grid" | "network"): GameSpe
     schemaVersion: 1, ruleSystemId: `fixture-${kind}`, ruleSystemVersion: 1,
     name: `${kind} contract fixture`,
     generation: {
-      generatorVersion: "contract-fixture-v1", rulesVersion: "fixture-rules-v1",
+      generatorVersion: GENERATOR_VERSION, rulesVersion: RULES_VERSION,
       sourcePrompt: kind === "hex" ? BASELINE_PROMPTS[0] : kind === "grid" ? BASELINE_PROMPTS[1] : "Connect stations by routes",
       seed: 42, assumptions: ["Contract example only; the executable adapter is unavailable."],
     },
@@ -27,4 +28,22 @@ export function structuredSpecFixture(kind: "hex" | "grid" | "network"): GameSpe
     presentation: { kind: "table", layout: kind },
     execution: { kernelType: null },
   };
+}
+
+export function executableSpecFixture(): RuleSystem {
+  const rule: RuleSystem = {
+    id: "rule-system-fixture", version: 1, name: "Conversation", pitch: "Speak in turns",
+    generation: { generatorVersion: GENERATOR_VERSION, rulesVersion: RULES_VERSION,
+      sourcePrompt: "Speak in turns", assumptions: [], seed: 42, requestedMechanics: ["conversation"] },
+    participants: { min: 2, max: 3, default: 3, roles: [] }, durationMinutes: 10,
+    entities: [], rules: [], constraints: [], setup: [], stages: [], outcomes: [],
+    actions: [{ id: "speak", label: "Speak", description: "Record a sentence", sourceId: null, provenance: "source-anchored", confidence: 1 }],
+    playSurface: { kind: "conversation", layout: "conversation-relay", regions: [] },
+    presentation: { theme: "conversation" },
+    runtimeSupport: { status: "executable", unsupported: [], kernel: {
+      type: "conversation-relay-v1", maxTurns: 12, actions: [{ id: "speak", label: "Speak" }],
+    } },
+  };
+  refreshGameSpec(rule);
+  return rule;
 }

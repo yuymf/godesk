@@ -162,11 +162,18 @@ describe("Creator Studio optimistic draft baseline", () => {
 
   it("opens a Shared Session only for executable Builds that pass both floors", () => {
     const build = {
-      ruleSystem: { runtimeSupport: { status: "executable" } },
+      ruleSystem: { runtimeSupport: { status: "executable", kernel: {
+        type: "score-race-v1", victoryTarget: 8, maxTurns: 12,
+        actions: [{ id: "score", label: "Score", points: 1 }],
+      } } },
       presentationFloor: { status: "passed" },
       playabilityFloor: { status: "passed" },
     } as PlayableBuild;
     expect(buildCanOpenSharedSession(build)).toBe(true);
+    expect(buildCanOpenSharedSession({
+      ...build,
+      ruleSystem: { runtimeSupport: { status: "executable" } },
+    } as PlayableBuild)).toBe(false);
     expect(buildCanOpenSharedSession({
       ...build,
       presentationFloor: { status: "failed" },

@@ -370,6 +370,21 @@ export function configureDedicatedKernel(
   record.sources.push(runtimeSource);
   record.ruleSystem = {
     ...record.ruleSystem,
+    // Placement intents are derived from configured regions, not free-text extraction.
+    // Persist that adapter contract so GameSpec never needs an empty-actions exception.
+    ...(kernel.type === "worker-placement-v1" ? {
+      actions: [
+        ...record.ruleSystem.actions.filter((action) => !action.id.startsWith("place:")),
+        ...kernel.regions.map((region) => ({
+          id: `place:${region.id}`,
+          label: `放置到${region.name}`,
+          description: `派一名工人前往${region.name}，支付区域费用并执行该区域的收获或建造规则。`,
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        })),
+      ],
+    } : {}),
     runtimeSupport: {
       status: "executable",
       unsupported,

@@ -1,4 +1,5 @@
-import { GENERATOR_VERSION, gameSpecCapabilityGap, refreshGameSpec, ruleSystemSpecIssues } from "../src/creator/game-spec";
+import { inferRequestedMechanics } from "../src/creator/kernel-capabilities";
+import { GENERATOR_VERSION, RULES_VERSION, gameSpecCapabilityGap, refreshGameSpec, ruleSystemSpecIssues } from "../src/creator/game-spec";
 import type {
   ApplyProjectChangesInput,
   CompileBuildInput,
@@ -626,7 +627,8 @@ export async function runCreatorJob(
               ...generatedRuleSystem,
               generation: {
                 generatorVersion: GENERATOR_VERSION,
-                rulesVersion: "source-rules-v1",
+                rulesVersion: RULES_VERSION,
+                requestedMechanics: inferRequestedMechanics(`${input.name ?? ""}\n${idea}\n${authoredMaterial}`),
                 sourcePrompt: idea,
                 seed: deterministicJobSeed(input.idempotencyKey),
                 assumptions: [

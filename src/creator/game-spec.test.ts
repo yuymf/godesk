@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { gameSpecSchema, validateGameSpec, gameSpecCapabilityGap, ruleSystemSpecIssues } from "./game-spec";
-import { BASELINE_PROMPTS, structuredSpecFixture } from "./fixtures/game-spec";
+import { gameSpecSchema, validateGameSpec, gameSpecCapabilityGap, ruleSystemSpecIssues, refreshGameSpec } from "./game-spec";
+import { BASELINE_PROMPTS, structuredSpecFixture, executableSpecFixture } from "./fixtures/game-spec";
 import type { RuleSystem } from "./project-contract";
 
 describe("GameSpec v1", () => {
@@ -30,5 +30,45 @@ describe("GameSpec v1", () => {
     const spec = structuredSpecFixture("grid");
     const rule = { gameSpec: spec, runtimeSupport: { status: "draft", unsupported: [] } } as unknown as RuleSystem;
     expect(ruleSystemSpecIssues(rule).map((issue) => issue.path)).toContain("execution");
+  });
+});
+
+describe("GameSpec executable semantics and freshness", () => {
+  it.each(["unknown-v1", "toString", "__proto__"])("rejects unregistered kernel %s", (kernel) => {
+    const spec = executableSpecFixture().gameSpec!;
+    spec.execution.kernelType = kernel;
+    expect(validateGameSpec(spec).issues).toContainEqual(expect.objectContaining({ path: "execution.kernelType" }));
+  });
+  it.each(["arbitrary hook", "hand-play-v1: authoritative outcome", null])("rejects a hook not owned by the adapter: %s", (hook) => {
+    const spec = executableSpecFixture().gameSpec!;
+    spec.scoring.hook = hook;
+    expect(validateGameSpec(spec).valid).toBe(false);
+  });
+  it.each(["generatorVersion", "rulesVersion"] as const)("rejects unsupported %s even when regenerated metadata agrees", (field) => {
+    const rule = executableSpecFixture();
+    rule.generation![field] = "obsolete-v0";
+    refreshGameSpec(rule);
+    expect(ruleSystemSpecIssues(rule)).toContainEqual(expect.objectContaining({ path: `generation.${field}` }));
+  });
+  it("compares provenance canonically while rejecting changed seeds and rule versions", () => {
+    const rule = executableSpecFixture();
+    rule.gameSpec = Object.fromEntries(Object.entries(rule.gameSpec!).reverse()) as typeof rule.gameSpec;
+    rule.gameSpec!.generation = Object.fromEntries(Object.entries(rule.generation!).reverse()) as typeof rule.generation & {};
+    expect(ruleSystemSpecIssues(rule)).toEqual([]);
+    rule.generation!.seed++;
+    expect(ruleSystemSpecIssues(rule)).toContainEqual(expect.objectContaining({ path: "generation" }));
+    refreshGameSpec(rule);
+    rule.version++;
+    expect(ruleSystemSpecIssues(rule)).toContainEqual(expect.objectContaining({ path: "ruleSystemVersion" }));
+  });
+  it.each(["hex-settlement", "disc-flipping", "unknown-mechanic", "toString", "hand-play"])("rejects declared %s on a conversation adapter without game-name keywords", (mechanic) => {
+    const rule = executableSpecFixture();
+    rule.generation!.requestedMechanics = [mechanic];
+    refreshGameSpec(rule);
+    expect(ruleSystemSpecIssues(rule)).toContainEqual(expect.objectContaining({ path: "execution" }));
+  });
+  it("does not combine capabilities from separate adapters into a fictional runtime", () => {
+    expect(gameSpecCapabilityGap("Untitled", ["conversation", "hand-play"])).toContain("能力缺口");
+    expect(gameSpecCapabilityGap("Untitled", ["conversation"], "conversation-relay-v1")).toBeNull();
   });
 });
