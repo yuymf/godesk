@@ -5,7 +5,7 @@ import {
   openLobbyCard,
 } from "./helpers/sol-max-baseline";
 
-test.describe("PR11 network-route thin board", () => {
+test.describe("PR14 network-route HUD + lobby thumb", () => {
   test("线路网络: studio playable, lobby mark, claim edge, HUD authority", async ({
     page,
   }) => {
@@ -40,5 +40,7 @@ test.describe("PR11 network-route thin board", () => {
     await legal.first().click();
     await expect(hud).toContainText("最近占领");
     await expect(board.getByLabel("已铺路线")).toContainText(/座位 0 · [1-9]/);
+    await expect(board.getByLabel("枢纽")).toContainText(/北港|南站|A|F/);
+    await expect(board.getByLabel("连通进度")).toBeVisible();
   });
 });

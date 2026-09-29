@@ -2,6 +2,7 @@ import {
   createNetworkRouteKernelConfig,
   networkRouteAdapter,
   parseNetworkRouteConfig,
+  playerConnectsTerminals,
   type NetworkRouteGenre,
 } from "../runtime/adapters/network-route";
 import type { PlayState } from "../runtime/play-kernel";
@@ -33,6 +34,9 @@ const COPY = {
     waiting: "等待对方",
     claim: "可占领",
     terminals: "枢纽",
+    goal: "连通进度",
+    linked: "已连通",
+    unlinked: "未连通",
     connectHint: "先连通南北枢纽获胜",
   },
   en: {
@@ -50,6 +54,9 @@ const COPY = {
     waiting: "Waiting for opponent",
     claim: "Legal claim",
     terminals: "Hubs",
+    goal: "Link progress",
+    linked: "linked",
+    unlinked: "open",
     connectHint: "Connect the terminal hubs to win",
   },
 } as const;
@@ -170,6 +177,29 @@ export function NetworkRouteBoard({
         ? copy.yourTurn
         : `${copy.waiting} · ${copy.seat} ${activeSeat}`;
 
+  const linked0 = playerConnectsTerminals(
+    networkRoute.claims,
+    networkRoute.edges,
+    0,
+    networkRoute.terminalFrom,
+    networkRoute.terminalTo,
+  );
+  const linked1 = playerConnectsTerminals(
+    networkRoute.claims,
+    networkRoute.edges,
+    1,
+    networkRoute.terminalFrom,
+    networkRoute.terminalTo,
+  );
+  const fromHub = cityById(networkRoute.cities, networkRoute.terminalFrom);
+  const toHub = cityById(networkRoute.cities, networkRoute.terminalTo);
+  const terminalsLine = `${copy.terminals}: ${networkRoute.terminalFrom}${
+    fromHub ? ` ${fromHub.name}` : ""
+  } ↔ ${networkRoute.terminalTo}${toHub ? ` ${toHub.name}` : ""}`;
+  const goalLine = `${copy.goal} · ${copy.seat} 0 ${
+    linked0 ? copy.linked : copy.unlinked
+  } · ${copy.seat} 1 ${linked1 ? copy.linked : copy.unlinked}`;
+
   const width = 400;
   const height = 360;
 
@@ -212,8 +242,11 @@ export function NetworkRouteBoard({
           </div>
         </div>
         <p className="network-route-hud-last">{lastLine}</p>
-        <p className="network-route-terminals">
-          {copy.terminals}: {networkRoute.terminalFrom} ↔ {networkRoute.terminalTo}
+        <p aria-label={copy.terminals} className="network-route-terminals">
+          {terminalsLine}
+        </p>
+        <p aria-label={copy.goal} className="network-route-goal">
+          {goalLine}
         </p>
       </section>
 

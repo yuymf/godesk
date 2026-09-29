@@ -11,6 +11,10 @@ describe("network-route thumbnail", () => {
     const b = networkRouteStartingBoardThumbnailDataUrl();
     expect(a).toBe(b);
     expect(a.startsWith("data:image/svg+xml")).toBe(true);
+    const decoded = decodeURIComponent(a.split(",")[1] ?? "");
+    expect(decoded).toContain("nrFelt");
+    expect(decoded).toContain("#fbbf24");
+    expect(decoded).toContain("#2563eb");
   });
 
   it("initial slice exposes legal claims for seat 0", () => {
