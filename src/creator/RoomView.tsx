@@ -47,6 +47,7 @@ import { HarborVoyageBoard } from "./HarborVoyageBoard";
 import { OthelloBoard } from "./OthelloBoard";
 import { CatanBoard, type CatanBoardState } from "./CatanBoard";
 import { NetworkRouteBoard, type NetworkRouteBoardState } from "./NetworkRouteBoard";
+import { HandPlayBoard } from "./HandPlayBoard";
 import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import {
   readShareToken,
@@ -654,21 +655,15 @@ export function RoomView({ sessionId }: { sessionId: string }) {
               </section>
             )}
             {handPlay && room.state.handPlay && (
-              <section className="hand-play-board" aria-label="手牌与出牌区">
-                <p>牌库剩余 {room.state.handPlay.deckRemaining} 张</p>
-                <div className="play-area">
-                  {room.state.handPlay.playArea.map((card, index) => (
-                    <span key={`${card.seat}-${index}`}>座位 {card.seat} 打出 {card.card}</span>
-                  ))}
-                </div>
-                {seat !== null && (
-                  <div className="own-hand" aria-label="你的手牌">
-                    {(room.state.handPlay.hands[seat] ?? []).map((card, index) => (
-                      <span key={`${card}-${index}`}>手牌 {card}</span>
-                    ))}
-                  </div>
-                )}
-              </section>
+              <HandPlayBoard
+                activeSeat={activeSeat}
+                handPlay={room.state.handPlay}
+                locale={locale}
+                scores={room.state.scores}
+                status={room.state.status}
+                viewerSeat={seat}
+                winnerSeat={room.state.winnerSeat}
+              />
             )}
             {conversationRelay && room.state.conversation && (
               <section className="conversation-board" aria-label={copy.transcript}>

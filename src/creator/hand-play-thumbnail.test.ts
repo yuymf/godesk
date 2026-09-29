@@ -8,4 +8,20 @@ describe("hand-play thumbnail", () => {
     expect(a).toBe(b);
     expect(a.startsWith("data:image/svg+xml")).toBe(true);
   });
+
+  it("renders a felt table with a card fan (not hex/disc/network cues)", () => {
+    const decoded = decodeURIComponent(handPlayStartingBoardThumbnailDataUrl());
+    expect(decoded.includes("<svg")).toBe(true);
+    expect(decoded.includes("hpFelt")).toBe(true);
+    expect(decoded.includes("hpCardFace")).toBe(true);
+    expect(decoded.includes("<rect")).toBe(true);
+    expect(decoded.includes("<circle")).toBe(true);
+    // Card face values in the fan
+    expect(decoded.includes(">5<")).toBe(true);
+    expect(decoded.includes(">3<")).toBe(true);
+    // Distinct from othello green grid / catan polygons / network edge lines
+    expect(decoded.includes("polygon")).toBe(false);
+    expect(decoded.includes("<line ")).toBe(false);
+    expect(decoded.includes("role=\"img\"")).toBe(true);
+  });
 });
