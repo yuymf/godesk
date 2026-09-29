@@ -212,7 +212,12 @@ export function OthelloBoard({
         : `${copy.waiting} · ${copy.seat} ${activeSeat}`;
 
   return (
-    <div className="othello-board" data-status={status}>
+    <div
+      aria-label={copy.board}
+      className="othello-board"
+      data-status={status}
+      role="region"
+    >
       <section aria-label={copy.hud} className="othello-hud">
         <div className="othello-hud-status">
           <span className="othello-kicker">{copy.active}</span>

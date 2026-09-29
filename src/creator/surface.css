@@ -5160,6 +5160,17 @@ summary:focus-visible {
     animation: none;
   }
 
+  .othello-board,
+  .othello-cell,
+  .othello-disc,
+  .othello-pass,
+  .catan-board,
+  .catan-hit,
+  .catan-action {
+    animation: none !important;
+    transition: none !important;
+  }
+
 }
 
 @media (max-width: 960px) {
