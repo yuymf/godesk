@@ -349,6 +349,9 @@ export type RuntimeConfiguration =
     }
   | Extract<ProjectChangeOperation, { op: "configure_hex_settlement" }> & {
       op: "configure_hex_settlement";
+    }
+  | Extract<ProjectChangeOperation, { op: "configure_network_route" }> & {
+      op: "configure_network_route";
     };
 
 export function configureDedicatedKernel(
@@ -356,7 +359,7 @@ export function configureDedicatedKernel(
   op: string,
   kernel: Extract<
     Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
-    { type: "harbor-voyage-v1" | "worker-placement-v1" | "hidden-role-v1" | "hand-play-v1" | "conversation-relay-v1" | "disc-flipping-v1" | "hex-settlement-v1" }
+    { type: "harbor-voyage-v1" | "worker-placement-v1" | "hidden-role-v1" | "hand-play-v1" | "conversation-relay-v1" | "disc-flipping-v1" | "hex-settlement-v1" | "network-route-v1" }
   >,
   unsupported: string[],
   config: unknown,
@@ -512,6 +515,34 @@ export function configureDedicatedKernel(
           },
         ],
       },
+    } : kernel.type === "network-route-v1" ? {
+      actions: [
+        {
+          id: "claim",
+          label: "占领路线",
+          description: "在未占领的路线上铺设连接。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+      ],
+      participants: {
+        ...record.ruleSystem.participants,
+        min: 2,
+        max: 2,
+        default: 2,
+      },
+      playSurface: {
+        kind: "table" as const,
+        layout: "network-graph",
+        regions: [
+          {
+            id: "map",
+            name: "线路图",
+            description: "城市路线网络盘面",
+          },
+        ],
+      },
     } : {}),
     runtimeSupport: {
       status: "executable",
@@ -604,6 +635,26 @@ export function configureRuntimeKernel(
         type: "hex-settlement-v1",
         playerCount: configuration.config.playerCount,
         victoryPointsToWin: configuration.config.victoryPointsToWin,
+      },
+      configuration.config.unsupported?.map((item) => item.trim()) ?? [],
+      configuration.config,
+      affectedEntities,
+    );
+    return;
+  }
+  if (configuration.op === "configure_network_route") {
+    configureDedicatedKernel(
+      record,
+      configuration.op,
+      {
+        type: "network-route-v1",
+        playerCount: configuration.config.playerCount,
+        ...(configuration.config.terminalFrom
+          ? { terminalFrom: configuration.config.terminalFrom }
+          : {}),
+        ...(configuration.config.terminalTo
+          ? { terminalTo: configuration.config.terminalTo }
+          : {}),
       },
       configuration.config.unsupported?.map((item) => item.trim()) ?? [],
       configuration.config,
@@ -1466,6 +1517,18 @@ const RUNTIME_HANDLERS: {
       Number.isInteger(config.victoryPointsToWin) &&
       config.victoryPointsToWin >= 5 &&
       config.victoryPointsToWin <= 15 &&
+      validUnsupported(config.unsupported),
+  },
+  configure_network_route: {
+    validate: (config) =>
+      Boolean(config) &&
+      typeof config === "object" &&
+      Number.isInteger(config.playerCount) &&
+      config.playerCount === 2 &&
+      (config.terminalFrom === undefined ||
+        typeof config.terminalFrom === "string") &&
+      (config.terminalTo === undefined ||
+        typeof config.terminalTo === "string") &&
       validUnsupported(config.unsupported),
   },
 };

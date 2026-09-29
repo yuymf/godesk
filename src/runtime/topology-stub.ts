@@ -201,3 +201,15 @@ export function createHexTopologyStub(radius = 2): HexTopologyStub {
     cells: hexesInRadius(radius),
   };
 }
+
+/** Undirected city/route graph — network-route-v1 (PR11) fills this stub. */
+export function createGraphTopologyStub(
+  nodeIds: readonly string[],
+  edges: readonly { from: string; to: string }[],
+): GraphTopologyStub {
+  return {
+    kind: "graph",
+    nodeIds: [...nodeIds],
+    edges: edges.map((edge) => ({ from: edge.from, to: edge.to })),
+  };
+}

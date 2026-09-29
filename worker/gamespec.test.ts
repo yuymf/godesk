@@ -252,21 +252,41 @@ describe("all artifact entry points fail closed", () => {
   });
 });
 
-const UNSEEN_PROMPTS = [
-  "做一款线路网络桌游，玩家铺设路线连接城市",
+const NETWORK_PROMPT = "做一款线路网络桌游，玩家铺设路线连接城市";
+const OTHER_UNSEEN_PROMPTS = [
   "做一款卡牌区域控制游戏，玩家出牌争夺区域",
   "随便做个桌游",
 ] as const;
 
 describe("unseen prompts never silent-bind Catan or Othello", () => {
-  it.each(UNSEEN_PROMPTS)(
-    "generation for %s refuses hex-settlement-v1 and disc-flipping-v1",
+  it("线路网络 proposes network-route-v1 (never Catan/Othello)", async () => {
+    const { project, job } = await generate(NETWORK_PROMPT);
+    expect(job.status).toBe("succeeded");
+    const rule = await readRule(project.id);
+    expect(rule.generation?.requestedMechanics).toEqual(["route-network"]);
+    expect(rule.generation?.requestedMechanics ?? []).not.toContain("hex-settlement");
+    expect(rule.generation?.requestedMechanics ?? []).not.toContain("disc-flipping");
+
+    const { generationPlan } = await (
+      await SELF.fetch(`${origin}/api/projects/${project.id}?view=generation-plan`)
+    ).json<{ generationPlan: GenerationPlan | null }>();
+    expect(generationPlan?.proposedRuntime).toMatchObject({
+      op: "configure_network_route",
+      config: { playerCount: 2 },
+    });
+    expect(generationPlan?.proposedRuntime?.op).not.toBe("configure_hex_settlement");
+    expect(generationPlan?.proposedRuntime?.op).not.toBe("configure_disc_flipping");
+  });
+
+  it.each(OTHER_UNSEEN_PROMPTS)(
+    "generation for %s refuses hex-settlement-v1, disc-flipping-v1, and network-route-v1",
     async (idea) => {
       const { project, job } = await generate(idea);
       expect(job.status).toBe("succeeded");
       const rule = await readRule(project.id);
       expect(rule.generation?.requestedMechanics ?? []).not.toContain("hex-settlement");
       expect(rule.generation?.requestedMechanics ?? []).not.toContain("disc-flipping");
+      expect(rule.generation?.requestedMechanics ?? []).not.toContain("route-network");
 
       const kernelType =
         rule.runtimeSupport.status === "executable"
@@ -274,6 +294,7 @@ describe("unseen prompts never silent-bind Catan or Othello", () => {
           : null;
       expect(kernelType).not.toBe("hex-settlement-v1");
       expect(kernelType).not.toBe("disc-flipping-v1");
+      expect(kernelType).not.toBe("network-route-v1");
 
       const { generationPlan } = await (
         await SELF.fetch(`${origin}/api/projects/${project.id}?view=generation-plan`)
@@ -281,8 +302,9 @@ describe("unseen prompts never silent-bind Catan or Othello", () => {
       const proposedOp = generationPlan?.proposedRuntime?.op ?? null;
       expect(proposedOp).not.toBe("configure_hex_settlement");
       expect(proposedOp).not.toBe("configure_disc_flipping");
+      expect(proposedOp).not.toBe("configure_network_route");
 
-      // Acceptable: explicit gap/refuse (draft, no proposed Catan/Othello runtime) OR a different correct kernel.
+      // Acceptable: explicit gap/refuse OR a different correct non-spatial kernel.
       if (proposedOp === null) {
         expect(rule.runtimeSupport.status).not.toBe("executable");
       } else {

@@ -5166,7 +5166,9 @@ summary:focus-visible {
   .othello-pass,
   .catan-board,
   .catan-hit,
-  .catan-action {
+  .catan-action,
+  .network-route-board,
+  .network-route-hit {
     animation: none !important;
     transition: none !important;
   }
@@ -5809,5 +5811,102 @@ summary:focus-visible {
   }
   .catan-hud-scores {
     justify-content: flex-start;
+  }
+}
+
+
+/* PR11 — thin network-route board + lobby mark */
+.lobby-card-mark-network {
+  background: #e2e8f0;
+}
+.lobby-card-mark-network img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: inherit;
+}
+
+.network-route-board {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #f8fafc, #eef2ff);
+  border: 1px solid #cbd5e1;
+}
+
+.network-route-hud {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1.4fr 1fr;
+  align-items: start;
+}
+
+.network-route-kicker {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.network-route-hud-status strong {
+  display: block;
+  margin-top: 2px;
+}
+
+.network-route-hud-status p,
+.network-route-hud-last,
+.network-route-terminals,
+.network-route-hint {
+  margin: 4px 0 0;
+  color: #475569;
+  font-size: 14px;
+}
+
+.network-route-hud-scores {
+  display: grid;
+  gap: 6px;
+}
+
+.network-route-score {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+}
+
+.network-route-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.network-route-svg {
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.network-route-hit:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.room-view-network .network-route-board {
+  max-width: 720px;
+}
+
+@media (max-width: 720px) {
+  .network-route-hud {
+    grid-template-columns: 1fr;
   }
 }

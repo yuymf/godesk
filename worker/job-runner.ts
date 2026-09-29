@@ -265,8 +265,8 @@ export async function runCreatorJob(
         sourceGenre === "conversation" &&
         generatedRuleSystem.actions.length > 0 &&
         generatedRuleSystem.actions.length <= 12;
-      // PR5/PR6 thin bind: Othello → disc-flipping-v1; Catan → hex-settlement-v1.
-      // Never silently substitute Othello for Catan (or the reverse).
+      // PR5/PR6/PR11 thin bind: Othello → disc-flipping-v1; Catan → hex-settlement-v1;
+      // line network → network-route-v1. Never silently substitute across genres.
       const requestedMechanics = inferRequestedMechanics(
         `${input.name ?? ""}\n${idea}\n${authoredMaterial}`,
       );
@@ -275,6 +275,10 @@ export async function runCreatorJob(
       const discFlippingRuntimeConfigured =
         requestedMechanics.includes("disc-flipping") &&
         !requestedMechanics.includes("hex-settlement");
+      const networkRouteRuntimeConfigured =
+        requestedMechanics.includes("route-network") &&
+        !requestedMechanics.includes("hex-settlement") &&
+        !requestedMechanics.includes("disc-flipping");
       weakGenreScoreRaceRefused =
         sourceGenre === "generic" &&
         drawAndScoreRule === null &&
@@ -334,6 +338,7 @@ export async function runCreatorJob(
       generationRuntimeConfigured =
         hexSettlementRuntimeConfigured ||
         discFlippingRuntimeConfigured ||
+        networkRouteRuntimeConfigured ||
         hiddenRoleRuntimeConfigured ||
         handPlayRuntimeConfigured ||
         harborVoyageRuntimeConfigured ||
@@ -385,6 +390,16 @@ export async function runCreatorJob(
               cols: 8,
               unsupported: [
                 "disc-flipping-v1 executes 8×8 (or configured) grid placement, eight-direction continuous flips, forced pass, and terminal disc-count scoring on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8.",
+              ],
+            },
+          }
+        : networkRouteRuntimeConfigured
+        ? {
+            op: "configure_network_route" as const,
+            config: {
+              playerCount: 2,
+              unsupported: [
+                "network-route-v1 executes a fixed city graph with alternate-turn route claims and first-to-connect terminal hubs on the public play-kernel; not Ticket to Ride (no tickets deck / multi-color routes / scoring table).",
               ],
             },
           }
@@ -917,6 +932,8 @@ export async function runCreatorJob(
           ? "规则结构来自体裁识别；六角盘面、资源产出、道路连通建造、交易与发展牌将在批准 Generation Plan 后配置为 hex-settlement-v1（公共 play-kernel 适配器）。"
           : proposedRuntime?.op === "configure_disc_flipping"
           ? "规则结构来自体裁识别；方格翻子、八方向翻转、强制跳过与终盘计分将在批准 Generation Plan 后配置为 disc-flipping-v1（公共 play-kernel 适配器）。"
+          : proposedRuntime?.op === "configure_network_route"
+          ? "规则结构来自体裁识别；城市图铺线、交替占领路线与连通枢纽获胜将在批准 Generation Plan 后配置为 network-route-v1（公共 play-kernel 适配器；非完整 Ticket to Ride）。"
           : proposedRuntime?.op === "configure_hidden_role"
           ? "规则结构来自体裁识别；秘密身份、公开发言与指控将在批准 Generation Plan 后配置为 hidden-role-v1。"
           : proposedRuntime?.op === "configure_hand_play"

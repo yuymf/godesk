@@ -177,6 +177,23 @@ export function isHexSettlement(ruleSystem: RuleSystem): boolean {
   return Boolean(hexSettlementKernel(ruleSystem));
 }
 
+export function networkRouteKernel(
+  ruleSystem: RuleSystem,
+): Extract<
+  Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
+  { type: "network-route-v1" }
+> | null {
+  return ruleSystem.runtimeSupport.status === "executable" &&
+    ruleSystem.runtimeSupport.kernel.type === "network-route-v1"
+    ? ruleSystem.runtimeSupport.kernel
+    : null;
+}
+
+/** Line / route network — dedicated graph board HUD, never ScoreTrackRoom. */
+export function isNetworkRoute(ruleSystem: RuleSystem): boolean {
+  return Boolean(networkRouteKernel(ruleSystem));
+}
+
 /** Score-track family only — themed scoreboard UI must not stand in for other genres (ADR 0012). */
 export function usesScoreTrackSurface(ruleSystem: RuleSystem): boolean {
   return Boolean(

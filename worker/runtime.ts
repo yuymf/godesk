@@ -63,6 +63,14 @@ import {
   type CatanPlayer,
   type DevCardKind
 } from "../src/runtime/adapters/catan";
+import {
+  bindNetworkRouteFromRuntimeKernel,
+  networkRouteAdapter,
+  networkRouteToSessionFields,
+  pickNetworkRouteBotAction,
+  playActionFromNetworkRouteIntent,
+  type NetworkRouteGenre,
+} from "../src/runtime/adapters/network-route";
 
 type ExecutableRuntime = Extract<
   RuleSystem["runtimeSupport"],
@@ -316,6 +324,26 @@ export function initialSessionState(
       status: fields.status,
       winnerSeat: fields.winnerSeat,
       catan: fields.catan,
+    };
+  }
+  if (runtime?.kernel.type === "network-route-v1") {
+    const play = createInitialState(
+      networkRouteAdapter,
+      bindNetworkRouteFromRuntimeKernel({
+        playerCount: runtime.kernel.playerCount,
+        terminalFrom: runtime.kernel.terminalFrom,
+        terminalTo: runtime.kernel.terminalTo,
+      }),
+      _seed,
+    );
+    const fields = networkRouteToSessionFields(play);
+    return {
+      turn: fields.turn,
+      activeSeat: fields.activeSeat,
+      scores: fields.scores,
+      status: fields.status,
+      winnerSeat: fields.winnerSeat,
+      networkRoute: fields.networkRoute,
     };
   }
   return {
@@ -892,6 +920,63 @@ export function acceptIntent(
     };
   }
 
+  if (runtime.kernel.type === "network-route-v1") {
+    if (state.status !== "active" || !state.networkRoute || intent.seat !== state.activeSeat) {
+      return null;
+    }
+    const kernelConfig = bindNetworkRouteFromRuntimeKernel({
+      playerCount: runtime.kernel.playerCount,
+      terminalFrom: runtime.kernel.terminalFrom,
+      terminalTo: runtime.kernel.terminalTo,
+    });
+    const playState = {
+      seed,
+      sequence: state.turn,
+      phase: "play" as const,
+      activePlayerId: state.activeSeat,
+      playerCount: runtime.kernel.playerCount,
+      status: state.status,
+      winnerId: state.winnerSeat,
+      events: [] as const,
+      genre: {
+        cities: state.networkRoute.cities.map((city) => ({ ...city })),
+        edges: state.networkRoute.edges.map((edge) => ({ ...edge })),
+        claims: { ...state.networkRoute.claims },
+        terminalFrom: state.networkRoute.terminalFrom,
+        terminalTo: state.networkRoute.terminalTo,
+        lastClaim: state.networkRoute.lastClaim
+          ? { ...state.networkRoute.lastClaim }
+          : null,
+        routeCounts: [...state.networkRoute.routeCounts] as [number, number],
+      } satisfies NetworkRouteGenre,
+    };
+    const result = applyAction(
+      networkRouteAdapter,
+      playState,
+      playActionFromNetworkRouteIntent(intent.seat, intent.actionId, intent.payload),
+      kernelConfig,
+    );
+    if (!result.ok) return null;
+    const fields = networkRouteToSessionFields(result.state);
+    return {
+      sequence,
+      intentId: intent.intentId,
+      seat: intent.seat,
+      actionId: intent.actionId,
+      points: 0,
+      payload: intent.payload,
+      state: {
+        turn: fields.turn,
+        activeSeat: fields.activeSeat,
+        scores: fields.scores,
+        status: fields.status,
+        winnerSeat: fields.winnerSeat,
+        networkRoute: fields.networkRoute,
+      },
+    };
+  }
+
+
   const raceKernel = runtime.kernel;
   const action = raceKernel.actions.find(
     (candidate) => candidate.id === intent.actionId,
@@ -1006,6 +1091,68 @@ export function runBotSimulation(
       terminalStatus: "complete" as const,
     };
   }
+
+  if (runtime.kernel.type === "network-route-v1") {
+    const kernelConfig = bindNetworkRouteFromRuntimeKernel({
+      playerCount: runtime.kernel.playerCount,
+      terminalFrom: runtime.kernel.terminalFrom,
+      terminalTo: runtime.kernel.terminalTo,
+    });
+    let guard = 0;
+    while (state.status === "active" && state.networkRoute && guard < 64) {
+      guard += 1;
+      const playState = {
+        seed,
+        sequence: state.turn,
+        phase: "play" as const,
+        activePlayerId: state.activeSeat,
+        playerCount: runtime.kernel.playerCount,
+        status: state.status,
+        winnerId: state.winnerSeat,
+        events: [] as const,
+        genre: {
+          cities: state.networkRoute.cities.map((city) => ({ ...city })),
+          edges: state.networkRoute.edges.map((edge) => ({ ...edge })),
+          claims: { ...state.networkRoute.claims },
+          terminalFrom: state.networkRoute.terminalFrom,
+          terminalTo: state.networkRoute.terminalTo,
+          lastClaim: state.networkRoute.lastClaim
+            ? { ...state.networkRoute.lastClaim }
+            : null,
+          routeCounts: [...state.networkRoute.routeCounts] as [number, number],
+        } satisfies NetworkRouteGenre,
+      };
+      const bot = pickNetworkRouteBotAction(
+        playState,
+        kernelConfig,
+        seed,
+        state.turn + 1,
+      );
+      if (!bot) throw new Error("bot_action_unavailable");
+      const accepted = acceptIntent(
+        state,
+        runtime,
+        {
+          intentId: `bot_${acceptedActions.length + 1}`,
+          seat: state.activeSeat,
+          actionId: bot.type,
+          payload: bot.payload,
+        },
+        acceptedActions.length + 1,
+        seed,
+      );
+      if (!accepted) throw new Error("bot_action_rejected");
+      acceptedActions.push(accepted);
+      state = accepted.state;
+    }
+    return {
+      initialState,
+      acceptedActions,
+      finalState: state,
+      terminalStatus: "complete" as const,
+    };
+  }
+
 
   if (runtime.kernel.type === "hand-play-v1") {
     while (state.status === "active" && state.handPlay) {

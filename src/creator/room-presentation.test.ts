@@ -3,6 +3,7 @@ import type { RuleSystem } from "./project-contract";
 import {
   isDiscFlipping,
   isHexSettlement,
+  isNetworkRoute,
   showsAcceptedActionPointChrome,
   usesConversationTranscriptSurface,
   usesScoreTrackSurface,
@@ -249,5 +250,29 @@ describe("showsAcceptedActionPointChrome", () => {
       victoryTarget: 10,
       actions: [{ id: "play", label: "出牌" }],
     }))).toBe(true);
+  });
+});
+
+
+describe("isNetworkRoute", () => {
+  it("detects network-route-v1 only", () => {
+    expect(isNetworkRoute(base({
+      type: "disc-flipping-v1",
+      playerCount: 2,
+      rows: 8,
+      cols: 8,
+    }))).toBe(false);
+    expect(isNetworkRoute(base({
+      type: "hex-settlement-v1",
+      playerCount: 2,
+      victoryPointsToWin: 10,
+    }))).toBe(false);
+    const network = base({
+      type: "network-route-v1",
+      playerCount: 2,
+    });
+    expect(isNetworkRoute(network)).toBe(true);
+    expect(isDiscFlipping(network)).toBe(false);
+    expect(isHexSettlement(network)).toBe(false);
   });
 });

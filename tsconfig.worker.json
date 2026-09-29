@@ -37,6 +37,7 @@
     "src/runtime/adapters/turn-taking.ts",
     "src/runtime/adapters/othello.ts",
     "src/runtime/adapters/catan.ts",
+    "src/runtime/adapters/network-route.ts",
     "src/runtime/topology-stub.ts"
   ]
 }

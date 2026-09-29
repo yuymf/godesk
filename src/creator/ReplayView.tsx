@@ -7,6 +7,8 @@ import { HarborVoyageBoard } from "./HarborVoyageBoard";
 import { OthelloBoard } from "./OthelloBoard";
 import { CatanBoard } from "./CatanBoard";
 import type { CatanBoardState } from "./CatanBoard";
+import { NetworkRouteBoard } from "./NetworkRouteBoard";
+import type { NetworkRouteBoardState } from "./NetworkRouteBoard";
 import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import { readShareToken, validationStudioHref } from "./studio-utils";
 import {
@@ -101,6 +103,16 @@ export function ReplayView({ replayId }: { replayId: string }) {
             activeSeat={replay.finalState.activeSeat}
             catan={replay.finalState.catan as CatanBoardState}
             enabled={false}
+            readOnly
+            status={replay.finalState.status}
+            viewerSeat={null}
+            winnerSeat={replay.finalState.winnerSeat}
+          />
+        ) : replay.finalState.networkRoute ? (
+          <NetworkRouteBoard
+            activeSeat={replay.finalState.activeSeat}
+            enabled={false}
+            networkRoute={replay.finalState.networkRoute as NetworkRouteBoardState}
             readOnly
             status={replay.finalState.status}
             viewerSeat={null}

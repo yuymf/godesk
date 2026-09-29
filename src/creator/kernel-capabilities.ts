@@ -18,6 +18,7 @@ export const KERNEL_CAPABILITIES = {
   "conversation-relay-v1": ["speech-log", "turn-budget"],
   "disc-flipping-v1": ["grid-placement", "directional-flips", "forced-pass", "terminal-disc-count"],
   "hex-settlement-v1": ["hex-topology", "resource-production", "player-trading", "network-building"],
+  "network-route-v1": ["graph-topology", "route-claiming", "path-connectivity"],
 } satisfies Record<KernelType, readonly string[]>;
 
 /** Mechanics are declarations, independent of a game's title or source language. */
@@ -36,6 +37,7 @@ export const MECHANIC_CAPABILITIES: Record<string, readonly string[]> = {
   "conversation": ["speech-log", "turn-budget"],
   "hex-settlement": ["hex-topology", "resource-production", "player-trading", "network-building"],
   "disc-flipping": ["grid-placement", "directional-flips", "forced-pass", "terminal-disc-count"],
+  "route-network": ["graph-topology", "route-claiming", "path-connectivity"],
 };
 
 export function kernelCapabilities(kernelType: string): readonly string[] | undefined {
@@ -62,5 +64,9 @@ export function inferRequestedMechanics(corpus: string): string[] {
   const mechanics: string[] = [];
   if (/\bcatan\b|settlecoast|卡坦|卡版|六角.*(?:资源|建造)|hex.*(?:resource|build)/i.test(corpus)) mechanics.push("hex-settlement");
   if (/\bothello\b|\breversi\b|黑白棋|翻转棋|翻子|flipp?ing.*dis[ck]|dis[ck].*flipp?ing/i.test(corpus)) mechanics.push("disc-flipping");
+  // Line / route network (PR11) — must not also match hex or disc cues above.
+  if (/线路网络|路线连接|铺设路线|连接城市|route\s*network|connect(?:ing)?\s+cities|claim(?:ing)?\s+routes/i.test(corpus)) {
+    mechanics.push("route-network");
+  }
   return mechanics;
 }

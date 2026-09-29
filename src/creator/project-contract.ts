@@ -265,6 +265,12 @@ export interface RuleSystem {
               type: "hex-settlement-v1";
               playerCount: number;
               victoryPointsToWin: number;
+            }
+          | {
+              type: "network-route-v1";
+              playerCount: number;
+              terminalFrom?: string;
+              terminalTo?: string;
             };
   };
 }
@@ -600,6 +606,15 @@ export type ProjectChangeOperation =
       };
     }
   | {
+      op: "configure_network_route";
+      config: {
+        playerCount: number;
+        terminalFrom?: string;
+        terminalTo?: string;
+        unsupported?: string[];
+      };
+    }
+  | {
       op: "activate_rule_system";
       ruleSystemId: string;
     }
@@ -889,6 +904,16 @@ export interface SessionState {
     freeRoadsRemaining: number;
     lastAction: string | null;
     turnPlayer: number;
+  };
+  /** Present when the build kernel is network-route-v1 (line network). */
+  networkRoute?: {
+    cities: Array<{ id: string; name: string; x: number; y: number }>;
+    edges: Array<{ id: string; from: string; to: string }>;
+    claims: Record<string, number | null>;
+    terminalFrom: string;
+    terminalTo: string;
+    lastClaim: { edgeId: string; playerId: number } | null;
+    routeCounts: [number, number];
   };
 }
 

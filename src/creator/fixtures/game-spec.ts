@@ -122,3 +122,37 @@ export function executableCatanSpecFixture(): RuleSystem {
   refreshGameSpec(rule);
   return rule;
 }
+
+
+/** Executable network-route RuleSystem for PR11 thin bind tests. */
+export function executableNetworkRouteSpecFixture(): RuleSystem {
+  const rule: RuleSystem = {
+    id: "rule-system-network-route-fixture", version: 1, name: "线路网络", pitch: "Claim routes to connect hubs",
+    generation: {
+      generatorVersion: GENERATOR_VERSION, rulesVersion: RULES_VERSION,
+      sourcePrompt: "做一款线路网络桌游，玩家铺设路线连接城市",
+      assumptions: ["Thin route-claim graph; not Ticket to Ride"],
+      seed: 42, requestedMechanics: ["route-network"],
+    },
+    participants: { min: 2, max: 2, default: 2, roles: [] }, durationMinutes: 15,
+    entities: [
+      { id: "route", name: "路线", kind: "token", sourceId: null, provenance: "source-anchored", confidence: 1 },
+      { id: "city", name: "城市", kind: "token", sourceId: null, provenance: "source-anchored", confidence: 1 },
+    ],
+    rules: [{ id: "claim", text: "On your turn claim one unclaimed route; first to connect the terminal hubs wins", sourceId: null, provenance: "source-anchored", confidence: 1 }],
+    constraints: [], setup: ["Place the fixed city graph; no routes claimed"],
+    stages: [{ id: "play", name: "Play" }, { id: "ended", name: "Ended" }],
+    outcomes: [{ id: "connect", name: "First path between terminal hubs wins" }],
+    actions: [
+      { id: "claim", label: "Claim route", description: "Claim an unclaimed edge", sourceId: null, provenance: "source-anchored", confidence: 1 },
+    ],
+    playSurface: { kind: "table", layout: "network-graph", regions: [{ id: "map", name: "线路图", description: "City route network" }] },
+    presentation: { theme: "network-route" },
+    runtimeSupport: {
+      status: "executable", unsupported: [],
+      kernel: { type: "network-route-v1", playerCount: 2 },
+    },
+  };
+  refreshGameSpec(rule);
+  return rule;
+}
