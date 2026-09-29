@@ -37,6 +37,13 @@ import {
   applyConversationRelayIntent,
   createConversationRelayState,
 } from "../src/runtime/conversation-relay";
+import { applyAction, createInitialState } from "../src/runtime/play-kernel";
+import {
+  createTurnTakingKernelConfig,
+  playActionFromIntent,
+  turnTakingAdapter,
+  turnTakingToSessionFields,
+} from "../src/runtime/adapters/turn-taking";
 
 type ExecutableRuntime = Extract<
   RuleSystem["runtimeSupport"],
@@ -175,15 +182,24 @@ export function initialSessionState(
     };
   }
   if (runtime?.kernel.type === "turn-taking-v1") {
-    return {
-      turn: 0,
-      activeSeat: 0,
-      scores: Array.from({ length: ruleSystem.participants.default }, () => 0),
-      status: "active",
-      winnerSeat: null,
-      turnTaking: {
+    const playerCount = ruleSystem.participants.default;
+    const play = createInitialState(
+      turnTakingAdapter,
+      createTurnTakingKernelConfig({
+        playerCount,
         maxTurns: runtime.kernel.maxTurns,
-      },
+        actions: runtime.kernel.actions,
+      }),
+      _seed,
+    );
+    const fields = turnTakingToSessionFields(play);
+    return {
+      turn: fields.turn,
+      activeSeat: fields.activeSeat,
+      scores: Array.from({ length: playerCount }, () => 0),
+      status: fields.status,
+      winnerSeat: fields.winnerSeat,
+      turnTaking: fields.turnTaking,
     };
   }
   if (runtime?.kernel.type === "take-away-v1") {
@@ -460,35 +476,56 @@ export function acceptIntent(
   }
 
   if (runtime.kernel.type === "turn-taking-v1") {
-    const action = runtime.kernel.actions.find(
-      (candidate) => candidate.id === intent.actionId,
-    );
-    if (
-      state.status !== "active" ||
-      intent.seat !== state.activeSeat ||
-      !action ||
-      !state.turnTaking
-    ) {
+    if (state.status !== "active" || !state.turnTaking || intent.seat !== state.activeSeat) {
       return null;
     }
-    const turn = state.turn + 1;
-    const complete = turn >= runtime.kernel.maxTurns;
+    const config = createTurnTakingKernelConfig({
+      playerCount: state.scores.length,
+      maxTurns: runtime.kernel.maxTurns,
+      actions: runtime.kernel.actions,
+    });
+    // Reconstruct public play state from the session slice so turn-taking-v1
+    // shares one reducer with the play-kernel contract (no second engine).
+    const playState = {
+      seed,
+      sequence: state.turn,
+      phase: "turn" as const,
+      activePlayerId: state.activeSeat,
+      playerCount: state.scores.length,
+      status: state.status,
+      winnerId: null,
+      events: [],
+      genre: {
+        maxTurns: runtime.kernel.maxTurns,
+        turn: state.turn,
+        actions: runtime.kernel.actions.map((action) => ({ ...action })),
+        allowPass: false,
+        lastActionId: null,
+        passedSeats: [] as number[],
+      },
+    };
+    const result = applyAction(
+      turnTakingAdapter,
+      playState,
+      playActionFromIntent(intent.seat, intent.actionId, intent.payload),
+      config,
+    );
+    if (!result.ok) return null;
+    const fields = turnTakingToSessionFields(result.state);
     return {
       sequence,
       intentId: intent.intentId,
       seat: intent.seat,
-      actionId: action.id,
+      actionId: intent.actionId,
       points: 0,
       payload: intent.payload,
       state: {
-        turn,
-        activeSeat: complete ? intent.seat : (intent.seat + 1) % state.scores.length,
+        turn: fields.turn,
+        activeSeat: fields.activeSeat,
         scores: [...state.scores],
-        status: complete ? "complete" : "active",
-        winnerSeat: null,
-        turnTaking: {
-          maxTurns: runtime.kernel.maxTurns,
-        },
+        status: fields.status,
+        winnerSeat: fields.winnerSeat,
+        turnTaking: fields.turnTaking,
       },
     };
   }

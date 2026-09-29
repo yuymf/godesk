@@ -32,6 +32,9 @@
     "src/runtime/hidden-role.ts",
     "src/runtime/hand-play.ts",
     "src/runtime/generation-refuse.ts",
-    "src/runtime/conversation-relay.ts"
+    "src/runtime/conversation-relay.ts",
+    "src/runtime/play-kernel.ts",
+    "src/runtime/adapters/turn-taking.ts",
+    "src/runtime/topology-stub.ts"
   ]
 }
