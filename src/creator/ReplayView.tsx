@@ -4,6 +4,7 @@ import type { GameReplay, PlayableBuild } from "./project-contract";
 import type { HarborVoyageState } from "../runtime/harbor-voyage";
 import type { WorkerPlacementState } from "../runtime/worker-placement";
 import { HarborVoyageBoard } from "./HarborVoyageBoard";
+import { OthelloBoard } from "./OthelloBoard";
 import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import { readShareToken, validationStudioHref } from "./studio-utils";
 import {
@@ -82,6 +83,16 @@ export function ReplayView({ replayId }: { replayId: string }) {
           <WorkerPlacementBoard
             readOnly
             board={replay.finalState.workerPlacement as WorkerPlacementState}
+          />
+        ) : replay.finalState.othello ? (
+          <OthelloBoard
+            activeSeat={replay.finalState.activeSeat}
+            enabled={false}
+            othello={replay.finalState.othello}
+            readOnly
+            status={replay.finalState.status}
+            viewerSeat={null}
+            winnerSeat={replay.finalState.winnerSeat}
           />
         ) : (
           <div className="replay-state-columns">

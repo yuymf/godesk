@@ -4,7 +4,9 @@ import type { PlayableBuild } from "./project-contract";
 import { createHarborVoyageState } from "../runtime/harbor-voyage";
 import { createWorkerPlacementState } from "../runtime/worker-placement";
 import {
+  discFlippingKernel,
   drawAndScoreKernel,
+  isDiscFlipping,
   isHarborVoyage,
   workerPlacementKernel,
   pushYourLuckKernel,
@@ -16,6 +18,8 @@ import {
   usesScoreTrackSurface,
 } from "./room-presentation";
 import { HarborVoyageBoard } from "./HarborVoyageBoard";
+import { OthelloBoard } from "./OthelloBoard";
+import { createInitialOthelloSessionSlice } from "./othello-thumbnail";
 import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import { href, readShareToken } from "./studio-utils";
 
@@ -55,6 +59,8 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
   const turnTaking = turnTakingKernel(build.ruleSystem);
   const harbor = isHarborVoyage(build.ruleSystem);
   const workerPlacement = workerPlacementKernel(build.ruleSystem);
+  const discFlipping = isDiscFlipping(build.ruleSystem);
+  const discKernel = discFlippingKernel(build.ruleSystem);
   const scoreTrackSurface = usesScoreTrackSurface(build.ruleSystem);
   const runtimeValues = new Map(
     race?.actions.map((action) => [action.id, action.points]) ??
@@ -121,6 +127,17 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
               victoryTarget: workerPlacement.victoryTarget,
               victoryBuildings: workerPlacement.victoryBuildings,
             })}
+          />
+        </section>
+      ) : discFlipping && discKernel ? (
+        <section className="preview-board" aria-label="黑白棋可玩桌面">
+          <OthelloBoard
+            activeSeat={0}
+            enabled={false}
+            othello={createInitialOthelloSessionSlice(discKernel.rows, discKernel.cols)}
+            readOnly
+            status="active"
+            viewerSeat={null}
           />
         </section>
       ) : (
