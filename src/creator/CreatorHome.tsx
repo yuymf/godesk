@@ -294,7 +294,7 @@ export function CreatorHome() {
       <section className="studio-stage">
         <header className="studio-topbar">
           <span>桌游 · 剧本杀 · 棋牌</span>
-          <div><span className="studio-status-dot" /> 创作台</div>
+          <nav aria-label="主导航"><span>创作台</span><a href={href("/games")}>我的游戏</a><a href={href("/settings")}>设置</a></nav>
         </header>
         <div className="studio-welcome">
           <div className="studio-orbit" aria-hidden="true"><span>GD</span></div>

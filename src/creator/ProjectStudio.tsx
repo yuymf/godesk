@@ -1103,7 +1103,7 @@ export function ProjectStudio({ projectId }: { projectId: string }) {
           {generationPlan?.status !== "pending" && <a href="#iteration">改下一版</a>}
           <a href="#validation">朋友反馈{unreviewedFeedbackCount ? ` · ${unreviewedFeedbackCount}` : ""}</a>
         </nav>
-        <a className="back-projects" href={href("/")}>← 返回所有游戏</a>
+        <a className="back-projects" href={href("/games")}>← 返回所有游戏</a>
       </aside>
 
       <section className="studio-canvas">
@@ -1121,6 +1121,7 @@ export function ProjectStudio({ projectId }: { projectId: string }) {
             </span>
             <strong>v{project.version}</strong>
           </div>
+          <nav aria-label="主导航" className="studio-shell-links"><a href={href("/games")}>我的游戏</a><a href={href("/settings")}>设置</a></nav>
         </header>
 
         {visibleJob && (

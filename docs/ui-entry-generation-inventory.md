@@ -13,3 +13,15 @@ Routes are resolved by `src/App.tsx`, `src/creator/CreatorWorkspace.tsx`, and `s
 | No settings route | No settings page in `CreatorWorkspace` | None | None | No link to repair |
 
 The removed **＋ 新游戏** action cleared the home form. The single home composer remains the creation entry; users can edit or clear its text and submit another idea. The removed rules field is replaced by the same idea textarea, which accepts pasted rules. Existing example sessions remain available under **先玩一局现成的**. No Room, auth, or share URL behavior changes in this PR.
+
+## PR2 lobby, session, and settings shell
+
+`CreatorWorkspace` now resolves `/games` to `GameLobby` and `/settings` to `CreatorSettings` (with the same `/chatgpt-plugin` mount behavior). `/room/:sessionId` still resolves to `RoomView`; its `share=` URL and invitation source are unchanged.
+
+| Path | Data slots and primary action | Secondary path |
+| --- | --- | --- |
+| `/games` | `listProjects` supplies the title; `getBuilds` and `getSharedSessions` determine whether to continue an existing Session, start one from a share-ready Build, or finish setup in Studio. No project summary, genre, or thumbnail field exists. | Manage in `/studio/:projectId`; create from `/`. |
+| `/room/:sessionId` | Existing Build and Session state supply the seat picker, turn cue, game surface, and actions. A failed Build load offers retry. | Invitation URL and Replay remain; `/games` and `/settings` are navigation. |
+| `/settings` | Existing `godesk-room-locale` preference is saved immediately. | Create and lobby navigation. |
+
+Delete/keep mapping: the home recent-project sidebar remains a quick link on desktop, with the full project list at `/games` available on narrow screens. Lobby cards have one primary action and one manage link; no generic island thumbnail or invented summary is shown. The Room language switch moved to Settings; the Room continues reading its stored language on load. No volume, motion, or display preference exists to consolidate, so no inactive toggles were added. The Studio mobile rail previously hid its return link; visible header links now provide the lobby and settings path.
