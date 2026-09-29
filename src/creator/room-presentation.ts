@@ -160,6 +160,23 @@ export function isDiscFlipping(ruleSystem: RuleSystem): boolean {
   return Boolean(discFlippingKernel(ruleSystem));
 }
 
+export function hexSettlementKernel(
+  ruleSystem: RuleSystem,
+): Extract<
+  Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
+  { type: "hex-settlement-v1" }
+> | null {
+  return ruleSystem.runtimeSupport.status === "executable" &&
+    ruleSystem.runtimeSupport.kernel.type === "hex-settlement-v1"
+    ? ruleSystem.runtimeSupport.kernel
+    : null;
+}
+
+/** Catan / hex-settlement — dedicated hex board HUD, never ScoreTrackRoom. */
+export function isHexSettlement(ruleSystem: RuleSystem): boolean {
+  return Boolean(hexSettlementKernel(ruleSystem));
+}
+
 /** Score-track family only — themed scoreboard UI must not stand in for other genres (ADR 0012). */
 export function usesScoreTrackSurface(ruleSystem: RuleSystem): boolean {
   return Boolean(
