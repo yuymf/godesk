@@ -28,9 +28,9 @@ test.describe("ChatCut charter: source in, playable game out", () => {
   }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "今天要做一款什么游戏？" })).toBeVisible();
-    await expect(page.getByText("别人能立刻打开、立刻玩、还能联机的游戏")).toBeVisible();
+    await expect(page.getByText("生成后查看玩法、自己试玩，再把可分享的一局发给朋友。")).toBeVisible();
     await expect(page.locator("body")).not.toContainText("可编辑、可分享、可验证");
-    await expect(page.getByText("分享联机")).toBeVisible();
+    await expect(page.getByText("可分享的一局")).toBeVisible();
     await expect(page.getByText("创作台")).toBeVisible();
     await expect(page.locator(".studio-home")).not.toContainText("GoDesk 服务暂时不可用");
 
@@ -50,6 +50,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect
       .poll(async () => page.evaluate(() => getComputedStyle(document.documentElement).fontFamily))
       .not.toMatch(/Inter/i);
+    await page.getByText("先玩一局现成的").click();
     const exampleCard = page.locator(".studio-examples .example-grid article").first();
     await expect(exampleCard).toBeVisible();
     await expect
@@ -94,10 +95,11 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     );
     await expect(generate).toBeEnabled();
 
-    await page.getByRole("link", { name: "＋ 新游戏" }).click();
+    await idea.fill("");
     await expect(idea).toHaveValue("");
     await expect(generate).toBeDisabled();
 
+    await page.getByText("先玩一局现成的").click();
     await expect(page.getByRole("button", { name: "先玩这一局" })).toHaveCount(3);
 
     await page.getByRole("button", { name: "3人剧本杀" }).click();
@@ -158,6 +160,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await page.getByRole("link", { name: "不用 Connector，直接做一局" }).click();
     await expect(page).toHaveURL(/\/chatgpt-plugin\/new$/);
     const ideaRelay = page.locator("article").filter({ hasText: "灵感接力" });
+    await page.getByText("先玩一局现成的").click();
     await ideaRelay.getByRole("button", { name: "先玩这一局" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 90_000 });
 
@@ -355,6 +358,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
   }) => {
     await page.goto("/chatgpt-plugin/new");
     const harbor = page.locator("article").filter({ hasText: "港口十三号" });
+    await page.getByText("先玩一局现成的").click();
     await harbor.getByRole("button", { name: "先玩这一局" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 90_000 });
 
@@ -465,6 +469,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
 
     await page.goto("/chatgpt-plugin/new");
     const harbor = page.locator("article").filter({ hasText: "港口十三号" });
+    await page.getByText("先玩一局现成的").click();
     await harbor.getByRole("button", { name: "先玩这一局" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 90_000 });
 
@@ -589,6 +594,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
   test("雾岭山庄 speaks mid-game and Replay hides roles", async ({ page, browser }) => {
     await page.goto("/chatgpt-plugin/new");
     const lodge = page.locator("article").filter({ hasText: "雾岭山庄" });
+    await page.getByText("先玩一局现成的").click();
     await lodge.getByRole("button", { name: "先玩这一局" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 90_000 });
 

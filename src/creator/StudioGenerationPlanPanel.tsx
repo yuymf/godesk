@@ -11,6 +11,8 @@ export type StudioGenerationPlanPanelProps = {
   busy: boolean;
   ruleSystemDirty: boolean;
   sourceDraft: string;
+  canPlayLatest: boolean;
+  error: string;
   approveGenerationPlan: () => void;
 };
 
@@ -20,6 +22,8 @@ export function StudioGenerationPlanPanel({
   busy,
   ruleSystemDirty,
   sourceDraft,
+  canPlayLatest,
+  error,
   approveGenerationPlan,
 }: StudioGenerationPlanPanelProps) {
   const showUnsupported = generationPlanShowsUnsupported(generationPlan);
@@ -34,6 +38,12 @@ export function StudioGenerationPlanPanel({
           <h2>{generationPlan.status === "pending" ? "先看这一局怎么玩" : "这一局的玩法"}</h2>
         </div>
       </header>
+      {generationPlan.status === "pending" && (
+        <p className="generation-plan-state" role="status">
+          {busy ? "正在校验规则并生成可玩版本…" : "规则待确认：检查玩法后再继续。"}
+        </p>
+      )}
+      {error && <p className="creator-error" role="alert">处理失败：{error} 检查提示后可重试。</p>}
       <p className="generation-plan-summary">{generationPlan.summary}</p>
       <dl className="generation-plan-facts">
         <div><dt>人数</dt><dd>{generationPlan.participants.min}–{generationPlan.participants.max} 人</dd></div>
@@ -96,7 +106,9 @@ export function StudioGenerationPlanPanel({
           </button>
         </div>
       ) : (
-        <p className="generation-plan-approved" role="status">玩法已确认。可以直接开玩，或改下一版。</p>
+        <p className="generation-plan-approved" role="status">
+          {canPlayLatest ? <>可进入项目：<a href="#play">现在就开玩</a>，或改下一版。</> : "玩法已确认。请查看下方可玩性缺口，修正后再开局。"}
+        </p>
       )}
     </section>
   );
