@@ -352,6 +352,9 @@ export type RuntimeConfiguration =
     }
   | Extract<ProjectChangeOperation, { op: "configure_network_route" }> & {
       op: "configure_network_route";
+    }
+  | Extract<ProjectChangeOperation, { op: "configure_auction_bidding" }> & {
+      op: "configure_auction_bidding";
     };
 
 export function configureDedicatedKernel(
@@ -359,7 +362,7 @@ export function configureDedicatedKernel(
   op: string,
   kernel: Extract<
     Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
-    { type: "harbor-voyage-v1" | "worker-placement-v1" | "hidden-role-v1" | "hand-play-v1" | "conversation-relay-v1" | "disc-flipping-v1" | "hex-settlement-v1" | "network-route-v1" }
+    { type: "harbor-voyage-v1" | "worker-placement-v1" | "hidden-role-v1" | "hand-play-v1" | "conversation-relay-v1" | "disc-flipping-v1" | "hex-settlement-v1" | "network-route-v1" | "auction-bidding-v1" }
   >,
   unsupported: string[],
   config: unknown,
@@ -515,6 +518,15 @@ export function configureDedicatedKernel(
           },
         ],
       },
+    } : kernel.type === "auction-bidding-v1" ? {
+      actions: [
+        { id: "bid", label: "出价", description: "报出高于当前价且不超过持有筹码的整数。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "pass", label: "放弃", description: "若已有出价，拍品归最高出价者；双方均放弃则流拍。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+      ],
+      participants: { ...record.ruleSystem.participants, min: 2, max: 2, default: 2 },
+      playSurface: { kind: "table" as const, layout: "auction-table", regions: [{ id: "lot", name: "拍品", description: "公开叫价与筹码" }] },
+      stages: [{ id: "bidding", name: "竞价" }, { id: "ended", name: "结算" }],
+      outcomes: [{ id: "award", name: "最高有效出价获得拍品" }, { id: "unsold", name: "无人出价则流拍" }],
     } : kernel.type === "network-route-v1" ? {
       actions: [
         {
@@ -660,6 +672,12 @@ export function configureRuntimeKernel(
       configuration.config,
       affectedEntities,
     );
+    return;
+  }
+  if (configuration.op === "configure_auction_bidding") {
+    configureDedicatedKernel(record, configuration.op, {
+      type: "auction-bidding-v1", playerCount: configuration.config.playerCount,
+    }, configuration.config.unsupported?.map((item) => item.trim()) ?? [], configuration.config, affectedEntities);
     return;
   }
   if (configuration.op === "configure_harbor_voyage") {
@@ -1531,6 +1549,10 @@ const RUNTIME_HANDLERS: {
         typeof config.terminalTo === "string") &&
       validUnsupported(config.unsupported),
   },
+  configure_auction_bidding: {
+    validate: (config) => Boolean(config) && typeof config === "object" &&
+      config.playerCount === 2 && validUnsupported(config.unsupported),
+  },
 };
 
 function isRuntimeConfiguration(
@@ -2297,4 +2319,3 @@ export function reconstructReplay(
     finalState: reconstructed.state,
   };
 }
-

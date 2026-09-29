@@ -71,6 +71,11 @@ import {
   playActionFromNetworkRouteIntent,
   type NetworkRouteGenre,
 } from "../src/runtime/adapters/network-route";
+import {
+  auctionBiddingAdapter, auctionBiddingToSessionFields,
+  bindAuctionBiddingFromRuntimeKernel, pickAuctionBiddingBotAction,
+  playActionFromAuctionBiddingIntent, type AuctionBiddingGenre,
+} from "../src/runtime/adapters/auction-bidding";
 
 type ExecutableRuntime = Extract<
   RuleSystem["runtimeSupport"],
@@ -345,6 +350,11 @@ export function initialSessionState(
       winnerSeat: fields.winnerSeat,
       networkRoute: fields.networkRoute,
     };
+  }
+  if (runtime?.kernel.type === "auction-bidding-v1") {
+    const play = createInitialState(auctionBiddingAdapter,
+      bindAuctionBiddingFromRuntimeKernel({ playerCount: runtime.kernel.playerCount }), _seed);
+    return auctionBiddingToSessionFields(play);
   }
   return {
     turn: 0,
@@ -976,6 +986,29 @@ export function acceptIntent(
     };
   }
 
+  if (runtime.kernel.type === "auction-bidding-v1") {
+    if (state.status !== "active" || !state.auctionBidding || intent.seat !== state.activeSeat) return null;
+    const kernelConfig = bindAuctionBiddingFromRuntimeKernel({ playerCount: runtime.kernel.playerCount });
+    const playState = {
+      seed, sequence: state.turn, phase: "bidding" as const,
+      activePlayerId: state.activeSeat, playerCount: runtime.kernel.playerCount,
+      status: state.status, winnerId: state.winnerSeat, events: [] as const,
+      genre: {
+        ...state.auctionBidding,
+        chips: [...state.auctionBidding.chips] as [number, number],
+        scores: [...state.auctionBidding.scores] as [number, number],
+        seatOrder: [...state.auctionBidding.seatOrder] as [number, number],
+      } satisfies AuctionBiddingGenre,
+    };
+    const result = applyAction(auctionBiddingAdapter, playState,
+      playActionFromAuctionBiddingIntent(intent.seat, intent.actionId, intent.payload), kernelConfig);
+    if (!result.ok) return null;
+    return {
+      sequence, intentId: intent.intentId, seat: intent.seat, actionId: intent.actionId,
+      points: 0, payload: intent.payload, state: auctionBiddingToSessionFields(result.state),
+    };
+  }
+
 
   const raceKernel = runtime.kernel;
   const action = raceKernel.actions.find(
@@ -1151,6 +1184,33 @@ export function runBotSimulation(
       finalState: state,
       terminalStatus: "complete" as const,
     };
+  }
+
+  if (runtime.kernel.type === "auction-bidding-v1") {
+    let guard = 0;
+    while (state.status === "active" && state.auctionBidding && guard < 44) {
+      guard += 1;
+      const playState = {
+        seed, sequence: state.turn, phase: "bidding" as const,
+        activePlayerId: state.activeSeat, playerCount: runtime.kernel.playerCount,
+        status: state.status, winnerId: state.winnerSeat, events: [] as const,
+        genre: { ...state.auctionBidding,
+          chips: [...state.auctionBidding.chips] as [number, number],
+          scores: [...state.auctionBidding.scores] as [number, number],
+          seatOrder: [...state.auctionBidding.seatOrder] as [number, number],
+        } satisfies AuctionBiddingGenre,
+      };
+      const bot = pickAuctionBiddingBotAction(playState, seed);
+      const accepted = acceptIntent(state, runtime, {
+        intentId: `bot_${acceptedActions.length + 1}`, seat: state.activeSeat,
+        actionId: bot.type, payload: bot.payload,
+      }, acceptedActions.length + 1, seed);
+      if (!accepted) throw new Error("bot_action_rejected");
+      acceptedActions.push(accepted);
+      state = accepted.state;
+    }
+    if (state.status !== "complete") throw new Error("bot_action_limit");
+    return { initialState, acceptedActions, finalState: state, terminalStatus: "complete" as const };
   }
 
 
@@ -1654,4 +1714,3 @@ function sessionCatanToGenre(catan: NonNullable<import("../src/creator/project-c
     turnPlayer: catan.turnPlayer,
   };
 }
-

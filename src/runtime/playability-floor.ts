@@ -142,6 +142,18 @@ export function playabilityFloor(ruleSystem: RuleSystem): PlayabilityFloorReadin
     };
   }
   const kernelType = ruleSystem.runtimeSupport.kernel.type;
+  if (ruleSystem.generation?.requestedMechanics?.includes("auction-bidding") &&
+      kernelType !== "auction-bidding-v1") {
+    return { status: "failed", reason: "拍卖竞价来源需要 auction-bidding-v1 的公开出价与成交环。", genre, kernelType };
+  }
+  if (kernelType === "auction-bidding-v1") {
+    const hasActions = ruleSystem.actions.some((action) => action.id === "bid") &&
+      ruleSystem.actions.some((action) => action.id === "pass");
+    if (ruleSystem.playSurface.kind !== "table" || !hasActions ||
+        ruleSystem.runtimeSupport.kernel.playerCount !== 2) {
+      return { status: "failed", reason: "auction-bidding-v1 需要双人桌面与出价/放弃动作。", genre, kernelType };
+    }
+  }
   const required = genre === "generic" ? null : GENRE_KERNEL[genre];
   if (required) {
     const allowed = typeof required === "string" ? [required] : required;

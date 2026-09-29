@@ -8,11 +8,21 @@ import { BASELINE_PROMPTS } from "./fixtures/game-spec";
 /** Off-corpus / unseen prompts used by Sol max PR10–PR12 release gate. */
 const NETWORK_PROMPT = "做一款线路网络桌游，玩家铺设路线连接城市";
 const CARD_AREA_PROMPT = "做一款卡牌区域控制游戏，玩家出牌争夺区域";
+const AUCTION_PROMPT = "做一款拍卖竞价桌游";
 const OTHER_UNSEEN_PROMPTS = [
   "随便做个桌游",
 ] as const;
 
 describe("inferRequestedMechanics — baseline vs unseen", () => {
+  it("binds auction intent only to auction-bidding", () => {
+    for (const prompt of [AUCTION_PROMPT, "players bid in an auction", "轮流出价"]) {
+      expect(inferRequestedMechanics(prompt)).toEqual(["auction-bidding"]);
+    }
+    expect(mechanicsCapabilityGap(["auction-bidding"], "auction-bidding-v1")).toBeNull();
+    for (const kernel of ["hex-settlement-v1", "disc-flipping-v1", "network-route-v1", "hand-play-v1"]) {
+      expect(mechanicsCapabilityGap(["auction-bidding"], kernel)).toContain("能力缺口");
+    }
+  });
   it("binds hex-settlement only for Catan-shaped baseline prompts", () => {
     expect(inferRequestedMechanics(BASELINE_PROMPTS[0])).toEqual(["hex-settlement"]);
     expect(inferRequestedMechanics(BASELINE_PROMPTS[1])).toEqual(["disc-flipping"]);

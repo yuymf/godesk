@@ -253,12 +253,30 @@ describe("all artifact entry points fail closed", () => {
 });
 
 const NETWORK_PROMPT = "做一款线路网络桌游，玩家铺设路线连接城市";
+const AUCTION_PROMPT = "做一款拍卖竞价桌游";
 const OTHER_UNSEEN_PROMPTS = [
   "做一款卡牌区域控制游戏，玩家出牌争夺区域",
   "随便做个桌游",
 ] as const;
 
 describe("unseen prompts never silent-bind Catan or Othello", () => {
+  it("auction prompt proposes the auction adapter and passes the build gate", async () => {
+    const { project } = await generate(AUCTION_PROMPT);
+    const rule = await readRule(project.id);
+    expect(rule.generation?.requestedMechanics).toEqual(["auction-bidding"]);
+    const { generationPlan } = await (await SELF.fetch(`${origin}/api/projects/${project.id}?view=generation-plan`)).json<{ generationPlan: GenerationPlan }>();
+    expect(generationPlan.proposedRuntime).toMatchObject({ op: "configure_auction_bidding", config: { playerCount: 2 } });
+    const approved = await (await post(`/api/projects/${project.id}/changes`, {
+      expectedVersion: 2, idempotencyKey: "approve-auction",
+      operations: [{ op: "approve_generation_plan", planId: generationPlan.id }, generationPlan.proposedRuntime!],
+    })).json<{ project: GameProject; ruleSystem: RuleSystem }>();
+    expect(approved.ruleSystem.runtimeSupport).toMatchObject({ status: "executable", kernel: { type: "auction-bidding-v1", playerCount: 2 } });
+    expect(ruleSystemSpecIssues(approved.ruleSystem)).toEqual([]);
+    const built = await post(`/api/projects/${project.id}/builds`, {
+      expectedVersion: approved.project.version, idempotencyKey: "auction-build",
+    });
+    expect([200, 201]).toContain(built.status);
+  });
   it("线路网络 proposes network-route-v1 (never Catan/Othello)", async () => {
     const { project, job } = await generate(NETWORK_PROMPT);
     expect(job.status).toBe("succeeded");

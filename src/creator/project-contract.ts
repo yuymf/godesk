@@ -271,6 +271,10 @@ export interface RuleSystem {
               playerCount: number;
               terminalFrom?: string;
               terminalTo?: string;
+            }
+          | {
+              type: "auction-bidding-v1";
+              playerCount: number;
             };
   };
 }
@@ -615,6 +619,10 @@ export type ProjectChangeOperation =
       };
     }
   | {
+      op: "configure_auction_bidding";
+      config: { playerCount: number; unsupported?: string[] };
+    }
+  | {
       op: "activate_rule_system";
       ruleSystemId: string;
     }
@@ -914,6 +922,17 @@ export interface SessionState {
     terminalTo: string;
     lastClaim: { edgeId: string; playerId: number } | null;
     routeCounts: [number, number];
+  };
+  auctionBidding?: {
+    lotId: "amber" | "jade";
+    chips: [number, number];
+    scores: [number, number];
+    lotValue: number;
+    currentBid: number;
+    highBidder: number | null;
+    passedWithoutBid: number;
+    awardedTo: number | null;
+    seatOrder: [number, number];
   };
 }
 
