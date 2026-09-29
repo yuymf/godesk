@@ -1,3 +1,4 @@
+import { ruleSystemSpecIssues } from "../creator/game-spec";
 import type {
   PlayabilityFloorReadiness,
   PlaySurfaceKind,
@@ -127,6 +128,11 @@ export function decisionDensityGap(
 
 export function playabilityFloor(ruleSystem: RuleSystem): PlayabilityFloorReadiness {
   const genre = inferSourceGenre(ruleSystemCorpus(ruleSystem));
+  const specIssues = ruleSystemSpecIssues(ruleSystem);
+  if (specIssues.length) return {
+    status: "failed", reason: specIssues.map((issue) => `${issue.path}: ${issue.message}`).join(" "),
+    genre, kernelType: ruleSystem.runtimeSupport.status === "executable" ? ruleSystem.runtimeSupport.kernel.type : null,
+  };
   if (ruleSystem.runtimeSupport.status !== "executable") {
     return {
       status: "failed",

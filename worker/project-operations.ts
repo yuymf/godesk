@@ -1,3 +1,4 @@
+import { generationMetadataSchema } from "../src/creator/game-spec";
 import {
   acceptIntent,
   executableRuntime,
@@ -1362,6 +1363,9 @@ export function applyOperation(
 
   if (operation.op === "update_rule_system") {
     const fields = operation.fields;
+    if (fields?.generation !== undefined && !generationMetadataSchema.safeParse(fields.generation).success) {
+      throw new Error("invalid_rule_system");
+    }
     if (
       !fields ||
       typeof fields !== "object" ||
@@ -1568,6 +1572,7 @@ export function applyOperation(
       "改了人数、规则或行动后，需要再确认一次玩法才能继续开玩。";
     record.ruleSystem = {
       ...record.ruleSystem,
+      ...(fields.generation === undefined ? {} : { generation: structuredClone(fields.generation) }),
       ...(fields.name === undefined
         ? {}
         : { name: fields.name.trim().slice(0, 120) }),

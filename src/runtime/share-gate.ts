@@ -1,3 +1,4 @@
+import { validateGameSpec } from "../creator/game-spec";
 import type {
   PlayabilityFloorReadiness,
   PresentationFloorReadiness,
@@ -7,7 +8,7 @@ import type {
 export type ShareGateBuild = {
   presentationFloor: PresentationFloorReadiness;
   playabilityFloor: PlayabilityFloorReadiness;
-  ruleSystem: Pick<RuleSystem, "runtimeSupport">;
+  ruleSystem: Pick<RuleSystem, "runtimeSupport" | "generation" | "gameSpec">;
 };
 
 export type ShareGateRefusal =
@@ -27,6 +28,9 @@ export type ShareGateRefusal =
  * honesty / that-game fidelity, not merely visual kit or genre-object gaps).
  */
 export function shareGateRefusal(build: ShareGateBuild): ShareGateRefusal | null {
+  if ((build.ruleSystem.generation || build.ruleSystem.gameSpec) && !validateGameSpec(build.ruleSystem.gameSpec).valid) {
+    return { error: "playability_floor_unmet", playabilityFloor: { ...build.playabilityFloor, status: "failed", reason: "GameSpec 校验失败；请修正规则后重新构建。" } };
+  }
   if (build.playabilityFloor.status !== "passed") {
     return {
       error: "playability_floor_unmet",

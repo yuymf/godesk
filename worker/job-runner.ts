@@ -1,3 +1,4 @@
+import { GENERATOR_VERSION, gameSpecCapabilityGap, refreshGameSpec, ruleSystemSpecIssues } from "../src/creator/game-spec";
 import type {
   ApplyProjectChangesInput,
   CompileBuildInput,
@@ -102,6 +103,7 @@ export function slimGenerateJobResult(
       ? body.studioPath
       : `/studio/${projectId}`,
   };
+  if (body.artifactState) slim.artifactState = body.artifactState;
   if (body.build && typeof body.build === "object") {
     slim.build = body.build;
   }
@@ -584,7 +586,9 @@ export async function runCreatorJob(
                 },
               }
             : null;
-      proposedRuntime = runtimeOperation;
+      const capabilityGap = gameSpecCapabilityGap(`${input.name ?? ""}\n${idea}\n${authoredMaterial}`);
+      proposedRuntime = capabilityGap ? null : runtimeOperation;
+      if (capabilityGap) generationRuntimeConfigured = false;
       operation = await host.applyProjectChanges(job.projectId, {
         expectedVersion: input.expectedVersion,
         idempotencyKey: `job:${input.idempotencyKey}`,
@@ -618,7 +622,21 @@ export async function runCreatorJob(
           })),
           {
             op: "update_rule_system",
-            fields: generatedRuleSystem,
+            fields: {
+              ...generatedRuleSystem,
+              generation: {
+                generatorVersion: GENERATOR_VERSION,
+                rulesVersion: "source-rules-v1",
+                sourcePrompt: idea,
+                seed: deterministicJobSeed(input.idempotencyKey),
+                assumptions: [
+                  "规则来自当前来源的确定性抽取，尚未获得完整规则实现保证。",
+                  "配置内核后，初始状态、可见性、阶段推进和终局由该版本内核负责。",
+                  ...(capabilityGap ? [capabilityGap] : []),
+                  ...(proposedRuntime ? [`提议的内核及参数：${JSON.stringify(proposedRuntime)}`] : []),
+                ],
+              },
+            },
           },
         ],
       });
@@ -738,6 +756,7 @@ export async function runCreatorJob(
             },
           },
         };
+        refreshGameSpec(candidate);
         if (
           playabilityFloor(candidate).status === "passed" &&
           presentationFloor(candidate).status === "passed"
@@ -889,6 +908,17 @@ export async function runCreatorJob(
           : generatedRuleSystem.actions.length > 12
           ? "来源识别出超过 Kernel 上限的行动；为避免静默丢弃规则，Rule System 保持 draft，等待创作者明确缩减或配置 Executable Kernel。"
           : "规则结构来自确定性文本抽取；来源不足以证明可执行语义，Rule System 保持 draft，等待显式配置 Executable Kernel。"];
+    }
+    if (operation.ok && input.kind === "generate-rule-system") {
+      const rule = operationBody.ruleSystem as RuleSystem;
+      const issues = ruleSystemSpecIssues(rule);
+      const gap = gameSpecCapabilityGap(rule.generation?.sourcePrompt ?? "");
+      operationBody.artifactState = {
+        status: operationBody.build ? "built" : gap ? "capability-gap"
+          : proposedRuntime && rule.runtimeSupport.status === "draft" ? "awaiting-approval"
+          : issues.length ? "validation-failed" : "build-failed",
+        ruleSystemId: rule.id, ruleSystemVersion: rule.version, issues,
+      };
     }
     // Auto-compile / Shared Session handoff path must stay MCP-slim (Connect
     // stalls when track_job still ships full ruleSystem/project blobs). Pending

@@ -1,3 +1,4 @@
+import { gameSpecCapabilityGap } from "../src/creator/game-spec";
 import type {
   BoundImage,
   GenerationPlan,
@@ -715,8 +716,10 @@ export function createGenerationPlan(input: {
     ...ruleSystem.rules.map((rule) => rule.text),
     ...ruleSystem.actions.map((action) => `${action.label} ${action.description}`),
   ].join("\n"));
-  const unsupported = [...ruleSystem.runtimeSupport.unsupported];
+  const capabilityGap = gameSpecCapabilityGap(ruleSystem.generation?.sourcePrompt ?? "");
+  const unsupported = [...(capabilityGap ? [capabilityGap] : []), ...ruleSystem.runtimeSupport.unsupported];
   const assumptions = [
+    ...(ruleSystem.generation?.assumptions ?? []),
     "识别出的规则、行动与结果仍需创作者在同一项目中审阅。",
     "来源锚点决定了可追溯内容；未从来源中识别出的裁判、随机与资源语义不会被隐式补全。",
     `将呈现的 Play Surface 是 ${ruleSystem.playSurface.kind}，必须改变交互，不能只换文案。`,

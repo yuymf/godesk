@@ -7,6 +7,7 @@ export function sameRuleSystemContent(left: RuleSystem, right: RuleSystem) {
     id: "",
     version: 0,
     restoredFromBuildId: undefined,
+    gameSpec: ruleSystem.gameSpec ? { ...ruleSystem.gameSpec, ruleSystemId: "", ruleSystemVersion: 0 } : undefined,
   });
   return JSON.stringify(comparable(left)) === JSON.stringify(comparable(right));
 }

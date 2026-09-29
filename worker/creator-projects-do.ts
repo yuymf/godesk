@@ -1,3 +1,4 @@
+import { refreshGameSpec, ruleSystemSpecIssues } from "../src/creator/game-spec";
 import { DurableObject } from "cloudflare:workers";
 import {
   acceptIntent,
@@ -304,6 +305,7 @@ export class CreatorProjects extends DurableObject<Env> {
               ruleSystemVersion: record.ruleSystem.version,
             };
           }
+          refreshGameSpec(record.ruleSystem);
           record.ruleSystems = record.ruleSystems.map((ruleSystem) =>
             ruleSystem.id === record.ruleSystem.id
               ? record.ruleSystem
@@ -461,6 +463,10 @@ export class CreatorProjects extends DurableObject<Env> {
           };
         }
 
+        const specIssues = ruleSystemSpecIssues(record.ruleSystem);
+        if (specIssues.length) {
+          return { status: 409, value: { error: "gamespec_invalid", issues: specIssues } };
+        }
         const sourceIds = referencedSourceIds(record.ruleSystem, record.sources);
         const id = await buildId(
           record.project.id,
@@ -916,6 +922,8 @@ export class CreatorProjects extends DurableObject<Env> {
           hypotheses: structuredClone(source.hypotheses),
           findings: [],
         };
+        refreshGameSpec(record.ruleSystem);
+        record.ruleSystems = [record.ruleSystem];
         await transaction.put({
           [`${PROJECT_PREFIX}${projectId}`]: record,
           [idempotencyKey]: project,
@@ -1010,6 +1018,7 @@ export class CreatorProjects extends DurableObject<Env> {
           version: previousVersion + 1,
           updatedAt: now,
         };
+        refreshGameSpec(ruleSystem);
         record.ruleSystem = ruleSystem;
         record.ruleSystems = [...record.ruleSystems, ruleSystem];
         const changeset: Changeset = {
@@ -1122,6 +1131,7 @@ export class CreatorProjects extends DurableObject<Env> {
           version: previousVersion + 1,
           updatedAt: now,
         };
+        refreshGameSpec(ruleSystem);
         record.ruleSystem = ruleSystem;
         record.ruleSystems = [...record.ruleSystems, ruleSystem];
         const changeset: Changeset = {
