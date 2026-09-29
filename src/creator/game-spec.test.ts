@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { gameSpecSchema, validateGameSpec, gameSpecCapabilityGap, ruleSystemSpecIssues, refreshGameSpec } from "./game-spec";
-import { BASELINE_PROMPTS, structuredSpecFixture, executableSpecFixture } from "./fixtures/game-spec";
+import { BASELINE_PROMPTS, structuredSpecFixture, executableSpecFixture, executableOthelloSpecFixture } from "./fixtures/game-spec";
 import type { RuleSystem } from "./project-contract";
 
 describe("GameSpec v1", () => {
@@ -23,8 +23,13 @@ describe("GameSpec v1", () => {
     expect(result.valid).toBe(false);
     expect(result.issues.map((issue) => issue.path)).toEqual(expect.arrayContaining(["players", "actions", "objects", "relationships", "scoring"]));
   });
-  it.each(BASELINE_PROMPTS)("reports the baseline capability gap: %s", (prompt) => {
-    expect(gameSpecCapabilityGap(prompt)).toContain("当前没有对应 Executable Kernel");
+  it("reports the Catan baseline capability gap until hex-settlement kernel exists", () => {
+    expect(gameSpecCapabilityGap(BASELINE_PROMPTS[0])).toContain("当前没有对应 Executable Kernel");
+  });
+  it("closes the Othello baseline capability gap once disc-flipping-v1 is registered", () => {
+    expect(gameSpecCapabilityGap(BASELINE_PROMPTS[1])).toBeNull();
+    expect(gameSpecCapabilityGap(BASELINE_PROMPTS[1], ["disc-flipping"], "disc-flipping-v1")).toBeNull();
+    expect(gameSpecCapabilityGap(BASELINE_PROMPTS[1], ["disc-flipping"], "conversation-relay-v1")).toContain("能力缺口");
   });
   it("does not label valid structured data executable", () => {
     const spec = structuredSpecFixture("grid");
@@ -70,5 +75,14 @@ describe("GameSpec executable semantics and freshness", () => {
   it("does not combine capabilities from separate adapters into a fictional runtime", () => {
     expect(gameSpecCapabilityGap("Untitled", ["conversation", "hand-play"])).toContain("能力缺口");
     expect(gameSpecCapabilityGap("Untitled", ["conversation"], "conversation-relay-v1")).toBeNull();
+  });
+});
+
+describe("GameSpec disc-flipping-v1 executable fixture", () => {
+  it("validates an Othello-shaped RuleSystem without capability gap", () => {
+    const rule = executableOthelloSpecFixture();
+    expect(ruleSystemSpecIssues(rule)).toEqual([]);
+    expect(rule.gameSpec?.execution.kernelType).toBe("disc-flipping-v1");
+    expect(rule.gameSpec?.generation.requestedMechanics).toEqual(["disc-flipping"]);
   });
 });

@@ -254,6 +254,12 @@ export interface RuleSystem {
               type: "conversation-relay-v1";
               maxTurns: number;
               actions: Array<{ id: string; label: string }>;
+            }
+          | {
+              type: "disc-flipping-v1";
+              playerCount: number;
+              rows: number;
+              cols: number;
             };
   };
 }
@@ -572,6 +578,15 @@ export type ProjectChangeOperation =
       };
     }
   | {
+      op: "configure_disc_flipping";
+      config: {
+        playerCount: number;
+        rows: number;
+        cols: number;
+        unsupported?: string[];
+      };
+    }
+  | {
       op: "activate_rule_system";
       ruleSystemId: string;
     }
@@ -816,6 +831,16 @@ export interface SessionState {
   /** Present when the build kernel is conversation-relay-v1. */
   conversation?: {
     transcript: Array<{ seat: number; actionId: string; text: string }>;
+  };
+  /** Present when the build kernel is disc-flipping-v1 (Othello). */
+  othello?: {
+    rows: number;
+    cols: number;
+    board: Array<Array<number | null>>;
+    consecutivePasses: number;
+    discCounts: [number, number];
+    lastMove: { row: number; col: number; flipped: number } | null;
+    lastAction: "place" | "pass" | null;
   };
 }
 

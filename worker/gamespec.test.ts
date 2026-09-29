@@ -25,7 +25,8 @@ async function readRule(projectId: string) {
 }
 
 describe("GameSpec generation, save and build gate", () => {
-  it.each(BASELINE_PROMPTS)("saves %s as an explicit capability gap, never a substitute Build", async (idea) => {
+  it("saves Catan baseline as an explicit capability gap, never a substitute Build", async () => {
+    const idea = BASELINE_PROMPTS[0];
     const { project, job, input } = await generate(idea);
     expect(job.result?.artifactState).toMatchObject({ status: "capability-gap" });
     const rule = await readRule(project.id);
@@ -50,6 +51,39 @@ describe("GameSpec generation, save and build gate", () => {
     expect(await build.json()).toMatchObject({ error: "gamespec_invalid", issues: expect.arrayContaining([expect.objectContaining({ path: "execution" })]) });
     const savedBuilds = await (await SELF.fetch(`${origin}/api/projects/${project.id}?view=builds`)).json<{ builds: unknown[] }>();
     expect(savedBuilds.builds).toEqual([]);
+  });
+
+  it("proposes disc-flipping-v1 for Othello baseline without silent Catan substitute", async () => {
+    const idea = BASELINE_PROMPTS[1];
+    const { project, job } = await generate(idea);
+    expect(job.result?.artifactState).toMatchObject({ status: "awaiting-approval" });
+    const rule = await readRule(project.id);
+    expect(rule.generation).toMatchObject({ sourcePrompt: idea, generatorVersion: GENERATOR_VERSION, rulesVersion: "source-rules-v1" });
+    expect(rule.generation?.requestedMechanics).toEqual(["disc-flipping"]);
+    expect(rule.runtimeSupport.status).toBe("draft");
+    const { generationPlan } = await (await SELF.fetch(`${origin}/api/projects/${project.id}?view=generation-plan`)).json<{ generationPlan: GenerationPlan }>();
+    expect(generationPlan.proposedRuntime).toMatchObject({
+      op: "configure_disc_flipping",
+      config: { playerCount: 2, rows: 8, cols: 8 },
+    });
+    const approved = await (await post(`/api/projects/${project.id}/changes`, {
+      expectedVersion: 2, idempotencyKey: "approve-othello",
+      operations: [
+        { op: "approve_generation_plan", planId: generationPlan.id },
+        generationPlan.proposedRuntime as NonNullable<typeof generationPlan.proposedRuntime>,
+      ],
+    })).json<{ project: GameProject; ruleSystem: RuleSystem }>();
+    expect(approved.ruleSystem.runtimeSupport).toMatchObject({
+      status: "executable",
+      kernel: { type: "disc-flipping-v1", playerCount: 2, rows: 8, cols: 8 },
+    });
+    expect(ruleSystemSpecIssues(approved.ruleSystem)).toEqual([]);
+    const build = await post(`/api/projects/${project.id}/builds`, {
+      expectedVersion: approved.project.version,
+      idempotencyKey: "othello-build",
+    });
+    expect([200, 201]).toContain(build.status);
+    expect(approved.ruleSystem.runtimeSupport.status).toBe("executable");
   });
 
   it("persists a valid version and seed through auto-build, reopen, edit and recompile", async () => {

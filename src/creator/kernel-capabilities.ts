@@ -16,6 +16,7 @@ export const KERNEL_CAPABILITIES = {
   "hidden-role-v1": ["private-roles", "accusation", "speech-log"],
   "hand-play-v1": ["seeded-deck", "private-hands", "card-play-scoring"],
   "conversation-relay-v1": ["speech-log", "turn-budget"],
+  "disc-flipping-v1": ["grid-placement", "directional-flips", "forced-pass", "terminal-disc-count"],
 } satisfies Record<KernelType, readonly string[]>;
 
 /** Mechanics are declarations, independent of a game's title or source language. */
