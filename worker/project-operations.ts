@@ -17,6 +17,8 @@ import type {
   RestoreBuildResult,
   GameProject,
   GameReplay,
+  AcceptedAction,
+  SessionState,
   SharedSessionSnapshot,
   ProjectChangeOperation,
   SourceLibraryEntry,
@@ -2140,6 +2142,36 @@ export function visibleSession(
     ...scoped,
     seats: publicSeats(session.seats),
   };
+}
+
+
+/** Persist action logs without per-ply genre blobs (catan/othello/…).
+ *  Reconstruct rebuilds full state from intentId/actionId/payload + seed.
+ *  Keeps DO/SQLite under SQLITE_TOOBIG for long seeded bot runs (~800+ plies).
+ */
+export function slimAcceptedActionForStorage(action: AcceptedAction): AcceptedAction {
+  const slimState: SessionState = {
+    turn: action.state.turn,
+    activeSeat: action.state.activeSeat,
+    scores: action.state.scores,
+    status: action.state.status,
+    winnerSeat: action.state.winnerSeat,
+  };
+  return {
+    sequence: action.sequence,
+    intentId: action.intentId,
+    seat: action.seat,
+    actionId: action.actionId,
+    points: action.points,
+    ...(action.payload !== undefined ? { payload: action.payload } : {}),
+    state: slimState,
+  };
+}
+
+export function slimAcceptedActionsForStorage(
+  actions: AcceptedAction[],
+): AcceptedAction[] {
+  return actions.map(slimAcceptedActionForStorage);
 }
 
 export function reconstructActions(

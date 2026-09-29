@@ -56,6 +56,7 @@ import {
   visibleSession,
   reconstructSession,
   reconstructReplay,
+  slimAcceptedActionsForStorage,
   type ProjectRecord,
   type StoredPlayableBuild,
   type StoredPlaytest,
@@ -647,7 +648,7 @@ export class CreatorProjects extends DurableObject<Env> {
           seed: Number(input.seed),
           evidenceType: "automated-bot-simulation",
           initialState: simulation.initialState,
-          acceptedActions: simulation.acceptedActions,
+          acceptedActions: slimAcceptedActionsForStorage(simulation.acceptedActions),
           finalState: simulation.finalState,
           createdAt: now,
         };
@@ -1756,6 +1757,10 @@ export class CreatorProjects extends DurableObject<Env> {
           state: accepted.state,
           acceptedActions: [...room.acceptedActions, accepted],
         };
+        const persistedRoom: StoredSharedSession = {
+          ...updatedRoom,
+          acceptedActions: slimAcceptedActionsForStorage(updatedRoom.acceptedActions),
+        };
         const replay = await transaction.get<StoredReplay>(
           `replay:${room.replayId}`,
         );
@@ -1764,7 +1769,7 @@ export class CreatorProjects extends DurableObject<Env> {
         }
         const updatedReplay: StoredReplay = {
           ...replay,
-          acceptedActions: updatedRoom.acceptedActions,
+          acceptedActions: persistedRoom.acceptedActions,
           finalState: updatedRoom.state,
         };
         const projectKey = `${PROJECT_PREFIX}${room.projectId}`;
@@ -1775,20 +1780,22 @@ export class CreatorProjects extends DurableObject<Env> {
         }
         const record = normalizedProjectRecord(storedProject);
         record.sessions = record.sessions.map((candidate) =>
-          candidate.id === updatedRoom.id ? updatedRoom : candidate,
+          candidate.id === persistedRoom.id ? persistedRoom : candidate,
         );
         await transaction.put({
-          [roomKey]: updatedRoom,
+          [roomKey]: persistedRoom,
           [`replay:${room.replayId}`]: updatedReplay,
           [projectKey]: record,
         });
-        return { status: 200, value: visibleSession(updatedRoom, Number(input.seat)) };
+        // Response/broadcast keep full in-memory actions; DO stores slim logs.
+        return {
+          status: 200,
+          value: visibleSession(updatedRoom, Number(input.seat)),
+          broadcast: updatedRoom,
+        };
       });
-      if (outcome.status === 200 && "id" in outcome.value) {
-        const stored = await this.ctx.storage.get<StoredSharedSession>(
-          `session:${outcome.value.id}`,
-        );
-        if (stored) this.broadcastSession(stored);
+      if (outcome.status === 200 && "broadcast" in outcome && outcome.broadcast) {
+        this.broadcastSession(outcome.broadcast);
       }
       return json(outcome.value, outcome.status);
     }
