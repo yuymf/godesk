@@ -8,6 +8,7 @@ import { join } from "node:path";
  * Automatable rows are executed in-process by sibling specs (never fake PASS here):
  * - 一句话生成 / 大厅缩略图品类正确 / 主交互一步 → e2e/dual-genre-boards.spec.ts
  * - share= 交接 (guest context) → e2e/dual-genre-share.spec.ts
+* - share= hand-play + network guest → e2e/hand-network-share.spec.ts (PR15)
  * - unseen prompts no silent Catan/Othello → unit (kernel-capabilities + gamespec worker)
  *
  * Rows that still need human live proof are explicit test.skip with reason.
@@ -19,10 +20,13 @@ test.describe("Sol max release matrix — automatable row index", () => {
   test("sibling specs cover 一句话生成 / 大厅缩略图 / 主交互一步 / share= 交接", () => {
     const boardsPath = join(root, "e2e/dual-genre-boards.spec.ts");
     const sharePath = join(root, "e2e/dual-genre-share.spec.ts");
+    const handNetSharePath = join(root, "e2e/hand-network-share.spec.ts");
     expect(existsSync(boardsPath)).toBe(true);
     expect(existsSync(sharePath)).toBe(true);
+    expect(existsSync(handNetSharePath)).toBe(true);
     const boards = readFileSync(boardsPath, "utf8");
     const share = readFileSync(sharePath, "utf8");
+    const handNet = readFileSync(handNetSharePath, "utf8");
 
     // 一句话生成 + lobby mark + one legal act (both genres)
     expect(boards).toMatch(/做一款可以与电脑对战的卡坦岛基础版/);
@@ -31,10 +35,15 @@ test.describe("Sol max release matrix — automatable row index", () => {
     expect(boards).toMatch(/data-lobby-mark="othello"/);
     expect(boards).toMatch(/放置定居点|可落子/);
 
-    // share= guest handoff
+    // share= guest handoff (othello/catan + hand-play/network)
     expect(share).toMatch(/share=\s*交接|second context|guest/i);
     expect(share).toMatch(/browser\.newContext/);
     expect(share).toMatch(/missing|invalid/);
+    expect(handNet).toMatch(/卡牌区域控制|hand-play/);
+    expect(handNet).toMatch(/线路网络|network/);
+    expect(handNet).toMatch(/browser\.newContext/);
+    expect(handNet).toMatch(/data-lobby-mark="card"/);
+    expect(handNet).toMatch(/data-lobby-mark="network"/);
   });
 });
 
