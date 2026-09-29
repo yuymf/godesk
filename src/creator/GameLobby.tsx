@@ -94,11 +94,19 @@ export function GameLobby() {
               return (
                 <article className="lobby-card" key={game.project.id}>
                   {game.build && isDiscFlipping(game.build.ruleSystem) ? (
-                    <div aria-hidden="true" className="lobby-card-mark lobby-card-mark-othello">
+                    <div
+                      aria-hidden="true"
+                      className="lobby-card-mark lobby-card-mark-othello"
+                      data-lobby-mark="othello"
+                    >
                       <img alt="" src={othelloStartingBoardThumbnailDataUrl()} />
                     </div>
                   ) : game.build && isHexSettlement(game.build.ruleSystem) ? (
-                    <div aria-hidden="true" className="lobby-card-mark lobby-card-mark-catan">
+                    <div
+                      aria-hidden="true"
+                      className="lobby-card-mark lobby-card-mark-catan"
+                      data-lobby-mark="catan"
+                    >
                       <img alt="" src={catanStartingBoardThumbnailDataUrl()} />
                     </div>
                   ) : (

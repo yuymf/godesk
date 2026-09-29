@@ -432,7 +432,12 @@ export function CatanBoard({
   };
 
   return (
-    <div className="catan-board" data-status={status}>
+    <div
+      aria-label={copy.board}
+      className="catan-board"
+      data-status={status}
+      role="region"
+    >
       <section aria-label={copy.hud} className="catan-hud">
         <div className="catan-hud-status">
           <span className="catan-kicker">{copy.active}</span>

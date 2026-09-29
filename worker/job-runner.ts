@@ -372,7 +372,7 @@ export async function runCreatorJob(
               playerCount: 2,
               victoryPointsToWin: 10,
               unsupported: [
-                "hex-settlement-v1 executes beginner-board Catan basics (placement, production, robber/discard, build+connectivity, bank/port + simple player trade, development cards, VP win) on the public play-kernel; Phase 5 HUD / lobby thumbnail polish and full negotiated multi-resource trades remain out of scope.",
+                "hex-settlement-v1 executes beginner-board Catan basics (placement, production, robber/discard, build+connectivity, bank/port + simple player trade, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — full negotiated multi-resource trades remain out of scope.",
               ],
             },
           }
@@ -384,7 +384,7 @@ export async function runCreatorJob(
               rows: 8,
               cols: 8,
               unsupported: [
-                "disc-flipping-v1 executes 8×8 (or configured) grid placement, eight-direction continuous flips, forced pass, and terminal disc-count scoring on the public play-kernel; Phase 5 HUD / lobby thumbnail polish remain out of scope.",
+                "disc-flipping-v1 executes 8×8 (or configured) grid placement, eight-direction continuous flips, forced pass, and terminal disc-count scoring on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8.",
               ],
             },
           }
