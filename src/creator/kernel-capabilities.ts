@@ -64,7 +64,7 @@ export function mechanicsCapabilityGap(mechanics: readonly string[], kernelType?
 /** Existing source guards now produce declarations consumed by the same registry. */
 export function inferRequestedMechanics(corpus: string): string[] {
   const mechanics: string[] = [];
-  if (/拍卖|竞价|出价|\bauction\b|\bbid(?:s|ding)?\b/i.test(corpus)) return ["auction-bidding"];
+  if (/拍卖|竞价|出价|\bauction\b|\bbid(?:s|ding)?\b/i.test(corpus)) mechanics.push("auction-bidding");
   if (/\bcatan\b|settlecoast|卡坦|卡版|六角.*(?:资源|建造)|hex.*(?:resource|build)/i.test(corpus)) mechanics.push("hex-settlement");
   if (/\bothello\b|\breversi\b|黑白棋|翻转棋|翻子|flipp?ing.*dis[ck]|dis[ck].*flipp?ing/i.test(corpus)) mechanics.push("disc-flipping");
   // Line / route network (PR11) — must not also match hex or disc cues above.
