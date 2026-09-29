@@ -5,7 +5,7 @@ import {
   openLobbyCard,
 } from "./helpers/sol-max-baseline";
 
-test.describe("PR12 hand-play card-area thin board", () => {
+test.describe("PR13 hand-play card-area HUD", () => {
   test("卡牌区域控制: studio playable, lobby mark, play card, HUD authority", async ({
     page,
   }) => {
@@ -23,6 +23,11 @@ test.describe("PR12 hand-play card-area thin board", () => {
       "alt",
       "",
     );
+    // Polished thumb is an SVG data URL (felt + card fan)
+    const thumbSrc = await card
+      .locator('[data-lobby-mark="card"] img')
+      .getAttribute("src");
+    expect(thumbSrc?.startsWith("data:image/svg+xml")).toBe(true);
 
     await card.getByRole("link", { name: "继续这一局" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
@@ -30,12 +35,21 @@ test.describe("PR12 hand-play card-area thin board", () => {
 
     const board = page.getByRole("region", { name: "手牌与出牌区" });
     await expect(board).toBeVisible();
+    const hud = board.getByRole("region", { name: "对局状态" });
+    await expect(hud).toBeVisible();
+    await expect(hud.getByLabel("牌库剩余")).toBeVisible();
+    await expect(hud.getByLabel("分数")).toBeVisible();
+    await expect(board.getByLabel("出牌区")).toBeVisible();
 
     await page.getByLabel("你的席位").selectOption("0");
+    await expect(hud).toContainText("轮到你出牌");
+    await expect(board.getByLabel("你的手牌")).toBeVisible();
 
     const playButton = page.getByRole("button", { name: /打出 / });
     await expect.poll(async () => playButton.count()).toBeGreaterThan(0);
     await playButton.first().click();
     await expect(board).toContainText(/座位 0 打出/);
+    await expect(hud).toContainText("最近打出");
+    await expect(hud.getByLabel("分数")).toContainText(/座位 0 · [1-9]/);
   });
 });
