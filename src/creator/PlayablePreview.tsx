@@ -9,7 +9,9 @@ import {
   hexSettlementKernel,
   isDiscFlipping,
   isHexSettlement,
+  isNetworkRoute,
   isHarborVoyage,
+  networkRouteKernel,
   workerPlacementKernel,
   pushYourLuckKernel,
   rollAndMoveKernel,
@@ -24,6 +26,8 @@ import { OthelloBoard } from "./OthelloBoard";
 import { createInitialOthelloSessionSlice } from "./othello-thumbnail";
 import { CatanBoard } from "./CatanBoard";
 import { createInitialCatanSessionSlice } from "./catan-thumbnail";
+import { NetworkRouteBoard } from "./NetworkRouteBoard";
+import { createInitialNetworkRouteSessionSlice } from "./network-route-thumbnail";
 import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import { href, readShareToken } from "./studio-utils";
 
@@ -67,6 +71,8 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
   const discKernel = discFlippingKernel(build.ruleSystem);
   const hexSettlement = isHexSettlement(build.ruleSystem);
   const hexKernel = hexSettlementKernel(build.ruleSystem);
+  const networkRoute = isNetworkRoute(build.ruleSystem);
+  const networkKernel = networkRouteKernel(build.ruleSystem);
   const scoreTrackSurface = usesScoreTrackSurface(build.ruleSystem);
   const runtimeValues = new Map(
     race?.actions.map((action) => [action.id, action.points]) ??
@@ -152,6 +158,17 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
             activeSeat={0}
             catan={createInitialCatanSessionSlice(hexKernel.playerCount)}
             enabled={false}
+            readOnly
+            status="active"
+            viewerSeat={null}
+          />
+        </section>
+      ) : networkRoute && networkKernel ? (
+        <section className="preview-board" aria-label="线路网络可玩桌面">
+          <NetworkRouteBoard
+            activeSeat={0}
+            enabled={false}
+            networkRoute={createInitialNetworkRouteSessionSlice()}
             readOnly
             status="active"
             viewerSeat={null}

@@ -21,6 +21,7 @@ import {
   hiddenRoleKernel,
   isDiscFlipping,
   isHexSettlement,
+  isNetworkRoute,
   isHarborVoyage,
   isWorkerPlacement,
   localizedRoomError,
@@ -45,6 +46,7 @@ import type { WorkerPlacementState } from "../runtime/worker-placement";
 import { HarborVoyageBoard } from "./HarborVoyageBoard";
 import { OthelloBoard } from "./OthelloBoard";
 import { CatanBoard, type CatanBoardState } from "./CatanBoard";
+import { NetworkRouteBoard, type NetworkRouteBoardState } from "./NetworkRouteBoard";
 import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import {
   readShareToken,
@@ -355,6 +357,9 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   const catanState = room.state.catan;
   const hexSettlement =
     isHexSettlement(build.ruleSystem) && Boolean(catanState);
+  const networkRouteState = room.state.networkRoute;
+  const networkRoute =
+    isNetworkRoute(build.ruleSystem) && Boolean(networkRouteState);
   const gameName = build.ruleSystem.name;
   const activeSeat = room.state.activeSeat;
   const isMyTurn = room.state.status === "active" && seat === activeSeat;
@@ -416,7 +421,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       : copy.points;
 
   return (
-    <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-catan" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
+    <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-catan" : ""} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
       <header className="room-shell-header">
         <div className="room-title-block">
           <span className="room-brand-mark" aria-hidden="true">GD</span>
@@ -533,6 +538,20 @@ export function RoomView({ sessionId }: { sessionId: string }) {
           catan={catanState as CatanBoardState}
           enabled={isMyTurn}
           locale={locale}
+          onAct={(actionId, payload) => {
+            void act(actionId, -1, payload);
+          }}
+          status={room.state.status}
+          viewerSeat={seat}
+          winnerSeat={room.state.winnerSeat}
+        />
+      ) : networkRoute && networkRouteState ? (
+        <NetworkRouteBoard
+          activeSeat={activeSeat}
+          busy={busy}
+          enabled={isMyTurn}
+          locale={locale}
+          networkRoute={networkRouteState as NetworkRouteBoardState}
           onAct={(actionId, payload) => {
             void act(actionId, -1, payload);
           }}
