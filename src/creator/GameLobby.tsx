@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Brand } from "./CreatorBrand";
 import { createSharedSession, getBuilds, getSharedSessions, listProjects } from "./project-api";
 import type { GameProject, PlayableBuild, SharedSession } from "./project-contract";
-import { isDiscFlipping } from "./room-presentation";
+import { isDiscFlipping, isHexSettlement } from "./room-presentation";
 import { othelloStartingBoardThumbnailDataUrl } from "./othello-thumbnail";
+import { catanStartingBoardThumbnailDataUrl } from "./catan-thumbnail";
 import { buildCanOpenSharedSession, href, latestStudioPlayTarget } from "./studio-utils";
 
 type LobbyGame = {
@@ -95,6 +96,10 @@ export function GameLobby() {
                   {game.build && isDiscFlipping(game.build.ruleSystem) ? (
                     <div aria-hidden="true" className="lobby-card-mark lobby-card-mark-othello">
                       <img alt="" src={othelloStartingBoardThumbnailDataUrl()} />
+                    </div>
+                  ) : game.build && isHexSettlement(game.build.ruleSystem) ? (
+                    <div aria-hidden="true" className="lobby-card-mark lobby-card-mark-catan">
+                      <img alt="" src={catanStartingBoardThumbnailDataUrl()} />
                     </div>
                   ) : (
                     <div aria-hidden="true" className="lobby-card-mark">GD</div>

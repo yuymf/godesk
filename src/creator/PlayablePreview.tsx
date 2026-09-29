@@ -6,7 +6,9 @@ import { createWorkerPlacementState } from "../runtime/worker-placement";
 import {
   discFlippingKernel,
   drawAndScoreKernel,
+  hexSettlementKernel,
   isDiscFlipping,
+  isHexSettlement,
   isHarborVoyage,
   workerPlacementKernel,
   pushYourLuckKernel,
@@ -20,6 +22,8 @@ import {
 import { HarborVoyageBoard } from "./HarborVoyageBoard";
 import { OthelloBoard } from "./OthelloBoard";
 import { createInitialOthelloSessionSlice } from "./othello-thumbnail";
+import { CatanBoard } from "./CatanBoard";
+import { createInitialCatanSessionSlice } from "./catan-thumbnail";
 import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import { href, readShareToken } from "./studio-utils";
 
@@ -61,6 +65,8 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
   const workerPlacement = workerPlacementKernel(build.ruleSystem);
   const discFlipping = isDiscFlipping(build.ruleSystem);
   const discKernel = discFlippingKernel(build.ruleSystem);
+  const hexSettlement = isHexSettlement(build.ruleSystem);
+  const hexKernel = hexSettlementKernel(build.ruleSystem);
   const scoreTrackSurface = usesScoreTrackSurface(build.ruleSystem);
   const runtimeValues = new Map(
     race?.actions.map((action) => [action.id, action.points]) ??
@@ -135,6 +141,17 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
             activeSeat={0}
             enabled={false}
             othello={createInitialOthelloSessionSlice(discKernel.rows, discKernel.cols)}
+            readOnly
+            status="active"
+            viewerSeat={null}
+          />
+        </section>
+      ) : hexSettlement && hexKernel ? (
+        <section className="preview-board" aria-label="卡坦可玩桌面">
+          <CatanBoard
+            activeSeat={0}
+            catan={createInitialCatanSessionSlice(hexKernel.playerCount)}
+            enabled={false}
             readOnly
             status="active"
             viewerSeat={null}

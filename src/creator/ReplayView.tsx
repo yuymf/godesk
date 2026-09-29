@@ -5,6 +5,8 @@ import type { HarborVoyageState } from "../runtime/harbor-voyage";
 import type { WorkerPlacementState } from "../runtime/worker-placement";
 import { HarborVoyageBoard } from "./HarborVoyageBoard";
 import { OthelloBoard } from "./OthelloBoard";
+import { CatanBoard } from "./CatanBoard";
+import type { CatanBoardState } from "./CatanBoard";
 import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import { readShareToken, validationStudioHref } from "./studio-utils";
 import {
@@ -89,6 +91,16 @@ export function ReplayView({ replayId }: { replayId: string }) {
             activeSeat={replay.finalState.activeSeat}
             enabled={false}
             othello={replay.finalState.othello}
+            readOnly
+            status={replay.finalState.status}
+            viewerSeat={null}
+            winnerSeat={replay.finalState.winnerSeat}
+          />
+        ) : replay.finalState.catan ? (
+          <CatanBoard
+            activeSeat={replay.finalState.activeSeat}
+            catan={replay.finalState.catan as CatanBoardState}
+            enabled={false}
             readOnly
             status={replay.finalState.status}
             viewerSeat={null}

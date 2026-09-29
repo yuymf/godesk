@@ -20,6 +20,7 @@ import {
   handPlayKernel,
   hiddenRoleKernel,
   isDiscFlipping,
+  isHexSettlement,
   isHarborVoyage,
   isWorkerPlacement,
   localizedRoomError,
@@ -43,6 +44,7 @@ import type { HarborVoyageState } from "../runtime/harbor-voyage";
 import type { WorkerPlacementState } from "../runtime/worker-placement";
 import { HarborVoyageBoard } from "./HarborVoyageBoard";
 import { OthelloBoard } from "./OthelloBoard";
+import { CatanBoard, type CatanBoardState } from "./CatanBoard";
 import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import {
   readShareToken,
@@ -329,6 +331,9 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   const othelloState = room.state.othello;
   const discFlipping =
     isDiscFlipping(build.ruleSystem) && Boolean(othelloState);
+  const catanState = room.state.catan;
+  const hexSettlement =
+    isHexSettlement(build.ruleSystem) && Boolean(catanState);
   const gameName = build.ruleSystem.name;
   const activeSeat = room.state.activeSeat;
   const isMyTurn = room.state.status === "active" && seat === activeSeat;
@@ -390,7 +395,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       : copy.points;
 
   return (
-    <main className={`room-view ${harbor || workerPlacement || discFlipping ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
+    <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-catan" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
       <header className="room-shell-header">
         <div className="room-title-block">
           <span className="room-brand-mark" aria-hidden="true">GD</span>
@@ -493,6 +498,20 @@ export function RoomView({ sessionId }: { sessionId: string }) {
           enabled={isMyTurn}
           locale={locale}
           othello={othelloState}
+          onAct={(actionId, payload) => {
+            void act(actionId, -1, payload);
+          }}
+          status={room.state.status}
+          viewerSeat={seat}
+          winnerSeat={room.state.winnerSeat}
+        />
+      ) : hexSettlement && catanState ? (
+        <CatanBoard
+          activeSeat={activeSeat}
+          busy={busy}
+          catan={catanState as CatanBoardState}
+          enabled={isMyTurn}
+          locale={locale}
           onAct={(actionId, payload) => {
             void act(actionId, -1, payload);
           }}
@@ -878,7 +897,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         )}
       </section>
 
-      {error && (harbor || workerPlacement || discFlipping) && <p className="creator-error" role="alert">{error}</p>}
+      {error && (harbor || workerPlacement || discFlipping || hexSettlement) && <p className="creator-error" role="alert">{error}</p>}
 
       <aside className="action-log">
         <span>{copy.log}</span>

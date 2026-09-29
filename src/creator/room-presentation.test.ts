@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { RuleSystem } from "./project-contract";
 import {
   isDiscFlipping,
+  isHexSettlement,
   showsAcceptedActionPointChrome,
   usesConversationTranscriptSurface,
   usesScoreTrackSurface,
@@ -131,6 +132,11 @@ describe("usesScoreTrackSurface", () => {
       rows: 8,
       cols: 8,
     }))).toBe(false);
+    expect(usesScoreTrackSurface(base({
+      type: "hex-settlement-v1",
+      playerCount: 2,
+      victoryPointsToWin: 10,
+    }))).toBe(false);
   });
 });
 
@@ -163,6 +169,39 @@ describe("isDiscFlipping", () => {
     });
     expect(isDiscFlipping(othello)).toBe(true);
     expect(usesScoreTrackSurface(othello)).toBe(false);
+  });
+});
+
+
+describe("isHexSettlement", () => {
+  it("is true only for hex-settlement-v1", () => {
+    expect(isHexSettlement(base({
+      type: "hex-settlement-v1",
+      playerCount: 2,
+      victoryPointsToWin: 10,
+    }))).toBe(true);
+    expect(isHexSettlement(base({
+      type: "disc-flipping-v1",
+      playerCount: 2,
+      rows: 8,
+      cols: 8,
+    }))).toBe(false);
+    expect(isHexSettlement(base({
+      type: "score-race-v1",
+      victoryTarget: 8,
+      maxTurns: 12,
+      actions: [{ id: "a", label: "得分", points: 2 }],
+    }))).toBe(false);
+  });
+
+  it("keeps Catan off the score-track surface", () => {
+    const catan = base({
+      type: "hex-settlement-v1",
+      playerCount: 3,
+      victoryPointsToWin: 10,
+    });
+    expect(isHexSettlement(catan)).toBe(true);
+    expect(usesScoreTrackSurface(catan)).toBe(false);
   });
 });
 
