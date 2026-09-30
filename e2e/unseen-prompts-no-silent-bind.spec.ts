@@ -3,6 +3,7 @@ import {
   CARD_AREA_PROMPT,
   AUCTION_PROMPT,
   CATAN_PROMPT,
+  NORTH_STAR_CATAN_PROMPT,
   NETWORK_PROMPT,
   OTHELLO_PROMPT,
   OTHER_UNSEEN_PROMPTS,
@@ -35,6 +36,7 @@ test.describe("PR10/PR11/PR12 unseen prompts: no silent Catan/Othello bind", () 
     test.setTimeout(180_000);
     for (const [prompt, expected] of [
       [CATAN_PROMPT, "configure_hex_settlement"],
+      [NORTH_STAR_CATAN_PROMPT, "configure_hex_settlement"],
       [OTHELLO_PROMPT, "configure_disc_flipping"],
     ] as const) {
       await page.goto("/chatgpt-plugin/new");
