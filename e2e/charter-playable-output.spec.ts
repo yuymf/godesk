@@ -29,6 +29,8 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "今天要做一款什么游戏？" })).toBeVisible();
     await expect(page.getByText("生成后查看玩法、自己试玩，再把可分享的一局发给朋友。")).toBeVisible();
+    await expect(page.getByRole("button", { name: "＋ 新游戏" })).toHaveCount(0);
+    await expect(page.getByRole("textbox", { name: "游戏名称" })).toHaveCount(0);
     await expect(page.locator("body")).not.toContainText("可编辑、可分享、可验证");
     await expect(page.getByText("可分享的一局")).toBeVisible();
     await expect(page.getByText("创作台")).toBeVisible();

@@ -30,9 +30,7 @@ import { generationSourceFields, hobbyistProjectName, href } from "./studio-util
 export function CreatorHome() {
   const restoredDraft = readComposerDraft();
   const [name, setName] = useState(restoredDraft?.name ?? "我的游戏");
-  const [description, setDescription] = useState(
-    [restoredDraft?.description, restoredDraft?.rulesText].filter(Boolean).join("\n\n"),
-  );
+  const [description, setDescription] = useState(restoredDraft?.description ?? "");
   const [rulebook, setRulebook] = useState<File>();
   const [visualAssets, setVisualAssets] = useState<File[]>([]);
   const [visualAssetUse, setVisualAssetUse] = useState<"visual-reference" | "project-asset">(
@@ -60,7 +58,6 @@ export function CreatorHome() {
     writeComposerDraft({
       name,
       description,
-      rulesText: "",
       resume: readComposerDraft()?.resume ?? null,
       exampleId: readComposerDraft()?.exampleId,
     });
@@ -73,7 +70,6 @@ export function CreatorHome() {
     writeComposerDraft({
       name: restoredDraft?.name ?? "我的游戏",
       description,
-      rulesText: "",
       resume: null,
     });
     if (resume === "generate") {
@@ -180,7 +176,6 @@ export function CreatorHome() {
         writeComposerDraft({
           name,
           description,
-          rulesText: "",
           resume: "generate",
         });
         beginWebLogin("/");
@@ -226,7 +221,6 @@ export function CreatorHome() {
         writeComposerDraft({
           name,
           description,
-          rulesText: "",
           resume: "example",
           exampleId,
         });

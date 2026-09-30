@@ -28,7 +28,6 @@ describe("hobbyist composer draft", () => {
       {
         name: "3人剧本杀",
         description: "三个人在别墅里讨论谁是凶手。",
-        rulesText: "",
         resume: "generate",
       },
       storage,
@@ -37,7 +36,6 @@ describe("hobbyist composer draft", () => {
     expect(readComposerDraft(storage)).toEqual({
       name: "3人剧本杀",
       description: "三个人在别墅里讨论谁是凶手。",
-      rulesText: "",
       resume: "generate",
       exampleId: undefined,
     });
@@ -49,7 +47,6 @@ describe("hobbyist composer draft", () => {
       {
         name: "我的游戏",
         description: "",
-        rulesText: "",
         resume: "example",
         exampleId: "idea-relay",
       },
@@ -67,7 +64,6 @@ describe("hobbyist composer draft", () => {
       JSON.stringify({
         name: "我的游戏",
         description: "",
-        rulesText: "",
         resume: "example",
         exampleId: "not-a-real-example",
       }),
@@ -87,7 +83,6 @@ describe("hobbyist composer draft", () => {
       {
         name: "轻桌游",
         description: "两到四人在棋盘上抢地盘。",
-        rulesText: "",
         resume: null,
       },
       storage,
