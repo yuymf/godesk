@@ -2,7 +2,9 @@ import { expect, test } from "@playwright/test";
 import {
   CARD_AREA_PROMPT,
   AUCTION_PROMPT,
+  CATAN_PROMPT,
   NETWORK_PROMPT,
+  OTHELLO_PROMPT,
   OTHER_UNSEEN_PROMPTS,
   UNSEEN_PROMPTS,
 } from "./helpers/sol-max-baseline";
@@ -27,6 +29,24 @@ test.describe("PR10/PR11/PR12 unseen prompts: no silent Catan/Othello bind", () 
     expect(plan.generationPlan?.proposedRuntime?.op).toBe("configure_auction_bidding");
     for (const kernel of ["hex-settlement-v1", "disc-flipping-v1", "network-route-v1", "hand-play-v1"]) {
       expect(rule.runtimeSupport?.kernel?.type).not.toBe(kernel);
+    }
+  });
+  test("hex and disc ideas never propose the auction kernel", async ({ page }) => {
+    test.setTimeout(180_000);
+    for (const [prompt, expected] of [
+      [CATAN_PROMPT, "configure_hex_settlement"],
+      [OTHELLO_PROMPT, "configure_disc_flipping"],
+    ] as const) {
+      await page.goto("/chatgpt-plugin/new");
+      await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(prompt);
+      await page.getByRole("button", { name: "生成可玩版本" }).click();
+      await page.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 90_000 });
+      const projectId = new URL(page.url()).pathname.split("/").at(-1)!;
+      const rule = await (await page.request.get(`/api/projects/${projectId}?view=rule-system`)).json();
+      const plan = await (await page.request.get(`/api/projects/${projectId}?view=generation-plan`)).json();
+      expect(rule.generation?.requestedMechanics).not.toContain("auction-bidding");
+      expect(plan.generationPlan?.proposedRuntime?.op).toBe(expected);
+      expect(rule.runtimeSupport?.kernel?.type).not.toBe("auction-bidding-v1");
     }
   });
   test("mixed auction and hex request stays unbound", async ({ page }) => {
@@ -69,6 +89,7 @@ test.describe("PR10/PR11/PR12 unseen prompts: no silent Catan/Othello bind", () 
     expect(rule.generation?.requestedMechanics ?? []).not.toContain("hex-settlement");
     expect(rule.generation?.requestedMechanics ?? []).not.toContain("disc-flipping");
     expect(rule.generation?.requestedMechanics ?? []).toContain("route-network");
+    expect(rule.generation?.requestedMechanics ?? []).not.toContain("auction-bidding");
 
     const planRes = await page.request.get(`/api/projects/${projectId}?view=generation-plan`);
     if (planRes.ok()) {
@@ -76,6 +97,7 @@ test.describe("PR10/PR11/PR12 unseen prompts: no silent Catan/Othello bind", () 
       const op = generationPlan?.proposedRuntime?.op ?? null;
       expect(op).not.toBe("configure_hex_settlement");
       expect(op).not.toBe("configure_disc_flipping");
+      expect(op).not.toBe("configure_auction_bidding");
       // Pending plan should propose network configure; after auto-approve kernel is executable.
       if (op) expect(op).toBe("configure_network_route");
     }
@@ -108,10 +130,12 @@ test.describe("PR10/PR11/PR12 unseen prompts: no silent Catan/Othello bind", () 
     expect(kernelType).not.toBe("hex-settlement-v1");
     expect(kernelType).not.toBe("disc-flipping-v1");
     expect(kernelType).not.toBe("network-route-v1");
+    expect(kernelType).not.toBe("auction-bidding-v1");
     expect(rule.generation?.requestedMechanics ?? []).toContain("hand-play");
     expect(rule.generation?.requestedMechanics ?? []).not.toContain("hex-settlement");
     expect(rule.generation?.requestedMechanics ?? []).not.toContain("disc-flipping");
     expect(rule.generation?.requestedMechanics ?? []).not.toContain("route-network");
+    expect(rule.generation?.requestedMechanics ?? []).not.toContain("auction-bidding");
 
     const planRes = await page.request.get(`/api/projects/${projectId}?view=generation-plan`);
     if (planRes.ok()) {
@@ -120,6 +144,7 @@ test.describe("PR10/PR11/PR12 unseen prompts: no silent Catan/Othello bind", () 
       expect(op).not.toBe("configure_hex_settlement");
       expect(op).not.toBe("configure_disc_flipping");
       expect(op).not.toBe("configure_network_route");
+      expect(op).not.toBe("configure_auction_bidding");
       if (op) expect(op).toBe("configure_hand_play");
     }
   });
