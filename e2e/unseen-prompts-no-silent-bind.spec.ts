@@ -4,6 +4,8 @@ import {
   AUCTION_PROMPT,
   CATAN_PROMPT,
   NORTH_STAR_CATAN_PROMPT,
+  NORTH_STAR_OTHELLO_ALT_PROMPT,
+  NORTH_STAR_OTHELLO_PROMPT,
   NETWORK_PROMPT,
   OTHELLO_PROMPT,
   OTHER_UNSEEN_PROMPTS,
@@ -32,12 +34,14 @@ test.describe("PR10/PR11/PR12 unseen prompts: no silent Catan/Othello bind", () 
       expect(rule.runtimeSupport?.kernel?.type).not.toBe(kernel);
     }
   });
-  test("hex and disc ideas never propose the auction kernel", async ({ page }) => {
-    test.setTimeout(180_000);
+  test("hex and disc ideas propose only their own kernel", async ({ page }) => {
+    test.setTimeout(240_000);
     for (const [prompt, expected] of [
       [CATAN_PROMPT, "configure_hex_settlement"],
       [NORTH_STAR_CATAN_PROMPT, "configure_hex_settlement"],
       [OTHELLO_PROMPT, "configure_disc_flipping"],
+      [NORTH_STAR_OTHELLO_PROMPT, "configure_disc_flipping"],
+      [NORTH_STAR_OTHELLO_ALT_PROMPT, "configure_disc_flipping"],
     ] as const) {
       await page.goto("/chatgpt-plugin/new");
       await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(prompt);
@@ -46,9 +50,14 @@ test.describe("PR10/PR11/PR12 unseen prompts: no silent Catan/Othello bind", () 
       const projectId = new URL(page.url()).pathname.split("/").at(-1)!;
       const rule = await (await page.request.get(`/api/projects/${projectId}?view=rule-system`)).json();
       const plan = await (await page.request.get(`/api/projects/${projectId}?view=generation-plan`)).json();
-      expect(rule.generation?.requestedMechanics).not.toContain("auction-bidding");
+      expect(rule.generation?.requestedMechanics).toEqual([
+        expected === "configure_hex_settlement" ? "hex-settlement" : "disc-flipping",
+      ]);
       expect(plan.generationPlan?.proposedRuntime?.op).toBe(expected);
-      expect(rule.runtimeSupport?.kernel?.type).not.toBe("auction-bidding-v1");
+      for (const kernel of ["auction-bidding-v1", "network-route-v1", "hand-play-v1",
+        expected === "configure_hex_settlement" ? "disc-flipping-v1" : "hex-settlement-v1"]) {
+        expect(rule.runtimeSupport?.kernel?.type).not.toBe(kernel);
+      }
     }
   });
   test("mixed auction and hex request stays unbound", async ({ page }) => {

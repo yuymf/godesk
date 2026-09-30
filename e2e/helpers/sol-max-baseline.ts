@@ -4,6 +4,8 @@ import { expect, type Page } from "@playwright/test";
 export const CATAN_PROMPT = "做一款可以与电脑对战的卡坦岛基础版";
 export const NORTH_STAR_CATAN_PROMPT = "帮我生成一个卡坦岛游戏";
 export const OTHELLO_PROMPT = "做一款可以与电脑对战的黑白棋";
+export const NORTH_STAR_OTHELLO_PROMPT = "帮我生成一个黑白棋游戏";
+export const NORTH_STAR_OTHELLO_ALT_PROMPT = "做一款翻转棋 othello";
 export const NETWORK_PROMPT = "做一款线路网络桌游，玩家铺设路线连接城市";
 export const CARD_AREA_PROMPT = "做一款卡牌区域控制游戏，玩家出牌争夺区域";
 export const AUCTION_PROMPT = "做一款拍卖竞价桌游";
