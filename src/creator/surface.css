@@ -7024,10 +7024,14 @@ summary:focus-visible {
 }
 
 .studio-starter-row button.is-selected,
-.studio-starter-row button[aria-pressed="true"] {
+.studio-starter-row button.is-selected:hover,
+.studio-starter-row button[aria-pressed="true"],
+.studio-starter-row button[aria-pressed="true"]:hover {
   color: #fff;
   background: var(--forest);
   border-color: var(--forest);
+  box-shadow: none;
+  transform: none;
 }
 
 .studio-attach-row .studio-dropzone,
