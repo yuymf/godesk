@@ -227,13 +227,13 @@ export function OthelloBoard({
           <p>{statusLine}</p>
         </div>
         <div className="othello-hud-scores" aria-label={copy.discs}>
-          <div className="othello-score is-black">
+          <div className={`othello-score is-black${activeSeat === 0 ? " is-active" : ""}`}>
             <span aria-hidden="true" className="othello-disc-swatch is-black" />
             <b>
               {copy.black} {black}
             </b>
           </div>
-          <div className="othello-score is-white">
+          <div className={`othello-score is-white${activeSeat === 1 ? " is-active" : ""}`}>
             <span aria-hidden="true" className="othello-disc-swatch is-white" />
             <b>
               {copy.white} {white}

@@ -449,7 +449,10 @@ export function CatanBoard({
         </div>
         <div className="catan-hud-scores" aria-label={copy.vp}>
           {vpScores.map((vp, seat) => (
-            <div className="catan-score" key={`vp-${seat}`}>
+            <div
+              className={`catan-score${seat === activeSeat ? " is-active" : ""}`}
+              key={`vp-${seat}`}
+            >
               <span
                 aria-hidden="true"
                 className="catan-seat-swatch"
@@ -502,7 +505,7 @@ export function CatanBoard({
         </dl>
       </section>
 
-      <div className="catan-stage">
+      <div className="catan-stage catan-stage-frame">
         <svg
           aria-label={copy.board}
           className="catan-svg"
@@ -510,7 +513,7 @@ export function CatanBoard({
           viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`}
         >
           <rect
-            fill="#1a4a6e"
+            fill="#2f6f7e"
             height={vbH}
             rx={36}
             width={vbW}
@@ -536,7 +539,7 @@ export function CatanBoard({
                   className={legal ? "catan-hex is-legal" : "catan-hex"}
                   fill={CATAN_TERRAIN_FILL[tile.terrain as Terrain] ?? "#888"}
                   points={points}
-                  stroke="#0d2a3d"
+                  stroke="#1f4f5c"
                   strokeWidth={6}
                 />
                 {tile.number !== null && (
