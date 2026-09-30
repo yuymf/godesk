@@ -84,9 +84,9 @@ export function GameLobby() {
           </section>
         )}
         {status === "ready" && games.length === 0 && (
-          <section className="shell-state">
+          <section className="shell-state shell-state-empty">
             <h2>还没有游戏</h2>
-            <p>写下想法或上传规则，生成后就能在这里继续。</p>
+            <p>写想法或贴规则，生成后会出现在这里。</p>
             <a className="shell-primary" href={href("/")}>创建第一款游戏</a>
           </section>
         )}

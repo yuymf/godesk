@@ -286,7 +286,7 @@ export function CreatorHome() {
               <span><strong>{project.name}</strong><small>v{project.version}</small></span>
             </a>
           ))}
-          {!projects.length && <small>生成后，游戏会出现在这里。</small>}
+          {!projects.length && <small>生成后会出现在这里。</small>}
         </nav>
         <a className="studio-install" href="/chatgpt-plugin">在 Codex 中使用</a>
       </aside>
@@ -300,8 +300,7 @@ export function CreatorHome() {
           <div className="studio-orbit" aria-hidden="true"><span>GD</span></div>
           <h1>今天要做一款什么游戏？</h1>
           <span>
-            写下一局桌游、剧本杀或棋牌的想法，也可以附上剧本或规则。
-            生成后查看玩法、自己试玩，再把可分享的一局发给朋友。
+            写下一局桌游、剧本杀或棋牌的想法，也可附上剧本或规则；生成后试玩，再把链接发给朋友。
           </span>
         </div>
 
