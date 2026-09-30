@@ -49,6 +49,7 @@ test("NL auction proposal → playable build → share= guest bid → award", as
   const guest = await guestBrowser.newContext();
   try {
     const guestPage = await guest.newPage();
+    await guestPage.setViewportSize({ width: 1440, height: 900 });
     await page.goto(shareUrl);
     await guestPage.goto(shareUrl);
     await guestPage.waitForURL(/\/chatgpt-plugin\/room\//);
@@ -59,6 +60,9 @@ test("NL auction proposal → playable build → share= guest bid → award", as
     const guestBoard = guestPage.getByRole("region", { name: "拍卖竞价桌" });
     await expect(board).toBeVisible();
     await expect(guestBoard).toBeVisible();
+    if (process.env.GODESK_VISUAL_EVIDENCE) {
+      await guestPage.screenshot({ path: `${process.env.GODESK_VISUAL_EVIDENCE}-room-auction.png`, animations: "disabled" });
+    }
     const guestHud = guestBoard.getByRole("region", { name: "拍卖状态" });
     await expect(guestHud).toContainText("轮到座位 0 出价或放弃");
     await expect(guestHud).toContainText("当前出价：0");

@@ -21,6 +21,7 @@ export function GameLobby() {
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
   const [startingId, setStartingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setStatus("loading");
@@ -137,7 +138,7 @@ export function GameLobby() {
                   )}
                   <div className="lobby-card-body">
                     <h2>{game.project.name}</h2>
-                    <p>{session ? "已有 Shared Session，可继续这一局。" : playable ? "可开始一局。" : "继续完成玩法后即可开局。"}</p>
+                    <p>{session ? "这一局已开启，邀请朋友加入。" : playable ? "准备好开局，朋友可以从链接加入。" : "继续完成玩法后即可开局。"}</p>
                     <div className="lobby-card-actions">
                       {session ? (
                         <a className="shell-primary" href={session.sessionUrl}>继续这一局</a>
@@ -149,6 +150,11 @@ export function GameLobby() {
                         <a className="shell-primary" href={href(`/studio/${game.project.id}`)}>继续完成玩法</a>
                       )}
                       <a className="shell-secondary" href={href(`/studio/${game.project.id}`)}>管理游戏</a>
+                      {session && <button className="shell-secondary lobby-share" type="button" onClick={() => {
+                        void navigator.clipboard.writeText(new URL(session.sessionUrl, window.location.origin).href)
+                          .then(() => setCopiedId(game.project.id))
+                          .catch(() => setCopiedId(null));
+                      }}>{copiedId === game.project.id ? "已复制邀请链接" : "复制邀请链接"}</button>}
                     </div>
                   </div>
                 </article>

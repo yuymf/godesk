@@ -3,9 +3,16 @@ import { expect, type Page, test } from "@playwright/test";
 /** Frozen Sol max baseline prompts (GameSpec fixtures). */
 const CATAN_PROMPT = "做一款可以与电脑对战的卡坦岛基础版";
 const OTHELLO_PROMPT = "做一款可以与电脑对战的黑白棋";
+const visualEvidence = process.env.GODESK_VISUAL_EVIDENCE;
+
+async function capture(page: Page, name: string) {
+  if (!visualEvidence) return;
+  await page.screenshot({ path: `${visualEvidence}-${name}.png`, animations: "disabled" });
+}
 
 async function generateApproveAndPlayable(page: Page, prompt: string): Promise<string> {
   await page.goto("/chatgpt-plugin/new");
+  await capture(page, "home");
   await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(prompt);
   await page.getByRole("button", { name: "生成可玩版本" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 90_000 });
@@ -25,9 +32,11 @@ async function generateApproveAndPlayable(page: Page, prompt: string): Promise<s
 async function openLobbyCard(page: Page, projectId: string) {
   await page.getByRole("navigation", { name: "主导航" }).getByRole("link", { name: "我的游戏" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/games$/);
-  return page.locator(".lobby-card").filter({
+  const card = page.locator(".lobby-card").filter({
     has: page.locator(`a[href$="/studio/${projectId}"]`),
   });
+  await expect(card).toBeVisible();
+  return card;
 }
 
 async function assertBoardHudNotClipped(page: Page, boardName: string) {
@@ -56,9 +65,13 @@ test.describe("dual-genre boards: Othello + Catan generate → lobby → act", (
     const projectId = await generateApproveAndPlayable(page, OTHELLO_PROMPT);
 
     const card = await openLobbyCard(page, projectId);
+    await capture(page, "lobby");
     await expect(card.locator('[data-lobby-mark="othello"]')).toBeVisible();
     await expect(card.locator('[data-lobby-mark="catan"]')).toHaveCount(0);
     await expect(card.locator('[data-lobby-mark="othello"] img')).toHaveAttribute("alt", "");
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await card.getByRole("button", { name: "复制邀请链接" }).click();
+    await expect(card.getByRole("button", { name: "已复制邀请链接" })).toBeVisible();
 
     await card.getByRole("link", { name: "继续这一局" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
@@ -71,6 +84,7 @@ test.describe("dual-genre boards: Othello + Catan generate → lobby → act", (
 
     await page.getByLabel("你的席位").selectOption("0");
     await expect(board.getByRole("region", { name: "对局状态" })).toContainText("轮到你落子");
+    await capture(page, "room-othello");
 
     // Cells expose role=gridcell (not button) so legal places stay in the grid a11y tree.
     const legal = board.getByRole("gridcell", { name: /可落子/ });
@@ -122,6 +136,7 @@ test.describe("dual-genre boards: Othello + Catan generate → lobby → act", (
 
     await page.getByLabel("你的席位").selectOption("0");
     await expect(hud).toContainText("轮到你行动");
+    await capture(page, "room-catan");
     await expect(board.getByLabel("你的资源")).toBeVisible();
 
     const settlement = board.getByRole("button", { name: /放置定居点/ });

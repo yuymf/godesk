@@ -9,7 +9,7 @@ async function expectLightPlaySurface(page: Page) {
   await expect(header).toBeVisible();
   await expect
     .poll(async () => header.evaluate((el) => getComputedStyle(el).backgroundColor))
-    .toBe("rgb(244, 250, 246)");
+    .toBe("rgb(255, 255, 255)");
   await expect
     .poll(async () =>
       page.locator(".room-view").evaluate((el) => getComputedStyle(el).backgroundColor),
