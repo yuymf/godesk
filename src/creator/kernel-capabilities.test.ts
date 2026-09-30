@@ -43,6 +43,18 @@ describe("inferRequestedMechanics — baseline vs unseen", () => {
     expect(inferRequestedMechanics(BASELINE_PROMPTS[1])).toEqual(["disc-flipping"]);
   });
 
+  it.each(["帮我生成一个黑白棋游戏", "做一款翻转棋 othello"])(
+    "binds north-star Othello to disc-flipping only: %s",
+    (prompt) => {
+      const mechanics = inferRequestedMechanics(prompt);
+      expect(mechanics).toEqual(["disc-flipping"]);
+      expect(mechanicsCapabilityGap(mechanics, "disc-flipping-v1")).toBeNull();
+      for (const kernel of ["auction-bidding-v1", "hex-settlement-v1", "hand-play-v1", "network-route-v1"]) {
+        expect(mechanicsCapabilityGap(mechanics, kernel)).toContain("能力缺口");
+      }
+    },
+  );
+
   it("binds route-network for the line-network prompt (never hex/disc)", () => {
     const mechanics = inferRequestedMechanics(NETWORK_PROMPT);
     expect(mechanics).toEqual(["route-network"]);
