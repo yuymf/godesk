@@ -39,6 +39,7 @@ describe("inferRequestedMechanics — baseline vs unseen", () => {
   });
   it("binds hex-settlement only for Catan-shaped baseline prompts", () => {
     expect(inferRequestedMechanics(BASELINE_PROMPTS[0])).toEqual(["hex-settlement"]);
+    expect(inferRequestedMechanics("帮我生成一个卡坦岛游戏")).toEqual(["hex-settlement"]);
     expect(inferRequestedMechanics(BASELINE_PROMPTS[1])).toEqual(["disc-flipping"]);
   });
 
