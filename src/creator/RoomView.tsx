@@ -464,37 +464,97 @@ export function RoomView({ sessionId }: { sessionId: string }) {
             <span>{copy.inviteLink}</span>
             <input aria-label={copy.inviteLink} readOnly value={room.sessionUrl} />
           </label>
-          <button onClick={() => void copyInvitation()} type="button">
+          <button
+            className={`invite-copy-btn${copied ? " is-copied" : ""}`}
+            onClick={() => void copyInvitation()}
+            type="button"
+          >
             {copied ? copy.copiedInvite : copy.copyInvite}
           </button>
         </div>
-        <label className="seat-picker">
-          <span>{copy.yourSeat}</span>
-          <select
-            disabled={busy}
-            onChange={(event) => {
-              const selected = Number(event.target.value);
-              if (Number.isInteger(selected)) void claimSeat(selected);
-            }}
-            value={seat ?? ""}
-          >
-            <option value="">{copy.chooseSeat}</option>
+        <div className="seat-rail" role="group" aria-label={locale === "zh" ? "席位栏" : "Seat rail"}>
+          <span className="seat-rail-label">{copy.yourSeat}</span>
+          <div className="seat-chip-row">
             {room.state.scores.map((_score, availableSeat) => {
               const occupant = room.seats.find((entry) => entry.seat === availableSeat);
               const isCurrentClient = seat === availableSeat;
+              const isOccupied = Boolean(occupant && !isCurrentClient);
+              const isOpen = !occupant && !isCurrentClient;
+              const disabled = busy || isOccupied || isCurrentClient || (seat !== null && !isCurrentClient);
               return (
-                <option
-                  disabled={Boolean(occupant && !isCurrentClient)}
+                <button
+                  aria-pressed={isCurrentClient}
+                  className={[
+                    "seat-chip",
+                    isCurrentClient ? "is-yours" : "",
+                    isOccupied ? "is-occupied" : "",
+                    isOpen ? "is-open" : "",
+                  ].filter(Boolean).join(" ")}
+                  disabled={disabled}
                   key={availableSeat}
-                  value={availableSeat}
+                  onClick={() => {
+                    if (!disabled && !isCurrentClient) void claimSeat(availableSeat);
+                  }}
+                  type="button"
                 >
-                  {locale === "zh" ? "座位" : "Seat"} {availableSeat}{occupant && !isCurrentClient ? ` · ${copy.occupied}` : ""}
-                </option>
+                  <b>{locale === "zh" ? "座位" : "Seat"} {availableSeat}</b>
+                  <small>
+                    {isCurrentClient
+                      ? copy.you
+                      : isOccupied
+                        ? copy.occupied
+                        : copy.openSeat}
+                  </small>
+                </button>
               );
             })}
-          </select>
-        </label>
+            {seat === null && (
+              <span className="seat-chip is-spectator" aria-live="polite">
+                <b>{copy.spectator}</b>
+                <small>{copy.chooseSeat}</small>
+              </span>
+            )}
+          </div>
+          {/* Keep a visually-hidden select for keyboard/AT parity with prior control. */}
+          <label className="seat-picker seat-picker-fallback">
+            <span>{copy.yourSeat}</span>
+            <select
+              aria-label={copy.yourSeat}
+              disabled={busy}
+              onChange={(event) => {
+                const selected = Number(event.target.value);
+                if (Number.isInteger(selected)) void claimSeat(selected);
+              }}
+              value={seat ?? ""}
+            >
+              <option value="">{copy.chooseSeat}</option>
+              {room.state.scores.map((_score, availableSeat) => {
+                const occupant = room.seats.find((entry) => entry.seat === availableSeat);
+                const isCurrentClient = seat === availableSeat;
+                return (
+                  <option
+                    disabled={Boolean(occupant && !isCurrentClient)}
+                    key={availableSeat}
+                    value={availableSeat}
+                  >
+                    {locale === "zh" ? "座位" : "Seat"} {availableSeat}{occupant && !isCurrentClient ? ` · ${copy.occupied}` : ""}
+                  </option>
+                );
+              })}
+            </select>
+          </label>
+        </div>
       </section>
+
+      {room.state.status === "active" && room.seats.length < room.state.scores.length && (
+        <section aria-live="polite" className="room-waiting-empty">
+          <div aria-hidden="true" className="room-waiting-mark">◇</div>
+          <div>
+            <h2>{copy.waitingOpponent}</h2>
+            <p>{copy.waitingOpponentHint}</p>
+          </div>
+        </section>
+      )}
 
       {room.experiment && (
         <section
