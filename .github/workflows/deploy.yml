@@ -108,3 +108,34 @@ jobs:
             exit 1
           fi
           node scripts/publish-public-plugin.mjs
+
+  release:
+    name: Record release
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Least privilege: only this job may write repository contents, so the tag
+    # and Release are created here instead of widening the deploy job's
+    # `contents: read` grant for the whole deploy.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      # No tag/release convention existed before this workflow (no tags, no
+      # releases), so each successful production deploy is recorded as one
+      # release. `deploy-` + UTC date + run number stays unique (run_number is
+      # monotonic per workflow) and sorts chronologically without implying
+      # SemVer the package does not follow.
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="deploy-$(date -u +%Y.%m.%d)-${{ github.run_number }}"
+          gh release create "$tag" \
+            --target "$GITHUB_SHA" \
+            --title "$tag" \
+            --generate-notes \
+            --notes "Production deploy of ${{ github.sha }} — workflow run ${{ github.run_number }} (https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})."
+          echo "::notice::Recorded release $tag for ${{ github.sha }}"

@@ -116,6 +116,14 @@ Cloud-computer / Asia/Shanghai nightly one-shot (Node ≥ 22, no real Worker sec
 
 Set repository secret `GODESK_PLUGIN_SYNC_TOKEN` (write access to `yuymf/godesk-plugin`) so a push to `main` publishes the current bundle.
 
+### Release records
+
+Every successful production deploy is recorded as one GitHub Release. The `release` job in [`deploy.yml`](.github/workflows/deploy.yml) runs only after `verify` → `deploy` → production smoke → public Plugin publish have all passed, then creates a tag `deploy-YYYY.MM.DD-<run_number>` on the deployed commit with auto-generated notes (`gh release create --generate-notes`).
+
+- View them at [Releases](https://github.com/yuymf/godesk/releases) — tag, deployed commit, and the merged PRs/changes since the previous deploy.
+- Trigger: pushing to `main` (or re-running the `Verify and deploy Godesk` workflow from the Actions tab) does it automatically. There is nothing to run by hand.
+- The tag is a deploy record, not a package version — `package.json` stays the source of the app version.
+
 ### Production configuration
 
 Public Worker vars (`wrangler.jsonc`):
