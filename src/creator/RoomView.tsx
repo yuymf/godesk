@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { GameMark } from "./CreatorBrand";
 import {
   claimSessionSeat,
   getBuild,
@@ -429,7 +430,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
     <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute || auction ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-catan" : ""} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
       <header className="room-shell-header">
         <div className="room-title-block">
-          <span className="room-brand-mark" aria-hidden="true">GD</span>
+          <span className="room-brand-mark" aria-hidden="true"><GameMark /></span>
           <div>
             <span className="room-kicker">{copy.room}</span>
             <h1>{gameName}</h1>

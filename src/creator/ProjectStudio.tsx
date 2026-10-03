@@ -39,7 +39,7 @@ import type {
   ValidationFinding,
 } from "./project-contract";
 import { studioShareGateMessage } from "../runtime/share-gate-copy";
-import { Brand } from "./CreatorBrand";
+import { Brand, GameMark } from "./CreatorBrand";
 import { StudioBuildPlayPanel } from "./StudioBuildPlayPanel";
 import { StudioGenerationPlanPanel } from "./StudioGenerationPlanPanel";
 import { StudioValidationPanel } from "./StudioValidationPanel";
@@ -1044,7 +1044,7 @@ export function ProjectStudio({ projectId }: { projectId: string }) {
   if (!project || !ruleSystem) {
     return (
       <main className="studio-status" id="main" aria-busy="true">
-        <span className="loading-mark" aria-hidden="true">GD</span>
+        <span className="loading-mark" aria-hidden="true"><GameMark /></span>
         <h1>正在打开这局游戏…</h1>
       </main>
     );

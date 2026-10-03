@@ -1,0 +1,60 @@
+.godesk-mark { display: block; width: 100%; height: 100%; object-fit: contain; }
+.creator-brand { display: inline-flex; flex: none; align-items: center; gap: 8px; color: var(--ink); text-decoration: none; }
+.creator-brand > span { width: 30px; height: 30px; }
+.creator-brand strong { font-size: 20px; font-weight: 750; letter-spacing: -.055em; }
+.room-brand-mark .godesk-mark { width: 32px; height: 32px; }
+.shell-page { min-height: 100dvh; color: var(--ink); background: var(--canvas); }
+.shell-header { box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 24px; max-width: 1240px; min-height: 88px; margin: 0 auto; padding: 20px 40px; }
+.shell-header nav, .studio-shell-links { display: flex; align-items: center; flex-wrap: wrap; gap: 28px; }
+.shell-header nav a, .studio-shell-links a { color: var(--muted); font-size: 13px; font-weight: 500; text-decoration: none; }
+.shell-header nav a:hover, .studio-shell-links a:hover { color: var(--ink); }
+.shell-header nav a[aria-current="page"] { color: var(--ink); }
+.shell-header .nav-install { margin-left: 4px; padding: 10px 16px; border: 1px solid var(--line); border-radius: var(--radius-pill); color: var(--ink); }
+.shell-content { box-sizing: border-box; max-width: 1160px; padding: 64px 40px; margin: 0 auto; }
+.shell-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 40px; }
+.shell-heading h1 { margin: 0; font-size: clamp(32px, 4vw, 44px); font-weight: 650; letter-spacing: -.045em; }
+.shell-heading p { margin: 16px 0 0; color: var(--muted); font-size: 14px; line-height: 1.65; }
+.lobby-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 48px 28px; }
+.lobby-card { display: flex; min-width: 0; flex-direction: column; }
+.lobby-card-mark { position: relative; display: grid; place-items: center; overflow: hidden; aspect-ratio: 16 / 11; border-radius: var(--radius-lg); color: var(--muted); background: var(--surface-raised); font-size: 26px; font-weight: 600; }
+.lobby-card-mark img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.lobby-card-mark > .godesk-mark { position: static; width: 40px; height: 40px; }
+.lobby-card-mark .example-artwork { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; }
+.lobby-card-body { display: flex; flex: 1; flex-direction: column; padding: 20px 2px 0; }
+.lobby-card h2 { margin: 0; font-size: 18px; font-weight: 650; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.lobby-card p { margin: 12px 0 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.lobby-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: auto; padding-top: 20px; }
+.shell-primary, .shell-secondary, .shell-state button { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; border: 1px solid transparent; border-radius: var(--radius-pill); font: inherit; font-size: 12px; font-weight: 600; text-decoration: none; cursor: pointer; }
+.shell-primary, .shell-state button { color: var(--paper); background: var(--ink); }
+.shell-primary:hover, .shell-state button:hover { background: var(--accent-deep); }
+.shell-primary:disabled { opacity: .55; cursor: wait; }
+.shell-secondary { color: var(--ink); background: transparent; border-color: var(--line); }
+.shell-secondary:hover { background: var(--surface-raised); }
+.lobby-share { padding: 0; border: 0; color: var(--muted); }
+.lobby-share:hover { color: var(--ink); background: transparent; text-decoration: underline; }
+.shell-state { padding: 32px; border: 1px solid var(--line); border-radius: var(--radius-lg); }
+.shell-state h2 { margin: 0; font-size: 20px; font-weight: 600; }
+.shell-state p { margin: 16px 0 24px; color: var(--muted); font-size: 14px; line-height: 1.65; }
+.shell-state > :last-child { margin-bottom: 0; }
+.shell-settings { max-width: 800px; }
+.settings-choice { display: flex; gap: 24px; border: 0; padding: 0; }
+.settings-choice legend { margin-bottom: 16px; font-weight: 600; font-size: 14px; }
+.settings-choice label { display: flex; min-height: 44px; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
+.settings-choice input { accent-color: var(--ink); }
+.studio-shell-links { margin-left: auto; }
+
+@media (max-width: 900px) {
+  .lobby-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .shell-header nav { gap: 20px; }
+}
+@media (max-width: 680px) {
+  .shell-header { align-items: flex-start; flex-direction: column; gap: 20px; padding: 24px 20px; }
+  .shell-header nav { width: 100%; gap: 20px; }
+  .shell-header nav a { font-size: 12px; }
+  .shell-header .nav-install { margin-left: auto; padding: 8px 12px; }
+  .shell-content { padding: 40px 20px; }
+  .shell-heading { align-items: flex-start; flex-direction: column; margin-bottom: 32px; }
+  .lobby-grid { grid-template-columns: 1fr; gap: 40px; }
+  .shell-state { padding: 24px; }
+  .studio-shell-links { margin-left: 0; }
+}

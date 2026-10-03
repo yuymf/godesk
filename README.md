@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/assets/logo.svg" alt="GoDesk" width="72" height="72">
+  <img src="src/assets/godesk-mark.svg" alt="GoDesk" width="72" height="72">
 
 # GoDesk
 

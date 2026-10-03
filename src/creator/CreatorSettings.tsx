@@ -22,7 +22,7 @@ export function CreatorSettings() {
         </nav>
       </header>
       <div className="shell-content shell-settings">
-        <div className="shell-heading"><div><span>偏好设置</span><h1>设置</h1></div></div>
+        <div className="shell-heading"><div><h1>设置</h1></div></div>
         <section className="shell-state">
           <h2>Shared Session 语言</h2>
           <p>选择后立即保存，重新打开游戏时继续使用。</p>

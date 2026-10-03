@@ -1,3 +1,5 @@
+<img src="plugins/godesk/assets/godesk-mark.svg" alt="GoDesk" width="72" height="72">
+
 # GoDesk Codex Plugin
 
 This is the public, thin Codex Plugin distribution for

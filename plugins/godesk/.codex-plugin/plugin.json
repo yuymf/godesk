@@ -33,7 +33,7 @@
       "Open my GoDesk project and start a joinable session",
       "Share this game so a friend can play in the browser"
     ],
-    "brandColor": "#0F6B4C",
+    "brandColor": "#171717",
     "composerIcon": "./assets/godesk-mark.svg",
     "logo": "./assets/godesk-mark.svg"
   },

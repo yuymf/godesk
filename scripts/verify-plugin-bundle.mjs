@@ -35,6 +35,12 @@ assert(
 assert(plugin.skills === "./skills/", "plugin skills path must be ./skills/");
 assert(plugin.mcpServers === "./.mcp.json", "plugin MCP path must be ./.mcp.json");
 assertFile("plugins/godesk/assets/godesk-mark.svg");
+const gameMark = await readFile(path.join(root, "src/assets/godesk-mark.svg"), "utf8");
+const pluginMark = await readFile(path.join(root, "plugins/godesk/assets/godesk-mark.svg"), "utf8");
+assert(pluginMark === gameMark, "Plugin mark must match src/assets/godesk-mark.svg");
+assert(plugin.interface?.brandColor === "#171717", "Plugin brand color must match GoDesk ink");
+assert(plugin.interface?.composerIcon === "./assets/godesk-mark.svg", "Plugin composer icon must use the GoDesk mark");
+assert(plugin.interface?.logo === "./assets/godesk-mark.svg", "Plugin logo must use the GoDesk mark");
 
 const hostedMcp = mcp.mcpServers?.godesk;
 assert(hostedMcp?.url?.endsWith("/mcp"), "hosted MCP URL must end in /mcp");

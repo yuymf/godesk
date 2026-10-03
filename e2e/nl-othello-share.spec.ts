@@ -44,6 +44,13 @@ test("NL Othello proposal → disc-flipping build → share= guest legal place",
 
   const card = await openLobbyCard(page, projectId);
   await expect(card.locator('[data-lobby-mark="othello"]')).toBeVisible();
+  const thumbnail = card.locator('[data-lobby-mark="othello"] img');
+  const thumbnailBounds = await thumbnail.boundingBox();
+  const frameBounds = await card.locator('[data-lobby-mark="othello"]').boundingBox();
+  expect(thumbnailBounds).not.toBeNull();
+  expect(frameBounds).not.toBeNull();
+  expect(thumbnailBounds!.height).toBeLessThanOrEqual(frameBounds!.height + 1);
+  expect(thumbnailBounds!.width).toBeLessThanOrEqual(frameBounds!.width + 1);
   for (const mark of ["auction", "catan", "network", "card"]) {
     await expect(card.locator(`[data-lobby-mark="${mark}"]`)).toHaveCount(0);
   }
