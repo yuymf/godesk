@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { GameMark } from "./CreatorBrand";
 import { getBuild, getReplay } from "./project-api";
 import type { GameReplay, PlayableBuild } from "./project-contract";
 import type { HarborVoyageState } from "../runtime/harbor-voyage";
@@ -62,7 +63,7 @@ export function ReplayView({ replayId }: { replayId: string }) {
     <main className="replay-view" id="main">
       <header className="room-shell-header">
         <div className="room-title-block">
-          <span className="room-brand-mark" aria-hidden="true">GD</span>
+          <span className="room-brand-mark" aria-hidden="true"><GameMark /></span>
           <div>
             <span className="room-kicker">只读 · 不能改这一局</span>
             <h1>{build?.ruleSystem.name ?? "回放"}</h1>

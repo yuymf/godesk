@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   beginWebLogin,
   createProject,
@@ -24,7 +24,8 @@ import {
   validateImageAssets,
   validateRulebookFile,
 } from "../platform/ingestion";
-import { Brand } from "./CreatorBrand";
+import { Brand, GameMark } from "./CreatorBrand";
+import { ExampleArtwork } from "./ExampleArtwork";
 import { generationSourceFields, hobbyistProjectName, href } from "./studio-utils";
 
 export function CreatorHome() {
@@ -270,39 +271,30 @@ export function CreatorHome() {
 
   return (
     <main className="studio-home" id="main">
-      <aside className="studio-sidebar">
+      <header className="shell-header">
         <Brand />
-        <nav aria-label="最近项目">
-          <span>我的游戏</span>
-          {projects.slice(0, 8).map((project) => (
-            <a href={href(`/studio/${project.id}`)} key={project.id}>
-              <i aria-hidden="true">◇</i>
-              <span><strong>{project.name}</strong><small>v{project.version}</small></span>
-            </a>
-          ))}
-          {!projects.length && <small>生成后，游戏会出现在这里。</small>}
+        <nav aria-label="主导航">
+          <a aria-current="page" href={href("/")}>创作台</a>
+          <a href={href("/games")}>我的游戏</a>
+          <a href={href("/settings")}>设置</a>
+          <a className="nav-install" href="/chatgpt-plugin">在 Codex 中使用</a>
         </nav>
-        <a className="studio-install" href="/chatgpt-plugin">在 Codex 中使用</a>
-      </aside>
+      </header>
 
       <section className="studio-stage">
-        <header className="studio-topbar">
-          <span>桌游 · 剧本杀 · 棋牌</span>
-          <nav aria-label="主导航"><span>创作台</span><a href={href("/games")}>我的游戏</a><a href={href("/settings")}>设置</a></nav>
-        </header>
         <div className="studio-welcome">
-          <div className="studio-orbit" aria-hidden="true"><span>GD</span></div>
-          <h1>今天要做一款什么游戏？</h1>
+          <div className="studio-mark" aria-hidden="true"><GameMark /></div>
+          <h1><span>把想法变成游戏，</span><span>邀请朋友一起玩。</span></h1>
           <span>
-            写下一局桌游、剧本杀或棋牌的想法，也可以附上剧本或规则。
-            生成后查看玩法、自己试玩，再把可分享的一局发给朋友。
+            <span>写下想法，或上传剧本和规则。</span>
+            <span>生成可玩的一局，用链接邀请朋友。</span>
           </span>
         </div>
 
         <form
           aria-busy={busy}
           autoComplete="off"
-          className={`studio-composer${description.trim() ? " is-filled" : ""}${hasGenerationInput ? " is-ready" : ""}`}
+          className="studio-composer"
           onSubmit={submit}
         >
             <label className="studio-idea-field">
@@ -316,8 +308,8 @@ export function CreatorHome() {
                     event.currentTarget.form?.requestSubmit();
                   }
                 }}
-                placeholder="描述想法，或直接粘贴规则。例如：三个人在别墅里互相怀疑谁是凶手，每人有一条私密线索。"
-                rows={4}
+                placeholder="描述游戏想法，或粘贴规则。例如：三人剧本杀，每人有一条私密线索。"
+                rows={3}
                 value={description}
               />
             </label>
@@ -348,6 +340,7 @@ export function CreatorHome() {
               >
                 <input
                   accept=".pdf,.txt,.md,.markdown,application/pdf,text/plain,text/markdown"
+                  aria-label="附上剧本或规则"
                   onChange={(event) => selectRulebook(event.currentTarget.files?.[0])}
                   type="file"
                 />
@@ -368,6 +361,7 @@ export function CreatorHome() {
               >
                 <input
                   accept="image/jpeg,image/png,image/webp,image/gif"
+                  aria-label="添加图片"
                   aria-describedby="asset-upload-help"
                   multiple
                   onChange={(event) => selectVisualAssets(event.currentTarget.files ?? undefined)}
@@ -419,29 +413,49 @@ export function CreatorHome() {
         {error && <p className="studio-error" role="alert">生成失败：{error} 修改输入后可用同一个按钮重试。</p>}
 
         {!showPipeline && (
-          <details className="default-examples studio-examples">
-            <summary>先玩一局现成的</summary>
-            <h2>想先摸清手感？直接开一局现成的</h2>
+          <section aria-labelledby="examples-heading" className="studio-examples">
+            <header className="gallery-heading">
+              <h2 id="examples-heading">先玩一局现成的</h2>
+              <p>挑一款，开局后就能邀请朋友。</p>
+            </header>
             <div className="example-grid">
-              {DEFAULT_EXAMPLES.map((example, index) => (
-                <article key={example.id} style={{ "--i": index } as CSSProperties}>
-                  <h3>{example.title}</h3>
-                  <p>{example.summary}</p>
-                  <dl>
-                    <div><dt>人数</dt><dd>{example.players}</dd></div>
-                    <div><dt>时长</dt><dd>{example.duration}</dd></div>
-                  </dl>
-                  <button
-                    disabled={Boolean(exampleBusy) || busy}
-                    onClick={() => copyExample(example.id)}
-                    type="button"
-                  >
-                    {exampleBusy === example.id ? "正在开局…" : "先玩这一局"}
-                  </button>
+              {DEFAULT_EXAMPLES.map((example) => (
+                <article key={example.id}>
+                  <ExampleArtwork exampleId={example.id} />
+                  <div className="example-body">
+                    <h3>{example.title}</h3>
+                    <p>{example.summary}</p>
+                    <dl>
+                      <div><dt>人数</dt><dd>{example.players}</dd></div>
+                      <div><dt>时长</dt><dd>{example.duration}</dd></div>
+                    </dl>
+                    <button
+                      disabled={Boolean(exampleBusy) || busy}
+                      onClick={() => copyExample(example.id)}
+                      type="button"
+                    >
+                      {exampleBusy === example.id ? "正在开局…" : "先玩这一局"}
+                    </button>
+                  </div>
                 </article>
               ))}
             </div>
-          </details>
+          </section>
+        )}
+        {projects.length > 0 && !showPipeline && (
+          <section aria-labelledby="recent-heading" className="studio-recent">
+            <header className="gallery-heading">
+              <h2 id="recent-heading">继续创作</h2>
+              <a href={href("/games")}>查看全部游戏</a>
+            </header>
+            <nav aria-label="最近项目">
+              {projects.slice(0, 4).map((project) => (
+                <a href={href(`/studio/${project.id}`)} key={project.id}>
+                  <strong>{project.name}</strong><span>打开游戏</span>
+                </a>
+              ))}
+            </nav>
+          </section>
         )}
       </section>
     </main>

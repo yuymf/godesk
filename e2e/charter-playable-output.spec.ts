@@ -14,50 +14,45 @@ async function expectLightPlaySurface(page: Page) {
     .poll(async () =>
       page.locator(".room-view").evaluate((el) => getComputedStyle(el).backgroundColor),
     )
-    .toBe("rgb(232, 240, 235)");
+    .toBe("rgb(255, 255, 255)");
   const log = page.locator(".action-log");
   await expect(log).toBeVisible();
   await expect
     .poll(async () => log.evaluate((el) => getComputedStyle(el).backgroundColor))
-    .toBe("rgb(244, 250, 246)");
+    .toBe("rgb(245, 245, 245)");
 }
 
 test.describe("ChatCut charter: source in, playable game out", () => {
-  test("home composer is a light table and a starter chip is enough to generate", async ({
+  test("home composer is a neutral gallery and a starter chip is enough to generate", async ({
     page,
   }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "今天要做一款什么游戏？" })).toBeVisible();
-    await expect(page.getByText("生成后查看玩法、自己试玩，再把可分享的一局发给朋友。")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /把想法变成游戏，\s*邀请朋友一起玩。/ })).toBeVisible();
+    await expect(page.getByText("生成可玩的一局，用链接邀请朋友。")).toBeVisible();
     await expect(page.getByRole("button", { name: "＋ 新游戏" })).toHaveCount(0);
     await expect(page.getByRole("textbox", { name: "游戏名称" })).toHaveCount(0);
     await expect(page.locator("body")).not.toContainText("可编辑、可分享、可验证");
-    await expect(page.getByText("可分享的一局")).toBeVisible();
+    await expect(page.getByText("用链接邀请朋友", { exact: false })).toBeVisible();
     await expect(page.getByText("创作台")).toBeVisible();
     await expect(page.locator(".studio-home")).not.toContainText("GoDesk 服务暂时不可用");
 
-    const sidebar = page.locator(".studio-sidebar");
-    await expect(sidebar).toBeVisible();
-    await expect
-      .poll(async () => sidebar.evaluate((el) => getComputedStyle(el).backgroundColor))
-      .toBe("rgb(244, 250, 246)");
+    const navigation = page.getByRole("navigation", { name: "主导航" });
+    await expect(navigation.getByRole("link", { name: "我的游戏" })).toBeVisible();
+    await expect(navigation.getByRole("link", { name: "创作台" })).toHaveAttribute("aria-current", "page");
     await expect
       .poll(async () => page.evaluate(() => getComputedStyle(document.body).backgroundColor))
-      .toBe("rgb(232, 240, 235)");
+      .toBe("rgb(255, 255, 255)");
     await expect
       .poll(async () =>
         page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--canvas").trim()),
       )
-      .toBe("#e8f0eb");
+      .toBe("#ffffff");
     await expect
       .poll(async () => page.evaluate(() => getComputedStyle(document.documentElement).fontFamily))
-      .not.toMatch(/Inter/i);
-    await page.getByText("先玩一局现成的").click();
+      .toMatch(/Manrope/);
     const exampleCard = page.locator(".studio-examples .example-grid article").first();
     await expect(exampleCard).toBeVisible();
-    await expect
-      .poll(async () => exampleCard.evaluate((el) => getComputedStyle(el).backgroundColor))
-      .toBe("rgb(255, 255, 255)");
+    await expect(exampleCard.locator(".example-artwork")).toBeVisible();
 
     const idea = page.getByRole("textbox", { name: "描述你的游戏想法" });
     const generate = page.getByRole("button", { name: "生成可玩版本" });
@@ -101,7 +96,6 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(idea).toHaveValue("");
     await expect(generate).toBeDisabled();
 
-    await page.getByText("先玩一局现成的").click();
     await expect(page.getByRole("button", { name: "先玩这一局" })).toHaveCount(3);
 
     await page.getByRole("button", { name: "3人剧本杀" }).click();
@@ -143,14 +137,14 @@ test.describe("ChatCut charter: source in, playable game out", () => {
       .poll(async () =>
         page.locator(".install-guide").evaluate((el) => getComputedStyle(el).backgroundColor),
       )
-      .toBe("rgb(232, 240, 235)");
+      .toBe("rgb(255, 255, 255)");
 
     await page.getByRole("button", { name: "复制这一句话" }).click();
     await expect(page.getByRole("button", { name: "已复制" })).toBeVisible();
 
     await page.getByRole("link", { name: "不用 Connector，直接做一局" }).click();
     await expect(page).toHaveURL(/\/chatgpt-plugin\/new$/);
-    await expect(page.getByRole("heading", { name: "今天要做一款什么游戏？" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /把想法变成游戏，\s*邀请朋友一起玩。/ })).toBeVisible();
   });
 
   test("灵感接力 becomes a joinable room where two people can play", async ({
@@ -162,7 +156,6 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await page.getByRole("link", { name: "不用 Connector，直接做一局" }).click();
     await expect(page).toHaveURL(/\/chatgpt-plugin\/new$/);
     const ideaRelay = page.locator("article").filter({ hasText: "灵感接力" });
-    await page.getByText("先玩一局现成的").click();
     await ideaRelay.getByRole("button", { name: "先玩这一局" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 90_000 });
 
@@ -223,12 +216,12 @@ test.describe("ChatCut charter: source in, playable game out", () => {
       .poll(async () =>
         page.locator(".replay-view").evaluate((el) => getComputedStyle(el).backgroundColor),
       )
-      .toBe("rgb(232, 240, 235)");
+      .toBe("rgb(255, 255, 255)");
     await expect
       .poll(async () =>
         page.locator(".room-shell-header").evaluate((el) => getComputedStyle(el).backgroundColor),
       )
-      .toBe("rgb(244, 250, 246)");
+      .toBe("rgb(245, 245, 245)");
     await expect(page.getByText(/座位 0 · 加入约束/)).toBeVisible();
     await expect(page.getByText(/座位 1 · 扩展创意/)).toBeVisible();
 

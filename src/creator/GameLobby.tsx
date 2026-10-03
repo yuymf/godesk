@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { Brand } from "./CreatorBrand";
+import { Brand, GameMark } from "./CreatorBrand";
+import { ExampleArtwork } from "./ExampleArtwork";
 import { createSharedSession, getBuilds, getSharedSessions, listProjects } from "./project-api";
 import type { GameProject, PlayableBuild, SharedSession } from "./project-contract";
-import { isAuctionBidding, isDiscFlipping, isHandPlay, isHexSettlement, isNetworkRoute } from "./room-presentation";
+import { conversationRelayKernel, hiddenRoleKernel, isAuctionBidding, isDiscFlipping, isHandPlay, isHarborVoyage, isHexSettlement, isNetworkRoute } from "./room-presentation";
 import { othelloStartingBoardThumbnailDataUrl } from "./othello-thumbnail";
 import { catanStartingBoardThumbnailDataUrl } from "./catan-thumbnail";
 import { networkRouteStartingBoardThumbnailDataUrl } from "./network-route-thumbnail";
@@ -73,7 +74,7 @@ export function GameLobby() {
       </header>
       <div className="shell-content">
         <div className="shell-heading">
-          <div><span>游戏大厅</span><h1>我的游戏</h1></div>
+          <div><h1>我的游戏</h1><p>把想法做成游戏，再和朋友一起玩。</p></div>
           {games.length > 0 && <a className="shell-secondary" href={href("/")}>创建新游戏</a>}
         </div>
         {status === "loading" && <p aria-busy="true" role="status">正在载入游戏…</p>}
@@ -133,8 +134,20 @@ export function GameLobby() {
                     >
                       <img alt="" src={handPlayStartingBoardThumbnailDataUrl()} />
                     </div>
+                  ) : game.build && isHarborVoyage(game.build.ruleSystem) ? (
+                    <div aria-hidden="true" className="lobby-card-mark" data-lobby-mark="harbor">
+                      <ExampleArtwork exampleId="harbor-13" />
+                    </div>
+                  ) : game.build && hiddenRoleKernel(game.build.ruleSystem) ? (
+                    <div aria-hidden="true" className="lobby-card-mark" data-lobby-mark="hidden-role">
+                      <ExampleArtwork exampleId="mistpeak-lodge" />
+                    </div>
+                  ) : game.build && conversationRelayKernel(game.build.ruleSystem) ? (
+                    <div aria-hidden="true" className="lobby-card-mark" data-lobby-mark="conversation">
+                      <ExampleArtwork exampleId="idea-relay" />
+                    </div>
                   ) : (
-                    <div aria-hidden="true" className="lobby-card-mark">GD</div>
+                    <div aria-hidden="true" className="lobby-card-mark"><GameMark /></div>
                   )}
                   <div className="lobby-card-body">
                     <h2>{game.project.name}</h2>

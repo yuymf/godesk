@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Brand } from "../creator/CreatorBrand";
 
 const mcpUrl =
   "https://godesk.yumengfan220.workers.dev/chatgpt-plugin/mcp";
@@ -28,10 +29,7 @@ export function InstallGuide() {
   return (
     <main className="install-guide">
       <header className="install-nav">
-        <a href="/chatgpt-plugin/new" className="install-brand" aria-label="GoDesk 首页">
-          <span>GD</span>
-          <strong>GoDesk</strong>
-        </a>
+        <Brand />
         <span>ChatGPT Connector · MCP · 0.2.0+codex.20260830</span>
       </header>
 
