@@ -23,6 +23,11 @@ test("one conversation idea becomes a shared session with share=", async ({ page
   await page.getByLabel("写下你的发言").fill("从雨夜码头开始讲这个故事。");
   await page.getByRole("region", { name: "你的行动" }).getByRole("button").first().click();
   await expect(page.locator(".speech-transcript")).toContainText("从雨夜码头开始讲这个故事。");
+  // A generated invitation must still open its playable state after reload.
+  const invitation = page.url();
+  await page.reload();
+  await expect(page).toHaveURL(invitation);
+  await expect(page.locator(".speech-transcript")).toContainText("从雨夜码头开始讲这个故事。");
 });
 
 test("a failed entry submit keeps the idea and retries through the same action", async ({ page }) => {

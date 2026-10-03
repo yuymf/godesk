@@ -118,10 +118,12 @@ Set repository secret `GODESK_PLUGIN_SYNC_TOKEN` (write access to `yuymf/godesk-
 
 ### Release records
 
-Every successful production deploy is recorded as one GitHub Release. The `release` job in [`deploy.yml`](.github/workflows/deploy.yml) runs only after `verify` → `deploy` → production smoke → public Plugin publish have all passed, then creates a tag `deploy-YYYY.MM.DD-<run_number>` on the deployed commit with auto-generated notes (`gh release create --generate-notes`).
+Every successful production deploy is recorded as one GitHub Release. The `release` job in [`deploy.yml`](.github/workflows/deploy.yml) runs only after `verify` → `deploy` → production smoke → public Plugin publish have all passed, then creates a tag `deploy-YYYY.MM.DD-<run_number>-<run_attempt>` on the deployed commit with auto-generated notes (`gh release create --generate-notes`). The successful `deploy` job supplies this identity to `release`.
 
 - View them at [Releases](https://github.com/yuymf/godesk/releases) — tag, deployed commit, and the merged PRs/changes since the previous deploy.
 - Trigger: pushing to `main` (or re-running the `Verify and deploy Godesk` workflow from the Actions tab) does it automatically. There is nothing to run by hand.
+- A full redeploy gets a new attempt suffix. Retrying only `release` reuses the deploy's tag and accepts an existing Release only when its tag points to the deployed SHA; it does not create another record.
+- `node scripts/verify-release-records.mjs` checks full reruns, release-only retries, and mismatched tag targets with a local GitHub CLI stub. It does not publish a real Release.
 - The tag is a deploy record, not a package version — `package.json` stays the source of the app version.
 
 ### Production configuration

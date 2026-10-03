@@ -31,6 +31,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
+      - run: node scripts/verify-release-records.mjs
       - run: pnpm build
       - run: pnpm test:worker
       - run: pnpm typecheck
@@ -43,6 +44,8 @@ jobs:
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      release_tag: ${{ steps.release-record.outputs.tag }}
     steps:
       - uses: actions/checkout@v6
 
@@ -109,6 +112,12 @@ jobs:
           fi
           node scripts/publish-public-plugin.mjs
 
+      - name: Record deploy identity
+        id: release-record
+        run: |
+          set -euo pipefail
+          echo "tag=deploy-$(date -u +%Y.%m.%d)-${{ github.run_number }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+
   release:
     name: Record release
     needs: deploy
@@ -122,17 +131,29 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # No tag/release convention existed before this workflow (no tags, no
-      # releases), so each successful production deploy is recorded as one
-      # release. `deploy-` + UTC date + run number stays unique (run_number is
-      # monotonic per workflow) and sorts chronologically without implying
-      # SemVer the package does not follow.
+      # The deploy job owns the identity: full redeploys get a new attempt,
+      # while retrying only this job reuses the successful deploy's tag.
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.deploy.outputs.release_tag }}
         run: |
           set -euo pipefail
-          tag="deploy-$(date -u +%Y.%m.%d)-${{ github.run_number }}"
+          : "${RELEASE_TAG:?Deploy release tag is missing}"
+          tag="$RELEASE_TAG"
+          target="$(gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/$tag" --jq "map(select(.ref == \"refs/tags/$tag\")) | .[].object.sha")"
+          if [ -n "$target" ] && [ "$target" != "$GITHUB_SHA" ]; then
+            echo "::error::Tag $tag does not point to deployed commit $GITHUB_SHA"
+            exit 1
+          fi
+          if gh release view "$tag" >/dev/null 2>&1; then
+            if [ "$target" != "$GITHUB_SHA" ]; then
+              echo "::error::Release $tag does not point to deployed commit $GITHUB_SHA"
+              exit 1
+            fi
+            echo "::notice::Release $tag already records $GITHUB_SHA"
+            exit 0
+          fi
           gh release create "$tag" \
             --target "$GITHUB_SHA" \
             --title "$tag" \
