@@ -60,7 +60,7 @@ export type AssetManifestEntry = {
  */
 export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
 [
-  {
+{
     "id": "font/manrope",
     "file": "src/assets/fonts/manrope-latin-wght-normal.woff2",
     "kind": "font",
@@ -78,7 +78,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "status": "cleared"
     }
   },
-  {
+{
     "id": "ui/godesk-mark",
     "file": "src/assets/godesk-mark.svg",
     "kind": "ui",
@@ -96,7 +96,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "status": "cleared"
     }
   },
-  {
+{
     "id": "ui/paper-noise",
     "file": "assets/ui/paper-noise.webp",
     "kind": "ui",
@@ -114,7 +114,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "status": "cleared"
     }
   },
-  {
+{
     "id": "ui/paper-edge-panel",
     "file": "assets/ui/paper-edge-panel.svg",
     "kind": "ui",
@@ -132,7 +132,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "status": "cleared"
     }
   },
-  {
+{
     "id": "ui/paper-edge-card",
     "file": "assets/ui/paper-edge-card.svg",
     "kind": "ui",
@@ -150,7 +150,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "status": "cleared"
     }
   },
-  {
+{
     "id": "ui/ink-icons",
     "file": "assets/ui/ink-icons.svg",
     "kind": "ui",
@@ -168,7 +168,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "status": "cleared"
     }
   },
-  {
+{
     "id": "font/fraunces-display",
     "file": "assets/fonts/fraunces-latin-display.woff2",
     "kind": "font",
@@ -186,7 +186,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "status": "cleared"
     }
   },
-  {
+{
     "id": "audio/sfx-core",
     "file": "assets/audio/sfx-core.mp3",
     "kind": "audio-sprite",
@@ -221,7 +221,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "sfx/lose"
     ]
   },
-  {
+{
     "id": "audio/sfx-extended",
     "file": "assets/audio/sfx-extended.mp3",
     "kind": "audio-sprite",
@@ -256,7 +256,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "sfx/trade-4"
     ]
   },
-  {
+{
     "id": "audio/ambience-surf",
     "file": "assets/audio/ambience-surf.mp3",
     "kind": "audio",
@@ -274,7 +274,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "status": "cleared"
     }
   },
-  {
+{
     "id": "audio/ambience-harbor-wind",
     "file": "assets/audio/ambience-harbor-wind.mp3",
     "kind": "audio",
@@ -292,7 +292,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "status": "cleared"
     }
   },
-  {
+{
     "id": "music/tide-harbor",
     "file": "assets/audio/music-tide-harbor.mp3",
     "kind": "audio",
@@ -310,7 +310,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "status": "cleared"
     }
   },
-  {
+{
     "id": "music/crystal-shore",
     "file": "assets/audio/music-crystal-shore.mp3",
     "kind": "audio",
@@ -328,7 +328,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "status": "cleared"
     }
   },
-  {
+{
     "id": "music/observing-star",
     "file": "assets/audio/music-observing-star.mp3",
     "kind": "audio",
@@ -342,6 +342,150 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "obtainedAt": "2026-10-06",
       "modified": true,
       "modificationNote": "循环至 120s、96kbps、loudnorm",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/resource-wood",
+    "file": "assets/illustrations/cards/resource-wood.webp",
+    "kind": "illustration",
+    "bytes": 27568,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-card-art.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "PIL 羊皮纸插画",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/resource-brick",
+    "file": "assets/illustrations/cards/resource-brick.webp",
+    "kind": "illustration",
+    "bytes": 26734,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-card-art.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "PIL 羊皮纸插画",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/resource-sheep",
+    "file": "assets/illustrations/cards/resource-sheep.webp",
+    "kind": "illustration",
+    "bytes": 26346,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-card-art.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "PIL 羊皮纸插画",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/resource-wheat",
+    "file": "assets/illustrations/cards/resource-wheat.webp",
+    "kind": "illustration",
+    "bytes": 27000,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-card-art.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "PIL 羊皮纸插画",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/resource-ore",
+    "file": "assets/illustrations/cards/resource-ore.webp",
+    "kind": "illustration",
+    "bytes": 26190,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-card-art.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "PIL 羊皮纸插画",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/dev-fog-signal",
+    "file": "assets/illustrations/cards/dev-fog-signal.webp",
+    "kind": "illustration",
+    "bytes": 51912,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-card-art.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "PIL 羊皮纸插画",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/dev-tide-plenty",
+    "file": "assets/illustrations/cards/dev-tide-plenty.webp",
+    "kind": "illustration",
+    "bytes": 50096,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-card-art.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "PIL 羊皮纸插画",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/dev-harbor-charter",
+    "file": "assets/illustrations/cards/dev-harbor-charter.webp",
+    "kind": "illustration",
+    "bytes": 50112,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-card-art.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "PIL 羊皮纸插画",
       "orderRef": "n/a",
       "status": "cleared"
     }

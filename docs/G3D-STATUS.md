@@ -11,7 +11,7 @@
 | SPEC | 仓外 `/workspace/godesk-3d-spec/SPEC.md`（v0.2）；指针见 [`docs/G3D-SPEC-POINTER.md`](./G3D-SPEC-POINTER.md) |
 | Notion 项目 | https://app.notion.com/p/3f05fabdfe81810e90ade6b4fe2de7c2 |
 | 任务范围 | G3D-01 至 G3D-27；里程碑 M0–M5；人日上限 91 |
-| 代码基线 | `yuymf/godesk` `main` @ `8fbbc6c`（#105 G3D-11；含 #106/#107/#104） |
+| 代码基线 | `yuymf/godesk` `main` @ `6d4db72`（#109 G3D-04；含 #112/#111/#108/#105） |
 | 状态文件维护人 | 劳埃德(工程) / Track B（素材） |
 | 最近更新 | 2026-10-06（Asia/Shanghai） |
 
@@ -44,6 +44,9 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | G3D-12 | GameSpec v2 render schema / RuleSystem 存储 / v1 惰性迁移 | PR [#106](https://github.com/yuymf/godesk/pull/106) squash `15fdad5` |
 | G3D-11 | 资产清单、LICENSES、CI 许可证门、KTX2/meshopt；`render-asset-registry` ← `ASSET_MANIFEST` | PR [#105](https://github.com/yuymf/godesk/pull/105) squash `8fbbc6c` |
 | G3D-23 | UI 羊皮纸皮肤、墨线图标、Fraunces、风格指南（Track B） | PR [#108](https://github.com/yuymf/godesk/pull/108) squash `f2bb555` |
+| G3D-26 | SFX sprites×30 + ambient×2（Track B） | PR [#111](https://github.com/yuymf/godesk/pull/111) squash `41e352b` |
+| G3D-27 | 音乐循环×3 CC0 120s（Track B） | PR [#112](https://github.com/yuymf/godesk/pull/112) squash `757c9bc` |
+| G3D-04 | 拾取 → 合法动作、HUD、HexSettlementBoard（Track A） | PR [#109](https://github.com/yuymf/godesk/pull/109) squash `6d4db72` |
 
 仓外已完成（不记入上表）：SPEC v0.2 起草与 §9 拍板修订；Notion 项目与任务卡建立。
 
@@ -51,16 +54,21 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
-| G3D-04：拾取 → 合法动作、HUD、可访问动作列表，Room 替换 SVG | Track A · 劳埃德(工程) | `feat/g3d-04-pick-hud` / [PR #109](https://github.com/yuymf/godesk/pull/109) | M1 第三刀；含 iPhone 触控修复 e44dfe0 |
-| G3D-18：删除 2D 六角盘面路径 | Track A | `feat/g3d-18-delete-2d` / [PR #119](https://github.com/yuymf/godesk/pull/119) | stacked on #109；#109 合入后改 base main |
-| G3D-05：Chrome 模拟 harness（并行） | Track C | `feat/g3d-05-perf-harness` / [PR #110](https://github.com/yuymf/godesk/pull/110) | 调度变更：G3D-05 归 Track C；Track A 不做 |
+| G3D-18：删除 2D 六角盘面路径 | Track A | `feat/g3d-18-delete-2d` / [PR #119](https://github.com/yuymf/godesk/pull/119) | #109 已合入；改 base main 后 rebase |
+| G3D-05：Chrome 模拟 harness（并行） | Track C | `feat/g3d-05-perf-harness` / [PR #110](https://github.com/yuymf/godesk/pull/110) | 调度变更：G3D-05 归 Track C |
+| G3D-24：卡面插画 | Track B | `feat/g3d-24-card-art` / [PR #113](https://github.com/yuymf/godesk/pull/113) | 合入队列下一刀 |
+| G3D-25：品牌插画 | Track B | `feat/g3d-25-brand-art` / [PR #114](https://github.com/yuymf/godesk/pull/114) | 排队 |
+| G3D-19：地形装饰 + 海面 KTX2 | Track B | `feat/g3d-19-terrain-decor` / [PR #115](https://github.com/yuymf/godesk/pull/115) | 排队 |
+| G3D-22：PBR×11 | Track B | `feat/g3d-22-pbr-textures` / [PR #116](https://github.com/yuymf/godesk/pull/116) | 排队 |
+| G3D-20：棋子 + 羊 | Track B | `feat/g3d-20-pieces` / [PR #117](https://github.com/yuymf/godesk/pull/117) | 排队 |
+| G3D-21：道具 GLB | Track B | `feat/g3d-21-props` / [PR #118](https://github.com/yuymf/godesk/pull/118) | 排队 |
 
 ## 阻塞
 
 | 项 | 原因 | 解除条件 |
 | --- | --- | --- |
 | box Codex 用量上限 | `codex exec` gpt-5.5 于 2026-10-06 报 usage limit（约至 2026-11-05 02:04 Asia/Shanghai）；审查改人工 diff / Cloud Agent 兜底 | 用量恢复或改用 Cursor Cloud Agent |
-| **GitHub Actions 大范围故障（外部）** | [githubstatus.com](https://www.githubstatus.com) component **Actions = major_outage**（incident 自 2026-10-05T19:11Z / 03:12 Asia/Shanghai）。此后 PR/main 工作流均 `runner=null` 取消，**非代码失败**。涉及 #108/#111/#112 及 main deploy。 | Actions 恢复 operational 后按序 `gh run rerun --failed`，CI 绿再 squash：#108 → #111 → #112 |
+| **GitHub Actions（外部）** | 曾 major_outage；现多为 `degraded_performance`。#108/#111/#112/#109 已合入。禁无绿合入；每 PR 至多一次 rerun。 | Actions operational 后继续合入 Track B 队列 |
 | Track A 侧 Actions 处理 | 03:12 起 major_outage；~05:16 起降为 `degraded_performance`，runner 恢复（#109 95c6dda / e44dfe0 CI 通过）。**禁无绿合入；禁循环 rerun（每 PR 至多一次）。** | 按序 #109 → #119 |
 | toktx（Basis CLI） | 本环境未预装 `toktx`；`scripts/compress-assets.mjs --texture` 显式失败。GLB meshopt 可用 | CI/开发机安装 `toktx`，或 G3D-22 在有 toktx 的环境烘焙 |
 
@@ -70,22 +78,23 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 > Track A 调度（2026-10-06）：**不做 G3D-05**（归 Track C）。M1 完成后顺序为 **G3D-09 →（等 G3D-05 合入 main 后）G3D-06 → G3D-07**。
 
-1. Track A：合入 **G3D-04 #109** → **G3D-18 #119** → M1 出口证明。
+1. Track A：合入 **G3D-18 #119**（retarget/rebase onto main）→ M1 出口证明。
 2. Track A（M1 后）：G3D-09 → G3D-06（依赖 G3D-05 on main）→ G3D-07。
-3. Track B：G3D-23 #108 已合入 `f2bb555` → G3D-26 / 27 / 22。
-4. G3D-19/20/21：G3D-03+11 已上 main，可开工。
+3. Track B：按序 squash **#113 → #114 → #115 → #116 → #117 → #118**（每刀 rebase onto 最新 main；LICENSES/manifest **并集**）。
 
 ## 开着的 PR / 分支
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
-| `feat/g3d-04-pick-hud` | [#109](https://github.com/yuymf/godesk/pull/109) | pick、hit 高亮、HexSettlementBoard、RoomView 去 SVG | open · CI 绿后合入 |
-| `feat/g3d-18-delete-2d` | [#119](https://github.com/yuymf/godesk/pull/119) | 删 CatanBoard / 2D 缩略图；预览/回放/大厅 3D | open · base #109 |
-| `feat/g3d-26-sfx` | [#111](https://github.com/yuymf/godesk/pull/111) | A-01/A-02 | open · 等 Actions |
-| `feat/g3d-27-music` | [#112](https://github.com/yuymf/godesk/pull/112) | A-03 ×3 | open · 等 Actions |
-| `feat/g3d-24-card-art` | [#113](https://github.com/yuymf/godesk/pull/113) | I-01/I-02 · base #108 | open · 等 Actions |
-| `feat/g3d-25-brand-art` | [#114](https://github.com/yuymf/godesk/pull/114) | I-03–I-05 · base #108 | open · 等 Actions |
-| `feat/g3d-19-terrain-decor` | TBD | decor.glb + T-12/13 · base #108 | open · 等 Actions |
+| `feat/g3d-18-delete-2d` | [#119](https://github.com/yuymf/godesk/pull/119) | 删 CatanBoard / 2D | open · Track A |
+| `feat/g3d-05-perf-harness` | [#110](https://github.com/yuymf/godesk/pull/110) | perf harness | open · Track C |
+| `feat/g3d-24-card-art` | [#113](https://github.com/yuymf/godesk/pull/113) | I-01/I-02 | open · 合入中 |
+| `feat/g3d-25-brand-art` | [#114](https://github.com/yuymf/godesk/pull/114) | I-03–I-05 | open |
+| `feat/g3d-19-terrain-decor` | [#115](https://github.com/yuymf/godesk/pull/115) | decor + T-12/13 | open |
+| `feat/g3d-22-pbr-textures` | [#116](https://github.com/yuymf/godesk/pull/116) | PBR×11 | open |
+| `feat/g3d-20-pieces` | [#117](https://github.com/yuymf/godesk/pull/117) | pieces + sheep | open |
+| `feat/g3d-21-props` | [#118](https://github.com/yuymf/godesk/pull/118) | props.glb | open |
+| `feat/g3d-10-audio` | [#120](https://github.com/yuymf/godesk/pull/120) | howler 引擎 | open · 他轨 |
 
 ## 修订记录
 
@@ -102,3 +111,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | 外部阻塞：GitHub Actions major_outage（约 03:12 CST）；禁无绿合入与循环 rerun | Track A |
 | 2026-10-06 | Track B：G3D-11 #105 合入 `8fbbc6c`；G3D-23 #108 rebase；toktx / Codex 阻塞 | Track B |
 | 2026-10-06 | G3D-04 iPhone 触控修复；G3D-18 PR #119 开出；Actions 降为 degraded、CI 恢复 | Track A |
+| 2026-10-06 | Track B：G3D-26 #111 / G3D-27 #112 / Track A G3D-04 #109 合入；Track B 队列 #113–#118 rebase 合入中；Actions degraded | Track B |
