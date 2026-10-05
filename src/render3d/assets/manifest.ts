@@ -58,7 +58,8 @@ export type AssetManifestEntry = {
  * 当前已登记资产。G3D-11 仅落地管线；素材文件由 G3D-19–G3D-27 追加。
  * 管线自检用的占位资产（若有）必须同时写入 LICENSES.md。
  */
-export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze([
+export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
+[
   {
     "id": "font/manrope",
     "file": "src/assets/fonts/manrope-latin-wght-normal.woff2",
@@ -70,7 +71,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze([
       "spdx": "OFL-1.1",
       "sourceUrl": "https://fonts.google.com/specimen/Manrope",
       "author": "Mikhail Sharanda / Cyreal",
-      "obtainedAt": "2026-10-05",
+      "obtainedAt": "2026-10-06",
       "modified": false,
       "modificationNote": "无",
       "orderRef": "n/a",
@@ -88,7 +89,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze([
       "spdx": "LicenseRef-GoDesk-Original",
       "sourceUrl": "src/assets/godesk-mark.svg",
       "author": "俞孟凡 / GoDesk",
-      "obtainedAt": "2026-10-05",
+      "obtainedAt": "2026-10-06",
       "modified": false,
       "modificationNote": "无",
       "orderRef": "n/a",
@@ -184,8 +185,115 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze([
       "orderRef": "n/a",
       "status": "cleared"
     }
+  },
+  {
+    "id": "audio/sfx-core",
+    "file": "assets/audio/sfx-core.mp3",
+    "kind": "audio-sprite",
+    "bytes": 76529,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/build-sfx-sprites.mjs",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "Kenney CC0 + 程序化组装",
+      "orderRef": "n/a",
+      "status": "cleared"
+    },
+    "spriteFragments": [
+      "sfx/hover",
+      "sfx/select",
+      "sfx/illegal",
+      "sfx/place-1",
+      "sfx/place-2",
+      "sfx/road-1",
+      "sfx/road-2",
+      "sfx/dice-1",
+      "sfx/dice-2",
+      "sfx/dice-3",
+      "sfx/dice-4",
+      "sfx/turn-1",
+      "sfx/turn-2",
+      "sfx/win",
+      "sfx/lose"
+    ]
+  },
+  {
+    "id": "audio/sfx-extended",
+    "file": "assets/audio/sfx-extended.mp3",
+    "kind": "audio-sprite",
+    "bytes": 69006,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/build-sfx-sprites.mjs",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "Kenney CC0 + 程序化组装",
+      "orderRef": "n/a",
+      "status": "cleared"
+    },
+    "spriteFragments": [
+      "sfx/panel-1",
+      "sfx/panel-2",
+      "sfx/toggle",
+      "sfx/upgrade",
+      "sfx/move",
+      "sfx/steal",
+      "sfx/gain-wood",
+      "sfx/gain-brick",
+      "sfx/gain-sheep",
+      "sfx/gain-wheat",
+      "sfx/gain-ore",
+      "sfx/trade-1",
+      "sfx/trade-2",
+      "sfx/trade-3",
+      "sfx/trade-4"
+    ]
+  },
+  {
+    "id": "audio/ambience-surf",
+    "file": "assets/audio/ambience-surf.mp3",
+    "kind": "audio",
+    "bytes": 96800,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/build-sfx-sprites.mjs",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "ffmpeg pink noise",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+  {
+    "id": "audio/ambience-harbor-wind",
+    "file": "assets/audio/ambience-harbor-wind.mp3",
+    "kind": "audio",
+    "bytes": 96800,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/build-sfx-sprites.mjs",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "ffmpeg brown noise",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
   }
-])
+]
+);
 
 export const LICENSE_SPDX_WHITELIST: readonly LicenseSpdx[] = Object.freeze([
   "CC0-1.0",
@@ -199,9 +307,7 @@ export function listManifestIds(): string[] {
   for (const entry of ASSET_MANIFEST) {
     ids.push(entry.id);
     if (entry.spriteFragments) {
-      for (const fragment of entry.spriteFragments) {
-        ids.push(fragment);
-      }
+      for (const fragment of entry.spriteFragments) ids.push(fragment);
     }
   }
   return ids;

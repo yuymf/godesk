@@ -78,3 +78,9 @@ THE SOFTWARE.
 
 - settlecoast.com 及其任何模型、音频、插画、文案、shader
 - 任何 CC BY 或附加署名限制的素材（SPEC §5.1 不允许）
+
+## Kenney UI Audio (via OpenGameArt)
+
+- Source: https://opengameart.org/content/51-ui-sound-effects-buttons-switches-and-clicks
+- License: CC0-1.0
+- Used in: G3D-26 core/extended SFX sprites (selected click/switch clips)

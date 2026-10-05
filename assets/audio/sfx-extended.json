@@ -1,0 +1,72 @@
+{
+  "src": [
+    "sfx-extended.mp3"
+  ],
+  "sprite": {
+    "sfx/panel-1": [
+      0,
+      300
+    ],
+    "sfx/panel-2": [
+      350,
+      300
+    ],
+    "sfx/toggle": [
+      700,
+      250
+    ],
+    "sfx/upgrade": [
+      1000,
+      50
+    ],
+    "sfx/move": [
+      1100,
+      220
+    ],
+    "sfx/steal": [
+      1370,
+      280
+    ],
+    "sfx/gain-wood": [
+      1700,
+      200
+    ],
+    "sfx/gain-brick": [
+      1950,
+      200
+    ],
+    "sfx/gain-sheep": [
+      2200,
+      200
+    ],
+    "sfx/gain-wheat": [
+      2450,
+      200
+    ],
+    "sfx/gain-ore": [
+      2700,
+      200
+    ],
+    "sfx/trade-1": [
+      2950,
+      280
+    ],
+    "sfx/trade-2": [
+      3280,
+      280
+    ],
+    "sfx/trade-3": [
+      3610,
+      280
+    ],
+    "sfx/trade-4": [
+      3940,
+      280
+    ]
+  },
+  "meta": {
+    "task": "G3D-26",
+    "clips": 15,
+    "bitrate": "128k"
+  }
+}
