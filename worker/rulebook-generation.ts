@@ -498,7 +498,6 @@ export function materializeRuleSystem(input: {
   const rollAndMoveRule = inferredRollAndMoveRule(corpus);
   const drawAndScoreRule = inferredDrawAndScoreRule(corpus);
   const pushYourLuckRule = inferredPushYourLuckRule(corpus);
-  const numberToken = RULE_NUMBER_TOKEN;
   const participants = input.playerCount === undefined
     ? inferredParticipantRange(corpus)
     : { min: input.playerCount, max: input.playerCount, default: input.playerCount };

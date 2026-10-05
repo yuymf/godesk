@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { SessionState } from "./project-contract";
 
-export type AuctionBiddingBoardState = NonNullable<SessionState["auctionBidding"]>;
+type AuctionBiddingBoardState = NonNullable<SessionState["auctionBidding"]>;
 
 export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false, readOnly = false,
   status, viewerSeat, onAct }: {

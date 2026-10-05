@@ -6,7 +6,6 @@ import type {
 import { inferSourceGenre, type SourceGenre } from "./genre";
 import { ruleSystemCorpus } from "./playability-floor";
 
-export type { PresentationFloorReadiness };
 
 export type GenreObjectFamily =
   | "conversation"
@@ -15,7 +14,7 @@ export type GenreObjectFamily =
   | "hidden-role"
   | "generic";
 
-export type GenreObjectFidelity = {
+type GenreObjectFidelity = {
   status: "passed" | "failed";
   reason: string;
   family: GenreObjectFamily;
@@ -50,7 +49,7 @@ function executableKernel(ruleSystem: RuleSystem) {
 }
 
 /** Resolve which genre objects Presentation Floor must see (ADR 0012 / FP5–FP6). */
-export function presentationGenreFamily(ruleSystem: RuleSystem): GenreObjectFamily {
+function presentationGenreFamily(ruleSystem: RuleSystem): GenreObjectFamily {
   const kernel = executableKernel(ruleSystem);
   if (kernel) {
     if (kernel.type === "conversation-relay-v1") return "conversation";

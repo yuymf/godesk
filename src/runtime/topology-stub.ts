@@ -5,8 +5,6 @@
  * grid directional flips; PR6 (Catan) fills hex tile/vertex/edge. Stubs only.
  */
 
-export type TopologyKind = "none" | "grid" | "hex" | "graph";
-
 /** Rectangular grid coordinates — Othello/Reversi will use these in PR5. */
 export type GridCoord = { row: number; col: number };
 
@@ -60,18 +58,8 @@ export function createGridTopologyStub(rows: number, cols: number): GridTopology
   };
 }
 
-/** Flat-top hex neighbor offsets (axial). */
-export const HEX_AXIAL_DIRECTIONS: readonly HexCoord[] = [
-  { q: 1, r: 0 },
-  { q: 1, r: -1 },
-  { q: 0, r: -1 },
-  { q: -1, r: 0 },
-  { q: -1, r: 1 },
-  { q: 0, r: 1 },
-];
-
 /** All axial cells inside a hexagon of the given radius (Catan board = 2). */
-export function hexesInRadius(radius: number): HexCoord[] {
+function hexesInRadius(radius: number): HexCoord[] {
   const cells: HexCoord[] = [];
   for (let q = -radius; q <= radius; q += 1) {
     for (let r = -radius; r <= radius; r += 1) {
@@ -96,7 +84,7 @@ function flatCornerPixel(
   };
 }
 
-export function hexVertexId(q: number, r: number, corner: number): string {
+function hexVertexId(q: number, r: number, corner: number): string {
   const { x, y } = flatCornerPixel(q, r, corner);
   return `${x}:${y}`;
 }

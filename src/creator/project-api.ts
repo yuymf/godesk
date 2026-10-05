@@ -242,7 +242,7 @@ export function submitJob(id: string, input: SubmitJobInput) {
   }).then(readJson<CreatorJob>);
 }
 
-export function getJob(id: string) {
+function getJob(id: string) {
   return fetch(apiPath(`/api/jobs/${encodeURIComponent(id)}`)).then(
     readJson<CreatorJob>,
   );

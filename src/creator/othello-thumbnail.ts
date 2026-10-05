@@ -9,7 +9,7 @@ import {
   type OthelloCell,
 } from "../runtime/adapters/othello";
 
-export type OthelloSessionSlice = {
+type OthelloSessionSlice = {
   rows: number;
   cols: number;
   board: OthelloCell[][];

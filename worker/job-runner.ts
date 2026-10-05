@@ -59,7 +59,7 @@ import {
   type StoredPlayableBuild,
 } from "./project-operations";
 
-export interface CreatorJobHost {
+interface CreatorJobHost {
   ctx: DurableObjectState;
   saveJob(job: CreatorJob, input?: SubmitJobInput): Promise<void>;
   schedulePendingJobRecovery(): Promise<void>;
@@ -83,7 +83,7 @@ export interface CreatorJobHost {
 
 
 /** Deterministic positive seed from a job idempotency key (Shared Session auto-handoff). */
-export function deterministicJobSeed(idempotencyKey: string): number {
+function deterministicJobSeed(idempotencyKey: string): number {
   let hash = 0;
   for (let i = 0; i < idempotencyKey.length; i += 1) {
     hash = (Math.imul(hash, 31) + idempotencyKey.charCodeAt(i)) | 0;
@@ -93,7 +93,7 @@ export function deterministicJobSeed(idempotencyKey: string): number {
 }
 
 /** MCP/Connect-facing generate result: drop bulky ruleSystem/sources/project blobs. */
-export function slimGenerateJobResult(
+function slimGenerateJobResult(
   body: Record<string, unknown>,
   projectId: string,
 ): Record<string, unknown> {

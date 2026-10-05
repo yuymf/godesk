@@ -1,13 +1,13 @@
-export type HiddenRoleAlignment = "culprit" | "town";
-export type HiddenRolePhase = "discuss" | "accuse" | "resolved";
+type HiddenRoleAlignment = "culprit" | "town";
+type HiddenRolePhase = "discuss" | "accuse" | "resolved";
 
-export type HiddenRoleDef = {
+type HiddenRoleDef = {
   id: string;
   name: string;
   alignment: HiddenRoleAlignment;
 };
 
-export type HiddenRoleState = {
+type HiddenRoleState = {
   phase: HiddenRolePhase;
   playerCount: number;
   roles: Array<{ seat: number; roleId: string; name: string; alignment: HiddenRoleAlignment }>;

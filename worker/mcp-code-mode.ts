@@ -8,7 +8,7 @@
 import type { McpServer, RegisteredTool } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
-export type CodeModeEnv = Env & { GODESK_MCP_CODE_MODE?: string };
+type CodeModeEnv = Env & { GODESK_MCP_CODE_MODE?: string };
 
 export type CodeModeOptions = {
   /** 显式覆盖；未设则读 GODESK_MCP_CODE_MODE */
@@ -64,7 +64,7 @@ export function tagsForToolName(name: string): string[] {
   return [...tags];
 }
 
-export type SearchOpsQuery = {
+type SearchOpsQuery = {
   query?: string;
   name?: string;
   tags?: string[];

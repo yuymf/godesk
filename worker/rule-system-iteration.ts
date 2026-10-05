@@ -4,7 +4,7 @@ import type {
 } from "../src/creator/project-contract";
 import { parseRuleNumber, RULE_NUMBER_TOKEN } from "./rule-numbers";
 
-export interface ActionDescriptionIterationPlan {
+interface ActionDescriptionIterationPlan {
   prompt: string;
   summary: string;
   actionId: string;

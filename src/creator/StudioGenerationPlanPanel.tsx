@@ -5,7 +5,7 @@ import {
   generationPlanShowsUnsupported,
 } from "./generation-plan-honesty";
 
-export type StudioGenerationPlanPanelProps = {
+type StudioGenerationPlanPanelProps = {
   generationPlan: GenerationPlan;
   hobbyistFocus: StudioHobbyistFocus;
   busy: boolean;

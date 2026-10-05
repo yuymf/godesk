@@ -13,12 +13,12 @@ import type {
   ValidationEvidenceType,
 } from "./studio-utils";
 
-export type FeedbackInboxEntry = {
+type FeedbackInboxEntry = {
   session: SharedSession;
   feedback: SessionFeedback;
 };
 
-export type StudioValidationPanelProps = {
+type StudioValidationPanelProps = {
   showValidationOpen: boolean;
   setValidationOpen: (open: boolean) => void;
   unreviewedFeedbackCount: number;

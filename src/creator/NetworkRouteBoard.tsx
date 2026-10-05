@@ -75,7 +75,7 @@ function toGenre(board: NetworkRouteBoardState): NetworkRouteGenre {
   };
 }
 
-export function playStateFromNetworkRouteSession(
+function playStateFromNetworkRouteSession(
   board: NetworkRouteBoardState,
   activeSeat: number,
   status: "active" | "complete",

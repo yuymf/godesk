@@ -9,14 +9,12 @@ import {
   catanToSessionFields,
   createBeginnerTiles,
   createCatanKernelConfig,
-  type CatanGenre,
   type CatanTile,
-  type Resource,
   type Terrain,
 } from "../runtime/adapters/catan";
 import { createInitialState } from "../runtime/play-kernel";
 
-export type CatanSessionSlice = ReturnType<typeof catanToSessionFields>["catan"];
+type CatanSessionSlice = ReturnType<typeof catanToSessionFields>["catan"];
 
 const TERRAIN_FILL: Record<Terrain, string> = {
   wood: "#2f7d4a",
@@ -122,5 +120,3 @@ export function catanBoardThumbnailDataUrl(tiles: CatanTile[]): string {
 
 /** Re-export terrain palette for the live board (keeps thumbnail + HUD in sync). */
 export const CATAN_TERRAIN_FILL = TERRAIN_FILL;
-
-export type { Resource, Terrain, CatanGenre };

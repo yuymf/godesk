@@ -15,9 +15,7 @@ import type {
   CompileBuildInput,
   CreatorJob,
   CreatorJobKind,
-  DesignHypothesis,
   GameProject,
-  GameReplay,
   GenerationPlan,
   RuleSystem,
   SessionFeedback,
@@ -32,7 +30,6 @@ import {
   hashSeatToken,
   issueSeatToken,
   otherSeatForHash,
-  publicSeats,
   seatForToken,
   type StoredSessionSeat,
 } from "./seat-capability";

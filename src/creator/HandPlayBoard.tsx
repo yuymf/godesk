@@ -1,6 +1,6 @@
 import type { RoomLocale } from "./room-presentation";
 
-export type HandPlayBoardState = {
+type HandPlayBoardState = {
   playerCount: number;
   deckRemaining: number;
   hands: number[][];

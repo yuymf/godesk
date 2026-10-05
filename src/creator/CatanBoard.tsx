@@ -175,7 +175,7 @@ function toGenre(catan: CatanBoardState): CatanGenre {
 }
 
 /** Rebuild a minimal PlayState so client-side listLegalActions matches the adapter. */
-export function playStateFromCatanSession(
+function playStateFromCatanSession(
   catan: CatanBoardState,
   activeSeat: number,
   status: "active" | "complete",

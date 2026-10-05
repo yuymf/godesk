@@ -49,7 +49,7 @@ export type WorkerPlacementState = {
   winnerSeat: number | null;
 };
 
-export type WorkerPlacementConfig = {
+type WorkerPlacementConfig = {
   playerCount: number;
   workersPerSeat: number;
   startingCoins: number;
@@ -334,7 +334,7 @@ export function createWorkerPlacementState(
   };
 }
 
-export function regionOccupancy(state: WorkerPlacementState, regionId: string) {
+function regionOccupancy(state: WorkerPlacementState, regionId: string) {
   return state.placements.filter((placement) => placement.regionId === regionId).length;
 }
 
@@ -519,7 +519,7 @@ function placeWorker(
   };
 }
 
-export function parseWorkerPlacementActionId(actionId: string): {
+function parseWorkerPlacementActionId(actionId: string): {
   kind: "place";
   regionId: string;
 } | null {

@@ -1,4 +1,4 @@
-export type ConversationRelayState = {
+type ConversationRelayState = {
   transcript: Array<{ seat: number; actionId: string; text: string }>;
 };
 
