@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { GameMark } from "./CreatorBrand";
 import {
   claimSessionSeat,
@@ -47,7 +47,12 @@ import type { HarborVoyageState } from "../runtime/harbor-voyage";
 import type { WorkerPlacementState } from "../runtime/worker-placement";
 import { HarborVoyageBoard } from "./HarborVoyageBoard";
 import { OthelloBoard } from "./OthelloBoard";
-import { HexSettlementBoard, type HexSettlementBoardState } from "./HexSettlementBoard";
+import type { HexSettlementBoardState } from "./HexSettlementBoard";
+
+const LazyHexSettlementBoard = lazy(async () => {
+  const mod = await import("./HexSettlementBoard");
+  return { default: mod.HexSettlementBoard };
+});
 import { NetworkRouteBoard, type NetworkRouteBoardState } from "./NetworkRouteBoard";
 import { AuctionBiddingBoard } from "./AuctionBiddingBoard";
 import { HandPlayBoard } from "./HandPlayBoard";
@@ -599,19 +604,21 @@ export function RoomView({ sessionId }: { sessionId: string }) {
           winnerSeat={room.state.winnerSeat}
         />
       ) : hexSettlement && catanState ? (
-        <HexSettlementBoard
-          activeSeat={activeSeat}
-          busy={busy}
-          catan={catanState as HexSettlementBoardState}
-          enabled={isMyTurn}
-          locale={locale}
-          onAct={(actionId, payload) => {
-            void act(actionId, -1, payload);
-          }}
-          status={room.state.status}
-          viewerSeat={seat}
-          winnerSeat={room.state.winnerSeat}
-        />
+        <Suspense fallback={<div aria-busy="true">加载 3D 盘面…</div>}>
+          <LazyHexSettlementBoard
+            activeSeat={activeSeat}
+            busy={busy}
+            catan={catanState as HexSettlementBoardState}
+            enabled={isMyTurn}
+            locale={locale}
+            onAct={(actionId, payload) => {
+              void act(actionId, -1, payload);
+            }}
+            status={room.state.status}
+            viewerSeat={seat}
+            winnerSeat={room.state.winnerSeat}
+          />
+        </Suspense>
       ) : networkRoute && networkRouteState ? (
         <NetworkRouteBoard
           activeSeat={activeSeat}
