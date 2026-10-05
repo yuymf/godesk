@@ -31,3 +31,12 @@
 
 - 依赖 PR：https://github.com/yuymf/godesk/pull/105
 - 本 PR：TBD
+
+## 2026-10-06 ~03:53 Asia/Shanghai · rebase 于 #105
+
+### tool
+- Codex 额度耗尽，按站立刀序改 Cursor Cloud Agent 兜底。
+- 本步为 rebase + STATUS 冲突解决（小修补，执行席手写，未启动 Cloud Agent）。
+
+### outcomes
+- skip 已合入的旧 G3D-11 提交；G3D-23 落在 `8fbbc6c` 之上。
