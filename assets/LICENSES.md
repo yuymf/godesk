@@ -48,3 +48,6 @@
 | sfx/trade-4 | assets/audio/sfx-extended.mp3 (sprite fragment) | sfx/trade-4 SFX 片段 | CC0 | https://opengameart.org/content/51-ui-sound-effects-buttons-switches-and-clicks | CC0-1.0 | Kenney | 2026-10-06 | 是 | 响度归一化并入 sprite | G3D-26 |
 | audio/ambience-surf | assets/audio/ambience-surf.mp3 | 海浪环境声 | 程序化 | scripts/build-sfx-sprites.mjs | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | ffmpeg pink noise 合成（无 Freesound 登录；STATUS 记 CC0 环境声改程序化） | G3D-26 |
 | audio/ambience-harbor-wind | assets/audio/ambience-harbor-wind.mp3 | 港风环境声 | 程序化 | scripts/build-sfx-sprites.mjs | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | ffmpeg brown noise 合成 | G3D-26 |
+| music/tide-harbor | assets/audio/music-tide-harbor.mp3 | Tide Harbor | CC0 | https://opengameart.org/content/the-field-of-dreams | CC0-1.0 | pauliuw | 2026-10-06 | 是 | 裁剪/循环至 120s、96kbps mp3、响度归一 | G3D-27 |
+| music/crystal-shore | assets/audio/music-crystal-shore.mp3 | Crystal Shore | CC0 | https://opengameart.org/content/crystal-cave-song18 | CC0-1.0 | cynicmusic / pixelsphere.org | 2026-10-06 | 是 | 裁剪/循环至 120s、96kbps mp3、响度归一 | G3D-27 |
+| music/observing-star | assets/audio/music-observing-star.mp3 | Observing Star | CC0 | https://opengameart.org/content/another-space-background-track | CC0-1.0 | yd | 2026-10-06 | 是 | 裁剪/循环至 120s、96kbps mp3、响度归一 | G3D-27 |
