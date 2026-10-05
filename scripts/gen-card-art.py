@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""G3D-24: procedural parchment card illustrations (spirit-only; no settlecoast trace)."""
+"""G3D-24: procedural parchment card illustrations (spirit-only; no settlecoast trace).
+
+Bitmap captions are Latin-only so default PIL fonts do not emit CJK tofu.
+Chinese titles belong in UI chrome; full art pass tracked as G3D-ART.
+"""
 from __future__ import annotations
 import math, random
 from pathlib import Path
@@ -130,16 +134,9 @@ def draw_resource(kind: str, w=384, h=512) -> Image.Image:
 
     # caption band
     d.rectangle((margin + 16, h - 110, w - margin - 16, h - margin - 16), outline=INK, fill=PAPER_DEEP)
-    label = {
-        "wood": "松林",
-        "brick": "赭土",
-        "sheep": "盐草",
-        "wheat": "麦垄",
-        "ore": "礁岩",
-    }[kind]
-    # simple pixel-ish label via bars (avoid font dependency for CJK)
-    d.text((margin + 28, h - 88), label, fill=INK)
-    d.text((margin + 28, h - 64), kind.upper(), fill=ZHU)
+    # Latin-only caption on bitmap (G3D-ART): CJK labels belong in UI —
+    # default PIL bitmap font cannot render CJK (was tofu □□).
+    d.text((margin + 28, h - 72), kind.upper(), fill=INK)
     return img
 
 
@@ -180,13 +177,11 @@ def draw_dev(kind: str, w=512, h=768) -> Image.Image:
 
     d.rectangle((margin + 20, h - 140, w - margin - 20, h - margin - 20), outline=INK, fill=PAPER_DEEP)
     titles = {
-        "fog-signal": ("雾灯令", "FOG SIGNAL"),
-        "tide-plenty": ("潮运", "TIDE PLENTY"),
-        "harbor-charter": ("商港特许", "HARBOR CHARTER"),
+        "fog-signal": "FOG SIGNAL",
+        "tide-plenty": "TIDE PLENTY",
+        "harbor-charter": "HARBOR CHARTER",
     }
-    zh, en = titles[kind]
-    d.text((margin + 36, h - 115), zh, fill=INK)
-    d.text((margin + 36, h - 88), en, fill=ZHU)
+    d.text((margin + 36, h - 100), titles[kind], fill=INK)
     return img
 
 
