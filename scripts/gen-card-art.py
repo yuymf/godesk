@@ -1,203 +1,214 @@
 #!/usr/bin/env python3
-"""G3D-24: procedural parchment card illustrations (spirit-only; no settlecoast trace).
+"""G3D-ART / G3D-24: illustrated parchment card art (self-authored + CC0 Paper001 + Cycles mesh renders).
 
-Bitmap captions are Latin-only so default PIL fonts do not emit CJK tofu.
-Chinese titles belong in UI chrome; full art pass tracked as G3D-ART.
+No AI images. No settlecoast copy. Latin-only bitmap captions (CJK in UI).
 """
 from __future__ import annotations
-import math, random
+
+import sys
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFilter, ImageEnhance
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lib.parchment import (  # noqa: E402
+    BRICK,
+    COPPER,
+    FOAM,
+    INK,
+    ORE,
+    PAPER_DEEP,
+    RENDERS,
+    SEA,
+    SEA_NEAR,
+    SHEEP,
+    WHEAT,
+    WOOD,
+    ZHU,
+    apply_torn_frame,
+    brick_wall,
+    caption_band,
+    hatch,
+    ore_crystal,
+    parchment_base,
+    paste_render,
+    pine_tree,
+    save_webp,
+    seal_stamp,
+    tone_render,
+    wash_radial,
+    wave_band,
+    wheat_stalk,
+)
+from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "assets/illustrations/cards"
-EV = Path("/workspace/g3d-evidence/G3D-24")
+EV = Path("/workspace/g3d-evidence/G3D-ART/after")
 OUT.mkdir(parents=True, exist_ok=True)
 EV.mkdir(parents=True, exist_ok=True)
 
-PAPER = (232, 214, 184)
-PAPER_DEEP = (201, 176, 138)
-INK = (42, 36, 28)
-ZHU = (163, 59, 43)
-COPPER = (138, 106, 61)
-
 TERRAIN = {
-    "wood": (47, 93, 58),
-    "brick": (179, 90, 60),
-    "sheep": (143, 168, 106),
-    "wheat": (212, 165, 74),
-    "ore": (107, 110, 120),
+    "wood": WOOD,
+    "brick": BRICK,
+    "sheep": SHEEP,
+    "wheat": WHEAT,
+    "ore": ORE,
 }
-
 DEV = {
     "fog-signal": (27, 79, 107),
-    "tide-plenty": (62, 140, 154),
-    "harbor-charter": (138, 106, 61),
+    "tide-plenty": SEA_NEAR,
+    "harbor-charter": COPPER,
 }
-
-
-def paper_noise(w: int, h: int, seed: int) -> Image.Image:
-    rng = random.Random(seed)
-    img = Image.new("RGB", (w, h), PAPER)
-    px = img.load()
-    for y in range(h):
-        for x in range(w):
-            n = rng.randint(-12, 12)
-            r = max(0, min(255, PAPER[0] + n + ((x * 3 + y) % 7) - 3))
-            g = max(0, min(255, PAPER[1] + n + ((x + y * 2) % 5) - 2))
-            b = max(0, min(255, PAPER[2] + n))
-            # vignette toward paper deep
-            dx, dy = x / w - 0.5, y / h - 0.5
-            v = (dx * dx + dy * dy) * 0.55
-            r = int(r * (1 - v) + PAPER_DEEP[0] * v)
-            g = int(g * (1 - v) + PAPER_DEEP[1] * v)
-            b = int(b * (1 - v) + PAPER_DEEP[2] * v)
-            px[x, y] = (r, g, b)
-    return img.filter(ImageFilter.GaussianBlur(0.4))
-
-
-def torn_rect(draw: ImageDraw.ImageDraw, box, fill=None, outline=INK, width=3):
-    x0, y0, x1, y1 = box
-    pts = []
-    # top
-    x = x0
-    while x < x1:
-        pts.append((x, y0 + (1 if (x // 7) % 2 == 0 else -1)))
-        x += 6
-    pts.append((x1, y0))
-    y = y0
-    while y < y1:
-        pts.append((x1 + (1 if (y // 9) % 2 == 0 else -1), y))
-        y += 6
-    pts.append((x1, y1))
-    x = x1
-    while x > x0:
-        pts.append((x, y1 + (1 if (x // 8) % 2 == 0 else -1)))
-        x -= 6
-    pts.append((x0, y1))
-    y = y1
-    while y > y0:
-        pts.append((x0 + (1 if (y // 10) % 2 == 0 else -1), y))
-        y -= 6
-    if fill:
-        draw.polygon(pts, fill=fill, outline=outline)
-    else:
-        draw.line(pts + [pts[0]], fill=outline, width=width)
 
 
 def draw_resource(kind: str, w=384, h=512) -> Image.Image:
-    img = paper_noise(w, h, seed=hash(kind) % 10_000)
-    d = ImageDraw.Draw(img)
-    margin = 28
-    torn_rect(d, (margin, margin, w - margin, h - margin), outline=INK, width=3)
-    # inner wash
+    seed = {"wood": 11, "brick": 22, "sheep": 33, "wheat": 44, "ore": 55}[kind]
+    img = parchment_base(w, h, seed)
     color = TERRAIN[kind]
-    wash = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    wd = ImageDraw.Draw(wash)
-    cx, cy = w // 2, int(h * 0.42)
-    for r in range(110, 20, -8):
-        a = 40 + (110 - r)
-        wd.ellipse((cx - r, cy - r, cx + r, cy + r), fill=(*color, a))
-    img = Image.alpha_composite(img.convert("RGBA"), wash).convert("RGB")
+    cx, cy = w // 2, int(h * 0.40)
+    img = wash_radial(img, cx, cy, 130, color, strength=85)
+    # ground wash band
+    ground = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(ground)
+    gd.ellipse((40, cy + 40, w - 40, cy + 160), fill=(*PAPER_DEEP, 90))
+    img = Image.alpha_composite(img.convert("RGBA"), ground.filter(ImageFilter.GaussianBlur(4))).convert("RGB")
     d = ImageDraw.Draw(img)
 
-    # motif
     if kind == "wood":
-        for i, dx in enumerate((-40, 0, 40)):
-            d.polygon(
-                [(cx + dx, cy - 70), (cx + dx - 22, cy + 50), (cx + dx + 22, cy + 50)],
-                outline=INK,
-                fill=(*color, ),
-            )
-            d.rectangle((cx + dx - 6, cy + 50, cx + dx + 6, cy + 85), outline=INK, fill=COPPER)
+        # distant treeline silhouette
+        for i, dx in enumerate(range(-120, 121, 28)):
+            pine_tree(d, cx + dx, cy - 20 + (i % 3) * 6, 70 + (i % 4) * 8, fill=tuple(max(20, c - 25) for c in WOOD))
+        # hero pines
+        pine_tree(d, cx - 55, cy - 50, 150, WOOD)
+        pine_tree(d, cx + 10, cy - 70, 175, WOOD)
+        pine_tree(d, cx + 60, cy - 40, 140, WOOD)
+        # hatched undergrowth
+        hatch(d, (cx - 100, cy + 60, cx + 100, cy + 110), spacing=5, angle=25, fill=INK, width=1)
+        d.arc((cx - 90, cy + 70, cx + 90, cy + 120), 200, 340, fill=SEA_NEAR, width=2)
     elif kind == "brick":
-        for row, y in enumerate(range(cy - 50, cy + 70, 28)):
-            ox = 14 if row % 2 else 0
-            for x in range(cx - 70 + ox, cx + 70, 36):
-                d.rectangle((x, y, x + 30, y + 22), outline=INK, fill=color)
+        # kiln hinterland
+        d.polygon([(cx - 110, cy + 40), (cx - 40, cy - 80), (cx + 30, cy + 40)], fill=tuple(max(0, c - 40) for c in BRICK), outline=INK)
+        hatch(d, (cx - 100, cy - 40, cx + 20, cy + 40), spacing=6, angle=60, fill=INK, width=1)
+        brick_wall(d, cx + 20, cy + 10, cols=6, rows=5, bw=26, bh=15)
+        # clay mound
+        d.ellipse((cx - 120, cy + 70, cx - 40, cy + 120), fill=BRICK, outline=INK)
+        d.ellipse((cx + 40, cy + 75, cx + 120, cy + 125), fill=tuple(min(255, c + 15) for c in BRICK), outline=INK)
     elif kind == "sheep":
-        d.ellipse((cx - 55, cy - 35, cx + 55, cy + 45), outline=INK, fill=(230, 230, 220))
-        d.ellipse((cx + 20, cy - 55, cx + 70, cy - 5), outline=INK, fill=(230, 230, 220))
-        d.ellipse((cx - 25, cy + 35, cx - 5, cy + 55), fill=INK)
-        d.ellipse((cx + 5, cy + 35, cx + 25, cy + 55), fill=INK)
-        # bush
-        d.ellipse((cx - 100, cy + 40, cx - 40, cy + 90), outline=INK, fill=color)
+        # salt-grass meadow
+        for i in range(18):
+            x = 50 + i * 16
+            d.line((x, cy + 90, x + (i % 3) - 1, cy + 40 - (i % 5) * 3), fill=SHEEP, width=2)
+        # bushes
+        for bx, by, br in ((cx - 90, cy + 50, 35), (cx + 85, cy + 55, 30), (cx - 20, cy + 70, 25)):
+            d.ellipse((bx - br, by - br // 2, bx + br, by + br // 2), fill=SHEEP, outline=INK)
+            hatch(d, (bx - br, by - br // 2, bx + br, by + br // 2), spacing=4, angle=40, fill=INK, width=1)
+        # composite Cycles sheep render
+        sheep = tone_render(RENDERS / "sheep.png", 220, tint=SHEEP)
+        if sheep:
+            img = paste_render(img, sheep, cx + 10, cy - 10, opacity=0.95)
+            d = ImageDraw.Draw(img)
+        else:
+            d.ellipse((cx - 55, cy - 35, cx + 55, cy + 45), outline=INK, fill=(230, 230, 220))
+            d.ellipse((cx + 20, cy - 55, cx + 70, cy - 5), outline=INK, fill=(230, 230, 220))
     elif kind == "wheat":
-        for dx in (-50, -25, 0, 25, 50):
-            d.line((cx + dx, cy + 80, cx + dx, cy - 60), fill=color, width=3)
-            d.ellipse((cx + dx - 10, cy - 75, cx + dx + 10, cy - 45), outline=INK, fill=color)
-        d.polygon([(cx + 70, cy - 20), (cx + 110, cy + 40), (cx + 85, cy + 40)], outline=INK, fill=COPPER)
+        # field rows perspective
+        for row in range(8):
+            y = cy - 40 + row * 18
+            spread = 40 + row * 12
+            d.arc((cx - spread, y, cx + spread, y + 20), 200, 340, fill=WHEAT, width=2)
+        for i, dx in enumerate((-70, -45, -20, 5, 30, 55, 80)):
+            wheat_stalk(d, cx + dx, cy - 90 + (i % 3) * 8, 130 - (i % 4) * 8)
+        # sickle
+        d.arc((cx + 70, cy - 30, cx + 130, cy + 40), 200, 40, fill=COPPER, width=4)
+        d.line((cx + 100, cy + 35, cx + 100, cy + 90), fill=COPPER, width=3)
+        d.rectangle((cx + 92, cy + 88, cx + 108, cy + 100), outline=INK, fill=PAPER_DEEP)
     elif kind == "ore":
-        pts = [(cx, cy - 70), (cx + 70, cy - 10), (cx + 40, cy + 70), (cx - 50, cy + 60), (cx - 75, cy - 20)]
-        d.polygon(pts, outline=INK, fill=color)
-        d.line((cx - 20, cy - 10, cx + 30, cy + 20), fill=INK, width=2)
+        # reef ridge
+        d.polygon([(40, cy + 80), (100, cy - 20), (160, cy + 30), (220, cy - 60), (300, cy + 10), (350, cy + 90), (40, cy + 100)], fill=tuple(max(0, c - 30) for c in ORE), outline=INK)
+        hatch(d, (60, cy - 40, 320, cy + 80), spacing=7, angle=15, fill=INK, width=1)
+        ore_crystal(d, cx - 40, cy, 55)
+        ore_crystal(d, cx + 50, cy - 20, 70)
+        ore_crystal(d, cx + 10, cy + 40, 40)
+        # foam tide line
+        wave_band(d, cy + 95, w, amp=8, color=SEA, width=2, phases=2)
 
-    # caption band
-    d.rectangle((margin + 16, h - 110, w - margin - 16, h - margin - 16), outline=INK, fill=PAPER_DEEP)
-    # Latin-only caption on bitmap (G3D-ART): CJK labels belong in UI —
-    # default PIL bitmap font cannot render CJK (was tofu □□).
-    d.text((margin + 28, h - 72), kind.upper(), fill=INK)
+    img = apply_torn_frame(img, 26, seed, ink_w=3)
+    img = caption_band(img, kind.upper(), 26)
     return img
 
 
 def draw_dev(kind: str, w=512, h=768) -> Image.Image:
-    img = paper_noise(w, h, seed=hash(kind) % 10_000 + 99)
-    d = ImageDraw.Draw(img)
-    margin = 36
-    torn_rect(d, (margin, margin, w - margin, h - margin), outline=INK, width=4)
+    seed = {"fog-signal": 101, "tide-plenty": 202, "harbor-charter": 303}[kind]
+    img = parchment_base(w, h, seed)
     color = DEV[kind]
-    wash = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    wd = ImageDraw.Draw(wash)
-    cx, cy = w // 2, int(h * 0.4)
-    for r in range(140, 30, -10):
-        wd.ellipse((cx - r, cy - r, cx + r, cy + r), fill=(*color, 35 + (140 - r) // 2))
-    img = Image.alpha_composite(img.convert("RGBA"), wash).convert("RGB")
+    cx, cy = w // 2, int(h * 0.38)
+    img = wash_radial(img, cx, cy, 160, color, strength=75)
     d = ImageDraw.Draw(img)
 
     if kind == "fog-signal":
-        # floating fog lamp buoy (not humanoid)
-        d.ellipse((cx - 50, cy + 40, cx + 50, cy + 100), outline=INK, fill=COPPER)
-        d.rectangle((cx - 12, cy - 40, cx + 12, cy + 50), outline=INK, fill=PAPER_DEEP)
-        d.ellipse((cx - 28, cy - 90, cx + 28, cy - 30), outline=INK, fill=(232, 242, 240))
-        d.ellipse((cx - 10, cy - 72, cx + 10, cy - 52), fill=ZHU)
-        # fog wisps
-        for i in range(5):
-            d.arc((cx - 100 + i * 10, cy - 20 + i * 8, cx + 100 - i * 10, cy + 80 + i * 5), 200, 340, fill=INK, width=2)
+        # fog banks
+        fog = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        fd = ImageDraw.Draw(fog)
+        for i in range(6):
+            fd.ellipse((30 + i * 20, cy - 40 + i * 25, w - 30 - i * 15, cy + 80 + i * 20), fill=(232, 242, 240, 35 + i * 5))
+        img = Image.alpha_composite(img.convert("RGBA"), fog.filter(ImageFilter.GaussianBlur(6))).convert("RGB")
+        d = ImageDraw.Draw(img)
+        wave_band(d, cy + 120, w, amp=12, color=SEA, width=3, phases=3)
+        lamp = tone_render(RENDERS / "fog-lamp.png", 280, tint=SEA)
+        if lamp:
+            img = paste_render(img, lamp, cx, cy - 20)
+            d = ImageDraw.Draw(img)
+        else:
+            d.ellipse((cx - 50, cy + 40, cx + 50, cy + 100), outline=INK, fill=COPPER)
+        # signal rays
+        for ang in (-35, -10, 15, 40):
+            import math
+            rad = math.radians(ang)
+            d.line((cx, cy - 80, cx + math.sin(rad) * 140, cy - 80 - math.cos(rad) * 100), fill=FOAM, width=2)
+        seal_stamp(d, cx + 140, cy + 160, 36, ZHU)
     elif kind == "tide-plenty":
-        for i, dy in enumerate((-40, 0, 40)):
-            d.arc((cx - 120, cy + dy - 30, cx + 120, cy + dy + 30), 200, 340, fill=color, width=4)
-        d.ellipse((cx - 20, cy - 100, cx + 20, cy - 60), outline=INK, fill=(232, 242, 240))
+        # stacked tide arcs + moon
+        for i in range(7):
+            yy = cy - 60 + i * 28
+            d.arc((80, yy, w - 80, yy + 70), 200, 340, fill=SEA if i % 2 == 0 else SEA_NEAR, width=3)
+            if i % 2 == 0:
+                hatch(d, (100, yy + 10, w - 100, yy + 50), spacing=10, angle=8, fill=INK, width=1)
+        d.ellipse((cx - 28, cy - 140, cx + 28, cy - 84), outline=INK, fill=FOAM)
+        d.ellipse((cx - 10, cy - 130, cx + 18, cy - 100), fill=PAPER_DEEP)  # crescent bite
+        # fish silhouette school
+        for i, dx in enumerate((-90, -40, 20, 70)):
+            y = cy + 40 + (i % 2) * 20
+            d.polygon([(cx + dx, y), (cx + dx + 28, y - 8), (cx + dx + 28, y + 8)], fill=SEA, outline=INK)
+            d.line((cx + dx + 28, y, cx + dx + 40, y - 6), fill=INK, width=1)
+        dock = tone_render(RENDERS / "dock.png", 160, tint=COPPER)
+        if dock:
+            img = paste_render(img, dock, cx, cy + 160, opacity=0.88)
+            d = ImageDraw.Draw(img)
     elif kind == "harbor-charter":
-        # seal + pier
-        d.ellipse((cx - 70, cy - 70, cx + 70, cy + 70), outline=ZHU, width=4)
-        d.ellipse((cx - 50, cy - 50, cx + 50, cy + 50), outline=COPPER, width=3)
-        d.rectangle((cx - 90, cy + 90, cx + 90, cy + 115), outline=INK, fill=COPPER)
+        wave_band(d, cy + 130, w, amp=10, color=SEA, width=3, phases=2)
+        # pier planks
+        for i in range(5):
+            y = cy + 90 + i * 14
+            d.rectangle((cx - 100, y, cx + 100, y + 10), outline=INK, fill=COPPER if i % 2 == 0 else PAPER_DEEP)
         for x in range(cx - 80, cx + 81, 40):
-            d.rectangle((x - 6, cy + 115, x + 6, cy + 160), outline=INK, fill=PAPER_DEEP)
+            d.rectangle((x - 5, cy + 150, x + 5, cy + 210), outline=INK, fill=PAPER_DEEP)
+        sett = tone_render(RENDERS / "settlement.png", 200, tint=(196, 92, 74))
+        city = tone_render(RENDERS / "city.png", 180, tint=(210, 162, 58))
+        if sett:
+            img = paste_render(img, sett, cx - 70, cy - 30)
+        if city:
+            img = paste_render(img, city, cx + 60, cy - 50)
+        d = ImageDraw.Draw(img)
+        seal_stamp(d, cx, cy + 40, 55, ZHU)
+        d.text((cx - 18, cy + 34), "HC", fill=ZHU)
 
-    d.rectangle((margin + 20, h - 140, w - margin - 20, h - margin - 20), outline=INK, fill=PAPER_DEEP)
     titles = {
         "fog-signal": "FOG SIGNAL",
         "tide-plenty": "TIDE PLENTY",
         "harbor-charter": "HARBOR CHARTER",
     }
-    d.text((margin + 36, h - 100), titles[kind], fill=INK)
+    img = apply_torn_frame(img, 34, seed, ink_w=4)
+    img = caption_band(img, titles[kind], 34)
     return img
-
-
-def save_webp(img: Image.Image, path: Path, limit_kb: int) -> int:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    q = 82
-    while q >= 40:
-        img.save(path, "WEBP", quality=q, method=6)
-        sz = path.stat().st_size
-        if sz <= limit_kb * 1024:
-            return sz
-        q -= 6
-    # last resort scale slightly
-    img2 = img.resize((int(img.width * 0.92), int(img.height * 0.92)), Image.Resampling.LANCZOS)
-    img2.save(path, "WEBP", quality=55, method=6)
-    return path.stat().st_size
 
 
 manifest = []
@@ -207,7 +218,7 @@ for kind in TERRAIN:
     sz = save_webp(img, ROOT / rel, 40)
     img.save(EV / f"resource-{kind}.png")
     print(f"resource-{kind}: {sz} B")
-    manifest.append(("illustration/resource-" + kind, rel, sz, f"资源卡·{kind}"))
+    manifest.append(("illustration/resource-" + kind, rel, sz))
 
 for kind in DEV:
     img = draw_dev(kind)
@@ -215,7 +226,7 @@ for kind in DEV:
     sz = save_webp(img, ROOT / rel, 60)
     img.save(EV / f"dev-{kind}.png")
     print(f"dev-{kind}: {sz} B")
-    manifest.append(("illustration/dev-" + kind, rel, sz, f"发展卡·{kind}"))
+    manifest.append(("illustration/dev-" + kind, rel, sz))
 
-Path(EV / "sizes.txt").write_text("\n".join(f"{a} {c}" for a, _, c, _ in manifest) + "\n")
+Path(EV / "card-sizes.txt").write_text("\n".join(f"{a} {c}" for a, _, c in manifest) + "\n")
 print("done", len(manifest))

@@ -11,7 +11,7 @@
 | SPEC | 仓外 `/workspace/godesk-3d-spec/SPEC.md`（v0.2）；指针见 [`docs/G3D-SPEC-POINTER.md`](./G3D-SPEC-POINTER.md) |
 | Notion 项目 | https://app.notion.com/p/3f05fabdfe81810e90ade6b4fe2de7c2 |
 | 任务范围 | G3D-01 至 G3D-27；里程碑 M0–M5；人日上限 91 |
-| 代码基线 | `yuymf/godesk` `main` @ `96a9d70`（#122 G3D-06） |
+| 代码基线 | `yuymf/godesk` `main` @ `73d4c80`（#124 art tofu fix；#122 G3D-06） |
 | 状态文件维护人 | 劳埃德(工程) / Track B（素材） |
 | 最近更新 | 2026-10-06（Asia/Shanghai） |
 
@@ -48,9 +48,9 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | G3D-27 | 音乐循环×3 CC0 120s（Track B） | PR [#112](https://github.com/yuymf/godesk/pull/112) squash `757c9bc` |
 | G3D-04 | 拾取 → 合法动作、HUD、HexSettlementBoard（Track A） | PR [#109](https://github.com/yuymf/godesk/pull/109) squash `6d4db72` |
 
-| G3D-24 | 资源/发展卡插画×8（Track B）**shipped, placeholder-grade — art pass required** | PR [#113](https://github.com/yuymf/godesk/pull/113) squash `fd3f54e` |
+| G3D-24 | 资源/发展卡插画×8（Track B）**shipped；G3D-ART 2D 回炉（本 PR：分层插画+Cycles 复合）— 仍待 G3D-13 接线入局** | PR [#113](https://github.com/yuymf/godesk/pull/113) squash `fd3f54e` + G3D-ART PR |
 
-| G3D-25 | 座位徽记、岛名花饰、加载画（Track B）**shipped, placeholder-grade — art pass required** | PR [#114](https://github.com/yuymf/godesk/pull/114) squash `93e5adb` |
+| G3D-25 | 座位徽记、岛名花饰、加载画（Track B）**shipped；G3D-ART 2D 回炉（本 PR）— 仍待 G3D-13 接线入局** | PR [#114](https://github.com/yuymf/godesk/pull/114) squash `93e5adb` + G3D-ART PR |
 
 | G3D-19 | 地形 decor.glb + 海面/泡沫 T-12/13（Track B） | PR [#115](https://github.com/yuymf/godesk/pull/115) squash `97eb027` |
 
@@ -71,7 +71,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
-| G3D-ART：美术质量回炉 | Track B | （进行中 / 本 PR） | art quality pass for 19–25 after G3D-13；卡面/花饰去掉 bitmap CJK（tofu 修）；占位矢量品质仍待回炉 |
+| G3D-ART：美术质量回炉（2D） | Track B | `feat/g3d-art-2d-pass` / 本 PR | **2D 位图回炉**：G3D-24 卡、G3D-25 品牌/加载/座位、G3D-23 ink icons；自研分层+Cycles（自有 mesh）+CC0 Paper001；无 AI / 无 CC-BY；3D 素材（19–22）回炉仍等 G3D-13 接线后 |
 | G3D-09：动效 | Track A | （未开） | M1 后；Track A 拥有 |
 | G3D-15：生成默认集成 | Track C | `feat/g3d-15-render-defaults` / [PR #123](https://github.com/yuymf/godesk/pull/123) | 第一刀：生成写 render、MCP `configure_render` 局部 patch、skills；第二刀（「做一款两人翻转棋」→ 3D Room e2e + 3 轮截图）等 G3D-14 |
 
@@ -81,7 +81,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | --- | --- | --- |
 | box Codex 用量上限 | 至 2026-11-05 02:04 Asia/Shanghai；Cloud Agent 兜底（本席无该工具时手写） | 用量恢复 |
 | **G3D-08（Track B）** | 依赖 G3D-07；G3D-06 #122 已合入 | Track A 合入 G3D-07 后开工 |
-| **G3D-13（Track B）** | 依赖 G3D-07/08/09/10 + 素材 19–25；素材已齐；G3D-10 #120 已合入，缺 07–09 | 07+08+09 上 main |
+| **G3D-13（Track B）** | 依赖 G3D-07/08/09/10 + 素材 19–25；素材已齐；G3D-10 #120 已合入，缺 07–09。**HUD 备注（iPhone 12 Pro 模拟）**：Room 在棋盘下方露出合法动作的原始按钮列表，文案含坐标串（例：`放置道路 · -200:173|-250:87`）— HUD 重做须隐藏/替换此层 | 07+08+09 上 main |
 | GitHub Actions | 现 **operational**。deploy @ `41e352b` 生产 smoke 曾失败（ChatGPT Connector heading）；后续 deploy 通过 → 瞬时 | 禁无绿合入 |
 | **G3D-14 / G3D-15 第二刀（Track C）** | G3D-14 依赖 G3D-07（← G3D-06 #122）；G3D-15 的 3D Room 验收依赖 G3D-14 | G3D-07 上 `main` |
 
@@ -95,13 +95,13 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 1. Track C：G3D-10 #120 已合入（`67e5383`）；**G3D-15 第一刀 #123** 合入后，第二刀（翻转棋 3D Room e2e + 逐轮截图）与 **G3D-14** 等 G3D-07 上 `main`。
 2. Track A：**G3D-09 → G3D-07**（G3D-06 已由 Track B 合入）。
-3. Track B：**G3D-08 与 G3D-13 均阻塞**；解阻后先 08 再 13。
+3. Track B：**G3D-ART 2D 本 PR**；**G3D-08 / G3D-13 仍阻塞**（等 G3D-07）；**G3D-07 一合入 main 立即接 G3D-08**，再 13。
 
 ## 开着的 PR / 分支
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
-| `docs/g3d-status-asset-track-done` | [#121](https://github.com/yuymf/godesk/pull/121) | STATUS 收官 | open · 本 PR |
+| `feat/g3d-art-2d-pass` | （本 PR） | G3D-ART 2D：卡/品牌/ink | open · Track B |
 
 ## 修订记录
 
@@ -127,3 +127,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | G3D-15 第一刀（Track C）PR #123：进行中加一行；阻塞加 G3D-14 / G3D-15 第二刀；回填 G3D-10 #120 合入 SHA `67e5383` | Track C |
 | 2026-10-06 | Track B：#122 merge-main（无 rebase）同步 #123 STATUS；G3D-06 待 squash | Track B |
 | 2026-10-06 | G3D-06 #122 合入 `96a9d70`；卡面/品牌 bitmap 去 CJK tofu；G3D-ART 仍待品质回炉 | Track B |
+| 2026-10-06 | G3D-ART 2D：卡/品牌/ink 分层插画回炉；G3D-13 HUD 备注（iPhone 合法动作坐标按钮）；等 G3D-07→08 | Track B |

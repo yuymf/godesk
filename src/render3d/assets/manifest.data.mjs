@@ -114,7 +114,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "ui/ink-icons",
     "file": "assets/ui/ink-icons.svg",
     "kind": "ui",
-    "bytes": 6369,
+    "bytes": 9585,
     "tier": "all",
     "source": "self-made",
     "license": {
@@ -310,7 +310,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "illustration/resource-wood",
     "file": "assets/illustrations/cards/resource-wood.webp",
     "kind": "illustration",
-    "bytes": 27500,
+    "bytes": 34938,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -328,7 +328,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "illustration/resource-brick",
     "file": "assets/illustrations/cards/resource-brick.webp",
     "kind": "illustration",
-    "bytes": 27130,
+    "bytes": 38494,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -346,7 +346,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "illustration/resource-sheep",
     "file": "assets/illustrations/cards/resource-sheep.webp",
     "kind": "illustration",
-    "bytes": 26704,
+    "bytes": 35784,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -364,7 +364,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "illustration/resource-wheat",
     "file": "assets/illustrations/cards/resource-wheat.webp",
     "kind": "illustration",
-    "bytes": 27136,
+    "bytes": 24224,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -382,7 +382,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "illustration/resource-ore",
     "file": "assets/illustrations/cards/resource-ore.webp",
     "kind": "illustration",
-    "bytes": 26102,
+    "bytes": 33382,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -400,7 +400,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "illustration/dev-fog-signal",
     "file": "assets/illustrations/cards/dev-fog-signal.webp",
     "kind": "illustration",
-    "bytes": 52220,
+    "bytes": 45314,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -418,7 +418,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "illustration/dev-tide-plenty",
     "file": "assets/illustrations/cards/dev-tide-plenty.webp",
     "kind": "illustration",
-    "bytes": 50356,
+    "bytes": 48406,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -436,7 +436,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "illustration/dev-harbor-charter",
     "file": "assets/illustrations/cards/dev-harbor-charter.webp",
     "kind": "illustration",
-    "bytes": 50684,
+    "bytes": 46832,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -454,7 +454,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "illustration/seat-0",
     "file": "assets/illustrations/brand/seat-0.webp",
     "kind": "illustration",
-    "bytes": 7656,
+    "bytes": 19444,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -472,7 +472,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "illustration/seat-1",
     "file": "assets/illustrations/brand/seat-1.webp",
     "kind": "illustration",
-    "bytes": 8164,
+    "bytes": 19862,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -490,7 +490,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "illustration/seat-2",
     "file": "assets/illustrations/brand/seat-2.webp",
     "kind": "illustration",
-    "bytes": 8268,
+    "bytes": 17882,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -508,7 +508,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "illustration/seat-3",
     "file": "assets/illustrations/brand/seat-3.webp",
     "kind": "illustration",
-    "bytes": 7930,
+    "bytes": 18176,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -526,7 +526,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "illustration/island-flourish",
     "file": "assets/illustrations/brand/island-flourish.webp",
     "kind": "illustration",
-    "bytes": 30416,
+    "bytes": 29426,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -544,7 +544,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "illustration/loading-tidewell",
     "file": "assets/illustrations/brand/loading-tidewell.webp",
     "kind": "illustration",
-    "bytes": 66668,
+    "bytes": 108536,
     "tier": "all",
     "source": "procedural",
     "license": {
