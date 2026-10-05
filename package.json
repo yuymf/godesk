@@ -20,7 +20,8 @@
     "publish:plugin:public": "node scripts/publish-public-plugin.mjs",
     "test:watch": "vitest",
     "deploy": "pnpm build && wrangler deploy",
-    "deploy:dry-run": "pnpm build && wrangler deploy --dry-run"
+    "deploy:dry-run": "pnpm build && wrangler deploy --dry-run",
+    "size": "size-limit"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.0.0",
@@ -29,14 +30,18 @@
     "pdfjs-dist": "^6.4.299",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "three": "0.186.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.19.0",
     "@playwright/test": "^1.63.0",
+    "@size-limit/file": "14.1.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/three": "0.186.0",
     "@vitejs/plugin-react": "^5.2.0",
+    "size-limit": "14.1.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.6",
     "vitest": "^4.1.11",

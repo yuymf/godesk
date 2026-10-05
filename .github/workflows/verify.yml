@@ -32,6 +32,7 @@ jobs:
       - run: pnpm test
       - run: node scripts/verify-release-records.mjs
       - run: pnpm build
+      - run: pnpm size
       - run: pnpm test:worker
       - run: pnpm typecheck
       - run: pnpm verify:plugin

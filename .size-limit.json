@@ -1,0 +1,14 @@
+[
+  {
+    "name": "homepage index JS (gzip)",
+    "path": "dist/assets/index-*.js",
+    "gzip": true,
+    "limit": "170 KB"
+  },
+  {
+    "name": "render3d core chunk (gzip)",
+    "path": "dist/assets/render3d-*.js",
+    "gzip": true,
+    "limit": "210 KB"
+  }
+]
