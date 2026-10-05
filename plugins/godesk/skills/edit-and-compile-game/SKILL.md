@@ -54,6 +54,24 @@ Keep Codex edits and manual Web Studio edits on the same optimistic-version path
    add/fix transcript, hand/play areas, named regions, or seat roles — do not
    tell the creator to paste another kit or change the theme.
 
+## 3D render declaration (GameSpec v2)
+
+- GameSpec is `schemaVersion: 2`. Spatial play surfaces (`table`, `scene`,
+  `hybrid`) carry `presentation.render`: the data-only Three.js declaration
+  (`preset`, `camera`, `lighting`, `water`, `materials`, `bindings`, `motion`,
+  `audio`). GoDesk fills a Kernel-specific default and projects it into
+  `gameSpec.render`; the Executable Kernel stays the only rules authority.
+- To change the look (water colour, sun elevation, piece material …), read the
+  `rule-system` view, edit the needed `presentation.render` fields, and send the
+  whole `presentation` back with `update_rule_system`. Omitting `render` keeps
+  the current one; `presentation.theme` no longer exists (a legacy value is
+  ignored).
+- A render is rejected unless every `bindings[].material` is a `materials` key,
+  `camera.minPolarDeg < camera.maxPolarDeg`, and every asset id is
+  licence-cleared in the asset manifest. Never send scripts or shader source.
+- Non-spatial surfaces (`cards`, `conversation`, `screen`) have no render.
+  A dedicated `configure_render` patch operation arrives with G3D-15.
+
 ## Build discipline
 
 - A build snapshots one Rule System version. Later project edits must not change

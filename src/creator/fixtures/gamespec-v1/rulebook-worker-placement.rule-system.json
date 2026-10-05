@@ -1,0 +1,340 @@
+{
+  "id": "rule_system_5cb3461a-f0e2-48b0-ab08-817f7dffa65c",
+  "version": 2,
+  "name": "G3D-12 v1 规则书导入",
+  "pitch": "工人放置规则书。两名玩家轮流把工人派到伐木场、市场、工坊。伐木场每回合产出 1 木材；市场把 1 木材换 2 金币；工坊花费 2 木材建造 1 座建筑。先建成 3 座建筑者获胜。每个区域容量 1。",
+  "participants": {
+    "min": 2,
+    "max": 2,
+    "default": 2,
+    "roles": []
+  },
+  "durationMinutes": 45,
+  "rules": [
+    {
+      "id": "source-rule-1",
+      "text": "两名玩家轮流把工人派到伐木场、市场、工坊。",
+      "sourceId": "source_job_0c25c95b-7b77-490d-8676-d51a99b085d4",
+      "provenance": "source-anchored",
+      "confidence": 0.72
+    },
+    {
+      "id": "source-rule-2",
+      "text": "伐木场每回合产出 1 木材；市场把 1 木材换 2 金币；工坊花费 2 木材建造 1 座建筑。",
+      "sourceId": "source_job_0c25c95b-7b77-490d-8676-d51a99b085d4",
+      "provenance": "source-anchored",
+      "confidence": 0.72
+    },
+    {
+      "id": "source-rule-3",
+      "text": "先建成 3 座建筑者获胜。",
+      "sourceId": "source_job_0c25c95b-7b77-490d-8676-d51a99b085d4",
+      "provenance": "source-anchored",
+      "confidence": 0.72
+    }
+  ],
+  "constraints": [],
+  "entities": [
+    {
+      "id": "entity-workers",
+      "name": "工人",
+      "kind": "token",
+      "quantity": 8,
+      "sourceId": "source_job_0c25c95b-7b77-490d-8676-d51a99b085d4",
+      "provenance": "source-anchored",
+      "confidence": 0.72
+    },
+    {
+      "id": "entity-region-region-1",
+      "name": "资源区甲",
+      "kind": "object",
+      "quantity": 2,
+      "sourceId": "source_job_0c25c95b-7b77-490d-8676-d51a99b085d4",
+      "provenance": "source-anchored",
+      "confidence": 0.72
+    },
+    {
+      "id": "entity-region-region-2",
+      "name": "资源区乙",
+      "kind": "object",
+      "quantity": 2,
+      "sourceId": "source_job_0c25c95b-7b77-490d-8676-d51a99b085d4",
+      "provenance": "source-anchored",
+      "confidence": 0.72
+    },
+    {
+      "id": "entity-region-region-3",
+      "name": "工坊",
+      "kind": "object",
+      "quantity": 3,
+      "sourceId": "source_job_0c25c95b-7b77-490d-8676-d51a99b085d4",
+      "provenance": "source-anchored",
+      "confidence": 0.72
+    }
+  ],
+  "setup": [
+    "两名玩家轮流把工人派到伐木场、市场、工坊。",
+    "伐木场每回合产出 1 木材；市场把 1 木材换 2 金币；工坊花费 2 木材建造 1 座建筑。",
+    "先建成 3 座建筑者获胜。"
+  ],
+  "actions": [
+    {
+      "id": "source-action-1",
+      "label": "两名玩家轮流把工人派到伐木场、市场、工坊",
+      "description": "两名玩家轮流把工人派到伐木场、市场、工坊。",
+      "sourceId": "source_job_0c25c95b-7b77-490d-8676-d51a99b085d4",
+      "provenance": "source-anchored",
+      "confidence": 0.72
+    },
+    {
+      "id": "place:region-1",
+      "label": "放置到资源区甲",
+      "description": "派一名工人前往资源区甲，支付区域费用并执行该区域的收获或建造规则。",
+      "sourceId": "source_f8a750b9-8740-43c4-861e-33f354bdbb61",
+      "provenance": "system-generated",
+      "confidence": 1
+    },
+    {
+      "id": "place:region-2",
+      "label": "放置到资源区乙",
+      "description": "派一名工人前往资源区乙，支付区域费用并执行该区域的收获或建造规则。",
+      "sourceId": "source_f8a750b9-8740-43c4-861e-33f354bdbb61",
+      "provenance": "system-generated",
+      "confidence": 1
+    },
+    {
+      "id": "place:region-3",
+      "label": "放置到工坊",
+      "description": "派一名工人前往工坊，支付区域费用并执行该区域的收获或建造规则。",
+      "sourceId": "source_f8a750b9-8740-43c4-861e-33f354bdbb61",
+      "provenance": "system-generated",
+      "confidence": 1
+    }
+  ],
+  "playSurface": {
+    "kind": "table",
+    "layout": "worker-placement",
+    "regions": [
+      {
+        "id": "region-1",
+        "name": "资源区甲",
+        "description": "来源具名放置区域。"
+      },
+      {
+        "id": "region-2",
+        "name": "资源区乙",
+        "description": "来源具名放置区域。"
+      },
+      {
+        "id": "region-3",
+        "name": "工坊",
+        "description": "来源具名放置区域。"
+      }
+    ]
+  },
+  "stages": [
+    {
+      "id": "source-phase-1",
+      "name": "伐木场每回合产出 1 木材；市场把 1 木材换 2 金币；工坊花费 2 木材建造 1 座建筑。"
+    }
+  ],
+  "outcomes": [
+    {
+      "id": "source-outcome-1",
+      "name": "先建成 3 座建筑者获胜。"
+    }
+  ],
+  "presentation": {
+    "theme": "rulebook-studio",
+    "visuals": [
+      {
+        "provenance": "kit",
+        "label": "程序化主题 kit"
+      }
+    ]
+  },
+  "runtimeSupport": {
+    "status": "executable",
+    "unsupported": [
+      "worker-placement-v1 economy subset executes region wood yields, one wood→building convert, and victory by buildings built; multi-resource graphs and building trees remain unsupported.",
+      "Generic placement briefs are not mapped onto harbor cargo IDs (amber/cobalt/cedar or 琥珀货/东栈桥)."
+    ],
+    "kernel": {
+      "type": "worker-placement-v1",
+      "playerCount": 2,
+      "workersPerSeat": 4,
+      "startingCoins": 0,
+      "regions": [
+        {
+          "id": "region-1",
+          "name": "资源区甲",
+          "capacity": 2,
+          "cost": 0,
+          "resolvePoints": 0,
+          "tag": "resource",
+          "yieldWood": 1
+        },
+        {
+          "id": "region-2",
+          "name": "资源区乙",
+          "capacity": 2,
+          "cost": 0,
+          "resolvePoints": 0,
+          "tag": "resource",
+          "yieldWood": 1
+        },
+        {
+          "id": "region-3",
+          "name": "工坊",
+          "capacity": 3,
+          "cost": 0,
+          "resolvePoints": 0,
+          "tag": "workshop",
+          "convertWoodToBuilding": 1
+        }
+      ],
+      "victoryTarget": null,
+      "victoryBuildings": 3
+    }
+  },
+  "generation": {
+    "generatorVersion": "rule-system-materializer-v1",
+    "rulesVersion": "source-rules-v1",
+    "requestedMechanics": [],
+    "sourcePrompt": "工人放置规则书。两名玩家轮流把工人派到伐木场、市场、工坊。伐木场每回合产出 1 木材；市场把 1 木材换 2 金币；工坊花费 2 木材建造 1 座建筑。先建成 3 座建筑者获胜。每个区域容量 1。",
+    "seed": 312882042,
+    "assumptions": [
+      "规则来自当前来源的确定性抽取，尚未获得完整规则实现保证。",
+      "配置内核后，初始状态、可见性、阶段推进和终局由该版本内核负责。",
+      "提议的内核及参数：{\"op\":\"configure_worker_placement\",\"config\":{\"playerCount\":2,\"workersPerSeat\":4,\"startingCoins\":0,\"regions\":[{\"id\":\"region-1\",\"name\":\"资源区甲\",\"capacity\":2,\"cost\":0,\"resolvePoints\":0,\"tag\":\"resource\",\"yieldWood\":1},{\"id\":\"region-2\",\"name\":\"资源区乙\",\"capacity\":2,\"cost\":0,\"resolvePoints\":0,\"tag\":\"resource\",\"yieldWood\":1},{\"id\":\"region-3\",\"name\":\"工坊\",\"capacity\":3,\"cost\":0,\"resolvePoints\":0,\"tag\":\"workshop\",\"convertWoodToBuilding\":1}],\"victoryTarget\":null,\"victoryBuildings\":3,\"unsupported\":[\"worker-placement-v1 economy subset executes region wood yields, one wood→building convert, and victory by buildings built; multi-resource graphs and building trees remain unsupported.\",\"Generic placement briefs are not mapped onto harbor cargo IDs (amber/cobalt/cedar or 琥珀货/东栈桥).\"]}}"
+    ]
+  },
+  "gameSpec": {
+    "schemaVersion": 1,
+    "ruleSystemId": "rule_system_5cb3461a-f0e2-48b0-ab08-817f7dffa65c",
+    "ruleSystemVersion": 2,
+    "name": "G3D-12 v1 规则书导入",
+    "generation": {
+      "generatorVersion": "rule-system-materializer-v1",
+      "rulesVersion": "source-rules-v1",
+      "requestedMechanics": [],
+      "sourcePrompt": "工人放置规则书。两名玩家轮流把工人派到伐木场、市场、工坊。伐木场每回合产出 1 木材；市场把 1 木材换 2 金币；工坊花费 2 木材建造 1 座建筑。先建成 3 座建筑者获胜。每个区域容量 1。",
+      "seed": 312882042,
+      "assumptions": [
+        "规则来自当前来源的确定性抽取，尚未获得完整规则实现保证。",
+        "配置内核后，初始状态、可见性、阶段推进和终局由该版本内核负责。",
+        "提议的内核及参数：{\"op\":\"configure_worker_placement\",\"config\":{\"playerCount\":2,\"workersPerSeat\":4,\"startingCoins\":0,\"regions\":[{\"id\":\"region-1\",\"name\":\"资源区甲\",\"capacity\":2,\"cost\":0,\"resolvePoints\":0,\"tag\":\"resource\",\"yieldWood\":1},{\"id\":\"region-2\",\"name\":\"资源区乙\",\"capacity\":2,\"cost\":0,\"resolvePoints\":0,\"tag\":\"resource\",\"yieldWood\":1},{\"id\":\"region-3\",\"name\":\"工坊\",\"capacity\":3,\"cost\":0,\"resolvePoints\":0,\"tag\":\"workshop\",\"convertWoodToBuilding\":1}],\"victoryTarget\":null,\"victoryBuildings\":3,\"unsupported\":[\"worker-placement-v1 economy subset executes region wood yields, one wood→building convert, and victory by buildings built; multi-resource graphs and building trees remain unsupported.\",\"Generic placement briefs are not mapped onto harbor cargo IDs (amber/cobalt/cedar or 琥珀货/东栈桥).\"]}}"
+      ]
+    },
+    "players": {
+      "min": 2,
+      "max": 2,
+      "default": 2,
+      "visibility": "kernel-scoped"
+    },
+    "objects": [
+      {
+        "id": "entity-workers",
+        "name": "工人",
+        "kind": "token",
+        "visibility": "kernel-scoped"
+      },
+      {
+        "id": "entity-region-region-1",
+        "name": "资源区甲",
+        "kind": "object",
+        "visibility": "kernel-scoped"
+      },
+      {
+        "id": "entity-region-region-2",
+        "name": "资源区乙",
+        "kind": "object",
+        "visibility": "kernel-scoped"
+      },
+      {
+        "id": "entity-region-region-3",
+        "name": "工坊",
+        "kind": "object",
+        "visibility": "kernel-scoped"
+      }
+    ],
+    "regions": [
+      {
+        "id": "region-1",
+        "name": "资源区甲",
+        "visibility": "kernel-scoped"
+      },
+      {
+        "id": "region-2",
+        "name": "资源区乙",
+        "visibility": "kernel-scoped"
+      },
+      {
+        "id": "region-3",
+        "name": "工坊",
+        "visibility": "kernel-scoped"
+      }
+    ],
+    "relationships": [],
+    "setup": [
+      "worker-placement-v1: initialSessionState"
+    ],
+    "actions": [
+      {
+        "id": "source-action-1",
+        "label": "两名玩家轮流把工人派到伐木场、市场、工坊",
+        "description": "两名玩家轮流把工人派到伐木场、市场、工坊。",
+        "phaseIds": [
+          "kernel-turn"
+        ]
+      },
+      {
+        "id": "place:region-1",
+        "label": "放置到资源区甲",
+        "description": "派一名工人前往资源区甲，支付区域费用并执行该区域的收获或建造规则。",
+        "phaseIds": [
+          "kernel-turn"
+        ]
+      },
+      {
+        "id": "place:region-2",
+        "label": "放置到资源区乙",
+        "description": "派一名工人前往资源区乙，支付区域费用并执行该区域的收获或建造规则。",
+        "phaseIds": [
+          "kernel-turn"
+        ]
+      },
+      {
+        "id": "place:region-3",
+        "label": "放置到工坊",
+        "description": "派一名工人前往工坊，支付区域费用并执行该区域的收获或建造规则。",
+        "phaseIds": [
+          "kernel-turn"
+        ]
+      }
+    ],
+    "phases": [
+      {
+        "id": "kernel-turn",
+        "name": "worker-placement-v1: phase advancement"
+      }
+    ],
+    "endConditions": [
+      {
+        "id": "kernel-end",
+        "description": "worker-placement-v1: authoritative termination"
+      }
+    ],
+    "scoring": {
+      "kind": "kernel-hook",
+      "hook": "worker-placement-v1: authoritative outcome"
+    },
+    "presentation": {
+      "kind": "table",
+      "layout": "worker-placement"
+    },
+    "execution": {
+      "kernelType": "worker-placement-v1"
+    }
+  }
+}

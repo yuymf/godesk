@@ -40,6 +40,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | Bootstrap | 状态骨架 + prompt-trace 约定 | PR [#102](https://github.com/yuymf/godesk/pull/102) squash `f13c8ce` |
 | G3D-01 | ADR 0014 + 删除旧 2D 限定常量与技能措辞 | PR [#103](https://github.com/yuymf/godesk/pull/103) squash `332275d` |
 | G3D-02 | three / SceneHost / size-limit | PR [#104](https://github.com/yuymf/godesk/pull/104) squash `aa48c2a` |
+| G3D-12 | GameSpec v2：SPEC §3.6 `render` schema（`src/creator/render-spec.ts`）、`RuleSystem.presentation.render` 存储并投影到 `gameSpec.render`、`schemaVersion: 2`、删除 `presentation.theme`；v1 读时惰性迁移（`migrateRuleSystemToV2`，生产无需批处理或凭据）；真实 v1 fixtures + 迁移测试；轨迹 [`docs/prompt-trace/2026-10-06-G3D-12.md`](./prompt-trace/2026-10-06-G3D-12.md) | PR [#106](https://github.com/yuymf/godesk/pull/106) squash（合入 SHA 见 PR / Notion，下次 STATUS 更新回填） |
 
 仓外已完成（不记入上表）：SPEC v0.2 起草与 §9 拍板修订；Notion 项目与任务卡建立。
 
@@ -49,15 +50,16 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | --- | --- | --- | --- |
 | G3D-03：六角岛状态 → 场景映射与基础渲染 | Track A · 劳埃德(工程) | `feat/g3d-03-hex-mapper` / [PR #107](https://github.com/yuymf/godesk/pull/107) | M1 第二刀 |
 | G3D-11：资产清单与许可证门（并行） | Track B | 见 Track B worktree | 不阻塞本 STATUS 行合并 |
-| G3D-12：GameSpec v2（并行） | Track C | 见 Track C worktree | 不阻塞本 STATUS 行合并 |
 
 ## 阻塞
 
 | 项 | 原因 | 解除条件 |
 | --- | --- | --- |
-| box Codex 用量上限 | `codex exec` gpt-5.5 于 2026-10-06 03:00 CST 报 usage limit（约至 2026-11-05）；G3D-02 改由 Track A 直接落码，审查改人工 diff + 测试门 | 用量恢复后恢复 Codex review pass；或用户另授替代模型 |
+| box Codex 用量上限 | `codex exec` gpt-5.5 于 2026-10-06 03:00 CST 报 usage limit（约至 2026-11-05）；G3D-02 改由 Track A 直接落码，审查改人工 diff + 测试门；G3D-12 实现初稿中途失败、审查一次尝试即失败，改逐文件自审并在 PR #106 披露 | 用量恢复后恢复 Codex review pass；或用户另授替代模型 |
 
 ## 下一刀
+
+> G3D-12 备注：资产许可证登记表（`src/creator/render-asset-registry.ts`）暂为空，待 G3D-11 manifest 接入；G3D-15 调整默认 render token 时须兼顾「未改动默认跟随 Kernel」的识别（`isUntouchedDefaultRender`）；G3D-14 依赖 G3D-07。
 
 1. 完成并合并 **G3D-03**（本分支）。
 2. 随后按序 **G3D-04 → G3D-18**。
@@ -78,3 +80,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | 回填 G3D-01 PR #103；下一刀改为经授权合并后进入 M1 | 劳埃德(工程) |
 | 2026-10-06 | #102 / #103 已 squash 合入；进入 M1；记录 C2C 作废与合入授权口径；G3D-02 开工；Codex 用量上限记入阻塞 | 劳埃德(工程) |
 | 2026-10-06 | G3D-02 已合入；G3D-03 开工（hex mapper + reconcile） | 劳埃德(工程) |
+| 2026-10-06 | G3D-12（Track C）PR #106 合入：已完成加一行；Codex 阻塞行补 G3D-12；下一刀加 G3D-12 备注（资产登记表、G3D-15 默认识别、G3D-14 依赖 G3D-07） | Track C |

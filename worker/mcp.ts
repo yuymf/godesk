@@ -1,4 +1,5 @@
 import { generationMetadataSchema } from "../src/creator/game-spec";
+import { renderSpecSchema } from "../src/creator/render-spec";
 import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp";
 import { z } from "zod";
@@ -104,8 +105,12 @@ const ruleSystemSchema = z.object({
   }),
   stages: z.array(z.object({ id: z.string(), name: z.string() })),
   outcomes: z.array(z.object({ id: z.string(), name: z.string() })),
+  // GameSpec v2: `theme` was replaced by `render.preset`. This stays a
+  // non-strict object so an older client's `theme` is stripped, not rejected.
   presentation: z.object({
-    theme: z.string(),
+    render: renderSpecSchema.optional().describe(
+      "3D render declaration for table/scene/hybrid surfaces (preset, camera, lighting, water, materials, bindings, motion, audio). Omit to keep the current one; the platform fills a Kernel default. Asset ids must be licence-cleared.",
+    ),
     image: boundImageSchema.optional(),
     visuals: z.array(z.object({
       provenance: z.enum(["extracted", "generated", "kit", "uploaded"]),

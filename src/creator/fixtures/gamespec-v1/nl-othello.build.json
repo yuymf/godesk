@@ -1,0 +1,206 @@
+{
+  "id": "build_245c3f305645bb8a141cec73",
+  "projectId": "project_9e4c21e6-bf45-4258-b3bf-6d358237ccba",
+  "ruleSystemId": "rule_system_16e5a718-2963-415c-a59a-d2fb35e121a6",
+  "ruleSystemVersion": 2,
+  "ruleSystem": {
+    "id": "rule_system_16e5a718-2963-415c-a59a-d2fb35e121a6",
+    "version": 2,
+    "name": "G3D-12 v1 黑白棋",
+    "pitch": "做一款可以与电脑对战的黑白棋",
+    "participants": {
+      "min": 2,
+      "max": 2,
+      "default": 2,
+      "roles": []
+    },
+    "durationMinutes": 45,
+    "rules": [
+      {
+        "id": "source-rule-1",
+        "text": "做一款可以与电脑对战的黑白棋",
+        "sourceId": "source_job_478fa3c6-7f7a-4d9e-84cf-45714d0d7e57",
+        "provenance": "source-anchored",
+        "confidence": 0.72
+      }
+    ],
+    "constraints": [],
+    "entities": [],
+    "setup": [
+      "做一款可以与电脑对战的黑白棋"
+    ],
+    "actions": [
+      {
+        "id": "place",
+        "label": "落子",
+        "description": "在合法格落子并沿八方向翻转对手棋子。",
+        "sourceId": "source_dd397c82-e766-450f-8ab6-1d2d5b795a13",
+        "provenance": "system-generated",
+        "confidence": 1
+      },
+      {
+        "id": "pass",
+        "label": "跳过",
+        "description": "无合法落子时强制跳过回合。",
+        "sourceId": "source_dd397c82-e766-450f-8ab6-1d2d5b795a13",
+        "provenance": "system-generated",
+        "confidence": 1
+      }
+    ],
+    "playSurface": {
+      "kind": "table",
+      "layout": "grid-8x8",
+      "regions": [
+        {
+          "id": "board",
+          "name": "棋盘",
+          "description": "8×8 方格翻子盘面"
+        }
+      ]
+    },
+    "stages": [],
+    "outcomes": [],
+    "presentation": {
+      "theme": "rulebook-studio",
+      "visuals": [
+        {
+          "provenance": "kit",
+          "label": "程序化主题 kit"
+        }
+      ]
+    },
+    "runtimeSupport": {
+      "status": "executable",
+      "unsupported": [
+        "disc-flipping-v1 executes 8×8 (or configured) grid placement, eight-direction continuous flips, forced pass, and terminal disc-count scoring on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8."
+      ],
+      "kernel": {
+        "type": "disc-flipping-v1",
+        "playerCount": 2,
+        "rows": 8,
+        "cols": 8
+      }
+    },
+    "generation": {
+      "generatorVersion": "rule-system-materializer-v1",
+      "rulesVersion": "source-rules-v1",
+      "requestedMechanics": [
+        "disc-flipping"
+      ],
+      "sourcePrompt": "做一款可以与电脑对战的黑白棋",
+      "seed": 1522768066,
+      "assumptions": [
+        "规则来自当前来源的确定性抽取，尚未获得完整规则实现保证。",
+        "配置内核后，初始状态、可见性、阶段推进和终局由该版本内核负责。",
+        "提议的内核及参数：{\"op\":\"configure_disc_flipping\",\"config\":{\"playerCount\":2,\"rows\":8,\"cols\":8,\"unsupported\":[\"disc-flipping-v1 executes 8×8 (or configured) grid placement, eight-direction continuous flips, forced pass, and terminal disc-count scoring on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8.\"]}}"
+      ]
+    },
+    "gameSpec": {
+      "schemaVersion": 1,
+      "ruleSystemId": "rule_system_16e5a718-2963-415c-a59a-d2fb35e121a6",
+      "ruleSystemVersion": 2,
+      "name": "G3D-12 v1 黑白棋",
+      "generation": {
+        "generatorVersion": "rule-system-materializer-v1",
+        "rulesVersion": "source-rules-v1",
+        "requestedMechanics": [
+          "disc-flipping"
+        ],
+        "sourcePrompt": "做一款可以与电脑对战的黑白棋",
+        "seed": 1522768066,
+        "assumptions": [
+          "规则来自当前来源的确定性抽取，尚未获得完整规则实现保证。",
+          "配置内核后，初始状态、可见性、阶段推进和终局由该版本内核负责。",
+          "提议的内核及参数：{\"op\":\"configure_disc_flipping\",\"config\":{\"playerCount\":2,\"rows\":8,\"cols\":8,\"unsupported\":[\"disc-flipping-v1 executes 8×8 (or configured) grid placement, eight-direction continuous flips, forced pass, and terminal disc-count scoring on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8.\"]}}"
+        ]
+      },
+      "players": {
+        "min": 2,
+        "max": 2,
+        "default": 2,
+        "visibility": "kernel-scoped"
+      },
+      "objects": [],
+      "regions": [
+        {
+          "id": "board",
+          "name": "棋盘",
+          "visibility": "kernel-scoped"
+        }
+      ],
+      "relationships": [],
+      "setup": [
+        "disc-flipping-v1: initialSessionState"
+      ],
+      "actions": [
+        {
+          "id": "place",
+          "label": "落子",
+          "description": "在合法格落子并沿八方向翻转对手棋子。",
+          "phaseIds": [
+            "kernel-turn"
+          ]
+        },
+        {
+          "id": "pass",
+          "label": "跳过",
+          "description": "无合法落子时强制跳过回合。",
+          "phaseIds": [
+            "kernel-turn"
+          ]
+        }
+      ],
+      "phases": [
+        {
+          "id": "kernel-turn",
+          "name": "disc-flipping-v1: phase advancement"
+        }
+      ],
+      "endConditions": [
+        {
+          "id": "kernel-end",
+          "description": "disc-flipping-v1: authoritative termination"
+        }
+      ],
+      "scoring": {
+        "kind": "kernel-hook",
+        "hook": "disc-flipping-v1: authoritative outcome"
+      },
+      "presentation": {
+        "kind": "table",
+        "layout": "grid-8x8"
+      },
+      "execution": {
+        "kernelType": "disc-flipping-v1"
+      }
+    }
+  },
+  "sourceIds": [
+    "source_dd397c82-e766-450f-8ab6-1d2d5b795a13",
+    "source_job_478fa3c6-7f7a-4d9e-84cf-45714d0d7e57"
+  ],
+  "warnings": [
+    "Rule System 还没有 Game Entity。"
+  ],
+  "unsupportedBehavior": [
+    "disc-flipping-v1 executes 8×8 (or configured) grid placement, eight-direction continuous flips, forced pass, and terminal disc-count scoring on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8."
+  ],
+  "presentationFloor": {
+    "status": "passed",
+    "reason": "程序化主题 kit 已满足 Presentation Floor。",
+    "visuals": [
+      {
+        "provenance": "kit",
+        "label": "程序化主题 kit"
+      }
+    ]
+  },
+  "playabilityFloor": {
+    "status": "passed",
+    "reason": "disc-flipping-v1 与来源体裁一致，已满足 Playability Floor。",
+    "genre": "generic",
+    "kernelType": "disc-flipping-v1"
+  },
+  "createdAt": "2026-10-05T18:55:57.176Z",
+  "playableUrl": "http://127.0.0.1:45459/play/build_245c3f305645bb8a141cec73?share=eyJ2IjoxLCJjIjoiZzNkMTItbGl2ZS1wcm9vZiIsImJ1aWxkIjoiYnVpbGRfMjQ1YzNmMzA1NjQ1YmI4YTE0MWNlYzczIn0.doieQiLqCgnSVRJb23gAQRQnYCxAeYIN9l48PdGDtck"
+}

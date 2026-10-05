@@ -41,6 +41,14 @@ test("NL Catan proposal → hex-settlement build → share= guest setup settleme
     status: "executable",
     kernel: { type: "hex-settlement-v1", playerCount: 2, victoryPointsToWin: 10 },
   });
+  // GameSpec v2 (G3D-12): island games default to an animated-water 3D declaration.
+  expect(ruleAfter.gameSpec).toMatchObject({
+    schemaVersion: 2,
+    render: { engine: "three-webgl2", water: { enabled: true } },
+  });
+  expect(ruleAfter.gameSpec.render.bindings.map((binding: { objectKind: string }) => binding.objectKind)).toEqual(
+    expect.arrayContaining(["tile-wood", "settlement", "city", "road", "robber"]),
+  );
 
   const card = await openLobbyCard(page, projectId);
   await expect(card.locator('[data-lobby-mark="catan"]')).toBeVisible();

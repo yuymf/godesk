@@ -5,6 +5,9 @@ import {
   hasBoundImage,
   presentationFloor,
 } from "./presentation-floor";
+import { defaultRenderSpec } from "../creator/render-spec";
+
+const RENDER = defaultRenderSpec("score-race-v1", "table")!;
 
 function base(overrides: Partial<RuleSystem> = {}): RuleSystem {
   return {
@@ -22,7 +25,7 @@ function base(overrides: Partial<RuleSystem> = {}): RuleSystem {
     playSurface: { kind: "table", layout: "track", regions: [] },
     stages: [],
     outcomes: [],
-    presentation: { theme: "kit", visuals: [{ provenance: "kit", label: "主题 kit" }] },
+    presentation: { render: RENDER, visuals: [{ provenance: "kit", label: "主题 kit" }] },
     runtimeSupport: {
       status: "executable",
       unsupported: [],
@@ -40,19 +43,45 @@ function base(overrides: Partial<RuleSystem> = {}): RuleSystem {
 describe("presentationFloor", () => {
   it("fails when there is no visual treatment", () => {
     const floor = presentationFloor(base({
-      presentation: { theme: "", visuals: [] },
+      presentation: { visuals: [] },
     }));
     expect(floor.status).toBe("failed");
     expect(floor.reason).toContain("没有可分享的呈现");
     expect(floor.visuals).toEqual([]);
   });
 
-  it("fails kit provenance without a theme", () => {
+  it("fails a spatial surface without a 3D render declaration (ADR 0014)", () => {
     const floor = presentationFloor(base({
-      presentation: { theme: "  ", visuals: [{ provenance: "kit", label: "空主题" }] },
+      presentation: { visuals: [{ provenance: "kit", label: "主题 kit" }] },
     }));
     expect(floor.status).toBe("failed");
-    expect(floor.reason).toContain("缺少 theme");
+    expect(floor.reason).toContain("render: 空间体裁缺少 3D 渲染声明");
+  });
+
+  it("fails a spatial surface whose render binds an unknown material", () => {
+    const render = structuredClone(RENDER);
+    render.bindings = [{ objectKind: "token", mesh: "pawn", material: "missing", scale: 1 }];
+    const floor = presentationFloor(base({
+      presentation: { render, visuals: [{ provenance: "kit", label: "主题 kit" }] },
+    }));
+    expect(floor).toMatchObject({ status: "failed", reason: "render.bindings: 未知材质 missing" });
+  });
+
+  it("fails a spatial surface whose render is not schema-valid", () => {
+    const render = { ...structuredClone(RENDER), engine: "webgpu" } as unknown as typeof RENDER;
+    const floor = presentationFloor(base({
+      presentation: { render, visuals: [{ provenance: "kit", label: "主题 kit" }] },
+    }));
+    expect(floor.status).toBe("failed");
+    expect(floor.reason).toContain("render.engine");
+  });
+
+  it("passes kit on a non-spatial surface without render (§9 Q4)", () => {
+    const floor = presentationFloor(base({
+      playSurface: { kind: "screen", layout: "track", regions: [] },
+      presentation: { visuals: [{ provenance: "kit", label: "主题 kit" }] },
+    }));
+    expect(floor.status).toBe("passed");
   });
 
   it("passes kit-only score-race / generic without genre objects", () => {
@@ -68,7 +97,7 @@ describe("presentationFloor", () => {
   it("fails generated/extracted/uploaded without a bound image", () => {
     const floor = presentationFloor(base({
       presentation: {
-        theme: "",
+        render: RENDER,
         visuals: [{ provenance: "generated", label: "排版" }],
       },
     }));
@@ -76,7 +105,7 @@ describe("presentationFloor", () => {
     expect(floor.reason).toContain("必须绑定真实图像");
     expect(hasBoundImage(base({
       presentation: {
-        theme: "",
+        render: RENDER,
         visuals: [{ provenance: "generated", label: "排版" }],
       },
     }))).toBe(false);
@@ -85,7 +114,7 @@ describe("presentationFloor", () => {
   it("passes generated provenance when an image is bound", () => {
     const ruleSystem = base({
       presentation: {
-        theme: "",
+        render: RENDER,
         image: { sourceId: "src-1", url: "https://example.com/cover.png", alt: "cover" },
         visuals: [{ provenance: "uploaded", label: "封面" }],
       },
@@ -243,7 +272,7 @@ describe("presentationFloor", () => {
       name: "别墅剧本杀",
       pitch: "三个人找出凶手，发言后指控。",
       presentation: {
-        theme: "harbor-kit",
+        render: RENDER,
         visuals: [{ provenance: "kit", label: "Harbor ink presentation kit" }],
       },
     });

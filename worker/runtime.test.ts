@@ -50,7 +50,7 @@ const conversationRuleSystem: RuleSystem = {
     layout: "prompt-and-response",
     regions: [],
   },
-  presentation: { theme: "idea-relay" },
+  presentation: {},
   runtimeSupport: {
     status: "executable",
     unsupported: [],
@@ -89,7 +89,7 @@ const conversationRelayRuleSystem: RuleSystem = {
     layout: "prompt-and-response",
     regions: [],
   },
-  presentation: { theme: "idea-relay" },
+  presentation: {},
   runtimeSupport: {
     status: "executable",
     unsupported: [],
@@ -119,7 +119,7 @@ const ruleSystem: RuleSystem = {
   playSurface: { kind: "table", layout: "", regions: [] },
   stages: [],
   outcomes: [],
-  presentation: { theme: "test" },
+  presentation: {},
   runtimeSupport: {
     status: "executable",
     unsupported: [],

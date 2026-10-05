@@ -1,4 +1,5 @@
 import type { GameSpec, GenerationMetadata } from "./game-spec";
+import type { RenderSpec } from "./render-spec";
 
 export interface GameProject {
   id: string;
@@ -104,7 +105,7 @@ export interface GameEntity {
 }
 
 export interface RuleSystem {
-  /** Absent on legacy records; new generation persists a v1 contract. */
+  /** Absent on legacy records; new generation persists the current GameSpec contract. */
   generation?: GenerationMetadata;
   gameSpec?: GameSpec;
   id: string;
@@ -156,7 +157,7 @@ export interface RuleSystem {
   stages: Array<{ id: string; name: string }>;
   outcomes: Array<{ id: string; name: string }>;
   presentation: {
-    theme: string;
+    render?: RenderSpec;
     image?: BoundImage;
     visuals?: VisualTreatment[];
   };
