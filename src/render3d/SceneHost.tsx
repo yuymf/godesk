@@ -26,6 +26,8 @@ import {
 import { reconcileScene } from "./reconcile";
 import type { SceneModel, SceneNode } from "./scene-model";
 import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
+import { markInteractive, perfModeEnabled, perfRecorder } from "./perf";
+import { PerfOverlay } from "./PerfOverlay";
 
 export type SceneHostProps = {
   className?: string;
@@ -90,7 +92,9 @@ function createNodeObject(node: SceneNode): Object3D {
     mesh.position.set(node.position[0], node.position[1], node.position[2]);
     if (node.rotationY !== undefined) mesh.rotation.y = node.rotationY;
     if (node.scale) mesh.scale.set(node.scale[0], node.scale[1], node.scale[2]);
-    mesh.castShadow = true;
+    // G3D-05 budget: 0.06-tall number tokens cast no visible shadow; skipping the
+    // shadow pass for them keeps the fixed-seed board within 150 draw calls (§4.6.3).
+    mesh.castShadow = node.kind !== "number-token";
     mesh.receiveShadow = true;
     mesh.userData.nodeId = node.id;
     mesh.userData.kind = node.kind;
@@ -220,6 +224,9 @@ export function SceneHost({
   interactiveRef.current = interactive;
   legalActionsRef.current = legalActions;
   onPickRef.current = onPick;
+  // G3D-05: bumping the epoch tears the 3D host down and rebuilds it (perf leak check).
+  const [hostEpoch, setHostEpoch] = useState(0);
+  const [perfMode] = useState(() => perfModeEnabled());
 
   function buildHost(root: Object3D) {
     return {
@@ -247,6 +254,12 @@ export function SceneHost({
     const renderer = new WebGLRenderer({ antialias: true, alpha: false });
     renderer.shadowMap.enabled = true;
     renderer.setClearColor(0x87b5d4, 1);
+    // setSize(..., false) leaves the canvas CSS size unset, so on DPR > 1 the
+    // canvas laid out at its backing-store width (e.g. 824 px on a 412 px
+    // phone) and widened the page. Pin the CSS box to the container (G3D-05).
+    renderer.domElement.style.display = "block";
+    renderer.domElement.style.width = "100%";
+    renderer.domElement.style.height = "100%";
     container.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -294,6 +307,12 @@ export function SceneHost({
       onPickRef.current(matched);
     };
     renderer.domElement.addEventListener("pointerup", onPointerUp);
+    const perf = perfRecorder();
+    const detachPerf = perf?.attach({
+      renderer,
+      scene,
+      remount: () => setHostEpoch((epoch) => epoch + 1),
+    });
 
     // Fallback test cube when no hex state yet (G3D-02 smoke path).
     if (!hexSettlement) {
@@ -335,6 +354,9 @@ export function SceneHost({
       if (disposed) return;
       controls.update();
       renderer.render(scene, camera);
+      const hasContent = contentRoot.children.length > 0;
+      if (hasContent && renderer.info.render.calls > 0) markInteractive();
+      perf?.frame(renderer, performance.now(), hasContent);
       frameId = window.requestAnimationFrame(tick);
     };
     tick();
@@ -365,6 +387,9 @@ export function SceneHost({
           else material?.dispose();
         }
       });
+      sun.shadow.dispose();
+      perf?.beforeDispose(renderer);
+      detachPerf?.();
       renderer.dispose();
       renderer.forceContextLoss();
       if (renderer.domElement.parentElement === container) {
@@ -380,14 +405,14 @@ export function SceneHost({
     };
     // hexSettlement applied in separate effect against stable host
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [hostEpoch]);
 
   useEffect(() => {
     const host = reconcileHostRef.current;
     if (!host || !hexSettlement) return;
     const next = mapHexSettlementToScene(hexSettlement);
     modelRef.current = reconcileScene(host, modelRef.current, next, registryRef.current);
-  }, [hexSettlement, ready]);
+  }, [hexSettlement, ready, hostEpoch]);
 
   useEffect(() => {
     const hitRoot = hitRootRef.current;
@@ -401,7 +426,7 @@ export function SceneHost({
     for (const overlay of buildLegalHitOverlays(legalActions)) {
       hitRoot.add(overlay);
     }
-  }, [interactive, legalActions, ready]);
+  }, [interactive, legalActions, ready, hostEpoch]);
 
   if (unsupported) {
     return (
@@ -418,7 +443,9 @@ export function SceneHost({
       data-testid="g3d-scene-host"
       ref={containerRef}
       role="img"
-      style={{ width: "100%", height: "100%", minHeight: 280, touchAction: "none" }}
-    />
+      style={{ width: "100%", height: "100%", minHeight: 280, touchAction: "none", position: perfMode ? "relative" : undefined }}
+    >
+      {perfMode && <PerfOverlay />}
+    </div>
   );
 }

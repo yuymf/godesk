@@ -5655,3 +5655,10 @@ summary:focus-visible {
 @media (max-width: 680px) {
   .g3d-stage { height: clamp(260px, 46vh, 420px); }
 }
+
+/* G3D-05 — Room CLS: reserve the HexSettlementBoard HUD height while its lazy chunk loads
+   (measured initial HUD: 357px @412px, 315px @1350px; Lighthouse Room CLS 0.243 → see PR #110). */
+.hex-settlement-hud-placeholder { min-height: 315px; }
+@media (max-width: 680px) {
+  .hex-settlement-hud-placeholder { min-height: 357px; }
+}
