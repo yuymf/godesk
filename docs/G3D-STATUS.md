@@ -46,7 +46,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
-| G3D-02：three 依赖、`SceneHost` 动态加载与包体预算 | Track A · 劳埃德(工程) | `feat/g3d-02-scene-host` / PR TBD | M1 第一刀 |
+| G3D-02：three 依赖、`SceneHost` 动态加载与包体预算 | Track A · 劳埃德(工程) | `feat/g3d-02-scene-host` / [PR #104](https://github.com/yuymf/godesk/pull/104) | M1 第一刀 |
 | G3D-11：资产清单与许可证门（并行） | Track B | 见 Track B worktree | 不阻塞本 STATUS 行合并 |
 | G3D-12：GameSpec v2（并行） | Track C | 见 Track C worktree | 不阻塞本 STATUS 行合并 |
 
@@ -65,7 +65,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
-| `feat/g3d-02-scene-host` | TBD | three、`SceneHost`、lazy 加载、size-limit、STATUS | 进行中 |
+| `feat/g3d-02-scene-host` | [#104](https://github.com/yuymf/godesk/pull/104) | three、`SceneHost`、lazy 加载、size-limit、STATUS | 进行中 |
 
 ## 修订记录
 
