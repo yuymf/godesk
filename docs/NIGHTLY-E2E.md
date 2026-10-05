@@ -17,21 +17,15 @@ example file holds localhost placeholders only.
 
 ## Clone path
 
-On the cloud computer nightly box use:
-
-```bash
-/workspace/godesk-cleanup/godesk
-```
-
-(There is no `/workspace/nightly-audit/godesk` clone on this box; if you need a
-second checkout, `git clone https://github.com/yuymf/godesk.git` wherever you
-prefer and `cd` there instead.)
+Any checkout works, for example `git clone https://github.com/yuymf/godesk.git`
+and `cd godesk`. If corepack cannot write its default cache, set
+`COREPACK_HOME="$HOME/.cache/corepack"` before running `pnpm`.
 
 ## One-shot recipe (Asia/Shanghai nightly)
 
 ```bash
 export PATH="/home/box/.local/node22/bin:$PATH"
-cd /workspace/godesk-cleanup/godesk
+cd godesk
 git fetch origin && git checkout main && git pull --ff-only origin main
 test -f .dev.vars || cp .dev.vars.example .dev.vars
 CI=true pnpm i --frozen-lockfile
@@ -43,7 +37,8 @@ CI=true pnpm test:e2e
 
 `playwright.config.ts` `webServer` builds the client, starts
 `wrangler dev --local` on `127.0.0.1:8799`, and persists Worker state under
-`.wrangler/e2e`. Expect **11 passed** (Chromium, single worker).
+`.wrangler/e2e`. Expect every spec to pass (Chromium, single worker); the
+human/live-proof rows in `sol-max-release-matrix.spec.ts` are skipped by design.
 
 ## Fail-fast Node check
 

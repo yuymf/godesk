@@ -14,5 +14,5 @@ Read the current charter instead:
 
 Resolved delivery tickets for this effort were removed from the tree; recover
 them from git history if needed. Do not revive "validation platform" or
-"learning loop as the product." The only remaining tracker file under
-`issues/` is the open human gate for public Plugin publication.
+"learning loop as the product." The last tracker file, `issues/19-…`
+(public Plugin publication), was resolved on 2026-10-05.

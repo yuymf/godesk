@@ -1,7 +1,7 @@
 # 19 — Sync the public Plugin distribution with the current Rule System contract
 
 Type: task
-Status: ready-for-human
+Status: resolved
 
 Blocked by: None
 
@@ -12,30 +12,27 @@ installable GoDesk Skills and MCP contract?
 
 ## Answer
 
-Not yet. The local checkout is on the current `0.2.0+codex.20260811` contract
-with 12 Skills, Studio embedded self-play, and `participant-feedback` evidence,
-while the public repository still exposes the older `0.1.0` tabletop-only
-bundle. The repository now has a
-read-only distribution verifier so this drift is explicit instead of being
-reported as a successful public install.
+Yes. The `deploy.yml` public Plugin publish step synced `yuymf/godesk-plugin`
+on 2026-10-03 (commit `e58e879`, "Sync GoDesk Plugin from yuymf/godesk"). Its
+`plugins/godesk` tree and `README.md` are byte-identical to this repository's
+`plugins/godesk` and `plugins/PUBLIC_README.md` at version
+`0.2.0+codex.20260830` with the current 12 Skills.
 
-Closing this issue requires authorized publication of the current thin Plugin
-bundle to the separate public repository, followed by a fresh remote
-manifest/MCP/Skill check and a new Codex Desktop install check. No Git or public
-deployment mutation is authorized by this task.
+A fresh Codex Desktop install from the public Marketplace is still a human
+check; it is not covered by this verification.
 
 ## Verification
 
-- `pnpm verify:plugin` passes both the local bundle and local distribution
-  contract, including the current 12-Skill set.
-- `pnpm verify:plugin:public` intentionally fails on the stale public Plugin
-  version until the external repository is synchronized.
-- Public OAuth, fresh-task tool discovery, and human playtesting remain separate
-  acceptance gates.
+- 2026-10-05: `diff -r plugins/godesk <godesk-plugin>/plugins/godesk` and the
+  README diff are empty.
+- `pnpm verify:plugin` passes the local bundle and distribution contract.
+- `pnpm verify:plugin:public` matches the remote manifest, MCP declaration and
+  README; on unauthenticated networks the Skill-tree step can hit the GitHub
+  API rate limit (HTTP 403).
 
 ## Comments
 
 2026-08-12: The local verifier's stale hard-coded count of 11 Skills was
-corrected to the current 12-Skill contract, and `pnpm verify:plugin` now runs
-both the bundle and local distribution checks. The remote repository remains
-unchanged and the public check still stops at `public plugin version is stale`.
+corrected to the current 12-Skill contract.
+
+2026-10-05: Public distribution confirmed in sync; status set to resolved.
