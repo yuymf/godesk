@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""G3D-25: seat badges, island flourish, loading art — procedural parchment."""
+"""G3D-25 (bitmap captions Latin-only — CJK tofu fix; art pass = G3D-ART).
+
+G3D-25: seat badges, island flourish, loading art — procedural parchment."""
 from __future__ import annotations
 import math, random
 from pathlib import Path
@@ -76,7 +78,7 @@ def flourish() -> Image.Image:
     for x in (80, w // 2, w - 80):
         d.ellipse((x - 18, 70, x + 18, 106), outline=ZHU, width=3)
         d.ellipse((x - 8, 80, x + 8, 96), fill=COPPER)
-    d.text((w // 2 - 60, 110), "汐屿 · TIDEWELL", fill=INK)
+    d.text((w // 2 - 70, 110), "TIDEWELL ISLES", fill=INK)
     return img
 
 

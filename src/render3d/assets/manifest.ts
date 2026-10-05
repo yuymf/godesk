@@ -350,7 +350,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
     "id": "illustration/resource-wood",
     "file": "assets/illustrations/cards/resource-wood.webp",
     "kind": "illustration",
-    "bytes": 27568,
+    "bytes": 27500,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -368,7 +368,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
     "id": "illustration/resource-brick",
     "file": "assets/illustrations/cards/resource-brick.webp",
     "kind": "illustration",
-    "bytes": 26734,
+    "bytes": 27130,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -386,7 +386,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
     "id": "illustration/resource-sheep",
     "file": "assets/illustrations/cards/resource-sheep.webp",
     "kind": "illustration",
-    "bytes": 26346,
+    "bytes": 26704,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -404,7 +404,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
     "id": "illustration/resource-wheat",
     "file": "assets/illustrations/cards/resource-wheat.webp",
     "kind": "illustration",
-    "bytes": 27000,
+    "bytes": 27136,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -422,7 +422,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
     "id": "illustration/resource-ore",
     "file": "assets/illustrations/cards/resource-ore.webp",
     "kind": "illustration",
-    "bytes": 26190,
+    "bytes": 26102,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -440,7 +440,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
     "id": "illustration/dev-fog-signal",
     "file": "assets/illustrations/cards/dev-fog-signal.webp",
     "kind": "illustration",
-    "bytes": 51912,
+    "bytes": 52220,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -458,7 +458,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
     "id": "illustration/dev-tide-plenty",
     "file": "assets/illustrations/cards/dev-tide-plenty.webp",
     "kind": "illustration",
-    "bytes": 50096,
+    "bytes": 50356,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -476,7 +476,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
     "id": "illustration/dev-harbor-charter",
     "file": "assets/illustrations/cards/dev-harbor-charter.webp",
     "kind": "illustration",
-    "bytes": 50112,
+    "bytes": 50684,
     "tier": "all",
     "source": "procedural",
     "license": {
@@ -566,7 +566,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
     "id": "illustration/island-flourish",
     "file": "assets/illustrations/brand/island-flourish.webp",
     "kind": "illustration",
-    "bytes": 15112,
+    "bytes": 30416,
     "tier": "all",
     "source": "procedural",
     "license": {
