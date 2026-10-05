@@ -1,19 +1,12 @@
 /**
- * AREA-W4-03 — settlecoast-inspired **2D** presentation bar for harbor Room.
+ * AREA-W4-03 — settlecoast-inspired presentation bar for harbor Room.
  * Rights-safe flagship `港口十三号` must read as a harbor voyage on the invite
  * URL (token hierarchy, cargo/dock affordances, spectator landmarks).
- * Explicit non-goal: WebGL / 3D / GameFactory engine port.
+ * ADR 0014 establishes Three.js 3D tables as GoDesk's default render surface.
  */
 export const HARBOR_PRESENTATION_BAR = {
-  dimensionality: "2d" as const,
   flagshipExample: "港口十三号",
   visualReference: "settlecoast",
-  never: [
-    "WebGL",
-    "3D engine",
-    "GameFactory-3D",
-    "build settlecoast in 3D",
-  ] as const,
 } as const;
 
 export const HARBOR_LANDMARK_TEST_IDS = {

@@ -9,6 +9,11 @@ Raises: ADR 0004's shareable-prototype low bar and ADR 0011's
 Playability Floor is the additional gate before a Shared Session or Playtest
 Link may be exposed.
 
+Supersession note: ADR 0014 supersedes only the two historical Consequences
+clauses marked below: the GameFactory-3A "not a 3D engine target" sentence and
+the `港口十三号` / settlecoast dimensional presentation clause. The
+Playability Floor and all other ADR 0012 contracts remain accepted.
+
 ## Context
 
 ADR 0004 allowed a disclosed subset of rules to execute, as long as the shared
@@ -70,8 +75,8 @@ LLM-authored briefs remain allowed. Accepted Actions remain Kernel-only
   are replaced by genre-faithful Kernels or removed from the shareable path.
 - Playwright must take a genre action (speak, accuse, play a card), not only
   click a scored button.
-- GameFactory-3A is a process reference (plan, mechanic/UI contract, play to
+- **Partially superseded by ADR 0014.** GameFactory-3A is a process reference (plan, mechanic/UI contract, play to
   validate). It is not a 3D engine target.
-- `港口十三号` / settlecoast visual quality is the **2D presentation bar** for
+- **Superseded by ADR 0014.** `港口十三号` / settlecoast visual quality is the **2D presentation bar** for
   harbor Room tables (token hierarchy, cargo/dock affordances, spectator
   legibility). It is not a settlecoast port and not a GameFactory-3D build.

@@ -378,7 +378,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
           .evaluate((el) => getComputedStyle(el).backgroundColor),
       )
       .toBe("rgb(255, 255, 255)");
-    // W4-03 / W5-05: settlecoast is a 2D presentation bar — never invent 3D.
+    // W4-03 / W5-05: current harbor Room remains SVG until later G3D knives.
     await expect(page.locator("canvas")).toHaveCount(0);
     await expect(page.locator("body")).not.toContainText("WebGL");
     await expect(page.locator("body")).not.toContainText("GameFactory-3D");
@@ -443,7 +443,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await roll.click();
     await expect(page.locator(".action-log")).toContainText(/roll:\d+,\d+,\d+/);
     await expect(page.getByTestId("harbor-cargo-tracks")).toContainText(/本轮\s*\+/);
-    // First sail returns to placement round 3 — mid-voyage progressed without settle/3D.
+    // First sail returns to placement round 3 — mid-voyage progressed without settle.
     await expect(page.getByTestId("harbor-phase-label")).toHaveText("放置阶段", {
       timeout: 30_000,
     });
@@ -471,7 +471,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.getByRole("heading", { name: "港口十三号" })).toBeVisible();
     await expect(page.getByTestId("harbor-voyage-board")).toBeVisible();
     await expect(page.getByTestId("harbor-phase-label")).toHaveText("放置阶段");
-    // ADR 0012: settlecoast / 港口十三号 = 2D presentation bar, never 3D.
+    // ADR 0014 owns the render-surface policy; this legacy Room is still SVG.
     await expect(page.locator("canvas")).toHaveCount(0);
     await expect(page.locator("body")).not.toContainText("WebGL");
     await expect(page.locator("body")).not.toContainText("GameFactory-3D");
@@ -557,7 +557,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
 
     await rollSail(3);
 
-    // W6-03: late-voyage settle surface — 已结算 + cargo outcomes + 2D bar only.
+    // W6-03: late-voyage settle surface — 已结算 + cargo outcomes on the current SVG Room.
     await expect(page.getByTestId("harbor-voyage-board")).toHaveAttribute(
       "data-harbor-phase",
       "resolved",
@@ -576,7 +576,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.locator("canvas")).toHaveCount(0);
     await expect(page.locator("body")).not.toContainText("WebGL");
     await expect(page.locator("body")).not.toContainText("GameFactory-3D");
-    // Friend seats still see the same 2D settle surface (no 3D).
+    // Friend seats still see the same current SVG settle surface.
     await expect(friendPage.getByTestId("harbor-phase-label")).toHaveText("已结算", {
       timeout: 30_000,
     });

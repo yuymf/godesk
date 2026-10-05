@@ -4,6 +4,7 @@
 
 1. [ADR 0011 — ChatCut-style playable output is the product](0011-chatcut-playable-output-is-the-product.md)
 2. [ADR 0012 — Playability Floor is the share gate](0012-playability-floor-is-the-share-gate.md)
+3. [ADR 0014 — Three.js 3D 桌面是默认渲染面](0014-threejs-3d-table-is-the-default-render-surface.md)
 
 Product identity and the share gate live there, plus
 [`CONTEXT.md`](../../CONTEXT.md) and
@@ -17,7 +18,8 @@ identity sections are historical. This index does not rewrite them.
 | ADR | Title | Status |
 | --- | --- | --- |
 | [0011](0011-chatcut-playable-output-is-the-product.md) | ChatCut-style playable output is the product | accepted — **read first** |
-| [0012](0012-playability-floor-is-the-share-gate.md) | Playability Floor is the share gate | accepted — **read first** |
+| [0012](0012-playability-floor-is-the-share-gate.md) | Playability Floor is the share gate | accepted — **read first**；3D 条款被 0014 取代 |
+| [0014](0014-threejs-3d-table-is-the-default-render-surface.md) | Three.js 3D 桌面是默认渲染面 | accepted — **read first for render surface** |
 | [0002](0002-codex-controlled-creator-platform.md) | Codex-controlled creator platform | accepted (control plane) |
 | [0006](0006-visual-references-and-project-assets.md) | Visual References vs Project Assets | accepted |
 | [0007](0007-restore-builds-as-new-rule-systems.md) | Restore Builds as new Rule Systems | accepted |
