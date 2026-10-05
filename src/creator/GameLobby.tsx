@@ -5,7 +5,6 @@ import { createSharedSession, getBuilds, getSharedSessions, listProjects } from 
 import type { GameProject, PlayableBuild, SharedSession } from "./project-contract";
 import { conversationRelayKernel, hiddenRoleKernel, isAuctionBidding, isDiscFlipping, isHandPlay, isHarborVoyage, isHexSettlement, isNetworkRoute } from "./room-presentation";
 import { othelloStartingBoardThumbnailDataUrl } from "./othello-thumbnail";
-import { catanStartingBoardThumbnailDataUrl } from "./catan-thumbnail";
 import { networkRouteStartingBoardThumbnailDataUrl } from "./network-route-thumbnail";
 import { auctionBiddingThumbnailDataUrl } from "./auction-bidding-thumbnail";
 import { handPlayStartingBoardThumbnailDataUrl } from "./hand-play-thumbnail";
@@ -112,7 +111,7 @@ export function GameLobby() {
                       className="lobby-card-mark lobby-card-mark-catan"
                       data-lobby-mark="catan"
                     >
-                      <img alt="" src={catanStartingBoardThumbnailDataUrl()} />
+                      <img alt="" src="/lobby/hex-settlement-thumb.webp" width="128" height="128" />
                     </div>
                   ) : game.build && isNetworkRoute(game.build.ruleSystem) ? (
                     <div
