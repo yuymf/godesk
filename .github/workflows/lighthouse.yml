@@ -1,0 +1,65 @@
+name: Lighthouse CI
+
+# SPEC §4.6.3: Lighthouse mobile default preset (Moto G Power 2022, simulated
+# throttling) on the homepage and a fixed-seed hex Room (?tier=low).
+# No secrets and no paid services: reports go to LHCI temporary public storage
+# (link printed in the job log) and to the workflow artifact.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: godesk-lighthouse-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lighthouse:
+    name: Lighthouse (mobile preset)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      - name: Start local Worker and create a fixed-seed hex Room
+        run: |
+          test -f .dev.vars || cp .dev.vars.example .dev.vars
+          mkdir -p perf-results
+          nohup node scripts/perf-serve.mjs --port 8790 --urls-file perf-results/lighthouse-urls.json \
+            > perf-results/perf-serve.log 2>&1 &
+          for _ in $(seq 1 120); do
+            test -f perf-results/lighthouse-urls.json && break
+            sleep 1
+          done
+          cat perf-results/perf-serve.log
+          test -f perf-results/lighthouse-urls.json
+
+      - name: Lighthouse CI autorun (home + Room)
+        run: pnpm exec lhci autorun --collect.url="$LHCI_HOME_URL" --collect.url="$LHCI_ROOM_URL"
+
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: |
+            .lighthouseci/
+            perf-results/perf-serve.log
+          if-no-files-found: ignore
+          retention-days: 14

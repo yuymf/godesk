@@ -12,3 +12,6 @@ blob-report/
 playwright/.cache/
 assets/textures/pbr/**/*.png
 assets/textures/procedural/
+assets/audio/src/
+perf-results/
+.lighthouseci/

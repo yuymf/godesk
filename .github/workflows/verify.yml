@@ -39,3 +39,14 @@ jobs:
       - run: pnpm verify:plugin
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
+      # SPEC §4.6.1 CI gate: deterministic render budgets under SwiftShader
+      # (bytes, requests, draw calls, triangles, GPU estimate, leaks, context loss).
+      - run: pnpm perf:ci --out perf-results
+      - name: Upload CI render budget report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-ci-budgets
+          path: perf-results/
+          if-no-files-found: ignore
+          retention-days: 14

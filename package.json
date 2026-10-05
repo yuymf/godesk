@@ -25,7 +25,11 @@
     "verify:assets": "node scripts/verify-assets.mjs --skip-network",
     "verify:assets:network": "node scripts/verify-assets.mjs",
     "compress:assets": "node scripts/compress-assets.mjs",
-    "size:assets": "node scripts/check-assets-chunk-size.mjs"
+    "size:assets": "node scripts/check-assets-chunk-size.mjs",
+    "perf:emulate": "node scripts/perf-emulate.mjs",
+    "perf:ci": "node scripts/perf-emulate.mjs --ci",
+    "perf:serve": "node scripts/perf-serve.mjs",
+    "lighthouse": "lhci autorun"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.0.0",
@@ -39,6 +43,7 @@
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.19.0",
+    "@lhci/cli": "0.15.1",
     "@playwright/test": "^1.63.0",
     "@size-limit/file": "14.1.0",
     "@types/react": "^19.3.0",
