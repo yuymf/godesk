@@ -58,10 +58,11 @@
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
-| `feat/g3d-bootstrap-status` | （本 PR，创建后回填编号） | `docs/G3D-STATUS.md`、`docs/G3D-SPEC-POINTER.md`、`docs/prompt-trace/` | open |
+| `feat/g3d-bootstrap-status` | [#102](https://github.com/yuymf/godesk/pull/102) | `docs/G3D-STATUS.md`、`docs/G3D-SPEC-POINTER.md`、`docs/prompt-trace/` | open |
 
 ## 修订记录
 
 | 日期 | 变更 | 作者 |
 | --- | --- | --- |
 | 2026-10-05 | 初创：硬约束三条、M0 未开始、bootstrap 进行中、C2C bridge 阻塞行、下一刀指向 G3D-01 | 劳埃德(工程) |
+| 2026-10-05 | 回填开着的 PR：#102 | 劳埃德(工程) |

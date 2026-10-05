@@ -47,4 +47,4 @@
 | --- | --- |
 | SPEC（仓外） | `/workspace/godesk-3d-spec/SPEC.md`（v0.2） |
 | Notion | https://app.notion.com/p/3f05fabdfe81810e90ade6b4fe2de7c2 |
-| PR | （`gh pr create` 后回填） |
+| PR | https://github.com/yuymf/godesk/pull/102 |
