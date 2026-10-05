@@ -25,8 +25,8 @@ import {
 import { HarborVoyageBoard } from "./HarborVoyageBoard";
 import { OthelloBoard } from "./OthelloBoard";
 import { createInitialOthelloSessionSlice } from "./othello-thumbnail";
-import { CatanBoard } from "./CatanBoard";
-import { createInitialCatanSessionSlice } from "./catan-thumbnail";
+import { HexSettlementScenePreview } from "./HexSettlementScenePreview";
+import { createInitialCatanSessionSlice } from "./hex-settlement-session";
 import { NetworkRouteBoard } from "./NetworkRouteBoard";
 import { createInitialNetworkRouteSessionSlice } from "./network-route-thumbnail";
 import { AuctionBiddingBoard } from "./AuctionBiddingBoard";
@@ -159,13 +159,8 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
         </section>
       ) : hexSettlement && hexKernel ? (
         <section className="preview-board" aria-label="卡坦可玩桌面">
-          <CatanBoard
-            activeSeat={0}
+          <HexSettlementScenePreview
             catan={createInitialCatanSessionSlice(hexKernel.playerCount)}
-            enabled={false}
-            readOnly
-            status="active"
-            viewerSeat={null}
           />
         </section>
       ) : networkRoute && networkKernel ? (

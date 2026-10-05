@@ -6,8 +6,8 @@ import type { HarborVoyageState } from "../runtime/harbor-voyage";
 import type { WorkerPlacementState } from "../runtime/worker-placement";
 import { HarborVoyageBoard } from "./HarborVoyageBoard";
 import { OthelloBoard } from "./OthelloBoard";
-import { CatanBoard } from "./CatanBoard";
-import type { CatanBoardState } from "./CatanBoard";
+import { HexSettlementScenePreview } from "./HexSettlementScenePreview";
+import type { HexSettlementBoardState } from "./hex-settlement-session";
 import { NetworkRouteBoard } from "./NetworkRouteBoard";
 import type { NetworkRouteBoardState } from "./NetworkRouteBoard";
 import { AuctionBiddingBoard } from "./AuctionBiddingBoard";
@@ -101,14 +101,8 @@ export function ReplayView({ replayId }: { replayId: string }) {
             winnerSeat={replay.finalState.winnerSeat}
           />
         ) : replay.finalState.catan ? (
-          <CatanBoard
-            activeSeat={replay.finalState.activeSeat}
-            catan={replay.finalState.catan as CatanBoardState}
-            enabled={false}
-            readOnly
-            status={replay.finalState.status}
-            viewerSeat={null}
-            winnerSeat={replay.finalState.winnerSeat}
+          <HexSettlementScenePreview
+            catan={replay.finalState.catan as HexSettlementBoardState}
           />
         ) : replay.finalState.networkRoute ? (
           <NetworkRouteBoard

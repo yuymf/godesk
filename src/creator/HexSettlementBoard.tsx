@@ -3,11 +3,11 @@ import type { Resource } from "../runtime/adapters/catan";
 import type { LegalAction } from "../runtime/play-kernel";
 import {
   listCatanLegalActionsForSession,
-  type CatanBoardState,
-} from "./CatanBoard";
+  type HexSettlementBoardState,
+} from "./hex-settlement-session";
 import type { RoomLocale } from "./room-presentation";
 
-export type HexSettlementBoardState = CatanBoardState;
+export type { HexSettlementBoardState } from "./hex-settlement-session";
 
 const LazySceneHost = lazy(async () => {
   const mod = await import("../render3d");

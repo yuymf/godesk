@@ -1,7 +1,7 @@
 import type { Terrain } from "../../runtime/adapters/catan";
 import type { SceneModel, SceneNode, SceneVec3 } from "../scene-model";
 
-/** Match topology-stub / CatanBoard flat-top pixel size, then scale to world units. */
+/** Match topology-stub / hex-settlement flat-top pixel size, then scale to world units. */
 const HEX_PIXEL_SIZE = 100;
 const WORLD_SCALE = 0.01;
 
@@ -53,7 +53,7 @@ function numberId(tile: { q: number; r: number }): string {
  * Pure mapper: hex-settlement Kernel public state → SceneModel (§3.4).
  * Uses procedural placeholder geometry ids; GLB swap is G3D-13.
  */
-/** Structural subset accepted from Room session JSON / CatanBoardState. */
+/** Structural subset accepted from Room session JSON / HexSettlementBoardState. */
 export type HexSettlementSceneInput = {
   tiles: readonly { q: number; r: number; terrain: string; number: number | null }[];
   robberHex: string;

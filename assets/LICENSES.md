@@ -9,3 +9,5 @@
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | font/manrope | src/assets/fonts/manrope-latin-wght-normal.woff2 | Manrope 拉丁可变字体 | OFL | https://fonts.google.com/specimen/Manrope | OFL-1.1 | Mikhail Sharanda / Cyreal | 2026-10-05 | 否 | 无 | G3D-11 |
 | ui/godesk-mark | src/assets/godesk-mark.svg | GoDesk 标记 SVG | 自制 | src/assets/godesk-mark.svg | LicenseRef-GoDesk-Original | 俞孟凡 / GoDesk | 2026-10-05 | 否 | 无 | G3D-11 |
+
+| `public/lobby/hex-settlement-thumb.webp` | GoDesk / 劳埃德(工程) | CC0-1.0 | 程序化 canvas 海报（`scripts/render-poster.mjs`）；非 settlecoast 资产 | G3D-18 |
