@@ -651,6 +651,1230 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "orderRef": "n/a",
       "status": "cleared"
     }
+  },
+{
+    "id": "texture/t01-pine/512/baseColor",
+    "file": "assets/textures/pbr/t01-pine/512/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 22111,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Grass001",
+      "author": "ambientCG / Grass001",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t01-pine/512/normal",
+    "file": "assets/textures/pbr/t01-pine/512/normal.ktx2",
+    "kind": "texture",
+    "bytes": 20156,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Grass001",
+      "author": "ambientCG / Grass001",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t01-pine/512/orm",
+    "file": "assets/textures/pbr/t01-pine/512/orm.ktx2",
+    "kind": "texture",
+    "bytes": 19160,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Grass001",
+      "author": "ambientCG / Grass001",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t01-pine/256/baseColor",
+    "file": "assets/textures/pbr/t01-pine/256/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 7090,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Grass001",
+      "author": "ambientCG / Grass001",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t01-pine/256/normal",
+    "file": "assets/textures/pbr/t01-pine/256/normal.ktx2",
+    "kind": "texture",
+    "bytes": 54180,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Grass001",
+      "author": "ambientCG / Grass001",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t01-pine/256/orm",
+    "file": "assets/textures/pbr/t01-pine/256/orm.ktx2",
+    "kind": "texture",
+    "bytes": 6536,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Grass001",
+      "author": "ambientCG / Grass001",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t02-clay/512/baseColor",
+    "file": "assets/textures/pbr/t02-clay/512/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 19727,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Ground037",
+      "author": "ambientCG / Ground037",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t02-clay/512/normal",
+    "file": "assets/textures/pbr/t02-clay/512/normal.ktx2",
+    "kind": "texture",
+    "bytes": 18404,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Ground037",
+      "author": "ambientCG / Ground037",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t02-clay/512/orm",
+    "file": "assets/textures/pbr/t02-clay/512/orm.ktx2",
+    "kind": "texture",
+    "bytes": 21528,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Ground037",
+      "author": "ambientCG / Ground037",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t02-clay/256/baseColor",
+    "file": "assets/textures/pbr/t02-clay/256/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 7142,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Ground037",
+      "author": "ambientCG / Ground037",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t02-clay/256/normal",
+    "file": "assets/textures/pbr/t02-clay/256/normal.ktx2",
+    "kind": "texture",
+    "bytes": 45495,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Ground037",
+      "author": "ambientCG / Ground037",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t02-clay/256/orm",
+    "file": "assets/textures/pbr/t02-clay/256/orm.ktx2",
+    "kind": "texture",
+    "bytes": 6948,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Ground037",
+      "author": "ambientCG / Ground037",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t03-meadow/512/baseColor",
+    "file": "assets/textures/pbr/t03-meadow/512/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 21974,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Grass001",
+      "author": "ambientCG / Grass001",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t03-meadow/512/normal",
+    "file": "assets/textures/pbr/t03-meadow/512/normal.ktx2",
+    "kind": "texture",
+    "bytes": 20156,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Grass001",
+      "author": "ambientCG / Grass001",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t03-meadow/512/orm",
+    "file": "assets/textures/pbr/t03-meadow/512/orm.ktx2",
+    "kind": "texture",
+    "bytes": 19160,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Grass001",
+      "author": "ambientCG / Grass001",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t03-meadow/256/baseColor",
+    "file": "assets/textures/pbr/t03-meadow/256/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 7055,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Grass001",
+      "author": "ambientCG / Grass001",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t03-meadow/256/normal",
+    "file": "assets/textures/pbr/t03-meadow/256/normal.ktx2",
+    "kind": "texture",
+    "bytes": 54180,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Grass001",
+      "author": "ambientCG / Grass001",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t03-meadow/256/orm",
+    "file": "assets/textures/pbr/t03-meadow/256/orm.ktx2",
+    "kind": "texture",
+    "bytes": 6536,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Grass001",
+      "author": "ambientCG / Grass001",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t04-wheat/512/baseColor",
+    "file": "assets/textures/pbr/t04-wheat/512/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 39646,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Ground033",
+      "author": "ambientCG / Ground033",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t04-wheat/512/normal",
+    "file": "assets/textures/pbr/t04-wheat/512/normal.ktx2",
+    "kind": "texture",
+    "bytes": 109357,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Ground033",
+      "author": "ambientCG / Ground033",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t04-wheat/512/orm",
+    "file": "assets/textures/pbr/t04-wheat/512/orm.ktx2",
+    "kind": "texture",
+    "bytes": 34459,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Ground033",
+      "author": "ambientCG / Ground033",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t04-wheat/256/baseColor",
+    "file": "assets/textures/pbr/t04-wheat/256/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 9943,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Ground033",
+      "author": "ambientCG / Ground033",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t04-wheat/256/normal",
+    "file": "assets/textures/pbr/t04-wheat/256/normal.ktx2",
+    "kind": "texture",
+    "bytes": 32711,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Ground033",
+      "author": "ambientCG / Ground033",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t04-wheat/256/orm",
+    "file": "assets/textures/pbr/t04-wheat/256/orm.ktx2",
+    "kind": "texture",
+    "bytes": 9169,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Ground033",
+      "author": "ambientCG / Ground033",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t05-reef/512/baseColor",
+    "file": "assets/textures/pbr/t05-reef/512/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 23906,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Rock020",
+      "author": "ambientCG / Rock020",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t05-reef/512/normal",
+    "file": "assets/textures/pbr/t05-reef/512/normal.ktx2",
+    "kind": "texture",
+    "bytes": 174455,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Rock020",
+      "author": "ambientCG / Rock020",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t05-reef/512/orm",
+    "file": "assets/textures/pbr/t05-reef/512/orm.ktx2",
+    "kind": "texture",
+    "bytes": 18991,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Rock020",
+      "author": "ambientCG / Rock020",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t05-reef/256/baseColor",
+    "file": "assets/textures/pbr/t05-reef/256/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 10240,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Rock020",
+      "author": "ambientCG / Rock020",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t05-reef/256/normal",
+    "file": "assets/textures/pbr/t05-reef/256/normal.ktx2",
+    "kind": "texture",
+    "bytes": 52583,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Rock020",
+      "author": "ambientCG / Rock020",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t05-reef/256/orm",
+    "file": "assets/textures/pbr/t05-reef/256/orm.ktx2",
+    "kind": "texture",
+    "bytes": 6897,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Rock020",
+      "author": "ambientCG / Rock020",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t06-sand/512/baseColor",
+    "file": "assets/textures/pbr/t06-sand/512/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 27664,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Ground054",
+      "author": "ambientCG / Ground054",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t06-sand/512/normal",
+    "file": "assets/textures/pbr/t06-sand/512/normal.ktx2",
+    "kind": "texture",
+    "bytes": 142093,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Ground054",
+      "author": "ambientCG / Ground054",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t06-sand/512/orm",
+    "file": "assets/textures/pbr/t06-sand/512/orm.ktx2",
+    "kind": "texture",
+    "bytes": 27112,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Ground054",
+      "author": "ambientCG / Ground054",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t06-sand/256/baseColor",
+    "file": "assets/textures/pbr/t06-sand/256/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 9223,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Ground054",
+      "author": "ambientCG / Ground054",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t06-sand/256/normal",
+    "file": "assets/textures/pbr/t06-sand/256/normal.ktx2",
+    "kind": "texture",
+    "bytes": 47786,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Ground054",
+      "author": "ambientCG / Ground054",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t06-sand/256/orm",
+    "file": "assets/textures/pbr/t06-sand/256/orm.ktx2",
+    "kind": "texture",
+    "bytes": 8785,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Ground054",
+      "author": "ambientCG / Ground054",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t07-cliff/512/baseColor",
+    "file": "assets/textures/pbr/t07-cliff/512/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 30779,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Rock023",
+      "author": "ambientCG / Rock023",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t07-cliff/512/normal",
+    "file": "assets/textures/pbr/t07-cliff/512/normal.ktx2",
+    "kind": "texture",
+    "bytes": 174407,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Rock023",
+      "author": "ambientCG / Rock023",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t07-cliff/512/orm",
+    "file": "assets/textures/pbr/t07-cliff/512/orm.ktx2",
+    "kind": "texture",
+    "bytes": 19327,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Rock023",
+      "author": "ambientCG / Rock023",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t07-cliff/256/baseColor",
+    "file": "assets/textures/pbr/t07-cliff/256/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 9985,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Rock023",
+      "author": "ambientCG / Rock023",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t07-cliff/256/normal",
+    "file": "assets/textures/pbr/t07-cliff/256/normal.ktx2",
+    "kind": "texture",
+    "bytes": 53258,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Rock023",
+      "author": "ambientCG / Rock023",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t07-cliff/256/orm",
+    "file": "assets/textures/pbr/t07-cliff/256/orm.ktx2",
+    "kind": "texture",
+    "bytes": 7076,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Rock023",
+      "author": "ambientCG / Rock023",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t08-wood/512/baseColor",
+    "file": "assets/textures/pbr/t08-wood/512/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 38432,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Wood049",
+      "author": "ambientCG / Wood049",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t08-wood/512/normal",
+    "file": "assets/textures/pbr/t08-wood/512/normal.ktx2",
+    "kind": "texture",
+    "bytes": 94030,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Wood049",
+      "author": "ambientCG / Wood049",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t08-wood/512/orm",
+    "file": "assets/textures/pbr/t08-wood/512/orm.ktx2",
+    "kind": "texture",
+    "bytes": 32463,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Wood049",
+      "author": "ambientCG / Wood049",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t08-wood/256/baseColor",
+    "file": "assets/textures/pbr/t08-wood/256/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 9434,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Wood049",
+      "author": "ambientCG / Wood049",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t08-wood/256/normal",
+    "file": "assets/textures/pbr/t08-wood/256/normal.ktx2",
+    "kind": "texture",
+    "bytes": 21814,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Wood049",
+      "author": "ambientCG / Wood049",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t08-wood/256/orm",
+    "file": "assets/textures/pbr/t08-wood/256/orm.ktx2",
+    "kind": "texture",
+    "bytes": 7733,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Wood049",
+      "author": "ambientCG / Wood049",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t09-paintwood/512/baseColor",
+    "file": "assets/textures/pbr/t09-paintwood/512/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 37766,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Wood049",
+      "author": "ambientCG / Wood049",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t09-paintwood/512/normal",
+    "file": "assets/textures/pbr/t09-paintwood/512/normal.ktx2",
+    "kind": "texture",
+    "bytes": 94030,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Wood049",
+      "author": "ambientCG / Wood049",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t09-paintwood/512/orm",
+    "file": "assets/textures/pbr/t09-paintwood/512/orm.ktx2",
+    "kind": "texture",
+    "bytes": 32463,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Wood049",
+      "author": "ambientCG / Wood049",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t09-paintwood/256/baseColor",
+    "file": "assets/textures/pbr/t09-paintwood/256/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 9453,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Wood049",
+      "author": "ambientCG / Wood049",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t09-paintwood/256/normal",
+    "file": "assets/textures/pbr/t09-paintwood/256/normal.ktx2",
+    "kind": "texture",
+    "bytes": 21814,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Wood049",
+      "author": "ambientCG / Wood049",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t09-paintwood/256/orm",
+    "file": "assets/textures/pbr/t09-paintwood/256/orm.ktx2",
+    "kind": "texture",
+    "bytes": 7733,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Wood049",
+      "author": "ambientCG / Wood049",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t10-canvas/512/baseColor",
+    "file": "assets/textures/pbr/t10-canvas/512/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 22267,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Fabric045",
+      "author": "ambientCG / Fabric045",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t10-canvas/512/normal",
+    "file": "assets/textures/pbr/t10-canvas/512/normal.ktx2",
+    "kind": "texture",
+    "bytes": 22211,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Fabric045",
+      "author": "ambientCG / Fabric045",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t10-canvas/512/orm",
+    "file": "assets/textures/pbr/t10-canvas/512/orm.ktx2",
+    "kind": "texture",
+    "bytes": 21207,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Fabric045",
+      "author": "ambientCG / Fabric045",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t10-canvas/256/baseColor",
+    "file": "assets/textures/pbr/t10-canvas/256/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 9686,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Fabric045",
+      "author": "ambientCG / Fabric045",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t10-canvas/256/normal",
+    "file": "assets/textures/pbr/t10-canvas/256/normal.ktx2",
+    "kind": "texture",
+    "bytes": 43912,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Fabric045",
+      "author": "ambientCG / Fabric045",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t10-canvas/256/orm",
+    "file": "assets/textures/pbr/t10-canvas/256/orm.ktx2",
+    "kind": "texture",
+    "bytes": 8222,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Fabric045",
+      "author": "ambientCG / Fabric045",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t11-parchment/512/baseColor",
+    "file": "assets/textures/pbr/t11-parchment/512/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 28424,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Paper001",
+      "author": "ambientCG / Paper001",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t11-parchment/512/normal",
+    "file": "assets/textures/pbr/t11-parchment/512/normal.ktx2",
+    "kind": "texture",
+    "bytes": 165150,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Paper001",
+      "author": "ambientCG / Paper001",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t11-parchment/512/orm",
+    "file": "assets/textures/pbr/t11-parchment/512/orm.ktx2",
+    "kind": "texture",
+    "bytes": 26202,
+    "tier": "high-medium",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Paper001",
+      "author": "ambientCG / Paper001",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t11-parchment/256/baseColor",
+    "file": "assets/textures/pbr/t11-parchment/256/baseColor.ktx2",
+    "kind": "texture",
+    "bytes": 9284,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Paper001",
+      "author": "ambientCG / Paper001",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t11-parchment/256/normal",
+    "file": "assets/textures/pbr/t11-parchment/256/normal.ktx2",
+    "kind": "texture",
+    "bytes": 25823,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Paper001",
+      "author": "ambientCG / Paper001",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/t11-parchment/256/orm",
+    "file": "assets/textures/pbr/t11-parchment/256/orm.ktx2",
+    "kind": "texture",
+    "bytes": 8634,
+    "tier": "low",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://ambientcg.com/a/Paper001",
+      "author": "ambientCG / Paper001",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "风格指南调色 + toktx",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "model/pieces",
+    "file": "assets/models/pieces.glb",
+    "kind": "model",
+    "bytes": 10392,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/blender/",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "渔村/港镇/雾灯/栈道/羊 bpy 自制 meshopt",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "model/sheep",
+    "file": "assets/models/sheep.glb",
+    "kind": "model",
+    "bytes": 7760,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/blender/",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "bpy 低模羊",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
   }
 ]
 );
