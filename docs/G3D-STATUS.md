@@ -47,7 +47,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
-| G3D-03：六角岛状态 → 场景映射与基础渲染 | Track A · 劳埃德(工程) | `feat/g3d-03-hex-mapper` / PR TBD | M1 第二刀 |
+| G3D-03：六角岛状态 → 场景映射与基础渲染 | Track A · 劳埃德(工程) | `feat/g3d-03-hex-mapper` / [PR #107](https://github.com/yuymf/godesk/pull/107) | M1 第二刀 |
 | G3D-11：资产清单与许可证门（并行） | Track B | 见 Track B worktree | 不阻塞本 STATUS 行合并 |
 | G3D-12：GameSpec v2（并行） | Track C | 见 Track C worktree | 不阻塞本 STATUS 行合并 |
 
@@ -66,7 +66,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
-| `feat/g3d-03-hex-mapper` | TBD | scene-model、hex mapper、reconcile、SceneHost 接线 | 进行中 |
+| `feat/g3d-03-hex-mapper` | [#107](https://github.com/yuymf/godesk/pull/107) | scene-model、hex mapper、reconcile、SceneHost 接线 | 进行中 |
 
 ## 修订记录
 
