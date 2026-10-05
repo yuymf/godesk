@@ -1,0 +1,33 @@
+# Prompt trace · G3D-23 UI 羊皮纸皮肤
+
+## goal
+
+交付 SPEC §5.5 U-01–U-05：纸纹 WebP、纸边 mask×2、墨线图标 20、OFL 显示字体、`docs/art/style-guide.md`；全部登记清单与 LICENSES；体积门达标。
+
+## tool
+
+- 执行席手写 / 程序化生成（PIL、pyftsubset）
+- Codex：本环境已触达 usage limit（约 2026-10-06 03:xx Asia/Shanghai），审查以执行席自检 + 体积/许可证门为准；待额度恢复后再补 Codex 审查摘录
+
+## prompts used
+
+（本刀未成功跑通 Codex；实现依据 SPEC §5.5 / §6.3 G3D-23 与用户硬规则：原创 SVG、OFL 字体、禁止 settlecoast。）
+
+## decisions
+
+1. 显示字体选 Fraunces（OFL-1.1，google/fonts），实例化后拉丁子集 woff2 ≈ 16 KB。
+2. 纸纹用 PIL 程序化噪声 + 纤维，非 AI 插画、非照片。
+3. 20 枚墨线图标全部手写 SVG symbol，资源/建造/发展/HUD 分组命名贴合汐屿术语。
+4. 风格指南含调色板 hex、线宽、机位、三角形/贴图规格与评审门说明。
+
+## outcomes
+
+- `assets/ui/paper-noise.webp`（≤120KB）、`paper-edge-*.svg`、`ink-icons.svg`（≤40KB）
+- `assets/fonts/fraunces-latin-display.woff2`（≤40KB）+ OFL 全文
+- `docs/art/style-guide.md`
+- 清单与 LICENSES 现 7 行；`verify-assets` OK
+
+## links
+
+- 依赖 PR：https://github.com/yuymf/godesk/pull/105
+- 本 PR：TBD

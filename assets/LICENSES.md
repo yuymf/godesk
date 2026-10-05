@@ -9,3 +9,8 @@
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | font/manrope | src/assets/fonts/manrope-latin-wght-normal.woff2 | Manrope 拉丁可变字体 | OFL | https://fonts.google.com/specimen/Manrope | OFL-1.1 | Mikhail Sharanda / Cyreal | 2026-10-05 | 否 | 无 | G3D-11 |
 | ui/godesk-mark | src/assets/godesk-mark.svg | GoDesk 标记 SVG | 自制 | src/assets/godesk-mark.svg | LicenseRef-GoDesk-Original | 俞孟凡 / GoDesk | 2026-10-05 | 否 | 无 | G3D-11 |
+| ui/paper-noise | assets/ui/paper-noise.webp | 羊皮纸纹底图 | 程序化 | scripts/gen-paper-noise.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | 无 | G3D-23 |
+| ui/paper-edge-panel | assets/ui/paper-edge-panel.svg | 面板纸边撕口 mask | 自制 | assets/ui/paper-edge-panel.svg | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | 无 | G3D-23 |
+| ui/paper-edge-card | assets/ui/paper-edge-card.svg | 卡片纸边撕口 mask | 自制 | assets/ui/paper-edge-card.svg | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | 无 | G3D-23 |
+| ui/ink-icons | assets/ui/ink-icons.svg | 墨线图标 sprite（20） | 自制 | assets/ui/ink-icons.svg | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | 无 | G3D-23 |
+| font/fraunces-display | assets/fonts/fraunces-latin-display.woff2 | Fraunces Display 拉丁子集 | OFL | https://github.com/google/fonts/tree/main/ofl/fraunces | OFL-1.1 | Underscore Type / Google Fonts (Fraunces) | 2026-10-06 | 是 | 实例化 Soft=50 opsz=36 wght=600 并 pyftsubset 拉丁子集为 woff2 | G3D-23 |

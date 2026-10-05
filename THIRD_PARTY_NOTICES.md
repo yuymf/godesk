@@ -65,7 +65,14 @@ THE SOFTWARE.
 - 许可证：OFL-1.1
 - 全文：https://openfontlicense.org/open-font-license-official-text/
 
-（G3D-23 将追加标题显示字体的 OFL 声明。）
+### Fraunces Display（SIL Open Font License 1.1）
+
+- 文件：`assets/fonts/fraunces-latin-display.woff2`
+- 用途：汐屿标题显示字体（G3D-23）
+- 来源：https://github.com/google/fonts/tree/main/ofl/fraunces
+- 修改：实例化 Soft=50 / opsz=36 / wght=600，pyftsubset 拉丁子集
+- 许可证全文：`assets/fonts/fraunces-OFL.txt`
+
 
 ## 明确不包含
 
