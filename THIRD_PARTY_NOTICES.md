@@ -65,9 +65,25 @@ THE SOFTWARE.
 - 许可证：OFL-1.1
 - 全文：https://openfontlicense.org/open-font-license-official-text/
 
-（G3D-23 将追加标题显示字体的 OFL 声明。）
+### Fraunces Display（SIL Open Font License 1.1）
+
+- 文件：`assets/fonts/fraunces-latin-display.woff2`
+- 用途：汐屿标题显示字体（G3D-23）
+- 来源：https://github.com/google/fonts/tree/main/ofl/fraunces
+- 修改：实例化 Soft=50 / opsz=36 / wght=600，pyftsubset 拉丁子集
+- 许可证全文：`assets/fonts/fraunces-OFL.txt`
+
 
 ## 明确不包含
 
 - settlecoast.com 及其任何模型、音频、插画、文案、shader
 - 任何 CC BY 或附加署名限制的素材（SPEC §5.1 不允许）
+
+## Kenney UI Audio (via OpenGameArt)
+
+- Source: https://opengameart.org/content/51-ui-sound-effects-buttons-switches-and-clicks
+- License: CC0-1.0
+- Used in: G3D-26 core/extended SFX sprites (selected click/switch clips)
+
+## OpenGameArt CC0 music (G3D-27)
+See prompt-trace.

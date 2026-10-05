@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <title>Tidewell parchment panel edge mask (original)</title>
+  <!-- Soft irregular parchment silhouette for HUD panels -->
+  <path fill="#000" d="M18 42
+    C 48 18, 92 10, 140 14
+    C 188 18, 230 8, 278 16
+    C 322 24, 360 38, 382 62
+    C 396 92, 390 130, 386 168
+    C 382 210, 394 248, 372 274
+    C 340 292, 292 286, 246 288
+    C 198 290, 152 296, 106 286
+    C 64 276, 28 250, 14 214
+    C 4 178, 8 136, 10 98
+    C 12 72, 8 54, 18 42 Z"/>
+</svg>

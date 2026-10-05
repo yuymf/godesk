@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 192" fill="none" stroke="#2a241c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <title>Tidewell Isles ink-line icon sprite (original · GoDesk G3D-23)</title>
+  <desc>20 icons: resources×5, build×4, development×3, HUD×8. Hand-authored SVG; not derived from settlecoast.</desc>
+  <defs>
+    <!-- Resources (5) -->
+    <symbol id="icon-res-wood" viewBox="0 0 24 24"><path d="M12 21V10"/><path d="M8 8c1.5-3 3-5 4-6 1 1 2.5 3 4 6"/><path d="M7 12h10"/><path d="M8 16h8"/></symbol>
+    <symbol id="icon-res-brick" viewBox="0 0 24 24"><rect x="4" y="5" width="7" height="4" rx="0.5"/><rect x="13" y="5" width="7" height="4" rx="0.5"/><rect x="4" y="10" width="7" height="4" rx="0.5"/><rect x="13" y="10" width="7" height="4" rx="0.5"/><rect x="4" y="15" width="7" height="4" rx="0.5"/><rect x="13" y="15" width="7" height="4" rx="0.5"/></symbol>
+    <symbol id="icon-res-wool" viewBox="0 0 24 24"><path d="M8 14c-2 0-3-1.5-3-3s1.5-3 3-2c0-2 1.5-3.5 3.5-3.5S15 7 15 9c1.5-.5 3 1 3 2.5S16.5 14 15 14"/><path d="M9 14v4h6v-4"/><path d="M10 20h4"/></symbol>
+    <symbol id="icon-res-grain" viewBox="0 0 24 24"><path d="M12 21V9"/><path d="M12 9c-2-1-4-1-5 .5 2 .2 3.5 1.2 5 3"/><path d="M12 9c2-1 4-1 5 .5-2 .2-3.5 1.2-5 3"/><path d="M12 13c-2-.8-3.5-.6-4.5.6 1.5.1 2.8.9 4.5 2.4"/><path d="M12 13c2-.8 3.5-.6 4.5.6-1.5.1-2.8.9-4.5 2.4"/></symbol>
+    <symbol id="icon-res-ore" viewBox="0 0 24 24"><path d="M7 16l5-10 5 10H7z"/><path d="M9.5 14h5"/><path d="M8 18h8"/></symbol>
+    <!-- Build (4) -->
+    <symbol id="icon-build-village" viewBox="0 0 24 24"><path d="M4 20V11l8-6 8 6v9"/><path d="M9 20v-6h6v6"/><path d="M10 8.5l2-1.5 2 1.5"/></symbol>
+    <symbol id="icon-build-town" viewBox="0 0 24 24"><path d="M3 20V10l6-5 4 3v12"/><path d="M13 20V9l4-3 4 3v11"/><path d="M7 20v-5h3v5"/><path d="M16 20v-4h2v4"/></symbol>
+    <symbol id="icon-build-boardwalk" viewBox="0 0 24 24"><path d="M3 14h18"/><path d="M5 14l2 6"/><path d="M19 14l-2 6"/><path d="M8 14V9l4-3 4 3v5"/><path d="M7 11h10"/></symbol>
+    <symbol id="icon-build-fog-lantern" viewBox="0 0 24 24"><path d="M12 3v3"/><circle cx="12" cy="12" r="4"/><path d="M9 16c0 2 1.5 4 3 5 1.5-1 3-3 3-5"/><path d="M10 12h4"/><path d="M8 8c1.2-1 2.6-1.5 4-1.5S14.8 7 16 8"/></symbol>
+    <!-- Development (3) -->
+    <symbol id="icon-dev-tidechart" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M8 8h8"/><path d="M8 12h8"/><path d="M8 16h5"/><circle cx="15.5" cy="16" r="1.2"/></symbol>
+    <symbol id="icon-dev-beacon" viewBox="0 0 24 24"><path d="M12 21V11"/><path d="M8 11h8l-1.5-5h-5L8 11z"/><path d="M10 6l2-3 2 3"/><path d="M7 14h10"/></symbol>
+    <symbol id="icon-dev-monsoon" viewBox="0 0 24 24"><path d="M5 10c1-3 4-5 7-5s6 2 7 5"/><path d="M8 13c.5 2 1.5 4 4 6"/><path d="M12 13c.5 2 1.5 4 4 6"/><path d="M16 13c.3 1.5.8 3 2 4.5"/></symbol>
+    <!-- HUD (8) -->
+    <symbol id="icon-hud-dice" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/><circle cx="5.5" cy="5.5" r="0.8" fill="#2a241c" stroke="none"/><circle cx="8.5" cy="8.5" r="0.8" fill="#2a241c" stroke="none"/><circle cx="17" cy="17" r="0.8" fill="#2a241c" stroke="none"/></symbol>
+    <symbol id="icon-hud-trade" viewBox="0 0 24 24"><path d="M7 7h11l-2-2"/><path d="M18 7l-2 2"/><path d="M17 17H6l2 2"/><path d="M6 17l2-2"/></symbol>
+    <symbol id="icon-hud-end-turn" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></symbol>
+    <symbol id="icon-hud-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M4.9 6.5l1.8 1.8M17.3 15.7l1.8 1.8M3 12h2.5M18.5 12H21M4.9 17.5l1.8-1.8M17.3 8.3l1.8-1.8"/></symbol>
+    <symbol id="icon-hud-hand" viewBox="0 0 24 24"><path d="M7 20V9.5a1.5 1.5 0 0 1 3 0V8a1.5 1.5 0 0 1 3 0v1a1.5 1.5 0 0 1 3 0v2a1.5 1.5 0 0 1 3 0V16c0 2.5-2 4-5 4H9c-1.5 0-2-.5-2-0z"/></symbol>
+    <symbol id="icon-hud-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1.5 1-1.5 2.2"/><circle cx="12" cy="17" r="0.8" fill="#2a241c" stroke="none"/></symbol>
+    <symbol id="icon-hud-menu" viewBox="0 0 24 24"><path d="M5 8h14"/><path d="M5 12h14"/><path d="M5 16h14"/></symbol>
+    <symbol id="icon-hud-back" viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6"/><path d="M8 12h11"/></symbol>
+  </defs>
+  <!-- Preview grid (also keeps paths in file for browsers without symbol use) -->
+  <g transform="translate(0,0)"><use href="#icon-res-wood" width="24" height="24" x="0" y="0"/></g>
+  <g transform="translate(48,0)"><use href="#icon-res-brick" width="24" height="24"/></g>
+  <g transform="translate(96,0)"><use href="#icon-res-wool" width="24" height="24"/></g>
+  <g transform="translate(144,0)"><use href="#icon-res-grain" width="24" height="24"/></g>
+  <g transform="translate(192,0)"><use href="#icon-res-ore" width="24" height="24"/></g>
+  <g transform="translate(240,0)"><use href="#icon-build-village" width="24" height="24"/></g>
+  <g transform="translate(288,0)"><use href="#icon-build-town" width="24" height="24"/></g>
+  <g transform="translate(336,0)"><use href="#icon-build-boardwalk" width="24" height="24"/></g>
+  <g transform="translate(384,0)"><use href="#icon-build-fog-lantern" width="24" height="24"/></g>
+  <g transform="translate(432,0)"><use href="#icon-dev-tidechart" width="24" height="24"/></g>
+  <g transform="translate(0,48)"><use href="#icon-dev-beacon" width="24" height="24"/></g>
+  <g transform="translate(48,48)"><use href="#icon-dev-monsoon" width="24" height="24"/></g>
+  <g transform="translate(96,48)"><use href="#icon-hud-dice" width="24" height="24"/></g>
+  <g transform="translate(144,48)"><use href="#icon-hud-trade" width="24" height="24"/></g>
+  <g transform="translate(192,48)"><use href="#icon-hud-end-turn" width="24" height="24"/></g>
+  <g transform="translate(240,48)"><use href="#icon-hud-settings" width="24" height="24"/></g>
+  <g transform="translate(288,48)"><use href="#icon-hud-hand" width="24" height="24"/></g>
+  <g transform="translate(336,48)"><use href="#icon-hud-help" width="24" height="24"/></g>
+  <g transform="translate(384,48)"><use href="#icon-hud-menu" width="24" height="24"/></g>
+  <g transform="translate(432,48)"><use href="#icon-hud-back" width="24" height="24"/></g>
+</svg>
