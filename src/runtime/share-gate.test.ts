@@ -95,7 +95,7 @@ describe("shareGate", () => {
       playSurface: { kind: "table" as const, layout: "worker-placement", regions: [] },
       stages: [],
       outcomes: [],
-      presentation: { theme: "kit", visuals: [{ provenance: "kit" as const, label: "kit" }] },
+      presentation: { visuals: [{ provenance: "kit" as const, label: "kit" }] },
       runtimeSupport: {
         status: "executable" as const,
         unsupported: [],

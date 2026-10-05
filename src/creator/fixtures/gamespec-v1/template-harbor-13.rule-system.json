@@ -1,0 +1,209 @@
+{
+  "id": "rule_system_9d29ac15-caed-4eed-b55b-dced9ce25da2",
+  "version": 1,
+  "name": "港口十三号",
+  "pitch": "在三条拥挤航线上押下有限资源，用放置、航行与领航抢先积累信用。",
+  "participants": {
+    "min": 3,
+    "max": 3,
+    "default": 3,
+    "roles": []
+  },
+  "durationMinutes": 25,
+  "rules": [
+    {
+      "id": "rule_harbor_place",
+      "text": "共 4 轮放置：每轮每名玩家派遣 1 名伙计到仍有空位且付得起的位置。",
+      "sourceId": "source_harbor_13_original_brief",
+      "provenance": "source-anchored",
+      "confidence": 1
+    },
+    {
+      "id": "rule_harbor_sail",
+      "text": "第 2、3 轮放置后各航行一次；第 4 轮放置后经领航再进行最后一次航行。",
+      "sourceId": "source_harbor_13_original_brief",
+      "provenance": "source-anchored",
+      "confidence": 1
+    },
+    {
+      "id": "rule_harbor_settle",
+      "text": "航次结束时按进港、进坞与私掠结果结算信用；信用最高者领先。",
+      "sourceId": "source_harbor_13_original_brief",
+      "provenance": "source-anchored",
+      "confidence": 1
+    }
+  ],
+  "constraints": [
+    {
+      "id": "constraint_harbor_capacity",
+      "text": "伙计只能放到仍有空位且当前商会付得起的位置。",
+      "sourceId": "source_harbor_13_original_brief",
+      "provenance": "source-anchored",
+      "confidence": 1
+    }
+  ],
+  "entities": [
+    {
+      "id": "entity_harbor_board",
+      "name": "港口航线板",
+      "kind": "object",
+      "quantity": 1,
+      "sourceId": "source_harbor_13_original_brief",
+      "provenance": "source-anchored",
+      "confidence": 1
+    },
+    {
+      "id": "entity_harbor_ships",
+      "name": "货船标记",
+      "kind": "token",
+      "quantity": 3,
+      "sourceId": "source_harbor_13_original_brief",
+      "provenance": "source-anchored",
+      "confidence": 1
+    },
+    {
+      "id": "entity_harbor_workers",
+      "name": "商会伙计",
+      "kind": "token",
+      "quantity": 12,
+      "sourceId": "source_harbor_13_original_brief",
+      "provenance": "source-anchored",
+      "confidence": 1
+    },
+    {
+      "id": "entity_harbor_dice",
+      "name": "货船骰",
+      "kind": "object",
+      "quantity": 3,
+      "sourceId": "source_harbor_13_original_brief",
+      "provenance": "source-anchored",
+      "confidence": 1
+    }
+  ],
+  "setup": [
+    "每名玩家持有 30 信用与 4 名伙计。",
+    "三艘货船分别停在 4、3、2。",
+    "港务商会先行动。"
+  ],
+  "actions": [
+    {
+      "id": "place-cargo",
+      "label": "派伙计上船",
+      "description": "选择琥珀货、钴蓝绸或雪松木货船的空位。",
+      "sourceId": "source_harbor_13_original_brief",
+      "provenance": "source-anchored",
+      "confidence": 1
+    },
+    {
+      "id": "place-port",
+      "label": "押注栈桥",
+      "description": "占据东/中/西栈桥，按进港艘数结算。",
+      "sourceId": "source_harbor_13_original_brief",
+      "provenance": "source-anchored",
+      "confidence": 1
+    },
+    {
+      "id": "place-yard",
+      "label": "押注干坞",
+      "description": "占据干坞，按进坞艘数结算。",
+      "sourceId": "source_harbor_13_original_brief",
+      "provenance": "source-anchored",
+      "confidence": 1
+    },
+    {
+      "id": "sail",
+      "label": "掷骰航行",
+      "description": "三艘货船按各自骰面前进。",
+      "sourceId": "source_harbor_13_original_brief",
+      "provenance": "source-anchored",
+      "confidence": 1
+    },
+    {
+      "id": "pilot",
+      "label": "领航调整",
+      "description": "末次航行前将一艘船前后调整。",
+      "sourceId": "source_harbor_13_original_brief",
+      "provenance": "source-anchored",
+      "confidence": 1
+    }
+  ],
+  "playSurface": {
+    "kind": "table",
+    "layout": "三条并列航线、栈桥、干坞、私掠与领航区。",
+    "regions": [
+      {
+        "id": "route-amber",
+        "name": "琥珀航线",
+        "description": "d4 货船，货值 24。"
+      },
+      {
+        "id": "route-cobalt",
+        "name": "钴蓝航线",
+        "description": "d3 货船，货值 18。"
+      },
+      {
+        "id": "route-cedar",
+        "name": "雪松航线",
+        "description": "d2 货船，货值 12。"
+      },
+      {
+        "id": "piers",
+        "name": "栈桥区",
+        "description": "按进港艘数派发信用。"
+      },
+      {
+        "id": "yards",
+        "name": "干坞区",
+        "description": "按进坞艘数派发信用。"
+      },
+      {
+        "id": "specials",
+        "name": "特殊区",
+        "description": "私掠、领航与港务保险。"
+      }
+    ]
+  },
+  "stages": [
+    {
+      "id": "placement",
+      "name": "派遣伙计"
+    },
+    {
+      "id": "movement",
+      "name": "航行"
+    },
+    {
+      "id": "pilot",
+      "name": "领航"
+    },
+    {
+      "id": "settlement",
+      "name": "航次结算"
+    }
+  ],
+  "outcomes": [
+    {
+      "id": "first-voyage",
+      "name": "首航教学局"
+    }
+  ],
+  "presentation": {
+    "theme": "harbor-voyage",
+    "visuals": [
+      {
+        "provenance": "kit",
+        "label": "Harbor voyage presentation kit"
+      }
+    ]
+  },
+  "runtimeSupport": {
+    "status": "executable",
+    "unsupported": [
+      "多航次终局、股份拍卖、贷款与盲客未包含在此单航次切片。"
+    ],
+    "kernel": {
+      "type": "harbor-voyage-v1",
+      "playerCount": 3
+    }
+  }
+}

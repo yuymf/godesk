@@ -38,7 +38,7 @@ function ruleSystem(): RuleSystem {
     playSurface: { kind: "screen", layout: "", regions: [] },
     stages: [],
     outcomes: [],
-    presentation: { theme: "test" },
+    presentation: {},
     runtimeSupport: {
       status: "executable",
       unsupported: [],

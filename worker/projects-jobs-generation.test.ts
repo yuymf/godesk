@@ -1333,7 +1333,7 @@ describe("Game Project HTTP seam — jobs, generation, rulebook, floors", () => 
 
     await expect(waitForJob(queued.id)).resolves.toMatchObject({
       status: "succeeded",
-      result: { ruleSystem: { presentation: { theme: "rulebook-studio" } } },
+      result: { ruleSystem: { presentation: { visuals: [{ provenance: "kit", label: "程序化主题 kit" }] } } },
     });
     const ruleSystem = await SELF.fetch(
       `https://godesk.test/api/projects/${created.project.id}?view=rule-system`,

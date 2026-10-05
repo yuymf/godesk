@@ -1,4 +1,5 @@
-import { generationMetadataSchema } from "../src/creator/game-spec";
+import { generationMetadataSchema, migrateRuleSystemToV2 } from "../src/creator/game-spec";
+import { renderSpecIssues, renderSpecSchema } from "../src/creator/render-spec";
 import {
   acceptIntent,
   executableRuntime,
@@ -148,7 +149,7 @@ export function initialRuleSystem(id: string): RuleSystem {
     playSurface: { kind: "screen", layout: "", regions: [] },
     stages: [],
     outcomes: [],
-    presentation: { theme: "unassigned" },
+    presentation: {},
     runtimeSupport: { status: "draft", unsupported: [] },
   };
 }
@@ -164,10 +165,35 @@ function normalizedRuleSystem(ruleSystem: RuleSystem): RuleSystem {
   ) {
     throw new Error("unsupported_rule_system_shape");
   }
-  return structuredClone(ruleSystem);
+  // G3D-12: every stored project / build read is lifted to GameSpec v2 here
+  // (drop legacy `presentation.theme`, add the default `render` for spatial
+  // surfaces, version-lift a v1 GameSpec without regenerating it). The Durable
+  // Object persists the migrated shape on its next write; no batch job.
+  return migrateRuleSystemToV2(ruleSystem);
 }
 
 export { sameRuleSystemContent } from "../src/creator/rule-system-compare";
+
+/** Schema + semantic render checks (materials, licence-cleared assets, camera). */
+function validRenderSpec(value: unknown): boolean {
+  const parsed = renderSpecSchema.safeParse(value);
+  return parsed.success && renderSpecIssues(parsed.data).length === 0;
+}
+
+/**
+ * GameSpec v2 presentation patch: a legacy client's `theme` is dropped, and an
+ * omitted `render` keeps the current 3D declaration instead of wiping it.
+ */
+function patchedPresentation(
+  current: RuleSystem["presentation"],
+  incoming: RuleSystem["presentation"] & { theme?: unknown },
+): RuleSystem["presentation"] {
+  const { theme: _legacyTheme, ...next } = structuredClone(incoming);
+  if (next.render === undefined && current.render !== undefined) {
+    next.render = structuredClone(current.render);
+  }
+  return next;
+}
 
 export function normalizedBuild(build: StoredPlayableBuild): StoredPlayableBuild {
   if (!build.presentationFloor || !build.playabilityFloor) {
@@ -1815,7 +1841,9 @@ export function applyOperation(
           !validNamedList(fields.outcomes))) ||
       (fields.presentation !== undefined &&
         (!fields.presentation ||
-          typeof fields.presentation.theme !== "string" ||
+          typeof fields.presentation !== "object" ||
+          (fields.presentation.render !== undefined &&
+            !validRenderSpec(fields.presentation.render)) ||
           (fields.presentation.image !== undefined &&
             !validBoundImage(fields.presentation.image)) ||
           (fields.presentation.visuals !== undefined &&
@@ -1892,7 +1920,7 @@ export function applyOperation(
         : { outcomes: structuredClone(fields.outcomes) }),
       ...(fields.presentation === undefined
         ? {}
-        : { presentation: structuredClone(fields.presentation) }),
+        : { presentation: patchedPresentation(record.ruleSystem.presentation, fields.presentation) }),
       ...(runtimeSensitiveEdit
         ? {
             runtimeSupport: {

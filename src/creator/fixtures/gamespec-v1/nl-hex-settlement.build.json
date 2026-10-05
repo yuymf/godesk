@@ -1,0 +1,301 @@
+{
+  "id": "build_a512595088fb18ecc07fbe41",
+  "projectId": "project_6c4ae3ed-4f6f-492e-893d-909fb2600afd",
+  "ruleSystemId": "rule_system_7161442e-eba0-4773-8d03-3cf135b80e3a",
+  "ruleSystemVersion": 2,
+  "ruleSystem": {
+    "id": "rule_system_7161442e-eba0-4773-8d03-3cf135b80e3a",
+    "version": 2,
+    "name": "G3D-12 v1 六角岛",
+    "pitch": "做一款可以与电脑对战的卡坦岛基础版",
+    "participants": {
+      "min": 2,
+      "max": 4,
+      "default": 2,
+      "roles": []
+    },
+    "durationMinutes": 45,
+    "rules": [
+      {
+        "id": "source-rule-1",
+        "text": "做一款可以与电脑对战的卡坦岛基础版",
+        "sourceId": "source_job_ea8baa31-05f3-4d4d-8dc4-8c8002a47eb9",
+        "provenance": "source-anchored",
+        "confidence": 0.72
+      }
+    ],
+    "constraints": [],
+    "entities": [],
+    "setup": [
+      "做一款可以与电脑对战的卡坦岛基础版"
+    ],
+    "actions": [
+      {
+        "id": "place_settlement",
+        "label": "建造定居点",
+        "description": "在合法顶点建造定居点。",
+        "sourceId": "source_074b1228-4365-4ac1-8a92-b9ac48f36565",
+        "provenance": "system-generated",
+        "confidence": 1
+      },
+      {
+        "id": "place_road",
+        "label": "建造道路",
+        "description": "在合法边上建造道路。",
+        "sourceId": "source_074b1228-4365-4ac1-8a92-b9ac48f36565",
+        "provenance": "system-generated",
+        "confidence": 1
+      },
+      {
+        "id": "place_city",
+        "label": "升级城市",
+        "description": "将定居点升级为城市。",
+        "sourceId": "source_074b1228-4365-4ac1-8a92-b9ac48f36565",
+        "provenance": "system-generated",
+        "confidence": 1
+      },
+      {
+        "id": "roll_dice",
+        "label": "掷骰",
+        "description": "掷骰进行资源产出或触发强盗。",
+        "sourceId": "source_074b1228-4365-4ac1-8a92-b9ac48f36565",
+        "provenance": "system-generated",
+        "confidence": 1
+      },
+      {
+        "id": "bank_trade",
+        "label": "银行/港口交易",
+        "description": "按港口或 4:1 与银行交易资源。",
+        "sourceId": "source_074b1228-4365-4ac1-8a92-b9ac48f36565",
+        "provenance": "system-generated",
+        "confidence": 1
+      },
+      {
+        "id": "player_trade",
+        "label": "玩家交易",
+        "description": "与其他玩家进行 1:1 资源交换。",
+        "sourceId": "source_074b1228-4365-4ac1-8a92-b9ac48f36565",
+        "provenance": "system-generated",
+        "confidence": 1
+      },
+      {
+        "id": "buy_dev",
+        "label": "购买发展牌",
+        "description": "支付羊麦矿购买一张发展牌。",
+        "sourceId": "source_074b1228-4365-4ac1-8a92-b9ac48f36565",
+        "provenance": "system-generated",
+        "confidence": 1
+      },
+      {
+        "id": "end_turn",
+        "label": "结束回合",
+        "description": "结束当前回合。",
+        "sourceId": "source_074b1228-4365-4ac1-8a92-b9ac48f36565",
+        "provenance": "system-generated",
+        "confidence": 1
+      }
+    ],
+    "playSurface": {
+      "kind": "table",
+      "layout": "hex-radius-2",
+      "regions": [
+        {
+          "id": "island",
+          "name": "岛屿",
+          "description": "六角定居岛屿盘面"
+        }
+      ]
+    },
+    "stages": [],
+    "outcomes": [],
+    "presentation": {
+      "theme": "rulebook-studio",
+      "visuals": [
+        {
+          "provenance": "kit",
+          "label": "程序化主题 kit"
+        }
+      ]
+    },
+    "runtimeSupport": {
+      "status": "executable",
+      "unsupported": [
+        "hex-settlement-v1 executes beginner-board Catan basics (placement, production, robber/discard, build+connectivity, bank/port + simple player trade, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — full negotiated multi-resource trades remain out of scope."
+      ],
+      "kernel": {
+        "type": "hex-settlement-v1",
+        "playerCount": 2,
+        "victoryPointsToWin": 10
+      }
+    },
+    "generation": {
+      "generatorVersion": "rule-system-materializer-v1",
+      "rulesVersion": "source-rules-v1",
+      "requestedMechanics": [
+        "hex-settlement"
+      ],
+      "sourcePrompt": "做一款可以与电脑对战的卡坦岛基础版",
+      "seed": 1847253068,
+      "assumptions": [
+        "规则来自当前来源的确定性抽取，尚未获得完整规则实现保证。",
+        "配置内核后，初始状态、可见性、阶段推进和终局由该版本内核负责。",
+        "提议的内核及参数：{\"op\":\"configure_hex_settlement\",\"config\":{\"playerCount\":2,\"victoryPointsToWin\":10,\"unsupported\":[\"hex-settlement-v1 executes beginner-board Catan basics (placement, production, robber/discard, build+connectivity, bank/port + simple player trade, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — full negotiated multi-resource trades remain out of scope.\"]}}"
+      ]
+    },
+    "gameSpec": {
+      "schemaVersion": 1,
+      "ruleSystemId": "rule_system_7161442e-eba0-4773-8d03-3cf135b80e3a",
+      "ruleSystemVersion": 2,
+      "name": "G3D-12 v1 六角岛",
+      "generation": {
+        "generatorVersion": "rule-system-materializer-v1",
+        "rulesVersion": "source-rules-v1",
+        "requestedMechanics": [
+          "hex-settlement"
+        ],
+        "sourcePrompt": "做一款可以与电脑对战的卡坦岛基础版",
+        "seed": 1847253068,
+        "assumptions": [
+          "规则来自当前来源的确定性抽取，尚未获得完整规则实现保证。",
+          "配置内核后，初始状态、可见性、阶段推进和终局由该版本内核负责。",
+          "提议的内核及参数：{\"op\":\"configure_hex_settlement\",\"config\":{\"playerCount\":2,\"victoryPointsToWin\":10,\"unsupported\":[\"hex-settlement-v1 executes beginner-board Catan basics (placement, production, robber/discard, build+connectivity, bank/port + simple player trade, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — full negotiated multi-resource trades remain out of scope.\"]}}"
+        ]
+      },
+      "players": {
+        "min": 2,
+        "max": 4,
+        "default": 2,
+        "visibility": "kernel-scoped"
+      },
+      "objects": [],
+      "regions": [
+        {
+          "id": "island",
+          "name": "岛屿",
+          "visibility": "kernel-scoped"
+        }
+      ],
+      "relationships": [],
+      "setup": [
+        "hex-settlement-v1: initialSessionState"
+      ],
+      "actions": [
+        {
+          "id": "place_settlement",
+          "label": "建造定居点",
+          "description": "在合法顶点建造定居点。",
+          "phaseIds": [
+            "kernel-turn"
+          ]
+        },
+        {
+          "id": "place_road",
+          "label": "建造道路",
+          "description": "在合法边上建造道路。",
+          "phaseIds": [
+            "kernel-turn"
+          ]
+        },
+        {
+          "id": "place_city",
+          "label": "升级城市",
+          "description": "将定居点升级为城市。",
+          "phaseIds": [
+            "kernel-turn"
+          ]
+        },
+        {
+          "id": "roll_dice",
+          "label": "掷骰",
+          "description": "掷骰进行资源产出或触发强盗。",
+          "phaseIds": [
+            "kernel-turn"
+          ]
+        },
+        {
+          "id": "bank_trade",
+          "label": "银行/港口交易",
+          "description": "按港口或 4:1 与银行交易资源。",
+          "phaseIds": [
+            "kernel-turn"
+          ]
+        },
+        {
+          "id": "player_trade",
+          "label": "玩家交易",
+          "description": "与其他玩家进行 1:1 资源交换。",
+          "phaseIds": [
+            "kernel-turn"
+          ]
+        },
+        {
+          "id": "buy_dev",
+          "label": "购买发展牌",
+          "description": "支付羊麦矿购买一张发展牌。",
+          "phaseIds": [
+            "kernel-turn"
+          ]
+        },
+        {
+          "id": "end_turn",
+          "label": "结束回合",
+          "description": "结束当前回合。",
+          "phaseIds": [
+            "kernel-turn"
+          ]
+        }
+      ],
+      "phases": [
+        {
+          "id": "kernel-turn",
+          "name": "hex-settlement-v1: phase advancement"
+        }
+      ],
+      "endConditions": [
+        {
+          "id": "kernel-end",
+          "description": "hex-settlement-v1: authoritative termination"
+        }
+      ],
+      "scoring": {
+        "kind": "kernel-hook",
+        "hook": "hex-settlement-v1: authoritative outcome"
+      },
+      "presentation": {
+        "kind": "table",
+        "layout": "hex-radius-2"
+      },
+      "execution": {
+        "kernelType": "hex-settlement-v1"
+      }
+    }
+  },
+  "sourceIds": [
+    "source_074b1228-4365-4ac1-8a92-b9ac48f36565",
+    "source_job_ea8baa31-05f3-4d4d-8dc4-8c8002a47eb9"
+  ],
+  "warnings": [
+    "Rule System 还没有 Game Entity。"
+  ],
+  "unsupportedBehavior": [
+    "hex-settlement-v1 executes beginner-board Catan basics (placement, production, robber/discard, build+connectivity, bank/port + simple player trade, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — full negotiated multi-resource trades remain out of scope."
+  ],
+  "presentationFloor": {
+    "status": "passed",
+    "reason": "程序化主题 kit 已满足 Presentation Floor。",
+    "visuals": [
+      {
+        "provenance": "kit",
+        "label": "程序化主题 kit"
+      }
+    ]
+  },
+  "playabilityFloor": {
+    "status": "passed",
+    "reason": "hex-settlement-v1 与来源体裁一致，已满足 Playability Floor。",
+    "genre": "generic",
+    "kernelType": "hex-settlement-v1"
+  },
+  "createdAt": "2026-10-05T18:55:57.262Z",
+  "playableUrl": "http://127.0.0.1:45459/play/build_a512595088fb18ecc07fbe41?share=eyJ2IjoxLCJjIjoiZzNkMTItbGl2ZS1wcm9vZiIsImJ1aWxkIjoiYnVpbGRfYTUxMjU5NTA4OGZiMThlY2MwN2ZiZTQxIn0.ABRTH9taPNOwH33YDr5sniQWwydBLw6KFpzh9nks_Ao"
+}

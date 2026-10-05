@@ -160,6 +160,14 @@ async function verifyLoop(origin) {
   const listedProjects = await callTool("list_projects", {});
   ensure(Array.isArray(listedProjects.projects), "list_projects returned no project list");
 
+  // GameSpec v2: a spatial template imported through MCP carries the 3D render declaration.
+  const harborTemplate = await callTool("create_project", { name: "MCP 模板 3D 声明", templateId: "harbor-13" });
+  const harborRule = await readProject(harborTemplate.project.id, "rule-system");
+  ensure(harborRule.playSurface?.kind === "table", "harbor-13 template must be a table surface");
+  ensure(harborRule.presentation?.render?.engine === "three-webgl2", "harbor-13 template lost presentation.render");
+  ensure(harborRule.presentation.render.water.enabled === true, "harbor-13 default render must enable water");
+  ensure(!("theme" in harborRule.presentation), "harbor-13 template still exposes presentation.theme");
+
   const brief = "三位玩家合作收集线索。玩家可以调查线索推进 2 点，也可以整理线索推进 1 点。累计达到 6 点完成目标，最多 12 回合。";
   const created = await callTool("create_project", { name: "MCP 闭环验证" });
   const projectId = created.project.id;
@@ -240,7 +248,6 @@ async function verifyLoop(origin) {
         op: "update_rule_system",
         fields: {
           presentation: {
-            theme: "mist-green-clue-cards",
             image: { sourceId: generatedImageId, url: generatedImage, alt: "Mist-green clue card" },
             visuals: [{ provenance: "generated", label: "Generated clue-card art" }],
           },
@@ -273,6 +280,12 @@ async function verifyLoop(origin) {
   ensure(approvedRuleSystem.runtimeSupport?.status === "executable", "MCP approve did not apply proposedRuntime");
   ensure(approvedRuleSystem.runtimeSupport.kernel?.type === "shared-goal-v1", "MCP approve did not produce shared-goal-v1");
   ensure(approvedRuleSystem.runtimeSupport.kernel.goalTarget === 6, "MCP approve changed the shared target");
+  ensure(approvedRuleSystem.gameSpec?.schemaVersion === 2, "MCP approve did not persist a GameSpec v2");
+  ensure(!("theme" in approvedRuleSystem.presentation), "GameSpec v2 must not keep presentation.theme");
+  ensure(
+    approvedRuleSystem.presentation.render === undefined && approvedRuleSystem.gameSpec.render === undefined,
+    "A non-spatial (screen) game must not carry a 3D render declaration",
+  );
 
   const compileJob = await callTool("submit_job", {
     kind: "compile-build",

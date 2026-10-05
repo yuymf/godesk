@@ -31,7 +31,7 @@ function base(kernel: ExecutableKernel): RuleSystem {
     playSurface: { kind: "table", layout: "track", regions: [] },
     stages: [],
     outcomes: [],
-    presentation: { theme: "kit", visuals: [{ provenance: "kit", label: "kit" }] },
+    presentation: { visuals: [{ provenance: "kit", label: "kit" }] },
     runtimeSupport: {
       status: "executable",
       unsupported: [],

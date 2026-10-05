@@ -39,5 +39,11 @@ billing are explicitly out of scope.
    role. If Presentation Floor fails with "桌子好看但还不是那款游戏", add or
    fix those objects — do not apply another kit or swap the theme.
 
+7. For spatial surfaces (`table`, `scene`, `hybrid`) the 3D look lives in
+   `presentation.render` (GameSpec v2; see `$edit-and-compile-game`). Presentation
+   Floor fails if it is missing or invalid. Do not try to express 3D art through
+   `presentation.theme` (removed) or by uploading textures that are not
+   licence-cleared in the asset manifest.
+
 Generated output remains replaceable Source Library material; it never rewrites
 rules or removes source provenance.

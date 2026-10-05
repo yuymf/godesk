@@ -90,7 +90,6 @@ describe("studioShareGateMessage", () => {
       name: "灵感接力",
       pitch: "发言写入记录",
       presentation: {
-        theme: "rulebook-studio",
         visuals: [{ provenance: "kit", label: "程序化主题 kit" }],
       },
       playSurface: { kind: "conversation", layout: "prompt-and-response", regions: [] },

@@ -681,8 +681,9 @@ export function materializeRuleSystem(input: {
       id: `source-outcome-${index + 1}`,
       name: line.slice(0, 120),
     })),
+    // GameSpec v2: refreshGameSpec fills the Kernel-aware `render` default for
+    // spatial surfaces (G3D-15 will write it explicitly here).
     presentation: {
-      theme: "rulebook-studio",
       ...(input.image ? { image: input.image } : {}),
       visuals: input.image
         ? [{

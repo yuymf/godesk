@@ -1506,7 +1506,7 @@ export function ProjectStudio({ projectId }: { projectId: string }) {
                   <div><dt>阶段</dt><dd>{ruleSystem.stages.length}</dd></div>
                   <div><dt>结果</dt><dd>{ruleSystem.outcomes.length}</dd></div>
                 </dl>
-                <p>主题：{ruleSystem.presentation.theme || "未设置"}</p>
+                <p>渲染预设：{ruleSystem.presentation.render?.preset ?? "非空间体裁（无 3D 渲染）"}</p>
               </section>
             </details>
 

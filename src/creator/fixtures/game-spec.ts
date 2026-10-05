@@ -1,5 +1,6 @@
 import type { RuleSystem } from "../project-contract";
 import { GENERATOR_VERSION, RULES_VERSION, refreshGameSpec, type GameSpec } from "../game-spec";
+import { defaultRenderSpec } from "../render-spec";
 
 export const BASELINE_PROMPTS = [
   "做一款可以与电脑对战的卡坦岛基础版",
@@ -9,7 +10,7 @@ export const BASELINE_PROMPTS = [
 /** Contract fixtures, not executable implementations or generated success claims. */
 export function structuredSpecFixture(kind: "hex" | "grid" | "network"): GameSpec {
   return {
-    schemaVersion: 1, ruleSystemId: `fixture-${kind}`, ruleSystemVersion: 1,
+    schemaVersion: 2, ruleSystemId: `fixture-${kind}`, ruleSystemVersion: 1,
     name: `${kind} contract fixture`,
     generation: {
       generatorVersion: GENERATOR_VERSION, rulesVersion: RULES_VERSION,
@@ -26,6 +27,7 @@ export function structuredSpecFixture(kind: "hex" | "grid" | "network"): GameSpe
     endConditions: [{ id: "end", description: kind === "grid" ? "Neither player has a legal move" : "The source-defined goal is met" }],
     scoring: { kind: "none", hook: null },
     presentation: { kind: "table", layout: kind },
+    render: defaultRenderSpec(null, "table")!,
     execution: { kernelType: null },
   };
 }
@@ -39,7 +41,7 @@ export function executableSpecFixture(): RuleSystem {
     entities: [], rules: [], constraints: [], setup: [], stages: [], outcomes: [],
     actions: [{ id: "speak", label: "Speak", description: "Record a sentence", sourceId: null, provenance: "source-anchored", confidence: 1 }],
     playSurface: { kind: "conversation", layout: "conversation-relay", regions: [] },
-    presentation: { theme: "conversation" },
+    presentation: {},
     runtimeSupport: { status: "executable", unsupported: [], kernel: {
       type: "conversation-relay-v1", maxTurns: 12, actions: [{ id: "speak", label: "Speak" }],
     } },
@@ -72,7 +74,7 @@ export function executableOthelloSpecFixture(): RuleSystem {
       { id: "pass", label: "Pass", description: "Pass when no legal place remains", sourceId: null, provenance: "source-anchored", confidence: 1 },
     ],
     playSurface: { kind: "table", layout: "grid-8x8", regions: [{ id: "board", name: "Board", description: "8×8 grid" }] },
-    presentation: { theme: "othello" },
+    presentation: {},
     runtimeSupport: {
       status: "executable", unsupported: [],
       kernel: { type: "disc-flipping-v1", playerCount: 2, rows: 8, cols: 8 },
@@ -113,7 +115,7 @@ export function executableCatanSpecFixture(): RuleSystem {
       { id: "end_turn", label: "End turn", description: "End the current turn", sourceId: null, provenance: "source-anchored", confidence: 1 },
     ],
     playSurface: { kind: "table", layout: "hex-radius-2", regions: [{ id: "island", name: "Island", description: "Hex settlement board" }] },
-    presentation: { theme: "catan" },
+    presentation: {},
     runtimeSupport: {
       status: "executable", unsupported: [],
       kernel: { type: "hex-settlement-v1", playerCount: 2, victoryPointsToWin: 10 },
@@ -142,7 +144,7 @@ export function executableAuctionBiddingSpecFixture(): RuleSystem {
       { id: "pass", label: "放弃", description: "放弃当前叫价", sourceId: null, provenance: "source-anchored", confidence: 1 },
     ],
     playSurface: { kind: "table", layout: "auction-table", regions: [{ id: "lot-region", name: "拍品区", description: "公开拍品与出价" }] },
-    presentation: { theme: "auction" },
+    presentation: {},
     runtimeSupport: { status: "executable", unsupported: [], kernel: { type: "auction-bidding-v1", playerCount: 2 } },
   };
   refreshGameSpec(rule);

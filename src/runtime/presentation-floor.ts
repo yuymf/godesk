@@ -5,6 +5,12 @@ import type {
 } from "../creator/project-contract";
 import { inferSourceGenre, type SourceGenre } from "./genre";
 import { ruleSystemCorpus } from "./playability-floor";
+import {
+  RENDER_MISSING_MESSAGE,
+  isSpatialPresentationKind,
+  renderSpecIssues,
+  renderSpecSchema,
+} from "../creator/render-spec";
 
 
 export type GenreObjectFamily =
@@ -196,6 +202,19 @@ export function genreObjectFidelity(ruleSystem: RuleSystem): GenreObjectFidelity
   };
 }
 
+function renderFloorIssue(ruleSystem: RuleSystem): string | null {
+  if (!isSpatialPresentationKind(ruleSystem.playSurface.kind)) return null;
+  const render = ruleSystem.presentation.render;
+  if (!render) return `${RENDER_MISSING_MESSAGE}，不能作为 Presentation Floor。`;
+  const parsed = renderSpecSchema.safeParse(render);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return `render.${issue?.path.join(".") ?? ""}: 3D 渲染声明不合法（${issue?.message ?? "schema"}）。`;
+  }
+  const issue = renderSpecIssues(parsed.data)[0];
+  return issue ? issue.message : null;
+}
+
 export function presentationFloor(ruleSystem: RuleSystem): PresentationFloorReadiness {
   const visuals: VisualTreatment[] = ruleSystem.presentation.visuals?.length
     ? ruleSystem.presentation.visuals
@@ -208,20 +227,18 @@ export function presentationFloor(ruleSystem: RuleSystem): PresentationFloorRead
       visuals,
     };
   }
-  if (visual.provenance === "kit") {
-    if (!ruleSystem.presentation.theme.trim()) {
-      return {
-        status: "failed",
-        reason: "主题 kit 缺少 theme，不能作为 Presentation Floor。",
-        visuals,
-      };
-    }
-  } else if (!hasBoundImage(ruleSystem)) {
+  if (visual.provenance !== "kit" && !hasBoundImage(ruleSystem)) {
     return {
       status: "failed",
       reason: "generated、extracted 或 uploaded 呈现必须绑定真实图像，不能只写 provenance。",
       visuals,
     };
+  }
+
+  // ADR 0014: spatial genres additionally need a schema-valid 3D declaration.
+  const render = renderFloorIssue(ruleSystem);
+  if (render) {
+    return { status: "failed", reason: render, visuals };
   }
 
   const objects = genreObjectFidelity(ruleSystem);

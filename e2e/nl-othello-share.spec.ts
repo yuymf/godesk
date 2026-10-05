@@ -41,6 +41,15 @@ test("NL Othello proposal → disc-flipping build → share= guest legal place",
     status: "executable",
     kernel: { type: "disc-flipping-v1", playerCount: 2, rows: 8, cols: 8 },
   });
+  // GameSpec v2 (G3D-12): the generated spatial game carries a 3D render declaration.
+  expect(ruleAfter.presentation).not.toHaveProperty("theme");
+  expect(ruleAfter.gameSpec).toMatchObject({
+    schemaVersion: 2,
+    render: { engine: "three-webgl2", preset: "tabletop-day", water: { enabled: false } },
+  });
+  expect(ruleAfter.gameSpec.render).toEqual(ruleAfter.presentation.render);
+  await page.getByText("游戏结构", { exact: true }).click();
+  await expect(page.getByText("渲染预设：tabletop-day")).toBeVisible();
 
   const card = await openLobbyCard(page, projectId);
   await expect(card.locator('[data-lobby-mark="othello"]')).toBeVisible();

@@ -1,0 +1,216 @@
+{
+  "id": "rule_system_7dc29b33-7daa-400d-945b-bee9af9883e4",
+  "version": 2,
+  "name": "G3D-12 v1 线索合作",
+  "pitch": "三位玩家合作收集线索。玩家可以调查线索推进 2 点，也可以整理线索推进 1 点。累计达到 6 点完成目标，最多 12 回合。",
+  "participants": {
+    "min": 3,
+    "max": 3,
+    "default": 3,
+    "roles": []
+  },
+  "durationMinutes": 45,
+  "rules": [
+    {
+      "id": "source-rule-1",
+      "text": "玩家可以调查线索推进 2 点，也可以整理线索推进 1 点。",
+      "sourceId": "source_job_76245d0d-a815-459a-b503-78416f1a8db6",
+      "provenance": "source-anchored",
+      "confidence": 0.72
+    },
+    {
+      "id": "source-rule-2",
+      "text": "累计达到 6 点完成目标，最多 12 回合。",
+      "sourceId": "source_job_76245d0d-a815-459a-b503-78416f1a8db6",
+      "provenance": "source-anchored",
+      "confidence": 0.72
+    },
+    {
+      "id": "runtime-turn-order",
+      "text": "玩家按座位顺序轮流选择一个可用行动，共同推进共享目标。",
+      "sourceId": "source_89d0df97-b548-46c9-9f3c-af7dc42d2f94",
+      "provenance": "system-generated",
+      "confidence": 1
+    },
+    {
+      "id": "runtime-victory",
+      "text": "共享进度达到 6 点即完成目标；若 12 回合仍未达到，则会话以回合上限结束。",
+      "sourceId": "source_89d0df97-b548-46c9-9f3c-af7dc42d2f94",
+      "provenance": "system-generated",
+      "confidence": 1
+    }
+  ],
+  "constraints": [],
+  "entities": [
+    {
+      "id": "runtime-shared-goal",
+      "name": "共享目标与参与者状态",
+      "kind": "concept",
+      "quantity": 1,
+      "sourceId": "source_89d0df97-b548-46c9-9f3c-af7dc42d2f94",
+      "provenance": "system-generated",
+      "confidence": 1
+    }
+  ],
+  "setup": [
+    "玩家可以调查线索推进 2 点，也可以整理线索推进 1 点。",
+    "累计达到 6 点完成目标，最多 12 回合。"
+  ],
+  "actions": [
+    {
+      "id": "source-action-1",
+      "label": "调查线索",
+      "description": "调查线索推进 2 点",
+      "sourceId": "source_job_76245d0d-a815-459a-b503-78416f1a8db6",
+      "provenance": "source-anchored",
+      "confidence": 0.72
+    },
+    {
+      "id": "source-action-2",
+      "label": "整理线索",
+      "description": "整理线索推进 1 点",
+      "sourceId": "source_job_76245d0d-a815-459a-b503-78416f1a8db6",
+      "provenance": "source-anchored",
+      "confidence": 0.72
+    }
+  ],
+  "playSurface": {
+    "kind": "screen",
+    "layout": "shared-game-state",
+    "regions": []
+  },
+  "stages": [
+    {
+      "id": "source-phase-1",
+      "name": "累计达到 6 点完成目标，最多 12 回合。"
+    }
+  ],
+  "outcomes": [
+    {
+      "id": "source-outcome-1",
+      "name": "累计达到 6 点完成目标，最多 12 回合。"
+    }
+  ],
+  "presentation": {
+    "theme": "rulebook-studio",
+    "visuals": [
+      {
+        "provenance": "kit",
+        "label": "程序化主题 kit"
+      }
+    ]
+  },
+  "runtimeSupport": {
+    "status": "executable",
+    "unsupported": [
+      "shared-goal-v1 only executes the source's explicit shared progress actions and goal target; other rule behavior remains unsupported."
+    ],
+    "kernel": {
+      "type": "shared-goal-v1",
+      "goalTarget": 6,
+      "maxTurns": 12,
+      "actions": [
+        {
+          "id": "source-action-1",
+          "label": "调查线索",
+          "progress": 2
+        },
+        {
+          "id": "source-action-2",
+          "label": "整理线索",
+          "progress": 1
+        }
+      ]
+    }
+  },
+  "generation": {
+    "generatorVersion": "rule-system-materializer-v1",
+    "rulesVersion": "source-rules-v1",
+    "requestedMechanics": [],
+    "sourcePrompt": "三位玩家合作收集线索。玩家可以调查线索推进 2 点，也可以整理线索推进 1 点。累计达到 6 点完成目标，最多 12 回合。",
+    "seed": 1393742818,
+    "assumptions": [
+      "规则来自当前来源的确定性抽取，尚未获得完整规则实现保证。",
+      "配置内核后，初始状态、可见性、阶段推进和终局由该版本内核负责。",
+      "提议的内核及参数：{\"op\":\"configure_shared_goal\",\"config\":{\"goalTarget\":6,\"maxTurns\":12,\"actions\":[{\"id\":\"source-action-1\",\"label\":\"调查线索\",\"progress\":2},{\"id\":\"source-action-2\",\"label\":\"整理线索\",\"progress\":1}],\"unsupported\":[\"shared-goal-v1 only executes the source's explicit shared progress actions and goal target; other rule behavior remains unsupported.\"]}}"
+    ]
+  },
+  "gameSpec": {
+    "schemaVersion": 1,
+    "ruleSystemId": "rule_system_7dc29b33-7daa-400d-945b-bee9af9883e4",
+    "ruleSystemVersion": 2,
+    "name": "G3D-12 v1 线索合作",
+    "generation": {
+      "generatorVersion": "rule-system-materializer-v1",
+      "rulesVersion": "source-rules-v1",
+      "requestedMechanics": [],
+      "sourcePrompt": "三位玩家合作收集线索。玩家可以调查线索推进 2 点，也可以整理线索推进 1 点。累计达到 6 点完成目标，最多 12 回合。",
+      "seed": 1393742818,
+      "assumptions": [
+        "规则来自当前来源的确定性抽取，尚未获得完整规则实现保证。",
+        "配置内核后，初始状态、可见性、阶段推进和终局由该版本内核负责。",
+        "提议的内核及参数：{\"op\":\"configure_shared_goal\",\"config\":{\"goalTarget\":6,\"maxTurns\":12,\"actions\":[{\"id\":\"source-action-1\",\"label\":\"调查线索\",\"progress\":2},{\"id\":\"source-action-2\",\"label\":\"整理线索\",\"progress\":1}],\"unsupported\":[\"shared-goal-v1 only executes the source's explicit shared progress actions and goal target; other rule behavior remains unsupported.\"]}}"
+      ]
+    },
+    "players": {
+      "min": 3,
+      "max": 3,
+      "default": 3,
+      "visibility": "kernel-scoped"
+    },
+    "objects": [
+      {
+        "id": "runtime-shared-goal",
+        "name": "共享目标与参与者状态",
+        "kind": "concept",
+        "visibility": "kernel-scoped"
+      }
+    ],
+    "regions": [],
+    "relationships": [],
+    "setup": [
+      "shared-goal-v1: initialSessionState"
+    ],
+    "actions": [
+      {
+        "id": "source-action-1",
+        "label": "调查线索",
+        "description": "调查线索推进 2 点",
+        "phaseIds": [
+          "kernel-turn"
+        ]
+      },
+      {
+        "id": "source-action-2",
+        "label": "整理线索",
+        "description": "整理线索推进 1 点",
+        "phaseIds": [
+          "kernel-turn"
+        ]
+      }
+    ],
+    "phases": [
+      {
+        "id": "kernel-turn",
+        "name": "shared-goal-v1: phase advancement"
+      }
+    ],
+    "endConditions": [
+      {
+        "id": "kernel-end",
+        "description": "shared-goal-v1: authoritative termination"
+      }
+    ],
+    "scoring": {
+      "kind": "kernel-hook",
+      "hook": "shared-goal-v1: authoritative outcome"
+    },
+    "presentation": {
+      "kind": "screen",
+      "layout": "shared-game-state"
+    },
+    "execution": {
+      "kernelType": "shared-goal-v1"
+    }
+  }
+}

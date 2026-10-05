@@ -1,6 +1,14 @@
 import { z } from "zod";
 import { inferRequestedMechanics, kernelCapabilities, kernelScoringHook, mechanicsCapabilityGap } from "./kernel-capabilities";
 import type { RuleSystem } from "./project-contract";
+import {
+  RENDER_MISSING_MESSAGE,
+  defaultRenderSpec,
+  isSpatialPresentationKind,
+  isUntouchedDefaultRender,
+  renderSpecIssues,
+  renderSpecSchema,
+} from "./render-spec";
 
 const text = z.string().trim().min(1);
 const visibility = z.enum(["public", "owner", "private", "kernel-scoped"]);
@@ -16,7 +24,8 @@ export const generationMetadataSchema = z.strictObject({
 export type GenerationMetadata = z.infer<typeof generationMetadataSchema>;
 export const GENERATOR_VERSION = "rule-system-materializer-v1";
 export const RULES_VERSION = "source-rules-v1";
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
+export const GAME_SPEC_SCHEMA_VERSION = SCHEMA_VERSION;
 
 /** Data only. Hooks identify adapter responsibilities; they never execute scripts. */
 export const gameSpecSchema = z.strictObject({
@@ -38,6 +47,7 @@ export const gameSpecSchema = z.strictObject({
   endConditions: z.array(z.strictObject({ id: text, description: text })).min(1),
   scoring: z.strictObject({ kind: z.enum(["none", "kernel-hook"]), hook: text.nullable() }),
   presentation: z.strictObject({ kind: z.enum(["table", "cards", "conversation", "screen", "scene", "hybrid"]), layout: text }),
+  render: renderSpecSchema.optional(),
   execution: z.strictObject({ kernelType: text.nullable() }),
 });
 export type GameSpec = z.infer<typeof gameSpecSchema>;
@@ -76,6 +86,10 @@ export function validateGameSpec(value: unknown): SpecValidation {
   const gap = mechanicsCapabilityGap(spec.generation.requestedMechanics ?? [], kernelType);
   if (gap) fail("execution", gap);
   if (!spec.setup.length) fail("setup", "Initial setup is required.");
+  if (isSpatialPresentationKind(spec.presentation.kind) && !spec.render) {
+    fail("render", RENDER_MISSING_MESSAGE);
+  }
+  if (spec.render) issues.push(...renderSpecIssues(spec.render));
   return { valid: issues.length === 0, issues };
 }
 
@@ -92,6 +106,11 @@ function canonical(value: unknown): string {
     }
     return item;
   });
+}
+
+function currentKernelType(rule: RuleSystem): string | null {
+  const kernel = rule.runtimeSupport.status === "executable" ? rule.runtimeSupport.kernel : null;
+  return kernel?.type ?? null;
 }
 
 /** Project the existing Rule System; do not introduce another generator or rules engine. */
@@ -112,13 +131,64 @@ function createGameSpec(rule: RuleSystem, generation: GenerationMetadata): GameS
     endConditions: kernel ? [{ id: "kernel-end", description: `${kernel.type}: authoritative termination` }] : rule.outcomes.map(({ id, name }) => ({ id, description: name })),
     scoring: kernel ? { kind: "kernel-hook", hook: kernelScoringHook(kernel.type) } : { kind: "none", hook: null },
     presentation: { kind: rule.playSurface.kind, layout: rule.playSurface.layout },
+    ...(rule.presentation.render ? { render: structuredClone(rule.presentation.render) } : {}),
     execution: { kernelType: kernel?.type ?? null },
   };
 }
 
-/** Legacy Rule Systems remain readable without silently claiming a v1 migration. */
+/**
+ * GameSpec v2: spatial surfaces always carry `presentation.render`. A missing
+ * render gets the Kernel default; an untouched platform default follows the
+ * current Kernel; an authored render is never rewritten. Mutates `rule`.
+ */
+export function ensureRuleSystemRender(rule: RuleSystem): void {
+  const kind = rule.playSurface.kind;
+  const current = defaultRenderSpec(currentKernelType(rule), kind);
+  if (!current) return; // non-spatial surface: no 3D declaration required
+  const render = rule.presentation.render;
+  if (!render || (isUntouchedDefaultRender(render, kind) && canonical(render) !== canonical(current))) {
+    rule.presentation.render = current;
+  }
+}
+
+/** Legacy Rule Systems remain readable without silently claiming an executable migration. */
 export function refreshGameSpec(rule: RuleSystem): void {
+  ensureRuleSystemRender(rule);
   if (rule.generation) rule.gameSpec = createGameSpec(rule, rule.generation);
+}
+
+/**
+ * GameSpec v1 → v2 storage migration (G3D-12). The ONLY place that understands
+ * v1. Pure (returns a deep clone) and idempotent.
+ *
+ * - drops the legacy `presentation.theme` (replaced by `render.preset`);
+ * - gives spatial surfaces (table / scene / hybrid) the Kernel default
+ *   `presentation.render` when it is missing;
+ * - version-lifts a stored `schemaVersion: 1` GameSpec IN PLACE (adds the
+ *   projected `render`) instead of regenerating it, so a v1 spec that was stale
+ *   or corrupted stays stale/corrupted and still fails closed. Any other
+ *   schemaVersion (2, or an unknown future one) is left untouched.
+ *
+ * Worker reads (`normalizedRuleSystem`) apply it lazily; the Durable Object
+ * persists the migrated record on its next write. No batch job is needed.
+ */
+export function migrateRuleSystemToV2(rule: RuleSystem): RuleSystem {
+  const clone = structuredClone(rule);
+  const presentation = (clone.presentation && typeof clone.presentation === "object"
+    ? clone.presentation : {}) as RuleSystem["presentation"] & { theme?: unknown };
+  delete presentation.theme;
+  clone.presentation = presentation;
+  ensureRuleSystemRender(clone);
+  const stored = clone.gameSpec as (Omit<GameSpec, "schemaVersion"> & { schemaVersion: number }) | undefined;
+  if (stored && stored.schemaVersion === 1) {
+    const { render: _staleRender, ...rest } = stored;
+    clone.gameSpec = {
+      ...rest,
+      schemaVersion: SCHEMA_VERSION,
+      ...(clone.presentation.render ? { render: structuredClone(clone.presentation.render) } : {}),
+    } as GameSpec;
+  }
+  return clone;
 }
 
 export function ruleSystemSpecIssues(rule: RuleSystem): SpecIssue[] {

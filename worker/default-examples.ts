@@ -3,6 +3,7 @@ import type {
   SourceLibraryEntry,
 } from "../src/creator/project-contract";
 import type { DefaultExampleId } from "../src/creator/default-examples";
+import { defaultRenderSpec } from "../src/creator/render-spec";
 
 function source(
   id: string,
@@ -185,7 +186,7 @@ export function instantiateDefaultExample(
         ],
         outcomes: [{ id: "first-voyage", name: "首航教学局" }],
         presentation: {
-          theme: "harbor-voyage",
+          render: defaultRenderSpec("harbor-voyage-v1", "table"),
           visuals: [{
             provenance: "kit",
             label: "Harbor voyage presentation kit",
@@ -316,7 +317,6 @@ export function instantiateDefaultExample(
         stages: [{ id: "relay", name: "创意接力" }],
         outcomes: [{ id: "relay-complete", name: "回合预算用尽，发言记录可供评议" }],
         presentation: {
-          theme: "idea-relay",
           visuals: [{
             provenance: "kit",
             label: "程序化提示卡与发言记录界面",
@@ -448,7 +448,6 @@ export function instantiateDefaultExample(
         stages: [{ id: "discuss", name: "发言" }, { id: "accuse", name: "指控" }],
         outcomes: [{ id: "reveal", name: "揭晓被指控最多的人" }],
       presentation: {
-        theme: "mistpeak-archive",
         visuals: [{
           provenance: "kit",
           label: "Mistpeak archive presentation kit",
