@@ -1,4 +1,5 @@
 import { gameSpecCapabilityGap } from "../src/creator/game-spec";
+import { defaultRenderSpec } from "../src/creator/render-spec";
 import type {
   BoundImage,
   GenerationPlan,
@@ -681,10 +682,17 @@ export function materializeRuleSystem(input: {
       id: `source-outcome-${index + 1}`,
       name: line.slice(0, 120),
     })),
-    // GameSpec v2: refreshGameSpec fills the Kernel-aware `render` default for
-    // spatial surfaces (G3D-15 will write it explicitly here).
+    // G3D-15: spatial surfaces get an explicit `render` declaration at
+    // generation time. No Kernel is bound yet, so this is the generic tabletop
+    // default; once a configure_* operation binds a spatial Kernel,
+    // ensureRuleSystemRender swaps an untouched default for that Kernel's preset
+    // and bindings (an edited render is kept).
     presentation: {
       ...(input.image ? { image: input.image } : {}),
+      ...(() => {
+        const render = defaultRenderSpec(null, drawAndScoreRule ? "cards" : surface.kind);
+        return render ? { render } : {};
+      })(),
       visuals: input.image
         ? [{
             provenance: "extracted",

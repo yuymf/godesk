@@ -207,7 +207,8 @@ export class CreatorProjects extends DurableObject<Env> {
               operation.op === "configure_worker_placement" ||
               operation.op === "configure_hidden_role" ||
               operation.op === "configure_hand_play" ||
-              operation.op === "configure_conversation_relay",
+              operation.op === "configure_conversation_relay" ||
+              operation.op === "configure_render",
           );
           const affectedEntities: string[] = [];
           const now = new Date().toISOString();
@@ -358,6 +359,17 @@ export class CreatorProjects extends DurableObject<Env> {
           ].includes(reason.message)
         ) {
           return error(reason.message, 409);
+        }
+        if (
+          reason instanceof Error &&
+          ["invalid_render", "render_requires_spatial_surface"].includes(reason.message)
+        ) {
+          return error(
+            reason.message === "invalid_render"
+              ? "3D 渲染声明无效：取值越界、材质未定义、资产未登记许可证或俯仰角区间无效。"
+              : "当前盘面不是桌面 / 场景类，没有 3D 渲染声明可改。",
+            400,
+          );
         }
         if (
           reason instanceof Error &&

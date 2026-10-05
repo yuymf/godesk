@@ -130,6 +130,9 @@ floor.
   `configure_conversation_relay`, `configure_harbor_voyage`, or
   `configure_worker_placement`; score-track
   and related ops are listed in `$edit-and-compile-game`.
+- To change only the 3D look of a spatial surface (water, light, materials,
+  preset), use `configure_render` with a partial `patch`; it never touches Kernel
+  values. See `$edit-and-compile-game`.
 
 ## Authority boundaries
 

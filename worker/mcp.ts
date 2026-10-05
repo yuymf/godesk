@@ -1,5 +1,5 @@
 import { generationMetadataSchema } from "../src/creator/game-spec";
-import { renderSpecSchema } from "../src/creator/render-spec";
+import { renderPatchSchema, renderSpecSchema } from "../src/creator/render-spec";
 import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp";
 import { z } from "zod";
@@ -690,6 +690,11 @@ const operationSchema = z.discriminatedUnion("op", [
     }),
   }),
   z.object({
+    // G3D-15: partial 3D render patch (preset, camera, lighting, water, materials, bindings, motion, audio).
+    op: z.literal("configure_render"),
+    patch: renderPatchSchema,
+  }),
+  z.object({
     op: z.literal("activate_rule_system"),
     ruleSystemId: z.string().min(1),
   }),
@@ -1051,7 +1056,7 @@ export function createGodeskMcpServer(
     {
       title: "Apply a versioned GoDesk patch",
       description:
-        "Atomically add traceable sources or update the active Rule System. If generate-rule-system leaves a pending Generation Plan, call approve_generation_plan here with its planId before compiling; approval applies its proposedRuntime. Stale expectedVersion values apply nothing.",
+        "Atomically add traceable sources or update the active Rule System. Use configure_render with a partial `patch` (e.g. {water:{shallow}}, {lighting:{sun:{elevationDeg}}}, {materials:{piece:{base}}}) to edit the 3D render declaration of a table / scene / hybrid surface; the merged result must pass GameSpec render validation. If generate-rule-system leaves a pending Generation Plan, call approve_generation_plan here with its planId before compiling; approval applies its proposedRuntime. Stale expectedVersion values apply nothing.",
       inputSchema: z.object({
         projectId: z.string().min(1),
         expectedVersion: z.number().int().positive(),
