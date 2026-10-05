@@ -604,7 +604,18 @@ export function RoomView({ sessionId }: { sessionId: string }) {
           winnerSeat={room.state.winnerSeat}
         />
       ) : hexSettlement && catanState ? (
-        <Suspense fallback={<div aria-busy="true">加载 3D 盘面…</div>}>
+        <Suspense
+          fallback={
+            // Same outer box as HexSettlementBoard (HUD + fixed-height .g3d-stage) so the
+            // feedback panel below does not jump when the lazy chunk lands (Room CLS, G3D-05).
+            <div aria-busy="true" className="catan-board hex-settlement-board hex-settlement-board-loading">
+              <div aria-hidden="true" className="catan-hud hex-settlement-hud-placeholder" />
+              <div className="g3d-stage">
+                <span className="sr-only">加载 3D 盘面…</span>
+              </div>
+            </div>
+          }
+        >
           <LazyHexSettlementBoard
             activeSeat={activeSeat}
             busy={busy}

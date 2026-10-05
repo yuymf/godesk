@@ -74,7 +74,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 ## 下一刀
 
-> G3D-05 备注：① 120 秒对局后 draw call 为 162–170，超过 high 档 ≤ 150（初始局面为 140），G3D-07 需要实例化或合批（G3D-04 已合入，其拾取热点叠加层另计）。② 移动画像按 low 档评估，要等 G3D-06 自动分级。③ 测量时（G3D-04 合入前）2D `CatanBoard` 在 412 px 下横向溢出到 451 px，G3D-18 删除 2D 盘面后复测。④ box 无 GPU（llvmpipe / SwiftShader），帧率只是代理值，桌面门需要有硬件 GPU 的机器（A7）。⑤ **新增 §9 问题（待用户决定）**：Lighthouse 基线中首页 LCP（本机 3 173 ms / CI 3 499 ms，阈值 2 500）、Room TBT（本机 4 697 ms，阈值 600；CI 上为 SwiftShader 持续渲染造成的无效值）、Room CLS（CI 0.132，阈值 0.1）未达 §4.6.3。目前这三项阈值不变，级别为 warn；Performance 按「不低于基线」取 CI 3 次最低值（首页 0.81 / Room 0.52）。需要用户选择：收紧回 error（需要先优化），或修改阈值。合入后以 `main` 的 Lighthouse 运行复核。
+> G3D-05 备注：① 120 秒对局后 draw call 为 162–170，超过 high 档 ≤ 150（初始局面为 140），G3D-07 需要实例化或合批（G3D-04 已合入，其拾取热点叠加层另计）。② 移动画像按 low 档评估，要等 G3D-06 自动分级。③ 测量时（G3D-04 合入前）2D `CatanBoard` 在 412 px 下横向溢出到 451 px，G3D-18 删除 2D 盘面后复测。④ box 无 GPU（llvmpipe / SwiftShader），帧率只是代理值，桌面门需要有硬件 GPU 的机器（A7）。⑤ **新增 §9 问题（待用户决定）**：Lighthouse 基线中首页 LCP（本机 3 173 ms / CI 3 499 ms，阈值 2 500）、Room TBT（本机 4 697 ms，阈值 600；CI 上为 SwiftShader 持续渲染造成的无效值）、Room CLS（CI 0.132，阈值 0.1）未达 §4.6.3。目前这三项阈值不变，级别为 warn；Performance 按「不低于基线」取 CI 3 次最低值（首页 0.81 / Room 0.52）。需要用户选择：收紧回 error（需要先优化），或修改阈值。合入后以 `main` 的 Lighthouse 运行复核。⑥ rebase 到 G3D-04 后 Room CLS 回归（0 → 0.243，懒加载盘面把反馈面板下推，Room Performance 跌到 0.43）已在 #110 用同外框占位修复，本机 Room 回到 0.56–0.59、CLS 0，门槛未改（协议 §6.2）。
 
 > G3D-12 备注：`render-asset-registry.ts` 已由 G3D-11 接入 manifest；G3D-15 调整默认 render token 时须兼顾「未改动默认跟随 Kernel」；G3D-14 依赖 G3D-07。
 
