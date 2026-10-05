@@ -61,16 +61,42 @@ Keep Codex edits and manual Web Studio edits on the same optimistic-version path
   (`preset`, `camera`, `lighting`, `water`, `materials`, `bindings`, `motion`,
   `audio`). GoDesk fills a Kernel-specific default and projects it into
   `gameSpec.render`; the Executable Kernel stays the only rules authority.
-- To change the look (water colour, sun elevation, piece material …), read the
-  `rule-system` view, edit the needed `presentation.render` fields, and send the
-  whole `presentation` back with `update_rule_system`. Omitting `render` keeps
-  the current one; `presentation.theme` no longer exists (a legacy value is
-  ignored).
-- A render is rejected unless every `bindings[].material` is a `materials` key,
-  `camera.minPolarDeg < camera.maxPolarDeg`, and every asset id is
+- New spatial projects get an explicit render at generation time; when the
+  Generation Plan binds a spatial Kernel (`hex-settlement-v1`,
+  `disc-flipping-v1`, `harbor-voyage-v1`, `worker-placement-v1`,
+  `network-route-v1`), an untouched default is swapped for that Kernel's preset
+  and bindings. An edited render is kept.
+- To change the look, send one `configure_render` operation with a partial
+  `patch` through `apply_project_patch`. Sections merge one level deep
+  (`camera`, `lighting.sun` / `hemisphere` / `shadow`, `water`, `motion`,
+  `audio` levels); `materials` merges per key (a new key must be a complete
+  material: `base`, `roughness`, `metalness`, `pattern`); `bindings` and
+  `audio.cues` replace wholesale. Prefer one focused patch per creator request
+  and re-read the `rule-system` view after each.
+- A patch is rejected (400, nothing changes) when a value is out of range, a key
+  is unknown, `bindings[].material` is not a `materials` key,
+  `camera.minPolarDeg >= camera.maxPolarDeg`, or an asset id is not
   licence-cleared in the asset manifest. Never send scripts or shader source.
-- Non-spatial surfaces (`cards`, `conversation`, `screen`) have no render.
-  A dedicated `configure_render` patch operation arrives with G3D-15.
+- `update_rule_system` with a whole `presentation` still works; omitting
+  `render` keeps the current one, and `presentation.theme` no longer exists (a
+  legacy value is ignored).
+- Non-spatial surfaces (`cards`, `conversation`, `screen`) have no render;
+  `configure_render` on them is rejected.
+
+### Example: three render edits in a row
+
+Each step re-reads the project version and uses a new idempotency key.
+
+1. "海水再浅一点"
+   `{"op":"configure_render","patch":{"water":{"enabled":true,"shallow":"#3fa7c9"}}}`
+2. "太阳低一点，像傍晚"
+   `{"op":"configure_render","patch":{"lighting":{"sun":{"elevationDeg":24}}}}`
+3. "棋子换成深色金属"
+   `{"op":"configure_render","patch":{"materials":{"piece":{"base":"#222831","roughness":0.3,"metalness":0.2}}}}`
+
+After each step, confirm the changed field in `presentation.render` (and the
+projected `gameSpec.render`), then compile a new Build when the creator wants to
+play it.
 
 ## Build discipline
 

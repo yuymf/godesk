@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { HOBBYIST_STARTERS } from "../src/creator/hobbyist-starters";
+import { defaultRenderSpec } from "../src/creator/render-spec";
 import {
   createGenerationPlan,
   inferredDrawAndScoreRule,
@@ -221,6 +222,8 @@ describe("rulebook Rule System materialization", () => {
       { id: "source-action-2", label: "拿走 2 枚" },
     ]);
     expect(ruleSystem.playSurface.kind).toBe("table");
+    // G3D-15: spatial surfaces get an explicit render declaration at generation time.
+    expect(ruleSystem.presentation.render).toEqual(defaultRenderSpec(null, "table"));
     expect(ruleSystem.entities).toContainEqual(expect.objectContaining({
       kind: "token",
       quantity: 15,

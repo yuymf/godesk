@@ -43,7 +43,11 @@ billing are explicitly out of scope.
    `presentation.render` (GameSpec v2; see `$edit-and-compile-game`). Presentation
    Floor fails if it is missing or invalid. Do not try to express 3D art through
    `presentation.theme` (removed) or by uploading textures that are not
-   licence-cleared in the asset manifest.
+   licence-cleared in the asset manifest. A visual direction that maps to the 3D
+   table (water colour, light, piece material, preset) is a `configure_render`
+   patch, not a generated image. Save the creator's wording as the `brief`
+   source first, then patch one field group at a time and re-read
+   `presentation.render` after each.
 
 Generated output remains replaceable Source Library material; it never rewrites
 rules or removes source provenance.

@@ -11,6 +11,8 @@ import {
   renderSpecIssues,
   renderSpecSchema,
   type RenderSpec,
+  applyRenderPatch,
+  patchRenderSpec,
 } from "./render-spec";
 
 const KERNELS = [...Object.keys(KERNEL_CAPABILITIES), null];
@@ -149,5 +151,57 @@ describe("renderSpecIssues (validateGameSpec rules, SPEC §3.6)", () => {
     expect(validateGameSpec(badMaterial).issues).toContainEqual({ path: "render.bindings", message: "render.bindings: 未知材质 nope" });
     const v1 = { ...spec, schemaVersion: 1 };
     expect(validateGameSpec(v1).valid).toBe(false);
+  });
+});
+
+describe("configure_render patch (G3D-15)", () => {
+  const base = () => defaultRenderSpec("disc-flipping-v1", "table")!;
+
+  it("merges sections one level deep and leaves the input untouched", () => {
+    const render = base();
+    const snapshot = structuredClone(render);
+    const result = patchRenderSpec(render, {
+      water: { shallow: "#3fa7c9" },
+      lighting: { sun: { elevationDeg: 24 }, exposure: 1.2 },
+      materials: { piece: { base: "#222831" } },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.render.water).toEqual({ ...snapshot.water, shallow: "#3fa7c9" });
+    expect(result.render.lighting.sun).toEqual({ ...snapshot.lighting.sun, elevationDeg: 24 });
+    expect(result.render.lighting.exposure).toBe(1.2);
+    expect(result.render.materials.piece).toEqual({ ...snapshot.materials.piece, base: "#222831" });
+    expect(result.render.bindings).toEqual(snapshot.bindings);
+    expect(render).toEqual(snapshot);
+  });
+
+  it("replaces bindings wholesale and accepts a complete new material", () => {
+    const result = patchRenderSpec(base(), {
+      materials: { brass: { base: "#b08d57", roughness: 0.35, metalness: 0.8, pattern: "none" } },
+      bindings: [{ objectKind: "disc", mesh: "disc", material: "brass", scale: 0.9 }],
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.render.bindings).toEqual([{ objectKind: "disc", mesh: "disc", material: "brass", scale: 0.9 }]);
+  });
+
+  it.each([
+    ["empty", {}],
+    ["unknown top-level key", { fog: { density: 1 } }],
+    ["unknown nested key", { water: { colour: "#000000" } }],
+    ["out of range", { lighting: { sun: { elevationDeg: 5 } } }],
+    ["bad colour", { water: { shallow: "blue" } }],
+    ["unknown material in bindings", { bindings: [{ objectKind: "disc", mesh: "disc", material: "nope", scale: 1 }] }],
+    ["incomplete new material", { materials: { brass: { base: "#b08d57" } } }],
+    ["unlicensed texture", { materials: { piece: { texture: "textures/not-registered" } } }],
+    ["inverted polar range", { camera: { minPolarDeg: 70, maxPolarDeg: 30 } }],
+  ])("rejects %s", (_label, patch) => {
+    const result = patchRenderSpec(base(), patch);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues.length).toBeGreaterThan(0);
+  });
+
+  it("applyRenderPatch alone does not validate (callers must)", () => {
+    const merged = applyRenderPatch(base(), { camera: { minPolarDeg: 70, maxPolarDeg: 30 } });
+    expect(merged.camera.minPolarDeg).toBe(70);
   });
 });
