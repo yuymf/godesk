@@ -14,6 +14,9 @@ importers:
       agents:
         specifier: ^0.20.1
         version: 0.20.1(@babel/core@7.29.7)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260729.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@modelcontextprotocol/server@2.0.0)(react@19.3.0)(rolldown@1.2.1)(vite@7.3.6(@types/node@26.6.4)(yaml@2.9.0))(zod@4.6.5)
+      howler:
+        specifier: 2.2.4
+        version: 2.2.4
       jose:
         specifier: ^6.2.12
         version: 6.2.12
@@ -57,6 +60,9 @@ importers:
       '@size-limit/file':
         specifier: 14.1.0
         version: 14.1.0(size-limit@14.1.0)
+      '@types/howler':
+        specifier: 2.2.13
+        version: 2.2.13
       '@types/react':
         specifier: ^19.3.0
         version: 19.3.0
@@ -1294,6 +1300,9 @@ packages:
   '@types/glob@8.1.0':
     resolution: {integrity: sha512-IO+MJPVhoqz+28h1qLAcBEH2+xHMK6MTyHJc7MTnnYb6wsoLR29POVGJ7LycmVXIqyy/4/2ShP5sUwTXuOwb/w==}
 
+  '@types/howler@2.2.13':
+    resolution: {integrity: sha512-40+EBjqIHHrC4VShlz/7i0lBUsE3QkgzZinQQji74Hd8sBkJZUBaT7LWFLK6rcabsDOOQpoMbEJvtaFQwxOu/g==}
+
   '@types/jsesc@2.5.1':
     resolution: {integrity: sha512-9VN+6yxLOPLOav+7PwjZbxiID2bVaeq0ED4qSQmdQTdjnXJSaCVKTR58t15oqH1H5t8Ng2ZX1SabJVoN9Q34bw==}
 
@@ -2197,6 +2206,9 @@ packages:
   hono@4.13.13:
     resolution: {integrity: sha512-CQ46U0ZkAGmbT/4UxdzzGJpacP2IeKgY4a5/tOI9AABbpOMfK739wfDXmv1usCk+3RkKj1hQy4/fjhiwa2xlrA==}
     engines: {node: '>=16.9.0'}
+
+  howler@2.2.4:
+    resolution: {integrity: sha512-iARIBPgcQrwtEr+tALF+rapJ8qSc+Set2GJQl7xT1MQzWaVkFebdJhR3alVlSiUf5U7nAANKuj3aWpwerocD5w==}
 
   http-errors@2.0.1:
     resolution: {integrity: sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==}
@@ -4666,6 +4678,8 @@ snapshots:
       '@types/minimatch': 5.1.2
       '@types/node': 20.5.6
 
+  '@types/howler@2.2.13': {}
+
   '@types/jsesc@2.5.1': {}
 
   '@types/language-tags@1.0.4': {}
@@ -5623,6 +5637,8 @@ snapshots:
       function-bind: 1.1.2
 
   hono@4.13.13: {}
+
+  howler@2.2.4: {}
 
   http-errors@2.0.1:
     dependencies:
