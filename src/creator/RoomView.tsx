@@ -47,7 +47,12 @@ import type { HarborVoyageState } from "../runtime/harbor-voyage";
 import type { WorkerPlacementState } from "../runtime/worker-placement";
 import { HarborVoyageBoard } from "./HarborVoyageBoard";
 import { OthelloBoard } from "./OthelloBoard";
-import { CatanBoard, type CatanBoardState } from "./CatanBoard";
+import type { HexSettlementBoardState } from "./HexSettlementBoard";
+
+const LazyHexSettlementBoard = lazy(async () => {
+  const mod = await import("./HexSettlementBoard");
+  return { default: mod.HexSettlementBoard };
+});
 import { NetworkRouteBoard, type NetworkRouteBoardState } from "./NetworkRouteBoard";
 import { AuctionBiddingBoard } from "./AuctionBiddingBoard";
 import { HandPlayBoard } from "./HandPlayBoard";
@@ -60,10 +65,6 @@ import {
   writeStoredSeatClaim,
 } from "./studio-utils";
 
-const LazySceneHost = lazy(async () => {
-  const mod = await import("../render3d");
-  return { default: mod.SceneHost };
-});
 
 export function RoomView({ sessionId }: { sessionId: string }) {
   const [room, setRoom] = useState<SharedSession>();
@@ -603,14 +604,11 @@ export function RoomView({ sessionId }: { sessionId: string }) {
           winnerSeat={room.state.winnerSeat}
         />
       ) : hexSettlement && catanState ? (
-        <div className="room-hex-settlement-surface">
-          <Suspense fallback={<div aria-busy="true">加载 3D 桌面…</div>}>
-            <LazySceneHost className="room-g3d-scene-host" hexSettlement={catanState} />
-          </Suspense>
-          <CatanBoard
+        <Suspense fallback={<div aria-busy="true">加载 3D 盘面…</div>}>
+          <LazyHexSettlementBoard
             activeSeat={activeSeat}
             busy={busy}
-            catan={catanState as CatanBoardState}
+            catan={catanState as HexSettlementBoardState}
             enabled={isMyTurn}
             locale={locale}
             onAct={(actionId, payload) => {
@@ -620,7 +618,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
             viewerSeat={seat}
             winnerSeat={room.state.winnerSeat}
           />
-        </div>
+        </Suspense>
       ) : networkRoute && networkRouteState ? (
         <NetworkRouteBoard
           activeSeat={activeSeat}

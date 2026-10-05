@@ -5640,3 +5640,18 @@ summary:focus-visible {
     flex-wrap: wrap;
   }
 }
+}
+
+/* G3D-04/18 — 3D stage: explicit height so the WebGL canvas never overflows into HUD/actions */
+.g3d-stage {
+  position: relative;
+  width: 100%;
+  height: clamp(280px, 56vh, 620px);
+  overflow: hidden;
+  border-radius: var(--radius-md, .85rem);
+  box-shadow: var(--shadow-soft, inset 0 0 0 1px rgb(0 0 0 / 12%));
+}
+.g3d-stage canvas { display: block; width: 100% !important; height: 100% !important; }
+@media (max-width: 680px) {
+  .g3d-stage { height: clamp(260px, 46vh, 420px); }
+}

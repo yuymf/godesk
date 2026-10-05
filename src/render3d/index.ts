@@ -9,3 +9,10 @@ export {
   type SceneNodeKind,
   type SceneVec3,
 } from "./scene-model";
+
+export {
+  matchPickToLegalAction,
+  pickFromPointerEvent,
+  type PickTarget,
+  type PickableLegalAction,
+} from "./pick";
