@@ -489,6 +489,168 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "orderRef": "n/a",
       "status": "cleared"
     }
+  },
+{
+    "id": "illustration/seat-0",
+    "file": "assets/illustrations/brand/seat-0.webp",
+    "kind": "illustration",
+    "bytes": 7656,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-brand-art.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "PIL 品牌插画",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/seat-1",
+    "file": "assets/illustrations/brand/seat-1.webp",
+    "kind": "illustration",
+    "bytes": 8164,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-brand-art.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "PIL 品牌插画",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/seat-2",
+    "file": "assets/illustrations/brand/seat-2.webp",
+    "kind": "illustration",
+    "bytes": 8268,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-brand-art.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "PIL 品牌插画",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/seat-3",
+    "file": "assets/illustrations/brand/seat-3.webp",
+    "kind": "illustration",
+    "bytes": 7930,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-brand-art.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "PIL 品牌插画",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/island-flourish",
+    "file": "assets/illustrations/brand/island-flourish.webp",
+    "kind": "illustration",
+    "bytes": 15112,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-brand-art.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "PIL 品牌插画",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/loading-tidewell",
+    "file": "assets/illustrations/brand/loading-tidewell.webp",
+    "kind": "illustration",
+    "bytes": 66668,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-brand-art.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "PIL 品牌插画",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "model/decor",
+    "file": "assets/models/decor.glb",
+    "kind": "model",
+    "bytes": 41924,
+    "tier": "all",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://kenney.nl/assets/nature-kit",
+      "author": "Kenney",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "选型合并 + meshopt；按风格指南使用（松/灌/岩/麦/砖垛/浮木）",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/sea-normal",
+    "file": "assets/textures/ktx2/sea-normal.ktx2",
+    "kind": "texture",
+    "bytes": 70515,
+    "tier": "high-medium",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-noise-textures.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "程序化噪声 + toktx UASTC",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "texture/foam-noise",
+    "file": "assets/textures/ktx2/foam-noise.ktx2",
+    "kind": "texture",
+    "bytes": 9971,
+    "tier": "high-medium",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-noise-textures.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "程序化噪声 + toktx ETC1S",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
   }
 ]
 );
