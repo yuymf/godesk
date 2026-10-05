@@ -13,7 +13,7 @@
 | ui/paper-noise | assets/ui/paper-noise.webp | 羊皮纸纹底图 | 程序化 | scripts/gen-paper-noise.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | 无 | G3D-23 |
 | ui/paper-edge-panel | assets/ui/paper-edge-panel.svg | 面板纸边撕口 mask | 自制 | assets/ui/paper-edge-panel.svg | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | 无 | G3D-23 |
 | ui/paper-edge-card | assets/ui/paper-edge-card.svg | 卡片纸边撕口 mask | 自制 | assets/ui/paper-edge-card.svg | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | 无 | G3D-23 |
-| ui/ink-icons | assets/ui/ink-icons.svg | 墨线图标 sprite（20） | 自制 | assets/ui/ink-icons.svg | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | 无 | G3D-23 |
+| ui/ink-icons | assets/ui/ink-icons.svg | 墨线图标 sprite（20） | 自制 | assets/ui/ink-icons.svg | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | G3D-ART：加层线稿（仍 stroke 为主）；非 AI、非 settlecoast | G3D-23/G3D-ART |
 | font/fraunces-display | assets/fonts/fraunces-latin-display.woff2 | Fraunces Display 拉丁子集 | OFL | https://github.com/google/fonts/tree/main/ofl/fraunces | OFL-1.1 | Underscore Type / Google Fonts (Fraunces) | 2026-10-06 | 是 | 实例化 Soft=50 opsz=36 wght=600 并 pyftsubset 拉丁子集为 woff2 | G3D-23 |
 | audio/sfx-core | assets/audio/sfx-core.mp3 | 核心 SFX sprite（15） | 自制 | scripts/build-sfx-sprites.mjs | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | Kenney CC0 + 程序化片段组装 | G3D-26 |
 | sfx/hover | assets/audio/sfx-core.mp3 (sprite fragment) | sfx/hover SFX 片段 | CC0 | https://opengameart.org/content/51-ui-sound-effects-buttons-switches-and-clicks | CC0-1.0 | Kenney | 2026-10-06 | 是 | 响度归一化并入 sprite | G3D-26 |
@@ -52,20 +52,20 @@
 | music/tide-harbor | assets/audio/music-tide-harbor.mp3 | Tide Harbor | CC0 | https://opengameart.org/content/the-field-of-dreams | CC0-1.0 | pauliuw | 2026-10-06 | 是 | 裁剪/循环至 120s、96kbps mp3、响度归一 | G3D-27 |
 | music/crystal-shore | assets/audio/music-crystal-shore.mp3 | Crystal Shore | CC0 | https://opengameart.org/content/crystal-cave-song18 | CC0-1.0 | cynicmusic / pixelsphere.org | 2026-10-06 | 是 | 裁剪/循环至 120s、96kbps mp3、响度归一 | G3D-27 |
 | music/observing-star | assets/audio/music-observing-star.mp3 | Observing Star | CC0 | https://opengameart.org/content/another-space-background-track | CC0-1.0 | yd | 2026-10-06 | 是 | 裁剪/循环至 120s、96kbps mp3、响度归一 | G3D-27 |
-| illustration/resource-wood | assets/illustrations/cards/resource-wood.webp | 资源卡·松林 | 程序化 | scripts/gen-card-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸插画（风格指南调色） | G3D-24 |
-| illustration/resource-brick | assets/illustrations/cards/resource-brick.webp | 资源卡·赭土 | 程序化 | scripts/gen-card-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸插画（风格指南调色） | G3D-24 |
-| illustration/resource-sheep | assets/illustrations/cards/resource-sheep.webp | 资源卡·盐草 | 程序化 | scripts/gen-card-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸插画（风格指南调色） | G3D-24 |
-| illustration/resource-wheat | assets/illustrations/cards/resource-wheat.webp | 资源卡·麦垄 | 程序化 | scripts/gen-card-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸插画（风格指南调色） | G3D-24 |
-| illustration/resource-ore | assets/illustrations/cards/resource-ore.webp | 资源卡·礁岩 | 程序化 | scripts/gen-card-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸插画（风格指南调色） | G3D-24 |
-| illustration/dev-fog-signal | assets/illustrations/cards/dev-fog-signal.webp | 发展卡·雾灯令 | 程序化 | scripts/gen-card-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸插画（风格指南调色） | G3D-24 |
-| illustration/dev-tide-plenty | assets/illustrations/cards/dev-tide-plenty.webp | 发展卡·潮运 | 程序化 | scripts/gen-card-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸插画（风格指南调色） | G3D-24 |
-| illustration/dev-harbor-charter | assets/illustrations/cards/dev-harbor-charter.webp | 发展卡·商港特许 | 程序化 | scripts/gen-card-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸插画（风格指南调色） | G3D-24 |
-| illustration/seat-0 | assets/illustrations/brand/seat-0.webp | 座位徽记 0 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸品牌插画 | G3D-25 |
-| illustration/seat-1 | assets/illustrations/brand/seat-1.webp | 座位徽记 1 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸品牌插画 | G3D-25 |
-| illustration/seat-2 | assets/illustrations/brand/seat-2.webp | 座位徽记 2 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸品牌插画 | G3D-25 |
-| illustration/seat-3 | assets/illustrations/brand/seat-3.webp | 座位徽记 3 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸品牌插画 | G3D-25 |
-| illustration/island-flourish | assets/illustrations/brand/island-flourish.webp | 岛名花饰 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸品牌插画 | G3D-25 |
-| illustration/loading-tidewell | assets/illustrations/brand/loading-tidewell.webp | 加载画 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸品牌插画 | G3D-25 |
+| illustration/resource-wood | assets/illustrations/cards/resource-wood.webp | 资源卡·松林 | 程序化 | scripts/gen-card-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | G3D-ART：分层渲染+线稿+CC0 Paper001 底纹；部分卡复合自有 mesh 的 Cycles CPU 渲染；非 AI | G3D-24 |
+| illustration/resource-brick | assets/illustrations/cards/resource-brick.webp | 资源卡·赭土 | 程序化 | scripts/gen-card-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | G3D-ART：分层渲染+线稿+CC0 Paper001 底纹；部分卡复合自有 mesh 的 Cycles CPU 渲染；非 AI | G3D-24 |
+| illustration/resource-sheep | assets/illustrations/cards/resource-sheep.webp | 资源卡·盐草 | 程序化 | scripts/gen-card-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | G3D-ART：分层渲染+线稿+CC0 Paper001 底纹；部分卡复合自有 mesh 的 Cycles CPU 渲染；非 AI | G3D-24 |
+| illustration/resource-wheat | assets/illustrations/cards/resource-wheat.webp | 资源卡·麦垄 | 程序化 | scripts/gen-card-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | G3D-ART：分层渲染+线稿+CC0 Paper001 底纹；部分卡复合自有 mesh 的 Cycles CPU 渲染；非 AI | G3D-24 |
+| illustration/resource-ore | assets/illustrations/cards/resource-ore.webp | 资源卡·礁岩 | 程序化 | scripts/gen-card-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | G3D-ART：分层渲染+线稿+CC0 Paper001 底纹；部分卡复合自有 mesh 的 Cycles CPU 渲染；非 AI | G3D-24 |
+| illustration/dev-fog-signal | assets/illustrations/cards/dev-fog-signal.webp | 发展卡·雾灯令 | 程序化 | scripts/gen-card-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | G3D-ART：分层渲染+线稿+CC0 Paper001 底纹；部分卡复合自有 mesh 的 Cycles CPU 渲染；非 AI | G3D-24 |
+| illustration/dev-tide-plenty | assets/illustrations/cards/dev-tide-plenty.webp | 发展卡·潮运 | 程序化 | scripts/gen-card-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | G3D-ART：分层渲染+线稿+CC0 Paper001 底纹；部分卡复合自有 mesh 的 Cycles CPU 渲染；非 AI | G3D-24 |
+| illustration/dev-harbor-charter | assets/illustrations/cards/dev-harbor-charter.webp | 发展卡·商港特许 | 程序化 | scripts/gen-card-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | G3D-ART：分层渲染+线稿+CC0 Paper001 底纹；部分卡复合自有 mesh 的 Cycles CPU 渲染；非 AI | G3D-24 |
+| illustration/seat-0 | assets/illustrations/brand/seat-0.webp | 座位徽记 0 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | G3D-ART：分层渲染+线稿+CC0 Paper001；loading/部分卡复合自有 mesh Cycles；非 AI | G3D-25 |
+| illustration/seat-1 | assets/illustrations/brand/seat-1.webp | 座位徽记 1 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | G3D-ART：分层渲染+线稿+CC0 Paper001；loading/部分卡复合自有 mesh Cycles；非 AI | G3D-25 |
+| illustration/seat-2 | assets/illustrations/brand/seat-2.webp | 座位徽记 2 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | G3D-ART：分层渲染+线稿+CC0 Paper001；loading/部分卡复合自有 mesh Cycles；非 AI | G3D-25 |
+| illustration/seat-3 | assets/illustrations/brand/seat-3.webp | 座位徽记 3 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | G3D-ART：分层渲染+线稿+CC0 Paper001；loading/部分卡复合自有 mesh Cycles；非 AI | G3D-25 |
+| illustration/island-flourish | assets/illustrations/brand/island-flourish.webp | 岛名花饰 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | G3D-ART：分层渲染+线稿+CC0 Paper001；loading/部分卡复合自有 mesh Cycles；非 AI | G3D-25 |
+| illustration/loading-tidewell | assets/illustrations/brand/loading-tidewell.webp | 加载画 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | G3D-ART：分层渲染+线稿+CC0 Paper001；loading/部分卡复合自有 mesh Cycles；非 AI | G3D-25 |
 | model/decor | assets/models/decor.glb | 地形装饰合集 decor.glb | CC0 | https://kenney.nl/assets/nature-kit | CC0-1.0 | Kenney | 2026-10-06 | 是 | 选型合并 + meshopt；按风格指南使用（松/灌/岩/麦/砖垛/浮木） | G3D-19 |
 | texture/sea-normal | assets/textures/ktx2/sea-normal.ktx2 | 海面法线噪声 T-12 | 程序化 | scripts/gen-noise-textures.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | 程序化噪声 + toktx UASTC | G3D-19 |
 | texture/foam-noise | assets/textures/ktx2/foam-noise.ktx2 | 泡沫噪声 T-13 | 程序化 | scripts/gen-noise-textures.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | 程序化噪声 + toktx ETC1S | G3D-19 |
@@ -138,3 +138,7 @@
 | model/pieces | assets/models/pieces.glb | 棋子合集 pieces.glb | 自制 | scripts/blender/ | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | 渔村/港镇/雾灯/栈道/羊 bpy 自制 meshopt | G3D-20 |
 | model/sheep | assets/models/sheep.glb | 羊（G3D-19 补） | 自制 | scripts/blender/ | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | bpy 低模羊 | G3D-19 |
 | model/props | assets/models/props.glb | 场景道具 props.glb | 自制 | scripts/blender/gen_props.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | 码头/船×2/骰子/托盘/边框 bpy meshopt | G3D-21 |
+
+## G3D-ART 生成辅料（不入运行时清单）
+
+- `scripts/data/paper001-color-512.jpg`：ambientCG [Paper001](https://ambientcg.com/a/Paper001) **CC0-1.0** Color 裁 512，仅供 `gen-card-art.py` / `gen-brand-art.py` 合成羊皮纸底；不部署、不进 `ASSET_MANIFEST`。成品卡/品牌仍登记为 `LicenseRef-GoDesk-Original`（修改说明列已记 CC0 底纹）。
