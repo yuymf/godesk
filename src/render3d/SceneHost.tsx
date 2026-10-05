@@ -277,14 +277,6 @@ export function SceneHost({
 
     const contentRoot = new Scene();
     scene.add(contentRoot);
-    // G3D-05 TEMP over-budget proof: 200 extra meshes (reverted before merge).
-    const overBudgetGeometry = new BoxGeometry(0.01, 0.01, 0.01);
-    const overBudgetMaterial = new MeshStandardMaterial();
-    for (let i = 0; i < 200; i += 1) {
-      const extra = new Mesh(overBudgetGeometry, overBudgetMaterial);
-      extra.position.set((i % 20) * 0.05, -5, Math.floor(i / 20) * 0.05);
-      scene.add(extra);
-    }
     contentRootRef.current = contentRoot;
     reconcileHostRef.current = buildHost(contentRoot);
     const hitRoot = new Scene();
