@@ -13,7 +13,7 @@
 | 任务范围 | G3D-01 至 G3D-27；里程碑 M0–M5；人日上限 91 |
 | 代码基线 | `yuymf/godesk` `main` @ `60780f736c7f554482bdcffa6c4202dd83ca7637` |
 | 状态文件维护人 | 劳埃德(工程) |
-| 最近更新 | 2026-10-05（Asia/Shanghai） |
+| 最近更新 | 2026-10-06（Asia/Shanghai） |
 
 ## 硬约束（三条）
 
@@ -25,9 +25,9 @@
 
 | 项 | 值 |
 | --- | --- |
-| 里程碑 | **M0 治理**（未开始） |
+| 里程碑 | **M0 治理**（进行中） |
 | 本阶段出口 | G3D-01：ADR 0014 合并；3D 禁令常量与技能措辞删除 |
-| Bootstrap | 进行中：落地本状态文件与 prompt-trace 约定（docs-only） |
+| Bootstrap | PR #102 仍 open，尚未合并（`feat/g3d-bootstrap-status`） |
 
 ## 已完成
 
@@ -41,24 +41,27 @@
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
-| Bootstrap：状态骨架 + prompt-trace 约定 | 劳埃德(工程) | `feat/g3d-bootstrap-status` | docs-only；不含产品代码 |
+| Bootstrap：状态骨架 + prompt-trace 约定 | 劳埃德(工程) | `feat/g3d-bootstrap-status` / PR #102 | docs-only；open，未合并 |
+| G3D-01：ADR 0014 + 删除旧 2D 限定常量与技能措辞 | 劳埃德(工程) | `feat/g3d-01-adr-0014` / PR TBD | 本分支进行中；等待调用方提交并开 PR |
 
 ## 阻塞
 
 | 项 | 原因 | 解除条件 |
 | --- | --- | --- |
-| C2C bridge 就绪性 | 本 bootstrap 刀未在本环境验证 C2C / Codex bridge 是否可用；由并行检查跟进 | 并行检查确认 bridge 可用，或记录明确失败原因并换刀路径；coding 刀开工前必须解除 |
+| C2C ChatGPT 侧 connector | ChatGPT 侧等待用户删除并重建 `Codex with ChatGPT · godesk` connector，使用新的 server URL；本地 bridge 在固定域名上已 green | 用户完成删除 + 重建 connector，ChatGPT 侧显示 Ready 后恢复 C2C plan/review |
 
 ## 下一刀
 
-1. 合并本 bootstrap PR（docs-only）。
-2. **G3D-01（M0）**：提交 ADR 0014，删除 2D 限定常量与技能措辞。Coding 刀必须走 C2C + goal-mode，并在 `docs/prompt-trace/` 留轨迹。
+1. 提交并打开 **G3D-01（M0）** PR：ADR 0014、旧 2D 限定常量与技能措辞删除。
+2. 合并或关闭 bootstrap PR #102 的状态分歧，确保主线含本状态文件。
+3. 下一刀进入 **M1：G3D-02 / G3D-03 / G3D-04 / G3D-18**。
 
 ## 开着的 PR / 分支
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
 | `feat/g3d-bootstrap-status` | [#102](https://github.com/yuymf/godesk/pull/102) | `docs/G3D-STATUS.md`、`docs/G3D-SPEC-POINTER.md`、`docs/prompt-trace/` | open |
+| `feat/g3d-01-adr-0014` | TBD | ADR 0014、删除旧 2D 限定常量与技能措辞、G3D-01 prompt-trace | local in progress |
 
 ## 修订记录
 
@@ -66,3 +69,4 @@
 | --- | --- | --- |
 | 2026-10-05 | 初创：硬约束三条、M0 未开始、bootstrap 进行中、C2C bridge 阻塞行、下一刀指向 G3D-01 | 劳埃德(工程) |
 | 2026-10-05 | 回填开着的 PR：#102 | 劳埃德(工程) |
+| 2026-10-06 | G3D-01 开工：M0 标为进行中；记录 `feat/g3d-01-adr-0014`、PR TBD、#102 仍 open；阻塞项改为 ChatGPT 侧 connector 重建；下一刀指向 M1 G3D-02 / 03 / 04 / 18 | 劳埃德(工程) |

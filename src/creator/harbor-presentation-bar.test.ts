@@ -7,18 +7,9 @@ import {
 import { HarborVoyageBoard } from "./HarborVoyageBoard";
 
 describe("harbor presentation bar contract (W4-03)", () => {
-  it("declares settlecoast as a 2D presentation bar, never a 3D port", () => {
-    expect(HARBOR_PRESENTATION_BAR.dimensionality).toBe("2d");
+  it("declares the harbor flagship visual reference", () => {
     expect(HARBOR_PRESENTATION_BAR.flagshipExample).toBe("港口十三号");
     expect(HARBOR_PRESENTATION_BAR.visualReference).toBe("settlecoast");
-    expect(HARBOR_PRESENTATION_BAR.never).toEqual(
-      expect.arrayContaining([
-        "WebGL",
-        "3D engine",
-        "GameFactory-3D",
-        "build settlecoast in 3D",
-      ]),
-    );
   });
 
   it("exports spectator landmarks for cargo tracks and dock groups", () => {
