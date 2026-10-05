@@ -37,6 +37,24 @@ export const ASSET_MANIFEST = Object.freeze([
     }
   },
   {
+    "id": "lobby/hex-settlement-thumb",
+    "file": "public/lobby/hex-settlement-thumb.webp",
+    "kind": "ui",
+    "bytes": 4022,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/render-poster.mjs",
+      "author": "GoDesk Track A",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "无",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+  {
     "id": "ui/paper-noise",
     "file": "assets/ui/paper-noise.webp",
     "kind": "ui",
