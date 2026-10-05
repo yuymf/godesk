@@ -424,3 +424,97 @@ export function isUntouchedDefaultRender(render: RenderSpec, kind: PlaySurfaceKi
   );
   return untouchedDefaults.has(canonical(render));
 }
+
+/*
+ * G3D-15 — `configure_render`: a zod-validated partial patch over the current
+ * render declaration. Sections merge one level deep (camera / lighting.* /
+ * water / motion / audio scalars); `materials` merges per key (a new key must
+ * end up a complete material); `bindings` and `audio.cues` replace wholesale.
+ * The merged result must still pass `renderSpecSchema` + `renderSpecIssues`.
+ */
+const renderShape = renderSpecSchema.shape;
+const lightingShape = renderShape.lighting.shape;
+
+export const renderPatchSchema = z.strictObject({
+  preset: renderShape.preset.optional(),
+  camera: renderShape.camera.partial().optional(),
+  lighting: z.strictObject({
+    sun: lightingShape.sun.partial().optional(),
+    hemisphere: lightingShape.hemisphere.partial().optional(),
+    shadow: lightingShape.shadow.partial().optional(),
+    exposure: lightingShape.exposure.optional(),
+  }).optional(),
+  water: renderShape.water.partial().optional(),
+  materials: z.record(materialKey, materialSchema.partial()).optional(),
+  bindings: renderShape.bindings.optional(),
+  motion: renderShape.motion.partial().optional(),
+  audio: z.strictObject({
+    master: unit.optional(),
+    sfx: unit.optional(),
+    music: unit.optional(),
+    cues: renderShape.audio.shape.cues.optional(),
+    ambience: renderShape.audio.shape.ambience.optional(),
+    musicTracks: renderShape.audio.shape.musicTracks.optional(),
+  }).optional(),
+}).refine((patch) => Object.keys(patch).length > 0, { message: "render patch is empty" });
+
+export type RenderPatch = z.infer<typeof renderPatchSchema>;
+
+function definedEntries<T extends object>(value: T | undefined): Partial<T> {
+  if (!value) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter(([, entry]) => entry !== undefined),
+  ) as Partial<T>;
+}
+
+/** Pure merge; callers validate the result with `renderSpecSchema` + `renderSpecIssues`. */
+export function applyRenderPatch(render: RenderSpec, patch: RenderPatch): RenderSpec {
+  const next = structuredClone(render);
+  if (patch.preset) next.preset = patch.preset;
+  if (patch.camera) Object.assign(next.camera, definedEntries(patch.camera));
+  if (patch.lighting) {
+    if (patch.lighting.sun) Object.assign(next.lighting.sun, definedEntries(patch.lighting.sun));
+    if (patch.lighting.hemisphere) Object.assign(next.lighting.hemisphere, definedEntries(patch.lighting.hemisphere));
+    if (patch.lighting.shadow) Object.assign(next.lighting.shadow, definedEntries(patch.lighting.shadow));
+    if (patch.lighting.exposure !== undefined) next.lighting.exposure = patch.lighting.exposure;
+  }
+  if (patch.water) Object.assign(next.water, definedEntries(patch.water));
+  if (patch.materials) {
+    for (const [key, material] of Object.entries(patch.materials)) {
+      next.materials[key] = { ...(next.materials[key] ?? {}), ...definedEntries(material) } as RenderSpec["materials"][string];
+    }
+  }
+  if (patch.bindings) next.bindings = structuredClone(patch.bindings);
+  if (patch.motion) Object.assign(next.motion, definedEntries(patch.motion));
+  if (patch.audio) {
+    const { cues, ambience, musicTracks, ...levels } = patch.audio;
+    Object.assign(next.audio, definedEntries(levels));
+    if (cues) next.audio.cues = structuredClone(cues);
+    if (ambience) next.audio.ambience = [...ambience];
+    if (musicTracks) next.audio.musicTracks = [...musicTracks];
+  }
+  return next;
+}
+
+export type RenderPatchResult =
+  | { ok: true; render: RenderSpec }
+  | { ok: false; issues: string[] };
+
+/** Patch + full validation (schema, unknown material, unlicensed asset, camera range). */
+export function patchRenderSpec(
+  render: RenderSpec,
+  patch: unknown,
+  isClearedAsset = isClearedRenderAsset,
+): RenderPatchResult {
+  const parsedPatch = renderPatchSchema.safeParse(patch);
+  if (!parsedPatch.success) {
+    return { ok: false, issues: parsedPatch.error.issues.map((issue) => `render.${issue.path.join(".")}: ${issue.message}`) };
+  }
+  const merged = applyRenderPatch(render, parsedPatch.data);
+  const parsed = renderSpecSchema.safeParse(merged);
+  if (!parsed.success) {
+    return { ok: false, issues: parsed.error.issues.map((issue) => `render.${issue.path.join(".")}: ${issue.message}`) };
+  }
+  const issues = renderSpecIssues(parsed.data, isClearedAsset).map((issue) => issue.message);
+  return issues.length ? { ok: false, issues } : { ok: true, render: parsed.data };
+}

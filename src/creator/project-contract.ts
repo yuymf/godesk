@@ -1,5 +1,5 @@
 import type { GameSpec, GenerationMetadata } from "./game-spec";
-import type { RenderSpec } from "./render-spec";
+import type { RenderPatch, RenderSpec } from "./render-spec";
 
 export interface GameProject {
   id: string;
@@ -622,6 +622,11 @@ export type ProjectChangeOperation =
   | {
       op: "configure_auction_bidding";
       config: { playerCount: number; unsupported?: string[] };
+    }
+  | {
+      /** G3D-15: partial patch over `presentation.render` (spatial surfaces only). */
+      op: "configure_render";
+      patch: RenderPatch;
     }
   | {
       op: "activate_rule_system";

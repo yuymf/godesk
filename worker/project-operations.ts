@@ -1,5 +1,5 @@
 import { generationMetadataSchema, migrateRuleSystemToV2 } from "../src/creator/game-spec";
-import { renderSpecIssues, renderSpecSchema } from "../src/creator/render-spec";
+import { defaultRenderSpec, isSpatialPresentationKind, patchRenderSpec, renderSpecIssues, renderSpecSchema } from "../src/creator/render-spec";
 import {
   acceptIntent,
   executableRuntime,
@@ -1665,6 +1665,26 @@ export function applyOperation(
       : { ...entryBase, kind: source.kind };
     record.sources.push(entry);
     affectedEntities.push(`source:${entry.id}`);
+    return;
+  }
+
+  if (operation.op === "configure_render") {
+    const rule = record.ruleSystem;
+    if (!isSpatialPresentationKind(rule.playSurface.kind)) {
+      throw new Error("render_requires_spatial_surface");
+    }
+    const kernelType = rule.runtimeSupport.status === "executable"
+      ? rule.runtimeSupport.kernel?.type
+      : null;
+    const base = rule.presentation.render ?? defaultRenderSpec(kernelType, rule.playSurface.kind);
+    if (!base) throw new Error("render_requires_spatial_surface");
+    const patched = patchRenderSpec(base, operation.patch);
+    if (!patched.ok) throw new Error("invalid_render");
+    record.ruleSystem = {
+      ...rule,
+      presentation: { ...rule.presentation, render: patched.render },
+    };
+    affectedEntities.push(`rule-system:${rule.id}`);
     return;
   }
 
