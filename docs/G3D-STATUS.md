@@ -58,6 +58,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 原因 | 解除条件 |
 | --- | --- | --- |
+| **GitHub Actions 重大故障（外部）** | githubstatus.com Incident with Actions 自约 2026-10-06 03:12 Asia/Shanghai；Actions=`major_outage`；Verify 0-step cancel。**禁无绿合入；禁循环 rerun。** | Actions=`operational` 后对 #109（及后续 G3D-18）各 rerun 一次并 squash |
 | box Codex 用量上限 | `codex exec` gpt-5.5 于 2026-10-06 报 usage limit（约至 2026-11-05 02:04 Asia/Shanghai）；G3D-02/03/04 改人工 diff / Cloud Agent 兜底；G3D-12 亦同 | 用量恢复或改用 Cursor Cloud Agent |
 | toktx（Basis CLI） | 本环境未预装 `toktx`；`scripts/compress-assets.mjs --texture` 显式失败。GLB meshopt 可用 | CI/开发机安装 `toktx`，或 G3D-22 在有 toktx 的环境烘焙 |
 
@@ -91,3 +92,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | Track B：G3D-11 #105 / G3D-23 #108；rebase 含 G3D-03/12；registry 接线计划；toktx / Codex 阻塞 | Track B |
 | 2026-10-06 | G3D-03 已合入；G3D-04 开工（pick + HUD + HexSettlementBoard） | 劳埃德(工程) |
 | 2026-10-06 | STATUS rebase：合并 G3D-11/12 行；G3D-11 标 Done `8fbbc6c`；调度 G3D-05→Track C；M1 后 G3D-09→06→07 | Track A |
+| 2026-10-06 | 外部阻塞：GitHub Actions major_outage（约 03:12 CST）；禁无绿合入与循环 rerun | Track A |
