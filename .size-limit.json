@@ -6,9 +6,21 @@
     "limit": "170 KB"
   },
   {
+    "name": "homepage main JS (gzip)",
+    "path": "dist/assets/main-*.js",
+    "gzip": true,
+    "limit": "170 KB"
+  },
+  {
     "name": "render3d core chunk (gzip)",
     "path": "dist/assets/render3d-*.js",
     "gzip": true,
     "limit": "210 KB"
+  },
+  {
+    "name": "render3d-assets chunk (G3D-11)",
+    "path": "dist/assets/render3d-assets-*.js",
+    "gzip": true,
+    "limit": "60 KB"
   }
 ]
