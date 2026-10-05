@@ -71,7 +71,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "spdx": "OFL-1.1",
       "sourceUrl": "https://fonts.google.com/specimen/Manrope",
       "author": "Mikhail Sharanda / Cyreal",
-      "obtainedAt": "2026-10-06",
+      "obtainedAt": "2026-10-05",
       "modified": false,
       "modificationNote": "无",
       "orderRef": "n/a",
@@ -89,7 +89,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "spdx": "LicenseRef-GoDesk-Original",
       "sourceUrl": "src/assets/godesk-mark.svg",
       "author": "俞孟凡 / GoDesk",
-      "obtainedAt": "2026-10-06",
+      "obtainedAt": "2026-10-05",
       "modified": false,
       "modificationNote": "无",
       "orderRef": "n/a",
@@ -291,28 +291,64 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "orderRef": "n/a",
       "status": "cleared"
     }
+  },
+  {
+    "id": "music/tide-harbor",
+    "file": "assets/audio/music-tide-harbor.mp3",
+    "kind": "audio",
+    "bytes": 1440620,
+    "tier": "all",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://opengameart.org/content/the-field-of-dreams",
+      "author": "pauliuw",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "循环至 120s、96kbps、loudnorm",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+  {
+    "id": "music/crystal-shore",
+    "file": "assets/audio/music-crystal-shore.mp3",
+    "kind": "audio",
+    "bytes": 1439468,
+    "tier": "all",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://opengameart.org/content/crystal-cave-song18",
+      "author": "cynicmusic / pixelsphere.org",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "循环至 120s、96kbps、loudnorm",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+  {
+    "id": "music/observing-star",
+    "file": "assets/audio/music-observing-star.mp3",
+    "kind": "audio",
+    "bytes": 1440620,
+    "tier": "all",
+    "source": "cc0",
+    "license": {
+      "spdx": "CC0-1.0",
+      "sourceUrl": "https://opengameart.org/content/another-space-background-track",
+      "author": "yd",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "循环至 120s、96kbps、loudnorm",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
   }
 ]
 );
 
-export const LICENSE_SPDX_WHITELIST: readonly LicenseSpdx[] = Object.freeze([
-  "CC0-1.0",
-  "OFL-1.1",
-  "LicenseRef-GoDesk-Original",
-  "LicenseRef-Purchased",
-]);
-
-export function listManifestIds(): string[] {
-  const ids: string[] = [];
-  for (const entry of ASSET_MANIFEST) {
-    ids.push(entry.id);
-    if (entry.spriteFragments) {
-      for (const fragment of entry.spriteFragments) ids.push(fragment);
-    }
-  }
-  return ids;
-}
-
-export function expectedLicenseRowCount(): number {
-  return listManifestIds().length;
-}
+export const LICENSE_SPDX_WHITELIST: readonly LicenseSpdx[] = Object.freeze(["CC0-1.0","OFL-1.1","LicenseRef-GoDesk-Original","LicenseRef-Purchased"]);
+export function listManifestIds(): string[] { const ids: string[]=[]; for (const e of ASSET_MANIFEST){ ids.push(e.id); if(e.spriteFragments) for (const f of e.spriteFragments) ids.push(f);} return ids; }
+export function expectedLicenseRowCount(): number { return listManifestIds().length; }

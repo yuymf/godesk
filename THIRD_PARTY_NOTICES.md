@@ -84,3 +84,6 @@ THE SOFTWARE.
 - Source: https://opengameart.org/content/51-ui-sound-effects-buttons-switches-and-clicks
 - License: CC0-1.0
 - Used in: G3D-26 core/extended SFX sprites (selected click/switch clips)
+
+## OpenGameArt CC0 music (G3D-27)
+See prompt-trace.
