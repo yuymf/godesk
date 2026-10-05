@@ -136,3 +136,4 @@
 | texture/t11-parchment/256/orm | assets/textures/pbr/t11-parchment/256/orm.ktx2 | t11-parchment 256 orm | CC0 | https://ambientcg.com/a/Paper001 | CC0-1.0 | ambientCG / Paper001 | 2026-10-06 | 是 | 风格指南调色去照片感；toktx 烘焙（部分 normal 为 ETC1S 以达标） | G3D-22 |
 | model/pieces | assets/models/pieces.glb | 棋子合集 pieces.glb | 自制 | scripts/blender/ | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | 渔村/港镇/雾灯/栈道/羊 bpy 自制 meshopt | G3D-20 |
 | model/sheep | assets/models/sheep.glb | 羊（G3D-19 补） | 自制 | scripts/blender/ | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | bpy 低模羊 | G3D-19 |
+| model/props | assets/models/props.glb | 场景道具 props.glb | 自制 | scripts/blender/gen_props.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | 码头/船×2/骰子/托盘/边框 bpy meshopt | G3D-21 |

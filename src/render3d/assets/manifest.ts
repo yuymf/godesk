@@ -1875,6 +1875,24 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "orderRef": "n/a",
       "status": "cleared"
     }
+  },
+{
+    "id": "model/props",
+    "file": "assets/models/props.glb",
+    "kind": "model",
+    "bytes": 16304,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/blender/gen_props.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "码头/船×2/骰子/托盘/边框 bpy meshopt",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
   }
 ]
 );
