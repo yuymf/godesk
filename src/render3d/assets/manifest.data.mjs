@@ -1781,5 +1781,41 @@ export const ASSET_MANIFEST = Object.freeze([
       "orderRef": "n/a",
       "status": "cleared"
     }
+  },
+{
+    "id": "model/pieces",
+    "file": "assets/models/pieces.glb",
+    "kind": "model",
+    "bytes": 10392,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/blender/",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "渔村/港镇/雾灯/栈道/羊 bpy 自制 meshopt",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "model/sheep",
+    "file": "assets/models/sheep.glb",
+    "kind": "model",
+    "bytes": 7760,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/blender/",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "bpy 低模羊",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
   }
 ]);
