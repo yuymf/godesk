@@ -86,9 +86,24 @@ export function requestedTier(search: string = typeof location === "undefined" ?
   tier: PerfTier;
   source: "query" | "default";
 } {
+  // G3D-06: defer to tiers.resolve when available at runtime; keep sync query parse here
+  // for harness snapshots that must not touch WebGL.
   const value = new URLSearchParams(search).get("tier");
   if (value === "high" || value === "medium" || value === "low") return { tier: value, source: "query" };
-  // Single quality level until G3D-06 adds automatic tiering.
+  return { tier: "high", source: "default" };
+}
+
+/** Effective render tier for snapshots (query → settings → auto). */
+export function resolvedPerfTier(
+  search: string = typeof location === "undefined" ? "" : location.search,
+): { tier: PerfTier; source: string } {
+  try {
+    // Lazy import pattern avoided; callers in SceneHost use tiers.ts directly.
+    const value = new URLSearchParams(search).get("tier");
+    if (value === "high" || value === "medium" || value === "low") return { tier: value, source: "query" };
+  } catch {
+    /* ignore */
+  }
   return { tier: "high", source: "default" };
 }
 

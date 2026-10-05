@@ -28,6 +28,15 @@ import type { SceneModel, SceneNode } from "./scene-model";
 import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
 import { markInteractive, perfModeEnabled, perfRecorder } from "./perf";
 import { PerfOverlay } from "./PerfOverlay";
+import {
+  RuntimeDowngradeMonitor,
+  detectEnvFromBrowser,
+  downgradeTier,
+  resolveTier,
+  tierLogLine,
+  type RenderTierId,
+  type TierCaps,
+} from "./tiers";
 
 export type SceneHostProps = {
   className?: string;
@@ -87,14 +96,14 @@ function disposeObject(object: Object3D): void {
   });
 }
 
-function createNodeObject(node: SceneNode): Object3D {
+function createNodeObject(node: SceneNode, caps: TierCaps): Object3D {
   const applyPose = (mesh: Mesh) => {
     mesh.position.set(node.position[0], node.position[1], node.position[2]);
     if (node.rotationY !== undefined) mesh.rotation.y = node.rotationY;
     if (node.scale) mesh.scale.set(node.scale[0], node.scale[1], node.scale[2]);
-    // G3D-05 budget: 0.06-tall number tokens cast no visible shadow; skipping the
-    // shadow pass for them keeps the fixed-seed board within 150 draw calls (§4.6.3).
-    mesh.castShadow = node.kind !== "number-token";
+    // G3D-05 budget: number tokens never cast; G3D-06 low: tiles do not cast (§4.7).
+    const tileNoCast = node.kind === "tile" && !caps.tilesCastShadow;
+    mesh.castShadow = node.kind !== "number-token" && !tileNoCast;
     mesh.receiveShadow = true;
     mesh.userData.nodeId = node.id;
     mesh.userData.kind = node.kind;
@@ -227,11 +236,13 @@ export function SceneHost({
   // G3D-05: bumping the epoch tears the 3D host down and rebuilds it (perf leak check).
   const [hostEpoch, setHostEpoch] = useState(0);
   const [perfMode] = useState(() => perfModeEnabled());
+  const [activeTier, setActiveTier] = useState<RenderTierId>("high");
+  const runtimeFloorRef = useRef<RenderTierId | null>(null);
 
-  function buildHost(root: Object3D) {
+  function buildHost(root: Object3D, caps: TierCaps) {
     return {
       root,
-      create: createNodeObject,
+      create: (node: SceneNode) => createNodeObject(node, caps),
       update: updateNodeObject,
       disposeObject,
     };
@@ -251,7 +262,13 @@ export function SceneHost({
     const camera = new PerspectiveCamera(45, 1, 0.1, 100);
     camera.position.set(0, 9, 12);
 
-    const renderer = new WebGLRenderer({ antialias: true, alpha: false });
+    const env = detectEnvFromBrowser();
+    let resolution = resolveTier({ env, runtimeFloor: runtimeFloorRef.current });
+    let caps = resolution.caps;
+    setActiveTier(caps.id);
+    console.info(tierLogLine(resolution, "mount"));
+
+    const renderer = new WebGLRenderer({ antialias: caps.antialias, alpha: false });
     renderer.shadowMap.enabled = true;
     renderer.setClearColor(0x87b5d4, 1);
     // setSize(..., false) leaves the canvas CSS size unset, so on DPR > 1 the
@@ -272,13 +289,14 @@ export function SceneHost({
     const sun = new DirectionalLight(0xfff2d6, 1.35);
     sun.position.set(6, 12, 4);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.mapSize.set(caps.shadowMapSize, caps.shadowMapSize);
+    sun.shadow.radius = caps.shadowRadius;
     scene.add(sun);
 
     const contentRoot = new Scene();
     scene.add(contentRoot);
     contentRootRef.current = contentRoot;
-    reconcileHostRef.current = buildHost(contentRoot);
+    reconcileHostRef.current = buildHost(contentRoot, caps);
     const hitRoot = new Scene();
     scene.add(hitRoot);
     hitRootRef.current = hitRoot;
@@ -332,12 +350,31 @@ export function SceneHost({
 
     let frameId = 0;
     let disposed = false;
+    let lastFrameAt: number | null = null;
+    let warmFrames = 0;
+    const downgradeMonitor = new RuntimeDowngradeMonitor();
+    let lastRenderedAt = 0;
+
+    const applyCapsToRenderer = (next: TierCaps) => {
+      sun.shadow.mapSize.set(next.shadowMapSize, next.shadowMapSize);
+      sun.shadow.radius = next.shadowRadius;
+      sun.shadow.map?.dispose();
+      sun.shadow.map = null;
+      // Tile castShadow: update existing meshes
+      contentRoot.traverse((child) => {
+        const mesh = child as Mesh;
+        if (!mesh.isMesh) return;
+        if (mesh.userData.kind === "tile") {
+          mesh.castShadow = next.tilesCastShadow;
+        }
+      });
+    };
 
     const resize = () => {
       if (disposed) return;
       const width = Math.max(container.clientWidth, 1);
       const height = Math.max(container.clientHeight, 1);
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, caps.dprCap);
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       renderer.setPixelRatio(dpr);
@@ -350,16 +387,50 @@ export function SceneHost({
     window.addEventListener("resize", onWindowResize);
     resize();
 
-    const tick = () => {
+    const tick = (now: number) => {
       if (disposed) return;
+      frameId = window.requestAnimationFrame(tick);
+
+      const minFrameMs = caps.maxFps ? 1000 / caps.maxFps : 0;
+      if (minFrameMs > 0 && now - lastRenderedAt < minFrameMs - 0.5) {
+        return;
+      }
+      lastRenderedAt = now;
+
+      const delta = lastFrameAt === null ? null : now - lastFrameAt;
+      lastFrameAt = now;
+      warmFrames += 1;
+
+      // Runtime downgrade after 180 warm-up frames (§4.7 / §4.6.3).
+      if (warmFrames > 180 && delta !== null) {
+        if (downgradeMonitor.shouldDowngrade(caps.id, now, delta)) {
+          const nextId = downgradeTier(caps.id);
+          if (nextId !== caps.id) {
+            runtimeFloorRef.current = nextId;
+            const prevAntialias = caps.antialias;
+            resolution = resolveTier({ env, runtimeFloor: runtimeFloorRef.current });
+            caps = resolution.caps;
+            setActiveTier(caps.id);
+            console.info(tierLogLine(resolution, "runtime-downgrade"));
+            if (prevAntialias !== caps.antialias) {
+              // MSAA is constructor-only — remount host.
+              setHostEpoch((epoch) => epoch + 1);
+              return;
+            }
+            applyCapsToRenderer(caps);
+            resize();
+            downgradeMonitor.reset();
+          }
+        }
+      }
+
       controls.update();
       renderer.render(scene, camera);
       const hasContent = contentRoot.children.length > 0;
       if (hasContent && renderer.info.render.calls > 0) markInteractive();
-      perf?.frame(renderer, performance.now(), hasContent);
-      frameId = window.requestAnimationFrame(tick);
+      perf?.frame(renderer, now, hasContent);
     };
-    tick();
+    frameId = window.requestAnimationFrame(tick);
 
     return () => {
       disposed = true;
@@ -430,8 +501,16 @@ export function SceneHost({
 
   if (unsupported) {
     return (
-      <div aria-label={ariaLabel} className={className} data-testid="g3d-scene-host" role="img">
-        <p>此设备不支持 WebGL2，无法显示 3D 桌面。</p>
+      <div
+        aria-label={ariaLabel}
+        className={className}
+        data-testid="g3d-scene-host"
+        data-webgl2="unsupported"
+        role="img"
+      >
+        <p>
+          此设备不支持 WebGL2，无法显示 3D 桌面。请使用下方可访问动作列表继续对局（列表本身完整可玩）。
+        </p>
       </div>
     );
   }
@@ -441,6 +520,7 @@ export function SceneHost({
       aria-label={ariaLabel}
       className={className}
       data-testid="g3d-scene-host"
+      data-tier={activeTier}
       ref={containerRef}
       role="img"
       style={{ width: "100%", height: "100%", minHeight: 280, touchAction: "none", position: perfMode ? "relative" : undefined }}

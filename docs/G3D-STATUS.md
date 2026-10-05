@@ -48,9 +48,9 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | G3D-27 | 音乐循环×3 CC0 120s（Track B） | PR [#112](https://github.com/yuymf/godesk/pull/112) squash `757c9bc` |
 | G3D-04 | 拾取 → 合法动作、HUD、HexSettlementBoard（Track A） | PR [#109](https://github.com/yuymf/godesk/pull/109) squash `6d4db72` |
 
-| G3D-24 | 资源/发展卡插画×8（Track B） | PR [#113](https://github.com/yuymf/godesk/pull/113) squash `fd3f54e` |
+| G3D-24 | 资源/发展卡插画×8（Track B）**shipped, placeholder-grade — art pass required** | PR [#113](https://github.com/yuymf/godesk/pull/113) squash `fd3f54e` |
 
-| G3D-25 | 座位徽记、岛名花饰、加载画（Track B） | PR [#114](https://github.com/yuymf/godesk/pull/114) squash `93e5adb` |
+| G3D-25 | 座位徽记、岛名花饰、加载画（Track B）**shipped, placeholder-grade — art pass required** | PR [#114](https://github.com/yuymf/godesk/pull/114) squash `93e5adb` |
 
 | G3D-19 | 地形 decor.glb + 海面/泡沫 T-12/13（Track B） | PR [#115](https://github.com/yuymf/godesk/pull/115) squash `97eb027` |
 
@@ -69,6 +69,8 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
+| G3D-06：质量分级 | Track B | `feat/g3d-06-quality-tiers` / [PR #122](https://github.com/yuymf/godesk/pull/122) | 自动检测 / 降级 / 设置；CI 绿 |
+| G3D-ART：美术质量回炉 | Track B | （未开） | art quality pass for 19–25 after G3D-13；卡面 CJK tofu + 品牌占位 |
 | G3D-09：动效 | Track A | （未开） | M1 后；Track A 拥有 |
 
 ## 阻塞
@@ -119,3 +121,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | Track B 素材轨收官 #113–#118；#119 G3D-18 合入；G3D-08/13 阻塞；deploy smoke 瞬时失败记入 | Track B |
 | 2026-10-06 | STATUS：并入 Track C G3D-05 #110 `254384c`；G3D-08 阻塞改为仅等 06→07 | Track B |
 | 2026-10-06 | G3D-10（Track C）PR #120 合入：已完成加一行；下一刀加 G3D-10 备注（录屏缺口等）；恢复 #121 重排时丢失的 G3D-05 备注（含 Lighthouse §9 待决问题） | Track C |
+| 2026-10-06 | Track B：G3D-06 #122；G3D-24/25 placeholder-grade + G3D-ART | Track B |
