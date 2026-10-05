@@ -16,15 +16,26 @@ import {
   WebGLRenderer,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { buildLegalHitOverlays, disposeHitOverlay } from "./hit-targets";
 import { mapHexSettlementToScene } from "./mappers/hex-settlement";
+import {
+  matchPickToLegalAction,
+  pickFromPointerEvent,
+  type PickableLegalAction,
+} from "./pick";
 import { reconcileScene } from "./reconcile";
 import type { SceneModel, SceneNode } from "./scene-model";
 import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
 
 export type SceneHostProps = {
   className?: string;
+  ariaLabel?: string;
   /** Hex-settlement public state; when omitted, shows G3D-02 test cube. */
   hexSettlement?: HexSettlementSceneInput | null;
+  /** When true, pointer picks map to legalActions via onPick. */
+  interactive?: boolean;
+  legalActions?: readonly PickableLegalAction[];
+  onPick?: (action: { type: string; payload?: Record<string, unknown> }) => void;
 };
 
 const TERRAIN_HEX: Record<string, number> = {
@@ -185,7 +196,14 @@ function updateNodeObject(object: Object3D, node: SceneNode): void {
 /**
  * Three.js host: WebGL2 renderer + OrbitControls + SceneModel reconcile.
  */
-export function SceneHost({ className, hexSettlement }: SceneHostProps) {
+export function SceneHost({
+  className,
+  ariaLabel = "g3d-scene-host",
+  hexSettlement,
+  interactive = false,
+  legalActions = [],
+  onPick,
+}: SceneHostProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [unsupported, setUnsupported] = useState(false);
   const [ready, setReady] = useState(false);
@@ -193,6 +211,15 @@ export function SceneHost({ className, hexSettlement }: SceneHostProps) {
   const registryRef = useRef(new Map<string, Object3D>());
   const contentRootRef = useRef<Object3D | null>(null);
   const reconcileHostRef = useRef<ReturnType<typeof buildHost> | null>(null);
+  const cameraRef = useRef<PerspectiveCamera | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const hitRootRef = useRef<Object3D | null>(null);
+  const interactiveRef = useRef(interactive);
+  const legalActionsRef = useRef(legalActions);
+  const onPickRef = useRef(onPick);
+  interactiveRef.current = interactive;
+  legalActionsRef.current = legalActions;
+  onPickRef.current = onPick;
 
   function buildHost(root: Object3D) {
     return {
@@ -239,7 +266,34 @@ export function SceneHost({ className, hexSettlement }: SceneHostProps) {
     scene.add(contentRoot);
     contentRootRef.current = contentRoot;
     reconcileHostRef.current = buildHost(contentRoot);
+    const hitRoot = new Scene();
+    scene.add(hitRoot);
+    hitRootRef.current = hitRoot;
+    cameraRef.current = camera;
+    canvasRef.current = renderer.domElement;
     setReady(true);
+
+    const onPointerUp = (event: PointerEvent) => {
+      if (!interactiveRef.current || !onPickRef.current) return;
+      if (event.button !== 0) return;
+      const target = pickFromPointerEvent(
+        event,
+        renderer.domElement,
+        camera,
+        // Prefer hit overlays, then board content
+        hitRoot.children.length > 0 ? hitRoot : contentRoot,
+      );
+      // If hit root miss, also try content root (tiles for robber)
+      const resolved =
+        target ??
+        pickFromPointerEvent(event, renderer.domElement, camera, contentRoot);
+      if (!resolved) return;
+      const matched = matchPickToLegalAction(resolved, legalActionsRef.current);
+      if (!matched) return;
+      event.preventDefault();
+      onPickRef.current(matched);
+    };
+    renderer.domElement.addEventListener("pointerup", onPointerUp);
 
     // Fallback test cube when no hex state yet (G3D-02 smoke path).
     if (!hexSettlement) {
@@ -289,6 +343,7 @@ export function SceneHost({ className, hexSettlement }: SceneHostProps) {
       disposed = true;
       window.cancelAnimationFrame(frameId);
       window.removeEventListener("resize", onWindowResize);
+      renderer.domElement.removeEventListener("pointerup", onPointerUp);
       observer?.disconnect();
       controls.dispose();
       for (const object of registryRef.current.values()) {
@@ -296,6 +351,11 @@ export function SceneHost({ className, hexSettlement }: SceneHostProps) {
         disposeObject(object);
       }
       registryRef.current.clear();
+      while (hitRoot.children.length > 0) {
+        const child = hitRoot.children[0]!;
+        hitRoot.remove(child);
+        disposeHitOverlay(child);
+      }
       contentRoot.traverse((child) => {
         const mesh = child as Mesh;
         if (mesh.isMesh) {
@@ -312,6 +372,9 @@ export function SceneHost({ className, hexSettlement }: SceneHostProps) {
       }
       contentRootRef.current = null;
       reconcileHostRef.current = null;
+      hitRootRef.current = null;
+      cameraRef.current = null;
+      canvasRef.current = null;
       modelRef.current = null;
       setReady(false);
     };
@@ -326,9 +389,23 @@ export function SceneHost({ className, hexSettlement }: SceneHostProps) {
     modelRef.current = reconcileScene(host, modelRef.current, next, registryRef.current);
   }, [hexSettlement, ready]);
 
+  useEffect(() => {
+    const hitRoot = hitRootRef.current;
+    if (!hitRoot || !ready) return;
+    while (hitRoot.children.length > 0) {
+      const child = hitRoot.children[0]!;
+      hitRoot.remove(child);
+      disposeHitOverlay(child);
+    }
+    if (!interactive || legalActions.length === 0) return;
+    for (const overlay of buildLegalHitOverlays(legalActions)) {
+      hitRoot.add(overlay);
+    }
+  }, [interactive, legalActions, ready]);
+
   if (unsupported) {
     return (
-      <div aria-label="g3d-scene-host" className={className} data-testid="g3d-scene-host" role="img">
+      <div aria-label={ariaLabel} className={className} data-testid="g3d-scene-host" role="img">
         <p>此设备不支持 WebGL2，无法显示 3D 桌面。</p>
       </div>
     );
@@ -336,7 +413,7 @@ export function SceneHost({ className, hexSettlement }: SceneHostProps) {
 
   return (
     <div
-      aria-label="g3d-scene-host"
+      aria-label={ariaLabel}
       className={className}
       data-testid="g3d-scene-host"
       ref={containerRef}

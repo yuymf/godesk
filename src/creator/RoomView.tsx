@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { GameMark } from "./CreatorBrand";
 import {
   claimSessionSeat,
@@ -47,7 +47,7 @@ import type { HarborVoyageState } from "../runtime/harbor-voyage";
 import type { WorkerPlacementState } from "../runtime/worker-placement";
 import { HarborVoyageBoard } from "./HarborVoyageBoard";
 import { OthelloBoard } from "./OthelloBoard";
-import { CatanBoard, type CatanBoardState } from "./CatanBoard";
+import { HexSettlementBoard, type HexSettlementBoardState } from "./HexSettlementBoard";
 import { NetworkRouteBoard, type NetworkRouteBoardState } from "./NetworkRouteBoard";
 import { AuctionBiddingBoard } from "./AuctionBiddingBoard";
 import { HandPlayBoard } from "./HandPlayBoard";
@@ -60,10 +60,6 @@ import {
   writeStoredSeatClaim,
 } from "./studio-utils";
 
-const LazySceneHost = lazy(async () => {
-  const mod = await import("../render3d");
-  return { default: mod.SceneHost };
-});
 
 export function RoomView({ sessionId }: { sessionId: string }) {
   const [room, setRoom] = useState<SharedSession>();
@@ -603,24 +599,19 @@ export function RoomView({ sessionId }: { sessionId: string }) {
           winnerSeat={room.state.winnerSeat}
         />
       ) : hexSettlement && catanState ? (
-        <div className="room-hex-settlement-surface">
-          <Suspense fallback={<div aria-busy="true">加载 3D 桌面…</div>}>
-            <LazySceneHost className="room-g3d-scene-host" hexSettlement={catanState} />
-          </Suspense>
-          <CatanBoard
-            activeSeat={activeSeat}
-            busy={busy}
-            catan={catanState as CatanBoardState}
-            enabled={isMyTurn}
-            locale={locale}
-            onAct={(actionId, payload) => {
-              void act(actionId, -1, payload);
-            }}
-            status={room.state.status}
-            viewerSeat={seat}
-            winnerSeat={room.state.winnerSeat}
-          />
-        </div>
+        <HexSettlementBoard
+          activeSeat={activeSeat}
+          busy={busy}
+          catan={catanState as HexSettlementBoardState}
+          enabled={isMyTurn}
+          locale={locale}
+          onAct={(actionId, payload) => {
+            void act(actionId, -1, payload);
+          }}
+          status={room.state.status}
+          viewerSeat={seat}
+          winnerSeat={room.state.winnerSeat}
+        />
       ) : networkRoute && networkRouteState ? (
         <NetworkRouteBoard
           activeSeat={activeSeat}

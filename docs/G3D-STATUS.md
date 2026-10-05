@@ -11,7 +11,7 @@
 | SPEC | 仓外 `/workspace/godesk-3d-spec/SPEC.md`（v0.2）；指针见 [`docs/G3D-SPEC-POINTER.md`](./G3D-SPEC-POINTER.md) |
 | Notion 项目 | https://app.notion.com/p/3f05fabdfe81810e90ade6b4fe2de7c2 |
 | 任务范围 | G3D-01 至 G3D-27；里程碑 M0–M5；人日上限 91 |
-| 代码基线 | `yuymf/godesk` `main` @ `15fdad5`（#106 G3D-12；含 #104/#107） |
+| 代码基线 | `yuymf/godesk` `main` @ `8fbbc6c`（#105 G3D-11；含 #106/#107/#104） |
 | 状态文件维护人 | 劳埃德(工程) / Track B（素材） |
 | 最近更新 | 2026-10-06（Asia/Shanghai） |
 
@@ -42,6 +42,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | G3D-02 | three / SceneHost / size-limit | PR [#104](https://github.com/yuymf/godesk/pull/104) squash `aa48c2a` |
 | G3D-03 | 六角岛状态 → 场景映射与基础渲染 | PR [#107](https://github.com/yuymf/godesk/pull/107) squash `5b85159` |
 | G3D-12 | GameSpec v2 render schema / RuleSystem 存储 / v1 惰性迁移 | PR [#106](https://github.com/yuymf/godesk/pull/106) squash `15fdad5` |
+| G3D-11 | 资产清单、LICENSES、CI 许可证门、KTX2/meshopt；接线 `render-asset-registry` | PR [#105](https://github.com/yuymf/godesk/pull/105) squash `8fbbc6c` |
 
 仓外已完成（不记入上表）：SPEC v0.2 起草与 §9 拍板修订；Notion 项目与任务卡建立。
 
@@ -49,31 +50,34 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
-| G3D-04 / G3D-18 | Track A | TBD | M1 后续 |
-| G3D-11：资产清单、LICENSES、CI 许可证门、KTX2/meshopt；接线 `render-asset-registry` | Track B | `feat/g3d-11-asset-pipeline` / [PR #105](https://github.com/yuymf/godesk/pull/105) | 将 `ASSET_MANIFEST` 接入 `src/creator/render-asset-registry.ts`（不另建登记表） |
-| G3D-23：UI 羊皮纸皮肤、墨线图标、Fraunces、风格指南 | Track B | `feat/g3d-23-ui-parchment` / [PR #108](https://github.com/yuymf/godesk/pull/108) | 基于 #105；待 #105 合入后 rebase |
+| G3D-04：拾取 → 合法动作、HUD、可访问动作列表，Room 替换 SVG | Track A · 劳埃德(工程) | `feat/g3d-04-pick-hud` / [PR #109](https://github.com/yuymf/godesk/pull/109) | M1 第三刀；Room 挂 HexSettlementBoard + SceneHost |
+| G3D-05：Chrome 模拟 harness（并行） | Track C | 见 Track C worktree | 调度变更：G3D-05 归 Track C；Track A 不做 |
+| G3D-23：UI 羊皮纸皮肤、墨线图标、Fraunces、风格指南 | Track B | `feat/g3d-23-ui-parchment` / [PR #108](https://github.com/yuymf/godesk/pull/108) | 基于 #105；rebase 后合入 |
 
 ## 阻塞
 
 | 项 | 原因 | 解除条件 |
 | --- | --- | --- |
-| box Codex 用量上限 | `codex exec` gpt-5.5 于 2026-10-06 报 usage limit（约至 2026-11-05 02:04 Asia/Shanghai）；审查改人工 diff / Cloud Agent 兜底 | 用量恢复或改用 Cursor Cloud Agent |
+| box Codex 用量上限 | `codex exec` gpt-5.5 于 2026-10-06 报 usage limit（约至 2026-11-05 02:04 Asia/Shanghai）；G3D-02/03/04 改人工 diff / Cloud Agent 兜底；G3D-12 亦同 | 用量恢复或改用 Cursor Cloud Agent |
 | toktx（Basis CLI） | 本环境未预装 `toktx`；`scripts/compress-assets.mjs --texture` 显式失败。GLB meshopt 可用 | CI/开发机安装 `toktx`，或 G3D-22 在有 toktx 的环境烘焙 |
 
 ## 下一刀
 
-> G3D-12 备注：`render-asset-registry.ts` 由 G3D-11 接入 manifest；G3D-15 调整默认 render token 时须兼顾「未改动默认跟随 Kernel」；G3D-14 依赖 G3D-07。
+> G3D-12 备注：`render-asset-registry.ts` 已由 G3D-11 接入 manifest；G3D-15 调整默认 render token 时须兼顾「未改动默认跟随 Kernel」；G3D-14 依赖 G3D-07。
+>
+> Track A 调度（2026-10-06）：**不做 G3D-05**（归 Track C）。M1 完成后顺序为 **G3D-09 →（等 G3D-05 合入 main 后）G3D-06 → G3D-07**。
 
-1. Track A：按序 **G3D-04 → G3D-18**。
-2. Track B：合入 **G3D-11 #105**（含 registry 接线）→ rebase 合 **G3D-23 #108** → G3D-26 / 27 / 22。
-3. G3D-19/20/21：G3D-03 已上 main，G3D-11+23 合入后可开工。
+1. Track A：合入 **G3D-04 #109** → **G3D-18** → M1 出口证明。
+2. Track A（M1 后）：G3D-09 → G3D-06（依赖 G3D-05 on main）→ G3D-07。
+3. Track B：rebase 合 **G3D-23 #108** → G3D-26 / 27 / 22。
+4. G3D-19/20/21：G3D-03 与 G3D-11 已上 main，可开工。
 
 ## 开着的 PR / 分支
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
-| `feat/g3d-11-asset-pipeline` | [#105](https://github.com/yuymf/godesk/pull/105) | manifest、LICENSES、verify-assets、compress、render3d-assets、registry 接线 | Track B open |
-| `feat/g3d-23-ui-parchment` | [#108](https://github.com/yuymf/godesk/pull/108) | U-01–U-05 | Track B open（依赖 #105） |
+| `feat/g3d-04-pick-hud` | [#109](https://github.com/yuymf/godesk/pull/109) | pick、hit 高亮、HexSettlementBoard、RoomView 去 SVG | rebase 待合入 |
+| `feat/g3d-23-ui-parchment` | [#108](https://github.com/yuymf/godesk/pull/108) | U-01–U-05 | Track B open（#105 已合入） |
 
 ## 修订记录
 
@@ -85,3 +89,5 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | G3D-02 合入；G3D-03 开工 | 劳埃德(工程) |
 | 2026-10-06 | G3D-12（Track C）#106 合入；资产登记表备注 | Track C |
 | 2026-10-06 | Track B：G3D-11 #105 / G3D-23 #108；rebase 含 G3D-03/12；registry 接线计划；toktx / Codex 阻塞 | Track B |
+| 2026-10-06 | G3D-03 已合入；G3D-04 开工（pick + HUD + HexSettlementBoard） | 劳埃德(工程) |
+| 2026-10-06 | STATUS rebase：合并 G3D-11/12 行；G3D-11 标 Done `8fbbc6c`；调度 G3D-05→Track C；M1 后 G3D-09→06→07 | Track A |
