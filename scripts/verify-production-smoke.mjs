@@ -86,7 +86,8 @@ if (!home.text.includes("写想法，就开玩")) {
   );
 }
 const homeSource = await withBundles(home);
-if (!homeSource.includes("今天要做一款什么游戏？")) {
+// Heading copy since #99 / gallery redesign (was「今天要做一款什么游戏？」).
+if (!homeSource.includes("把想法变成游戏")) {
   throw new Error(
     `${origin}/chatgpt-plugin/new: composer heading missing from the shipped bundle.`,
   );
