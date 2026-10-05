@@ -431,5 +431,113 @@ export const ASSET_MANIFEST = Object.freeze([
       "orderRef": "n/a",
       "status": "cleared"
     }
+  },
+{
+    "id": "illustration/seat-0",
+    "file": "assets/illustrations/brand/seat-0.webp",
+    "kind": "illustration",
+    "bytes": 7656,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-brand-art.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "PIL 品牌插画",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/seat-1",
+    "file": "assets/illustrations/brand/seat-1.webp",
+    "kind": "illustration",
+    "bytes": 8164,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-brand-art.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "PIL 品牌插画",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/seat-2",
+    "file": "assets/illustrations/brand/seat-2.webp",
+    "kind": "illustration",
+    "bytes": 8268,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-brand-art.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "PIL 品牌插画",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/seat-3",
+    "file": "assets/illustrations/brand/seat-3.webp",
+    "kind": "illustration",
+    "bytes": 7930,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-brand-art.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "PIL 品牌插画",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/island-flourish",
+    "file": "assets/illustrations/brand/island-flourish.webp",
+    "kind": "illustration",
+    "bytes": 15112,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-brand-art.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "PIL 品牌插画",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/loading-tidewell",
+    "file": "assets/illustrations/brand/loading-tidewell.webp",
+    "kind": "illustration",
+    "bytes": 66668,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-brand-art.py",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "PIL 品牌插画",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
   }
 ]);
