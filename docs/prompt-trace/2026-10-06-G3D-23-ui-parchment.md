@@ -50,3 +50,10 @@
 ### outcomes
 - 本地 Playwright（新鲜 wrangler）`nl-catan-share` + `nl-othello-share` 2/2 通过；截图在 `/workspace/g3d-evidence/G3D-23/e2e-shots/`。
 - **暂不合入 #108**；记 STATUS 阻塞；并行开工 G3D-26（仅依赖 G3D-11）。
+
+## 2026-10-06 ~05:15 Asia/Shanghai · Actions major_outage
+
+### external
+- https://www.githubstatus.com — **Actions: major_outage**（Partial System Outage）。
+- 判定：#108/#111/#112 及 main deploy 的 runner=null 取消均为外部故障，非回归。
+- 策略：不合入直至 CI 绿；不空转 rerun；并行推进素材批次本地验证。

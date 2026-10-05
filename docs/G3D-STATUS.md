@@ -58,7 +58,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 项 | 原因 | 解除条件 |
 | --- | --- | --- |
 | box Codex 用量上限 | `codex exec` gpt-5.5 于 2026-10-06 报 usage limit（约至 2026-11-05 02:04 Asia/Shanghai）；审查改人工 diff / Cloud Agent 兜底 | 用量恢复或改用 Cursor Cloud Agent |
-| GitHub hosted runner（#108） | 连续 3 次 CI 未获取 runner（runs 37366521270 / 37369772658）；本地 typecheck/test/e2e/verify/size 已绿 | Actions runner 恢复后 `gh run watch` 再合 |
+| **GitHub Actions 大范围故障（外部）** | [githubstatus.com](https://www.githubstatus.com) component **Actions = major_outage**（incident 自 2026-10-05T19:11Z / 03:12 Asia/Shanghai）。此后 PR/main 工作流均 `runner=null` 取消，**非代码失败**。涉及 #108/#111/#112 及 main deploy。 | Actions 恢复 operational 后按序 `gh run rerun --failed`，CI 绿再 squash：#108 → #111 → #112 |
 | toktx（Basis CLI） | 本环境未预装 `toktx`；`scripts/compress-assets.mjs --texture` 显式失败。GLB meshopt 可用 | CI/开发机安装 `toktx`，或 G3D-22 在有 toktx 的环境烘焙 |
 
 ## 下一刀
@@ -74,6 +74,8 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
 | `feat/g3d-23-ui-parchment` | [#108](https://github.com/yuymf/godesk/pull/108) | U-01–U-05 parchment / ink / Fraunces / style-guide | Track B open |
+| `feat/g3d-26-sfx` | [#111](https://github.com/yuymf/godesk/pull/111) | A-01/A-02 SFX | open · 等 Actions |
+| `feat/g3d-27-music` | [#112](https://github.com/yuymf/godesk/pull/112) | A-03 音乐 | open · 等 Actions |
 
 ## 修订记录
 
