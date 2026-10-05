@@ -11,7 +11,7 @@
 | SPEC | 仓外 `/workspace/godesk-3d-spec/SPEC.md`（v0.2）；指针见 [`docs/G3D-SPEC-POINTER.md`](./G3D-SPEC-POINTER.md) |
 | Notion 项目 | https://app.notion.com/p/3f05fabdfe81810e90ade6b4fe2de7c2 |
 | 任务范围 | G3D-01 至 G3D-27；里程碑 M0–M5；人日上限 91 |
-| 代码基线 | `yuymf/godesk` `main` @ `254384c`（含 Track B 素材轨收官与 #119） |
+| 代码基线 | `yuymf/godesk` `main` @ `254384c`（#110 G3D-05；含 #119/#118 及 Track B 素材轨） |
 | 状态文件维护人 | 劳埃德(工程) / Track B（素材） |
 | 最近更新 | 2026-10-06（Asia/Shanghai） |
 
@@ -60,13 +60,14 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | G3D-21 | props.glb（码头/船/骰子/托盘/边框，Track B） | PR [#118](https://github.com/yuymf/godesk/pull/118) squash `b86dff6` |
 
+| G3D-05 | Chrome 模拟 harness / Lighthouse CI（Track C） | PR [#110](https://github.com/yuymf/godesk/pull/110) squash `254384c` |
+
 仓外已完成（不记入上表）：SPEC v0.2 起草与 §9 拍板修订；Notion 项目与任务卡建立。
 
 ## 进行中
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
-| G3D-05：Chrome 模拟 harness | Track C | `feat/g3d-05-perf-harness` / [PR #110](https://github.com/yuymf/godesk/pull/110) | Track C 拥有 |
 | G3D-10：howler 音效引擎 | Track C | `feat/g3d-10-audio` / [PR #120](https://github.com/yuymf/godesk/pull/120) | Track C 拥有 |
 | G3D-09：动效 | Track A | （未开） | M1 后；Track A 拥有 |
 
@@ -75,7 +76,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 项 | 原因 | 解除条件 |
 | --- | --- | --- |
 | box Codex 用量上限 | 至 2026-11-05 02:04 Asia/Shanghai；Cloud Agent 兜底（本席无该工具时手写） | 用量恢复 |
-| **G3D-08（Track B）** | 依赖 G3D-07 ← G3D-06 ← G3D-05（#110）+ G3D-04（已合） | #110 → G3D-06 → G3D-07 后开工 |
+| **G3D-08（Track B）** | 依赖 G3D-07 ← G3D-06；G3D-05 #110 与 G3D-04 已合入 | Track A 合入 G3D-06 → G3D-07 后开工 |
 | **G3D-13（Track B）** | 依赖 G3D-07/08/09/10 + 素材 19–25；素材已齐，缺 07–10 | 07+08+09+#120 上 main |
 | GitHub Actions | 现 **operational**。deploy @ `41e352b` 生产 smoke 曾失败（ChatGPT Connector heading）；后续 deploy 通过 → 瞬时 | 禁无绿合入 |
 
@@ -83,15 +84,14 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 > Track A：拥有 **18（已合）/ 09 / 06 / 07**。Track C：**05 / 10 / 15 / 14**。Track B 素材轨 **G3D-11、19–27 已全部合入**。
 
-1. Track C：合入 **G3D-05 #110**、**G3D-10 #120**。
-2. Track A：M1 后 **G3D-09 →（等 G3D-05）G3D-06 → G3D-07**。
+1. Track C：合入 **G3D-10 #120**（及后续 15/14）。
+2. Track A：**G3D-09 → G3D-06 → G3D-07**（G3D-05 已合，06 可开）。
 3. Track B：**G3D-08 与 G3D-13 均阻塞**；解阻后先 08 再 13。
 
 ## 开着的 PR / 分支
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
-| `feat/g3d-05-perf-harness` | [#110](https://github.com/yuymf/godesk/pull/110) | perf harness | open · Track C |
 | `feat/g3d-10-audio` | [#120](https://github.com/yuymf/godesk/pull/120) | howler 引擎 | open · Track C |
 | `docs/g3d-status-asset-track-done` | [#121](https://github.com/yuymf/godesk/pull/121) | STATUS 收官 | open · 本 PR |
 
@@ -114,3 +114,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | G3D-18 #119 合入 main 最新（G3D-24 #113）；大厅缩略图登记 manifest | Track A |
 | 2026-10-06 | #119 合入 main（G3D-25 #114 / G3D-19 #115）；LICENSES 行移至 G3D-11 区段避免尾部冲突 | Track A |
 | 2026-10-06 | Track B 素材轨收官 #113–#118；#119 G3D-18 合入；G3D-08/13 阻塞；deploy smoke 瞬时失败记入 | Track B |
+| 2026-10-06 | STATUS：并入 Track C G3D-05 #110 `254384c`；G3D-08 阻塞改为仅等 06→07 | Track B |
