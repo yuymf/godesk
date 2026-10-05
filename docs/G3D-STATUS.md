@@ -42,7 +42,7 @@
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
 | Bootstrap：状态骨架 + prompt-trace 约定 | 劳埃德(工程) | `feat/g3d-bootstrap-status` / PR #102 | docs-only；open，未合并 |
-| G3D-01：ADR 0014 + 删除旧 2D 限定常量与技能措辞 | 劳埃德(工程) | `feat/g3d-01-adr-0014` / PR TBD | 本分支进行中；等待调用方提交并开 PR |
+| G3D-01：ADR 0014 + 删除旧 2D 限定常量与技能措辞 | 劳埃德(工程) | `feat/g3d-01-adr-0014` / [PR #103](https://github.com/yuymf/godesk/pull/103) | 进行中；[PR #103](https://github.com/yuymf/godesk/pull/103) |
 
 ## 阻塞
 
@@ -52,16 +52,15 @@
 
 ## 下一刀
 
-1. 提交并打开 **G3D-01（M0）** PR：ADR 0014、旧 2D 限定常量与技能措辞删除。
-2. 合并或关闭 bootstrap PR #102 的状态分歧，确保主线含本状态文件。
-3. 下一刀进入 **M1：G3D-02 / G3D-03 / G3D-04 / G3D-18**。
+1. 评审并（经 俞孟凡 授权后）合并 **G3D-01（M0）** [PR #103](https://github.com/yuymf/godesk/pull/103)；合并顺序建议先 #102 再 #103。
+2. 下一刀进入 **M1：G3D-02 / G3D-03 / G3D-04 / G3D-18**。
 
 ## 开着的 PR / 分支
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
 | `feat/g3d-bootstrap-status` | [#102](https://github.com/yuymf/godesk/pull/102) | `docs/G3D-STATUS.md`、`docs/G3D-SPEC-POINTER.md`、`docs/prompt-trace/` | open |
-| `feat/g3d-01-adr-0014` | TBD | ADR 0014、删除旧 2D 限定常量与技能措辞、G3D-01 prompt-trace | local in progress |
+| `feat/g3d-01-adr-0014` | [#103](https://github.com/yuymf/godesk/pull/103) | ADR 0014、删除旧 2D 限定常量与技能措辞、G3D-01 prompt-trace | open |
 
 ## 修订记录
 
@@ -70,3 +69,4 @@
 | 2026-10-05 | 初创：硬约束三条、M0 未开始、bootstrap 进行中、C2C bridge 阻塞行、下一刀指向 G3D-01 | 劳埃德(工程) |
 | 2026-10-05 | 回填开着的 PR：#102 | 劳埃德(工程) |
 | 2026-10-06 | G3D-01 开工：M0 标为进行中；记录 `feat/g3d-01-adr-0014`、PR TBD、#102 仍 open；阻塞项改为 ChatGPT 侧 connector 重建；下一刀指向 M1 G3D-02 / 03 / 04 / 18 | 劳埃德(工程) |
+| 2026-10-06 | 回填 G3D-01 PR #103；下一刀改为经授权合并后进入 M1 | 劳埃德(工程) |
