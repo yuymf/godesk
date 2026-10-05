@@ -43,3 +43,20 @@
 - Notion：https://app.notion.com/3f05fabdfe81814f8ee9e7369140a88e
 - PR：TBD
 - merge SHA：TBD
+
+## 2026-10-06 03:33 Asia/Shanghai · 续刀
+
+### tool
+- Codex 额度耗尽（至 2026-11-05 02:04 Asia/Shanghai），按站立刀序改 Cursor Cloud Agent 兜底。
+- 本续刀为小修补：将 `ASSET_MANIFEST` 接线到 G3D-12 的 `src/creator/render-asset-registry.ts`（执行席手写，未另起 Cloud Agent）。
+
+### prompts used（若启动 Cloud Agent 时须原文入库）
+（本续刀未启动 Cloud Agent；registry 接线为单文件小修补。）
+
+### decisions
+1. `render-asset-registry.ts` 只从 `ASSET_MANIFEST` 构建 Map；不维护并行登记表。
+2. `isClearedRenderAsset` 行为保持：仅 `status === "cleared"` 为 true。
+
+### outcomes
+- `src/creator/render-asset-registry.ts` 接线 + 单测
+- rebase 含 G3D-12 `15fdad5`
