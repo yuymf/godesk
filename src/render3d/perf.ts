@@ -36,6 +36,11 @@ export type PerfSnapshot = {
   frameTimeMs: { p50: number | null; p95: number | null; max: number | null };
   fps: number | null;
   renderer: RendererInfoSnapshot;
+  /**
+   * G3D-07：本次挂载以来单帧最大值。静止时阴影贴图复用（不逐帧重绘），
+   * `renderer.calls` 是稳态帧；`rendererPeak.calls` 含阴影重绘帧，两者都按 draw call 预算检查。
+   */
+  rendererPeak: { calls: number; triangles: number };
   gpuMemoryEstimateBytes: number;
   jsHeap: { usedBytes: number; totalBytes: number; limitBytes: number } | null;
   interactiveMs: number | null;
@@ -48,7 +53,7 @@ export type PerfSnapshot = {
     /** `renderer.info.memory` right before each `renderer.dispose()` (must be 0 / 0). */
     residualOnDispose: Array<{ geometries: number; textures: number }>;
     /** `renderer.info.memory` after the first content frame of each mount. */
-    memoryOnMount: Array<{ geometries: number; textures: number }>;
+    memoryOnMount: Array<{ geometries: number; textures: number; tier?: string }>;
   };
   capturedAt: string;
 };
@@ -57,6 +62,8 @@ type HostHandle = {
   renderer: WebGLRenderer;
   scene: Object3D;
   remount: () => void;
+  /** G3D-07: effective tier at first content frame (high adds the PMREM environment texture). */
+  tier?: () => string;
 };
 
 export type PerfHarnessApi = {
@@ -115,10 +122,23 @@ export function percentile(samples: readonly number[], p: number): number | null
   return sorted[rank]!;
 }
 
+/** G3D-07：按实际阴影贴图尺寸估算（RGBA8 深度打包，每像素 4 字节）。 */
+export function shadowMapBytes(root: Object3D): number {
+  let bytes = 0;
+  root.traverse((object) => {
+    const light = object as Object3D & { castShadow?: boolean; isLight?: boolean; shadow?: { mapSize: { x: number; y: number } } };
+    if (light.isLight && light.castShadow && light.shadow) bytes += light.shadow.mapSize.x * light.shadow.mapSize.y * 4;
+  });
+  return bytes;
+}
+
 /** Bytes of geometry attributes / indices and texture images reachable from `root`. */
 export function estimateGpuMemoryBytes(root: Object3D, extraTextureBytes = 0): number {
   const seen = new Set<unknown>();
   let bytes = extraTextureBytes;
+  // G3D-07: PMREM environment (high tier) lives on the scene, not on a material.
+  const environment = (root as Object3D & { environment?: { image?: { width?: number; height?: number } } | null }).environment;
+  if (environment?.image) bytes += (environment.image.width ?? 0) * (environment.image.height ?? 0) * 8; // RGBA16F
   root.traverse((object) => {
     const mesh = object as Object3D & {
       geometry?: { attributes?: Record<string, { array?: ArrayLike<number> & { byteLength?: number } }>; index?: { array?: { byteLength?: number } } | null };
@@ -184,9 +204,10 @@ class PerfRecorder {
     mounts: 0,
     activeHosts: 0,
     residualOnDispose: [] as Array<{ geometries: number; textures: number }>,
-    memoryOnMount: [] as Array<{ geometries: number; textures: number }>,
+    memoryOnMount: [] as Array<{ geometries: number; textures: number; tier?: string }>,
   };
   private memoryPending = false;
+  private peak = { calls: 0, triangles: 0 };
   private lastRenderer: RendererInfoSnapshot = {
     calls: 0, triangles: 0, points: 0, lines: 0, geometries: 0, textures: 0, programs: 0,
   };
@@ -197,6 +218,7 @@ class PerfRecorder {
     this.lifecycle.activeHosts += 1;
     this.memoryPending = true;
     this.lastFrameAt = null;
+    this.peak = { calls: 0, triangles: 0 };
     const canvas = handle.renderer.domElement;
     const gl = handle.renderer.getContext();
     this.loseExtension = gl.getExtension("WEBGL_lose_context");
@@ -239,6 +261,10 @@ class PerfRecorder {
     this.lastFrameAt = now;
     this.totalFrames += 1;
     const info = renderer.info;
+    if (hasContent) {
+      this.peak.calls = Math.max(this.peak.calls, info.render.calls);
+      this.peak.triangles = Math.max(this.peak.triangles, info.render.triangles);
+    }
     this.lastRenderer = {
       calls: info.render.calls,
       triangles: info.render.triangles,
@@ -250,7 +276,7 @@ class PerfRecorder {
     };
     if (hasContent && this.memoryPending && info.render.calls > 0) {
       this.memoryPending = false;
-      this.lifecycle.memoryOnMount.push(memoryOf(renderer));
+      this.lifecycle.memoryOnMount.push({ ...memoryOf(renderer), tier: this.host?.tier?.() });
     }
     if (this.rebuildPending && info.render.calls > 0 && this.lostAt !== null) {
       this.rebuildPending = false;
@@ -289,7 +315,7 @@ class PerfRecorder {
       memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number };
     }).memory;
     const renderer = this.host?.renderer;
-    const shadowBytes = renderer && renderer.shadowMap.enabled ? 1024 * 1024 * 4 : 0;
+    const shadowBytes = renderer && renderer.shadowMap.enabled && this.host ? shadowMapBytes(this.host.scene) : 0;
     return {
       schema: "godesk-perf/v1",
       tier,
@@ -306,6 +332,7 @@ class PerfRecorder {
       },
       fps: p50 ? round2(1000 / p50) : null,
       renderer: { ...this.lastRenderer },
+      rendererPeak: { ...this.peak },
       gpuMemoryEstimateBytes: this.host ? estimateGpuMemoryBytes(this.host.scene, shadowBytes) : 0,
       jsHeap: memory
         ? { usedBytes: memory.usedJSHeapSize, totalBytes: memory.totalJSHeapSize, limitBytes: memory.jsHeapSizeLimit }

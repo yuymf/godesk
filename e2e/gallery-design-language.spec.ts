@@ -1,6 +1,48 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdir, readFile } from "node:fs/promises";
 
+/** G3D-07：SPEC §3.7 CSS tokens（纸色表面 + 实阴影）。 */
+const G3D_CSS_TOKENS: Record<string, string> = {
+  "--surface-canvas": "#f6f1e7",
+  "--surface-paper": "#fbf8f1",
+  "--surface-raised": "#ffffff",
+  "--surface-board": "#e9e1d0",
+  "--surface-sunken": "#f5f5f5",
+  "--shadow-soft": "0 1px 2px rgba(41, 33, 20, 0.08), 0 2px 6px rgba(41, 33, 20, 0.06)",
+  "--shadow-card": "0 2px 4px rgba(41, 33, 20, 0.08), 0 8px 24px rgba(41, 33, 20, 0.12)",
+  "--shadow-float": "0 6px 12px rgba(41, 33, 20, 0.10), 0 20px 48px rgba(41, 33, 20, 0.18)",
+  "--hud-glass": "rgba(251, 248, 241, 0.86)",
+};
+
+async function expectDesignTokens(page: Page) {
+  // 生产构建会压缩自定义属性（0.10 → .1），所以把 token 与期望值各自挂到探针元素上，比较浏览器解析后的值。
+  const resolved = await page.evaluate((entries) => {
+    const probe = document.createElement("div");
+    document.body.appendChild(probe);
+    const resolve = (property: "boxShadow" | "backgroundColor", value: string) => {
+      probe.style[property] = "";
+      probe.style[property] = value;
+      return getComputedStyle(probe)[property];
+    };
+    const result = Object.fromEntries(entries.map(([name, expected]) => {
+      const property = name.startsWith("--shadow") ? "boxShadow" : "backgroundColor";
+      return [name, { actual: resolve(property, `var(${name})`), expected: resolve(property, expected) }];
+    }));
+    probe.remove();
+    return result;
+  }, Object.entries(G3D_CSS_TOKENS));
+  for (const [name, { actual, expected }] of Object.entries(resolved)) {
+    expect(actual, name).toBe(expected);
+    expect(actual, `${name} 已定义`).not.toMatch(/^(none|rgba\(0, 0, 0, 0\))$/);
+  }
+  // 实阴影：作曲区与画廊插画用 token 阴影（不再是 none），页面底色仍为白。
+  const composerShadow = await page.locator(".studio-composer").evaluate((el) => getComputedStyle(el).boxShadow);
+  expect(composerShadow).toContain("rgba(41, 33, 20, 0.12)");
+  const artworkShadow = await page.locator(".example-artwork").first().evaluate((el) => getComputedStyle(el).boxShadow);
+  expect(artworkShadow).toContain("rgba(41, 33, 20, 0.06)");
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe("rgb(255, 255, 255)");
+}
+
 async function expectGameMark(page: Page, markUrl: string) {
   const marks = page.locator(".godesk-mark");
   await expect(marks.first()).toBeVisible();
@@ -44,6 +86,7 @@ for (const viewport of [
 
     const gallery = page.getByRole("region", { name: "先玩一局现成的" });
     await expect(gallery.getByRole("button", { name: "先玩这一局" })).toHaveCount(3);
+    await expectDesignTokens(page);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.evaluate(() => window.scrollTo(0, 0));
     const submitBox = await page.getByRole("button", { name: "生成可玩版本" }).boundingBox();

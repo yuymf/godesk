@@ -34,14 +34,19 @@
   --accent-deep: #333333;
   --accent-soft: #f5f5f5;
   --danger: #b42318;
-  --surface-canvas: #ffffff;
-  --surface-paper: #ffffff;
-  --surface-raised: #f5f5f5;
-  --surface-board: #ededed;
+  /* G3D-07：SPEC §3.7 纸色表面 + 实阴影（暖墨色 rgba(41,33,20,·)）。 */
+  --surface-canvas: #f6f1e7;
+  --surface-paper: #fbf8f1;
+  --surface-raised: #ffffff;
+  /* 原 --surface-raised 的「浅灰填充」角色（输入框、次级面板、选中标签），数值不变。 */
+  --surface-sunken: #f5f5f5;
+  --surface-board: #e9e1d0;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --shadow-soft: none;
-  --shadow-card: none;
-  --shadow-float: none;
+  --shadow-soft: 0 1px 2px rgba(41, 33, 20, 0.08), 0 2px 6px rgba(41, 33, 20, 0.06);
+  --shadow-card: 0 2px 4px rgba(41, 33, 20, 0.08), 0 8px 24px rgba(41, 33, 20, 0.12);
+  --shadow-float: 0 6px 12px rgba(41, 33, 20, 0.10), 0 20px 48px rgba(41, 33, 20, 0.18);
+  --hud-glass: rgba(251, 248, 241, 0.86);
+  --hud-glass-blur: blur(12px);
   color: var(--ink);
   background: var(--canvas);
   font-family: Manrope, "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
