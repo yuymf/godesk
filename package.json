@@ -21,7 +21,11 @@
     "test:watch": "vitest",
     "deploy": "pnpm build && wrangler deploy",
     "deploy:dry-run": "pnpm build && wrangler deploy --dry-run",
-    "size": "size-limit"
+    "size": "size-limit && node scripts/check-size-budgets.mjs",
+    "verify:assets": "node scripts/verify-assets.mjs --skip-network",
+    "verify:assets:network": "node scripts/verify-assets.mjs",
+    "compress:assets": "node scripts/compress-assets.mjs",
+    "size:assets": "node scripts/check-assets-chunk-size.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.0.0",
@@ -45,7 +49,11 @@
     "typescript": "^5.9.3",
     "vite": "^7.3.6",
     "vitest": "^4.1.11",
-    "wrangler": "4.114.0"
+    "wrangler": "4.114.0",
+    "@gltf-transform/cli": "4.2.1",
+    "@gltf-transform/core": "4.2.1",
+    "@gltf-transform/extensions": "4.2.1",
+    "@gltf-transform/functions": "4.2.1"
   },
   "packageManager": "pnpm@10.15.1",
   "engines": {

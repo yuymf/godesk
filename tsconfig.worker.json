@@ -20,6 +20,7 @@
     "src/creator/game-spec.ts",
     "src/creator/render-spec.ts",
     "src/creator/render-asset-registry.ts",
+    "src/render3d/assets/manifest.ts",
     "src/creator/kernel-capabilities.ts",
     "src/creator/fixtures/game-spec.ts",
     "src/creator/fixtures/gamespec-v1/*.json",
