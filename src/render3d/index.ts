@@ -16,3 +16,14 @@ export {
   type PickTarget,
   type PickableLegalAction,
 } from "./pick";
+
+export {
+  TIER_CAPS,
+  resolveTier,
+  detectEnvFromBrowser,
+  readQualityPreference,
+  readSaverPreference,
+  type RenderTierId,
+  type TierCaps,
+  type TierResolution,
+} from "./tiers";

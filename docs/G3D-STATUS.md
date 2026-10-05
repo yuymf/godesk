@@ -11,7 +11,7 @@
 | SPEC | 仓外 `/workspace/godesk-3d-spec/SPEC.md`（v0.2）；指针见 [`docs/G3D-SPEC-POINTER.md`](./G3D-SPEC-POINTER.md) |
 | Notion 项目 | https://app.notion.com/p/3f05fabdfe81810e90ade6b4fe2de7c2 |
 | 任务范围 | G3D-01 至 G3D-27；里程碑 M0–M5；人日上限 91 |
-| 代码基线 | `yuymf/godesk` `main` @ `254384c`（#110 G3D-05；含 #119/#118 及 Track B 素材轨） |
+| 代码基线 | `yuymf/godesk` `main` @ `31cc0df`（#123；开 G3D-06 #122） |
 | 状态文件维护人 | 劳埃德(工程) / Track B（素材） |
 | 最近更新 | 2026-10-06（Asia/Shanghai） |
 
@@ -48,9 +48,9 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | G3D-27 | 音乐循环×3 CC0 120s（Track B） | PR [#112](https://github.com/yuymf/godesk/pull/112) squash `757c9bc` |
 | G3D-04 | 拾取 → 合法动作、HUD、HexSettlementBoard（Track A） | PR [#109](https://github.com/yuymf/godesk/pull/109) squash `6d4db72` |
 
-| G3D-24 | 资源/发展卡插画×8（Track B） | PR [#113](https://github.com/yuymf/godesk/pull/113) squash `fd3f54e` |
+| G3D-24 | 资源/发展卡插画×8（Track B）**shipped, placeholder-grade — art pass required** | PR [#113](https://github.com/yuymf/godesk/pull/113) squash `fd3f54e` |
 
-| G3D-25 | 座位徽记、岛名花饰、加载画（Track B） | PR [#114](https://github.com/yuymf/godesk/pull/114) squash `93e5adb` |
+| G3D-25 | 座位徽记、岛名花饰、加载画（Track B）**shipped, placeholder-grade — art pass required** | PR [#114](https://github.com/yuymf/godesk/pull/114) squash `93e5adb` |
 
 | G3D-19 | 地形 decor.glb + 海面/泡沫 T-12/13（Track B） | PR [#115](https://github.com/yuymf/godesk/pull/115) squash `97eb027` |
 
@@ -69,6 +69,8 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
+| G3D-06：质量分级 | Track B | `feat/g3d-06-quality-tiers` / [PR #122](https://github.com/yuymf/godesk/pull/122) | CI 绿；合入中 |
+| G3D-ART：美术质量回炉 | Track B | （未开） | art quality pass for 19–25 after G3D-13；卡面 CJK tofu + 品牌占位 |
 | G3D-09：动效 | Track A | （未开） | M1 后；Track A 拥有 |
 | G3D-15：生成默认集成 | Track C | `feat/g3d-15-render-defaults` / [PR #123](https://github.com/yuymf/godesk/pull/123) | 第一刀：生成写 render、MCP `configure_render` 局部 patch、skills；第二刀（「做一款两人翻转棋」→ 3D Room e2e + 3 轮截图）等 G3D-14 |
 
@@ -122,3 +124,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | STATUS：并入 Track C G3D-05 #110 `254384c`；G3D-08 阻塞改为仅等 06→07 | Track B |
 | 2026-10-06 | G3D-10（Track C）PR #120 合入：已完成加一行；下一刀加 G3D-10 备注（录屏缺口等）；恢复 #121 重排时丢失的 G3D-05 备注（含 Lighthouse §9 待决问题） | Track C |
 | 2026-10-06 | G3D-15 第一刀（Track C）PR #123：进行中加一行；阻塞加 G3D-14 / G3D-15 第二刀；回填 G3D-10 #120 合入 SHA `67e5383` | Track C |
+| 2026-10-06 | Track B：#122 merge-main（无 rebase）同步 #123 STATUS；G3D-06 待 squash | Track B |

@@ -10,7 +10,7 @@ describe("perf probe helpers (G3D-05, SPEC §4.6.3)", () => {
     expect(perfModeEnabled("?perf=0")).toBe(false);
   });
 
-  it("reads ?tier= and defaults to high until G3D-06 adds automatic tiering", () => {
+  it("reads ?tier= query (G3D-06 auto-detect lives in tiers.ts)", () => {
     expect(requestedTier("?tier=low")).toEqual({ tier: "low", source: "query" });
     expect(requestedTier("?tier=medium")).toEqual({ tier: "medium", source: "query" });
     expect(requestedTier("?tier=ultra")).toEqual({ tier: "high", source: "default" });
