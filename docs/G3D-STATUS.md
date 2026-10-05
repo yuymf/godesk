@@ -58,6 +58,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 项 | 原因 | 解除条件 |
 | --- | --- | --- |
 | box Codex 用量上限 | `codex exec` gpt-5.5 于 2026-10-06 报 usage limit（约至 2026-11-05 02:04 Asia/Shanghai）；审查改人工 diff / Cloud Agent 兜底 | 用量恢复或改用 Cursor Cloud Agent |
+| GitHub hosted runner（#108） | 连续 3 次 CI 未获取 runner（runs 37366521270 / 37369772658）；本地 typecheck/test/e2e/verify/size 已绿 | Actions runner 恢复后 `gh run watch` 再合 |
 | toktx（Basis CLI） | 本环境未预装 `toktx`；`scripts/compress-assets.mjs --texture` 显式失败。GLB meshopt 可用 | CI/开发机安装 `toktx`，或 G3D-22 在有 toktx 的环境烘焙 |
 
 ## 下一刀

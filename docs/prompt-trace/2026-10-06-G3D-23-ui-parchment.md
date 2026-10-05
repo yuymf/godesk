@@ -40,3 +40,13 @@
 
 ### outcomes
 - skip 已合入的旧 G3D-11 提交；G3D-23 落在 `8fbbc6c` 之上。
+
+## 2026-10-06 ~04:41 Asia/Shanghai · CI runner 阻塞
+
+### tool
+- Codex 额度耗尽；本步未启 Cloud Agent（工具目录亦无 CloudAgent；执行席手写/本地验证）。
+- `gh run watch` 三次均失败于 hosted runner not-acquired。
+
+### outcomes
+- 本地 Playwright（新鲜 wrangler）`nl-catan-share` + `nl-othello-share` 2/2 通过；截图在 `/workspace/g3d-evidence/G3D-23/e2e-shots/`。
+- **暂不合入 #108**；记 STATUS 阻塞；并行开工 G3D-26（仅依赖 G3D-11）。
