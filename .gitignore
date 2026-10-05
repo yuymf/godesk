@@ -10,4 +10,5 @@ test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
-assets/audio/src/
+assets/textures/pbr/**/*.png
+assets/textures/procedural/

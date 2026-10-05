@@ -79,6 +79,6 @@ THE SOFTWARE.
 - settlecoast.com 及其任何模型、音频、插画、文案、shader
 - 任何 CC BY 或附加署名限制的素材（SPEC §5.1 不允许）
 
-## Kenney Nature Kit
+## ambientCG textures (G3D-22)
 
-- https://kenney.nl/assets/nature-kit — CC0-1.0 — used in G3D-19 `decor.glb`
+CC0-1.0 materials from ambientcg.com (Grass001, Ground037/033/054, Rock020/023, Wood049, Fabric045, Paper001), graded per style-guide and baked to KTX2.
