@@ -1,4 +1,4 @@
-import { devices, expect, test, type Page } from "@playwright/test";
+import { devices, expect, test, type Locator, type Page } from "@playwright/test";
 import { NORTH_STAR_CATAN_PROMPT, shareHrefFromStudio } from "./helpers/sol-max-baseline";
 
 /**
@@ -22,6 +22,18 @@ async function audioSnapshot(page: Page) {
 
 async function waitForAudio(page: Page) {
   await page.waitForFunction(() => Boolean(window.__godeskAudio), undefined, { timeout: 30_000 });
+}
+
+/** 盘面可访问动作列表里的按钮；用 dispatchEvent，避开 3D canvas 对坐标点击的遮挡。 */
+async function clickAction(board: Locator, name: RegExp) {
+  const button = board.getByRole("button", { name }).first();
+  await expect(button).toBeEnabled({ timeout: 20_000 });
+  await button.dispatchEvent("click");
+}
+
+async function hasAction(board: Locator, name: RegExp): Promise<boolean> {
+  const button = board.getByRole("button", { name }).first();
+  return (await button.count()) > 0 && (await button.isEnabled());
 }
 
 test("hex-settlement room audio: cues from play events, touch unlock, settings persist, track switch", async ({ page, browser }) => {
@@ -83,6 +95,42 @@ test("hex-settlement room audio: cues from play events, touch unlock, settings p
     await hostSettle.hover();
     await expect.poll(async () => (await cueLog(page)).map((e) => e.cue)).toContain("hover");
 
+    // 走完初始放置（2 人蛇形，余下 3 个定居点 + 3 条道路），再由座位 0 掷骰、结束回合：dice / turn（及可能的 gain）。
+    const boards = [hostBoard, guestBoard];
+    const setupAction = /^(放置定居点|放置道路) · /;
+    for (let step = 0; step < 6; step += 1) {
+      let active: Locator | null = null;
+      await expect.poll(async () => {
+        for (const board of boards) if (await hasAction(board, setupAction)) active = board;
+        return active !== null;
+      }, { timeout: 30_000 }).toBe(true);
+      await clickAction(active as unknown as Locator, setupAction);
+      await expect.poll(async () => (await cueLog(page)).filter((e) => e.source.startsWith("action:")).length, { timeout: 20_000 })
+        .toBeGreaterThanOrEqual(3 + step);
+    }
+    await clickAction(guestBoard, /^掷骰$/);
+    // 掷出 7 时先处理弃牌 / 移动强盗，直到出现「结束回合」。
+    for (let guard = 0; guard < 12 && !(await hasAction(guestBoard, /^结束回合$/)); guard += 1) {
+      for (const board of boards) {
+        if (await hasAction(board, /^(弃牌|移动强盗)/)) await clickAction(board, /^(弃牌|移动强盗)/);
+      }
+      await guestPage.waitForTimeout(500);
+    }
+    await clickAction(guestBoard, /^结束回合$/);
+    for (const p of [page, guestPage]) {
+      await expect.poll(async () => (await cueLog(p)).map((e) => e.source), { timeout: 20_000 }).toEqual(
+        expect.arrayContaining([expect.stringMatching(/^action:roll_dice#/), expect.stringMatching(/^action:end_turn#/)]),
+      );
+      expect((await cueLog(p)).map((e) => e.cue)).toEqual(expect.arrayContaining(["dice", "turn"]));
+    }
+
+    // 动作被服务端拒绝 → 错误文案 → illegal（拦一次 intents 请求，返回 409）。
+    await page.route("**/api/sessions/*/intents**", (route) =>
+      route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: "illegal_action" }) }), { times: 1 });
+    await clickAction(hostBoard, /^掷骰$/);
+    await expect.poll(async () => (await cueLog(page)).map((e) => e.cue), { timeout: 20_000 }).toContain("illegal");
+    expect((await cueLog(page)).find((e) => e.cue === "illegal")?.source).toBe("ui:error");
+
     // 声音设置（桌面端）：panel / toggle cue、静音、音量、曲目切换，刷新后保持。
     await page.getByRole("heading").first().click();
     await expect(page.locator("[data-sound-settings]")).toHaveAttribute("data-audio-context", "running");
@@ -97,6 +145,11 @@ test("hex-settlement room audio: cues from play events, touch unlock, settings p
     const settingsBefore = (await audioSnapshot(page))?.settings;
     expect(settingsBefore).toEqual({ enabled: false, music: 0.3, sfx: 0.8, track: "finale" });
     expect((await cueLog(page)).map((e) => e.cue)).toEqual(expect.arrayContaining(["panel", "toggle"]));
+
+    // 证据：两端 cue 日志里出现过的 cue（PR 评论引用）。
+    const seenCues = [...new Set([...(await cueLog(page)), ...(await cueLog(guestPage))].map((e) => e.cue))].sort();
+    console.log(`[room-audio] cues seen in e2e: ${seenCues.join(", ")}`);
+    expect(seenCues).toEqual(expect.arrayContaining(["dice", "hover", "illegal", "panel", "place", "road", "select", "toggle", "turn"]));
 
     await page.reload();
     await waitForAudio(page);
