@@ -321,7 +321,7 @@ export function HexSettlementBoard({
         </dl>
       </section>
 
-      <div className="catan-stage catan-stage-frame">
+      <div className="g3d-stage">
         <Suspense fallback={<div aria-busy="true">加载 3D 桌面…</div>}>
           <LazySceneHost
             ariaLabel={copy.board}

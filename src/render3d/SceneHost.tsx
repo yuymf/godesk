@@ -418,7 +418,7 @@ export function SceneHost({
       data-testid="g3d-scene-host"
       ref={containerRef}
       role="img"
-      style={{ width: "100%", minHeight: 280, height: "42vh" }}
+      style={{ width: "100%", height: "100%", minHeight: 280, touchAction: "none" }}
     />
   );
 }
