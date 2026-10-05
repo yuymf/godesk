@@ -59,3 +59,9 @@
 | illustration/dev-fog-signal | assets/illustrations/cards/dev-fog-signal.webp | 发展卡·雾灯令 | 程序化 | scripts/gen-card-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸插画（风格指南调色） | G3D-24 |
 | illustration/dev-tide-plenty | assets/illustrations/cards/dev-tide-plenty.webp | 发展卡·潮运 | 程序化 | scripts/gen-card-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸插画（风格指南调色） | G3D-24 |
 | illustration/dev-harbor-charter | assets/illustrations/cards/dev-harbor-charter.webp | 发展卡·商港特许 | 程序化 | scripts/gen-card-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸插画（风格指南调色） | G3D-24 |
+| illustration/seat-0 | assets/illustrations/brand/seat-0.webp | 座位徽记 0 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸品牌插画 | G3D-25 |
+| illustration/seat-1 | assets/illustrations/brand/seat-1.webp | 座位徽记 1 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸品牌插画 | G3D-25 |
+| illustration/seat-2 | assets/illustrations/brand/seat-2.webp | 座位徽记 2 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸品牌插画 | G3D-25 |
+| illustration/seat-3 | assets/illustrations/brand/seat-3.webp | 座位徽记 3 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸品牌插画 | G3D-25 |
+| illustration/island-flourish | assets/illustrations/brand/island-flourish.webp | 岛名花饰 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸品牌插画 | G3D-25 |
+| illustration/loading-tidewell | assets/illustrations/brand/loading-tidewell.webp | 加载画 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸品牌插画 | G3D-25 |
