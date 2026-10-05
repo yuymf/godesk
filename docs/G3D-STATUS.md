@@ -73,6 +73,12 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
+| `feat/g3d-23-ui-parchment` | [#108](https://github.com/yuymf/godesk/pull/108) | U-01–U-05 | open · 等 Actions |
+| `feat/g3d-26-sfx` | [#111](https://github.com/yuymf/godesk/pull/111) | A-01/A-02 | open · 等 Actions |
+| `feat/g3d-27-music` | [#112](https://github.com/yuymf/godesk/pull/112) | A-03 ×3 | open · 等 Actions |
+| `feat/g3d-24-card-art` | [#113](https://github.com/yuymf/godesk/pull/113) | I-01/I-02 · base #108 | open · 等 Actions |
+| `feat/g3d-25-brand-art` | [#114](https://github.com/yuymf/godesk/pull/114) | I-03–I-05 · base #108 | open · 等 Actions |
+| `feat/g3d-19-terrain-decor` | TBD | decor.glb + T-12/13 · base #108 | open · 等 Actions |
 | `feat/g3d-23-ui-parchment` | [#108](https://github.com/yuymf/godesk/pull/108) | U-01–U-05 parchment / ink / Fraunces / style-guide | Track B open |
 | `feat/g3d-26-sfx` | [#111](https://github.com/yuymf/godesk/pull/111) | A-01/A-02 SFX | open · 等 Actions |
 | `feat/g3d-27-music` | [#112](https://github.com/yuymf/godesk/pull/112) | A-03 音乐 | open · 等 Actions |
