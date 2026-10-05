@@ -66,6 +66,9 @@ import {
 } from "./studio-utils";
 
 
+// G3D-10：音效（howler core）只在 3D 六角岛房间懒加载。
+const LazyRoomAudio = lazy(() => import("../render3d/audio/RoomAudio"));
+
 export function RoomView({ sessionId }: { sessionId: string }) {
   const [room, setRoom] = useState<SharedSession>();
   const [build, setBuild] = useState<PlayableBuild>();
@@ -1020,6 +1023,11 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         )}
       </section>
 
+      {hexSettlement ? (
+        <Suspense fallback={null}>
+          <LazyRoomAudio error={error} room={room} seat={seat} />
+        </Suspense>
+      ) : null}
       {error && (harbor || workerPlacement || discFlipping || hexSettlement) && <p className="creator-error" role="alert">{error}</p>}
 
       <aside className="action-log">
