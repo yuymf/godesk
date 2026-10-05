@@ -11,7 +11,7 @@
 | SPEC | 仓外 `/workspace/godesk-3d-spec/SPEC.md`（v0.2）；指针见 [`docs/G3D-SPEC-POINTER.md`](./G3D-SPEC-POINTER.md) |
 | Notion 项目 | https://app.notion.com/p/3f05fabdfe81810e90ade6b4fe2de7c2 |
 | 任务范围 | G3D-01 至 G3D-27；里程碑 M0–M5；人日上限 91 |
-| 代码基线 | `yuymf/godesk` `main` @ `332275d53219e3d6a9a3442a4abca8e432777b80`（#103 squash） |
+| 代码基线 | `yuymf/godesk` `main` @ `aa48c2a9088234e265de2675c9067a775ff30af1`（#104 squash） |
 | 状态文件维护人 | 劳埃德(工程) |
 | 最近更新 | 2026-10-06（Asia/Shanghai） |
 
@@ -39,6 +39,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | --- | --- | --- |
 | Bootstrap | 状态骨架 + prompt-trace 约定 | PR [#102](https://github.com/yuymf/godesk/pull/102) squash `f13c8ce` |
 | G3D-01 | ADR 0014 + 删除旧 2D 限定常量与技能措辞 | PR [#103](https://github.com/yuymf/godesk/pull/103) squash `332275d` |
+| G3D-02 | three / SceneHost / size-limit | PR [#104](https://github.com/yuymf/godesk/pull/104) squash `aa48c2a` |
 
 仓外已完成（不记入上表）：SPEC v0.2 起草与 §9 拍板修订；Notion 项目与任务卡建立。
 
@@ -46,7 +47,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
-| G3D-02：three 依赖、`SceneHost` 动态加载与包体预算 | Track A · 劳埃德(工程) | `feat/g3d-02-scene-host` / [PR #104](https://github.com/yuymf/godesk/pull/104) | M1 第一刀 |
+| G3D-03：六角岛状态 → 场景映射与基础渲染 | Track A · 劳埃德(工程) | `feat/g3d-03-hex-mapper` / [PR #107](https://github.com/yuymf/godesk/pull/107) | M1 第二刀 |
 | G3D-11：资产清单与许可证门（并行） | Track B | 见 Track B worktree | 不阻塞本 STATUS 行合并 |
 | G3D-12：GameSpec v2（并行） | Track C | 见 Track C worktree | 不阻塞本 STATUS 行合并 |
 
@@ -58,14 +59,14 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 ## 下一刀
 
-1. 完成并合并 **G3D-02**（本分支）。
-2. 随后按序 **G3D-03 → G3D-04 → G3D-18**（各独立 PR）。
+1. 完成并合并 **G3D-03**（本分支）。
+2. 随后按序 **G3D-04 → G3D-18**。
 
 ## 开着的 PR / 分支
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
-| `feat/g3d-02-scene-host` | [#104](https://github.com/yuymf/godesk/pull/104) | three、`SceneHost`、lazy 加载、size-limit、STATUS | 进行中 |
+| `feat/g3d-03-hex-mapper` | [#107](https://github.com/yuymf/godesk/pull/107) | scene-model、hex mapper、reconcile、SceneHost 接线 | 进行中 |
 
 ## 修订记录
 
@@ -76,3 +77,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | G3D-01 开工：M0 标为进行中；记录 `feat/g3d-01-adr-0014`、PR TBD、#102 仍 open；阻塞项改为 ChatGPT 侧 connector 重建；下一刀指向 M1 G3D-02 / 03 / 04 / 18 | 劳埃德(工程) |
 | 2026-10-06 | 回填 G3D-01 PR #103；下一刀改为经授权合并后进入 M1 | 劳埃德(工程) |
 | 2026-10-06 | #102 / #103 已 squash 合入；进入 M1；记录 C2C 作废与合入授权口径；G3D-02 开工；Codex 用量上限记入阻塞 | 劳埃德(工程) |
+| 2026-10-06 | G3D-02 已合入；G3D-03 开工（hex mapper + reconcile） | 劳埃德(工程) |

@@ -3,19 +3,40 @@ import {
   AmbientLight,
   BoxGeometry,
   Color,
+  CylinderGeometry,
   DirectionalLight,
+  ExtrudeGeometry,
   Mesh,
   MeshStandardMaterial,
+  type Object3D,
   PerspectiveCamera,
-  PlaneGeometry,
   Scene,
+  Shape,
+  SphereGeometry,
   WebGLRenderer,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { mapHexSettlementToScene } from "./mappers/hex-settlement";
+import { reconcileScene } from "./reconcile";
+import type { SceneModel, SceneNode } from "./scene-model";
+import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
 
 export type SceneHostProps = {
   className?: string;
+  /** Hex-settlement public state; when omitted, shows G3D-02 test cube. */
+  hexSettlement?: HexSettlementSceneInput | null;
 };
+
+const TERRAIN_HEX: Record<string, number> = {
+  wood: 0x2f6b3a,
+  brick: 0xb85a3a,
+  sheep: 0x8fbf6a,
+  wheat: 0xd4b84a,
+  ore: 0x6a6f78,
+  desert: 0xc9b896,
+};
+
+const SEAT_HEX = [0xc0392b, 0x2980b9, 0x27ae60, 0xf39c12] as const;
 
 function supportsWebGL2(): boolean {
   try {
@@ -26,19 +47,165 @@ function supportsWebGL2(): boolean {
   }
 }
 
+function hexShape(radius: number, bevel = 0.04): Shape {
+  const shape = new Shape();
+  for (let i = 0; i < 6; i += 1) {
+    const angle = (Math.PI / 180) * (60 * i);
+    const x = (radius - bevel) * Math.cos(angle);
+    const y = (radius - bevel) * Math.sin(angle);
+    if (i === 0) shape.moveTo(x, y);
+    else shape.lineTo(x, y);
+  }
+  shape.closePath();
+  return shape;
+}
+
+function disposeObject(object: Object3D): void {
+  object.traverse((child) => {
+    const mesh = child as Mesh;
+    if (!mesh.isMesh) return;
+    mesh.geometry?.dispose();
+    const material = mesh.material;
+    if (Array.isArray(material)) {
+      for (const entry of material) entry.dispose();
+    } else {
+      material?.dispose();
+    }
+  });
+}
+
+function createNodeObject(node: SceneNode): Object3D {
+  const applyPose = (mesh: Mesh) => {
+    mesh.position.set(node.position[0], node.position[1], node.position[2]);
+    if (node.rotationY !== undefined) mesh.rotation.y = node.rotationY;
+    if (node.scale) mesh.scale.set(node.scale[0], node.scale[1], node.scale[2]);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.userData.nodeId = node.id;
+    mesh.userData.kind = node.kind;
+    return mesh;
+  };
+
+  if (node.kind === "tile") {
+    const geom = new ExtrudeGeometry(hexShape(0.95), { depth: 0.28, bevelEnabled: false });
+    geom.rotateX(-Math.PI / 2);
+    const mat = new MeshStandardMaterial({
+      color: TERRAIN_HEX[node.tag ?? "desert"] ?? 0x888888,
+      roughness: 0.85,
+      metalness: 0.05,
+    });
+    return applyPose(new Mesh(geom, mat));
+  }
+
+  if (node.kind === "number-token") {
+    const geom = new CylinderGeometry(0.22, 0.22, 0.06, 24);
+    const mat = new MeshStandardMaterial({
+      color: node.tag === "hot" ? 0xc0392b : 0xf5f0e1,
+      roughness: 0.7,
+    });
+    return applyPose(new Mesh(geom, mat));
+  }
+
+  if (node.kind === "robber") {
+    const geom = new CylinderGeometry(0.12, 0.18, 0.7, 12);
+    const mat = new MeshStandardMaterial({ color: 0x2c3e50, emissive: 0x1a4a6a, emissiveIntensity: 0.35 });
+    return applyPose(new Mesh(geom, mat));
+  }
+
+  if (node.kind === "settlement") {
+    const geom = new BoxGeometry(0.28, 0.28, 0.28);
+    const mat = new MeshStandardMaterial({
+      color: SEAT_HEX[node.seat ?? 0] ?? 0xffffff,
+      roughness: 0.55,
+    });
+    return applyPose(new Mesh(geom, mat));
+  }
+
+  if (node.kind === "city") {
+    const geom = new BoxGeometry(0.36, 0.48, 0.36);
+    const mat = new MeshStandardMaterial({
+      color: SEAT_HEX[node.seat ?? 0] ?? 0xffffff,
+      roughness: 0.5,
+    });
+    return applyPose(new Mesh(geom, mat));
+  }
+
+  if (node.kind === "road") {
+    const geom = new BoxGeometry(1, 1, 1);
+    const mat = new MeshStandardMaterial({
+      color: SEAT_HEX[node.seat ?? 0] ?? 0xffffff,
+      roughness: 0.75,
+    });
+    return applyPose(new Mesh(geom, mat));
+  }
+
+  if (node.kind === "port" || node.kind === "ship" || node.kind === "die" || node.kind === "dice-tray" || node.kind === "decor") {
+    const geom =
+      node.kind === "ship"
+        ? new BoxGeometry(0.5, 0.18, 0.22)
+        : node.kind === "die"
+          ? new BoxGeometry(0.22, 0.22, 0.22)
+          : node.kind === "decor"
+            ? new SphereGeometry(0.18, 10, 10)
+            : new BoxGeometry(0.4, 0.12, 0.4);
+    const mat = new MeshStandardMaterial({
+      color:
+        node.kind === "decor"
+          ? TERRAIN_HEX[node.tag ?? "wood"] ?? 0x666666
+          : node.kind === "die"
+            ? 0xf8f8f8
+            : 0x8b6914,
+      roughness: 0.7,
+    });
+    return applyPose(new Mesh(geom, mat));
+  }
+
+  // cliff default
+  const geom = new CylinderGeometry(1, 1.05, 1, 6);
+  const mat = new MeshStandardMaterial({ color: 0x7a7368, roughness: 0.95 });
+  return applyPose(new Mesh(geom, mat));
+}
+
+function updateNodeObject(object: Object3D, node: SceneNode): void {
+  object.position.set(node.position[0], node.position[1], node.position[2]);
+  if (node.rotationY !== undefined) object.rotation.y = node.rotationY;
+  if (node.scale) object.scale.set(node.scale[0], node.scale[1], node.scale[2]);
+  const mesh = object as Mesh;
+  if (mesh.isMesh && mesh.material && "color" in mesh.material) {
+    const material = mesh.material as MeshStandardMaterial;
+    if (node.kind === "tile" && node.tag) {
+      material.color.setHex(TERRAIN_HEX[node.tag] ?? 0x888888);
+    }
+    if ((node.kind === "settlement" || node.kind === "city" || node.kind === "road") && node.seat !== undefined) {
+      material.color.setHex(SEAT_HEX[node.seat] ?? 0xffffff);
+    }
+  }
+}
+
 /**
- * Minimal Three.js host for G3D-02: WebGL2 renderer, orbit camera, and a
- * shadowed test cube. Game mapping arrives in G3D-03+.
+ * Three.js host: WebGL2 renderer + OrbitControls + SceneModel reconcile.
  */
-export function SceneHost({ className }: SceneHostProps) {
+export function SceneHost({ className, hexSettlement }: SceneHostProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [unsupported, setUnsupported] = useState(false);
+  const [ready, setReady] = useState(false);
+  const modelRef = useRef<SceneModel | null>(null);
+  const registryRef = useRef(new Map<string, Object3D>());
+  const contentRootRef = useRef<Object3D | null>(null);
+  const reconcileHostRef = useRef<ReturnType<typeof buildHost> | null>(null);
+
+  function buildHost(root: Object3D) {
+    return {
+      root,
+      create: createNodeObject,
+      update: updateNodeObject,
+      disposeObject,
+    };
+  }
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) {
-      return;
-    }
+    if (!container) return;
     if (!supportsWebGL2()) {
       setUnsupported(true);
       return;
@@ -48,7 +215,7 @@ export function SceneHost({ className }: SceneHostProps) {
     scene.background = new Color(0x87b5d4);
 
     const camera = new PerspectiveCamera(45, 1, 0.1, 100);
-    camera.position.set(3.2, 2.6, 4.2);
+    camera.position.set(0, 9, 12);
 
     const renderer = new WebGLRenderer({ antialias: true, alpha: false });
     renderer.shadowMap.enabled = true;
@@ -57,53 +224,44 @@ export function SceneHost({ className }: SceneHostProps) {
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.target.set(0, 0.4, 0);
+    controls.target.set(0, 0, 0);
+    controls.maxPolarAngle = Math.PI * 0.48;
 
     const ambient = new AmbientLight(0xffffff, 0.55);
     scene.add(ambient);
-
     const sun = new DirectionalLight(0xfff2d6, 1.35);
-    sun.position.set(4, 8, 2);
+    sun.position.set(6, 12, 4);
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
-    sun.shadow.camera.near = 0.5;
-    sun.shadow.camera.far = 30;
-    sun.shadow.camera.left = -6;
-    sun.shadow.camera.right = 6;
-    sun.shadow.camera.top = 6;
-    sun.shadow.camera.bottom = -6;
     scene.add(sun);
 
-    const groundGeometry = new PlaneGeometry(12, 12);
-    const groundMaterial = new MeshStandardMaterial({
-      color: 0xd7e6c8,
-      roughness: 0.9,
-      metalness: 0.05,
-    });
-    const ground = new Mesh(groundGeometry, groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    scene.add(ground);
+    const contentRoot = new Scene();
+    scene.add(contentRoot);
+    contentRootRef.current = contentRoot;
+    reconcileHostRef.current = buildHost(contentRoot);
+    setReady(true);
 
-    const cubeGeometry = new BoxGeometry(1, 1, 1);
-    const cubeMaterial = new MeshStandardMaterial({
-      color: 0xc56b3a,
-      roughness: 0.55,
-      metalness: 0.1,
-    });
-    const cube = new Mesh(cubeGeometry, cubeMaterial);
-    cube.position.set(0, 0.5, 0);
-    cube.castShadow = true;
-    cube.receiveShadow = true;
-    scene.add(cube);
+    // Fallback test cube when no hex state yet (G3D-02 smoke path).
+    if (!hexSettlement) {
+      const geom = new BoxGeometry(1, 1, 1);
+      const mat = new MeshStandardMaterial({ color: 0xc56b3a });
+      const cube = new Mesh(geom, mat);
+      cube.position.set(0, 0.5, 0);
+      cube.castShadow = true;
+      contentRoot.add(cube);
+      const groundGeom = new BoxGeometry(12, 0.05, 12);
+      const groundMat = new MeshStandardMaterial({ color: 0xd7e6c8 });
+      const ground = new Mesh(groundGeom, groundMat);
+      ground.position.y = -0.02;
+      ground.receiveShadow = true;
+      contentRoot.add(ground);
+    }
 
     let frameId = 0;
     let disposed = false;
 
     const resize = () => {
-      if (disposed) {
-        return;
-      }
+      if (disposed) return;
       const width = Math.max(container.clientWidth, 1);
       const height = Math.max(container.clientHeight, 1);
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -112,25 +270,15 @@ export function SceneHost({ className }: SceneHostProps) {
       renderer.setPixelRatio(dpr);
       renderer.setSize(width, height, false);
     };
-
-    const onWindowResize = () => {
-      resize();
-    };
-
+    const onWindowResize = () => resize();
     const observer =
-      typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(() => {
-            resize();
-          })
-        : null;
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => resize()) : null;
     observer?.observe(container);
     window.addEventListener("resize", onWindowResize);
     resize();
 
     const tick = () => {
-      if (disposed) {
-        return;
-      }
+      if (disposed) return;
       controls.update();
       renderer.render(scene, camera);
       frameId = window.requestAnimationFrame(tick);
@@ -143,27 +291,44 @@ export function SceneHost({ className }: SceneHostProps) {
       window.removeEventListener("resize", onWindowResize);
       observer?.disconnect();
       controls.dispose();
-      scene.remove(ambient, sun, ground, cube);
-      groundGeometry.dispose();
-      groundMaterial.dispose();
-      cubeGeometry.dispose();
-      cubeMaterial.dispose();
+      for (const object of registryRef.current.values()) {
+        contentRoot.remove(object);
+        disposeObject(object);
+      }
+      registryRef.current.clear();
+      contentRoot.traverse((child) => {
+        const mesh = child as Mesh;
+        if (mesh.isMesh) {
+          mesh.geometry?.dispose();
+          const material = mesh.material;
+          if (Array.isArray(material)) for (const entry of material) entry.dispose();
+          else material?.dispose();
+        }
+      });
       renderer.dispose();
       renderer.forceContextLoss();
       if (renderer.domElement.parentElement === container) {
         container.removeChild(renderer.domElement);
       }
+      contentRootRef.current = null;
+      reconcileHostRef.current = null;
+      modelRef.current = null;
+      setReady(false);
     };
+    // hexSettlement applied in separate effect against stable host
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const host = reconcileHostRef.current;
+    if (!host || !hexSettlement) return;
+    const next = mapHexSettlementToScene(hexSettlement);
+    modelRef.current = reconcileScene(host, modelRef.current, next, registryRef.current);
+  }, [hexSettlement, ready]);
 
   if (unsupported) {
     return (
-      <div
-        aria-label="g3d-scene-host"
-        className={className}
-        data-testid="g3d-scene-host"
-        role="img"
-      >
+      <div aria-label="g3d-scene-host" className={className} data-testid="g3d-scene-host" role="img">
         <p>此设备不支持 WebGL2，无法显示 3D 桌面。</p>
       </div>
     );
@@ -176,7 +341,7 @@ export function SceneHost({ className }: SceneHostProps) {
       data-testid="g3d-scene-host"
       ref={containerRef}
       role="img"
-      style={{ width: "100%", minHeight: 220, height: "32vh" }}
+      style={{ width: "100%", minHeight: 280, height: "42vh" }}
     />
   );
 }

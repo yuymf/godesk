@@ -605,7 +605,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       ) : hexSettlement && catanState ? (
         <div className="room-hex-settlement-surface">
           <Suspense fallback={<div aria-busy="true">加载 3D 桌面…</div>}>
-            <LazySceneHost className="room-g3d-scene-host" />
+            <LazySceneHost className="room-g3d-scene-host" hexSettlement={catanState} />
           </Suspense>
           <CatanBoard
             activeSeat={activeSeat}
