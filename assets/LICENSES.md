@@ -65,3 +65,6 @@
 | illustration/seat-3 | assets/illustrations/brand/seat-3.webp | 座位徽记 3 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸品牌插画 | G3D-25 |
 | illustration/island-flourish | assets/illustrations/brand/island-flourish.webp | 岛名花饰 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸品牌插画 | G3D-25 |
 | illustration/loading-tidewell | assets/illustrations/brand/loading-tidewell.webp | 加载画 | 程序化 | scripts/gen-brand-art.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | PIL 羊皮纸品牌插画 | G3D-25 |
+| model/decor | assets/models/decor.glb | 地形装饰合集 decor.glb | CC0 | https://kenney.nl/assets/nature-kit | CC0-1.0 | Kenney | 2026-10-06 | 是 | 选型合并 + meshopt；按风格指南使用（松/灌/岩/麦/砖垛/浮木） | G3D-19 |
+| texture/sea-normal | assets/textures/ktx2/sea-normal.ktx2 | 海面法线噪声 T-12 | 程序化 | scripts/gen-noise-textures.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | 程序化噪声 + toktx UASTC | G3D-19 |
+| texture/foam-noise | assets/textures/ktx2/foam-noise.ktx2 | 泡沫噪声 T-13 | 程序化 | scripts/gen-noise-textures.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | 程序化噪声 + toktx ETC1S | G3D-19 |
