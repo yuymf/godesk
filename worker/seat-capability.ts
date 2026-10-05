@@ -6,7 +6,7 @@ export interface StoredSessionSeat {
   displayName?: string;
 }
 
-export interface PublicSessionSeat {
+interface PublicSessionSeat {
   seat: number;
   displayName?: string;
 }

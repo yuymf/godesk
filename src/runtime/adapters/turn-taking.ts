@@ -12,7 +12,6 @@ import type {
   PlayKernelConfig,
   PlayPhaseId,
   PlayState,
-  PlayerId,
 } from "../play-kernel";
 
 export const TURN_TAKING_KERNEL_TYPE = "turn-taking-v1" as const;
@@ -24,7 +23,7 @@ export const TURN_TAKING_PHASES = [
 
 export type TurnTakingActionDef = { id: string; label: string };
 
-export type TurnTakingConfig = {
+type TurnTakingConfig = {
   maxTurns: number;
   actions: TurnTakingActionDef[];
   /** When true, active player may pass (hook for forced-pass genres). */
@@ -46,7 +45,7 @@ function isActionDef(value: unknown): value is TurnTakingActionDef {
   return typeof record.id === "string" && typeof record.label === "string";
 }
 
-export function parseTurnTakingConfig(
+function parseTurnTakingConfig(
   raw: Record<string, unknown>,
 ): TurnTakingConfig | null {
   const maxTurns = raw.maxTurns;
@@ -188,19 +187,6 @@ export function turnTakingToSessionFields(state: PlayState<TurnTakingGenre>): {
     winnerSeat: null,
     turnTaking: { maxTurns: state.genre.maxTurns },
   };
-}
-
-export function listTurnTakingLegalActionIds(
-  state: PlayState<TurnTakingGenre>,
-  playerId: PlayerId,
-): string[] {
-  return turnTakingAdapter
-    .listLegalActions(state, playerId, {
-      maxTurns: state.genre.maxTurns,
-      actions: state.genre.actions,
-      allowPass: state.genre.allowPass,
-    })
-    .map((action) => action.type);
 }
 
 export function playActionFromIntent(

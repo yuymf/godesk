@@ -2,7 +2,7 @@ import { isDefaultExampleId, type DefaultExampleId } from "./default-examples";
 
 export const COMPOSER_DRAFT_KEY = "godesk-composer-draft";
 
-export type ComposerDraft = {
+type ComposerDraft = {
   name: string;
   description: string;
   resume: "generate" | "example" | null;

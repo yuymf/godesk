@@ -48,9 +48,26 @@ Creator home ships three rights-safe originals. Each copies into a real editable
 
 | Example | Shape |
 |:---|:---|
-| `港口十三号` | Competitive harbor-voyage game |
-| `雾岭山庄` | Cooperative exploration mechanism slice |
-| `灵感接力` | Conversation game — no board or physical components |
+| `港口十三号` | Competitive harbor-voyage race (`harbor-voyage-v1`) |
+| `雾岭山庄` | Hidden-role deduction: secret identities, open talk, accusations (`hidden-role-v1`) |
+| `灵感接力` | Conversation game — no board or physical components (`conversation-relay-v1`) |
+
+### Play kernels
+
+Executable Builds run on one of these authoritative kernels (`src/runtime/`):
+
+| Kernel | Play shape |
+|:---|:---|
+| `disc-flipping-v1` | Othello / Reversi board |
+| `auction-bidding-v1` | Auction and bidding board |
+| `hex-settlement-v1` | Catan-style hex settlement |
+| `network-route-v1` | Route-claiming network map |
+| `hand-play-v1` | Card hand / play area |
+| `worker-placement-v1` | Worker placement regions |
+| `harbor-voyage-v1` | Harbor dispatch and dice voyage |
+| `hidden-role-v1` | Secret roles, speech, accusation |
+| `conversation-relay-v1` | Turn-based conversation relay |
+| `score-race-v1` / `turn-taking-v1` | Generic score track / turn order |
 
 ## Why this repo exists
 
@@ -67,12 +84,17 @@ Success is the invitation URL letting someone else sit down and play. Ratings an
 
 | Route | Role |
 |:---|:---|
-| `/` | Creator project home |
+| `/` | Creator project home (composer + original examples) |
+| `/games` | Game gallery / lobby of the creator's projects |
+| `/settings` | Creator settings |
 | `/studio/:projectId` | Authoritative workspace with embedded Creator self-play |
 | `/play/:buildId` | Immutable Build preview |
-| `/room/:roomId` | Shared Session and friend invitation |
+| `/room/:roomId` | Shared Session: invite link, seat claim, play |
 | `/replay/:replayId` | Read-only replay |
+| `/try/:projectId` | Stable playtest link; the Worker redirects to the pinned Shared Session |
 | `/chatgpt-plugin` | One-sentence Codex installation contract |
+
+Every route is also served under the public mount `/chatgpt-plugin/*` (home is `/chatgpt-plugin/new`).
 
 ## How it works
 
@@ -108,9 +130,9 @@ pnpm deploy:dry-run
 | `pnpm verify:local-routes` | OAuth metadata, login/callback, MCP route contracts |
 | `pnpm verify:local-loop` | Full prompt → Generation Plan → approval → Build → fixed-seed self-play → Finding → revised Build → Shared Session → Replay |
 | `pnpm verify:local-mcp` | Streamable HTTP MCP: tools, durable jobs, plan approval, Build/preview, self-play, Session, Replay |
-| `pnpm verify:plugin:public` | Compares published thin Plugin to local contract (expected to fail while public repo lags) |
+| `pnpm verify:plugin:public` | Compares the published thin Plugin (`yuymf/godesk-plugin`) to the local contract; uses the unauthenticated GitHub API, so it can hit HTTP 403 rate limits |
 
-`verify:local-routes`, `verify:local-loop`, and `verify:local-mcp` are release-only local smokes (shared temporary Worker bootstrap; overlap `test:worker` + Playwright) — not in CI. `verify:plugin:public` stays out of CI until the public Plugin repo matches the current contract.
+`verify:local-routes`, `verify:local-loop`, and `verify:local-mcp` are release-only local smokes (shared temporary Worker bootstrap; overlap `test:worker` + Playwright) — not in CI. `verify:plugin:public` is not in CI; `deploy.yml` publishes the bundle to the public repo after each production deploy.
 
 Cloud-computer / Asia/Shanghai nightly one-shot (Node ≥ 22, no real Worker secrets): **[docs/NIGHTLY-E2E.md](docs/NIGHTLY-E2E.md)**.
 

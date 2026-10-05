@@ -12,7 +12,7 @@ import {
   type NetworkEdgeDef,
 } from "../runtime/adapters/network-route";
 
-export type NetworkRouteSessionSlice = {
+type NetworkRouteSessionSlice = {
   cities: NetworkCity[];
   edges: NetworkEdgeDef[];
   claims: Record<string, number | null>;

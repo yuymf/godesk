@@ -25,12 +25,11 @@ import {
 import {
   createHexBoardGraph,
   type HexBoardGraph,
-  type HexCoord,
 } from "../topology-stub";
 
 export const HEX_SETTLEMENT_KERNEL_TYPE = "hex-settlement-v1" as const;
 
-export const CATAN_PHASES = [
+const CATAN_PHASES = [
   { id: "setup", name: "Initial placement" },
   { id: "roll", name: "Roll dice" },
   { id: "discard", name: "Discard on 7" },
@@ -43,7 +42,7 @@ export type Resource = "wood" | "brick" | "sheep" | "wheat" | "ore";
 export type Terrain = Resource | "desert";
 export type DevCardKind = "knight" | "victory" | "road_building";
 
-export const RESOURCES: readonly Resource[] = [
+const RESOURCES: readonly Resource[] = [
   "wood",
   "brick",
   "sheep",
@@ -53,7 +52,7 @@ export const RESOURCES: readonly Resource[] = [
 
 export type ResourceBank = Record<Resource, number>;
 
-export type CatanConfig = {
+type CatanConfig = {
   playerCount: number;
   victoryPointsToWin: number;
 };
@@ -209,7 +208,7 @@ function desertHexKey(tiles: CatanTile[]): string {
 }
 
 /** Coastal vertices sorted; assign ports in stable rings for bank/port trade. */
-export function createBeginnerPorts(graph: HexBoardGraph): CatanPort[] {
+function createBeginnerPorts(graph: HexBoardGraph): CatanPort[] {
   const coastal = graph.vertexIds.filter(
     (vertex) => (graph.vertexHexes[vertex] ?? []).length <= 2,
   );

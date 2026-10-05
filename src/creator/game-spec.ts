@@ -16,7 +16,7 @@ export const generationMetadataSchema = z.strictObject({
 export type GenerationMetadata = z.infer<typeof generationMetadataSchema>;
 export const GENERATOR_VERSION = "rule-system-materializer-v1";
 export const RULES_VERSION = "source-rules-v1";
-export const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 1;
 
 /** Data only. Hooks identify adapter responsibilities; they never execute scripts. */
 export const gameSpecSchema = z.strictObject({
@@ -41,8 +41,8 @@ export const gameSpecSchema = z.strictObject({
   execution: z.strictObject({ kernelType: text.nullable() }),
 });
 export type GameSpec = z.infer<typeof gameSpecSchema>;
-export type SpecIssue = { path: string; message: string };
-export type SpecValidation = { valid: boolean; issues: SpecIssue[] };
+type SpecIssue = { path: string; message: string };
+type SpecValidation = { valid: boolean; issues: SpecIssue[] };
 
 export function validateGameSpec(value: unknown): SpecValidation {
   const parsed = gameSpecSchema.safeParse(value);
@@ -95,7 +95,7 @@ function canonical(value: unknown): string {
 }
 
 /** Project the existing Rule System; do not introduce another generator or rules engine. */
-export function createGameSpec(rule: RuleSystem, generation: GenerationMetadata): GameSpec {
+function createGameSpec(rule: RuleSystem, generation: GenerationMetadata): GameSpec {
   const kernel = rule.runtimeSupport.status === "executable" ? rule.runtimeSupport.kernel : null;
   // Existing Kernels own setup/phase advancement/end/scoring. Keep that delegation explicit.
   const phases = kernel ? [{ id: "kernel-turn", name: `${kernel.type}: phase advancement` }] : rule.stages;

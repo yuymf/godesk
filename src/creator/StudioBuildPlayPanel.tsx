@@ -18,19 +18,19 @@ import {
 } from "./studio-utils";
 import type { StudioHobbyistFocus } from "./studio-panel-types";
 
-export type StudioPlayTarget = {
+type StudioPlayTarget = {
   build?: PlayableBuild;
   session?: SharedSession;
 };
 
-export type StudioBuildComparison = {
+type StudioBuildComparison = {
   baselineBuild: PlayableBuild;
   baselinePlaytest: PlaytestRun;
   candidateBuild: PlayableBuild;
   candidatePlaytest: PlaytestRun;
 };
 
-export type StudioBuildPlayPanelProps = {
+type StudioBuildPlayPanelProps = {
   hobbyistFocus: StudioHobbyistFocus;
   canPlayLatest: boolean;
   busy: boolean;

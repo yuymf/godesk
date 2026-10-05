@@ -9,7 +9,7 @@ import {
 import type { PlayState } from "../runtime/play-kernel";
 import type { RoomLocale } from "./room-presentation";
 
-export type OthelloBoardState = {
+type OthelloBoardState = {
   rows: number;
   cols: number;
   board: Array<Array<number | null>>;
@@ -79,7 +79,7 @@ function toGenre(othello: OthelloBoardState): OthelloGenre {
 }
 
 /** Rebuild a minimal PlayState so client-side listLegalActions matches the adapter. */
-export function playStateFromOthelloSession(
+function playStateFromOthelloSession(
   othello: OthelloBoardState,
   activeSeat: number,
   status: "active" | "complete",

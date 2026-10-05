@@ -22,7 +22,7 @@ export type ValidationEvidenceType =
 
 export type SeatedParticipantDraft = { seat: number; name: string };
 
-export type StoredSeatClaim = { seat: number; seatToken: string };
+type StoredSeatClaim = { seat: number; seatToken: string };
 
 export function readShareToken() {
   return new URLSearchParams(window.location.search).get("share") ?? undefined;
@@ -248,7 +248,7 @@ export function generationSourceFields(
   };
 }
 
-export type RuleSystemStructureDraft = Pick<
+type RuleSystemStructureDraft = Pick<
   RuleSystem,
   | "rules"
   | "constraints"

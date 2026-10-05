@@ -82,7 +82,7 @@ type ExecutableRuntime = Extract<
   { status: "executable" }
 >;
 
-export interface SessionIntent {
+interface SessionIntent {
   intentId: string;
   seat: number;
   actionId: string;

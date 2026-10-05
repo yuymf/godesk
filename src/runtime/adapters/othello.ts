@@ -27,7 +27,7 @@ import {
 
 export const DISC_FLIPPING_KERNEL_TYPE = "disc-flipping-v1" as const;
 
-export const OTHELLO_PHASES = [
+const OTHELLO_PHASES = [
   { id: "play", name: "Play" },
   { id: "ended", name: "Ended" },
 ] as const;
@@ -35,7 +35,7 @@ export const OTHELLO_PHASES = [
 /** Empty cell = null; occupied = owning playerId (0 = black, 1 = white). */
 export type OthelloCell = PlayerId | null;
 
-export type OthelloConfig = {
+type OthelloConfig = {
   rows: number;
   cols: number;
 };

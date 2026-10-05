@@ -16,7 +16,6 @@ import {
   kernelHasPlacementEconomy,
 } from "./worker-placement";
 
-export type { PlayabilityFloorReadiness };
 
 const SHAREABLE_KERNELS = new Set([
   "hidden-role-v1",
@@ -62,7 +61,7 @@ type ExecutableKernel = Extract<
  * (hands, regions/occupancy, speech, roles+accuse). Kernel *type* alone is
  * not enough — an empty contract fails the share gate.
  */
-export function decisionDensityGap(
+function decisionDensityGap(
   kernel: ExecutableKernel,
   ruleSystem: RuleSystem,
 ): string | null {

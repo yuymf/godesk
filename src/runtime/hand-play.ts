@@ -7,7 +7,7 @@ export type HandPlayState = {
 };
 
 /** Source-parameterized play-to-score hand deck (honest subset; not trick/shed/suit). */
-export type HandPlayDeckConfig = {
+type HandPlayDeckConfig = {
   cardValues: number[];
   copiesPerValue: number;
   handSize: number;

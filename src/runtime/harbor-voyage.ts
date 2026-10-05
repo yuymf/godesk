@@ -54,7 +54,7 @@ export type HarborVoyageState = {
   winnerSeat: number | null;
 };
 
-export const HARBOR_CARGO: Array<{
+const HARBOR_CARGO: Array<{
   id: HarborCargoId;
   name: string;
   color: string;
@@ -450,7 +450,7 @@ function nextRandom(state: number) {
   return value >>> 0;
 }
 
-export function seededHarborRoll(
+function seededHarborRoll(
   state: HarborVoyageState,
   seed: number,
   sequence: number,
@@ -464,7 +464,7 @@ export function seededHarborRoll(
   return values;
 }
 
-export function parseHarborActionId(actionId: string): {
+function parseHarborActionId(actionId: string): {
   kind: "place" | "roll" | "pilot";
   targetId?: HarborTargetId;
   rolls?: Record<HarborCargoId, number>;

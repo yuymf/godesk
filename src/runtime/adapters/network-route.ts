@@ -27,7 +27,7 @@ import {
 
 export const NETWORK_ROUTE_KERNEL_TYPE = "network-route-v1" as const;
 
-export const NETWORK_ROUTE_PHASES = [
+const NETWORK_ROUTE_PHASES = [
   { id: "play", name: "Play" },
   { id: "ended", name: "Ended" },
 ] as const;
@@ -75,7 +75,7 @@ export const DEFAULT_NETWORK_EDGES: readonly NetworkEdgeDef[] = [
   { id: "E|F", from: "E", to: "F" },
 ];
 
-export type NetworkRouteConfig = {
+type NetworkRouteConfig = {
   playerCount: number;
   terminalFrom: string;
   terminalTo: string;
@@ -91,10 +91,6 @@ export type NetworkRouteGenre = {
   lastClaim: { edgeId: string; playerId: PlayerId } | null;
   routeCounts: [number, number];
 };
-
-export function edgeIdFor(from: string, to: string): string {
-  return from < to ? `${from}|${to}` : `${to}|${from}`;
-}
 
 export function parseNetworkRouteConfig(
   raw: Record<string, unknown>,

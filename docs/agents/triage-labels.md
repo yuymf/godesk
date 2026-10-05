@@ -13,6 +13,7 @@ roles to the `Status:` strings this repository actually uses.
 
 Completion is not a skill label. Closed tickets use `Status: resolved`.
 
-Live statuses in `.scratch/` today are `resolved`, `ready-for-human`, and
-(when work is in progress) `claimed`. Do not write `ready-for-agent` on a
-new ticket; use `claimed` or leave the ticket unclaimed until work starts.
+`.scratch/` may be empty between efforts. When tickets exist, live statuses
+are `resolved`, `ready-for-human`, and (when work is in progress) `claimed`.
+Do not write `ready-for-agent` on a new ticket; use `claimed` or leave the
+ticket unclaimed until work starts.

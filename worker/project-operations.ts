@@ -9,7 +9,6 @@ import type {
   ApplyProjectChangesInput,
   ApplyProjectChangesResult,
   Changeset,
-  CompileBuildInput,
   CompileBuildResult,
   CreatorJob,
   DesignHypothesis,
@@ -23,17 +22,14 @@ import type {
   ProjectChangeOperation,
   SourceLibraryEntry,
   ValidationFinding,
-  VisualTreatment,
   RuleSystem,
 } from "../src/creator/project-contract";
 import {
   publicSeats,
-  type StoredSessionSeat,
 } from "./seat-capability";
 import type {
   StoredPlayableBuild,
   StoredPlaytest,
-  StoredPlaytestLink,
   StoredSharedSession,
 } from "./public-urls";
 
@@ -42,10 +38,8 @@ export {
   publicJob,
   publicMutation,
   publicPlaytest,
-  publicPlaytestLink,
   publicSession,
   publicizeProjectViewData,
-  signedShareToken,
 } from "./public-urls";
 export type {
   StoredPlayableBuild,
@@ -55,8 +49,8 @@ export type {
 } from "./public-urls";
 
 export const PROJECT_PREFIX = "/projects/";
-export const GENERATION_PLAN_PREFIX = "generation-plan:";
-export const PLAYTEST_LINK_PREFIX = "playtest-link:";
+const GENERATION_PLAN_PREFIX = "generation-plan:";
+const PLAYTEST_LINK_PREFIX = "playtest-link:";
 export interface ProjectRecord {
   project: GameProject;
   ruleSystem: RuleSystem;
@@ -159,7 +153,7 @@ export function initialRuleSystem(id: string): RuleSystem {
   };
 }
 
-export function normalizedRuleSystem(ruleSystem: RuleSystem): RuleSystem {
+function normalizedRuleSystem(ruleSystem: RuleSystem): RuleSystem {
   if (
     !ruleSystem.participants ||
     !Array.isArray(ruleSystem.constraints) ||
@@ -265,7 +259,7 @@ export function validChangeRequest(value: unknown): value is ApplyProjectChanges
   );
 }
 
-export function validBoundImage(value: unknown) {
+function validBoundImage(value: unknown) {
   return Boolean(
     value &&
       typeof value === "object" &&
@@ -275,7 +269,7 @@ export function validBoundImage(value: unknown) {
   );
 }
 
-export function validVisualTreatments(value: unknown) {
+function validVisualTreatments(value: unknown) {
   return (
     Array.isArray(value) &&
     value.length >= 1 &&
@@ -294,7 +288,7 @@ export function validVisualTreatments(value: unknown) {
   );
 }
 
-export function runtimeActionShapeChanged(
+function runtimeActionShapeChanged(
   previous: RuleSystem["actions"],
   next: RuleSystem["actions"],
 ) {
@@ -307,7 +301,7 @@ export function runtimeActionShapeChanged(
   );
 }
 
-export type RuntimeConfiguration =
+type RuntimeConfiguration =
   | Extract<ProjectChangeOperation, { op: "configure_score_race" }> & {
       op: "configure_score_race";
     }
@@ -357,7 +351,7 @@ export type RuntimeConfiguration =
       op: "configure_auction_bidding";
     };
 
-export function configureDedicatedKernel(
+function configureDedicatedKernel(
   record: ProjectRecord,
   op: string,
   kernel: Extract<
@@ -566,7 +560,7 @@ export function configureDedicatedKernel(
   affectedEntities.push(`runtime:${record.ruleSystem.id}`);
 }
 
-export function configureRuntimeKernel(
+function configureRuntimeKernel(
   record: ProjectRecord,
   configuration: RuntimeConfiguration,
   affectedEntities: string[],
@@ -2234,7 +2228,7 @@ export function visibleSession(
  *  Reconstruct rebuilds full state from intentId/actionId/payload + seed.
  *  Keeps DO/SQLite under SQLITE_TOOBIG for long seeded bot runs (~800+ plies).
  */
-export function slimAcceptedActionForStorage(action: AcceptedAction): AcceptedAction {
+function slimAcceptedActionForStorage(action: AcceptedAction): AcceptedAction {
   const slimState: SessionState = {
     turn: action.state.turn,
     activeSeat: action.state.activeSeat,

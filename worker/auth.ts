@@ -14,7 +14,7 @@ interface AuthorizationMetadata {
   code_challenge_methods_supported?: string[];
 }
 
-export interface CreatorIdentity {
+interface CreatorIdentity {
   creatorId: string;
   mode: "local-development" | "oauth";
   scopes: string[];

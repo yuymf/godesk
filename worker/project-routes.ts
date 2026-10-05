@@ -275,7 +275,7 @@ export async function projectApi(
   return publicizeProjectView(response, url, creatorId, secret, mount);
 }
 
-export function publicShareForwardRequest(target: string, request: Request) {
+function publicShareForwardRequest(target: string, request: Request) {
   const forwarded = new Request(target, request);
   forwarded.headers.set("x-godesk-public-share", "1");
   return forwarded;

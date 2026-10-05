@@ -65,7 +65,7 @@ export type PlayKernelConfig = {
   adapter: Record<string, unknown>;
 };
 
-export type ApplyActionResult<TGenre = unknown> =
+type ApplyActionResult<TGenre = unknown> =
   | { ok: true; state: PlayState<TGenre> }
   | { ok: false; state: PlayState<TGenre>; reason: string };
 
@@ -115,7 +115,7 @@ export type PlayKernelAdapter<TGenre, TConfig extends Record<string, unknown>> =
 };
 
 /** Deterministic xorshift32 RNG (matches worker/runtime nextRandom). */
-export function nextRandom(state: number): number {
+function nextRandom(state: number): number {
   let value = state | 0;
   value ^= value << 13;
   value ^= value >>> 17;
@@ -148,7 +148,7 @@ export function createSeededRng(seed: number): {
 }
 
 /** Stable JSON for hashing / replay equality (sorted object keys). */
-export function canonicalJson(value: unknown): string {
+function canonicalJson(value: unknown): string {
   return JSON.stringify(value, (_key, item: unknown) => {
     if (item && typeof item === "object" && !Array.isArray(item)) {
       return Object.fromEntries(

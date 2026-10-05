@@ -7,7 +7,6 @@ import {
   publicBuild,
   publicJob,
   publicMutation,
-  publicPlaytest,
   publicSession,
   publicizeProjectViewData,
 } from "./public-urls";
@@ -770,10 +769,6 @@ function studioUrl(origin: string, projectId: string) {
 
 function asBuild(value: JsonObject) {
   return { ...value, id: String(value.id ?? "") };
-}
-
-function asPlaytest(value: JsonObject) {
-  return { ...value, replayId: String(value.replayId ?? "") };
 }
 
 function asSession(value: JsonObject) {

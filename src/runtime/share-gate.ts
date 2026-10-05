@@ -11,7 +11,7 @@ export type ShareGateBuild = {
   ruleSystem: RuleSystem;
 };
 
-export type ShareGateRefusal =
+type ShareGateRefusal =
   | {
       error: "visual_floor_unmet";
       presentationFloor: PresentationFloorReadiness;

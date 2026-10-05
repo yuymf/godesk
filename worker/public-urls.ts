@@ -36,7 +36,7 @@ type JobLike = {
   result?: Record<string, unknown>;
 };
 
-export async function signedShareToken(
+async function signedShareToken(
   secret: string,
   creatorId: string,
   capability: Omit<ShareCapability, "v" | "c">,
@@ -107,7 +107,7 @@ export async function publicSession<T extends SessionLike>(
   };
 }
 
-export async function publicPlaytestLink<T extends PlaytestLinkLike>(
+async function publicPlaytestLink<T extends PlaytestLinkLike>(
   link: T,
   origin: string,
   creatorId: string,
@@ -232,7 +232,7 @@ export async function publicJob<T extends JobLike>(
   return job;
 }
 
-export type PublicizeViewContext = {
+type PublicizeViewContext = {
   origin: string;
   creatorId: string;
   secret: string;

@@ -4,8 +4,8 @@ import {
   type PlayKernelAdapter, type PlayKernelConfig, type PlayState,
 } from "../play-kernel";
 
-export const AUCTION_BIDDING_KERNEL_TYPE = "auction-bidding-v1" as const;
-export type AuctionBiddingConfig = { playerCount: number; lotValue: number };
+const AUCTION_BIDDING_KERNEL_TYPE = "auction-bidding-v1" as const;
+type AuctionBiddingConfig = { playerCount: number; lotValue: number };
 export type AuctionBiddingGenre = {
   lotId: "amber" | "jade";
   chips: [number, number];
@@ -18,7 +18,7 @@ export type AuctionBiddingGenre = {
   seatOrder: [number, number];
 };
 
-export function parseAuctionBiddingConfig(raw: Record<string, unknown>): AuctionBiddingConfig | null {
+function parseAuctionBiddingConfig(raw: Record<string, unknown>): AuctionBiddingConfig | null {
   const playerCount = raw.playerCount ?? 2;
   const lotValue = raw.lotValue ?? 10;
   return playerCount === 2 && lotValue === 10 ? { playerCount: 2, lotValue: 10 } : null;

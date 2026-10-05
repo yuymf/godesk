@@ -5,14 +5,14 @@ import {
   type GenreObjectFamily,
 } from "./presentation-floor";
 
-export type StudioShareGateKind =
+type StudioShareGateKind =
   | "ok"
   | "presentation-genre-objects"
   | "presentation-visual"
   | "playability"
   | "runtime";
 
-export type StudioShareGateMessage = {
+type StudioShareGateMessage = {
   title: string;
   /** Floor / gate reason — reuse Presentation/Playability Floor SSOT verbatim. */
   reason: string;

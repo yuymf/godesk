@@ -1,6 +1,6 @@
 export type DefaultExampleId = "harbor-13" | "mistpeak-lodge" | "idea-relay";
 
-export interface DefaultExample {
+interface DefaultExample {
   id: DefaultExampleId;
   title: string;
   kicker: string;

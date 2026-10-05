@@ -2,10 +2,7 @@ import type {
   RuleSystem,
   SourceLibraryEntry,
 } from "../src/creator/project-contract";
-import {
-  isDefaultExampleId,
-  type DefaultExampleId,
-} from "../src/creator/default-examples";
+import type { DefaultExampleId } from "../src/creator/default-examples";
 
 function source(
   id: string,

@@ -3,7 +3,7 @@ import { base64UrlToBytes, bytesToBase64Url } from "./base64url";
 
 const encoder = new TextEncoder();
 
-export type ShareResourceKind = "room" | "build" | "replay" | "try";
+type ShareResourceKind = "room" | "build" | "replay" | "try";
 
 export interface ShareCapability {
   v: 1;
