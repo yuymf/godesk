@@ -23,3 +23,6 @@
 - **Draw call（`renderer.info.render.calls`，稳态 / 峰值，预算 高 150 / 中 100 / 低 60）**：开局 高 23/41、中 23/41、低 23/35；中局 高 27/49、中 27/49、低 27/43（基线 bcfd09d 开局 24/43、中局 28/51）。三角形 ≤ 31.5k。
 - **评审 round-2p**：截图与差距表只在 `/workspace/g3d-evidence/judge/round-2p/`（不进仓库）。自评：棋子 2→4、骰子 2→6、镜头 3→5；**未达标**。剩余：棋子在默认视角偏小、雾灯太暗；俯视露水面边缘；骰盘不像参照那样钉在视窗右下；工具条缺 Pan / Harbors / Island tour。
 - **跨轨道备注 2**：评审拍摄时 wrangler 打出 `Uncaught Error at webSocketClose`（`worker/creator-projects-do.ts`，对已关闭的 socket 再 `close(code)`，1006 等保留码会抛错），之后 8833 不再响应、需重启。本分支未改 worker，留给 worker 负责人。
+
+## 迭代 2（20:57 指令）
+- **worker 挂死修复（单独提交）**：根因是 `webSocketClose` 把对端的关闭码原样回传给 `socket.close(code)`。浏览器直接断开（Playwright 关上下文、页面崩溃）时运行时报 1006，空 Close 帧报 1005，这些是协议保留码，`close()` 抛 `InvalidAccessError: Invalid WebSocket close code: 1006`，在 `wrangler dev` 里表现为 `Uncaught Error at webSocketClose`。兼容日期 2026-07-29 已开启 `web_socket_auto_reply_to_close`，握手由运行时完成，回传本就可选。修复：`sendableCloseCode()` 只放行 1000–1003 / 1007–1014 / 3000–4999，其余映射 1000，并 try/catch。`worker/session-socket-close.test.ts` 先复现（修复前 1005/1006/1015 三例抛错），修复后 5/5 通过。
