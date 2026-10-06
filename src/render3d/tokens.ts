@@ -56,10 +56,10 @@ export const SCENE_TOKENS = {
   outputColorSpace: "srgb",
   lighting: {
     // round-2d3：更暖的主光 + 略强填充，贴近参照 settlecoast 的暖色日光。
-    sun: { azimuthDeg: 135, elevationDeg: 48, intensity: 2.85, color: "#ffe6c2" },
-    hemisphere: { sky: "#e8f0fa", ground: "#c4a882", intensity: 0.95 },
+    sun: { azimuthDeg: 135, elevationDeg: 48, intensity: 2.95, color: "#ffd9a8" },
+    hemisphere: { sky: "#efe6d4", ground: "#c4a882", intensity: 1.0 },
     shadow: { enabled: true, softness: 0.85 },
-    exposure: 1.05,
+    exposure: 1.08,
   } satisfies LightingSpec,
   shadow: {
     /** high / medium 的 PCF 半径；low 档用 TierCaps.shadowRadius（= 1）。 */

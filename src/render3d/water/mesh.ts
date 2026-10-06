@@ -38,11 +38,11 @@ export const WATER_FAR_HALF_EXTENT = WATER_SEA_HALF_EXTENT;
 
 
 const DEFAULT_SPEC: TideWaterSpec = {
-  shallow: "#4aa8a8",
-  deep: "#0e3a55",
-  waveHeight: 0.06,
-  waveSpeed: 0.6,
-  foam: 0.85,
+  shallow: "#3f9e9a",
+  deep: "#072a42",
+  waveHeight: 0.055,
+  waveSpeed: 0.55,
+  foam: 1.0,
 };
 
 function coastsFromModel(model: SceneModel | null): CoastSample[] {

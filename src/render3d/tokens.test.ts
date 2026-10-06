@@ -18,10 +18,10 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
   it("matches the §3.7 tabletop-day table", () => {
     expect(SCENE_TOKENS.toneMapping).toBe("agx");
     expect(SCENE_TOKENS.lighting).toEqual({
-      sun: { azimuthDeg: 135, elevationDeg: 48, intensity: 2.85, color: "#ffe6c2" },
-      hemisphere: { sky: "#e8f0fa", ground: "#c4a882", intensity: 0.95 },
+      sun: { azimuthDeg: 135, elevationDeg: 48, intensity: 2.95, color: "#ffd9a8" },
+      hemisphere: { sky: "#efe6d4", ground: "#c4a882", intensity: 1.0 },
       shadow: { enabled: true, softness: 0.85 },
-      exposure: 1.05,
+      exposure: 1.08,
     });
     expect(SCENE_TOKENS.shadow).toMatchObject({ radius: 4, bias: -0.0004, normalBias: 0.02, boundsPadding: 1.5 });
     expect(SCENE_TOKENS.environment.intensity).toBe(0.35);

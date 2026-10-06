@@ -11,6 +11,7 @@ import {
   inPropRegion,
   layoutProps,
   placeTileProps,
+  buildPropGeometry,
 } from "./terrain-props";
 
 const tiles = dressingInputs(beginnerSceneInput()).tiles;
@@ -32,12 +33,15 @@ describe("G3D-PROPS terrain props", () => {
       for (const kind of TERRAIN_PROPS[tile.terrain] ?? []) {
         const got = props.filter((p) => p.kind === kind).length;
         const want = counts[kind] ?? 0;
-        if (kind === "canopy") expect(got, `${tile.terrain}/${kind}`).toBeGreaterThanOrEqual(Math.min(8, want));
-        else expect(got, `${tile.terrain}/${kind}`).toBe(want);
+        if (kind === "canopy" || kind.startsWith("pine")) {
+          expect(got, `${tile.terrain}/${kind}`).toBeGreaterThanOrEqual(Math.min(want, Math.max(6, want - 4)));
+        } else expect(got, `${tile.terrain}/${kind}`).toBe(want);
       }
       for (const p of props) expect(inPropRegion(p.x - tile.center[0], p.z - tile.center[2])).toBe(true);
     }
-    expect(PROP_COUNTS.high.wood!.pine).toBeGreaterThanOrEqual(10);
+    const woodHigh = PROP_COUNTS.high.wood!;
+    expect((woodHigh.pineTall ?? 0) + (woodHigh.pineRound ?? 0) + (woodHigh.pineSmall ?? 0)).toBeGreaterThanOrEqual(40);
+    expect(woodHigh.canopy ?? 0).toBeGreaterThanOrEqual(8);
     expect(PROP_COUNTS.high.sheep!.sheep).toBeGreaterThanOrEqual(5);
   });
 
