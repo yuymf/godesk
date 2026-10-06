@@ -32,6 +32,7 @@ import {
 } from "./pick";
 import { reconcileScene } from "./reconcile";
 import { createNumberLabelLayer, projectLabels, type NumberLabelLayer } from "./number-labels";
+import { JUDGE_PRESETS, judgeCamera, type JudgePreset } from "./judge-camera";
 import type { SceneModel, SceneNode } from "./scene-model";
 import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
 import { markInteractive, perfModeEnabled, perfRecorder } from "./perf";
@@ -510,6 +511,36 @@ export function SceneHost({
     controls.addEventListener("end", onControlsStart);
     controls.target.set(0, 0, 0);
     controls.maxPolarAngle = Math.PI * 0.48;
+    // G3D-JUDGE：仅 `?judge=1` 时暴露评审机位（dev-only；生产 URL 不带此参数时无任何行为变化）。
+    const judgeEnabled = new URLSearchParams(window.location.search).get("judge") === "1";
+    if (judgeEnabled) {
+      (globalThis as { __g3dJudge?: unknown }).__g3dJudge = {
+        presets: JUDGE_PRESETS,
+        set(preset: JudgePreset): boolean {
+          const cam = cameraRef.current;
+          const ctl = controlsRef.current;
+          const model = modelRef.current;
+          if (!cam || !ctl) return false;
+          motion.finishAll();
+          const pose = judgeCamera(preset, model?.nodes ?? [], cam.aspect);
+          if (pose) {
+            cam.position.set(...pose.position);
+            ctl.target.set(...pose.target);
+          } else {
+            cam.position.set(0, 9, 12);
+            ctl.target.set(0, 0, 0);
+            fitCameraRef.current();
+          }
+          if (pose?.fov) cam.fov = pose.fov;
+          cam.updateProjectionMatrix();
+          ctl.update();
+          // 抑制建造 / 换手 / 掷骰的自动 reframe，保证截图机位稳定。
+          motion.noteUserDrag(Number.POSITIVE_INFINITY);
+          markShadowsDirtyRef.current();
+          return true;
+        },
+      };
+    }
 
     const rig = createLightingRig(scene, lightingRef.current, caps);
     rigRef.current = rig;
