@@ -159,3 +159,8 @@
 ## G3D-ART 生成辅料（不入运行时清单）
 
 - `scripts/data/paper001-color-512.jpg`：ambientCG [Paper001](https://ambientcg.com/a/Paper001) **CC0-1.0** Color 裁 512，仅供 `gen-card-art.py` / `gen-brand-art.py` 合成羊皮纸底；不部署、不进 `ASSET_MANIFEST`。成品卡/品牌仍登记为 `LicenseRef-GoDesk-Original`（修改说明列已记 CC0 底纹）。
+
+## G3D-ISLAND / G3D-PROPS 运行时程序化（不产生文件，不入表）
+
+- `src/render3d/terrain-props.ts`（松林 / 羊群与水槽 / 灰岩 / 陶土丘与砖垛 / 麦束行 / 沙丘与卵石）与 `src/render3d/island.ts`（岩壁台基、岸石、木码头、港口牌、帆船）：全部为运行时代码生成的低多边形几何与 canvas 程序化贴图（岩壁纹、2:1 / 3:1 牌面图集），**LicenseRef-GoDesk-Original**，GoDesk Track D 手写，2026-10-06；无 AI 生图、无第三方素材，未参考或复制 settlecoast 的任何素材 / 代码。
+- 若后续换用 AI 贴图（岩壁 / 港口牌），按上表 `LicenseRef-AI-Generated` 规则另行登记文件行。

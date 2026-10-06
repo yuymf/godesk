@@ -42,6 +42,7 @@ const VERT_PARS = [
   "uniform float uTideWaveH;",
   "uniform float uTideWaveS;",
   "uniform float uTideWaves;",
+  "uniform float uTideHalf;",
   "varying vec3 vTideWorld;",
   "vec3 tideGerstner(vec3 p, vec2 dir, float steep, float waveLen, float speed) {",
   "  float k = 6.2831853 / waveLen;",
@@ -57,12 +58,16 @@ const VERT_PARS = [
 ].join("\n");
 
 const VERT_MAIN = [
+  // G3D-ISLAND：外圈远海环（同材质、平面）与主水面无缝衔接 —— 波浪位移在主水面外缘淡出到 0。
+  "vec3 tideRest = transformed;",
   "if (uTideWaves > 0.5 && uTideWaveH > 0.0001) {",
   "  transformed = tideGerstner(transformed, normalize(vec2(1.0, 0.35)), 0.22, 2.4, 1.0);",
   "  if (uTideWaves > 1.5) {",
   "    transformed = tideGerstner(transformed, normalize(vec2(-0.55, 1.0)), 0.14, 1.5, 1.25);",
   "  }",
   "}",
+  "float tideEdge = 1.0 - smoothstep(uTideHalf * 0.7, uTideHalf * 0.97, max(abs(tideRest.x), abs(tideRest.z)));",
+  "transformed = mix(tideRest, transformed, tideEdge);",
   "vTideWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;",
 ].join("\n");
 
@@ -84,8 +89,10 @@ const FRAG_COLOR = [
   "{",
   "  vec2 wu = vTideWorld.xz / max(uTideHalf * 2.0, 0.001) + 0.5;",
   "  float d = texture2D(uTideDist, clamp(wu, 0.0, 1.0)).r;",
-  "  vec3 waterCol = mix(uTideShallow, uTideDeep, smoothstep(0.02, 0.85, d));",
-  "  float foamBand = (1.0 - smoothstep(0.0, 0.18, d)) * uTideFoam;",
+  "  vec3 tideMid = mix(uTideShallow, uTideDeep, 0.58);",
+  "  vec3 waterCol = mix(uTideShallow, tideMid, smoothstep(0.0, 0.1, d));",
+  "  waterCol = mix(waterCol, uTideDeep, smoothstep(0.2, 0.7, d));",
+  "  float foamBand = (1.0 - smoothstep(0.0, 0.055, d)) * uTideFoam;",
   "  vec2 fuv = vTideWorld.xz * 0.35 + vec2(uTideTime * 0.03 * uTideWaveS, uTideTime * -0.02 * uTideWaveS);",
   "  float foamN = texture2D(uTideFoamMap, fuv).r;",
   "  waterCol = mix(waterCol, vec3(0.92, 0.96, 0.95), foamBand * (0.45 + 0.55 * foamN));",

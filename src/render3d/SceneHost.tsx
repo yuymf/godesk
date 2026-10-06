@@ -33,10 +33,12 @@ import {
 import { reconcileScene } from "./reconcile";
 import { createNumberLabelLayer, projectLabels, type NumberLabelLayer } from "./number-labels";
 import { JUDGE_PRESETS, judgeCamera, type JudgePreset } from "./judge-camera";
+import { REPLACED_NODE_KINDS } from "./dressing-kinds";
+import type { HexDressing } from "./hex-dressing";
 import type { SceneModel, SceneNode } from "./scene-model";
 import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
 import { markInteractive, perfModeEnabled, perfRecorder } from "./perf";
-import { dieFaceEuler, MotionController } from "./motion";
+import { dieFaceEuler, MotionController, prefersReducedMotion } from "./motion";
 import { PerfOverlay } from "./PerfOverlay";
 import {
   configureRenderer,
@@ -58,6 +60,7 @@ import {
 } from "./tokens";
 import {
   RuntimeDowngradeMonitor,
+  TIER_CAPS,
   detectEnvFromBrowser,
   downgradeTier,
   resolveTier,
@@ -364,6 +367,14 @@ export function SceneHost({
   const modelRef = useRef<SceneModel | null>(null);
   /** G3D-ART-2：点数筹码数字贴花（1 draw call，不进实例池）。 */
   const numberLabelsRef = useRef<NumberLabelLayer | null>(null);
+  /** G3D-ISLAND / PROPS：地形道具 + 岛屿海岸（汐屿专用图层）。 */
+  const dressingRef = useRef<HexDressing | null>(null);
+  /** 道具 / 岛屿层懒加载（不进 render3d 核心包体）。 */
+  const dressingModRef = useRef<typeof import("./hex-dressing") | null>(null);
+  const dressingLoadingRef = useRef(false);
+  /** 汐屿盘面的道具层在懒加载中：性能采样（挂载内存基线）等它就位，避免首挂载与重挂载口径不一。 */
+  const dressingPendingRef = useRef(false);
+  const [dressingReady, setDressingReady] = useState(0);
   const registryRef = useRef(new Map<string, Object3D>());
   const contentRootRef = useRef<Object3D | null>(null);
   const reconcileHostRef = useRef<ReturnType<typeof buildHost> | null>(null);
@@ -513,6 +524,8 @@ export function SceneHost({
     controls.maxPolarAngle = Math.PI * 0.48;
     // G3D-JUDGE：仅 `?judge=1` 时暴露评审机位（dev-only；生产 URL 不带此参数时无任何行为变化）。
     const judgeEnabled = new URLSearchParams(window.location.search).get("judge") === "1";
+    // 帆船起伏：减少动态效果或评审截图时冻结。
+    const freezeDressing = judgeEnabled || prefersReducedMotion();
     if (judgeEnabled) {
       (globalThis as { __g3dJudge?: unknown }).__g3dJudge = {
         presets: JUDGE_PRESETS,
@@ -522,7 +535,7 @@ export function SceneHost({
           const model = modelRef.current;
           if (!cam || !ctl) return false;
           motion.finishAll();
-          const pose = judgeCamera(preset, model?.nodes ?? [], cam.aspect);
+          const pose = judgeCamera(preset, [...(model?.nodes ?? []), ...(dressingRef.current?.portNodes() ?? [])], cam.aspect);
           if (pose) {
             cam.position.set(...pose.position);
             ctl.target.set(...pose.target);
@@ -735,7 +748,8 @@ export function SceneHost({
 
       // Runtime downgrade after 180 warm-up frames (§4.7 / §4.6.3).
       if (warmFrames > 180 && delta !== null) {
-        if (downgradeMonitor.shouldDowngrade(caps.id, now, delta)) {
+        // 评审截图（?judge=1）不做运行时降档：box 上 SwiftShader 慢，降档会让评审图失真（道具在 low 档为 0）。
+        if (!judgeEnabled && downgradeMonitor.shouldDowngrade(caps.id, now, delta)) {
           const nextId = downgradeTier(caps.id);
           if (nextId !== caps.id) {
             runtimeFloorRef.current = nextId;
@@ -757,6 +771,7 @@ export function SceneHost({
       }
 
       motion.update(now);
+      dressingRef.current?.update(now, camera, freezeDressing);
       waterRef.current?.update(now);
       controls.update();
       // 阴影：内容 / 档位变化后 SHADOW_REFRESH_MS 内逐帧重绘，之后复用（方向光阴影与机位无关）。
@@ -771,7 +786,7 @@ export function SceneHost({
         if (shadowDirtyUntil === Number.POSITIVE_INFINITY) markShadowsDirty();
         if (!pbrRequested) startPbrStreaming();
       }
-      perf?.frame(renderer, now, hasContent);
+      perf?.frame(renderer, now, hasContent && !dressingPendingRef.current);
     };
     frameId = window.requestAnimationFrame(tick);
 
@@ -827,6 +842,8 @@ export function SceneHost({
       library.dispose();
       // 须在 perf 快照前释放贴花图集，否则计为残留纹理。
       numberLabelsRef.current?.dispose();
+      dressingRef.current?.dispose();
+      dressingRef.current = null;
       numberLabelsRef.current = null;
       const hostPools = reconcileHostRef.current as { pools?: InstancePools } | null;
       hostPools?.pools?.dispose();
@@ -882,17 +899,56 @@ export function SceneHost({
       .map((tile) => ({ q: tile.q, r: tile.r, number: tile.number }));
   }
 
+  function syncDressing() {
+    const root = contentRootRef.current;
+    if (!root || !hexSettlement) return;
+    const mod = dressingModRef.current;
+    if (!mod) {
+      dressingPendingRef.current = true;
+      if (!dressingLoadingRef.current) {
+        dressingLoadingRef.current = true;
+        void import("./hex-dressing").then((loaded) => {
+          dressingModRef.current = loaded;
+          dressingLoadingRef.current = false;
+          setDressingReady((n) => n + 1);
+        });
+      }
+      return;
+    }
+    const dressing = (dressingRef.current ??= mod.createHexDressing());
+    if (dressing.group.parent !== root) root.add(dressing.group);
+    const caps = TIER_CAPS[activeTier];
+    dressing.sync(hexSettlement, activeTier, caps.tilesCastShadow);
+    dressingPendingRef.current = false;
+    const container = containerRef.current;
+    const stats = dressing.stats();
+    if (container) {
+      container.dataset.terrainProps = String(stats.props.meshes);
+      container.dataset.island = String(stats.island.meshes);
+    }
+    (globalThis as { __g3dDressing?: () => unknown }).__g3dDressing = () => dressingRef.current?.stats() ?? null;
+    markShadowsDirtyRef.current();
+  }
+
+  // 档位变化（high ↔ medium 不重挂 host）时按新档位重建道具密度。
+  useEffect(() => {
+    if (ready) syncDressing();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTier, ready, hostEpoch, dressingReady]);
+
   useEffect(() => {
     const host = reconcileHostRef.current;
     if (!host || !hexSettlement) return;
     const prev = modelRef.current;
-    const next = mapHexSettlementToScene(hexSettlement);
+    const mapped = mapHexSettlementToScene(hexSettlement);
+    const next: SceneModel = { ...mapped, nodes: mapped.nodes.filter((n) => !REPLACED_NODE_KINDS.has(n.kind)) };
     const hadModel = prev !== null;
     const previousAction = lastActionRef.current;
     lastActionRef.current = hexSettlement.lastAction;
     diceAnimatedRef.current = false;
     modelRef.current = reconcileScene(host, prev, next, registryRef.current);
     syncNumberLabels(next, hexSettlement.tiles);
+    syncDressing();
     // 阴影相机只在布局（地块集合）变化时按包围球重算一次（§4.3）。
     const tileKey = (model: SceneModel | null) =>
       model ? model.nodes.filter((node) => node.kind === "tile").map((node) => node.id).join("|") : "";

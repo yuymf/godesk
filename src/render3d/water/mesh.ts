@@ -5,7 +5,11 @@ import {
   DataTexture,
   Mesh,
   NearestFilter,
+  Path,
   PlaneGeometry,
+  Shape,
+  ShapeGeometry,
+  type BufferGeometry,
   RGBAFormat,
   UnsignedByteType,
   type Object3D,
@@ -27,6 +31,32 @@ import { loadSeaTextures, type SeaTextures } from "./sea-textures";
 import { waterFeaturesFor } from "./tiers";
 
 export const WATER_HALF_EXTENT = 9;
+/**
+ * G3D-ISLAND：远海环外半径。主水面只有 ±9（海岸距离场覆盖范围），斜视 / 海岸机位会看到边缘；
+ * 外圈用同一材质的平面方环补到 ±60（距离场在外圈被 clamp 成深水色），1 个额外 draw call。
+ */
+export const WATER_FAR_HALF_EXTENT = 60;
+
+function farSeaRing(): BufferGeometry {
+  const outer = new Shape();
+  const o = WATER_FAR_HALF_EXTENT;
+  outer.moveTo(-o, -o);
+  outer.lineTo(o, -o);
+  outer.lineTo(o, o);
+  outer.lineTo(-o, o);
+  outer.closePath();
+  const hole = new Path();
+  const h = WATER_HALF_EXTENT;
+  hole.moveTo(-h, -h);
+  hole.lineTo(-h, h);
+  hole.lineTo(h, h);
+  hole.lineTo(h, -h);
+  hole.closePath();
+  outer.holes.push(hole);
+  const geom = new ShapeGeometry(outer, 1);
+  geom.rotateX(-Math.PI / 2);
+  return geom;
+}
 
 const DEFAULT_SPEC: TideWaterSpec = {
   shallow: "#5fb3b3",
@@ -93,6 +123,13 @@ export async function createWaterController(options: {
   geom.rotateX(-Math.PI / 2);
   const mesh = new Mesh(geom, material);
   mesh.position.set(0, -0.08, 0);
+  const farGeom = farSeaRing();
+  const far = new Mesh(farGeom, material);
+  far.name = "water-far";
+  far.receiveShadow = false;
+  far.userData.kind = "water";
+  far.userData.nodeId = "water-far";
+  mesh.add(far);
   mesh.receiveShadow = true;
   mesh.castShadow = false;
   mesh.userData.kind = "water";
@@ -121,6 +158,7 @@ export async function createWaterController(options: {
     }
     disposeOwnedTextures();
     geom.dispose();
+    farGeom.dispose();
     material.dispose();
   };
 

@@ -4,6 +4,7 @@
  * - index-*.js ≤ 170 KB gzip (homepage)
  * - render3d-*.js excluding render3d-assets-* ≤ 210 KB gzip (sum)
  * - render3d-assets-*.js ≤ 60 KB gzip
+ * - board-dressing-*.js ≤ 30 KB gzip（G3D-ISLAND / PROPS，懒加载）
  * - TabletopScene3D-*.js ≤ 12 KB gzip（G3D-14 通用桌面 mapper + 网格工厂，懒加载，不计入核心）
  */
 import { gzipSync } from "node:zlib";
@@ -45,5 +46,7 @@ if (tideWater.length) {
 } else {
   console.log("tide-water: (not in this build — ok if SceneHost never imported water)");
 }
+// G3D-ISLAND / PROPS：岛屿海岸 + 地形道具懒加载 chunk。
+ok = check("board-dressing (lazy)", files.filter((f) => /^board-dressing-.*\.js$/.test(f)), 30) && ok;
 ok = check("tabletop mapper (lazy)", files.filter((f) => /^TabletopScene3D-.*\.js$/.test(f)), 12) && ok;
 process.exit(ok ? 0 : 1);
