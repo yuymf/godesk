@@ -12,10 +12,15 @@ export type AssetLoaders = {
   ktx2: KTX2Loader;
 };
 
-const DEFAULT_BASIS_PATH = "/basis/";
+/**
+ * 默认空路径：three r186 的 KTX2Loader 用 `new URL("../libs/basis/…", import.meta.url)`
+ * 引用转码器，Vite 会把它打包为带 hash 的独立文件（dist/assets/basis_transcoder-*.{js,wasm}）。
+ * G3D-07 之前这里写死 "/basis/"，但 dist 并不提供该目录，第一次真正加载 KTX2 时才暴露。
+ */
+const DEFAULT_BASIS_PATH = "";
 
 /**
- * 创建加载器集合。KTX2 的 Basis 转码 worker 仅在首次 detectSupport 时拉取。
+ * 创建加载器集合。KTX2 的 Basis 转码器在第一次加载贴图时才拉取。
  */
 export function createAssetLoaders(
   renderer: WebGLRenderer,
@@ -25,7 +30,7 @@ export function createAssetLoaders(
   gltf.setMeshoptDecoder(MeshoptDecoder);
 
   const ktx2 = new KTX2Loader();
-  ktx2.setTranscoderPath(basisPath);
+  if (basisPath) ktx2.setTranscoderPath(basisPath);
   ktx2.detectSupport(renderer);
   gltf.setKTX2Loader(ktx2);
 

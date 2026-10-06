@@ -280,6 +280,7 @@ function summarizeBudgets(profileId, profile, snap, transfer) {
     check("firstGameBytes", transfer.firstGame.bytes, tierBudget.firstGameBytes, "max", tierNote),
     check("firstGameRequests", transfer.firstGame.requests, TRANSFER_BUDGETS.firstGameRequests),
     check("drawCalls", snap?.renderer?.calls, tierBudget.drawCalls, "max", tierNote),
+    check("drawCallsPeak", snap?.rendererPeak?.calls, tierBudget.drawCalls, "max", tierNote),
     check("triangles", snap?.renderer?.triangles, tierBudget.triangles, "max", tierNote),
     check("gpuMemoryEstimateBytes", snap?.gpuMemoryEstimateBytes, tierBudget.gpuMemoryBytes, "max", tierNote),
   ];
@@ -417,6 +418,12 @@ async function runCi({ browser, roomUrl, outDir }) {
     await waitForInteractive(page, 120_000);
     const interactive = await interactiveBytes(page);
     await page.waitForTimeout(2_000);
+    // G3D-07: PBR textures stream in after interactive; measure GPU memory / draw calls with them applied.
+    const pbrState = await page.waitForFunction(() => {
+      const value = document.querySelector('[data-testid="g3d-scene-host"]')?.getAttribute("data-pbr");
+      return value && value !== "pending" ? value : null;
+    }, undefined, { timeout: 20_000 }).then((handle) => handle.jsonValue()).catch(() => "timeout");
+    await page.waitForTimeout(500);
     const snap = await snapshot(page);
     const wait = TRANSFER_BUDGETS.firstGameWindowMs - (Date.now() - started);
     if (wait > 0) await delay(wait);
@@ -426,8 +433,9 @@ async function runCi({ browser, roomUrl, outDir }) {
       check("firstGameBytes(high)", firstGame.bytes, tier.firstGameBytes),
       check("firstGameRequests", firstGame.requests, TRANSFER_BUDGETS.firstGameRequests),
       check("drawCalls(high)", snap?.renderer?.calls, tier.drawCalls),
+      check("drawCallsPeak(high)", snap?.rendererPeak?.calls, tier.drawCalls, "max", "含阴影重绘帧（G3D-07 静止时复用阴影贴图）"),
       check("triangles(high)", snap?.renderer?.triangles, tier.triangles),
-      check("gpuMemoryEstimateBytes(high)", snap?.gpuMemoryEstimateBytes, tier.gpuMemoryBytes),
+      check("gpuMemoryEstimateBytes(high)", snap?.gpuMemoryEstimateBytes, tier.gpuMemoryBytes, "max", `pbr=${pbrState}`),
     );
 
     // 2. Leak: rebuild the 3D host N times; memory after each mount equals the
@@ -445,13 +453,20 @@ async function runCi({ browser, roomUrl, outDir }) {
     const afterLeak = await snapshot(page);
     const life = afterLeak?.lifecycle;
     const baseline = life?.memoryOnMount[0];
-    const drift = life?.memoryOnMount.reduce((max, entry) => Math.max(max,
-      Math.abs(entry.geometries - baseline.geometries), Math.abs(entry.textures - baseline.textures)), 0) ?? null;
+    // G3D-07: a runtime downgrade (SwiftShader is slow) changes the resource mix — high adds the
+    // PMREM environment texture — so each mount is compared with the first mount at the same tier.
+    const firstByTier = new Map();
+    for (const entry of life?.memoryOnMount ?? []) if (!firstByTier.has(entry.tier)) firstByTier.set(entry.tier, entry);
+    const drift = life?.memoryOnMount.reduce((max, entry) => {
+      const reference = firstByTier.get(entry.tier);
+      return Math.max(max, Math.abs(entry.geometries - reference.geometries), Math.abs(entry.textures - reference.textures));
+    }, 0) ?? null;
+    const mountTiers = (life?.memoryOnMount ?? []).map((entry) => entry.tier ?? "?").join(",");
     const residualGeometries = life?.residualOnDispose.reduce((max, entry) => Math.max(max, entry.geometries), 0) ?? null;
     const residualTextures = life?.residualOnDispose.reduce((max, entry) => Math.max(max, entry.textures), 0) ?? null;
     const heapAfter = afterLeak?.jsHeap?.usedBytes ?? null;
     results.push(
-      check("leak.memoryDriftAfter10Remounts", drift, 0, "max", `baseline ${JSON.stringify(baseline)}，mounts ${life?.mounts}`),
+      check("leak.memoryDriftAfter10Remounts", drift, 0, "max", `baseline ${JSON.stringify(baseline)}，mounts ${life?.mounts}，按同档位比较（各次挂载档位 ${mountTiers}）`),
       check("leak.residualGeometriesOnDispose", residualGeometries, 0, "max", `${life?.residualOnDispose.length ?? 0} 次卸载`),
       // three r186 binds a module-level 1×1 `emptyShadowTexture` (WebGLUniforms.js) before the
       // first shadow map exists; it is an engine singleton, not an app resource.
