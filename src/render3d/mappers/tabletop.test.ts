@@ -85,7 +85,10 @@ describe("G3D-14 tabletop mapper", () => {
   });
 
   it("maps pattern materials to the G3D-22 PBR sets", () => {
-    expect(tokenForRenderMaterial("board", { base: "#1f6b4a", roughness: 0.8, metalness: 0, pattern: "cloth" }).pbrSet).toBe("t10-canvas");
+    // 呢面盘面不借 t10-canvas（粗帆布纹 + 单级 mip 在盘面尺度上成块 / 走样），保留程序化 cloth pattern。
+    expect(tokenForRenderMaterial("board", { base: "#1f6b4a", roughness: 0.8, metalness: 0, pattern: "cloth" })).toEqual({
+      base: "#1f6b4a", roughness: 0.8, metalness: 0, pattern: "cloth",
+    });
     expect(tokenForRenderMaterial("table", { base: "#8b5a2b", roughness: 0.8, metalness: 0, pattern: "grain" }).pbrSet).toBe("t08-wood");
     expect(tokenForRenderMaterial("map", { base: "#c9b68a", roughness: 0.8, metalness: 0, pattern: "none" }).pbrSet).toBeUndefined();
   });
