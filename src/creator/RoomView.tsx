@@ -488,8 +488,9 @@ export function RoomView({ sessionId }: { sessionId: string }) {
             {room.state.scores.map((_score, availableSeat) => {
               const occupant = room.seats.find((entry) => entry.seat === availableSeat);
               const isCurrentClient = seat === availableSeat;
-              const isOccupied = Boolean(occupant && !isCurrentClient);
-              const isOpen = !occupant && !isCurrentClient;
+              const isAi = Boolean(room.aiSeats?.includes(availableSeat));
+              const isOccupied = Boolean((occupant || isAi) && !isCurrentClient);
+              const isOpen = !occupant && !isAi && !isCurrentClient;
               const disabled = busy || isOccupied || isCurrentClient || (seat !== null && !isCurrentClient);
               return (
                 <button
@@ -511,9 +512,11 @@ export function RoomView({ sessionId }: { sessionId: string }) {
                   <small>
                     {isCurrentClient
                       ? copy.you
-                      : isOccupied
-                        ? copy.occupied
-                        : copy.openSeat}
+                      : isAi
+                        ? copy.computer
+                        : isOccupied
+                          ? copy.occupied
+                          : copy.openSeat}
                   </small>
                 </button>
               );
@@ -541,13 +544,14 @@ export function RoomView({ sessionId }: { sessionId: string }) {
               {room.state.scores.map((_score, availableSeat) => {
                 const occupant = room.seats.find((entry) => entry.seat === availableSeat);
                 const isCurrentClient = seat === availableSeat;
+                const isAi = Boolean(room.aiSeats?.includes(availableSeat));
                 return (
                   <option
-                    disabled={Boolean(occupant && !isCurrentClient)}
+                    disabled={Boolean((occupant || isAi) && !isCurrentClient)}
                     key={availableSeat}
                     value={availableSeat}
                   >
-                    {locale === "zh" ? "座位" : "Seat"} {availableSeat}{occupant && !isCurrentClient ? ` · ${copy.occupied}` : ""}
+                    {locale === "zh" ? "座位" : "Seat"} {availableSeat}{isAi ? ` · ${copy.computer}` : occupant && !isCurrentClient ? ` · ${copy.occupied}` : ""}
                   </option>
                 );
               })}
@@ -556,7 +560,8 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         </div>
       </section>
 
-      {room.state.status === "active" && room.seats.length < room.state.scores.length && (
+      {room.state.status === "active" &&
+        room.seats.length + (room.aiSeats?.length ?? 0) < room.state.scores.length && (
         <section aria-live="polite" className="room-waiting-empty">
           <div aria-hidden="true" className="room-waiting-mark">◇</div>
           <div>
@@ -621,6 +626,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         >
           <LazyHexSettlementBoard
             activeSeat={activeSeat}
+            aiSeats={room.aiSeats}
             busy={busy}
             catan={catanState as HexSettlementBoardState}
             enabled={isMyTurn}
