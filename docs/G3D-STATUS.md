@@ -71,7 +71,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
-| G3D-ART：美术质量回炉（2D） | Track B | [#125](https://github.com/yuymf/godesk/pull/125) squash `465f7fa` | **2D 位图回炉已合入**：G3D-24/25/23 ink；证据 `/workspace/g3d-evidence/G3D-ART/`；3D 素材（19–22）回炉仍等 G3D-13 |
+| G3D-ART：美术质量回炉（2D） | Track B | [#125](https://github.com/yuymf/godesk/pull/125) + fix PR | **improved, still below settlecoast bar; real art quality needs a user decision on sourcing (commission an artist / buy a CC0-compatible commercial pack / allow AI-generated art with a legal review at G3D-17)** · **Blocked (user decision)**；artifact clip fix 本 PR；此后不再继续 art pass |
 | G3D-09：动效 | Track A | （未开） | M1 后；Track A 拥有 |
 | G3D-15：生成默认集成 | Track C | `feat/g3d-15-render-defaults` / [PR #123](https://github.com/yuymf/godesk/pull/123) | 第一刀：生成写 render、MCP `configure_render` 局部 patch、skills；第二刀（「做一款两人翻转棋」→ 3D Room e2e + 3 轮截图）等 G3D-14 |
 
@@ -80,6 +80,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 项 | 原因 | 解除条件 |
 | --- | --- | --- |
 | box Codex 用量上限 | 至 2026-11-05 02:04 Asia/Shanghai；Cloud Agent 兜底（本席无该工具时手写） | 用量恢复 |
+| **G3D-ART（user decision）** | improved but below settlecoast bar；需用户决定 sourcing（委托画师 / 购 CC0 兼容商用包 / 允许 AI 并在 G3D-17 做法务审） | 用户拍板 |
 | **G3D-08（Track B）** | 依赖 G3D-07；G3D-06 #122 已合入 | Track A 合入 G3D-07 后开工 |
 | **G3D-13（Track B）** | 依赖 G3D-07/08/09/10 + 素材 19–25；素材已齐；G3D-10 #120 已合入，缺 07–09。**HUD 备注（iPhone 12 Pro 模拟）**：Room 在棋盘下方露出合法动作的原始按钮列表，文案含坐标串（例：`放置道路 · -200:173|-250:87`）— HUD 重做须隐藏/替换此层 | 07+08+09 上 main |
 | GitHub Actions | 现 **operational**。deploy @ `41e352b` 生产 smoke 曾失败（ChatGPT Connector heading）；后续 deploy 通过 → 瞬时 | 禁无绿合入 |
@@ -129,3 +130,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | G3D-06 #122 合入 `96a9d70`；卡面/品牌 bitmap 去 CJK tofu；G3D-ART 仍待品质回炉 | Track B |
 | 2026-10-06 | G3D-ART 2D：卡/品牌/ink 分层插画回炉；G3D-13 HUD 备注（iPhone 合法动作坐标按钮）；等 G3D-07→08 | Track B |
 | 2026-10-06 | G3D-ART 2D #125 合入 `465f7fa`；contact sheet `/workspace/g3d-evidence/G3D-ART/`；等 G3D-07→08 | Track B |
+| 2026-10-06 | G3D-ART artifact clip fix（hatch 裁剪/去叠层、loading 去朱印）；STATUS：ART Blocked(user decision)；此后不再 art pass | Track B |
