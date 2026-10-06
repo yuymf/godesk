@@ -4,12 +4,27 @@ import {
   acceptIntent,
   executableRuntime,
   initialSessionState,
+  pickBotIntent,
   runBotSimulation,
+  runtimeSupportsBotSeat,
 } from "./runtime";
+import {
+  AI_MAX_CONSECUTIVE_ACTIONS,
+  AI_TURN_PREFIX,
+  aiIntentId,
+  aiPendingFor,
+  aiTurnKey,
+  isAiSeat,
+  normalizeAiSeats,
+  normalizeAiThinkMs,
+  trailingActionsBySeat,
+  type AiPendingTurn,
+} from "./room-ai";
 import { playabilityFloor } from "../src/runtime/playability-floor";
 import { presentationFloor } from "../src/runtime/presentation-floor";
 import { buildMeetsShareGate, shareGateRefusal } from "../src/runtime/share-gate";
 import type {
+  AcceptedAction,
   ApplyProjectChangesInput,
   Changeset,
   CompileBuildInput,
@@ -67,6 +82,9 @@ import {
   type StoredRestoreBuildResult,
 } from "./project-operations";
 
+/** Next time queued/running jobs should be recovered by the alarm (ms epoch). */
+const JOB_RECOVERY_AT_KEY = "alarm:job-recovery-at";
+
 export class CreatorProjects extends DurableObject<Env> {
   private broadcastSession(session: StoredSharedSession) {
     for (const socket of this.ctx.getWebSockets()) {
@@ -92,6 +110,182 @@ export class CreatorProjects extends DurableObject<Env> {
         }
       }
     }
+  }
+
+  /**
+   * Persist one kernel-accepted action (room + replay + project record) inside
+   * the caller's transaction, and atomically (re)write the Room AI pending turn
+   * so a DO restart can never lose or duplicate an AI move.
+   */
+  private async persistAcceptedAction(
+    transaction: DurableObjectTransaction,
+    room: StoredSharedSession,
+    accepted: AcceptedAction,
+  ): Promise<
+    | { room: StoredSharedSession; aiPending: AiPendingTurn | null }
+    | { error: { status: number; value: { error: string } } }
+  > {
+    const roomKey = `session:${room.id}`;
+    const updatedRoom: StoredSharedSession = {
+      ...room,
+      state: accepted.state,
+      acceptedActions: [...room.acceptedActions, accepted],
+    };
+    const persistedRoom: StoredSharedSession = {
+      ...updatedRoom,
+      acceptedActions: slimAcceptedActionsForStorage(updatedRoom.acceptedActions),
+    };
+    const replay = await transaction.get<StoredReplay>(
+      `replay:${room.replayId}`,
+    );
+    if (!replay) {
+      return { error: { status: 500, value: { error: "replay_not_found" } } };
+    }
+    const updatedReplay: StoredReplay = {
+      ...replay,
+      acceptedActions: persistedRoom.acceptedActions,
+      finalState: updatedRoom.state,
+    };
+    const projectKey = `${PROJECT_PREFIX}${room.projectId}`;
+    const storedProject =
+      await transaction.get<ProjectRecord>(projectKey);
+    if (!storedProject) {
+      return { error: { status: 404, value: { error: "project_not_found" } } };
+    }
+    const record = normalizedProjectRecord(storedProject);
+    record.sessions = record.sessions.map((candidate) =>
+      candidate.id === persistedRoom.id ? persistedRoom : candidate,
+    );
+    const aiPending = aiPendingFor(updatedRoom, Date.now());
+    await transaction.put({
+      [roomKey]: persistedRoom,
+      [`replay:${room.replayId}`]: updatedReplay,
+      [projectKey]: record,
+      ...(aiPending ? { [aiTurnKey(room.id)]: aiPending } : {}),
+    });
+    if (!aiPending && room.aiSeats?.length) {
+      await transaction.delete(aiTurnKey(room.id));
+    }
+    return { room: updatedRoom, aiPending };
+  }
+
+  /** Earliest of the job-recovery time and every pending Room AI turn. */
+  private async rescheduleAlarm() {
+    const now = Date.now();
+    const times: number[] = [];
+    const jobRecoveryAt = await this.ctx.storage.get<number>(JOB_RECOVERY_AT_KEY);
+    if (typeof jobRecoveryAt === "number") times.push(jobRecoveryAt);
+    const pending = await this.ctx.storage.list<AiPendingTurn>({
+      prefix: AI_TURN_PREFIX,
+    });
+    for (const turn of pending.values()) times.push(Math.max(turn.dueAt, now));
+    if (times.length) {
+      await this.ctx.storage.setAlarm(Math.min(...times));
+    } else {
+      await this.ctx.storage.deleteAlarm();
+    }
+  }
+
+  /** Job flows used to call setAlarm(now + 30s) directly; keep that grace but
+   *  never push an earlier Room AI turn back. */
+  async requestJobRecoveryAlarm() {
+    await this.ctx.storage.put(JOB_RECOVERY_AT_KEY, Date.now() + 30_000);
+    await this.rescheduleAlarm();
+  }
+
+  /** Heal path (reconnect / reads): if a Room AI seat is up but its pending
+   *  record or alarm went missing, put them back. Idempotent. */
+  private async ensureAiTurnScheduled(room: StoredSharedSession) {
+    const pending = aiPendingFor(room, Date.now());
+    if (!pending) return;
+    const existing = await this.ctx.storage.get<AiPendingTurn>(aiTurnKey(room.id));
+    if (!existing || existing.expectedActions !== pending.expectedActions) {
+      await this.ctx.storage.put(aiTurnKey(room.id), pending);
+    }
+    const alarm = await this.ctx.storage.getAlarm();
+    const dueAt = existing?.expectedActions === pending.expectedActions
+      ? existing.dueAt
+      : pending.dueAt;
+    if (alarm === null || alarm > Math.max(dueAt, Date.now()) + 1_000) {
+      await this.rescheduleAlarm();
+    }
+  }
+
+  /**
+   * One Room AI step. Re-validates everything inside a transaction; the
+   * deterministic intentId and expectedActions pin make retries no-ops.
+   */
+  private async runAiTurn(turn: AiPendingTurn) {
+    const roomKey = `session:${turn.sessionId}`;
+    const outcome = await this.ctx.storage.transaction(async (transaction) => {
+      const current = await transaction.get<AiPendingTurn>(aiTurnKey(turn.sessionId));
+      if (!current || current.expectedActions !== turn.expectedActions) {
+        return { kind: "stale" as const };
+      }
+      const storedRoom = await transaction.get<StoredSharedSession>(roomKey);
+      const storedBuild = storedRoom
+        ? await transaction.get<StoredPlayableBuild>(`build:${storedRoom.buildId}`)
+        : undefined;
+      const build = storedBuild ? normalizedBuild(storedBuild) : undefined;
+      const runtime = build && executableRuntime(build.ruleSystem);
+      if (!storedRoom || !build || !runtime || !runtimeSupportsBotSeat(runtime)) {
+        await transaction.delete(aiTurnKey(turn.sessionId));
+        return { kind: "dropped" as const };
+      }
+      const room = reconstructSession(storedRoom, build);
+      const seat = room.state.activeSeat;
+      if (
+        room.state.status !== "active" ||
+        !isAiSeat(room, seat) ||
+        room.acceptedActions.length !== turn.expectedActions
+      ) {
+        // A human moved (or the game ended) since scheduling: re-derive.
+        const next = aiPendingFor(room, Date.now());
+        if (next) await transaction.put(aiTurnKey(room.id), next);
+        else await transaction.delete(aiTurnKey(room.id));
+        return { kind: "stale" as const };
+      }
+      const sequence = room.acceptedActions.length + 1;
+      const intentId = aiIntentId(sequence);
+      if (room.acceptedActions.some((action) => action.intentId === intentId)) {
+        await transaction.delete(aiTurnKey(room.id));
+        return { kind: "stale" as const };
+      }
+      let picked = pickBotIntent(room.state, runtime, room.seed);
+      if (
+        picked &&
+        trailingActionsBySeat(room, seat) >= AI_MAX_CONSECUTIVE_ACTIONS
+      ) {
+        picked = { seat, actionId: "end_turn" };
+      }
+      const accepted = picked && picked.seat === seat
+        ? acceptIntent(
+            room.state,
+            runtime,
+            {
+              intentId,
+              seat,
+              actionId: picked.actionId,
+              payload: picked.payload,
+            },
+            sequence,
+            room.seed,
+          )
+        : null;
+      if (!accepted) {
+        // No legal bot move: park the seat rather than spin the alarm.
+        await transaction.delete(aiTurnKey(room.id));
+        console.warn("room_ai_no_legal_action", room.id, seat, sequence);
+        return { kind: "dropped" as const };
+      }
+      const persisted = await this.persistAcceptedAction(transaction, room, accepted);
+      if ("error" in persisted) {
+        await transaction.delete(aiTurnKey(room.id));
+        return { kind: "dropped" as const };
+      }
+      return { kind: "moved" as const, room: persisted.room };
+    });
+    if (outcome.kind === "moved") this.broadcastSession(outcome.room);
   }
 
   private async saveJob(job: CreatorJob, input?: SubmitJobInput) {
@@ -120,10 +314,11 @@ export class CreatorProjects extends DurableObject<Env> {
       (job) => job.status === "queued" || job.status === "running",
     );
     if (pending) {
-      await this.ctx.storage.setAlarm(Date.now() + 30_000);
+      await this.ctx.storage.put(JOB_RECOVERY_AT_KEY, Date.now() + 30_000);
     } else {
-      await this.ctx.storage.deleteAlarm();
+      await this.ctx.storage.delete(JOB_RECOVERY_AT_KEY);
     }
+    await this.rescheduleAlarm();
   }
 
   private async runJob(jobId: string, submittedInput?: SubmitJobInput) {
@@ -131,6 +326,7 @@ export class CreatorProjects extends DurableObject<Env> {
       ctx: this.ctx,
       saveJob: (job, input) => this.saveJob(job, input),
       schedulePendingJobRecovery: () => this.schedulePendingJobRecovery(),
+      requestJobRecoveryAlarm: () => this.requestJobRecoveryAlarm(),
       applyProjectChanges: (projectId, input) =>
         this.applyProjectChanges(projectId, input),
       compileProjectBuild: (projectId, input) =>
@@ -684,7 +880,13 @@ export class CreatorProjects extends DurableObject<Env> {
 
   async createBuildSession(
     buildId: string,
-    input: { seed: number; idempotencyKey: string; hypothesisId?: string },
+    input: {
+      seed: number;
+      idempotencyKey: string;
+      hypothesisId?: string;
+      aiSeats?: unknown;
+      aiThinkMs?: unknown;
+    },
   ) {
       const idempotencyKey =
         `session:${buildId}:${input.idempotencyKey}`;
@@ -725,6 +927,17 @@ export class CreatorProjects extends DurableObject<Env> {
           build.ruleSystem,
           Number(input.seed),
         );
+        const aiSeats = normalizeAiSeats(input.aiSeats, state.scores.length);
+        const aiThinkMs = normalizeAiThinkMs(input.aiThinkMs);
+        if (aiSeats === null || aiThinkMs === null) {
+          return { status: 400, value: { error: "ai_seats_invalid" } };
+        }
+        if (aiSeats.length) {
+          const runtime = executableRuntime(build.ruleSystem);
+          if (!runtime || !runtimeSupportsBotSeat(runtime)) {
+            return { status: 422, value: { error: "ai_seat_unsupported" } };
+          }
+        }
         const room: StoredSharedSession = {
           id: `room_${crypto.randomUUID()}`,
           projectId: build.projectId,
@@ -732,6 +945,7 @@ export class CreatorProjects extends DurableObject<Env> {
           seed: Number(input.seed),
           state,
           seats: [],
+          ...(aiSeats.length ? { aiSeats, aiThinkMs } : {}),
           acceptedActions: [],
           feedback: [],
           experiment: hypothesis
@@ -756,28 +970,52 @@ export class CreatorProjects extends DurableObject<Env> {
           createdAt: now,
         };
         record.sessions.push(room);
+        const aiPending = aiPendingFor(room, Date.now());
         await transaction.put({
           [projectKey]: record,
           [`session:${room.id}`]: room,
           [`replay:${replay.id}`]: replay,
           [idempotencyKey]: room,
+          ...(aiPending ? { [aiTurnKey(room.id)]: aiPending } : {}),
         });
-        return { status: 201, value: room };
+        return { status: 201, value: room, aiPending };
       });
+      if ("aiPending" in outcome && outcome.aiPending) await this.rescheduleAlarm();
       return json(outcome.value, outcome.status);
   }
 
 
   async alarm() {
-    const jobs = await this.ctx.storage.list<CreatorJob>({ prefix: "job:" });
-    for (const job of [...jobs.values()].sort((left, right) =>
-      left.createdAt.localeCompare(right.createdAt)
-    )) {
-      if (job.status === "queued" || job.status === "running") {
-        await this.runJob(job.id);
+    // Room AI turns first: they are short and the human is waiting on them.
+    const aiTurns = await this.ctx.storage.list<AiPendingTurn>({
+      prefix: AI_TURN_PREFIX,
+    });
+    const now = Date.now();
+    for (const turn of aiTurns.values()) {
+      if (turn.dueAt <= now + 25) {
+        try {
+          await this.runAiTurn(turn);
+        } catch (reason) {
+          console.error("room_ai_turn_failed", turn.sessionId, reason);
+        }
       }
     }
-    await this.schedulePendingJobRecovery();
+    // Job recovery keeps its 30 s grace: only run when due (or legacy alarm
+    // without a recorded recovery time).
+    const jobRecoveryAt = await this.ctx.storage.get<number>(JOB_RECOVERY_AT_KEY);
+    if (jobRecoveryAt === undefined || jobRecoveryAt <= Date.now() + 25) {
+      const jobs = await this.ctx.storage.list<CreatorJob>({ prefix: "job:" });
+      for (const job of [...jobs.values()].sort((left, right) =>
+        left.createdAt.localeCompare(right.createdAt)
+      )) {
+        if (job.status === "queued" || job.status === "running") {
+          await this.runJob(job.id);
+        }
+      }
+      await this.schedulePendingJobRecovery();
+    } else {
+      await this.rescheduleAlarm();
+    }
   }
 
   async fetch(request: Request) {
@@ -1431,13 +1669,13 @@ export class CreatorProjects extends DurableObject<Env> {
       if ("missing" in claim) return error("没有找到这个 Game Project。", 404);
       if (!claim.created) {
         if (claim.job.status === "queued" || claim.job.status === "running") {
-          await this.ctx.storage.setAlarm(Date.now() + 30_000);
+          await this.requestJobRecoveryAlarm();
           this.ctx.waitUntil(this.runJob(claim.job.id));
         }
         return json(claim.job, 202);
       }
       const job = claim.job;
-      await this.ctx.storage.setAlarm(Date.now() + 30_000);
+      await this.requestJobRecoveryAlarm();
       this.ctx.waitUntil(this.runJob(job.id, acceptedInput));
       return json(job, 202);
     }
@@ -1467,7 +1705,7 @@ export class CreatorProjects extends DurableObject<Env> {
         updatedAt: new Date().toISOString(),
       };
       await this.saveJob(job, input);
-      await this.ctx.storage.setAlarm(Date.now() + 30_000);
+      await this.requestJobRecoveryAlarm();
       this.ctx.waitUntil(this.runJob(job.id, input));
       return json(job, 202);
     }
@@ -1565,10 +1803,14 @@ export class CreatorProjects extends DurableObject<Env> {
         seed?: unknown;
         idempotencyKey?: unknown;
         hypothesisId?: unknown;
+        aiSeats?: unknown;
+        aiThinkMs?: unknown;
       }>().catch(() => ({
         seed: undefined,
         idempotencyKey: undefined,
         hypothesisId: undefined,
+        aiSeats: undefined,
+        aiThinkMs: undefined,
       }));
       if (
         !Number.isInteger(input.seed) ||
@@ -1585,6 +1827,8 @@ export class CreatorProjects extends DurableObject<Env> {
         ...(typeof input.hypothesisId === "string"
           ? { hypothesisId: input.hypothesisId }
           : {}),
+        ...(input.aiSeats !== undefined ? { aiSeats: input.aiSeats } : {}),
+        ...(input.aiThinkMs !== undefined ? { aiThinkMs: input.aiThinkMs } : {}),
       });
     }
 
@@ -1624,6 +1868,9 @@ export class CreatorProjects extends DurableObject<Env> {
         const room = storedRoom;
         if (seat < 0 || seat >= room.state.scores.length) {
           return { status: 409, value: { error: "seat_unavailable" } };
+        }
+        if (isAiSeat(room, seat)) {
+          return { status: 409, value: { error: "seat_is_ai" } };
         }
         const claimed = room.seats.find((entry) => entry.seat === seat);
         if (claimed) {
@@ -1722,6 +1969,12 @@ export class CreatorProjects extends DurableObject<Env> {
           };
         }
         const room = reconstructSession(storedRoom, build);
+        if (isAiSeat(room, Number(input.seat))) {
+          return {
+            status: 409,
+            value: { error: "seat_is_ai", state: room.state },
+          };
+        }
         const seatToken = typeof input.seatToken === "string" ? input.seatToken : "";
         const claimedSeat = seatToken
           ? await seatForToken(room.seats, Number(input.seat), seatToken)
@@ -1761,50 +2014,20 @@ export class CreatorProjects extends DurableObject<Env> {
             value: { error: "intent_rejected", state: room.state },
           };
         }
-        const updatedRoom: StoredSharedSession = {
-          ...room,
-          state: accepted.state,
-          acceptedActions: [...room.acceptedActions, accepted],
-        };
-        const persistedRoom: StoredSharedSession = {
-          ...updatedRoom,
-          acceptedActions: slimAcceptedActionsForStorage(updatedRoom.acceptedActions),
-        };
-        const replay = await transaction.get<StoredReplay>(
-          `replay:${room.replayId}`,
-        );
-        if (!replay) {
-          return { status: 500, value: { error: "replay_not_found" } };
-        }
-        const updatedReplay: StoredReplay = {
-          ...replay,
-          acceptedActions: persistedRoom.acceptedActions,
-          finalState: updatedRoom.state,
-        };
-        const projectKey = `${PROJECT_PREFIX}${room.projectId}`;
-        const storedProject =
-          await transaction.get<ProjectRecord>(projectKey);
-        if (!storedProject) {
-          return { status: 404, value: { error: "project_not_found" } };
-        }
-        const record = normalizedProjectRecord(storedProject);
-        record.sessions = record.sessions.map((candidate) =>
-          candidate.id === persistedRoom.id ? persistedRoom : candidate,
-        );
-        await transaction.put({
-          [roomKey]: persistedRoom,
-          [`replay:${room.replayId}`]: updatedReplay,
-          [projectKey]: record,
-        });
+        const persisted = await this.persistAcceptedAction(transaction, room, accepted);
+        if ("error" in persisted) return persisted.error;
+        const updatedRoom = persisted.room;
         // Response/broadcast keep full in-memory actions; DO stores slim logs.
         return {
           status: 200,
           value: visibleSession(updatedRoom, Number(input.seat)),
           broadcast: updatedRoom,
+          aiPending: persisted.aiPending,
         };
       });
       if (outcome.status === 200 && "broadcast" in outcome && outcome.broadcast) {
         this.broadcastSession(outcome.broadcast);
+        if ("aiPending" in outcome && outcome.aiPending) await this.rescheduleAlarm();
       }
       return json(outcome.value, outcome.status);
     }
@@ -2165,10 +2388,13 @@ export class CreatorProjects extends DurableObject<Env> {
         } satisfies SessionSocketAttachment);
       }
     }
+    const reconstructed = reconstructSession(room, build);
     socket.send(JSON.stringify({
       type: "session.snapshot",
-      session: visibleSession(reconstructSession(room, build), viewerSeat),
+      session: visibleSession(reconstructed, viewerSeat),
     } satisfies SharedSessionSnapshotEvent));
+    // Reconnect heal: make sure a waiting AI seat still has its alarm.
+    await this.ensureAiTurnScheduled(reconstructed);
   }
 
   webSocketClose(socket: WebSocket, code: number, reason: string) {

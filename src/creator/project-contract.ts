@@ -1031,6 +1031,10 @@ export interface SharedSession {
   seed: number;
   state: SessionState;
   seats: SessionSeat[];
+  /** G3D-04b: seats driven server-side by the kernel bot ("电脑"). */
+  aiSeats?: number[];
+  /** G3D-04b: AI think delay so 3D motion is visible (ms). */
+  aiThinkMs?: number;
   acceptedActions: AcceptedAction[];
   feedback: SessionFeedback[];
   experiment: ExperimentBrief | null;

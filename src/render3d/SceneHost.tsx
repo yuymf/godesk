@@ -400,6 +400,8 @@ export function SceneHost({
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     const motion = new MotionController();
+    // e2e observability (like __g3dMotionLog): is any tween still in flight?
+    (globalThis as { __g3dMotionBusy?: () => boolean }).__g3dMotionBusy = () => motion.busy;
     motionRef.current = motion;
     controlsRef.current = controls;
     const onControlsStart = () => motion.noteUserDrag();

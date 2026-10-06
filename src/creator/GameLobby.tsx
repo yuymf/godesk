@@ -3,7 +3,7 @@ import { Brand, GameMark } from "./CreatorBrand";
 import { ExampleArtwork } from "./ExampleArtwork";
 import { createSharedSession, getBuilds, getSharedSessions, listProjects } from "./project-api";
 import type { GameProject, PlayableBuild, SharedSession } from "./project-contract";
-import { conversationRelayKernel, hiddenRoleKernel, isAuctionBidding, isDiscFlipping, isHandPlay, isHarborVoyage, isHexSettlement, isNetworkRoute } from "./room-presentation";
+import { conversationRelayKernel, hiddenRoleKernel, isAuctionBidding, isDiscFlipping, isHandPlay, isHarborVoyage, hexSettlementKernel, isHexSettlement, isNetworkRoute } from "./room-presentation";
 import { othelloStartingBoardThumbnailDataUrl } from "./othello-thumbnail";
 import { networkRouteStartingBoardThumbnailDataUrl } from "./network-route-thumbnail";
 import { auctionBiddingThumbnailDataUrl } from "./auction-bidding-thumbnail";
@@ -15,6 +15,13 @@ type LobbyGame = {
   build?: PlayableBuild;
   session?: SharedSession;
 };
+
+/** G3D-04b: kernels with a server-side Room AI seat (worker runtimeSupportsBotSeat).
+ *  The computer takes the last seat so the human opens the game. */
+function computerSeatFor(game: LobbyGame): number | null {
+  const kernel = game.build ? hexSettlementKernel(game.build.ruleSystem) : null;
+  return kernel ? kernel.playerCount - 1 : null;
+}
 
 export function GameLobby() {
   const [games, setGames] = useState<LobbyGame[]>([]);
@@ -45,14 +52,16 @@ export function GameLobby() {
 
   useEffect(() => { void load(); }, [load]);
 
-  async function start(game: LobbyGame) {
+  async function start(game: LobbyGame, vsComputer = false) {
     if (!game.build) return;
-    setStartingId(game.project.id);
+    setStartingId(vsComputer ? `${game.project.id}:ai` : game.project.id);
     setError("");
     try {
+      const aiSeat = vsComputer ? computerSeatFor(game) : null;
       const session = await createSharedSession(game.build.id, {
         seed: 42,
         idempotencyKey: crypto.randomUUID(),
+        ...(aiSeat !== null ? { aiSeats: [aiSeat] } : {}),
       });
       window.location.assign(session.sessionUrl);
     } catch (reason) {
@@ -160,6 +169,16 @@ export function GameLobby() {
                         </button>
                       ) : (
                         <a className="shell-primary" href={href(`/studio/${game.project.id}`)}>继续完成玩法</a>
+                      )}
+                      {playable && computerSeatFor(game) !== null && (
+                        <button
+                          className="shell-secondary lobby-vs-computer"
+                          disabled={startingId !== null}
+                          onClick={() => void start(game, true)}
+                          type="button"
+                        >
+                          {startingId === `${game.project.id}:ai` ? "正在开局…" : "和电脑对战"}
+                        </button>
                       )}
                       <a className="shell-secondary" href={href(`/studio/${game.project.id}`)}>管理游戏</a>
                       {session && <button className="shell-secondary lobby-share" type="button" onClick={() => {

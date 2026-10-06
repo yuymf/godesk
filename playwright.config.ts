@@ -19,6 +19,8 @@ export default defineConfig({
   workers: 1,
   reporter: process.env.CI ? [["github"], ["list"]] : "list",
   timeout: 120_000,
+  // `@slow` specs (full games vs the Room AI seat) run only with GODESK_E2E_SLOW=1.
+  ...(process.env.GODESK_E2E_SLOW ? {} : { grepInvert: /@slow/ }),
   expect: { timeout: 15_000 },
   use: {
     baseURL: origin,

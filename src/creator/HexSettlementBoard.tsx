@@ -42,6 +42,7 @@ const COPY = {
     winner: "获胜者",
     yourTurn: "轮到你行动",
     waiting: "等待对方",
+    aiThinking: "电脑思考中",
     roll: "掷骰",
     endTurn: "结束回合",
     buyDev: "购买发展卡",
@@ -76,6 +77,7 @@ const COPY = {
     winner: "Winner",
     yourTurn: "Your turn",
     waiting: "Waiting",
+    aiThinking: "Computer thinking",
     roll: "Roll dice",
     endTurn: "End turn",
     buyDev: "Buy development card",
@@ -166,6 +168,7 @@ export function HexSettlementBoard({
   locale = "zh",
   winnerSeat = null,
   busy = false,
+  aiSeats = [],
   onAct,
 }: {
   catan: HexSettlementBoardState;
@@ -176,6 +179,8 @@ export function HexSettlementBoard({
   locale?: RoomLocale;
   winnerSeat?: number | null;
   busy?: boolean;
+  /** G3D-04b: seats driven server-side by the kernel bot. */
+  aiSeats?: number[];
   onAct?: (actionId: string, payload?: Record<string, unknown>) => void;
 }) {
   const copy = COPY[locale];
@@ -219,7 +224,9 @@ export function HexSettlementBoard({
       ? `${copy.gameOver}${winnerSeat !== null ? ` · ${copy.winner} ${winnerSeat}` : ""}`
       : viewerSeat !== null && viewerSeat === activeSeat
         ? copy.yourTurn
-        : `${copy.waiting} · ${copy.seat} ${activeSeat}`;
+        : aiSeats.includes(activeSeat)
+          ? `${copy.aiThinking} · ${copy.seat} ${activeSeat}`
+          : `${copy.waiting} · ${copy.seat} ${activeSeat}`;
   const diceLine =
     catan.lastDice === null
       ? copy.noDice
