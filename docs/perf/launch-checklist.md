@@ -11,8 +11,8 @@
 | `asset-legal` | `LicenseRef-AI-Generated` 待法务审查条数 | `node scripts/verify-assets.mjs --skip-network --json` → `summary.aiPendingLegalReview` | 0，且 verify-assets 通过 | warn：68 项 |
 | `size-budgets` | 首页 / render3d 核心 / assets / 懒加载 chunk 体积 | `size-limit --json` + `scripts/check-size-budgets.mjs`（需先 `pnpm build`） | 全部不超限，且每项余量 ≥ 2% | warn：size-limit 首页 168.68 / 170 kB，余量 0.8% |
 | `lighthouse` | `lighthouserc.json` 里仍为 `"warn"` 级的断言（首页 LCP、Room TBT、Room CLS） | `lighthouserc.json` + `.lighthouseci/lhr-*.json`（median-run） | 没有 warn 级断言（都已改成 error） | warn：3 条仍为 warn 级 |
-| `draw-calls` | 六角岛 Room 分档 draw call：稳态和峰值取较大者，对照 §4.6.3（high 150 / medium 100 / low 60） | `pnpm perf:ci` 的 `ci-budgets.json` → `launchChecklist.tierDrawCalls`（high 取冷启动那次采样；medium / low 用 `?tier=` 强制档位） | 三档都不超预算 | 见本 PR 证据 |
-| `hud-raw-action-ids` | Room 可见文本和 aria-label 里的原始动作 id：边坐标串 `-200:173\|-250:87`、顶点键、`action_…` / UUID、`place_road` 一类动作类型 | `ci-budgets.json` → `launchChecklist.hudRawActionIds`（桌面 1440×900 + iPhone 12 Pro，不带 `?perf=1`） | 两个视口都是 0 | 见本 PR 证据（G3D-13 HUD 重做前预计非 0） |
+| `draw-calls` | 六角岛 Room 分档 draw call：稳态和峰值取较大者，对照 §4.6.3（high 150 / medium 100 / low 60） | `pnpm perf:ci` 的 `ci-budgets.json` → `launchChecklist.tierDrawCalls`（high 取冷启动那次采样；medium / low 用 `?tier=` 强制档位） | 三档都不超预算 | fail：high 140 / 140；medium 80 / 140；low 80 / 121（稳态 / 峰值，SwiftShader） |
+| `hud-raw-action-ids` | Room 可见文本和 aria-label 里的原始动作 id：边坐标串 `-200:173\|-250:87`、顶点键、`action_…` / UUID、`place_road` 一类动作类型 | `ci-budgets.json` → `launchChecklist.hudRawActionIds`（桌面 1440×900 + iPhone 12 Pro，不带 `?perf=1`） | 两个视口都是 0 | warn：桌面与 iPhone 各 54 种顶点坐标键（「放置定居点 · -100:-173」等，开局放置阶段） |
 
 状态取值：`pass` / `warn` / `fail` / `missing`（输入缺失，例如没跑 perf:ci）。
 
