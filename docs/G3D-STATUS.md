@@ -175,3 +175,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 2026-10-07 | G3D-JUDGE round-3/4 刀序②（`feat/g3d-judge-r3-pieces`）：微缩渔村/港镇/木板路 + 斗篷强盗；薄毡垫骰盘保留；round-4 叠屏由 Track D 截；手写（Codex 额度用尽） | Track C |
 | 2026-10-07 | G3D-JUDGE round-5p 刀序③+④（`feat/g3d-judge-r5-pieces`）：房屋体积/强盗剪影放大；Kenney 调研无房屋 glTF；强盗 hop + 资源 +N 弹出加强；手写（Codex 额度用尽） | Track C |
+| 2026-10-07 | G3D-JUDGE round-6tex 刀序①：CC0 重烘焙 t01–t11 PBR（去 AI 塑性感）；棋子 UV+木纹 albedo×VC；手写 | Track TEX |
