@@ -45,7 +45,7 @@ const COPY = {
     disc: "棋子",
   },
   en: {
-    board: "Othello board",
+    board: "Disc-flipping board",
     hud: "Match status",
     active: "Active seat",
     seat: "Seat",

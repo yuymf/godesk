@@ -4118,9 +4118,9 @@ summary:focus-visible {
 .othello-cell,
 .othello-disc,
 .othello-pass,
-.catan-board,
-.catan-hit,
-.catan-action,
+.hex-island-board,
+.hex-island-hit,
+.hex-island-action,
 .network-route-board,
 .network-route-hit {
     animation: none !important;
@@ -4431,8 +4431,8 @@ summary:focus-visible {
   }
 }
 
-/* —— Catan / hex-settlement board HUD (PR8) —— */
-.catan-board {
+/* —— hex-island / hex-settlement board HUD (PR8) —— */
+.hex-island-board {
   display: grid;
   gap: 1rem;
   margin: 0 auto 1.25rem;
@@ -4445,14 +4445,14 @@ summary:focus-visible {
   box-shadow: 0 10px 28px rgb(15 40 61 / 8%);
 }
 
-.catan-hud {
+.hex-island-hud {
   display: grid;
   gap: .75rem;
   grid-template-columns: 1fr auto;
   align-items: start;
 }
 
-.catan-kicker {
+.hex-island-kicker {
   display: block;
   margin-bottom: .2rem;
   color: var(--muted, #5b6a72);
@@ -4462,27 +4462,27 @@ summary:focus-visible {
   text-transform: uppercase;
 }
 
-.catan-hud-status strong {
+.hex-island-hud-status strong {
   display: block;
   font-size: 1.05rem;
 }
 
-.catan-hud-status p,
-.catan-hud-dice {
+.hex-island-hud-status p,
+.hex-island-hud-dice {
   margin: .35rem 0 0;
   color: var(--muted, #5b6a72);
   font-size: .92rem;
   line-height: 1.4;
 }
 
-.catan-hud-scores {
+.hex-island-hud-scores {
   display: flex;
   flex-wrap: wrap;
   gap: .55rem;
   justify-content: flex-end;
 }
 
-.catan-score {
+.hex-island-score {
   display: inline-flex;
   align-items: center;
   gap: .4rem;
@@ -4493,22 +4493,22 @@ summary:focus-visible {
   border: 1px solid rgb(26 74 110 / 14%);
 }
 
-.catan-score b {
+.hex-island-score b {
   font-size: .88rem;
 }
 
-.catan-seat-swatch {
+.hex-island-seat-swatch {
   width: .85rem;
   height: .85rem;
   border-radius: 999px;
   border: 1px solid rgb(0 0 0 / 18%);
 }
 
-.catan-hud-resources {
+.hex-island-hud-resources {
   grid-column: 1 / -1;
 }
 
-.catan-hud-resources ul {
+.hex-island-hud-resources ul {
   display: flex;
   flex-wrap: wrap;
   gap: .45rem;
@@ -4517,7 +4517,7 @@ summary:focus-visible {
   list-style: none;
 }
 
-.catan-hud-resources li {
+.hex-island-hud-resources li {
   display: inline-flex;
   align-items: center;
   gap: .35rem;
@@ -4528,7 +4528,7 @@ summary:focus-visible {
   font-size: .88rem;
 }
 
-.catan-hud-awards {
+.hex-island-hud-awards {
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
@@ -4536,14 +4536,14 @@ summary:focus-visible {
   margin: 0;
 }
 
-.catan-hud-awards div {
+.hex-island-hud-awards div {
   padding: .45rem .6rem;
   border-radius: .6rem;
   background: rgb(255 255 255 / 65%);
   border: 1px solid rgb(26 74 110 / 10%);
 }
 
-.catan-hud-awards dt {
+.hex-island-hud-awards dt {
   color: var(--muted, #5b6a72);
   font-size: .72rem;
   font-weight: 700;
@@ -4551,20 +4551,20 @@ summary:focus-visible {
   text-transform: uppercase;
 }
 
-.catan-hud-awards dd {
+.hex-island-hud-awards dd {
   margin: .2rem 0 0;
   font-size: .92rem;
   font-weight: 600;
 }
 
-.catan-stage {
+.hex-island-stage {
   position: relative;
   width: min(100%, 36rem);
   margin: 0 auto;
   aspect-ratio: 1 / 0.92;
 }
 
-.catan-svg {
+.hex-island-svg {
   display: block;
   width: 100%;
   height: 100%;
@@ -4572,11 +4572,11 @@ summary:focus-visible {
   box-shadow: inset 0 0 0 1px rgb(0 0 0 / 12%);
 }
 
-.catan-hex.is-legal {
+.hex-island-hex.is-legal {
   filter: brightness(1.12);
 }
 
-.catan-hit {
+.hex-island-hit {
   position: absolute;
   transform: translate(-50%, -50%);
   margin: 0;
@@ -4588,50 +4588,50 @@ summary:focus-visible {
   cursor: default;
 }
 
-.catan-hit.is-legal:not(:disabled) {
+.hex-island-hit.is-legal:not(:disabled) {
   cursor: pointer;
   border-color: rgb(245 215 110 / 90%);
   background: rgb(245 215 110 / 35%);
   box-shadow: 0 0 0 2px rgb(255 255 255 / 35%);
 }
 
-.catan-hit.is-legal:not(:disabled):hover,
-.catan-hit.is-legal:not(:disabled):focus-visible {
+.hex-island-hit.is-legal:not(:disabled):hover,
+.hex-island-hit.is-legal:not(:disabled):focus-visible {
   background: rgb(245 215 110 / 55%);
   outline: 2px solid #f5d76e;
   outline-offset: 1px;
 }
 
-.catan-hit-hex {
+.hex-island-hit-hex {
   width: 12%;
   height: 12%;
   border-radius: 999px;
 }
 
-.catan-hit-edge {
+.hex-island-hit-edge {
   width: 8%;
   height: 8%;
   border-radius: .35rem;
 }
 
-.catan-hit-vertex {
+.hex-island-hit-vertex {
   width: 7%;
   height: 7%;
   border-radius: 999px;
 }
 
-.catan-hit-vertex.is-city {
+.hex-island-hit-vertex.is-city {
   border-radius: .3rem;
 }
 
-.catan-action-row {
+.hex-island-action-row {
   display: flex;
   flex-wrap: wrap;
   gap: .55rem;
   justify-content: center;
 }
 
-.catan-action {
+.hex-island-action {
   min-height: 2.55rem;
   padding: .55rem 0.95rem;
   border-radius: .7rem;
@@ -4643,25 +4643,25 @@ summary:focus-visible {
   cursor: pointer;
 }
 
-.catan-action:disabled {
+.hex-island-action:disabled {
   opacity: .55;
   cursor: wait;
 }
 
-.catan-action:focus-visible {
+.hex-island-action:focus-visible {
   outline: 2px solid #f5d76e;
   outline-offset: 2px;
 }
 
-.room-view-catan .catan-board {
+.room-view-hex-island .hex-island-board {
   margin-top: .5rem;
 }
 
 @media (max-width: 680px) {
-  .catan-hud {
+  .hex-island-hud {
     grid-template-columns: 1fr;
   }
-  .catan-hud-scores {
+  .hex-island-hud-scores {
     justify-content: flex-start;
   }
 }
@@ -5053,7 +5053,7 @@ summary:focus-visible {
 }
 .room-view-voyage > .action-log { margin-bottom: var(--space-6); }
 .room-view-voyage > .othello-board,
-.room-view-voyage > .catan-board,
+.room-view-voyage > .hex-island-board,
 .room-view-voyage > .auction-board {
   box-sizing: border-box;
   width: min(960px, calc(100% - 48px));
@@ -5062,7 +5062,7 @@ summary:focus-visible {
 }
 
 .othello-board,
-.catan-board,
+.hex-island-board,
 .auction-board {
   padding: var(--space-5);
   border: 1px solid rgb(23 23 23 / 12%);
@@ -5071,25 +5071,25 @@ summary:focus-visible {
   box-shadow: var(--shadow-card);
 }
 .othello-hud,
-.catan-hud { gap: var(--space-4); align-items: stretch; }
+.hex-island-hud { gap: var(--space-4); align-items: stretch; }
 .othello-hud-status,
-.catan-hud-status {
+.hex-island-hud-status {
   padding: var(--space-4);
   background: var(--surface-sunken);
   border-radius: var(--radius-md);
   box-shadow: inset 4px 0 0 var(--accent);
 }
 .othello-kicker,
-.catan-kicker,
+.hex-island-kicker,
 .auction-kicker { color: var(--muted); font-size: var(--type-sm); letter-spacing: 0; text-transform: none; }
 .othello-hud-status strong,
-.catan-hud-status strong { font-size: var(--type-xl); }
+.hex-island-hud-status strong { font-size: var(--type-xl); }
 .othello-hud-scores,
-.catan-hud-scores { align-content: start; }
+.hex-island-hud-scores { align-content: start; }
 .othello-score,
-.catan-score,
-.catan-hud-resources li,
-.catan-hud-awards div {
+.hex-island-score,
+.hex-island-hud-resources li,
+.hex-island-hud-awards div {
   background: var(--surface-sunken);
   border: 0;
   border-radius: var(--radius-sm);
@@ -5103,26 +5103,26 @@ summary:focus-visible {
 .othello-cell.is-last-move { box-shadow: inset 0 0 0 3px white; }
 .othello-cell:disabled { cursor: default; opacity: .92; }
 .othello-pass:disabled,
-.catan-action:disabled { background: var(--surface-board); border-color: var(--surface-board); color: var(--muted); opacity: 1; cursor: not-allowed; box-shadow: none; }
+.hex-island-action:disabled { background: var(--surface-board); border-color: var(--surface-board); color: var(--muted); opacity: 1; cursor: not-allowed; box-shadow: none; }
 .othello-pass:focus-visible,
-.catan-action:focus-visible { outline-color: var(--accent); }
-.catan-hud-resources { padding: var(--space-3) var(--space-4); background: var(--surface-sunken); border-radius: var(--radius-md); }
-.catan-hud-resources { grid-column: 1; }
-.catan-hud-resources ul { margin-top: var(--space-2); }
-.catan-hud-resources li { background: var(--surface-paper); padding: var(--space-2) var(--space-3); }
-.catan-hud-resources li b { color: var(--accent-deep); }
-.catan-hud-awards { grid-column: 2; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.catan-hud-awards div { padding: var(--space-3); }
-.catan-stage { width: min(100%, 620px); }
-.catan-svg { box-shadow: var(--shadow-soft); }
-.catan-hex.is-legal { filter: brightness(1.18) saturate(1.15); }
-.catan-hit:disabled { cursor: default; }
-.catan-hit.is-legal:not(:disabled) { border-color: white; background: rgb(23 23 23 / 46%); box-shadow: 0 0 0 3px var(--accent-deep); }
-.catan-hit.is-legal:not(:disabled):hover,
-.catan-hit.is-legal:not(:disabled):focus-visible { background: rgb(23 23 23 / 70%); outline: 3px solid white; }
-.catan-action-row { justify-content: flex-start; padding: var(--space-3); background: var(--surface-sunken); border-radius: var(--radius-md); }
-.catan-action { min-height: 42px; background: var(--accent); border-color: var(--accent); border-radius: var(--radius-sm); }
-.catan-action:hover:not(:disabled),
+.hex-island-action:focus-visible { outline-color: var(--accent); }
+.hex-island-hud-resources { padding: var(--space-3) var(--space-4); background: var(--surface-sunken); border-radius: var(--radius-md); }
+.hex-island-hud-resources { grid-column: 1; }
+.hex-island-hud-resources ul { margin-top: var(--space-2); }
+.hex-island-hud-resources li { background: var(--surface-paper); padding: var(--space-2) var(--space-3); }
+.hex-island-hud-resources li b { color: var(--accent-deep); }
+.hex-island-hud-awards { grid-column: 2; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.hex-island-hud-awards div { padding: var(--space-3); }
+.hex-island-stage { width: min(100%, 620px); }
+.hex-island-svg { box-shadow: var(--shadow-soft); }
+.hex-island-hex.is-legal { filter: brightness(1.18) saturate(1.15); }
+.hex-island-hit:disabled { cursor: default; }
+.hex-island-hit.is-legal:not(:disabled) { border-color: white; background: rgb(23 23 23 / 46%); box-shadow: 0 0 0 3px var(--accent-deep); }
+.hex-island-hit.is-legal:not(:disabled):hover,
+.hex-island-hit.is-legal:not(:disabled):focus-visible { background: rgb(23 23 23 / 70%); outline: 3px solid white; }
+.hex-island-action-row { justify-content: flex-start; padding: var(--space-3); background: var(--surface-sunken); border-radius: var(--radius-md); }
+.hex-island-action { min-height: 42px; background: var(--accent); border-color: var(--accent); border-radius: var(--radius-sm); }
+.hex-island-action:hover:not(:disabled),
 .othello-pass:hover:not(:disabled) { background: var(--accent-deep); }
 
 .auction-board { display: grid; gap: var(--space-5); color: var(--ink); }
@@ -5167,20 +5167,20 @@ summary:focus-visible {
   .seat-picker { grid-column: 1 / -1; }
 }
 @media (max-width: 680px) {
-  .catan-hud-resources,
-.catan-hud-awards { grid-column: 1 / -1; }
+  .hex-island-hud-resources,
+.hex-island-hud-awards { grid-column: 1 / -1; }
   .room-view .room-shell-header,
 .room-view:not(.room-view-voyage) .room-shell-header { align-items: flex-start; flex-direction: column; }
   .room-view .room-invitation-rich,
 .room-view:not(.room-view-voyage) .room-invitation-rich { width: calc(100% - 24px); margin-top: var(--space-3); padding: var(--space-4); grid-template-columns: 1fr; }
   .seat-picker { grid-column: auto; }
   .room-view-voyage > .othello-board,
-.room-view-voyage > .catan-board,
+.room-view-voyage > .hex-island-board,
 .room-view-voyage > .auction-board,
 .room-view-voyage > .action-log,
 .room-view-voyage > .room-feedback-panel { width: calc(100% - 24px); margin-top: var(--space-3); }
   .othello-board,
-.catan-board,
+.hex-island-board,
 .auction-board { padding: var(--space-3); }
   .auction-status { display: grid; }
   .auction-seats { grid-template-columns: 1fr; }
@@ -5188,7 +5188,7 @@ summary:focus-visible {
 
 /* PR22: board / HUD finish pass — commercial tabletop density after #93 shell. */
 .othello-board,
-.catan-board,
+.hex-island-board,
 .auction-board {
   gap: var(--space-5);
   padding: var(--space-5);
@@ -5201,7 +5201,7 @@ summary:focus-visible {
 }
 
 .othello-hud,
-.catan-hud {
+.hex-island-hud {
   padding: var(--space-4);
   border-radius: var(--radius-lg);
   background: var(--surface-paper);
@@ -5210,7 +5210,7 @@ summary:focus-visible {
 }
 
 .othello-hud-status,
-.catan-hud-status {
+.hex-island-hud-status {
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   background: var(--surface-sunken);
@@ -5218,13 +5218,13 @@ summary:focus-visible {
 }
 
 .othello-hud-status strong,
-.catan-hud-status strong {
+.hex-island-hud-status strong {
   letter-spacing: -0.01em;
   line-height: 1.2;
 }
 
 .othello-score.is-active,
-.catan-score.is-active {
+.hex-island-score.is-active {
   box-shadow: inset 4px 0 0 var(--accent);
   background: var(--accent-soft);
   border-color: rgb(23 23 23 / 18%);
@@ -5264,32 +5264,32 @@ summary:focus-visible {
 }
 
 .othello-pass,
-.catan-action {
+.hex-island-action {
   min-height: 44px;
   padding: 0 var(--space-5);
   border-radius: var(--radius-md);
   font-weight: 700;
 }
 
-.catan-hud-resources {
+.hex-island-hud-resources {
   border: 1px solid rgb(23 23 23 / 10%);
   box-shadow: var(--shadow-soft);
 }
 
-.catan-hud-resources li {
+.hex-island-hud-resources li {
   min-height: 36px;
   align-items: center;
   border: 1px solid rgb(23 23 23 / 8%);
   border-radius: var(--radius-sm);
 }
 
-.catan-hud-awards div {
+.hex-island-hud-awards div {
   border: 1px solid rgb(23 23 23 / 8%);
   background: var(--surface-sunken);
   border-radius: var(--radius-md);
 }
 
-.catan-stage-frame {
+.hex-island-stage-frame {
   padding: var(--space-3);
   border-radius: var(--radius-lg);
   background: var(--surface-sunken);
@@ -5297,28 +5297,28 @@ summary:focus-visible {
   box-shadow: var(--shadow-soft);
 }
 
-.catan-svg {
+.hex-island-svg {
   border-radius: var(--radius-md);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 18%);
 }
 
-.catan-hex.is-legal {
+.hex-island-hex.is-legal {
   filter: brightness(1.08) saturate(1.12);
   stroke: #fff !important;
   stroke-width: 8;
 }
 
-.catan-hit.is-legal:not(:disabled) {
+.hex-island-hit.is-legal:not(:disabled) {
   background: rgb(23 23 23 / 28%);
   box-shadow: inset 0 0 0 2px #fff;
 }
 
-.catan-hit.is-legal:not(:disabled):hover,
-.catan-hit.is-legal:not(:disabled):focus-visible {
+.hex-island-hit.is-legal:not(:disabled):hover,
+.hex-island-hit.is-legal:not(:disabled):focus-visible {
   background: rgb(23 23 23 / 42%);
 }
 
-.catan-action-row {
+.hex-island-action-row {
   gap: var(--space-3);
   padding-top: var(--space-2);
 }
@@ -5377,14 +5377,14 @@ summary:focus-visible {
 
 @media (max-width: 720px) {
   .othello-board,
-.catan-board,
+.hex-island-board,
 .auction-board {
     padding: var(--space-3);
     gap: var(--space-4);
   }
   .auction-lot-card,
 .othello-hud,
-.catan-hud {
+.hex-island-hud {
     padding: var(--space-3);
   }
 }
