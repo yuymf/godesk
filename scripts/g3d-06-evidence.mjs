@@ -9,7 +9,7 @@ import path from "node:path";
 
 const OUT = process.env.G3D_EVIDENCE_DIR || "/workspace/g3d-evidence/G3D-06";
 const BASE = process.env.G3D_BASE_URL || "http://127.0.0.1:8799/chatgpt-plugin";
-const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿基础版";
+const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿六角岛资源建造游戏";
 
 const viewports = [
   { id: "desktop-1440x900", width: 1440, height: 900, isMobile: false },

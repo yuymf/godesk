@@ -1,8 +1,8 @@
 import { expect, type Page } from "@playwright/test";
 
 /** Frozen Sol max baseline prompts (GameSpec fixtures). */
-export const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿基础版";
-export const NORTH_STAR_HEX_ISLAND_PROMPT = "帮我生成一个汐屿游戏";
+export const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿六角岛资源建造游戏";
+export const NORTH_STAR_HEX_ISLAND_PROMPT = "帮我生成一个汐屿六角岛游戏";
 export const OTHELLO_PROMPT = "做一款可以与电脑对战的黑白棋";
 export const NORTH_STAR_OTHELLO_PROMPT = "帮我生成一个黑白棋游戏";
 export const NORTH_STAR_OTHELLO_ALT_PROMPT = "做一款翻转棋 othello";
@@ -10,7 +10,7 @@ export const NETWORK_PROMPT = "做一款线路网络桌游，玩家铺设路线�
 export const CARD_AREA_PROMPT = "做一款卡牌区域控制游戏，玩家出牌争夺区域";
 export const AUCTION_PROMPT = "做一款拍卖竞价桌游";
 
-/** Off-corpus prompts — must never silent-bind Tidewell or Othello. */
+/** Off-corpus prompts — must never silent-bind hex-island or Othello. */
 export const UNSEEN_PROMPTS = [
   NETWORK_PROMPT,
   CARD_AREA_PROMPT,

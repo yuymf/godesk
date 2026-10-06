@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
 
-const PROMPT = "做一款可以与电脑对战的汐屿基础版";
+const PROMPT = "做一款可以与电脑对战的汐屿六角岛资源建造游戏";
 
 async function openBoard(page: import("@playwright/test").Page) {
   await page.goto("/chatgpt-plugin/new");
@@ -16,7 +16,7 @@ async function openBoard(page: import("@playwright/test").Page) {
   await card.getByRole("link", { name: "继续这一局" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
   await page.getByLabel("你的席位").selectOption("0");
-  const board = page.getByRole("region", { name: "汐屿" });
+  const board = page.getByRole("region", { name: "汐屿六角岛" });
   await expect(board).toBeVisible();
   await expect(page.getByTestId("g3d-scene-host")).toHaveAttribute("data-water", "on", { timeout: 60_000 });
   return board;

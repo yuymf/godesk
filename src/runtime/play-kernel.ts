@@ -4,7 +4,7 @@
  * Owns: state envelope, legal actions, phase hooks, seeded RNG, append-only
  * events, fail-closed apply, and deterministic replay.
  * Does NOT own: hex/grid topology, resources, dice-as-universal-turn, or
- * genre visuals — those live in adapters (stubs OK; Othello/Tidewell = PR5/PR6).
+ * genre visuals — those live in adapters (stubs OK; Othello/hex-island = PR5/PR6).
  *
  * GameSpec / KERNEL_CAPABILITIES remain authoritative for which kernelType
  * may become executable. Unknown kernels stay fail-closed upstream.

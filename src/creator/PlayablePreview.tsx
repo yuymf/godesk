@@ -160,7 +160,7 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
       ) : hexSettlement && hexKernel ? (
         <section className="preview-board" aria-label="汐屿可玩桌面">
           <HexSettlementScenePreview
-            hexSettlement={createInitialHexIslandSessionSlice(hexKernel.playerCount)}
+            hexIsland={createInitialHexIslandSessionSlice(hexKernel.playerCount)}
           />
         </section>
       ) : networkRoute && networkKernel ? (

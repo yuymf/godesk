@@ -52,7 +52,7 @@ async function guestJoinClaimAndAct(
         await expect(board.getByLabel("子数")).toContainText(/黑\s*[3-9]/);
       }
     } else {
-      const board = page.getByRole("region", { name: "汐屿" });
+      const board = page.getByRole("region", { name: "汐屿六角岛" });
       await expect(board).toBeVisible();
       const hud = board.getByRole("region", { name: "对局状态" });
       await expect(hud).toContainText("轮到你行动");

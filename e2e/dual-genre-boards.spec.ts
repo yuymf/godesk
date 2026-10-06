@@ -2,7 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
 
 /** Frozen Sol max baseline prompts (GameSpec fixtures). */
-const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿基础版";
+const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿六角岛资源建造游戏";
 const OTHELLO_PROMPT = "做一款可以与电脑对战的黑白棋";
 const visualEvidence = process.env.GODESK_VISUAL_EVIDENCE;
 
@@ -56,7 +56,7 @@ async function assertBoardHudNotClipped(page: Page, boardName: string) {
   expect(box!.y).toBeLessThan(viewport!.height);
 }
 
-test.describe("dual-genre boards: Othello + Tidewell generate → lobby → act", () => {
+test.describe("dual-genre boards: Othello + hex-island generate → lobby → act", () => {
   test("黑白棋: studio playable, lobby mark, legal place, HUD authority", async ({
     page,
   }) => {
@@ -128,12 +128,12 @@ test.describe("dual-genre boards: Othello + Tidewell generate → lobby → act"
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
     expect(new URL(page.url()).searchParams.get("share")).toBeTruthy();
 
-    const board = page.getByRole("region", { name: "汐屿" });
+    const board = page.getByRole("region", { name: "汐屿六角岛" });
     await expect(board).toBeVisible();
     const hud = board.getByRole("region", { name: "对局状态" });
     await expect(hud).toBeVisible();
     await expect(hud).toContainText("初始放置");
-    await expect(page.getByRole("img", { name: "汐屿" })).toBeVisible();
+    await expect(page.getByRole("img", { name: "汐屿六角岛" })).toBeVisible();
 
     await page.getByLabel("你的席位").selectOption("0");
     await expect(hud).toContainText("轮到你行动");
@@ -155,6 +155,6 @@ test.describe("dual-genre boards: Othello + Tidewell generate → lobby → act"
       timeout: 15_000,
     });
 
-    await assertBoardHudNotClipped(page, "汐屿");
+    await assertBoardHudNotClipped(page, "汐屿六角岛");
   });
 });

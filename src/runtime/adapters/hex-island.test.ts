@@ -31,7 +31,7 @@ function snapshotBody(state: PlayState<HexIslandGenre>) {
   return rest;
 }
 
-describe("hex-settlement-v1 hexSettlement adapter", () => {
+describe("hex-settlement-v1 hexIsland adapter", () => {
   it("registers hex-settlement-v1 with the mechanics capability set", () => {
     expect(Object.hasOwn(KERNEL_CAPABILITIES, HEX_SETTLEMENT_KERNEL_TYPE)).toBe(
       true,
@@ -41,7 +41,7 @@ describe("hex-settlement-v1 hexSettlement adapter", () => {
     );
   });
 
-  it("creates beginner board without Tidewell fields on the public envelope", () => {
+  it("creates beginner board without hex-island fields on the public envelope", () => {
     const state = createInitialState(hexIslandAdapter, config, 42);
     expect(state.seed).toBe(42);
     expect(state.phase).toBe("setup");

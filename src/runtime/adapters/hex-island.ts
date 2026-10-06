@@ -1,5 +1,5 @@
 /**
- * Tidewell / hex-settlement adapter on the public play-kernel (PR6).
+ * hex-island / hex-settlement adapter on the public play-kernel (PR6).
  *
  * Genre/topology/resources/dice/roads live under `genre` only — the public
  * envelope still has no hex/resources/dice required fields. AI and humans
@@ -1170,7 +1170,7 @@ export function hexIslandToSessionFields(state: PlayState<HexIslandGenre>): {
   scores: number[];
   status: "active" | "complete";
   winnerSeat: number | null;
-  hexSettlement: {
+  hexIsland: {
     phase: string;
     playerCount: number;
     victoryPointsToWin: number;
@@ -1200,7 +1200,7 @@ export function hexIslandToSessionFields(state: PlayState<HexIslandGenre>): {
     scores,
     status: state.status,
     winnerSeat: state.winnerId,
-    hexSettlement: {
+    hexIsland: {
       phase: state.phase,
       playerCount: state.genre.playerCount,
       victoryPointsToWin: state.genre.victoryPointsToWin,

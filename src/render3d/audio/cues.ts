@@ -146,12 +146,12 @@ export type AudioRoomSnapshot = {
 export type AudioSessionState = {
   status: "active" | "complete";
   winnerSeat: number | null;
-  hexSettlement?: { players: readonly { resources: Record<string, number> }[] };
+  hexIsland?: { players: readonly { resources: Record<string, number> }[] };
 };
 
 function resourcesOf(state: AudioSessionState | undefined, seat: number | null): Record<string, number> | null {
-  if (!state?.hexSettlement || seat === null) return null;
-  return state.hexSettlement.players[seat]?.resources ?? null;
+  if (!state?.hexIsland || seat === null) return null;
+  return state.hexIsland.players[seat]?.resources ?? null;
 }
 
 function total(resources: Record<string, number> | null): number {

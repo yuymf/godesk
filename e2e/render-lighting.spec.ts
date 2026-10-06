@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
  * 每档断言 AgX、阴影贴图尺寸（2048 / 1024 / 512）与 KTX2 PBR 套件流式替换（512 / 512 / 256），
  * 且贴图与 Basis 转码器请求全部成功。
  */
-const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿基础版";
+const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿六角岛资源建造游戏";
 const EXPECTED = {
   high: { shadow: "2048", pbr: "512" },
   medium: { shadow: "1024", pbr: "512" },

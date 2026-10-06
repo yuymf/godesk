@@ -60,7 +60,7 @@ test("NL Othello proposal → disc-flipping build → share= guest legal place",
   expect(frameBounds).not.toBeNull();
   expect(thumbnailBounds!.height).toBeLessThanOrEqual(frameBounds!.height + 1);
   expect(thumbnailBounds!.width).toBeLessThanOrEqual(frameBounds!.width + 1);
-  for (const mark of ["auction", "hexSettlement", "network", "card"]) {
+  for (const mark of ["auction", "hexIsland", "network", "card"]) {
     await expect(card.locator(`[data-lobby-mark="${mark}"]`)).toHaveCount(0);
   }
 

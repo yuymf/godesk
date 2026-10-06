@@ -1,12 +1,12 @@
 /**
- * AREA-W4-03 — settlecoast-inspired presentation bar for harbor Room.
+ * AREA-W4-03 — presentation bar for harbor Room (业界 3D 桌游品质对标; original art).
  * Rights-safe flagship `港口十三号` must read as a harbor voyage on the invite
  * URL (token hierarchy, cargo/dock affordances, spectator landmarks).
  * ADR 0014 establishes Three.js 3D tables as GoDesk's default render surface.
  */
 export const HARBOR_PRESENTATION_BAR = {
   flagshipExample: "港口十三号",
-  visualReference: "settlecoast",
+  visualReference: "industry-3d-tabletop-quality",
 } as const;
 
 export const HARBOR_LANDMARK_TEST_IDS = {

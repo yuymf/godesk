@@ -31,7 +31,7 @@ describe("GameSpec v1", () => {
     expect(result.valid).toBe(false);
     expect(result.issues.map((issue) => issue.path)).toEqual(expect.arrayContaining(["players", "actions", "objects", "relationships", "scoring"]));
   });
-  it("closes the Tidewell baseline capability gap once hex-settlement-v1 is registered", () => {
+  it("closes the hex-island baseline capability gap once hex-settlement-v1 is registered", () => {
     expect(gameSpecCapabilityGap(BASELINE_PROMPTS[0])).toBeNull();
     expect(gameSpecCapabilityGap(BASELINE_PROMPTS[0], ["hex-settlement"], "hex-settlement-v1")).toBeNull();
     expect(gameSpecCapabilityGap(BASELINE_PROMPTS[0], ["hex-settlement"], "conversation-relay-v1")).toContain("能力缺口");

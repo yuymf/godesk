@@ -170,7 +170,7 @@ CI 上 Room 的 TBT 是 15 万毫秒级，原因是 SwiftShader 在 4× CPU 节�
 
 - **门槛没有配错，是真实回归，来自 `main` 而不是本 PR。** 本机同条件测 `main` @ `fd3f54e`：Room 0.47 / 0.45 / 0.45，CLS 0.243；本 PR rebase 后：0.45 / 0.44 / 0.45，CLS 0.243。两者一致，而 G3D-04 合入前的 `main`（`8fbbc6c`）Room CLS 为 0。
 - **原因**：G3D-04 把 `HexSettlementBoard` 改为懒加载，`Suspense` 占位只是一行文字；分块到达后 HUD（412 px 下约 357 px 高）和固定高度的 `.g3d-stage` 一起插入，把下方「试玩反馈」面板整体下推（Lighthouse `layout-shifts` 只有这一个元素，0.242）。
-- **修复（本 PR）**：占位改为与正式盘面同一外框：`.catan-board.hex-settlement-board` 内放一个保留 HUD 高度的占位块（`.hex-settlement-hud-placeholder`，≤ 680 px 为 357 px，否则 315 px，按实测初始 HUD 高度）和同一个 `.g3d-stage`。改为同步导入可以彻底消除位移，但会让首页 index 超过 170 kB 预算（当前 169.6 kB，组件约 2.8 kB gzip），所以没有采用。
+- **修复（本 PR）**：占位改为与正式盘面同一外框：`.hex-island-board.hex-settlement-board` 内放一个保留 HUD 高度的占位块（`.hex-settlement-hud-placeholder`，≤ 680 px 为 357 px，否则 315 px，按实测初始 HUD 高度）和同一个 `.g3d-stage`。改为同步导入可以彻底消除位移，但会让首页 index 超过 170 kB 预算（当前 169.6 kB，组件约 2.8 kB gzip），所以没有采用。
 - **修复后本机**：Room 0.56 / 0.56 / 0.59，CLS 0，回到 G3D-04 前的水平；首页不变（0.87）。门槛（Room ≥ 0.52）**未改动**。
 
 Room CLS 仍按 §6.1 保持 `warn`；用 CI 修复后的运行确认 CLS 稳定为 0 后，可以在 §9 决定时一并收紧回 `error`。

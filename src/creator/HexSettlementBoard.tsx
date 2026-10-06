@@ -29,7 +29,7 @@ const RESOURCE_LABEL = {
 
 const COPY = {
   zh: {
-    board: "汐屿",
+    board: "汐屿六角岛",
     hud: "对局状态",
     active: "当前行动",
     seat: "座位",
@@ -215,7 +215,7 @@ function labelForBoardAction(
  * No SVG board, no 2D fallback.
  */
 export function HexSettlementBoard({
-  hexSettlement,
+  hexIsland,
   activeSeat,
   viewerSeat,
   status,
@@ -226,7 +226,7 @@ export function HexSettlementBoard({
   aiSeats = [],
   onAct,
 }: {
-  hexSettlement: HexSettlementBoardState;
+  hexIsland: HexSettlementBoardState;
   activeSeat: number;
   viewerSeat: number | null;
   status: "active" | "complete";
@@ -259,31 +259,31 @@ export function HexSettlementBoard({
     () =>
       status === "active"
         ? listHexIslandLegalActionsForSession({
-            hexSettlement,
+            hexIsland,
             activeSeat,
             status,
             playerId: legalPlayer,
           })
         : [],
-    [hexSettlement, activeSeat, status, legalPlayer],
+    [hexIsland, activeSeat, status, legalPlayer],
   );
   const showLegal =
     interactive && viewerSeat !== null && viewerSeat === activeSeat;
 
   const vpScores = useMemo(
     () =>
-      hexSettlement.players.map((player, seat) => {
+      hexIsland.players.map((player, seat) => {
         let points =
           player.settlements.length + player.cities.length * 2 + player.vpCards;
-        if (hexSettlement.longestRoadOwner === seat) points += 2;
-        if (hexSettlement.largestArmyOwner === seat) points += 2;
+        if (hexIsland.longestRoadOwner === seat) points += 2;
+        if (hexIsland.largestArmyOwner === seat) points += 2;
         return points;
       }),
-    [hexSettlement],
+    [hexIsland],
   );
 
   const viewerResources =
-    viewerSeat !== null ? hexSettlement.players[viewerSeat]?.resources : null;
+    viewerSeat !== null ? hexIsland.players[viewerSeat]?.resources : null;
 
   const statusLine =
     status === "complete"
@@ -294,9 +294,9 @@ export function HexSettlementBoard({
           ? `${copy.aiThinking} · ${copy.seat} ${activeSeat}`
           : `${copy.waiting} · ${copy.seat} ${activeSeat}`;
   const diceLine =
-    hexSettlement.lastDice === null
+    hexIsland.lastDice === null
       ? copy.noDice
-      : `${copy.dice} ${hexSettlement.lastDice[0]} + ${hexSettlement.lastDice[1]} = ${hexSettlement.lastDice[0] + hexSettlement.lastDice[1]}`;
+      : `${copy.dice} ${hexIsland.lastDice[0]} + ${hexIsland.lastDice[1]} = ${hexIsland.lastDice[0] + hexIsland.lastDice[1]}`;
 
   const accessibleActions = showLegal ? legalActions : [];
 
@@ -331,7 +331,7 @@ export function HexSettlementBoard({
         <div className="hex-island-hud-status">
           <span className="hex-island-kicker">{copy.active}</span>
           <strong>
-            {copy.seat} {activeSeat} · {copy.phase} {phaseLabel(hexSettlement.phase, locale)}
+            {copy.seat} {activeSeat} · {copy.phase} {phaseLabel(hexIsland.phase, locale)}
           </strong>
           <p>{statusLine}</p>
           <p className="hex-island-hud-dice">{diceLine}</p>
@@ -393,27 +393,27 @@ export function HexSettlementBoard({
         <dl className="hex-island-hud-awards">
           <div>
             <dt>{copy.robber}</dt>
-            <dd>{hexSettlement.robberHex}</dd>
+            <dd>{hexIsland.robberHex}</dd>
           </div>
           <div>
             <dt>{copy.longestRoad}</dt>
             <dd>
-              {hexSettlement.longestRoadOwner === null
+              {hexIsland.longestRoadOwner === null
                 ? copy.none
-                : `${copy.seat} ${hexSettlement.longestRoadOwner}`}
+                : `${copy.seat} ${hexIsland.longestRoadOwner}`}
             </dd>
           </div>
           <div>
             <dt>{copy.largestArmy}</dt>
             <dd>
-              {hexSettlement.largestArmyOwner === null
+              {hexIsland.largestArmyOwner === null
                 ? copy.none
-                : `${copy.seat} ${hexSettlement.largestArmyOwner}`}
+                : `${copy.seat} ${hexIsland.largestArmyOwner}`}
             </dd>
           </div>
           <div>
             <dt>{copy.lastAction}</dt>
-            <dd>{formatLastAction(hexSettlement.lastAction, locale)}</dd>
+            <dd>{formatLastAction(hexIsland.lastAction, locale)}</dd>
           </div>
         </dl>
       </section>
@@ -423,7 +423,7 @@ export function HexSettlementBoard({
           <LazySceneHost
             ariaLabel={copy.board}
             className="room-g3d-scene-host"
-            hexSettlement={hexSettlement}
+            hexSettlement={hexIsland}
             activeSeat={activeSeat}
             interactive={showLegal}
             legalActions={pickableActions}

@@ -73,8 +73,8 @@ test("hex-settlement room audio: cues from play events, touch unlock, settings p
     await guestPage.getByLabel("你的席位").selectOption("0");
     await expect(guestPage.getByLabel("你的席位")).toHaveValue("0");
 
-    const guestBoard = guestPage.getByRole("region", { name: "汐屿" });
-    const hostBoard = page.getByRole("region", { name: "汐屿" });
+    const guestBoard = guestPage.getByRole("region", { name: "汐屿六角岛" });
+    const hostBoard = page.getByRole("region", { name: "汐屿六角岛" });
     // 手机视口下盘面目标抽屉默认收起；打开后再点（clipped 列表对 getByRole 不可见）。
     await clickTidewellBoardAction(guestBoard, /建造渔村/);
     await openTidewellBoardTargets(guestBoard);

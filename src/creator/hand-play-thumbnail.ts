@@ -1,6 +1,6 @@
 /**
  * Deterministic SVG data-URL thumbnails for hand-play lobby cards.
- * Felt table + card fan — distinguishable from hexSettlement/othello/network; polish bar matches #79/#80.
+ * Felt table + card fan — distinguishable from hexIsland/othello/network; polish bar matches #79/#80.
  */
 
 export function handPlayStartingBoardThumbnailDataUrl(): string {

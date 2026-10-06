@@ -10,7 +10,7 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-export const HEX_PROMPT = "做一款可以与电脑对战的汐屿基础版";
+export const HEX_PROMPT = "做一款可以与电脑对战的汐屿六角岛资源建造游戏";
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function freePort() {

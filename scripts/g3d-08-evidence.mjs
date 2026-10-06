@@ -11,7 +11,7 @@ const OUT = process.argv[2] || "/workspace/g3d-evidence/G3D-08";
 const BASE = process.env.G3D_BASE_URL || "http://127.0.0.1:8822/chatgpt-plugin";
 const TIERS = (process.env.G3D_TIERS || "high,medium,low").split(",");
 const VIEWPORTS = (process.env.G3D_VIEWPORTS || "desktop,iphone").split(",");
-const PROMPT = "做一款可以与电脑对战的汐屿基础版";
+const PROMPT = "做一款可以与电脑对战的汐屿六角岛资源建造游戏";
 const { defaultBrowserType: _ignored, ...iphone12Pro } = devices["iPhone 12 Pro"];
 void _ignored;
 
@@ -50,7 +50,7 @@ async function main() {
     shareUrl = new URL(href, page.url()).href;
     await page.goto(shareUrl, { waitUntil: "domcontentloaded" });
     await page.getByLabel("你的席位").selectOption("0");
-    const board = page.getByRole("region", { name: "汐屿" });
+    const board = page.getByRole("region", { name: "汐屿六角岛" });
     await board.waitFor({ timeout: 60_000 });
     let placed = 0;
     for (let step = 0; step < 24 && placed < 4; step += 1) {

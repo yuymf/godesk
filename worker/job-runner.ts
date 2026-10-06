@@ -255,7 +255,7 @@ export async function runCreatorJob(
         isMultiActHiddenRoleCorpus(authoredMaterial);
       const hiddenRoleRuntimeConfigured =
         sourceGenre === "hidden-role" && !multiActHiddenRoleRefused;
-      // PR5/PR6/PR11/PR12 thin bind: Othello → disc-flipping-v1; Tidewell → hex-settlement-v1;
+      // PR5/PR6/PR11/PR12 thin bind: Othello → disc-flipping-v1; hex-island → hex-settlement-v1;
       // line network → network-route-v1; card/area-control → hand-play-v1.
       // Never silently substitute across genres.
       const requestedMechanics = inferRequestedMechanics(
@@ -393,7 +393,7 @@ export async function runCreatorJob(
               playerCount: 2,
               victoryPointsToWin: 10,
               unsupported: [
-                "hex-settlement-v1 executes beginner-board Tidewell basics (placement, production, robber/discard, build+connectivity, bank/port + simple player trade, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — full negotiated multi-resource trades remain out of scope.",
+                "hex-settlement-v1 executes beginner-board hex-island basics (placement, production, robber/discard, build+connectivity, bank/port + simple player trade, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — full negotiated multi-resource trades remain out of scope.",
               ],
             },
           }
@@ -415,7 +415,7 @@ export async function runCreatorJob(
             config: {
               playerCount: 2,
               unsupported: [
-                "network-route-v1 executes a fixed city graph with alternate-turn route claims and first-to-connect terminal hubs on the public play-kernel; not Ticket to Ride (no tickets deck / multi-color routes / scoring table).",
+                "network-route-v1 executes a fixed city graph with alternate-turn route claims and first-to-connect terminal hubs on the public play-kernel; a minimal original route game (no tickets deck / multi-color routes / scoring table).",
               ],
             },
           }
@@ -957,7 +957,7 @@ export async function runCreatorJob(
           : proposedRuntime?.op === "configure_disc_flipping"
           ? "规则结构来自体裁识别；方格翻子、八方向翻转、强制跳过与终盘计分将在批准 Generation Plan 后配置为 disc-flipping-v1（公共 play-kernel 适配器）。"
           : proposedRuntime?.op === "configure_network_route"
-          ? "规则结构来自体裁识别；城市图铺线、交替占领路线与连通枢纽获胜将在批准 Generation Plan 后配置为 network-route-v1（公共 play-kernel 适配器；非完整 Ticket to Ride）。"
+          ? "规则结构来自体裁识别；城市图铺线、交替占领路线与连通枢纽获胜将在批准 Generation Plan 后配置为 network-route-v1（公共 play-kernel 适配器；最小原创铺线规则）。"
           : proposedRuntime?.op === "configure_auction_bidding"
           ? "规则结构来自体裁识别；两人公开轮流出价或放弃，最高有效出价获得拍品，将在批准 Generation Plan 后配置为 auction-bidding-v1。"
           : proposedRuntime?.op === "configure_hidden_role"

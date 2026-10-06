@@ -16,7 +16,7 @@ function playGame(seed: number) {
   let state = createInitialState(hexIslandAdapter, config, seed);
   const toSession = (s: typeof state): AudioSessionState => {
     const fields = hexIslandToSessionFields(s);
-    return { status: fields.status, winnerSeat: fields.winnerSeat, hexSettlement: { players: fields.hexSettlement.players } };
+    return { status: fields.status, winnerSeat: fields.winnerSeat, hexIsland: { players: fields.hexIsland.players } };
   };
   const snapshots: AudioRoomSnapshot[] = [{ state: toSession(state), acceptedActions: [] }];
   const accepted: AudioRoomSnapshot["acceptedActions"][number][] = [];

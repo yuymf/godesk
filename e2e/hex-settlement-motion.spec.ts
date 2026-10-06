@@ -7,7 +7,7 @@ import { openTidewellBoardTargets } from "./helpers/tidewell-actions";
  * Seat 1 is a second browser context on the same share link (rooms have no in-room bot).
  */
 type MotionEntry = { kind: string; id: string; durationMs: number; reduced: boolean };
-const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿基础版";
+const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿六角岛资源建造游戏";
 
 async function openRoom(page: Page) {
   await page.goto("/chatgpt-plugin/new");
@@ -22,8 +22,8 @@ async function openRoom(page: Page) {
   await card.getByRole("link", { name: "继续这一局" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
   await page.getByLabel("你的席位").selectOption("0");
-  const board = page.getByRole("region", { name: "汐屿" });
-  await expect(page.getByRole("img", { name: "汐屿" })).toBeVisible();
+  const board = page.getByRole("region", { name: "汐屿六角岛" });
+  await expect(page.getByRole("img", { name: "汐屿六角岛" })).toBeVisible();
   await expect(page.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
   await expect(page.getByTestId("g3d-scene-host")).toHaveAttribute("data-water", "on", { timeout: 60_000 });
   return board;
@@ -34,7 +34,7 @@ async function joinSeat1(browser: Browser, url: string, reducedMotion: "reduce" 
   const page = await ctx.newPage();
   await page.goto(url);
   await page.getByLabel("你的席位").selectOption("1");
-  const board = page.getByRole("region", { name: "汐屿" });
+  const board = page.getByRole("region", { name: "汐屿六角岛" });
   await expect(board).toBeVisible({ timeout: 30_000 });
   return { ctx, page, board };
 }

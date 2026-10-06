@@ -17,7 +17,7 @@ describe("slimAcceptedActionsForStorage", () => {
 
     const slim = slimAcceptedActionsForStorage(simulation.acceptedActions);
     for (const action of slim) {
-      expect(action.state.hexSettlement).toBeUndefined();
+      expect(action.state.hexIsland).toBeUndefined();
       expect(action.state.othello).toBeUndefined();
       expect(action.actionId).toBeTruthy();
     }

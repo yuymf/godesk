@@ -13,11 +13,11 @@ import {
 } from "./helpers/sol-max-baseline";
 
 /**
- * Sol max PR10–PR12 — unseen / off-corpus prompts must not silent-bind Tidewell or Othello.
- * PR11: 线路网络 may now bind network-route-v1 (still never Tidewell/Othello).
+ * Sol max PR10–PR12 — unseen / off-corpus prompts must not silent-bind hex-island or Othello.
+ * PR11: 线路网络 may now bind network-route-v1 (still never hex-island/Othello).
  * PR12: 卡牌区域控制 may now bind hand-play-v1 (still never hex/disc/network).
  */
-test.describe("PR10/PR11/PR12 unseen prompts: no silent Tidewell/Othello bind", () => {
+test.describe("PR10/PR11/PR12 unseen prompts: no silent hex-island/Othello bind", () => {
   test("auction intent binds auction-bidding only", async ({ page }) => {
     test.setTimeout(180_000);
     await page.goto("/chatgpt-plugin/new");
@@ -63,7 +63,7 @@ test.describe("PR10/PR11/PR12 unseen prompts: no silent Tidewell/Othello bind", 
   test("mixed auction and hex request stays unbound", async ({ page }) => {
     test.setTimeout(180_000);
     await page.goto("/chatgpt-plugin/new");
-    await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill("做一款拍卖竞价汐屿桌游");
+    await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill("做一款拍卖竞价六角岛资源建造桌游");
     await page.getByRole("button", { name: "生成可玩版本" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 90_000 });
     const projectId = new URL(page.url()).pathname.split("/").at(-1)!;
@@ -74,7 +74,7 @@ test.describe("PR10/PR11/PR12 unseen prompts: no silent Tidewell/Othello bind", 
     expect(rule.runtimeSupport?.status).toBe("draft");
     await expect(page.getByRole("heading", { name: "现在就开玩" })).toHaveCount(0);
   });
-  test("线路网络 binds network-route (never Tidewell/Othello boards)", async ({
+  test("线路网络 binds network-route (never hex-island/Othello boards)", async ({
     page,
   }) => {
     test.setTimeout(180_000);
@@ -89,7 +89,7 @@ test.describe("PR10/PR11/PR12 unseen prompts: no silent Tidewell/Othello bind", 
     ).toBeVisible({ timeout: 90_000 });
 
     await expect(page.getByRole("region", { name: "黑白棋盘" })).toHaveCount(0);
-    await expect(page.getByRole("region", { name: "汐屿" })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "汐屿六角岛" })).toHaveCount(0);
     await expect(page.locator('[data-lobby-mark="hexIsland"]')).toHaveCount(0);
     await expect(page.locator('[data-lobby-mark="othello"]')).toHaveCount(0);
 
@@ -129,7 +129,7 @@ test.describe("PR10/PR11/PR12 unseen prompts: no silent Tidewell/Othello bind", 
     ).toBeVisible({ timeout: 90_000 });
 
     await expect(page.getByRole("region", { name: "黑白棋盘" })).toHaveCount(0);
-    await expect(page.getByRole("region", { name: "汐屿" })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "汐屿六角岛" })).toHaveCount(0);
     await expect(page.getByRole("region", { name: "线路网络盘" })).toHaveCount(0);
     await expect(page.locator('[data-lobby-mark="hexIsland"]')).toHaveCount(0);
     await expect(page.locator('[data-lobby-mark="othello"]')).toHaveCount(0);
@@ -176,7 +176,7 @@ test.describe("PR10/PR11/PR12 unseen prompts: no silent Tidewell/Othello bind", 
       ).toBeVisible({ timeout: 90_000 });
 
       await expect(page.getByRole("region", { name: "黑白棋盘" })).toHaveCount(0);
-      await expect(page.getByRole("region", { name: "汐屿" })).toHaveCount(0);
+      await expect(page.getByRole("region", { name: "汐屿六角岛" })).toHaveCount(0);
       await expect(page.getByRole("region", { name: "线路网络盘" })).toHaveCount(0);
       await expect(page.locator('[data-lobby-mark="hexIsland"]')).toHaveCount(0);
       await expect(page.locator('[data-lobby-mark="othello"]')).toHaveCount(0);

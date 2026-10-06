@@ -367,7 +367,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   const othelloState = room.state.othello;
   const discFlipping =
     isDiscFlipping(build.ruleSystem) && Boolean(othelloState);
-  const hexIslandState = room.state.hexSettlement;
+  const hexIslandState = room.state.hexIsland;
   const hexSettlement =
     isHexSettlement(build.ruleSystem) && Boolean(hexIslandState);
   const networkRouteState = room.state.networkRoute;
@@ -628,7 +628,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
             activeSeat={activeSeat}
             aiSeats={room.aiSeats}
             busy={busy}
-            hexSettlement={hexIslandState as HexSettlementBoardState}
+            hexIsland={hexIslandState as HexSettlementBoardState}
             enabled={isMyTurn}
             locale={locale}
             onAct={(actionId, payload) => {

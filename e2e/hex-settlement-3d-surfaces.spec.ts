@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
 
 /** G3D-18: preview and replay mount the read-only 3D SceneHost (no SVG board). */
-const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿基础版";
+const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿六角岛资源建造游戏";
 
 test("汐屿: preview + replay render 3D canvas, no SVG board", async ({ page }) => {
   test.setTimeout(180_000);
@@ -26,7 +26,7 @@ test("汐屿: preview + replay render 3D canvas, no SVG board", async ({ page })
   await page.goto(`/chatgpt-plugin/play/${encodeURIComponent(buildId)}`);
   const preview = page.getByRole("region", { name: "汐屿可玩桌面" });
   await expect(preview).toBeVisible({ timeout: 30_000 });
-  await expect(preview.getByRole("img", { name: "汐屿" })).toBeVisible();
+  await expect(preview.getByRole("img", { name: "汐屿六角岛" })).toBeVisible();
   await expect(preview.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
   await expect(preview.locator("svg polygon")).toHaveCount(0);
 
@@ -37,7 +37,7 @@ test("汐屿: preview + replay render 3D canvas, no SVG board", async ({ page })
   await page.goto(tryUrl);
   await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
   await page.getByLabel("你的席位").selectOption("0");
-  const board = page.getByRole("region", { name: "汐屿" });
+  const board = page.getByRole("region", { name: "汐屿六角岛" });
   const { clickTidewellBoardAction } = await import("./helpers/tidewell-actions");
   await clickTidewellBoardAction(board, /建造渔村/);
   await expect(board.getByRole("region", { name: "对局状态" })).toContainText(
@@ -45,7 +45,7 @@ test("汐屿: preview + replay render 3D canvas, no SVG board", async ({ page })
   );
   await page.getByRole("link", { name: "只读回放" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/replay\//, { timeout: 30_000 });
-  const replayBoard = page.getByRole("region", { name: "汐屿" });
+  const replayBoard = page.getByRole("region", { name: "汐屿六角岛" });
   await expect(replayBoard).toBeVisible();
   await expect(replayBoard.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
   await expect(replayBoard.locator("svg polygon")).toHaveCount(0);

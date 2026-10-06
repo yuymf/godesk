@@ -10,10 +10,10 @@ const LazySceneHost = lazy(async () => {
  * Non-interactive 3D hex island for PlayablePreview / ReplayView (G3D-18).
  */
 export function HexSettlementScenePreview({
-  hexSettlement,
-  ariaLabel = "汐屿",
+  hexIsland,
+  ariaLabel = "汐屿六角岛",
 }: {
-  hexSettlement: HexSettlementBoardState;
+  hexIsland: HexSettlementBoardState;
   ariaLabel?: string;
 }) {
   return (
@@ -27,7 +27,7 @@ export function HexSettlementScenePreview({
           <LazySceneHost
             ariaLabel={ariaLabel}
             className="room-g3d-scene-host"
-            hexSettlement={hexSettlement}
+            hexSettlement={hexIsland}
             interactive={false}
           />
         </Suspense>
