@@ -216,12 +216,19 @@ export function OthelloBoard({
         ? copy.yourTurn
         : `${copy.waiting} · ${copy.seat} ${activeSeat}`;
 
+  // G3D-14 follow-up：2D 棋子 / 计分色块跟随编译进 build 的座位材质（configure_render 改色后与 3D 一致）。
+  const seatColors = {
+    ...(render?.materials.seat0?.base ? { "--othello-seat0": render.materials.seat0.base } : {}),
+    ...(render?.materials.seat1?.base ? { "--othello-seat1": render.materials.seat1.base } : {}),
+  } as CSSProperties;
+
   return (
     <div
       aria-label={copy.board}
       className="othello-board"
       data-status={status}
       role="region"
+      style={seatColors}
     >
       <section aria-label={copy.hud} className="othello-hud">
         <div className="othello-hud-status">
