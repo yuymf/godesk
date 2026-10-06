@@ -6,7 +6,7 @@ import { expect, test, type Page } from "@playwright/test";
  * ② 从默认机位看，每个贴花都在视锥内、朝向相机；③ 像素探针：贴花包围盒里有墨色（普通）
  *   或赤陶色（6 / 8）像素 —— 真的画出来了，而不仅是挂在场景里。
  * G3D-ART-3：④ 每个贴花数字都在 2..12，且与渲染输入的棋盘状态逐格一致（`__g3dBoardNumbers`，
- *   独立于 mapper）；整盘是卡坦标准点数分布（远处「12」曾被看成「17」，见 number-labels.ts）。
+ *   独立于 mapper）；整盘是汐屿六角岛标准点数分布（远处「12」曾被看成「17」，见 number-labels.ts）。
  */
 const STANDARD_NUMBERS = [2, 3, 3, 4, 4, 5, 5, 6, 6, 8, 8, 9, 9, 10, 10, 11, 11, 12];
 const PROMPT = "做一款可以与电脑对战的汐屿六角岛资源建造游戏";

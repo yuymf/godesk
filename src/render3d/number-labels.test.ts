@@ -115,7 +115,7 @@ describe("number token decals (G3D-ART-2)", () => {
     layer.dispose();
   });
 
-  it("every decal value is a legal Catan number (2..12, no 7) and matches its tile (G3D-ART-3)", () => {
+  it("every decal value is a legal hex-island number (2..12, no 7) and matches its tile (G3D-ART-3)", () => {
     const labels = labelsFromNodes(mapHexSettlementToScene(HEX_FIXTURE).nodes);
     const byId = Object.fromEntries(labels.map((l) => [l.id, l.number]));
     for (const tile of HEX_FIXTURE.tiles) {
