@@ -1,7 +1,21 @@
 import type { DefaultExampleId } from "./default-examples";
 
-// Original illustrations of the three executable examples; no borrowed artwork.
+/** Hero / card artwork. Tidewell uses a static WebP poster (G3D-16) — never mount SceneHost here. */
 export function ExampleArtwork({ exampleId }: { exampleId: DefaultExampleId }) {
+  if (exampleId === "tidewell-isles") {
+    return (
+      <div aria-hidden="true" className="example-artwork example-artwork-tidewell-isles">
+        <img
+          alt=""
+          decoding="async"
+          height={540}
+          src="/lobby/tidewell-hero.webp"
+          width={960}
+        />
+      </div>
+    );
+  }
+
   return (
     <div aria-hidden="true" className={`example-artwork example-artwork-${exampleId}`}>
       <svg fill="none" viewBox="0 0 360 230">

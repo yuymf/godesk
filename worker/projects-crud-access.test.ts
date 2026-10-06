@@ -283,6 +283,7 @@ describe("Game Project HTTP seam — CRUD, access, examples, sessions", () => {
     ["harbor-13", "港口十三号", "source_harbor_13_original_brief"],
     ["mistpeak-lodge", "雾岭山庄", "source_mistpeak_lodge_original_brief"],
     ["idea-relay", "灵感接力", "source_idea_relay_original_brief"],
+    ["tidewell-isles", "汐屿", "source_tidewell_isles_original_brief"],
   ])(
     "creates the %s default example as an independent sourced project",
     async (templateId, expectedName, expectedSourceId) => {

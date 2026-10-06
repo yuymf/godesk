@@ -120,6 +120,25 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
     }
   },
 {
+    "id": "lobby/tidewell-hero",
+    "file": "public/lobby/tidewell-hero.webp",
+    "kind": "ui",
+    "bytes": 13924,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/render-poster.mjs",
+      "author": "GoDesk Track B",
+      "obtainedAt": "2026-10-06",
+      "modified": false,
+      "modificationNote": "无",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+
+{
     "id": "ui/paper-noise",
     "file": "assets/ui/paper-noise.webp",
     "kind": "ui",
