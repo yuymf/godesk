@@ -329,6 +329,13 @@ describe("Creator Studio optimistic draft baseline", () => {
     }));
   });
 
+  it("registers tidewell-isles as a default example template (G3D-16)", () => {
+    expect(DEFAULT_EXAMPLES).toContainEqual(expect.objectContaining({
+      id: "tidewell-isles",
+      title: "汐屿",
+    }));
+  });
+
   it("renders conversation games without tabletop presentation labels", () => {
     expect(roomSurfaceCopy("conversation", "zh")).toEqual({
       label: "对话接力",

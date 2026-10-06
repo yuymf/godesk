@@ -10,7 +10,9 @@ import react from "@vitejs/plugin-react";
  */
 export default defineConfig({
   plugins: [react()],
-  publicDir: false,
+  // G3D-16: serve public/lobby posters; expose GODESK_FEATURE_TIDEWELL to the client.
+  publicDir: "public",
+  envPrefix: ["VITE_", "GODESK_"],
   build: {
     rollupOptions: {
       preserveEntrySignatures: "strict",

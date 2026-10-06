@@ -48,6 +48,36 @@
 .example-artwork-harbor-13 { background: #528694; }
 .example-artwork-mistpeak-lodge { background: #deded3; }
 .example-artwork-idea-relay { background: #efcfad; }
+.example-artwork-tidewell-isles { background: #1a4a6e; }
+.example-artwork-tidewell-isles img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.example-kicker {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.example-grid-showcase {
+  grid-template-columns: 1fr;
+}
+.example-grid-showcase article {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: center;
+}
+.example-grid-showcase .example-artwork { aspect-ratio: 16 / 9; }
+.example-grid-showcase .example-body { padding-top: 0; }
+.example-grid-showcase .example-body > p:not(.example-kicker) { min-height: 0; }
+@media (max-width: 800px) {
+  .example-grid-showcase article { grid-template-columns: 1fr; gap: 16px; }
+}
 .example-body { padding: 20px 2px 0; }
 .example-grid h3 { margin: 0; font-size: 18px; font-weight: 650; letter-spacing: -.02em; }
 .example-grid p { min-height: 3.3em; margin: 10px 0 0; color: var(--muted); font-size: 13px; line-height: 1.7; }

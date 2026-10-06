@@ -15,7 +15,12 @@ import {
   readComposerDraft,
   writeComposerDraft,
 } from "./composer-draft";
-import { DEFAULT_EXAMPLES, type DefaultExampleId } from "./default-examples";
+import {
+  DEFAULT_EXAMPLES,
+  examplesForHomepage,
+  type DefaultExampleId,
+} from "./default-examples";
+import { isTidewellHomepageEnabled } from "./tidewell-feature";
 import { HOBBYIST_STARTERS } from "./hobbyist-starters";
 import {
   extractRulebookText,
@@ -82,11 +87,13 @@ export function CreatorHome() {
     }
   }, []);
 
-  async function createAndOpenSession(buildId: string) {
+  async function createAndOpenSession(buildId: string, exampleId?: DefaultExampleId) {
     setStageLabel("创建共享会话");
     const session = await createSharedSession(buildId, {
       seed: 42,
       idempotencyKey: crypto.randomUUID(),
+      // G3D-16 / G3D-04b: Tidewell homepage open includes a Room AI seat so 2 clicks reach a playable room.
+      ...(exampleId === "tidewell-isles" ? { aiSeats: [1] as number[] } : {}),
     });
     window.location.assign(session.sessionUrl);
   }
@@ -216,7 +223,7 @@ export function CreatorHome() {
       if (!build) throw new Error("编译成功但未找到 Build。");
       setCompletedStages(5);
       setProjects(await listProjects());
-      await createAndOpenSession(build.id);
+      await createAndOpenSession(build.id, exampleId);
     } catch (reason) {
       if (isUnauthorized(reason) && shouldOfferWebLogin()) {
         writeComposerDraft({
@@ -418,11 +425,19 @@ export function CreatorHome() {
               <h2 id="examples-heading">先玩一局现成的</h2>
               <p>挑一款，开局后就能邀请朋友。</p>
             </header>
-            <div className="example-grid">
-              {DEFAULT_EXAMPLES.map((example) => (
+            <div
+              className={
+                isTidewellHomepageEnabled()
+                  ? "example-grid example-grid-showcase"
+                  : "example-grid"
+              }
+              data-homepage-showcase={isTidewellHomepageEnabled() ? "tidewell" : "classic"}
+            >
+              {examplesForHomepage(isTidewellHomepageEnabled()).map((example) => (
                 <article key={example.id}>
                   <ExampleArtwork exampleId={example.id} />
                   <div className="example-body">
+                    <p className="example-kicker">{example.kicker}</p>
                     <h3>{example.title}</h3>
                     <p>{example.summary}</p>
                     <dl>

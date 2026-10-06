@@ -901,7 +901,7 @@ export function createGodeskMcpServer(
         "Create one authoritative Game Project and return its exact Web Studio URL.",
       inputSchema: z.object({
         name: z.string().min(1).max(80),
-        templateId: z.enum(["harbor-13", "mistpeak-lodge", "idea-relay"]).optional(),
+        templateId: z.enum(["harbor-13", "mistpeak-lodge", "idea-relay", "tidewell-isles"]).optional(),
       }),
       outputSchema: z.object({
         project: projectSchema,

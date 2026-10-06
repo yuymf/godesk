@@ -13,7 +13,7 @@
 | 任务范围 | G3D-01 至 G3D-27；里程碑 M0–M5；人日上限 91 |
 | 代码基线 | `yuymf/godesk` `main` @ `902075e`（#137 G3D-ART AI；#132 G3D-04b；#131 G3D-08；#134 G3D-15 第二刀；#133 G3D-14） |
 | 状态文件维护人 | 劳埃德(工程) / Track B（素材） |
-| 最近更新 | 2026-10-06（Asia/Shanghai） |
+| 最近更新 | 2026-10-06（Asia/Shanghai）· G3D-16 开工 |
 
 ## 硬约束（三条）
 
@@ -84,14 +84,17 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
+| G3D-13 Tidewell 集成 | Track B | `feat/g3d-13-tidewell` [#138](https://github.com/yuymf/godesk/pull/138) @ `29d9c03` | 本地门禁已过；**合入阻塞：GitHub Actions billing/spending limit**（禁无绿合入 / 禁 workaround） |
+| G3D-16 首页汐屿 showcase | Track B | `feat/g3d-16-homepage`（叠在 #138 上；draft PR base=`feat/g3d-13-tidewell`） | 海报 + 上线开关 `GODESK_FEATURE_TIDEWELL` 默认关；#138 合入后 rebase→main 并改 base |
 
 ## 阻塞
 
 | 项 | 原因 | 解除条件 |
 | --- | --- | --- |
 | box Codex 用量上限 | 至 2026-11-05 02:04 Asia/Shanghai；Cloud Agent 兜底（本席无该工具时手写） | 用量恢复 |
-| **G3D-13（Track B）** | 依赖 G3D-07/08/09/10 + 素材 19–25 已齐。**合入阻塞：G3D-04b（Track A，#132 Room AI 座位）** — Tidewell 示例 AI 座位依赖它；可先开分支开发，**须等 #132 合入后再合 G3D-13**。**HUD 备注（iPhone 12 Pro 模拟）**：Room 在棋盘下方露出合法动作的原始按钮列表，文案含坐标串（例：`放置道路 · -200:173|-250:87`）— HUD 重做须隐藏/替换此层 | 开工中；合入等 #132 |
-| GitHub Actions | 现 **operational**。deploy @ `41e352b` 生产 smoke 曾失败（ChatGPT Connector heading）；后续 deploy 通过 → 瞬时 | 禁无绿合入 |
+| **G3D-13（Track B）** | 依赖齐；#132 已合。PR [#138](https://github.com/yuymf/godesk/pull/138) @ `29d9c03` 本地 typecheck/unit/e2e/size/perf:ci 全绿。**合入阻塞：GitHub Actions billing/spending limit**（jobs ~2s 失败） | 账单限额恢复 + CI 绿后 squash；**禁止无绿合入 / 禁 workaround** |
+| **G3D-16（Track B）** | 叠在 #138 上；draft PR base=`feat/g3d-13-tidewell`。#138 合入前不改 base、不合入 | #138 squash 后 rebase→main、retarget base=main |
+| GitHub Actions | **billing/spending limit blocked**（2026-10-06）。deploy 历史曾有瞬时失败，当前以 billing 为准 | 限额恢复后重跑；禁无绿合入 |
 
 ## 下一刀
 
@@ -109,7 +112,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 1. Track C：G3D-14 `28792e0`、G3D-15 第二刀 `98f5de0` 已合入，M4 平台化 Done；G3D-14 后续修补 #139 合入后 Track C 队列清空，待派。
 2. Track A：G3D-09 已合入 `d2f58ab`；Track A 队列清空（G3D-07 由 Track C）。
-3. Track B：G3D-08 已合入 `e8b59e8` → **G3D-13 Tidewell**（开发可开工；**合入等 #132 G3D-04b**）；G3D-ART 已由 Track D 用 AI 生图完成（#137），`assets/ui/ai/` 图标 / 9-slice 框 / 筹码面待 G3D-13 HUD 接线。
+3. Track B：G3D-13 #138 本地就绪、合入等 Actions billing；并行 **G3D-16** 首页 showcase（叠分支 `feat/g3d-16-homepage`）。G3D-ART #137 已合；`assets/ui/ai/` 已在 #138 HUD 接线。
 
 ## G3D-17 上线前清单（发布闸门）
 
@@ -121,13 +124,14 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
-| `feat/g3d-14-followups` | [#139](https://github.com/yuymf/godesk/pull/139) | G3D-14 后续修补 + M4 收官：圆子实例化、2D 棋子随座位材质、390 px 溢出、毡面、STATUS（Track C） | open · 本 PR |
-| `feat/g3d-13-tidewell` | — | G3D-13 Tidewell 集成（Track B） | 开工 · 合入等 #132 |
+| `feat/g3d-13-tidewell` | [#138](https://github.com/yuymf/godesk/pull/138) | G3D-13 Tidewell 集成（Track B）@ `29d9c03` | open · 合入等 Actions billing |
+| `feat/g3d-16-homepage` | （本刀开 draft） | G3D-16 首页汐屿 showcase；base=`feat/g3d-13-tidewell` | draft · 叠分支；#138 后 rebase→main |
 
 ## 修订记录
 
 | 日期 | 变更 | 作者 |
 | --- | --- | --- |
+| 2026-10-06 | G3D-16 开工：叠分支 `feat/g3d-16-homepage` off #138；draft PR base=`feat/g3d-13-tidewell`；Actions billing 阻塞合入；轨迹 `docs/prompt-trace/2026-10-06-g3d-16.md` | Track B |
 | 2026-10-05 | 初创：硬约束三条、M0 未开始、bootstrap 进行中、C2C bridge 阻塞行、下一刀指向 G3D-01 | 劳埃德(工程) |
 | 2026-10-05 | 回填开着的 PR：#102 | 劳埃德(工程) |
 | 2026-10-06 | G3D-01 开工；回填 #103；#102/#103 合入；G3D-02 开工；Codex 用量上限 | 劳埃德(工程) |

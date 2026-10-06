@@ -1,4 +1,8 @@
-export type DefaultExampleId = "harbor-13" | "mistpeak-lodge" | "idea-relay";
+export type DefaultExampleId =
+  | "harbor-13"
+  | "mistpeak-lodge"
+  | "idea-relay"
+  | "tidewell-isles";
 
 interface DefaultExample {
   id: DefaultExampleId;
@@ -42,8 +46,35 @@ export const DEFAULT_EXAMPLES: DefaultExample[] = [
     status: "可分享对话游戏",
     rights: "GoDesk 原创规则与程序化界面",
   },
+  {
+    id: "tidewell-isles",
+    title: "汐屿",
+    kicker: "招牌演示 · 六角岛开拓",
+    summary: "在潮汐环绕的六角岛上铺设栈道、建造渔村与港镇，和电脑对战一局完整开拓。",
+    players: "2 人（含电脑）",
+    duration: "45 分钟",
+    status: "可玩对局",
+    rights: "GoDesk 原创内容与自制 3D 素材，不含第三方规则书或美术",
+  },
+];
+
+/** Homepage 「先玩一局现成的」 when GODESK_FEATURE_TIDEWELL is on (SPEC §6 G3D-16 / Q9). */
+export const HOMEPAGE_SHOWCASE: DefaultExampleId[] = ["tidewell-isles"];
+
+/** Homepage classic three-card gallery when the Tidewell flag is off. */
+export const HOMEPAGE_CLASSIC: DefaultExampleId[] = [
+  "harbor-13",
+  "mistpeak-lodge",
+  "idea-relay",
 ];
 
 export function isDefaultExampleId(value: unknown): value is DefaultExampleId {
   return DEFAULT_EXAMPLES.some((example) => example.id === value);
+}
+
+export function examplesForHomepage(showcase: boolean): DefaultExample[] {
+  const ids = showcase ? HOMEPAGE_SHOWCASE : HOMEPAGE_CLASSIC;
+  return ids
+    .map((id) => DEFAULT_EXAMPLES.find((example) => example.id === id))
+    .filter((example): example is DefaultExample => Boolean(example));
 }
