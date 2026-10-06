@@ -31,7 +31,8 @@ export default defineConfig({
             normalized.includes("/examples/jsm/loaders/KTX2Loader") ||
             normalized.includes("/examples/jsm/libs/meshopt_decoder") ||
             normalized.includes("/examples/jsm/loaders/") ||
-            normalized.includes("/examples/jsm/utils/")
+            normalized.includes("/examples/jsm/utils/") ||
+            normalized.includes("/examples/jsm/geometries/")
           ) {
             return "render3d-assets";
           }
@@ -51,6 +52,14 @@ export default defineConfig({
           // G3D-08：水体必须先于 render3d 命名，避免被算进 210 KB 核心。
           if (chunkInfo.name === "tide-water" || facade.includes("/src/render3d/water/")) {
             return "assets/tide-water-[hash].js";
+          }
+          // G3D-JUDGE-PIECES：画布上的视角工具条是懒加载 UI（不在渲染核心路径上），单列 chunk。
+          if (facade.includes("/src/render3d/overlay/")) {
+            return "assets/g3d-overlay-[hash].js";
+          }
+          // `?judge=1` 评审机位（dev-only）懒加载，不进生产渲染核心。
+          if (facade.includes("/src/render3d/judge-camera")) {
+            return "assets/g3d-judge-[hash].js";
           }
           // G3D-14：SceneHost 被 hex 盘与通用桌面（TabletopScene3D）共享后成为无 facade 的共享 chunk，
           // 按内容判定：只含 src/render3d、three 与 tween 模块的 chunk 计入 render3d 核心预算。

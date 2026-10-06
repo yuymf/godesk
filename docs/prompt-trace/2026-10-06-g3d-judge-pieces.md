@@ -1,0 +1,25 @@
+# Prompt trace — G3D-JUDGE-PIECES（Track C，2026-10-06）
+
+- **用户指令（经大主管，19:43 Asia/Shanghai）**：
+  - 停止条件：汐屿（Tidewell）视觉对标 settlecoast.com，按左右对照逐轮评判。AI 美术闸门豁免（来源登记在 `assets/LICENSES.md`，不阻塞）。**不得复制 settlecoast 的素材或代码。**
+  - CI 因账单受阻：完整本地验证，不合入。省 Actions：文档随代码同提交，每个里程碑只 push 一次，只有冲突时才合 main，draft PR。
+  - 范围 = round-1 `GAPS.md` 的 #4 / #5 / #6：
+    - **棋子**：自建低多边形渔村（坡屋顶、烟囱、门窗，屋顶 / 墙为座位色）；港镇为更大的多体块建筑 / 塔楼；栈道为座位色涂装木梁；雾灯（盗贼）为兜帽斗篷人偶，待机轻微浮动，移动时沿弧线跳步；评审模式与减少动态效果下静止；能实例化的按类型实例化。
+    - **骰子**：圆角 3D 骰子 + 真点数，放在岛旁木质骰盘里；先翻滚、再确定性地落到服务端点数；不用物理库；评审预设显示落定的骰子。
+    - **镜头**：自动取景，桌面 / 手机都把岛放满视口；本方回合 3/4 斜视，电脑 / 对手回合平滑过渡到近俯视；尊重减少动态效果；画布上的木质 / 羊皮纸迷你工具条（缩放 −/+、滑杆、左右旋转、复位），自包含在 `render3d/overlay`，暴露小 API（Track B 在重做 HUD）；限制缩放与环绕。
+  - 分支 `feat/g3d-judge-pieces` 基于 `feat/g3d-judge-r1` @ `bcfd09d`（#148），draft PR base `feat/g3d-judge-r1`。Track D 负责地形 / 岛 / 海岸 / 水；Track B 负责 DOM HUD / 布局。e2e 端口 8833。
+- **代码作者**：Track C 执行代理手写（box 上 Codex 额度用尽）。
+- **决策**：
+  - **全部程序化几何，零外部素材**：`src/render3d/assets/pieces.ts`、`assets/dice-geometry.ts`。每个棋子由基本体拼装，转成非索引三角形（面法线 → 低多边形硬边），烘焙顶点色后合成一个 BufferGeometry。座位色在顶点色里，所以三把共享白色 `vertexColors` 材质（棋子 / 人偶 / 骰子）服务所有座位，draw call 仍是每 (类型, 座位) 一个 InstancedMesh。`assets/LICENSES.md` 规定运行时程序化几何不产生文件、不登记，故未加行。GLB 包里不再取 settlement / city / road / fog_lamp / dice / dice_tray（`model-templates.ts` 删掉死代码，decor / 羊 / 码头 / 船照旧）。
+  - **比例**：按评审参照的读图比例放大（渔村约 1/5 格宽，港镇约 1/4，雾灯约 1/3 格宽高）；棋子立在格面（`TILE_TOP_Y` 0.28）上；雾灯在有点数的格子上站到筹码旁（`ROBBER_TOKEN_OFFSET`），沙漠居中。
+  - **骰子**：`RoundedBoxGeometry`（three/examples）+ 几何点数（1 点红色），两枚骰子合批进 1 个 InstancedMesh（以前 2 个独立 mesh）。翻滚沿用 G3D-09 预计算曲线（`precomputeDiceTumble`，确定性），新增朝向（yaw）与从骰盘角落滑入；最后一帧精确落到服务端点数。骰盘位置随画布朝向：横屏在岛右侧偏前，竖屏在岛下方（`diceAnchorFor`）。
+  - **池化补间可见性修复**：以前补间只改句柄，InstancedMesh 矩阵只有 reconcile 时才同步，池化棋子的落子 / 雾灯弧线动画其实看不见。`MotionController` 记录被补间改过的对象（`drainDirty()`，含最后一帧），SceneHost 每帧把它们的矩阵推回实例池。
+  - **镜头**：`src/render3d/camera-rig.ts`。`fitDistance` 闭式求解（每点 D ≥ q·d + max(|q·r|/tanH, |q·u|/tanV)），取景点 = 全部格子六角顶点 + 港口 + 骰盘四角，目标点固定在岛中心；`CameraDirector` 管模式（play 50° / overview 9°）、缩放（拟合距离的 70%–320%）、环绕（极角 0–68°）、平移夹紧（岛半径 60% 内、贴桌面）。自动过渡走 `MotionController.camera()`，仍记 `camera` 600 ms（减少动态效果 0 ms，满足 G3D-09 e2e）；用户拖拽时停止自动过渡；`localSeat` 新 prop（HexSettlementBoard 传 `viewerSeat`）。原先建造 / 掷骰 / 雾灯时把镜头拉向棋子的 reframe 去掉（与自动取景冲突）。
+  - **工具条**：`src/render3d/overlay/CameraToolbar.tsx`，内联样式 + 内联 SVG，`role="toolbar"`，放在 `role="img"` 宿主的兄弟节点（img 的子节点不进无障碍树）。API `CameraRigApi`：`zoomIn / zoomOut / setZoom / rotate(±1) / reset / getState / subscribe`；SceneHost 新增 `cameraToolbar`（默认 true）和 `onCameraApi`，Track B 可以隐藏它、用自己的 HUD 控件。窄画布（< 480 px）隐藏滑杆。
+  - **评审工具**：新增预设 `a-topdown`（近俯视）和 `b-robber`（≈320% 雾灯近景）；`judge-capture.mjs` 加拍 `a3-topdown-ai-turn`、`b3-terrain-320pct-forest-sheep-robber`、`f2-dice-settled-10`；`judge-compose.mjs` 遇到与参考变体同名的截图优先配对。
+  - **体积**：render3d 核心预算 210 KB 很紧。程序化几何放在 `render3d/assets/`（与 GLB 加载器同属 render3d-assets chunk），`three/examples/jsm/geometries/` 归入 render3d-assets；工具条单独懒加载 chunk `g3d-overlay-*`（新增 ≤ 6 KB 预算）；`?judge=1` 的评审机位改为懒加载 `g3d-judge-*`（dev-only，不进生产核心）。
+- **跨轨道备注**（不在本刀范围）：近俯视 + 宽画布时能看到水面边缘（`WATER_HALF_EXTENT` 9）和后面的米色天空，属 Track D 的水面；建议加大水面范围或做暗角。页面截图里画布只占页面一小块，属 Track B 布局。
+- **本地验证**（CI 受阻，box 负载约 20，单个 wrangler 8833）：typecheck ✓；unit 464/464；worker 210/210；e2e 58 通过 / 4 显式跳过 / 0 失败（分两次跑，最终构建上重跑 hex-settlement-motion、tabletop-3d-boards 等）；size ✓（render3d 核心 209.60 / 210 KB，工具条 1.43 KB）；verify:assets ✓；perf:ci ✓（leaks 0）。
+- **Draw call（`renderer.info.render.calls`，稳态 / 峰值，预算 高 150 / 中 100 / 低 60）**：开局 高 23/41、中 23/41、低 23/35；中局 高 27/49、中 27/49、低 27/43（基线 bcfd09d 开局 24/43、中局 28/51）。三角形 ≤ 31.5k。
+- **评审 round-2p**：截图与差距表只在 `/workspace/g3d-evidence/judge/round-2p/`（不进仓库）。自评：棋子 2→4、骰子 2→6、镜头 3→5；**未达标**。剩余：棋子在默认视角偏小、雾灯太暗；俯视露水面边缘；骰盘不像参照那样钉在视窗右下；工具条缺 Pan / Harbors / Island tour。
+- **跨轨道备注 2**：评审拍摄时 wrangler 打出 `Uncaught Error at webSocketClose`（`worker/creator-projects-do.ts`，对已关闭的 socket 再 `close(code)`，1006 等保留码会抛错），之后 8833 不再响应、需重启。本分支未改 worker，留给 worker 负责人。

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import {
   BoxGeometry,
   Color,
@@ -32,11 +32,22 @@ import {
 } from "./pick";
 import { reconcileScene } from "./reconcile";
 import { createNumberLabelLayer, projectLabels, type NumberLabelLayer } from "./number-labels";
-import { JUDGE_PRESETS, judgeCamera, type JudgePreset } from "./judge-camera";
+import type { JudgePreset } from "./judge-camera";
 import type { SceneModel, SceneNode } from "./scene-model";
 import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
 import { markInteractive, perfModeEnabled, perfRecorder } from "./perf";
-import { dieFaceEuler, MotionController } from "./motion";
+import { applyDieOrientation, idleBob, MotionController } from "./motion";
+import { disposePieceGeometries, pieceGeometry } from "./assets/pieces";
+import { diceTrayGeometry, dieGeometry, disposeDiceGeometries } from "./assets/dice-geometry";
+import {
+  CameraDirector,
+  cameraModeFor,
+  framingPoints,
+  islandCenter,
+  type CameraRigApi,
+} from "./camera-rig";
+/** Toolbar is UI chrome, not render core: its own lazy chunk (keeps render3d core ≤ 210 KB). */
+const CameraToolbar = lazy(async () => ({ default: (await import("./overlay/CameraToolbar")).CameraToolbar }));
 import { PerfOverlay } from "./PerfOverlay";
 import {
   configureRenderer,
@@ -98,7 +109,68 @@ export type SceneHostProps = {
   activeSeat?: number | null;
   /** G3D-14：通用桌面场景（见 SceneAdapter）。 */
   scene?: SceneAdapter | null;
+  /**
+   * G3D-JUDGE-PIECES: the viewer's seat. Local player's turn → tilted 3/4 "play" camera;
+   * anyone else's turn → near top-down "overview". null (spectator / preview) → "play".
+   */
+  localSeat?: number | null;
+  /** Show the on-canvas camera toolbar (hex scenes). Default true. */
+  cameraToolbar?: boolean;
+  /** Receives the camera API (zoom / rotate / reset / subscribe) for external HUD controls. */
+  onCameraApi?: (api: CameraRigApi | null) => void;
 };
+
+/** Vertex-coloured procedural pieces share three white materials (seat colour is baked). */
+const PIECE_VC_TOKEN: MaterialToken = {
+  base: "#ffffff",
+  roughness: 0.5,
+  metalness: 0,
+  clearcoat: 0.3,
+  pattern: "none",
+  pbrSet: "t09-paintwood",
+  pbrRepeat: 1,
+  pbrBaseColor: false,
+};
+const FIGURE_VC_TOKEN: MaterialToken = { base: "#ffffff", roughness: 0.66, metalness: 0, pattern: "none" };
+const DICE_VC_TOKEN: MaterialToken = { base: "#ffffff", roughness: 0.34, metalness: 0, clearcoat: 0.5, pattern: "none" };
+
+function vcMaterial(library: MaterialLibrary, key: string, token: MaterialToken) {
+  const material = library.get(key, token);
+  if (!material.vertexColors) {
+    material.vertexColors = true;
+    material.needsUpdate = true;
+  }
+  return material;
+}
+
+/** Procedural (own-modelled) geometry + material for pieces / dice / tray; null for other kinds. */
+function proceduralFor(
+  node: SceneNode,
+  library: MaterialLibrary,
+): { geometry: BufferGeometry; material: ReturnType<MaterialLibrary["get"]>; poolKey: string } | null {
+  const seat = node.seat ?? 0;
+  switch (node.kind) {
+    case "settlement":
+    case "city":
+    case "road":
+      return {
+        geometry: pieceGeometry(node.kind, seat),
+        material: vcMaterial(library, "piece-vc", PIECE_VC_TOKEN),
+        poolKey: `${node.kind}:s${seat}`,
+      };
+    case "robber":
+      return { geometry: pieceGeometry("robber"), material: vcMaterial(library, "figure-vc", FIGURE_VC_TOKEN), poolKey: "robber:vc" };
+    case "die":
+      return { geometry: dieGeometry(), material: vcMaterial(library, "dice-vc", DICE_VC_TOKEN), poolKey: "die:vc" };
+    case "dice-tray":
+      return { geometry: diceTrayGeometry(), material: vcMaterial(library, "piece-vc", PIECE_VC_TOKEN), poolKey: "dice-tray:vc" };
+    default:
+      return null;
+  }
+}
+
+/** Dice are thrown in from the tray's back-left corner and slide to rest. */
+const DICE_THROW_SLIDE: readonly [number, number] = [-0.32, -0.22];
 
 /** 阴影贴图在场景变化后继续逐帧重绘的时长（覆盖 place/move/dice 动效）。 */
 const SHADOW_REFRESH_MS = 1_500;
@@ -130,7 +202,6 @@ function hexShape(radius: number, bevel = 0.04): Shape {
 
 /** Shared template geometries for G3D-13 InstancedMesh pools (one draw call per group). */
 let SHARED_TILE_GEOM: BufferGeometry | null = null;
-let SHARED_ROAD_GEOM: BufferGeometry | null = null;
 let SHARED_DECOR_GEOM: BufferGeometry | null = null;
 
 function sharedTileGeom(): BufferGeometry {
@@ -140,10 +211,6 @@ function sharedTileGeom(): BufferGeometry {
     SHARED_TILE_GEOM = geom;
   }
   return SHARED_TILE_GEOM;
-}
-function sharedRoadGeom(): BufferGeometry {
-  if (!SHARED_ROAD_GEOM) SHARED_ROAD_GEOM = new BoxGeometry(1, 1, 1);
-  return SHARED_ROAD_GEOM;
 }
 function sharedDecorGeom(): BufferGeometry {
   if (!SHARED_DECOR_GEOM) SHARED_DECOR_GEOM = new SphereGeometry(0.18, 10, 10);
@@ -161,7 +228,7 @@ function disposeObject(object: Object3D, pools?: InstancePools | null): void {
     const mesh = child as Mesh;
     // G3D-14：通用桌面的网格线是 LineSegments，同样要释放几何 / 材质。
     if (!mesh.isMesh && !(child as { isLine?: boolean }).isLine) return;
-    mesh.geometry?.dispose();
+    if (!mesh.userData.gdSharedGeometry) mesh.geometry?.dispose();
     const material = mesh.material;
     // 共享材质由 MaterialLibrary 在卸载时统一释放（G3D-07）。
     if (Array.isArray(material)) {
@@ -218,7 +285,8 @@ function batchableKind(kind: SceneNode["kind"]): boolean {
     kind === "robber" ||
     kind === "number-token" ||
     kind === "port" ||
-    kind === "ship"
+    kind === "ship" ||
+    kind === "die"
   );
 }
 
@@ -230,11 +298,9 @@ function sharedNumberGeom(): BufferGeometry {
 
 function disposeSharedSceneGeometries(): void {
   SHARED_TILE_GEOM?.dispose();
-  SHARED_ROAD_GEOM?.dispose();
   SHARED_DECOR_GEOM?.dispose();
   SHARED_NUMBER_GEOM?.dispose();
   SHARED_TILE_GEOM = null;
-  SHARED_ROAD_GEOM = null;
   SHARED_DECOR_GEOM = null;
   SHARED_NUMBER_GEOM = null;
 }
@@ -243,18 +309,9 @@ function disposeSharedSceneGeometries(): void {
 function geomForBatch(node: SceneNode): BufferGeometry {
   const tide = getTidewellGeometriesSync();
   if (node.kind === "tile") return sharedTileGeom();
-  if (node.kind === "road") return tide.ready ? tide.road : sharedRoadGeom();
   if (node.kind === "decor") return geometryForNode(node, tide);
   if (node.kind === "number-token") return sharedNumberGeom();
-  if (
-    node.kind === "settlement" ||
-    node.kind === "city" ||
-    node.kind === "robber" ||
-    node.kind === "port" ||
-    node.kind === "ship"
-  ) {
-    return geometryForNode(node, tide);
-  }
+  if (node.kind === "port" || node.kind === "ship") return geometryForNode(node, tide);
   return sharedDecorGeom();
 }
 
@@ -273,6 +330,28 @@ function createNodeObject(node: SceneNode, caps: TierCaps, library: MaterialLibr
     mesh.userData.kind = node.kind;
     return mesh;
   };
+
+  const procedural = proceduralFor(node, library);
+  if (procedural && pools && node.kind !== "dice-tray") {
+    const { index } = pools.acquire(procedural.poolKey, procedural.geometry, procedural.material, true);
+    const handle = new Object3D();
+    handle.position.set(node.position[0], node.position[1], node.position[2]);
+    if (node.rotationY !== undefined) handle.rotation.y = node.rotationY;
+    if (node.kind === "die") applyDieOrientation(handle, node.number, node.rotationY ?? 0);
+    handle.userData.nodeId = node.id;
+    handle.userData.kind = node.kind;
+    handle.userData.baseY = node.position[1];
+    handle.userData.gdInstance = { poolKey: procedural.poolKey, index };
+    pools.setMatrix(procedural.poolKey, index, handle);
+    return handle;
+  }
+  if (procedural) {
+    const mesh = applyPose(new Mesh(procedural.geometry, procedural.material));
+    mesh.userData.gdSharedGeometry = true;
+    if (node.kind === "die") applyDieOrientation(mesh, node.number, node.rotationY ?? 0);
+    mesh.userData.baseY = node.position[1];
+    return mesh;
+  }
 
   if (pools && batchableKind(node.kind)) {
     const geom = geomForBatch(node);
@@ -304,20 +383,8 @@ function createNodeObject(node: SceneNode, caps: TierCaps, library: MaterialLibr
   }
 
   const tide = getTidewellGeometriesSync();
-  if (
-    node.kind === "robber" ||
-    node.kind === "settlement" ||
-    node.kind === "city" ||
-    node.kind === "road" ||
-    node.kind === "port" ||
-    node.kind === "ship" ||
-    node.kind === "die" ||
-    node.kind === "dice-tray" ||
-    node.kind === "decor"
-  ) {
-    const mesh = applyPose(new Mesh(geometryForNode(node, tide).clone(), mat));
-    if (node.kind === "die") mesh.rotation.set(...dieFaceEuler(node.number));
-    return mesh;
+  if (node.kind === "port" || node.kind === "ship" || node.kind === "decor") {
+    return applyPose(new Mesh(geometryForNode(node, tide).clone(), mat));
   }
 
   // cliff default
@@ -329,7 +396,8 @@ function updateNodeObject(object: Object3D, node: SceneNode, library: MaterialLi
   if (node.rotationY !== undefined) object.rotation.y = node.rotationY;
   if (node.scale) object.scale.set(node.scale[0], node.scale[1], node.scale[2]);
   else if (node.kind === "settlement" || node.kind === "city" || node.kind === "robber") object.scale.set(1, 1, 1);
-  if (node.kind === "die") object.rotation.set(...dieFaceEuler(node.number));
+  if (node.kind === "die") applyDieOrientation(object, node.number, node.rotationY ?? 0);
+  object.userData.baseY = node.position[1];
   const inst = object.userData.gdInstance as { poolKey: string; index: number } | undefined;
   if (inst && pools) {
     // Material group changes are rare for tiles; pose sync is the hot path.
@@ -337,7 +405,7 @@ function updateNodeObject(object: Object3D, node: SceneNode, library: MaterialLi
     return;
   }
   const mesh = object as Mesh;
-  if (!mesh.isMesh) return;
+  if (!mesh.isMesh || mesh.userData.gdSharedGeometry) return;
   // 地形 / 座位变化：换成对应的共享材质（不改共享材质本身的颜色）。
   const { key, token } = materialFor(node);
   const next = library.get(key, token);
@@ -357,6 +425,9 @@ export function SceneHost({
   lighting,
   activeSeat = null,
   scene: adapter = null,
+  localSeat = null,
+  cameraToolbar = true,
+  onCameraApi,
 }: SceneHostProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [unsupported, setUnsupported] = useState(false);
@@ -384,10 +455,20 @@ export function SceneHost({
   const waterMountPromiseRef = useRef<Promise<void>>(Promise.resolve());
   const waterMountingRef = useRef(false);
   const controlsRef = useRef<OrbitControls | null>(null);
-  const lastSeatRef = useRef<number | null>(null);
+  const lastModeKeyRef = useRef<string | null>(null);
+  /** G3D-JUDGE-PIECES: auto-framing + turn modes + toolbar API (hex scenes only). */
+  const directorRef = useRef<CameraDirector | null>(null);
+  const [cameraApi, setCameraApi] = useState<CameraDirector | null>(null);
+  const [diceSide, setDiceSide] = useState<"landscape" | "portrait">("landscape");
+  const [compactToolbar, setCompactToolbar] = useState(false);
+  const framingKeyRef = useRef<string | null>(null);
   const diceSeedRef = useRef(1);
   const diceAnimatedRef = useRef(false);
   const lastActionRef = useRef<string | null | undefined>(undefined);
+  const localSeatRef = useRef(localSeat);
+  localSeatRef.current = localSeat;
+  const activeSeatRef = useRef(activeSeat);
+  activeSeatRef.current = activeSeat;
   const interactiveRef = useRef(interactive);
   const legalActionsRef = useRef(legalActions);
   const onPickRef = useRef(onPick);
@@ -414,11 +495,12 @@ export function SceneHost({
   const [pbrState, setPbrState] = useState<"off" | "pending" | "512" | "256" | "error">("pending");
   /** G3D-13: flip when pieces/decor/props GLBs replace procedural placeholders. */
 
-  function reframe(focus: readonly [number, number, number], id: string) {
-    const motion = motionRef.current;
-    const camera = cameraRef.current;
-    const controls = controlsRef.current;
-    if (motion && camera && controls) motion.reframe(camera, controls, focus, id);
+  function rollDie(motion: MotionController, object: Object3D, node: SceneNode) {
+    diceSeedRef.current += 1;
+    const slide: [number, number] = node.id === "die:1"
+      ? [DICE_THROW_SLIDE[0] * 0.8, DICE_THROW_SLIDE[1] * 1.2]
+      : [DICE_THROW_SLIDE[0], DICE_THROW_SLIDE[1]];
+    motion.dice(object, node.id, node.number ?? 1, diceSeedRef.current, node.rotationY ?? 0, slide);
   }
 
   function buildHost(root: Object3D, getCaps: () => TierCaps, library: MaterialLibrary, motion: MotionController) {
@@ -441,7 +523,6 @@ export function SceneHost({
           }
           if (node.kind !== "settlement" && node.kind !== "city" && node.kind !== "road") return;
           motion.place(object, node.id);
-          reframe(node.position, `build:${node.id}`);
         },
         removed: (object: Object3D, id: string, detach: () => void) => {
           motion.remove(object, id, detach);
@@ -450,13 +531,10 @@ export function SceneHost({
           if (node.kind === "piece" && prev.position.join() !== node.position.join()) {
             motion.moveArc(object, node.id, prev.position);
           } else if (node.kind === "robber" && prev.position.join() !== node.position.join()) {
-            motion.moveArc(object, node.id, prev.position);
-            reframe(node.position, "robber");
+            motion.hop(object, node.id, prev.position);
           } else if (node.kind === "die" && prev.number !== node.number) {
-            diceSeedRef.current += 1;
             diceAnimatedRef.current = true;
-            motion.dice(object, node.id, node.number ?? 1, diceSeedRef.current);
-            if (node.id === "die:0") reframe(node.position, "dice");
+            rollDie(motion, object, node);
           }
         },
       },
@@ -513,7 +591,9 @@ export function SceneHost({
     controls.maxPolarAngle = Math.PI * 0.48;
     // G3D-JUDGE：仅 `?judge=1` 时暴露评审机位（dev-only；生产 URL 不带此参数时无任何行为变化）。
     const judgeEnabled = new URLSearchParams(window.location.search).get("judge") === "1";
-    if (judgeEnabled) {
+    // Dev-only presets load lazily (own chunk; not part of the production render core).
+    if (judgeEnabled) void import("./judge-camera").then(({ JUDGE_PRESETS, judgeCamera }) => {
+      if (disposed) return;
       (globalThis as { __g3dJudge?: unknown }).__g3dJudge = {
         presets: JUDGE_PRESETS,
         set(preset: JudgePreset): boolean {
@@ -522,8 +602,12 @@ export function SceneHost({
           const model = modelRef.current;
           if (!cam || !ctl) return false;
           motion.finishAll();
+          const director = directorRef.current;
           const pose = judgeCamera(preset, model?.nodes ?? [], cam.aspect);
-          if (pose) {
+          if (!pose && director) {
+            director.pinToMode(preset === "a-topdown" ? "overview" : "play");
+          } else if (pose) {
+            director?.pinFree();
             cam.position.set(...pose.position);
             ctl.target.set(...pose.target);
           } else {
@@ -540,7 +624,7 @@ export function SceneHost({
           return true;
         },
       };
-    }
+    });
 
     const rig = createLightingRig(scene, lightingRef.current, caps);
     rigRef.current = rig;
@@ -626,6 +710,7 @@ export function SceneHost({
 
     let frameId = 0;
     let disposed = false;
+    const reducedQuery = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
     // G3D-13: load Tidewell GLBs before hex reconcile (avoids remount that aborted water).
     void ensureTidewellGeometries().finally(() => {
       if (!disposed) setReady(true);
@@ -660,6 +745,9 @@ export function SceneHost({
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       fitCameraRef.current();
+      setDiceSide(camera.aspect >= 1.15 ? "landscape" : "portrait");
+      setCompactToolbar(width < 480);
+      directorRef.current?.onResize();
       renderer.setPixelRatio(dpr);
       renderer.setSize(width, height, false);
     };
@@ -757,8 +845,28 @@ export function SceneHost({
       }
 
       motion.update(now);
+      // Pooled pieces: tweens pose the handle; push the pose into the InstancedMesh.
+      const livePools = (reconcileHostRef.current as { pools?: InstancePools } | null)?.pools;
+      for (const object of motion.drainDirty()) {
+        const inst = (object as Object3D).userData?.gdInstance as { poolKey: string; index: number } | undefined;
+        if (inst && livePools) livePools.setMatrix(inst.poolKey, inst.index, object as Object3D);
+      }
+      // Robber idle bob (frozen in judge mode and under reduced motion).
+      const robber = registryRef.current.get("robber");
+      if (robber && !motion.isAnimating(robber) && typeof robber.userData.baseY === "number") {
+        const frozen = judgeEnabled || (reducedQuery?.matches ?? false);
+        if (!frozen || robber.userData.bobbing) {
+          const bob = idleBob(now, frozen);
+          robber.position.y = robber.userData.baseY + bob.y;
+          robber.rotation.z = bob.tilt;
+          robber.userData.bobbing = !frozen;
+          const inst = robber.userData.gdInstance as { poolKey: string; index: number } | undefined;
+          if (inst && livePools) livePools.setMatrix(inst.poolKey, inst.index, robber);
+        }
+      }
       waterRef.current?.update(now);
       controls.update();
+      directorRef.current?.update();
       // 阴影：内容 / 档位变化后 SHADOW_REFRESH_MS 内逐帧重绘，之后复用（方向光阴影与机位无关）。
       if (now < shadowDirtyUntil || shadowFrames < 2) {
         renderer.shadowMap.needsUpdate = true;
@@ -791,6 +899,10 @@ export function SceneHost({
       waterRef.current?.dispose();
       waterRef.current = null;
       motion.finishAll();
+      directorRef.current?.dispose();
+      directorRef.current = null;
+      setCameraApi(null);
+      framingKeyRef.current = null;
       controls.removeEventListener("start", onControlsStart);
       controls.removeEventListener("end", onControlsStart);
       controls.dispose();
@@ -833,6 +945,8 @@ export function SceneHost({
       disposeSharedSceneGeometries();
       disposeSharedHitResources();
       disposeTidewellGeometryCache();
+      disposePieceGeometries();
+      disposeDiceGeometries();
       perf?.beforeDispose(renderer);
       detachPerf?.();
       renderer.dispose();
@@ -849,7 +963,7 @@ export function SceneHost({
       markShadowsDirtyRef.current = () => {};
       motionRef.current = null;
       controlsRef.current = null;
-      lastSeatRef.current = null;
+      lastModeKeyRef.current = null;
       lastActionRef.current = undefined;
       modelRef.current = null;
       layoutKeyRef.current = null;
@@ -886,7 +1000,7 @@ export function SceneHost({
     const host = reconcileHostRef.current;
     if (!host || !hexSettlement) return;
     const prev = modelRef.current;
-    const next = mapHexSettlementToScene(hexSettlement);
+    const next = mapHexSettlementToScene(hexSettlement, { layout: diceSide });
     const hadModel = prev !== null;
     const previousAction = lastActionRef.current;
     lastActionRef.current = hexSettlement.lastAction;
@@ -900,6 +1014,26 @@ export function SceneHost({
     if (tilesChanged) {
       const bounds = islandBounds(next.nodes);
       rigRef.current?.fitToBounds(bounds.center, bounds.radius);
+    }
+    // G3D-JUDGE-PIECES: auto-framing (island + harbours + dice tray) for the hex scene.
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    const motionForCamera = motionRef.current;
+    if (camera && controls && motionForCamera) {
+      let director = directorRef.current;
+      if (!director) {
+        director = new CameraDirector(camera, controls, motionForCamera);
+        director.mode = cameraModeFor(localSeatRef.current, activeSeatRef.current);
+        directorRef.current = director;
+        setCameraApi(director);
+      }
+      const tray = next.nodes.find((node) => node.kind === "dice-tray");
+      const framingKey = `${tileKey(next)}|${tray?.position.join(",") ?? ""}`;
+      if (framingKey !== framingKeyRef.current) {
+        framingKeyRef.current = framingKey;
+        const island = islandCenter(next.nodes);
+        director.setFraming(framingPoints(next.nodes), island.center, island.radius, true);
+      }
     }
     // G3D-08: first hex model mounts water; later tile-layout changes rebuild the coast field.
     // Synchronous mount lock: hex reconcile can fire twice before the first async controller
@@ -973,12 +1107,10 @@ export function SceneHost({
         if (node.kind !== "die") continue;
         const object = registryRef.current.get(node.id);
         if (!object) continue;
-        diceSeedRef.current += 1;
-        motion.dice(object, node.id, node.number ?? 1, diceSeedRef.current);
-        if (node.id === "die:0") reframe(node.position, "dice");
+        rollDie(motion, object, node);
       }
     }
-  }, [hexSettlement, ready, hostEpoch]);
+  }, [hexSettlement, ready, hostEpoch, diceSide]);
 
   // G3D-14：通用桌面场景 reconcile + 按包围球适配阴影相机 / 机位。
   useEffect(() => {
@@ -1027,15 +1159,34 @@ export function SceneHost({
     markShadowsDirtyRef.current();
   }, [adapter, ready, hostEpoch]);
 
-  // G3D-09 turn camera: reframe toward the island centre when the active seat changes.
+  // G3D-09 / G3D-JUDGE-PIECES turn camera: local turn → tilted "play", others → top-down "overview".
   useEffect(() => {
-    if (!ready || activeSeat === null || activeSeat === undefined) return;
-    const previous = lastSeatRef.current;
-    lastSeatRef.current = activeSeat;
-    if (previous === null || previous === activeSeat) return;
-    reframe([0, 0, 0], `turn:${activeSeat}`);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSeat, ready, hostEpoch]);
+    const director = directorRef.current;
+    if (!ready || !director) return;
+    const mode = cameraModeFor(localSeat, activeSeat);
+    const key = `${activeSeat ?? "-"}|${localSeat ?? "-"}`;
+    const previous = lastModeKeyRef.current;
+    lastModeKeyRef.current = key;
+    if (previous === null) {
+      director.setMode(mode, `turn:${activeSeat ?? "-"}`, true);
+      return;
+    }
+    if (previous === key) return;
+    director.setMode(mode, `turn:${activeSeat ?? "-"}`);
+  }, [activeSeat, localSeat, ready, hostEpoch, cameraApi]);
+
+  useEffect(() => {
+    onCameraApi?.(cameraApi);
+  }, [cameraApi, onCameraApi]);
+
+  const [cameraMode, setCameraMode] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (!cameraApi) {
+      setCameraMode(undefined);
+      return;
+    }
+    return cameraApi.subscribe((state) => setCameraMode(state.mode));
+  }, [cameraApi]);
 
   useEffect(() => {
     const rig = rigRef.current;
@@ -1078,17 +1229,26 @@ export function SceneHost({
   }
 
   return (
-    <div
-      aria-label={ariaLabel}
-      className={className}
-      data-testid="g3d-scene-host"
-      data-tier={activeTier}
-      data-pbr={pbrState}
-      ref={containerRef}
-      role="img"
-      style={{ width: "100%", height: "100%", minHeight: 280, touchAction: "none", position: perfMode ? "relative" : undefined }}
-    >
-      {perfMode && <PerfOverlay />}
-    </div>
+    <>
+      <div
+        aria-label={ariaLabel}
+        className={className}
+        data-testid="g3d-scene-host"
+        data-tier={activeTier}
+        data-pbr={pbrState}
+        data-camera-mode={cameraMode}
+        ref={containerRef}
+        role="img"
+        style={{ width: "100%", height: "100%", minHeight: 280, touchAction: "none", position: perfMode ? "relative" : undefined }}
+      >
+        {perfMode && <PerfOverlay />}
+      </div>
+      {/* Sibling of the role="img" host (children of an img are not exposed to assistive tech). */}
+      {cameraToolbar && cameraApi && hexSettlement && (
+        <Suspense fallback={null}>
+          <CameraToolbar api={cameraApi} compact={compactToolbar} />
+        </Suspense>
+      )}
+    </>
   );
 }

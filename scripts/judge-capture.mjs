@@ -15,6 +15,8 @@
  *   a-default  默认整盘          b-terrain-closeup  地形近景（森林/牧场/山地/麦田）
  *   c-coast    海岸+水+崖壁+港口  d-hand-hud        资源手牌 + HUD（整页）
  *   e-placement 可放置位高亮（布置阶段）  f-dice  掷骰   g-midgame 中局多棋子
+ *   a3-topdown-ai-turn  近俯视（a-topdown）  b3-terrain-320pct-…  雾灯近景（b-robber）
+ *   f2-dice-settled-10  骰子落定 + 近俯视整盘（a-topdown）
  */
 import { chromium, devices } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -192,6 +194,9 @@ async function runViewport(browser, projectId, vpKey) {
     await shot(page, vp, "a-default", "a-default", files);
     await shot(page, vp, "b-terrain-closeup", "b-terrain", files);
     await shot(page, vp, "c-coast", "c-coast", files);
+    // 参考变体同名截图（judge-compose 优先配对）：a3 电脑回合近俯视、b3 ≈320% 雾灯近景。
+    await shot(page, vp, "a3-topdown-ai-turn", "a-topdown", files);
+    await shot(page, vp, "b3-terrain-320pct-forest-sheep-robber", "b-robber", files);
     await page.evaluate(() => globalThis.__g3dJudge.set("a-default"));
   }
   // 掷骰。
@@ -206,6 +211,8 @@ async function runViewport(browser, projectId, vpKey) {
       const mid = path.join(OUT, `${vp.id}-f-dice-rolling.png`);
       await page.getByTestId("g3d-scene-host").first().screenshot({ path: mid }).catch(() => null);
       await shot(page, vp, "f-dice", "f-dice", files);
+      // f2：骰子落定后的近俯视整盘（骰盘在岛屿右下）。
+      await shot(page, vp, "f2-dice-settled-10", "a-topdown", files);
     } else {
       await clickBest(page, board, vp, /建造渔村|铺设栈道|结束回合/);
       await page.waitForTimeout(600);

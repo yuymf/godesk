@@ -4,8 +4,16 @@
  */
 import type { SceneNode, SceneVec3 } from "./scene-model";
 
-export type JudgePreset = "a-default" | "b-terrain" | "c-coast" | "f-dice" | "g-midgame";
-export const JUDGE_PRESETS: readonly JudgePreset[] = ["a-default", "b-terrain", "c-coast", "f-dice", "g-midgame"];
+export type JudgePreset = "a-default" | "a-topdown" | "b-terrain" | "b-robber" | "c-coast" | "f-dice" | "g-midgame";
+export const JUDGE_PRESETS: readonly JudgePreset[] = [
+  "a-default",
+  "a-topdown",
+  "b-terrain",
+  "b-robber",
+  "c-coast",
+  "f-dice",
+  "g-midgame",
+];
 
 export type JudgeCamera = { position: SceneVec3; target: SceneVec3; fov?: number };
 
@@ -54,12 +62,22 @@ export function pickCoast(nodes: readonly SceneNode[]): { port: SceneVec3; outwa
   return { port: port.position, outward: [port.position[0] / len, port.position[2] / len] };
 }
 
-/** 预设 → 机位；`a-default` 返回 null（保持 SceneHost 自适应的默认机位）。 */
+/**
+ * 预设 → 机位；`a-default` / `a-topdown` 返回 null（SceneHost 的 CameraDirector 自适应取景：
+ * a-default = 本方回合的 3/4 斜视，a-topdown = 电脑 / 对手回合的近俯视）。
+ */
 export function judgeCamera(preset: JudgePreset, nodes: readonly SceneNode[], aspect: number): JudgeCamera | null {
   const narrow = aspect < 0.8;
   switch (preset) {
     case "a-default":
+    case "a-topdown":
       return null;
+    case "b-robber": {
+      // ≈320% 近景：雾灯（盗贼）与周边地块，斜 38°。
+      const robber = nodes.find((n) => n.kind === "robber");
+      const center: SceneVec3 = robber ? [robber.position[0], 0.3, robber.position[2]] : [0, 0.3, 0];
+      return { target: center, position: orbit(center, narrow ? 5.0 : 3.6, 38, 0) };
+    }
     case "b-terrain": {
       const center = pickTerrainCluster(nodes) ?? [0, 0.3, 0];
       return { target: center, position: orbit(center, narrow ? 5.2 : 3.6, 52, 18) };

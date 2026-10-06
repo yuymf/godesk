@@ -5,6 +5,7 @@
  * - render3d-*.js excluding render3d-assets-* ≤ 210 KB gzip (sum)
  * - render3d-assets-*.js ≤ 60 KB gzip
  * - TabletopScene3D-*.js ≤ 12 KB gzip（G3D-14 通用桌面 mapper + 网格工厂，懒加载，不计入核心）
+ * - g3d-overlay-*.js ≤ 6 KB gzip（G3D-JUDGE-PIECES 画布视角工具条，懒加载，不计入核心）
  */
 import { gzipSync } from "node:zlib";
 import { readFileSync, readdirSync } from "node:fs";
@@ -46,4 +47,5 @@ if (tideWater.length) {
   console.log("tide-water: (not in this build — ok if SceneHost never imported water)");
 }
 ok = check("tabletop mapper (lazy)", files.filter((f) => /^TabletopScene3D-.*\.js$/.test(f)), 12) && ok;
+ok = check("g3d-overlay toolbar (lazy)", files.filter((f) => /^g3d-overlay-.*\.js$/.test(f)), 6) && ok;
 process.exit(ok ? 0 : 1);
