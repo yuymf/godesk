@@ -918,16 +918,20 @@ export function SceneHost({
       rigRef.current?.fitToBounds(bounds.center, bounds.radius);
       appliedFrameKeyRef.current = null; // force re-frame on new island layout
     }
-    // Track B framing: fit island into the canvas (fill/polar). Skip when judge
-    // has pinned a preset (a-default returns null → framing still applies).
+    // Track B framing: fit island into the canvas (fill/polar). Install on
+    // fitCameraRef so ResizeObserver re-applies when the stage gets a real size
+    // (immersive layout often mounts at 0×0 then expands).
     const frame = viewportFrameRef.current;
     if (frame && cameraRef.current && controlsRef.current) {
       const bounds = islandBounds(next.nodes);
-      const cam = cameraRef.current;
-      const ctl = controlsRef.current;
-      const key = `${bounds.radius.toFixed(2)}|${cam.aspect.toFixed(3)}|${frame.fill ?? ""}|${frame.polarDeg ?? ""}|${frame.azimuthDeg ?? ""}`;
-      if (key !== appliedFrameKeyRef.current) {
-        const pose = framePose(bounds.center, bounds.radius, cam.aspect, frame);
+      const applyFrame = () => {
+        const cam = cameraRef.current;
+        const ctl = controlsRef.current;
+        const fr = viewportFrameRef.current;
+        if (!cam || !ctl || !fr) return;
+        const key = `${bounds.radius.toFixed(2)}|${cam.aspect.toFixed(3)}|${fr.fill ?? ""}|${fr.polarDeg ?? ""}|${fr.azimuthDeg ?? ""}`;
+        if (key === appliedFrameKeyRef.current) return;
+        const pose = framePose(bounds.center, bounds.radius, cam.aspect, fr);
         cam.fov = pose.fov;
         cam.position.set(pose.position[0], pose.position[1], pose.position[2]);
         cam.updateProjectionMatrix();
@@ -937,7 +941,9 @@ export function SceneHost({
         ctl.update();
         appliedFrameKeyRef.current = key;
         markShadowsDirtyRef.current();
-      }
+      };
+      fitCameraRef.current = applyFrame;
+      applyFrame();
     }
     // G3D-08: first hex model mounts water; later tile-layout changes rebuild the coast field.
     // Synchronous mount lock: hex reconcile can fire twice before the first async controller
@@ -1069,21 +1075,7 @@ export function SceneHost({
   useEffect(() => {
     if (!ready || !hexSettlement || !viewportFrame) return;
     appliedFrameKeyRef.current = null;
-    const model = modelRef.current;
-    const cam = cameraRef.current;
-    const ctl = controlsRef.current;
-    if (!model || !cam || !ctl) return;
-    const bounds = islandBounds(model.nodes);
-    const pose = framePose(bounds.center, bounds.radius, cam.aspect, viewportFrame);
-    cam.fov = pose.fov;
-    cam.position.set(pose.position[0], pose.position[1], pose.position[2]);
-    cam.updateProjectionMatrix();
-    ctl.target.set(pose.target[0], pose.target[1], pose.target[2]);
-    ctl.minDistance = pose.distance * 0.45;
-    ctl.maxDistance = pose.distance * 2.2;
-    ctl.update();
-    appliedFrameKeyRef.current = `${bounds.radius.toFixed(2)}|${cam.aspect.toFixed(3)}|${viewportFrame.fill ?? ""}|${viewportFrame.polarDeg ?? ""}|${viewportFrame.azimuthDeg ?? ""}`;
-    markShadowsDirtyRef.current();
+    fitCameraRef.current();
   }, [viewportFrame, ready, hostEpoch, hexSettlement]);
 
   // G3D-09 turn camera: reframe toward the island centre when the active seat changes.
