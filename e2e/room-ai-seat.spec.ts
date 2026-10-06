@@ -70,6 +70,13 @@ test("G3D-04b · AI seat takes its setup turns (single human browser)", async ({
     "place_settlement", "place_road", "place_settlement", "place_road",
   ]);
   for (const action of ai) expect(action.intentId).toBe(`ai_${action.sequence}`);
+  // G3D-13 evidence (outside repo): one-browser vs Room AI mid-setup
+  const evidenceDir = process.env.GODESK_EVIDENCE_DIR;
+  if (evidenceDir) {
+    mkdirSync(evidenceDir, { recursive: true });
+    await page.screenshot({ path: `${evidenceDir}/desktop-vs-room-ai-midgame.png`, fullPage: false });
+    await page.getByTestId("g3d-scene-host").screenshot({ path: `${evidenceDir}/desktop-vs-room-ai-canvas.png` }).catch(() => null);
+  }
   await ctx.close();
 });
 
