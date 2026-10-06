@@ -571,6 +571,7 @@ export function HexSettlementBoard({
             </a>
           ) : null}
           <button
+            aria-label={locale === "zh" ? "声音设置" : "Sound settings"}
             className="tidewell-wood-icon tidewell-sound-chip"
             onClick={() => {
               const trigger = document.querySelector<HTMLButtonElement>(
