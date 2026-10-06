@@ -1,3 +1,4 @@
+// Box live proxy smoke: ASSET_SERVER_URL → 127.0.0.1:8787 (2026-10-07).
 import { MAX_IMPORT_BYTES, normalizeAssetServerUrl } from "../src/creator/asset-search/config";
 import { assetDownloadUrl, filenameFromDisposition } from "../src/creator/asset-search/client";
 import { error, json } from "./project-operations";
