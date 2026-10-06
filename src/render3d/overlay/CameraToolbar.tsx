@@ -12,36 +12,39 @@ const WOOD = "linear-gradient(180deg, #6b4428 0%, #4e301b 55%, #3f2615 100%)";
 const PARCHMENT = "#f3e4c1";
 const BRASS = "#c9a25a";
 
+/** round-6 ②：默认半透明、小尺寸，悬停/焦点才醒目，不抢岛。 */
 const barStyle: CSSProperties = {
   position: "absolute",
-  top: 10,
-  left: 10,
+  top: 8,
+  left: 8,
   zIndex: 2,
   display: "flex",
   alignItems: "center",
-  gap: 4,
-  padding: "4px 6px",
-  borderRadius: 10,
-  background: WOOD,
-  border: `1px solid ${BRASS}`,
-  boxShadow: "0 2px 6px rgb(0 0 0 / 35%), inset 0 1px 0 rgb(255 255 255 / 14%)",
-  color: PARCHMENT,
-  font: "600 12px/1 system-ui, -apple-system, 'PingFang SC', sans-serif",
+  gap: 2,
+  padding: "3px 5px",
+  borderRadius: 8,
+  background: "linear-gradient(180deg, rgb(80 52 32 / 55%) 0%, rgb(48 30 18 / 62%) 100%)",
+  border: "1px solid rgb(201 162 90 / 35%)",
+  boxShadow: "0 1px 3px rgb(0 0 0 / 22%)",
+  color: "rgb(243 228 193 / 78%)",
+  font: "600 11px/1 system-ui, -apple-system, 'PingFang SC', sans-serif",
   userSelect: "none",
   touchAction: "manipulation",
+  opacity: 0.42,
+  transition: "opacity 160ms ease, background 160ms ease, box-shadow 160ms ease",
 };
 
 const buttonStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  width: 28,
-  height: 28,
+  width: 24,
+  height: 24,
   padding: 0,
-  borderRadius: 7,
-  border: "1px solid rgb(201 162 90 / 55%)",
-  background: "rgb(243 228 193 / 10%)",
-  color: PARCHMENT,
+  borderRadius: 6,
+  border: "1px solid rgb(201 162 90 / 40%)",
+  background: "rgb(243 228 193 / 8%)",
+  color: "inherit",
   cursor: "pointer",
 };
 
@@ -140,7 +143,7 @@ export function CameraToolbar({
   useEffect(() => api.subscribe(setState), [api]);
   const percent = state.zoomPercent;
   return (
-    <div aria-label={copy.toolbar} data-testid="g3d-camera-toolbar" role="toolbar" style={barStyle}>
+    <div aria-label={copy.toolbar} className="g3d-camera-toolbar" data-testid="g3d-camera-toolbar" role="toolbar" style={barStyle}>
       <button aria-label={copy.zoomOut} onClick={() => api.zoomOut()} style={buttonStyle} title={copy.zoomOut} type="button">
         {ICONS.zoomOut}
       </button>
@@ -150,7 +153,7 @@ export function CameraToolbar({
         min={Math.round(state.minZoom * 100)}
         onChange={(event) => api.setZoom(Number(event.currentTarget.value) / 100)}
         step={5}
-        style={{ width: 84, accentColor: BRASS, cursor: "pointer" }}
+        style={{ width: 56, accentColor: BRASS, cursor: "pointer", opacity: 0.85 }}
         type="range"
         value={percent}
       />}
@@ -181,7 +184,7 @@ export function CameraToolbar({
       </button>
       <button aria-label={copy.harbors} onClick={() => api.showHarbors()} style={compact ? buttonStyle : wideButtonStyle} title={copy.harbors} type="button">
         {ICONS.harbors}
-        {!compact && <span>{copy.harbors}</span>}
+        {false && <span>{copy.harbors}</span>}
       </button>
       <button
         aria-label={copy.tour}
@@ -192,7 +195,7 @@ export function CameraToolbar({
         type="button"
       >
         {ICONS.tour}
-        {!compact && <span>{copy.tour}</span>}
+        {false && <span>{copy.tour}</span>}
       </button>
     </div>
   );

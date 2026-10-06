@@ -20,14 +20,14 @@ describe("viewport-frame", () => {
 
   it("desktop distance is close enough for ~90% height fill", () => {
     // Stage-ish aspect after thinner side rails (~960×684 → ~1.4)
-    const d = distanceForIslandFill(4.5, 1.4, 0.9, 40, 38);
+    const d = distanceForIslandFill(4.5, 1.4, 0.92, 40, 37);
     // round-4 was ~8 with fill 0.82; 5d should be clearly closer.
-    expect(d).toBeLessThan(7.2);
+    expect(d).toBeLessThan(7.0);
     expect(d).toBeGreaterThan(5.0);
   });
 
   it("framePose returns orbit above the island centre", () => {
-    const pose = framePose([0, 0, 0], 4.5, 1.6, { fill: 0.9, polarDeg: 38 });
+    const pose = framePose([0, 0, 0], 4.5, 1.6, { fill: 0.92, polarDeg: 37 });
     expect(pose.position[1]).toBeGreaterThan(2);
     expect(pose.distance).toBeGreaterThan(3);
   });

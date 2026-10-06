@@ -18,8 +18,8 @@ export type ViewportFrame = {
 /** Desktop a/d: island ~78–85% of canvas height, sea margins OK left/right. */
 export const DEFAULT_DESKTOP_FRAME: Required<ViewportFrame> = {
   // round-5d：岛更高占比，减弱「窗框」留白（更近机位 + 略顶视）。
-  fill: 0.9,
-  polarDeg: 38,
+  fill: 0.92,
+  polarDeg: 37,
   azimuthDeg: 14,
   fovDeg: 40,
 };
@@ -50,7 +50,7 @@ export function distanceForIslandFill(
   const f = Math.max(0.55, Math.min(0.95, fill));
   const polar = (polarDeg * Math.PI) / 180;
   // Empirical foreshorten so landscape a-default lands ~80% height (not ~70%).
-  const foreshorten = Math.max(0.38, 0.18 + Math.cos(polar) * 0.38);
+  const foreshorten = Math.max(0.36, 0.16 + Math.cos(polar) * 0.36);
   const projectedHalf = radius * foreshorten;
   const byHeight = projectedHalf / (f * Math.tan(halfV));
   if (aspect >= 1) {

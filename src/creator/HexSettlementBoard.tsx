@@ -708,7 +708,14 @@ export function HexSettlementBoard({
                 >
                   <div className="tidewell-player-avatar tidewell-medallion">
                     {seatMarkUrl(seat) ? (
-                      <img alt="" height={56} src={seatMarkUrl(seat)} width={56} />
+                      <img
+                        alt=""
+                        className="tidewell-portrait-img"
+                        decoding="async"
+                        height={64}
+                        src={seatMarkUrl(seat)}
+                        width={64}
+                      />
                     ) : (
                       <span aria-hidden="true" className="tidewell-seat-swatch" />
                     )}

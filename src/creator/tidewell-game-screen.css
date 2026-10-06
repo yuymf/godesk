@@ -316,7 +316,7 @@ body:has(.room-view-tidewell-immersive) {
 .tidewell-player-card {
   position: relative;
   display: grid;
-  grid-template-columns: 44px 1fr;
+  grid-template-columns: 68px 1fr;
   gap: 8px;
   align-items: center;
   padding: 8px;
@@ -329,18 +329,23 @@ body:has(.room-view-tidewell-immersive) {
   background: #fff8e8;
 }
 .tidewell-player-avatar {
-  width: 40px;
-  height: 40px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid var(--seat-color, #888);
-  background: #ddd;
+  border: 3px solid var(--seat-color, #c9a227);
+  box-shadow:
+    0 0 0 1px rgba(26, 14, 8, 0.85),
+    0 2px 6px rgba(0, 0, 0, 0.35);
+  background: #c4a882;
+  flex-shrink: 0;
 }
 .tidewell-player-avatar img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  background: #e8d3a2;
 }
 .tidewell-seat-swatch {
   display: block;
@@ -516,13 +521,13 @@ body:has(.room-view-tidewell-immersive) {
 }
 .tidewell-player-stats { color: #d8c9a8 !important; }
 .tidewell-medallion {
-  width: 56px !important;
-  height: 56px !important;
+  width: 64px !important;
+  height: 64px !important;
   border-width: 3px !important;
   box-shadow: 0 0 0 2px #c9a227aa, 0 3px 8px rgba(0,0,0,0.45);
 }
 .tidewell-player-card {
-  grid-template-columns: 52px 1fr !important;
+  grid-template-columns: 68px 1fr !important;
   gap: 8px !important;
   padding: 6px 8px !important;
 }
@@ -725,15 +730,24 @@ body:has(.room-view-tidewell-immersive) {
   border-radius: 0;
   overflow: hidden;
   border: none;
-  /* ⑤ recessed board well — gold carved lip, sunk into the wooden crate */
+  /* round-6 ②：浅金唇贴木桌，去掉深井阴影，岛缘与木框相接 */
   box-shadow:
     inset 0 0 0 1px var(--tw-carve-outer, #1a0e08),
     inset 0 0 0 2px var(--tw-gold-deep, #8a6a14),
-    inset 0 0 0 3px var(--tw-gold-mid, #c9a227),
-    inset 0 0 0 4px rgba(232, 200, 90, 0.4),
-    inset 0 0 22px rgba(0, 0, 0, 0.55),
-    inset 0 8px 18px rgba(0, 0, 0, 0.35);
-  background: radial-gradient(ellipse at 50% 30%, #3a9aaa 0%, var(--tw-sea, #2e7f86) 45%, #1a4f5a 100%);
+    inset 0 0 0 3px rgba(232, 200, 90, 0.45),
+    inset 0 0 10px rgba(0, 0, 0, 0.18);
+  background: radial-gradient(ellipse at 50% 35%, #4a9eaa 0%, var(--tw-sea, #2e7f86) 48%, #1f4550 100%);
+}
+/* wood→sea soft blend ring (DOM overlay, pointer-events none) */
+.tidewell-stage-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  box-shadow:
+    inset 0 0 28px 10px rgba(42, 24, 12, 0.55),
+    inset 0 0 8px 2px rgba(201, 162, 39, 0.18);
 }
 .tidewell-game-screen .g3d-stage {
   position: absolute !important;
@@ -760,6 +774,19 @@ body:has(.room-view-tidewell-immersive) {
   display: block !important;
   width: 100% !important;
   height: 100% !important;
+  position: relative;
+  z-index: 0;
+}
+.tidewell-game-screen .g3d-camera-toolbar,
+.tidewell-game-screen [data-testid="g3d-camera-toolbar"] {
+  z-index: 2 !important;
+}
+.tidewell-game-screen [data-testid="g3d-camera-toolbar"]:hover,
+.tidewell-game-screen [data-testid="g3d-camera-toolbar"]:focus-within {
+  opacity: 0.92 !important;
+  background: linear-gradient(180deg, rgb(90 58 34 / 82%) 0%, rgb(52 32 18 / 88%) 100%) !important;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 35%) !important;
+  color: #f3e4c1 !important;
 }
 
 .tidewell-turn-panel { display: flex; flex-direction: column; gap: 8px; }
