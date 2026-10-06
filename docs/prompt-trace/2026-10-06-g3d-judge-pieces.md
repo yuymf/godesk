@@ -36,3 +36,15 @@
 - **跨轨道备注 3（Track D）**：SceneHost 已读可选的 `water.seaHalfExtent` 并调 `director.setSeaExtent()`。Track D 的远海环（`WATER_FAR_HALF_EXTENT = 60`，已在 `/workspace/godesk-trackD-judge` 未合入）落地后，本方回合宽屏即可在 ±60 海面下恢复 ≥ 18°–50° 斜视（单测 `camera-rig.test.ts` 覆盖 half=60）。请在 water controller 上暴露 `seaHalfExtent`。
 - **本地验证（迭代 2，CI 可用但合入由 merge train 管；本分支保持 draft）**：typecheck ✓；unit 484/484；worker 215/215（含 session-socket-close 5）；e2e 分两段共 58 通过 / 4 跳过（8833）；size ✓（核心 205.80 / 210，hexkit 7.42 / 10，overlay 1.78 / 6）；perf:ci ✓（含 leak.memoryDrift=0）；verify:assets ✓。Draw call：开局 高/中/低 稳态/峰值 26/41、26/42、26/36；中局 30/50、30/50、30/44。
 - **评审 round-2p2**：截图与差距表在 `/workspace/g3d-evidence/judge/round-2p2/`（不进仓库）。自评：棋子 4→5、骰子 6→7、镜头 5→7；全局约 3/10；**未达标**。剩余：宽屏本方回合退近俯视（远海环未合入）、棋子无手绘贴图、托盘遮 iPhone 岛角、AI/本方构图差异变小。
+
+## 迭代 3（2p3，23:10 指令）
+- **用户**：棋子再放大（房屋默认 play 取景 28–34 px）、城市明显更高更宽、道路加粗+木纹色、强盗更高+兜帽轮廓/描边；骰盘改成参照那种薄深色毡垫（不要深木盒）+ 骰子约 1.4× + 点数更清楚；默认 play 倾角贴近参照 ≈35–40°（不要 a-default 纯俯视），AI 回合仍扁平；`seaHalfExtent` 有则用、无则 TODO 不阻塞。
+- **棋子**：`SETTLEMENT_SCALE` 1.45（play 38°/地板 35° 取景下投影 ≈31 px）、`CITY_SCALE` 1.68、`ROBBER_SCALE` 1.9；道路梁加厚加宽 + 座位色木纹条；强盗加高帽尖 + 加宽浅色描边；`contactShadow()` 椭圆接地软影 + 更强 `bakeShading` 接触 AO。
+- **骰盘**：`DIE_SIZE` 0.44→0.62（×1.4）；托盘改为薄深色毡垫（`rimHeight` 0.028，无高木墙/斜角盖），点数半径 ×0.11；仍为画布角叠加。
+- **镜头**：`CAMERA_MODE_POLAR_DEG.play` 50→38，`PLAY_MIN_POLAR_DEG` 18→35；`playFraming` 不再退到纯俯视（宽屏可露角天空，等 Track D 远海环）。SceneHost：`seaHalfExtent` 有限正数才 `setSeaExtent`，并留 TODO。
+- **代码作者**：Track C 执行代理手写（box Codex 额度用尽）。
+
+## 暂停（23:25 大主管 round-2 裁定）
+- 大主管 round-2：**未达标**；棋子自评 5 → 他评 ~4。
+- 优先级 #1：三轨叠进同一画面。Track D 正在把 #149+#151 叠进 #148。本分支 **暂停**，不另开分支。
+- 2p3 WIP 已提交并 push（薄毡垫骰盘 + play ≈38° + 棋子放大），合成后再改：真正房屋/城市/道路模型（非几何体拼装）、斗篷强盗小人、骰盘保持薄垫风格。

@@ -171,3 +171,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | 用户 19:16：AI 美术法务闸门豁免（仍须登记来源）；新停止条件为汐屿对标 settlecoast，由大主管逐轮评判；G3D-JUDGE 评审截图与对照工具，round-1 已拍 | Track D |
 | 2026-10-06 | G3D-JUDGE-PIECES（Track C）draft PR：已完成加 G3D-JUDGE-PIECES（程序化棋子 / 骰子骰盘 / 自动取景 + 回合镜头 + 画布工具条）；round-2p 评审已拍（自评 棋子 4 / 骰子 6 / 镜头 5，未达标）；本地 typecheck ✓、unit 464、worker 210、e2e 58 过 / 4 跳过；draw call 高/中/低 峰值 49/49/43（预算 150/100/60）；代码由 Track C 执行代理手写（box Codex 额度用尽） | Track C |
 | 2026-10-06 | G3D-JUDGE-PIECES 迭代 2（Track C，#151 draft）：棋子放大 + AO / 座位色染色 + 雾灯描边；骰盘右下角叠加渲染；无天空取景 + 平移 / 港口 / 环岛游览；hexkit 懒加载（核心 205.80 / 210 KB）；worker webSocketClose 修复（单独提交）；round-2p2 自评 棋子 5 / 骰子 7 / 镜头 7，全局约 3/10，未达标；代码由 Track C 执行代理手写（box Codex 额度用尽） | Track C |
+| 2026-10-06 | G3D-JUDGE-PIECES 迭代 3 / round-2p3（Track C，#151 draft）：房屋 ≈31 px + 城市/道路/强盗加高加粗；薄毡垫骰盘 + 骰×1.4；play 倾角 ≈38°（地板 35°）；seaHalfExtent TODO；自评待填；手写（Codex 额度用尽） | Track C |

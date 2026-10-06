@@ -17,7 +17,7 @@ import { TILE_RADIUS } from "./tokens";
 export type V3 = readonly [number, number, number];
 export type CameraMode = "play" | "overview";
 
-export const CAMERA_MODE_POLAR_DEG: Readonly<Record<CameraMode, number>> = { play: 50, overview: 9 };
+export const CAMERA_MODE_POLAR_DEG: Readonly<Record<CameraMode, number>> = { play: 38, overview: 9 };
 /** Zoom is relative to the fitted distance: 1 = whole island (+ tray) in view. */
 export const ZOOM_LIMITS = { min: 0.7, max: 3.2 } as const;
 export const ZOOM_STEP = 1.25;
@@ -35,7 +35,8 @@ const DEG = Math.PI / 180;
 export const SEA_HALF_EXTENT = 9;
 export const SEA_EDGE_PAD = 0.3;
 /** Play mode may flatten toward top-down to keep the sky out, but not below this. */
-export const PLAY_MIN_POLAR_DEG = 18;
+// Own-turn floor: keep a readable 3/4 tilt (settlecoast ≈ 35–40°). Prefer sky-at-corners over pure top-down until Track D far-sea lands.
+export const PLAY_MIN_POLAR_DEG = 35;
 
 export function clampZoom(zoom: number): number {
   if (!Number.isFinite(zoom)) return 1;
@@ -218,10 +219,10 @@ export function playFraming(
   aspect: number,
   half = SEA_HALF_EXTENT - SEA_EDGE_PAD,
 ): { polar: number; distance: number; fit: number; safe: boolean } {
-  const tilted = seaSafeFraming(points, keepPoints, target, preferredPolar, PLAY_MIN_POLAR_DEG * DEG, azimuth, fovDeg, aspect, half);
-  if (tilted.safe) return tilted;
-  const flat = seaSafeFraming(points, keepPoints, target, tilted.polar, 0, azimuth, fovDeg, aspect, half);
-  return flat.safe ? flat : tilted;
+  // Prefer the settlecoast-like 35–40° tilt. If the ±9 sea cannot cover the
+  // frame, keep the floor tilt (tiles uncropped) rather than collapsing to
+  // top-down — Track D's far-sea ring will make this safe once exposed.
+  return seaSafeFraming(points, keepPoints, target, preferredPolar, PLAY_MIN_POLAR_DEG * DEG, azimuth, fovDeg, aspect, half);
 }
 
 type FramingNode = {

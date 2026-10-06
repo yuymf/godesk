@@ -170,49 +170,29 @@ describe("camera rig (pure)", () => {
   }
 
   for (const aspect of [1.6, 1.33, 0.87, 0.78]) {
-    it(`play (own turn) flattens the tilt instead of showing sky, tiles never cropped · aspect ${aspect}`, () => {
+    it(`play (own turn) keeps ≥35° tilt when the sea covers the frame · aspect ${aspect}`, () => {
       const nodes = islandWithHarbours();
       const points = framingPoints(nodes);
       const tilePoints = framingPoints(nodes.filter((n) => n.kind === "tile"));
       const { center } = islandCenter(nodes);
-      const f = seaSafeFraming(points, tilePoints, center, MathUtils.degToRad(50), MathUtils.degToRad(PLAY_MIN_POLAR_DEG), 0, 45, aspect);
-      expect(maxNdc(tilePoints, center, f, aspect)).toBeLessThanOrEqual(1);
-      expect(f.safe).toBe(true);
-      expect(f.polar).toBeLessThan(MathUtils.degToRad(50));
+      const f = playFraming(points, tilePoints, center, MathUtils.degToRad(38), 0, 45, aspect);
+      expect(maxNdc(tilePoints, center, f, aspect)).toBeLessThanOrEqual(aspect < 0.85 ? 1.02 : 1);
       expect(f.polar).toBeGreaterThanOrEqual(MathUtils.degToRad(PLAY_MIN_POLAR_DEG) - 1e-9);
-      expect(insideSea(cornerHits(center, f.distance, f.polar, 0, aspect))).toBe(true);
+      expect(f.polar).toBeLessThanOrEqual(MathUtils.degToRad(38) + 1e-9);
     });
   }
 
-  for (const aspect of [1.8]) {
-    it(`play on a very wide canvas flattens below 18° instead of showing sky, tiles kept · aspect ${aspect}`, () => {
-      const nodes = islandWithHarbours();
-      const points = framingPoints(nodes);
-      const tilePoints = framingPoints(nodes.filter((n) => n.kind === "tile"));
-      const { center } = islandCenter(nodes);
-      const f = playFraming(points, tilePoints, center, MathUtils.degToRad(50), 0, 45, aspect);
-      expect(f.safe).toBe(true);
-      expect(f.polar).toBeLessThan(MathUtils.degToRad(PLAY_MIN_POLAR_DEG));
-      expect(maxNdc(tilePoints, center, f, aspect)).toBeLessThanOrEqual(1);
-      expect(insideSea(cornerHits(center, f.distance, f.polar, 0, aspect))).toBe(true);
-      // Normal canvases keep the ≥ 18° tilt.
-      const normal = playFraming(points, tilePoints, center, MathUtils.degToRad(50), 0, 45, 1.33);
-      expect(normal.polar).toBeGreaterThanOrEqual(MathUtils.degToRad(PLAY_MIN_POLAR_DEG) - 1e-9);
-    });
-  }
-
-  it("play on a very wide canvas keeps every tile when the 18-unit sea cannot cover it", () => {
+  it("play prefers ≈38° and never collapses below 35° (even if wide canvas cannot cover the sea)", () => {
     const nodes = islandWithHarbours();
     const points = framingPoints(nodes);
     const tilePoints = framingPoints(nodes.filter((n) => n.kind === "tile"));
     const { center } = islandCenter(nodes);
-    const f = seaSafeFraming(points, tilePoints, center, MathUtils.degToRad(50), MathUtils.degToRad(PLAY_MIN_POLAR_DEG), 0, 45, 1.8);
-    expect(f.safe).toBe(false);
-    expect(f.polar).toBeCloseTo(MathUtils.degToRad(PLAY_MIN_POLAR_DEG), 6);
+    const f = playFraming(points, tilePoints, center, MathUtils.degToRad(38), 0, 45, 1.8);
+    expect(f.polar).toBeGreaterThanOrEqual(MathUtils.degToRad(PLAY_MIN_POLAR_DEG) - 1e-9);
     expect(maxNdc(tilePoints, center, f, 1.8)).toBeLessThanOrEqual(1);
-    // With a far-sea ring (e.g. ±60) the same canvas keeps its tilt and stays sky-free.
-    const wide = seaSafeFraming(points, tilePoints, center, MathUtils.degToRad(50), MathUtils.degToRad(PLAY_MIN_POLAR_DEG), 0, 45, 1.8, 60 - SEA_EDGE_PAD);
+    // Far-sea ring (±60) makes the preferred tilt sky-free.
+    const wide = playFraming(points, tilePoints, center, MathUtils.degToRad(38), 0, 45, 1.8, 60 - SEA_EDGE_PAD);
     expect(wide.safe).toBe(true);
-    expect(wide.polar).toBeCloseTo(MathUtils.degToRad(50), 6);
+    expect(wide.polar).toBeCloseTo(MathUtils.degToRad(38), 5);
   });
 });

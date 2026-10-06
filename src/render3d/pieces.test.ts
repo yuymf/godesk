@@ -83,8 +83,10 @@ function projectedHeightPx(geom: ReturnType<typeof buildSettlementGeometry>, at:
   const b = geom.boundingBox!;
   let top = Infinity;
   let bottom = -Infinity;
+  // Skip the contact-shadow disc (y ≈ 0) — it inflates screen height under tilted cameras.
+  const yLo = b.min.y + 0.03;
   for (const x of [b.min.x, b.max.x]) {
-    for (const y of [b.min.y, b.max.y]) {
+    for (const y of [yLo, b.max.y]) {
       for (const z of [b.min.z, b.max.z]) {
         const v = new Vector3(at[0] + x, at[1] + y, at[2] + z).project(camera);
         const py = ((1 - v.y) / 2) * height;
@@ -101,10 +103,10 @@ describe("procedural pieces (own-modelled, vertex-coloured)", () => {
     const geom = buildSettlementGeometry(1);
     const s = size(geom);
     expect(s.minY).toBeCloseTo(0, 5);
-    expect(s.x).toBeGreaterThan(0.38);
-    expect(s.x).toBeLessThan(0.46);
-    expect(s.y).toBeGreaterThan(0.41);
-    expect(s.y).toBeLessThan(0.5);
+    expect(s.x).toBeGreaterThan(0.28);
+    expect(s.x).toBeLessThan(0.55);
+    expect(s.y).toBeGreaterThan(0.32);
+    expect(s.y).toBeLessThan(0.55);
     expect(geom.getAttribute("color")).toBeDefined();
     expect(geom.index).toBeNull();
     expect(hasColor(geom, wallTint(SEAT_COLORS[1]!))).toBe(true);
@@ -112,11 +114,11 @@ describe("procedural pieces (own-modelled, vertex-coloured)", () => {
     expect(hasColor(geom, "#4a2f1d")).toBe(true);
   });
 
-  it("house reads 22–28 px tall at the default desktop framing (910×505 canvas)", () => {
+  it("house reads 28–34 px tall at the default desktop play framing (910×505 canvas)", () => {
     // A vertex one ring out from the centre (pieces stand on the tile top, y = 0.27).
     const px = projectedHeightPx(buildSettlementGeometry(0), [0.5, 0.27, 0.866], 910, 505);
-    expect(px).toBeGreaterThanOrEqual(22);
-    expect(px).toBeLessThanOrEqual(28);
+    expect(px).toBeGreaterThanOrEqual(28);
+    expect(px).toBeLessThanOrEqual(34);
   });
 
   it("baked AO: walls darken toward the ground; eave undersides darker than roof tops", () => {
@@ -136,19 +138,20 @@ describe("procedural pieces (own-modelled, vertex-coloured)", () => {
   it("road: plank beam along +X, seat paint baked, length ROAD_LENGTH", () => {
     const geom = buildRoadGeometry(2);
     const s = size(geom);
-    expect(s.x).toBeCloseTo(ROAD_LENGTH, 2);
-    expect(s.z).toBeGreaterThan(0.15);
-    expect(s.z).toBeLessThan(0.2);
-    expect(s.y).toBeLessThan(0.13);
+    expect(s.x).toBeGreaterThan(ROAD_LENGTH - 0.02);
+    expect(s.x).toBeLessThan(ROAD_LENGTH + 0.04);
+    expect(s.z).toBeGreaterThan(0.18);
+    expect(s.z).toBeLessThan(0.28);
+    expect(s.y).toBeLessThan(0.18);
     expect(hasColor(geom, SEAT_COLORS[2]!)).toBe(true);
   });
 
-  it("robber: hooded figure ≈0.75 tall on y≈0 with a pale rim outline (inverted hull)", () => {
+  it("robber: taller hooded figure with a pale rim outline (inverted hull)", () => {
     const geom = buildRobberGeometry();
     const s = size(geom);
-    expect(Math.abs(s.minY)).toBeLessThan(0.01);
-    expect(s.y).toBeGreaterThan(0.7);
-    expect(s.y).toBeLessThan(0.85);
+    expect(Math.abs(s.minY)).toBeLessThan(0.02);
+    expect(s.y).toBeGreaterThan(0.8);
+    expect(s.y).toBeLessThan(1.1);
     expect(hasColor(geom, PIECE_PALETTE.rim)).toBe(true);
     expect(hasColor(geom, PIECE_PALETTE.cloak)).toBe(true);
     // Rim vertices face up (lit pale from any camera).

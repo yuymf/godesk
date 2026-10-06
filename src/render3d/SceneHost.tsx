@@ -1121,9 +1121,13 @@ export function SceneHost({
                 return;
               }
               waterRef.current = water;
-              // A water controller with a far-sea ring may report a larger sea for the camera's sky clamp.
+              // TODO(Track D): far-sea ring (±60) should expose `seaHalfExtent` on the water
+              // controller so play framing can keep ≥35° tilt sky-free on wide canvases. Use it when
+              // present; do not block SceneHost on Track D landing.
               const seaHalf = (water as { seaHalfExtent?: number }).seaHalfExtent;
-              if (typeof seaHalf === "number") directorRef.current?.setSeaExtent(seaHalf);
+              if (typeof seaHalf === "number" && Number.isFinite(seaHalf) && seaHalf > 0) {
+                directorRef.current?.setSeaExtent(seaHalf);
+              }
               // Warm custom water program on SwiftShader before the first user click
               // (cold compile can block the main thread long enough to flake mid-tween clicks).
               const cam = cameraRef.current;

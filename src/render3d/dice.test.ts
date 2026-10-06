@@ -54,10 +54,13 @@ describe("dice", () => {
     }
   });
 
-  it("tray: wooden frame with felt bed; dice rest on the felt inside the rim", () => {
+  it("tray: thin dark felt pad; dice rest on the felt inside the shallow lip", () => {
     const tray = buildDiceTrayGeometry();
     tray.computeBoundingBox();
-    expect(tray.boundingBox!.max.x - tray.boundingBox!.min.x).toBeCloseTo(TRAY.width + 0.012, 3);
+    const bb = tray.boundingBox!;
+    expect(bb.max.x - bb.min.x).toBeCloseTo(TRAY.width + 0.04, 3);
+    // Shallow: total height well under a deep wooden box (~0.2).
+    expect(bb.max.y - bb.min.y).toBeLessThan(0.08);
     const layout = diceLayout([6, 2.5]);
     for (const die of layout.dice) {
       const dx = die.position[0] - layout.tray.position[0];
