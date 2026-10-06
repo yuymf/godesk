@@ -112,7 +112,7 @@ export function evaluateLighthouse(rc, lhrs) {
   }
   if (!rows.length) return item("lighthouse", "pass", "lighthouserc.json 已无 warn 级断言（已转 error）", { rows });
   const over = rows.filter((row) => row.within === false);
-  const fmt = (row) => `${/room/i.test(row.urlPattern) ? "Room" : "首页"} ${row.auditId} ${row.actual === null ? "未测" : Math.round(row.actual * 1000) / 1000}${row.kind === "max" ? " ≤ " : " ≥ "}${row.limit}`;
+  const fmt = (row) => `${/room/i.test(row.urlPattern) ? "Room" : "首页"} ${row.auditId} ${row.actual === null ? "未测" : Math.round(row.actual * 1000) / 1000}（阈值 ${row.kind === "max" ? "≤" : "≥"} ${row.limit}）`;
   if (over.length) return item("lighthouse", "fail", `超阈值（仍为 warn 级）：${over.map(fmt).join("；")}`, { rows });
   return item("lighthouse", "warn", `${rows.length} 条断言仍为 warn 级，G3D-17 须改为 error：${rows.map(fmt).join("；")}`, { rows });
 }
@@ -127,7 +127,7 @@ export function evaluateDrawCalls(perfReport, budgets = TIER_BUDGETS) {
     const ok = probe.error || limit === null || worst < 0 ? null : worst <= limit;
     return { ...probe, limit, ok };
   });
-  const fmt = (row) => `${row.requestedTier} 稳态 ${row.calls ?? "?"} / 峰值 ${row.peak ?? "?"} ≤ ${row.limit}${row.actualTier && row.actualTier !== row.requestedTier ? `（实际档位 ${row.actualTier}）` : ""}`;
+  const fmt = (row) => `${row.requestedTier} 稳态 ${row.calls ?? "?"} / 峰值 ${row.peak ?? "?"}（预算 ≤ ${row.limit}）${row.actualTier && row.actualTier !== row.requestedTier ? `（实际档位 ${row.actualTier}）` : ""}`;
   const over = rows.filter((row) => row.ok === false);
   const unmeasured = rows.filter((row) => row.ok === null);
   if (over.length) return item("draw-calls", "fail", `超预算：${over.map(fmt).join("；")}`, { rows });
@@ -171,7 +171,11 @@ export function renderMarkdown(items, { mode, blocking }) {
     "| --- | --- | --- |",
     ...items.map((entry) => `| ${entry.title}（\`${entry.id}\`） | ${ICON[entry.status] ?? ""} ${entry.status}${blocking.includes(entry.id) ? " · 阻断" : ""} | ${entry.summary.replace(/\|/g, "\\|")} |`),
     "",
-    mode === "block" ? "阻断模式：任一项非 pass 即失败。" : "warning 模式：不影响 CI 结果。转阻断见 `docs/perf/launch-checklist.md`。",
+    mode === "block"
+      ? "阻断模式：任一项非 pass 即失败。"
+      : blocking.length
+        ? `warning 模式，但已逐项转阻断的 ${blocking.map((id) => `\`${id}\``).join("、")} 未通过 → 失败。`
+        : "warning 模式：不影响 CI 结果。转阻断见 `docs/perf/launch-checklist.md`。",
   ];
   return `${lines.join("\n")}\n`;
 }
