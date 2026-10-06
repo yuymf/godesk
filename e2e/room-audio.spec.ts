@@ -1,5 +1,5 @@
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
-import { NORTH_STAR_CATAN_PROMPT, shareHrefFromStudio } from "./helpers/sol-max-baseline";
+import { NORTH_STAR_HEX_ISLAND_PROMPT, shareHrefFromStudio } from "./helpers/sol-max-baseline";
 
 /**
  * G3D-10：房间音效。素材（G3D-26 / G3D-27）合入前，引擎只记 cue 日志不出声；
@@ -40,7 +40,7 @@ test("hex-settlement room audio: cues from play events, touch unlock, settings p
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/chatgpt-plugin/new");
-  await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(NORTH_STAR_CATAN_PROMPT);
+  await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(NORTH_STAR_HEX_ISLAND_PROMPT);
   await page.getByRole("button", { name: "生成可玩版本" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 90_000 });
   await page.getByRole("button", { name: "确认玩法并开始试玩" }).click();
@@ -71,8 +71,8 @@ test("hex-settlement room audio: cues from play events, touch unlock, settings p
     await page.getByLabel("你的席位").selectOption("1");
     await guestPage.getByLabel("你的席位").selectOption("0");
 
-    const guestBoard = guestPage.getByRole("region", { name: "卡坦六角岛" });
-    const hostBoard = page.getByRole("region", { name: "卡坦六角岛" });
+    const guestBoard = guestPage.getByRole("region", { name: "汐屿六角岛" });
+    const hostBoard = page.getByRole("region", { name: "汐屿六角岛" });
     // 手机视口下 main 上 2D 盘面的热点被 3D canvas 盖住（DPR > 1 时 canvas 溢出，G3D-05 #110 已修，
     // 2D 盘面由 G3D-18 删除），所以这里直接派发 click。
     await guestBoard.getByRole("button", { name: /放置定居点/ }).first().dispatchEvent("click");

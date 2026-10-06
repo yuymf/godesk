@@ -19,7 +19,7 @@ describe("hand-play thumbnail", () => {
     // Card face values in the fan
     expect(decoded.includes(">5<")).toBe(true);
     expect(decoded.includes(">3<")).toBe(true);
-    // Distinct from othello green grid / catan polygons / network edge lines
+    // Distinct from othello green grid / hexIsland polygons / network edge lines
     expect(decoded.includes("polygon")).toBe(false);
     expect(decoded.includes("<line ")).toBe(false);
     expect(decoded.includes("role=\"img\"")).toBe(true);

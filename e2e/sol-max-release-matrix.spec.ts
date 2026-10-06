@@ -9,7 +9,7 @@ import { join } from "node:path";
  * - 一句话生成 / 大厅缩略图品类正确 / 主交互一步 → e2e/dual-genre-boards.spec.ts
  * - share= 交接 (guest context) → e2e/dual-genre-share.spec.ts
 * - share= hand-play + network guest → e2e/hand-network-share.spec.ts (PR15)
- * - unseen prompts no silent Catan/Othello → unit (kernel-capabilities + gamespec worker)
+ * - unseen prompts no silent hex-island/Othello → unit (kernel-capabilities + gamespec worker)
  *
  * Rows that still need human live proof are explicit test.skip with reason.
  */
@@ -29,13 +29,13 @@ test.describe("Sol max release matrix — automatable row index", () => {
     const handNet = readFileSync(handNetSharePath, "utf8");
 
     // 一句话生成 + lobby mark + one legal act (both genres)
-    expect(boards).toMatch(/做一款可以与电脑对战的卡坦岛基础版/);
+    expect(boards).toMatch(/做一款可以与电脑对战的汐屿六角岛资源建造游戏/);
     expect(boards).toMatch(/做一款可以与电脑对战的黑白棋/);
-    expect(boards).toMatch(/data-lobby-mark="catan"/);
+    expect(boards).toMatch(/data-lobby-mark="hexIsland"/);
     expect(boards).toMatch(/data-lobby-mark="othello"/);
     expect(boards).toMatch(/放置定居点|可落子/);
 
-    // share= guest handoff (othello/catan + hand-play/network)
+    // share= guest handoff (othello/hexIsland + hand-play/network)
     expect(share).toMatch(/share=\s*交接|second context|guest/i);
     expect(share).toMatch(/browser\.newContext/);
     expect(share).toMatch(/missing|invalid/);

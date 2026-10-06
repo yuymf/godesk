@@ -4,7 +4,7 @@
  * Owns: state envelope, legal actions, phase hooks, seeded RNG, append-only
  * events, fail-closed apply, and deterministic replay.
  * Does NOT own: hex/grid topology, resources, dice-as-universal-turn, or
- * genre visuals — those live in adapters (stubs OK; Othello/Catan = PR5/PR6).
+ * genre visuals — those live in adapters (stubs OK; Othello/hex-island = PR5/PR6).
  *
  * GameSpec / KERNEL_CAPABILITIES remain authoritative for which kernelType
  * may become executable. Unknown kernels stay fail-closed upstream.
@@ -55,7 +55,7 @@ export type PlayState<TGenre = unknown> = {
   genre: TGenre;
 };
 
-/** Kernel binding used to create initial state. No Catan-only required keys. */
+/** Kernel binding used to create initial state. No hex-island-only required keys. */
 export type PlayKernelConfig = {
   /** Must match a registered Executable Kernel type when bound to GameSpec. */
   kernelType: string;

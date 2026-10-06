@@ -3,7 +3,7 @@ import { GENERATOR_VERSION, RULES_VERSION, refreshGameSpec, type GameSpec } from
 import { defaultRenderSpec } from "../render-spec";
 
 export const BASELINE_PROMPTS = [
-  "做一款可以与电脑对战的卡坦岛基础版",
+  "做一款可以与电脑对战的汐屿六角岛资源建造游戏",
   "做一款可以与电脑对战的黑白棋",
 ] as const;
 
@@ -57,7 +57,7 @@ export function executableOthelloSpecFixture(): RuleSystem {
     id: "rule-system-othello-fixture", version: 1, name: "黑白棋", pitch: "Grid disc-flipping",
     generation: {
       generatorVersion: GENERATOR_VERSION, rulesVersion: RULES_VERSION,
-      sourcePrompt: BASELINE_PROMPTS[1], assumptions: ["Standard Othello / Reversi 8×8"],
+      sourcePrompt: BASELINE_PROMPTS[1], assumptions: ["Standard reversi-style 8×8"],
       seed: 42, requestedMechanics: ["disc-flipping"],
     },
     participants: { min: 2, max: 2, default: 2, roles: [] }, durationMinutes: 15,
@@ -85,10 +85,10 @@ export function executableOthelloSpecFixture(): RuleSystem {
 }
 
 
-/** Executable Catan / hex-settlement RuleSystem for PR6 thin bind tests. */
-export function executableCatanSpecFixture(): RuleSystem {
+/** Executable hex-island / hex-settlement RuleSystem for PR6 thin bind tests. */
+export function executableHexIslandSpecFixture(): RuleSystem {
   const rule: RuleSystem = {
-    id: "rule-system-catan-fixture", version: 1, name: "卡坦岛基础版", pitch: "Hex settlement",
+    id: "rule-system-hex-island-fixture", version: 1, name: "汐屿六角岛基础版", pitch: "Hex settlement",
     generation: {
       generatorVersion: GENERATOR_VERSION, rulesVersion: RULES_VERSION,
       sourcePrompt: BASELINE_PROMPTS[0], assumptions: ["Basic Settlers beginner board"],
