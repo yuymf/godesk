@@ -5,16 +5,18 @@ import {
   CylinderGeometry,
   ExtrudeGeometry,
   Mesh,
-  type Object3D,
+  Object3D,
   PerspectiveCamera,
   Scene,
   Shape,
   SphereGeometry,
   type Texture,
   WebGLRenderer,
+  type BufferGeometry,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { buildLegalHitOverlays, disposeHitOverlay } from "./hit-targets";
+import { createInstancePools, type InstancePools } from "./instance-pools";
 import { mapHexSettlementToScene } from "./mappers/hex-settlement";
 import {
   matchPickToLegalAction,
@@ -119,7 +121,35 @@ function hexShape(radius: number, bevel = 0.04): Shape {
   return shape;
 }
 
-function disposeObject(object: Object3D): void {
+/** Shared template geometries for G3D-13 InstancedMesh pools (one draw call per group). */
+let SHARED_TILE_GEOM: BufferGeometry | null = null;
+let SHARED_ROAD_GEOM: BufferGeometry | null = null;
+let SHARED_DECOR_GEOM: BufferGeometry | null = null;
+
+function sharedTileGeom(): BufferGeometry {
+  if (!SHARED_TILE_GEOM) {
+    const geom = new ExtrudeGeometry(hexShape(TILE_RADIUS), { depth: 0.28, bevelEnabled: false });
+    geom.rotateX(-Math.PI / 2);
+    SHARED_TILE_GEOM = geom;
+  }
+  return SHARED_TILE_GEOM;
+}
+function sharedRoadGeom(): BufferGeometry {
+  if (!SHARED_ROAD_GEOM) SHARED_ROAD_GEOM = new BoxGeometry(1, 1, 1);
+  return SHARED_ROAD_GEOM;
+}
+function sharedDecorGeom(): BufferGeometry {
+  if (!SHARED_DECOR_GEOM) SHARED_DECOR_GEOM = new SphereGeometry(0.18, 10, 10);
+  return SHARED_DECOR_GEOM;
+}
+
+function disposeObject(object: Object3D, pools?: InstancePools | null): void {
+  const inst = object.userData.gdInstance as { poolKey: string; index: number } | undefined;
+  if (inst && pools) {
+    pools.release(inst.poolKey, inst.index);
+    object.userData.gdInstance = undefined;
+    return;
+  }
   object.traverse((child) => {
     const mesh = child as Mesh;
     // G3D-14：通用桌面的网格线是 LineSegments，同样要释放几何 / 材质。
@@ -171,7 +201,7 @@ export function materialFor(node: SceneNode): { key: string; token: MaterialToke
   }
 }
 
-function createNodeObject(node: SceneNode, caps: TierCaps, library: MaterialLibrary): Object3D {
+function createNodeObject(node: SceneNode, caps: TierCaps, library: MaterialLibrary, pools?: InstancePools | null): Object3D {
   const { key, token } = materialFor(node);
   const mat = library.get(key, token);
   const applyPose = (mesh: Mesh) => {
@@ -187,9 +217,25 @@ function createNodeObject(node: SceneNode, caps: TierCaps, library: MaterialLibr
     return mesh;
   };
 
+  if (pools && (node.kind === "tile" || node.kind === "road" || node.kind === "decor")) {
+    const geom =
+      node.kind === "tile" ? sharedTileGeom() : node.kind === "road" ? sharedRoadGeom() : sharedDecorGeom();
+    const castShadow = node.kind === "tile" ? caps.tilesCastShadow : true;
+    const poolKey = `${node.kind}:${key}`;
+    const { index } = pools.acquire(poolKey, geom, mat, castShadow);
+    const handle = new Object3D();
+    handle.position.set(node.position[0], node.position[1], node.position[2]);
+    if (node.rotationY !== undefined) handle.rotation.y = node.rotationY;
+    if (node.scale) handle.scale.set(node.scale[0], node.scale[1], node.scale[2]);
+    handle.userData.nodeId = node.id;
+    handle.userData.kind = node.kind;
+    handle.userData.gdInstance = { poolKey, index };
+    pools.setMatrix(poolKey, index, handle);
+    return handle;
+  }
+
   if (node.kind === "tile") {
-    const geom = new ExtrudeGeometry(hexShape(TILE_RADIUS), { depth: 0.28, bevelEnabled: false });
-    geom.rotateX(-Math.PI / 2);
+    const geom = sharedTileGeom().clone();
     return applyPose(new Mesh(geom, mat));
   }
 
@@ -210,7 +256,7 @@ function createNodeObject(node: SceneNode, caps: TierCaps, library: MaterialLibr
   }
 
   if (node.kind === "road") {
-    return applyPose(new Mesh(new BoxGeometry(1, 1, 1), mat));
+    return applyPose(new Mesh(sharedRoadGeom().clone(), mat));
   }
 
   if (node.kind === "port" || node.kind === "ship" || node.kind === "die" || node.kind === "dice-tray" || node.kind === "decor") {
@@ -225,7 +271,7 @@ function createNodeObject(node: SceneNode, caps: TierCaps, library: MaterialLibr
         : node.kind === "die"
           ? new BoxGeometry(0.22, 0.22, 0.22)
           : node.kind === "decor"
-            ? new SphereGeometry(0.18, 10, 10)
+            ? sharedDecorGeom().clone()
             : new BoxGeometry(0.4, 0.12, 0.4);
     return finish(new Mesh(geom, mat));
   }
@@ -234,12 +280,18 @@ function createNodeObject(node: SceneNode, caps: TierCaps, library: MaterialLibr
   return applyPose(new Mesh(new CylinderGeometry(1, 1.05, 1, 6), mat));
 }
 
-function updateNodeObject(object: Object3D, node: SceneNode, library: MaterialLibrary): void {
+function updateNodeObject(object: Object3D, node: SceneNode, library: MaterialLibrary, pools?: InstancePools | null): void {
   object.position.set(node.position[0], node.position[1], node.position[2]);
   if (node.rotationY !== undefined) object.rotation.y = node.rotationY;
   if (node.scale) object.scale.set(node.scale[0], node.scale[1], node.scale[2]);
   else if (node.kind === "settlement" || node.kind === "city" || node.kind === "robber") object.scale.set(1, 1, 1);
   if (node.kind === "die") object.rotation.set(...dieFaceEuler(node.number));
+  const inst = object.userData.gdInstance as { poolKey: string; index: number } | undefined;
+  if (inst && pools) {
+    // Material group changes are rare for tiles; pose sync is the hot path.
+    pools.setMatrix(inst.poolKey, inst.index, object);
+    return;
+  }
   const mesh = object as Mesh;
   if (!mesh.isMesh) return;
   // 地形 / 座位变化：换成对应的共享材质（不改共享材质本身的颜色）。
@@ -325,15 +377,17 @@ export function SceneHost({
   }
 
   function buildHost(root: Object3D, getCaps: () => TierCaps, library: MaterialLibrary, motion: MotionController) {
+    const pools = createInstancePools(root);
     return {
       root,
+      pools,
       create: (node: SceneNode) => adapterRef.current
         ? adapterRef.current.create(node, { library, caps: getCaps() })
-        : createNodeObject(node, getCaps(), library),
+        : createNodeObject(node, getCaps(), library, pools),
       update: (object: Object3D, node: SceneNode) => adapterRef.current
         ? adapterRef.current.update(object, node, { library, caps: getCaps() })
-        : updateNodeObject(object, node, library),
-      disposeObject,
+        : updateNodeObject(object, node, library, pools),
+      disposeObject: (object: Object3D) => disposeObject(object, pools),
       motion: {
         added: (object: Object3D, node: SceneNode) => {
           if (node.kind === "piece") {
@@ -700,6 +754,8 @@ export function SceneHost({
         container.removeChild(renderer.domElement);
       }
       contentRootRef.current = null;
+      const hostPools = reconcileHostRef.current as { pools?: InstancePools } | null;
+      hostPools?.pools?.dispose();
       reconcileHostRef.current = null;
       hitRootRef.current = null;
       cameraRef.current = null;

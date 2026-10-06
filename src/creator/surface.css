@@ -4434,9 +4434,8 @@ summary:focus-visible {
 /* —— G3D-13 Tidewell HUD (parchment + mobile action drawer) —— */
 .tidewell-board {
   background:
-    linear-gradient(180deg, rgb(251 248 241 / 92%) 0%, rgb(245 238 224 / 96%) 100%),
-    url("/assets/ui/paper-noise.webp");
-  background-size: auto, 256px 256px;
+    radial-gradient(ellipse at 20% 0%, rgb(255 250 240 / 95%) 0%, transparent 55%),
+    linear-gradient(180deg, rgb(251 248 241 / 96%) 0%, rgb(245 238 224 / 98%) 100%);
   border-color: rgb(120 90 50 / 28%);
   box-shadow: 0 12px 32px rgb(60 40 20 / 10%);
 }
