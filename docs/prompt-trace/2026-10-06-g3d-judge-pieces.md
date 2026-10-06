@@ -55,3 +55,11 @@
 - **强盗**：斗篷小人（腿/躯干/披风片/兜帽深影/灯笼），非 lathe 圆柱；浅色反向外壳描边。
 - **骰盘**：保持薄毡垫（不改）。
 - 不改 HUD CSS / 地形 props。手写（Codex 额度用尽）。
+
+## Round-5p 刀序③+④（feat/g3d-judge-r5-pieces @ stacked #148 d5be4ce）
+
+- 大主管 round-4 **未达标**；本分支在叠屏基线上旁支改棋子可读性 + 动效可见性。
+- **③ 棋子俯视可读**：渔村/港镇壳体积加大（宽深墙脊 + 烟囱/天窗），SETTLEMENT_SCALE 1.62 / CITY_SCALE 1.95（play 取景房屋约 34–48 px）；强盗 ROBBER_SCALE 2.25，兜帽/披风/浅色 rim 加宽加高。
+- **glTF**：调研 asset-server/downloads Kenney Nature Kit（仅自然物/帐篷，无房屋）+ Polyhaven 树 → **未替换**棋子；登记见 assets/LICENSES.md round-5p 调研段。
+- **④ 动效**：强盗 hop 720 ms、3 跳、弧高约 ×2.4；资源 +N 弹出 CSS 放大弹跳 1.8s（tidewell-resource-pop），gain 超时 2000 ms。
+- 端口 8833；draft PR base feat/g3d-judge-r1；手写（Codex 额度用尽）；**未达标**（交大主管裁定）。

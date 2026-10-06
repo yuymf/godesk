@@ -340,11 +340,14 @@ function houseParts({ width, depth, wallHeight, ridgeHeight, base, wall, roof, s
 }
 
 /**
- * Table-read scale: modelled as miniatures, then scaled so a cottage reads
- * ~28–34 px tall under the default desktop play framing.
+ * Table-read scale (round-5p): larger cottage/manor mass so houses read
+ * ~34–44 px tall under default desktop play framing; robber silhouette widened.
+ * Downloads under g3d-evidence/asset-server had Kenney Nature Kit trees/tents
+ * (no cottage/manor glTF suitable for InstancedMesh+vertexColors) — keep
+ * procedural miniatures; survey noted in assets/LICENSES.md.
  */
-export const SETTLEMENT_SCALE = 1.36;
-export const CITY_SCALE = 1.62;
+export const SETTLEMENT_SCALE = 1.62;
+export const CITY_SCALE = 1.95;
 
 function scaled(geom: BufferGeometry, s: number): BufferGeometry {
   geom.scale(s, s, s);
@@ -364,19 +367,22 @@ export function buildSettlementGeometry(seat: number): BufferGeometry {
   parts.push(paintPart(new BoxGeometry(0.018, 0.05, 0.018), PIECE_PALETTE.timber, { pos: [0.04, 0.04, 0.13] }));
   parts.push(paintPart(new BoxGeometry(0.11, 0.012, 0.018), PIECE_PALETTE.timber, { pos: [0, 0.068, 0.13] }));
   parts.push(
-    ...houseParts({ width: 0.22, depth: 0.16, wallHeight: 0.125, ridgeHeight: 0.095, base: [0, 0, 0], wall, roof }),
+    ...houseParts({ width: 0.24, depth: 0.175, wallHeight: 0.135, ridgeHeight: 0.105, base: [0, 0, 0], wall, roof }),
   );
   const frontZ = 0.08;
-  parts.push(...frontDoor(0.045, 0.078, -0.03, 0.032, frontZ));
-  parts.push(...windowRecess(0.038, 0.036, 0.055, 0.11, frontZ, "front", PIECE_PALETTE.window));
-  parts.push(...windowRecess(0.036, 0.034, 0.11, 0.11, 0, "right", PIECE_PALETTE.window));
-  parts.push(...windowRecess(0.036, 0.034, -0.11, 0.11, 0, "left", PIECE_PALETTE.window));
-  parts.push(...windowRecess(0.034, 0.032, 0.02, 0.11, -0.08, "back", PIECE_PALETTE.window));
-  // Chimney with pot.
-  parts.push(paintPart(new BoxGeometry(0.038, 0.12, 0.038), PIECE_PALETTE.stone, { pos: [0.06, 0.2, -0.03] }));
-  parts.push(paintPart(new BoxGeometry(0.048, 0.016, 0.048), PIECE_PALETTE.stoneDark, { pos: [0.06, 0.268, -0.03] }));
-  parts.push(paintPart(new CylinderGeometry(0.01, 0.01, 0.03, 6), PIECE_PALETTE.stoneDark, { pos: [0.06, 0.29, -0.03] }));
-  parts.push(contactShadow(0.15, 0.14));
+  parts.push(...frontDoor(0.048, 0.082, -0.03, 0.032, frontZ));
+  parts.push(...windowRecess(0.04, 0.038, 0.06, 0.118, frontZ, "front", PIECE_PALETTE.window));
+  parts.push(...windowRecess(0.038, 0.036, 0.12, 0.118, 0, "right", PIECE_PALETTE.window));
+  parts.push(...windowRecess(0.038, 0.036, -0.12, 0.118, 0, "left", PIECE_PALETTE.window));
+  parts.push(...windowRecess(0.036, 0.034, 0.02, 0.118, -0.088, "back", PIECE_PALETTE.window));
+  // Chimney stack + pot (taller mass for top-down roof silhouette).
+  parts.push(paintPart(new BoxGeometry(0.048, 0.145, 0.048), PIECE_PALETTE.stone, { pos: [0.07, 0.22, -0.035] }));
+  parts.push(paintPart(new BoxGeometry(0.058, 0.02, 0.058), PIECE_PALETTE.stoneDark, { pos: [0.07, 0.3, -0.035] }));
+  parts.push(paintPart(new CylinderGeometry(0.012, 0.012, 0.035, 6), PIECE_PALETTE.stoneDark, { pos: [0.07, 0.325, -0.035] }));
+  // Small dormer bump on front slope — reads as true-model roof detail from play tilt.
+  parts.push(paintPart(new BoxGeometry(0.055, 0.04, 0.045), wallTint(main), { pos: [0.02, 0.2, 0.055] }));
+  parts.push(paintPart(new BoxGeometry(0.062, 0.014, 0.05), shade(roof, -0.1), { pos: [0.02, 0.225, 0.055], rot: [0.35, 0, 0] }));
+  parts.push(contactShadow(0.17, 0.15));
   return scaled(bakeShading(mergeParts(parts), 0.36), SETTLEMENT_SCALE);
 }
 
@@ -388,7 +394,7 @@ export function buildCityGeometry(seat: number): BufferGeometry {
   parts.push(paintPart(new BoxGeometry(0.42, 0.04, 0.28), PIECE_PALETTE.stone, { pos: [0, 0.02, 0] }));
   // Two-storey hall.
   parts.push(
-    ...houseParts({ width: 0.24, depth: 0.18, wallHeight: 0.2, ridgeHeight: 0.1, base: [-0.08, 0.02, 0.02], wall, roof, storeys: 2 }),
+    ...houseParts({ width: 0.26, depth: 0.2, wallHeight: 0.22, ridgeHeight: 0.11, base: [-0.08, 0.02, 0.02], wall, roof, storeys: 2 }),
   );
   parts.push(...frontDoor(0.055, 0.095, -0.12, 0.052, 0.11));
   parts.push(...windowRecess(0.04, 0.04, -0.02, 0.14, 0.11, "front", PIECE_PALETTE.window));
@@ -437,7 +443,7 @@ export function buildCityGeometry(seat: number): BufferGeometry {
       pos: [tx + 0.004, poleTop, tz - 0.003],
     }),
   );
-  parts.push(contactShadow(0.22, 0.18));
+  parts.push(contactShadow(0.26, 0.2));
   return scaled(bakeShading(mergeParts(parts), 0.3), CITY_SCALE);
 }
 
@@ -472,7 +478,7 @@ export function buildRoadGeometry(seat: number): BufferGeometry {
 }
 
 /** Robber ≈ hooded miniature (not a lathe cylinder). */
-export const ROBBER_SCALE = 1.85;
+export const ROBBER_SCALE = 2.25;
 
 function invertHull(geom: BufferGeometry): BufferGeometry {
   for (const name of ["position", "normal", "color"]) {
@@ -508,26 +514,26 @@ export function buildRobberGeometry(): BufferGeometry {
   // Cloak panels (front flaps + back drape) — figure silhouette, not a lathe.
   parts.push(paintPart(new BoxGeometry(0.07, 0.2, 0.03), PIECE_PALETTE.cloak, { pos: [-0.055, 0.14, 0.05], rot: [0.15, 0.25, 0.1] }));
   parts.push(paintPart(new BoxGeometry(0.07, 0.2, 0.03), PIECE_PALETTE.cloak, { pos: [0.055, 0.14, 0.05], rot: [0.15, -0.25, -0.1] }));
-  parts.push(paintPart(new BoxGeometry(0.14, 0.22, 0.04), PIECE_PALETTE.cloakDark, { pos: [0, 0.15, -0.05], rot: [-0.2, 0, 0] }));
+  parts.push(paintPart(new BoxGeometry(0.18, 0.24, 0.05), PIECE_PALETTE.cloakDark, { pos: [0, 0.15, -0.055], rot: [-0.22, 0, 0] }));
   // Belt.
   parts.push(paintPart(new BoxGeometry(0.13, 0.02, 0.1), PIECE_PALETTE.belt, { pos: [0, 0.15, 0.01] }));
   // Hood: deep cowl (sphere + swept peak) with shadowed face cavity.
-  parts.push(paintPart(new SphereGeometry(0.075, 10, 8), PIECE_PALETTE.cloak, { pos: [0, 0.36, -0.01], scale: [1.05, 1.15, 1.1], smooth: true }));
-  parts.push(paintPart(new ConeGeometry(0.055, 0.12, 8), PIECE_PALETTE.cloakDark, { pos: [0, 0.46, -0.05], rot: [-0.65, 0, 0] }));
+  parts.push(paintPart(new SphereGeometry(0.088, 10, 8), PIECE_PALETTE.cloak, { pos: [0, 0.36, -0.01], scale: [1.15, 1.2, 1.15], smooth: true }));
+  parts.push(paintPart(new ConeGeometry(0.07, 0.16, 8), PIECE_PALETTE.cloakDark, { pos: [0, 0.48, -0.06], rot: [-0.7, 0, 0] }));
   parts.push(paintPart(new SphereGeometry(0.048, 8, 6), PIECE_PALETTE.hoodShadow, { pos: [0, 0.35, 0.045], scale: [1, 1.05, 0.55], smooth: true }));
   for (const x of [-0.018, 0.018] as const) {
     parts.push(paintPart(new BoxGeometry(0.014, 0.01, 0.008), PIECE_PALETTE.eyes, { pos: [x, 0.355, 0.072] }));
   }
   // Pale rim outline (inverted hull of a slightly larger cowl) for mountain tiles.
   const rimProfile = [
-    new Vector2(0.0, 0.08),
-    new Vector2(0.1, 0.08),
-    new Vector2(0.12, 0.16),
-    new Vector2(0.11, 0.28),
-    new Vector2(0.095, 0.38),
-    new Vector2(0.07, 0.48),
-    new Vector2(0.03, 0.55),
-    new Vector2(0.0, 0.58),
+    new Vector2(0.0, 0.06),
+    new Vector2(0.125, 0.06),
+    new Vector2(0.145, 0.16),
+    new Vector2(0.13, 0.28),
+    new Vector2(0.115, 0.4),
+    new Vector2(0.09, 0.52),
+    new Vector2(0.04, 0.6),
+    new Vector2(0.0, 0.64),
   ];
   parts.push(invertHull(paintPart(new LatheGeometry(rimProfile, 14), PIECE_PALETTE.rim, { pos: [0, 0, -0.015] })));
   // Arms + fog lantern.

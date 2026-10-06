@@ -22,7 +22,7 @@ import type { SceneVec3 } from "./scene-model";
 export const MOTION_MS = {
   place: 280,
   remove: 160,
-  robber: 420,
+  robber: 720,
   dice: 900,
   camera: 600,
 } as const;
@@ -143,7 +143,7 @@ export function sampleDiceTumble(keys: readonly DiceKeyframe[], t: number): Dice
 }
 
 /** Height of the robber arc at normalised progress p. */
-export function arcLift(p: number, height = 0.9): number {
+export function arcLift(p: number, height = 1.35): number {
   return Math.sin(Math.PI * Math.min(Math.max(p, 0), 1)) * height;
 }
 
@@ -156,7 +156,7 @@ export function hopPath(
   from: SceneVec3,
   to: SceneVec3,
   p: number,
-  hops = 2,
+  hops = 3,
 ): { position: SceneVec3; facing: number } {
   const t = Math.min(Math.max(p, 0), 1);
   const dx = to[0] - from[0];
@@ -173,7 +173,7 @@ export function hopPath(
   const tx = 2 * u * (cx - from[0]) + 2 * t * (to[0] - cx);
   const tz = 2 * u * (cz - from[2]) + 2 * t * (to[2] - cz);
   const baseY = from[1] + (to[1] - from[1]) * t;
-  const y = t >= 1 ? to[1] : baseY + Math.abs(Math.sin(Math.PI * hops * t)) * 0.16 + Math.sin(Math.PI * t) * 0.12;
+  const y = t >= 1 ? to[1] : baseY + Math.abs(Math.sin(Math.PI * hops * t)) * 0.38 + Math.sin(Math.PI * t) * 0.28;
   return { position: t >= 1 ? [to[0], to[1], to[2]] : [x, y, z], facing: Math.atan2(tx, tz) };
 }
 
@@ -181,7 +181,7 @@ export function hopPath(
 export function idleBob(ms: number, frozen: boolean): { y: number; tilt: number } {
   if (frozen) return { y: 0, tilt: 0 };
   const s = ms / 1000;
-  return { y: (Math.sin(s * 2.4) * 0.5 + 0.5) * 0.022, tilt: Math.sin(s * 1.2) * 0.035 };
+  return { y: (Math.sin(s * 2.4) * 0.5 + 0.5) * 0.045, tilt: Math.sin(s * 1.2) * 0.06 };
 }
 
 const _yawQ = new Quaternion();

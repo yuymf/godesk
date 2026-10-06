@@ -407,7 +407,7 @@ export function HexSettlementBoard({
     });
     if (!any) return;
     setResourceGain(delta);
-    const t = window.setTimeout(() => setResourceGain({}), 1600);
+    const t = window.setTimeout(() => setResourceGain({}), 2000);
     return () => window.clearTimeout(t);
   }, [viewerResources, resourceLabel]);
 
