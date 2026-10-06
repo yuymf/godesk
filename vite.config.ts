@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 
 /**
  * G3D-02：three / SceneHost → `render3d-*` chunk（≤ 210 KB gzip）。
+ * G3D-14：通用桌面 mapper 与网格工厂随 creator 侧 TabletopScene3D 懒加载，不计入核心。
  * G3D-11：GLTF/KTX2/meshopt 加载器 → `render3d-assets-*`（≤ 60 KB gzip）。
  * Basis 转码器经 import.meta.url 产出独立文件，不计入 60 KB。
  */
@@ -43,7 +44,19 @@ export default defineConfig({
           if (chunkInfo.name === "render3d-assets") {
             return "assets/render3d-assets-[hash].js";
           }
-          if (chunkInfo.name === "render3d" || facade.includes("/src/render3d/")) {
+          // G3D-14：SceneHost 被 hex 盘与通用桌面（TabletopScene3D）共享后成为无 facade 的共享 chunk，
+          // 按内容判定：只含 src/render3d、three 与 tween 模块的 chunk 计入 render3d 核心预算。
+          const render3dOnly =
+            chunkInfo.moduleIds.length > 0 &&
+            chunkInfo.moduleIds.every((id) => {
+              const normalized = id.replace(/\\/g, "/");
+              return (
+                normalized.includes("/src/render3d/") ||
+                normalized.includes("/node_modules/three/") ||
+                normalized.includes("/node_modules/@tweenjs/")
+              );
+            });
+          if (chunkInfo.name === "render3d" || facade.includes("/src/render3d/") || render3dOnly) {
             return "assets/render3d-[hash].js";
           }
           return "assets/[name]-[hash].js";

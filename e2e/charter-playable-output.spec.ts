@@ -379,8 +379,8 @@ test.describe("ChatCut charter: source in, playable game out", () => {
           .evaluate((el) => getComputedStyle(el).backgroundColor),
       )
       .toBe("rgb(255, 255, 255)");
-    // W4-03 / W5-05: current harbor Room remains SVG until later G3D knives.
-    await expect(page.locator("canvas")).toHaveCount(0);
+    // G3D-14: the harbor Room now renders the generic 3D tabletop (one WebGL canvas) above the DOM action board.
+    await expect(page.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
     await expect(page.locator("body")).not.toContainText("WebGL");
     await expect(page.locator("body")).not.toContainText("GameFactory-3D");
 
@@ -449,7 +449,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
       timeout: 30_000,
     });
     await expect(page.getByText(/放置 3\/4 · 座位 0/)).toBeVisible();
-    await expect(page.locator("canvas")).toHaveCount(0);
+    await expect(page.locator("canvas")).toHaveCount(1);
 
     await friendContext.close();
     await thirdContext.close();
@@ -472,8 +472,8 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.getByRole("heading", { name: "港口十三号" })).toBeVisible();
     await expect(page.getByTestId("harbor-voyage-board")).toBeVisible();
     await expect(page.getByTestId("harbor-phase-label")).toHaveText("放置阶段");
-    // ADR 0014 owns the render-surface policy; this legacy Room is still SVG.
-    await expect(page.locator("canvas")).toHaveCount(0);
+    // G3D-14: generic 3D tabletop stage (DOM action board stays below it).
+    await expect(page.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
     await expect(page.locator("body")).not.toContainText("WebGL");
     await expect(page.locator("body")).not.toContainText("GameFactory-3D");
 
@@ -574,14 +574,14 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.locator(".game-log")).toContainText(/航次结算/);
     await expect(page.getByTestId("harbor-player-ledger")).toBeVisible();
     await expect(page.getByTestId("harbor-dock-group-port")).toBeVisible();
-    await expect(page.locator("canvas")).toHaveCount(0);
+    await expect(page.locator("canvas")).toHaveCount(1);
     await expect(page.locator("body")).not.toContainText("WebGL");
     await expect(page.locator("body")).not.toContainText("GameFactory-3D");
-    // Friend seats still see the same current SVG settle surface.
+    // Friend seats see the same settle surface (3D tabletop + DOM board).
     await expect(friendPage.getByTestId("harbor-phase-label")).toHaveText("已结算", {
       timeout: 30_000,
     });
-    await expect(friendPage.locator("canvas")).toHaveCount(0);
+    await expect(friendPage.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
 
     await friendContext.close();
     await thirdContext.close();

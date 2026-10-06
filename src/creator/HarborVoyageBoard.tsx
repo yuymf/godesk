@@ -8,6 +8,8 @@ import {
   type HarborTargetId,
   type HarborVoyageState,
 } from "../runtime/harbor-voyage";
+import type { RenderSpec } from "./render-spec";
+import { TabletopStage } from "./TabletopStage";
 import {
   HARBOR_DOCK_GROUP_KIND,
   HARBOR_LANDMARK_TEST_IDS,
@@ -46,11 +48,14 @@ export function HarborVoyageBoard({
   busy,
   onAct,
   readOnly = false,
+  render,
 }: {
   voyage: HarborVoyageState;
   busy?: boolean;
   onAct?: (actionId: string) => void;
   readOnly?: boolean;
+  /** G3D-14：build.ruleSystem.presentation.render（缺省用平台默认）。 */
+  render?: RenderSpec;
 }) {
   const [selectedPilot, setSelectedPilot] = useState<HarborCargoId>("cedar");
   const active = voyage.players.find((player) => player.seat === voyage.activeSeat);
@@ -82,6 +87,8 @@ export function HarborVoyageBoard({
         </p>
         <p className="harbor-instruction">{harborInstruction(voyage)}</p>
       </header>
+
+      <TabletopStage kernel="harbor-voyage-v1" onAct={interactive && !busy ? onAct : undefined} render={render} state={voyage} />
 
       <div
         className="sea-chart"

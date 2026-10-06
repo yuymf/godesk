@@ -84,14 +84,14 @@ export function ReplayView({ replayId }: { replayId: string }) {
           {replay.acceptedActions.length} 次行动 · 打到第 {replay.finalState.turn} 回合
         </p>
         {replay.finalState.voyage ? (
-          <HarborVoyageBoard readOnly voyage={replay.finalState.voyage as HarborVoyageState} />
+          <HarborVoyageBoard render={build?.ruleSystem.presentation.render} readOnly voyage={replay.finalState.voyage as HarborVoyageState} />
         ) : replay.finalState.workerPlacement ? (
-          <WorkerPlacementBoard
+          <WorkerPlacementBoard render={build?.ruleSystem.presentation.render}
             readOnly
             board={replay.finalState.workerPlacement as WorkerPlacementState}
           />
         ) : replay.finalState.othello ? (
-          <OthelloBoard
+          <OthelloBoard render={build?.ruleSystem.presentation.render}
             activeSeat={replay.finalState.activeSeat}
             enabled={false}
             othello={replay.finalState.othello}
@@ -105,7 +105,7 @@ export function ReplayView({ replayId }: { replayId: string }) {
             catan={replay.finalState.catan as HexSettlementBoardState}
           />
         ) : replay.finalState.networkRoute ? (
-          <NetworkRouteBoard
+          <NetworkRouteBoard render={build?.ruleSystem.presentation.render}
             activeSeat={replay.finalState.activeSeat}
             enabled={false}
             networkRoute={replay.finalState.networkRoute as NetworkRouteBoardState}
