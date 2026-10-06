@@ -19,7 +19,7 @@ export function HexSettlementScenePreview({
   return (
     <div
       aria-label={ariaLabel}
-      className="hexSettlement-board hex-settlement-preview"
+      className="tidewell-board hex-settlement-preview"
       role="region"
     >
       <div className="g3d-stage">

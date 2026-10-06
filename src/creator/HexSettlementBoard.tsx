@@ -6,6 +6,12 @@ import {
   type HexSettlementBoardState,
 } from "./hex-settlement-session";
 import type { RoomLocale } from "./room-presentation";
+import {
+  InkIcon,
+  RESOURCE_CARD_URL,
+  RESOURCE_ICON_ID,
+  seatMarkUrl,
+} from "./tidewell-hud-assets";
 
 export type { HexSettlementBoardState } from "./hex-settlement-session";
 
@@ -292,30 +298,41 @@ export function HexSettlementBoard({
   return (
     <div
       aria-label={copy.board}
-      className="hexSettlement-board hex-settlement-board tidewell-board"
+      className="tidewell-board hex-settlement-board tidewell-board"
       data-status={status}
       role="region"
     >
-      <section aria-label={copy.hud} className="hexSettlement-hud tidewell-hud">
-        <div className="hexSettlement-hud-status">
-          <span className="hexSettlement-kicker">{copy.active}</span>
+      <section aria-label={copy.hud} className="tidewell-hud tidewell-hud">
+        <div className="tidewell-hud-status">
+          <span className="tidewell-kicker">{copy.active}</span>
           <strong>
             {copy.seat} {activeSeat} · {copy.phase} {phaseLabel(hexSettlement.phase, locale)}
           </strong>
           <p>{statusLine}</p>
-          <p className="hexSettlement-hud-dice">{diceLine}</p>
+          <p className="tidewell-hud-dice">{diceLine}</p>
         </div>
-        <div className="hexSettlement-hud-scores" aria-label={copy.vp}>
+        <div className="tidewell-hud-scores" aria-label={copy.vp}>
           {vpScores.map((vp, seat) => (
             <div
-              className={`hexSettlement-score${seat === activeSeat ? " is-active" : ""}`}
+              className={`tidewell-score${seat === activeSeat ? " is-active" : ""}`}
               key={`vp-${seat}`}
             >
-              <span
-                aria-hidden="true"
-                className="hexSettlement-seat-swatch"
-                style={{ background: SEAT_COLORS[seat % SEAT_COLORS.length] }}
-              />
+              {seatMarkUrl(seat) ? (
+                <img
+                  alt=""
+                  aria-hidden="true"
+                  className="tidewell-seat-mark"
+                  height={28}
+                  src={seatMarkUrl(seat)}
+                  width={28}
+                />
+              ) : (
+                <span
+                  aria-hidden="true"
+                  className="tidewell-seat-swatch"
+                  style={{ background: SEAT_COLORS[seat % SEAT_COLORS.length] }}
+                />
+              )}
               <b>
                 {copy.seat} {seat} · {vp} {copy.vp}
               </b>
@@ -323,11 +340,24 @@ export function HexSettlementBoard({
           ))}
         </div>
         {viewerResources && (
-          <div aria-label={copy.resources} className="hexSettlement-hud-resources">
-            <span className="hexSettlement-kicker">{copy.resources}</span>
+          <div aria-label={copy.resources} className="tidewell-hud-resources">
+            <span className="tidewell-kicker">{copy.resources}</span>
             <ul>
               {(Object.keys(resourceLabel) as Resource[]).map((resource) => (
                 <li key={resource}>
+                  <InkIcon
+                    className="tidewell-ink-icon"
+                    id={RESOURCE_ICON_ID[resource] ?? "icon-res-wood"}
+                  />
+                  {RESOURCE_CARD_URL[resource] ? (
+                    <img
+                      alt=""
+                      className="tidewell-resource-card"
+                      height={28}
+                      src={RESOURCE_CARD_URL[resource]}
+                      width={20}
+                    />
+                  ) : null}
                   <span>{resourceLabel[resource]}</span>
                   <b>{viewerResources[resource] ?? 0}</b>
                 </li>
@@ -335,7 +365,7 @@ export function HexSettlementBoard({
             </ul>
           </div>
         )}
-        <dl className="hexSettlement-hud-awards">
+        <dl className="tidewell-hud-awards">
           <div>
             <dt>{copy.robber}</dt>
             <dd>{hexSettlement.robberHex}</dd>
@@ -391,7 +421,7 @@ export function HexSettlementBoard({
             <li key={actionKey(action)}>
               <button
                 aria-label={labelForBoardAction(action, copy, resourceLabel)}
-                className={`hexSettlement-action${compact ? " is-board-target" : ""}`}
+                className={`tidewell-action${compact ? " is-board-target" : ""}`}
                 disabled={busy}
                 onClick={() =>
                   onAct?.(
@@ -410,7 +440,7 @@ export function HexSettlementBoard({
         return (
           <div className="hex-settlement-actions">
             {primary.length > 0 && (
-              <ul aria-label={copy.primary} className="hexSettlement-action-row hex-settlement-primary-actions">
+              <ul aria-label={copy.primary} className="tidewell-action-row hex-settlement-primary-actions">
                 {renderButtons(primary, false)}
               </ul>
             )}
@@ -425,7 +455,7 @@ export function HexSettlementBoard({
                 <summary>
                   {copy.boardTargets} · {targets.length}
                 </summary>
-                <ul aria-label={copy.actions} className="hexSettlement-action-row hex-settlement-action-list">
+                <ul aria-label={copy.actions} className="tidewell-action-row hex-settlement-action-list">
                   {renderButtons(targets, true)}
                 </ul>
               </details>

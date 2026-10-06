@@ -5747,3 +5747,30 @@ summary:focus-visible {
 @media (max-width: 680px) {
   .hex-settlement-hud-placeholder { min-height: 357px; }
 }
+
+
+.tidewell-ink-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 auto;
+  color: #2a241c;
+}
+.tidewell-resource-card {
+  width: 1.25rem;
+  height: 1.75rem;
+  object-fit: cover;
+  border-radius: 0.2rem;
+  box-shadow: 0 1px 2px rgb(60 40 20 / 18%);
+}
+.tidewell-seat-mark {
+  width: 1.75rem;
+  height: 1.75rem;
+  object-fit: cover;
+  border-radius: 999px;
+  border: 1px solid rgb(120 90 50 / 35%);
+}
+.tidewell-hud-resources li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
