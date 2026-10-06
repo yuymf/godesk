@@ -3,17 +3,22 @@ import {
   workerPlacementInstruction,
   type WorkerPlacementState,
 } from "../runtime/worker-placement";
+import type { RenderSpec } from "./render-spec";
+import { TabletopStage } from "./TabletopStage";
 
 export function WorkerPlacementBoard({
   board,
   busy,
   onAct,
   readOnly = false,
+  render,
 }: {
   board: WorkerPlacementState;
   busy?: boolean;
   onAct?: (actionId: string) => void;
   readOnly?: boolean;
+  /** G3D-14：build.ruleSystem.presentation.render（缺省用平台默认）。 */
+  render?: RenderSpec;
 }) {
   const interactive = !readOnly && Boolean(onAct) && board.phase !== "resolved";
 
@@ -22,6 +27,7 @@ export function WorkerPlacementBoard({
       <p className="worker-placement-instruction">
         {workerPlacementInstruction(board)}
       </p>
+      <TabletopStage kernel="worker-placement-v1" onAct={interactive && !busy ? onAct : undefined} render={render} state={board} />
       <div className="worker-placement-regions" role="list">
         {board.regions.map((region) => {
           const occupied = board.placements.filter(

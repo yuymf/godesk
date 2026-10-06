@@ -5656,6 +5656,12 @@ summary:focus-visible {
   .g3d-stage { height: clamp(260px, 46vh, 420px); }
 }
 
+/* G3D-14 — 通用 3D 桌面舞台：固定高度（懒加载前后不跳动），矮于 hex 舞台，下方保留 DOM 动作盘。 */
+.tabletop-stage { height: clamp(260px, 46vh, 520px); margin: .75rem 0; background: #e9eef0; }
+@media (max-width: 680px) {
+  .tabletop-stage { height: clamp(240px, 40vh, 360px); }
+}
+
 /* G3D-05 — Room CLS: reserve the HexSettlementBoard HUD height while its lazy chunk loads
    (measured initial HUD: 357px @412px, 315px @1350px; Lighthouse Room CLS 0.243 → see PR #110). */
 .hex-settlement-hud-placeholder { min-height: 315px; }

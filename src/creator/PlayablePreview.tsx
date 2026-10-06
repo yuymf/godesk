@@ -125,7 +125,7 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
       </section>
       {harbor ? (
         <section className="preview-board" aria-label="航次可玩桌面">
-          <HarborVoyageBoard
+          <HarborVoyageBoard render={build.ruleSystem.presentation.render}
             readOnly
             voyage={createHarborVoyageState(
               build.ruleSystem.participants.default,
@@ -134,7 +134,7 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
         </section>
       ) : workerPlacement ? (
         <section className="preview-board" aria-label="工人放置可玩桌面">
-          <WorkerPlacementBoard
+          <WorkerPlacementBoard render={build.ruleSystem.presentation.render}
             readOnly
             board={createWorkerPlacementState({
               playerCount: workerPlacement.playerCount,
@@ -148,7 +148,7 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
         </section>
       ) : discFlipping && discKernel ? (
         <section className="preview-board" aria-label="黑白棋可玩桌面">
-          <OthelloBoard
+          <OthelloBoard render={build.ruleSystem.presentation.render}
             activeSeat={0}
             enabled={false}
             othello={createInitialOthelloSessionSlice(discKernel.rows, discKernel.cols)}
@@ -165,7 +165,7 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
         </section>
       ) : networkRoute && networkKernel ? (
         <section className="preview-board" aria-label="线路网络可玩桌面">
-          <NetworkRouteBoard
+          <NetworkRouteBoard render={build.ruleSystem.presentation.render}
             activeSeat={0}
             enabled={false}
             networkRoute={createInitialNetworkRouteSessionSlice()}

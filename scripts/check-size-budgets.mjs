@@ -4,6 +4,7 @@
  * - index-*.js ≤ 170 KB gzip (homepage)
  * - render3d-*.js excluding render3d-assets-* ≤ 210 KB gzip (sum)
  * - render3d-assets-*.js ≤ 60 KB gzip
+ * - TabletopScene3D-*.js ≤ 12 KB gzip（G3D-14 通用桌面 mapper + 网格工厂，懒加载，不计入核心）
  */
 import { gzipSync } from "node:zlib";
 import { readFileSync, readdirSync } from "node:fs";
@@ -37,4 +38,5 @@ let ok = true;
 ok = check("homepage index JS", index, 170) && ok;
 ok = check("render3d core (excl. assets)", render3d, 210) && ok;
 ok = check("render3d-assets", assets, 60) && ok;
+ok = check("tabletop mapper (lazy)", files.filter((f) => /^TabletopScene3D-.*\.js$/.test(f)), 12) && ok;
 process.exit(ok ? 0 : 1);

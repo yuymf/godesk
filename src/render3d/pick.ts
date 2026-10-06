@@ -8,6 +8,8 @@ import {
 export type PickTarget = {
   nodeId: string;
   kind: string;
+  /** World-space hit point (G3D-14: grid boards resolve the cell from it). */
+  point?: readonly [number, number, number];
 };
 
 export type PickableLegalAction = {
@@ -41,7 +43,11 @@ export function pickFromPointerEvent(
       if (current.userData?.removing) break;
       const nodeId = current.userData?.nodeId;
       if (typeof nodeId === "string" && nodeId.length > 0) {
-        return { nodeId, kind: String(current.userData?.kind ?? "") };
+        return {
+          nodeId,
+          kind: String(current.userData?.kind ?? ""),
+          point: [hit.point.x, hit.point.y, hit.point.z],
+        };
       }
       current = current.parent;
     }
