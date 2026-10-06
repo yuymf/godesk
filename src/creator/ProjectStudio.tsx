@@ -1,5 +1,5 @@
 import { GameSpecStatus } from "./GameSpecStatus";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import {
   applyProjectChanges,
   createSharedSession,
@@ -67,6 +67,8 @@ import {
   validationStudioHref,
   visibleCreatorJob,
 } from "./studio-utils";
+
+const AssetSearchPanel = lazy(() => import("./asset-search/AssetSearchPanel"));
 
 function CapabilityList({ project }: { project: GameProject }) {
   return (
@@ -1092,13 +1094,14 @@ export function ProjectStudio({ projectId }: { projectId: string }) {
 
   return (
     <main className={`creator-studio studio-focus-${hobbyistFocus}`} id="main">
-      <aside className="studio-rail" aria-label="游戏导航">
+      <aside className="studio-rail">
         <Brand />
-        <nav>
+        <nav aria-label="游戏导航">
           <span>这局游戏</span>
           {canPlayLatest && <a href="#play">开玩</a>}
           {generationPlan && <a href="#plan">{generationPlan.status === "pending" ? "确认玩法" : "玩法摘要"}</a>}
           {generationPlan?.status !== "pending" && <a href="#iteration">改下一版</a>}
+          <a href="#asset-search">资产搜索</a>
           <a href="#validation">朋友反馈{unreviewedFeedbackCount ? ` · ${unreviewedFeedbackCount}` : ""}</a>
         </nav>
         <a className="back-projects" href={href("/games")}>← 返回所有游戏</a>
@@ -1315,6 +1318,17 @@ export function ProjectStudio({ projectId }: { projectId: string }) {
               )}
             </form>
           </section>
+
+          <Suspense fallback={<section className="asset-search-panel" id="asset-search"><h2>资产搜索</h2></section>}>
+            <AssetSearchPanel
+              disabled={busy || ruleSystemDirty}
+              expectedVersion={project.version}
+              onImported={() => {
+                loadProject().catch((reason: Error) => setFormError(reason.message));
+              }}
+              projectId={projectId}
+            />
+          </Suspense>
 
           {generationPlan?.status !== "pending" && <StudioBuildPlayPanel
             attestHumanSession={attestHumanSession}

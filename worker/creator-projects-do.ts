@@ -23,6 +23,14 @@ import {
 import { playabilityFloor } from "../src/runtime/playability-floor";
 import { presentationFloor } from "../src/runtime/presentation-floor";
 import { buildMeetsShareGate, shareGateRefusal } from "../src/runtime/share-gate";
+import type { AssetServerAsset, ImportedAssetFile } from "../src/creator/asset-search/types";
+import { importTooLargeMessage } from "../src/creator/asset-search/config";
+import { isValidAssetServerId } from "./asset-server";
+import {
+  applyImportedAsset,
+  decodeImportFiles,
+  importedBlobKey,
+} from "./imported-assets";
 import type {
   AcceptedAction,
   ApplyProjectChangesInput,
@@ -648,6 +656,112 @@ export class CreatorProjects extends DurableObject<Env> {
       }
   }
 
+  async importExternalAsset(projectId: string, input: unknown) {
+    const body = input as {
+      expectedVersion?: unknown;
+      idempotencyKey?: unknown;
+      asset?: unknown;
+      files?: unknown;
+    };
+    if (
+      !Number.isInteger(body.expectedVersion) ||
+      typeof body.idempotencyKey !== "string" ||
+      !body.idempotencyKey ||
+      !body.asset ||
+      typeof body.asset !== "object"
+    ) {
+      return error("导入请求无效。", 400);
+    }
+    const asset = body.asset as AssetServerAsset;
+    if (typeof asset.id !== "string" || !isValidAssetServerId(asset.id)) {
+      return error("资产 id 无效。", 400);
+    }
+    let files: ReturnType<typeof decodeImportFiles>;
+    try {
+      files = decodeImportFiles(Array.isArray(body.files) ? body.files as ImportedAssetFile[] : []);
+    } catch (reason) {
+      const code = reason instanceof Error ? reason.message : "invalid_import_file";
+      if (code === "import_too_large") return error(importTooLargeMessage(), 413);
+      return error("导入文件无效。", 400);
+    }
+    const projectKey = `${PROJECT_PREFIX}${projectId}`;
+    const idempotencyKey = `idempotency:${projectId}:${body.idempotencyKey}`;
+    try {
+      const outcome = await this.ctx.storage.transaction(async (transaction) => {
+        const existing = await transaction.get<{
+          studioPath: string;
+          project: ProjectRecord["project"];
+          sources: ProjectRecord["sources"];
+          importedAssets: ProjectRecord["importedAssets"];
+          licensesMarkdown: string;
+          changeset: { id: string };
+        }>(idempotencyKey);
+        if (existing) return { status: 200, value: existing };
+        const stored = await transaction.get<ProjectRecord>(projectKey);
+        if (!stored) return { status: 404, value: { error: "project_not_found" } };
+        const record = normalizedProjectRecord(stored);
+        if (record.project.version !== body.expectedVersion) {
+          return {
+            status: 409,
+            value: {
+              error: "version_conflict",
+              currentVersion: record.project.version,
+            },
+          };
+        }
+        const imported = applyImportedAsset(record, asset, files);
+        const now = new Date().toISOString();
+        const previousVersion = record.project.version;
+        record.project = {
+          ...record.project,
+          version: previousVersion + 1,
+          updatedAt: now,
+        };
+        const changeset = {
+          id: `changeset_${crypto.randomUUID()}`,
+          previousVersion,
+          newVersion: record.project.version,
+          affectedEntities: [`imported-asset:${imported.id}`, "source:assets/LICENSES.md"],
+          createdAt: now,
+        };
+        record.changesets.push(changeset);
+        const value = {
+          project: record.project,
+          ruleSystem: record.ruleSystem,
+          generationPlan: null,
+          sources: record.sources,
+          hypotheses: record.hypotheses,
+          findings: record.findings,
+          changeset,
+          warnings: [],
+          studioPath: `/studio/${record.project.id}`,
+          importedAssets: record.importedAssets ?? [],
+          licensesMarkdown: record.importedLicensesMarkdown ?? "",
+        };
+        await transaction.put({
+          [projectKey]: record,
+          [idempotencyKey]: value,
+          [importedBlobKey(record.project.id, imported.id)]: {
+            path: imported.path,
+            mimeType: imported.mimeType,
+            bytes: files[0]!.bytes,
+          },
+        });
+        return { status: 200, value };
+      });
+      return json(outcome.value, outcome.status);
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : "import_failed";
+      if (/SQLITE_TOOBIG|string or blob too big/i.test(message)) {
+        return error(importTooLargeMessage(), 413);
+      }
+      if (message === "import_files_required" || message === "invalid_import_file" || message === "invalid_import_path") {
+        return error("导入文件无效。", 400);
+      }
+      return error(message, 400);
+    }
+  }
+
   async compileProjectBuild(
     projectId: string,
     input: CompileBuildInput,
@@ -1150,6 +1264,8 @@ export class CreatorProjects extends DurableObject<Env> {
         jobs: [],
         hypotheses: [],
         findings: [],
+        importedAssets: [],
+        importedLicensesMarkdown: "",
       };
       await this.ctx.storage.put(`${PROJECT_PREFIX}${project.id}`, record);
       return json(project, 201);
@@ -1551,6 +1667,9 @@ export class CreatorProjects extends DurableObject<Env> {
             `job-input:${job.id}`,
             `job-idempotency:${job.projectId}:${job.idempotencyKey}`,
           ]),
+          ...(record.importedAssets ?? []).map((asset) =>
+            importedBlobKey(record.project.id, asset.id),
+          ),
           ...idempotencyLists.flatMap((entries) => [...entries.keys()]),
         ]);
         const value = { deletedProjectId: record.project.id };
@@ -1568,6 +1687,12 @@ export class CreatorProjects extends DurableObject<Env> {
       }
       return this.applyProjectChanges(changeMatch[1], input);
 
+    }
+
+    const importMatch = url.pathname.match(/^\/projects\/([^/]+)\/imported-assets$/);
+    if (request.method === "POST" && importMatch) {
+      const input = await request.json().catch(() => undefined);
+      return this.importExternalAsset(importMatch[1], input);
     }
 
     const submitJobMatch = url.pathname.match(/^\/projects\/([^/]+)\/jobs$/);
@@ -2336,6 +2461,12 @@ export class CreatorProjects extends DurableObject<Env> {
       }
       if (view === "sources") {
         return json(paginated(record.sources, url, "sources"));
+      }
+      if (view === "imported-assets") {
+        return json({
+          assets: record.importedAssets ?? [],
+          licensesMarkdown: record.importedLicensesMarkdown ?? "",
+        });
       }
       if (view === "changesets") {
         return json(paginated(record.changesets, url, "changesets"));

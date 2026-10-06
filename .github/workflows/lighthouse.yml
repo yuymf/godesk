@@ -8,8 +8,11 @@ name: Lighthouse CI
 # CI minute budget (see docs/ci/actions-budget.md):
 # - Runs only when front-end / Worker / perf-harness files change, never for
 #   docs-only changes, and not on push to main (the PR run already covered it).
-# - Draft PRs are skipped; PR runs collect 1 run per URL (assertions are
-#   warn-level). Manual dispatch keeps the 3-run median from lighthouserc.json.
+# - Draft PRs are skipped; PR runs collect 1 run per URL. Homepage TBT is
+#   warn on that single sample (simulated-throttle TBT is too noisy; 1-run CI
+#   has reported 229 / 369 ms while the G3D-05 3-run median was 0 ms).
+#   workflow_dispatch keeps the 3-run median and error-level TBT from
+#   lighthouserc.json.
 on:
   pull_request:
     branches: [main]
@@ -28,6 +31,7 @@ on:
       - "lighthouserc.json"
       - "scripts/perf-serve.mjs"
       - "scripts/perf/**"
+      - "scripts/lhci-warn-errors.mjs"
       - ".github/workflows/lighthouse.yml"
       - "!**/*.md"
   workflow_dispatch:
@@ -85,7 +89,13 @@ jobs:
       - name: Lighthouse CI autorun (home + Room)
         run: |
           echo "::notice::Lighthouse runs per URL: $LHCI_RUNS"
-          pnpm exec lhci autorun --collect.numberOfRuns="$LHCI_RUNS" \
+          CONFIG=lighthouserc.json
+          if [ "$LHCI_RUNS" = "1" ]; then
+            CONFIG=lighthouserc.pr.json
+            node scripts/lhci-warn-errors.mjs lighthouserc.json "$CONFIG"
+            echo "::notice::PR 1-run: homepage TBT demoted to warn (3-run dispatch stays error)"
+          fi
+          pnpm exec lhci autorun --config="$CONFIG" --collect.numberOfRuns="$LHCI_RUNS" \
             --collect.url="$LHCI_HOME_URL" --collect.url="$LHCI_ROOM_URL"
 
       # G3D-17 上线前清单 · Lighthouse 项：列出 lighthouserc.json 里仍为 warn 级的断言并按 median-run 对照阈值。
