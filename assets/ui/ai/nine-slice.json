@@ -1,0 +1,26 @@
+{
+  "panel-frame": {
+    "width": 380,
+    "height": 380,
+    "slice": {
+      "top": 130,
+      "right": 130,
+      "bottom": 130,
+      "left": 130
+    },
+    "css": "border-image: url(panel-frame.webp) 130 fill / 65px stretch;",
+    "note": "四边为素边条，可任意拉伸；中心为纸色 fill"
+  },
+  "card-frame": {
+    "width": 448,
+    "height": 615,
+    "slice": {
+      "top": 90,
+      "right": 60,
+      "bottom": 110,
+      "left": 60
+    },
+    "css": "border-image: url(card-frame.webp) 90 60 110 60 fill / 45px 30px 55px 30px stretch;",
+    "note": "适用宽高比接近 3:4 的卡片；中心为纸色插画窗"
+  }
+}
