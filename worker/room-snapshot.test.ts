@@ -46,7 +46,7 @@ async function waitForJob(id: string) {
   throw new Error(`job ${id} did not finish`);
 }
 
-async function catanBuild(key: string) {
+async function hexIslandBuild(key: string) {
   const { project } = await (await post("/api/projects", { name: `Snapshot ${key}` })).json<{ project: GameProject }>();
   const queued = await (await post(`/api/projects/${project.id}/jobs`, {
     kind: "generate-rule-system",
@@ -126,7 +126,7 @@ beforeEach(() => {
 
 describe("Room incremental kernel state (G3D-04c)", () => {
   it("snapshot + tail replay equals full replay (state hash) over the full seed-42 game", async () => {
-    const { build: created, ruleSystem } = await catanBuild("hash");
+    const { build: created, ruleSystem } = await hexIslandBuild("hash");
     const build = await storedBuild(created.id);
     const simulation = runBotSimulation(ruleSystem, 42);
     const total = simulation.acceptedActions.length;
@@ -156,7 +156,7 @@ describe("Room incremental kernel state (G3D-04c)", () => {
   }, 360_000);
 
   it("survives DO restarts mid-game: rebuilds from snapshot + tail and finishes equal to the simulation", async () => {
-    const { build, ruleSystem } = await catanBuild("restart");
+    const { build, ruleSystem } = await hexIslandBuild("restart");
     const simulation = runBotSimulation(ruleSystem, 42);
     const room = await (await createRoom(build.id, {})).json<{ id: string }>();
     const tokens = [(await claimSeat(room.id, 0)).seatToken!, (await claimSeat(room.id, 1)).seatToken!];

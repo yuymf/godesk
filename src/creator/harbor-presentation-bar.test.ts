@@ -9,7 +9,7 @@ import { HarborVoyageBoard } from "./HarborVoyageBoard";
 describe("harbor presentation bar contract (W4-03)", () => {
   it("declares the harbor flagship visual reference", () => {
     expect(HARBOR_PRESENTATION_BAR.flagshipExample).toBe("港口十三号");
-    expect(HARBOR_PRESENTATION_BAR.visualReference).toBe("settlecoast");
+    expect(HARBOR_PRESENTATION_BAR.visualReference).toBe("industry-3d-tabletop-quality");
   });
 
   it("exports spectator landmarks for cargo tracks and dock groups", () => {

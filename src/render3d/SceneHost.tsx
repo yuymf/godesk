@@ -5,16 +5,24 @@ import {
   CylinderGeometry,
   ExtrudeGeometry,
   Mesh,
-  type Object3D,
+  Object3D,
   PerspectiveCamera,
   Scene,
   Shape,
   SphereGeometry,
   type Texture,
   WebGLRenderer,
+  type BufferGeometry,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { buildLegalHitOverlays, disposeHitOverlay } from "./hit-targets";
+import { buildLegalHitOverlays, disposeHitOverlay, disposeSharedHitResources } from "./hit-targets";
+import { createInstancePools, type InstancePools } from "./instance-pools";
+import {
+  disposeTidewellGeometryCache,
+  ensureTidewellGeometries,
+  geometryForNode,
+  getTidewellGeometriesSync,
+} from "./model-templates";
 import { mapHexSettlementToScene } from "./mappers/hex-settlement";
 import {
   matchPickToLegalAction,
@@ -119,7 +127,35 @@ function hexShape(radius: number, bevel = 0.04): Shape {
   return shape;
 }
 
-function disposeObject(object: Object3D): void {
+/** Shared template geometries for G3D-13 InstancedMesh pools (one draw call per group). */
+let SHARED_TILE_GEOM: BufferGeometry | null = null;
+let SHARED_ROAD_GEOM: BufferGeometry | null = null;
+let SHARED_DECOR_GEOM: BufferGeometry | null = null;
+
+function sharedTileGeom(): BufferGeometry {
+  if (!SHARED_TILE_GEOM) {
+    const geom = new ExtrudeGeometry(hexShape(TILE_RADIUS), { depth: 0.28, bevelEnabled: false });
+    geom.rotateX(-Math.PI / 2);
+    SHARED_TILE_GEOM = geom;
+  }
+  return SHARED_TILE_GEOM;
+}
+function sharedRoadGeom(): BufferGeometry {
+  if (!SHARED_ROAD_GEOM) SHARED_ROAD_GEOM = new BoxGeometry(1, 1, 1);
+  return SHARED_ROAD_GEOM;
+}
+function sharedDecorGeom(): BufferGeometry {
+  if (!SHARED_DECOR_GEOM) SHARED_DECOR_GEOM = new SphereGeometry(0.18, 10, 10);
+  return SHARED_DECOR_GEOM;
+}
+
+function disposeObject(object: Object3D, pools?: InstancePools | null): void {
+  const inst = object.userData.gdInstance as { poolKey: string; index: number } | undefined;
+  if (inst && pools) {
+    pools.release(inst.poolKey, inst.index);
+    object.userData.gdInstance = undefined;
+    return;
+  }
   object.traverse((child) => {
     const mesh = child as Mesh;
     // G3D-14：通用桌面的网格线是 LineSegments，同样要释放几何 / 材质。
@@ -171,7 +207,57 @@ export function materialFor(node: SceneNode): { key: string; token: MaterialToke
   }
 }
 
-function createNodeObject(node: SceneNode, caps: TierCaps, library: MaterialLibrary): Object3D {
+function batchableKind(kind: SceneNode["kind"]): boolean {
+  return (
+    kind === "tile" ||
+    kind === "road" ||
+    kind === "decor" ||
+    kind === "settlement" ||
+    kind === "city" ||
+    kind === "robber" ||
+    kind === "number-token" ||
+    kind === "port" ||
+    kind === "ship"
+  );
+}
+
+let SHARED_NUMBER_GEOM: BufferGeometry | null = null;
+function sharedNumberGeom(): BufferGeometry {
+  if (!SHARED_NUMBER_GEOM) SHARED_NUMBER_GEOM = new CylinderGeometry(0.22, 0.22, 0.06, 24);
+  return SHARED_NUMBER_GEOM;
+}
+
+function disposeSharedSceneGeometries(): void {
+  SHARED_TILE_GEOM?.dispose();
+  SHARED_ROAD_GEOM?.dispose();
+  SHARED_DECOR_GEOM?.dispose();
+  SHARED_NUMBER_GEOM?.dispose();
+  SHARED_TILE_GEOM = null;
+  SHARED_ROAD_GEOM = null;
+  SHARED_DECOR_GEOM = null;
+  SHARED_NUMBER_GEOM = null;
+}
+
+
+function geomForBatch(node: SceneNode): BufferGeometry {
+  const tide = getTidewellGeometriesSync();
+  if (node.kind === "tile") return sharedTileGeom();
+  if (node.kind === "road") return tide.ready ? tide.road : sharedRoadGeom();
+  if (node.kind === "decor") return geometryForNode(node, tide);
+  if (node.kind === "number-token") return sharedNumberGeom();
+  if (
+    node.kind === "settlement" ||
+    node.kind === "city" ||
+    node.kind === "robber" ||
+    node.kind === "port" ||
+    node.kind === "ship"
+  ) {
+    return geometryForNode(node, tide);
+  }
+  return sharedDecorGeom();
+}
+
+function createNodeObject(node: SceneNode, caps: TierCaps, library: MaterialLibrary, pools?: InstancePools | null): Object3D {
   const { key, token } = materialFor(node);
   const mat = library.get(key, token);
   const applyPose = (mesh: Mesh) => {
@@ -187,59 +273,68 @@ function createNodeObject(node: SceneNode, caps: TierCaps, library: MaterialLibr
     return mesh;
   };
 
+  if (pools && batchableKind(node.kind)) {
+    const geom = geomForBatch(node);
+    const castShadow =
+      node.kind === "number-token"
+        ? false
+        : node.kind === "tile"
+          ? caps.tilesCastShadow
+          : true;
+    const poolKey = `${node.kind}:${key}`;
+    const { index } = pools.acquire(poolKey, geom, mat, castShadow);
+    const handle = new Object3D();
+    handle.position.set(node.position[0], node.position[1], node.position[2]);
+    if (node.rotationY !== undefined) handle.rotation.y = node.rotationY;
+    if (node.scale) handle.scale.set(node.scale[0], node.scale[1], node.scale[2]);
+    handle.userData.nodeId = node.id;
+    handle.userData.kind = node.kind;
+    handle.userData.gdInstance = { poolKey, index };
+    pools.setMatrix(poolKey, index, handle);
+    return handle;
+  }
+
   if (node.kind === "tile") {
-    const geom = new ExtrudeGeometry(hexShape(TILE_RADIUS), { depth: 0.28, bevelEnabled: false });
-    geom.rotateX(-Math.PI / 2);
-    return applyPose(new Mesh(geom, mat));
+    return applyPose(new Mesh(sharedTileGeom().clone(), mat));
   }
 
   if (node.kind === "number-token") {
     return applyPose(new Mesh(new CylinderGeometry(0.22, 0.22, 0.06, 24), mat));
   }
 
-  if (node.kind === "robber") {
-    return applyPose(new Mesh(new CylinderGeometry(0.12, 0.18, 0.7, 12), mat));
-  }
-
-  if (node.kind === "settlement") {
-    return applyPose(new Mesh(new BoxGeometry(0.28, 0.28, 0.28), mat));
-  }
-
-  if (node.kind === "city") {
-    return applyPose(new Mesh(new BoxGeometry(0.36, 0.48, 0.36), mat));
-  }
-
-  if (node.kind === "road") {
-    return applyPose(new Mesh(new BoxGeometry(1, 1, 1), mat));
-  }
-
-  if (node.kind === "port" || node.kind === "ship" || node.kind === "die" || node.kind === "dice-tray" || node.kind === "decor") {
-    const finish = (mesh: Mesh) => {
-      const posed = applyPose(mesh);
-      if (node.kind === "die") posed.rotation.set(...dieFaceEuler(node.number));
-      return posed;
-    };
-    const geom =
-      node.kind === "ship"
-        ? new BoxGeometry(0.5, 0.18, 0.22)
-        : node.kind === "die"
-          ? new BoxGeometry(0.22, 0.22, 0.22)
-          : node.kind === "decor"
-            ? new SphereGeometry(0.18, 10, 10)
-            : new BoxGeometry(0.4, 0.12, 0.4);
-    return finish(new Mesh(geom, mat));
+  const tide = getTidewellGeometriesSync();
+  if (
+    node.kind === "robber" ||
+    node.kind === "settlement" ||
+    node.kind === "city" ||
+    node.kind === "road" ||
+    node.kind === "port" ||
+    node.kind === "ship" ||
+    node.kind === "die" ||
+    node.kind === "dice-tray" ||
+    node.kind === "decor"
+  ) {
+    const mesh = applyPose(new Mesh(geometryForNode(node, tide).clone(), mat));
+    if (node.kind === "die") mesh.rotation.set(...dieFaceEuler(node.number));
+    return mesh;
   }
 
   // cliff default
   return applyPose(new Mesh(new CylinderGeometry(1, 1.05, 1, 6), mat));
 }
 
-function updateNodeObject(object: Object3D, node: SceneNode, library: MaterialLibrary): void {
+function updateNodeObject(object: Object3D, node: SceneNode, library: MaterialLibrary, pools?: InstancePools | null): void {
   object.position.set(node.position[0], node.position[1], node.position[2]);
   if (node.rotationY !== undefined) object.rotation.y = node.rotationY;
   if (node.scale) object.scale.set(node.scale[0], node.scale[1], node.scale[2]);
   else if (node.kind === "settlement" || node.kind === "city" || node.kind === "robber") object.scale.set(1, 1, 1);
   if (node.kind === "die") object.rotation.set(...dieFaceEuler(node.number));
+  const inst = object.userData.gdInstance as { poolKey: string; index: number } | undefined;
+  if (inst && pools) {
+    // Material group changes are rare for tiles; pose sync is the hot path.
+    pools.setMatrix(inst.poolKey, inst.index, object);
+    return;
+  }
   const mesh = object as Mesh;
   if (!mesh.isMesh) return;
   // 地形 / 座位变化：换成对应的共享材质（不改共享材质本身的颜色）。
@@ -316,6 +411,7 @@ export function SceneHost({
   /** 场景内容变化 → 阴影贴图在接下来 SHADOW_REFRESH_MS 内逐帧重绘。 */
   const markShadowsDirtyRef = useRef<() => void>(() => {});
   const [pbrState, setPbrState] = useState<"off" | "pending" | "512" | "256" | "error">("pending");
+  /** G3D-13: flip when pieces/decor/props GLBs replace procedural placeholders. */
 
   function reframe(focus: readonly [number, number, number], id: string) {
     const motion = motionRef.current;
@@ -325,15 +421,17 @@ export function SceneHost({
   }
 
   function buildHost(root: Object3D, getCaps: () => TierCaps, library: MaterialLibrary, motion: MotionController) {
+    const pools = createInstancePools(root);
     return {
       root,
+      pools,
       create: (node: SceneNode) => adapterRef.current
         ? adapterRef.current.create(node, { library, caps: getCaps() })
-        : createNodeObject(node, getCaps(), library),
+        : createNodeObject(node, getCaps(), library, pools),
       update: (object: Object3D, node: SceneNode) => adapterRef.current
         ? adapterRef.current.update(object, node, { library, caps: getCaps() })
-        : updateNodeObject(object, node, library),
-      disposeObject,
+        : updateNodeObject(object, node, library, pools),
+      disposeObject: (object: Object3D) => disposeObject(object, pools),
       motion: {
         added: (object: Object3D, node: SceneNode) => {
           if (node.kind === "piece") {
@@ -450,7 +548,6 @@ export function SceneHost({
     hitRootRef.current = hitRoot;
     cameraRef.current = camera;
     canvasRef.current = renderer.domElement;
-    setReady(true);
 
     const onPointerUp = (event: PointerEvent) => {
       if (!interactiveRef.current || !onPickRef.current) return;
@@ -498,6 +595,10 @@ export function SceneHost({
 
     let frameId = 0;
     let disposed = false;
+    // G3D-13: load Tidewell GLBs before hex reconcile (avoids remount that aborted water).
+    void ensureTidewellGeometries().finally(() => {
+      if (!disposed) setReady(true);
+    });
     let lastFrameAt: number | null = null;
     let warmFrames = 0;
     const downgradeMonitor = new RuntimeDowngradeMonitor();
@@ -674,11 +775,15 @@ export function SceneHost({
       }
       contentRoot.traverse((child) => {
         const mesh = child as Mesh;
-        if (mesh.isMesh) {
-          mesh.geometry?.dispose();
-          const material = mesh.material;
-          if (Array.isArray(material)) for (const entry of material) entry.dispose();
-          else material?.dispose();
+        if (!mesh.isMesh) return;
+        // InstancedMesh pools own shared geom/mat; pools.dispose() handles them.
+        if (mesh.userData.gdInstancePool || mesh.userData.gdShared) return;
+        mesh.geometry?.dispose();
+        const material = mesh.material;
+        if (Array.isArray(material)) {
+          for (const entry of material) if (!entry.userData?.gdShared) entry.dispose();
+        } else if (material && !material.userData?.gdShared) {
+          material.dispose();
         }
       });
       scene.remove(sky);
@@ -692,6 +797,11 @@ export function SceneHost({
       // 须在 perf 快照前释放贴花图集，否则计为残留纹理。
       numberLabelsRef.current?.dispose();
       numberLabelsRef.current = null;
+      const hostPools = reconcileHostRef.current as { pools?: InstancePools } | null;
+      hostPools?.pools?.dispose();
+      disposeSharedSceneGeometries();
+      disposeSharedHitResources();
+      disposeTidewellGeometryCache();
       perf?.beforeDispose(renderer);
       detachPerf?.();
       renderer.dispose();

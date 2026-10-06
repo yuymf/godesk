@@ -1,9 +1,24 @@
 name: Verify and deploy Godesk
 
+# CI minute budget (see docs/ci/actions-budget.md):
+# - Docs-only pushes (docs/**, **/*.md, STATUS, prompt-trace) do not deploy.
+# - The full Playwright suite already ran on the ready PR head (verify.yml), so
+#   main runs build + unit/Worker tests only before deploying. Use
+#   "Run workflow" with full_e2e=true to rerun Playwright on main by hand.
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "**/STATUS*"
+      - "**/prompt-trace/**"
   workflow_dispatch:
+    inputs:
+      full_e2e:
+        description: Also run the full Playwright suite before deploying
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -14,7 +29,8 @@ concurrency:
 
 jobs:
   verify:
-    name: Tests and Playwright
+    # Renamed from "Tests and Playwright": push-to-main check, not a PR merge gate.
+    name: Build and unit tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -36,8 +52,12 @@ jobs:
       - run: pnpm test:worker
       - run: pnpm typecheck
       - run: pnpm verify:plugin
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e
+      - name: Install Playwright Chromium (manual full_e2e only)
+        if: inputs.full_e2e
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Playwright e2e (manual full_e2e only)
+        if: inputs.full_e2e
+        run: pnpm test:e2e
 
   deploy:
     name: Deploy to Cloudflare

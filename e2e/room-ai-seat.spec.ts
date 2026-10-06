@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
 import { mkdirSync } from "node:fs";
 
 /**
@@ -9,11 +10,11 @@ import { mkdirSync } from "node:fs";
  * - `@slow` (GODESK_E2E_SLOW=1): full game to game over vs the AI seat on
  *   desktop 1440×900 (mouse) and iPhone 12 Pro 390×844 (touch).
  */
-const CATAN_PROMPT = "做一款可以与电脑对战的卡坦岛基础版";
+const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿六角岛资源建造游戏";
 
 async function openAiRoom(page: Page) {
   await page.goto("/chatgpt-plugin/new");
-  await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(CATAN_PROMPT);
+  await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(HEX_ISLAND_PROMPT);
   await page.getByRole("button", { name: "生成可玩版本" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 90_000 });
   await page.getByRole("button", { name: "确认玩法并开始试玩" }).click();
@@ -27,8 +28,8 @@ async function openAiRoom(page: Page) {
   await expect(seatSelect.locator("option[value='1']")).toHaveText(/电脑/);
   await expect(seatSelect.locator("option[value='1']")).toHaveAttribute("disabled", "");
   await seatSelect.selectOption("0");
-  const board = page.getByRole("region", { name: "卡坦六角岛" });
-  await expect(page.getByRole("img", { name: "卡坦六角岛" })).toBeVisible({ timeout: 30_000 });
+  const board = page.getByRole("region", { name: "汐屿六角岛" });
+  await expect(page.getByRole("img", { name: "汐屿六角岛" })).toBeVisible({ timeout: 30_000 });
   await expect(page.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
   await expect(page.locator(".seat-chip").filter({ hasText: "电脑" })).toHaveCount(1);
   return board;
@@ -56,8 +57,9 @@ test("G3D-04b · AI seat takes its setup turns (single human browser)", async ({
   const board = await openAiRoom(page);
   const hud = board.getByRole("region", { name: "对局状态" });
   await expect(hud).toContainText("轮到你行动");
-  await board.getByRole("button", { name: /放置定居点/ }).first().click();
-  await board.getByRole("button", { name: /放置道路/ }).first().click();
+  await clickTidewellBoardAction(board, /建造渔村/);
+  await openTidewellBoardTargets(board);
+  await board.getByRole("button", { name: /铺设栈道/ }).first().click();
   // Snake setup 0, 1, 1, 0 — the computer plays both of its turns by itself.
   await expect(hud).toContainText("电脑思考中", { timeout: 15_000 });
   await expect(hud).toContainText("轮到你行动", { timeout: 30_000 });
@@ -68,12 +70,19 @@ test("G3D-04b · AI seat takes its setup turns (single human browser)", async ({
     "place_settlement", "place_road", "place_settlement", "place_road",
   ]);
   for (const action of ai) expect(action.intentId).toBe(`ai_${action.sequence}`);
+  // G3D-13 evidence (outside repo): one-browser vs Room AI mid-setup
+  const evidenceDir = process.env.GODESK_EVIDENCE_DIR;
+  if (evidenceDir) {
+    mkdirSync(evidenceDir, { recursive: true });
+    await page.screenshot({ path: `${evidenceDir}/desktop-vs-room-ai-midgame.png`, fullPage: false });
+    await page.getByTestId("g3d-scene-host").screenshot({ path: `${evidenceDir}/desktop-vs-room-ai-canvas.png` }).catch(() => null);
+  }
   await ctx.close();
 });
 
 const PRIORITY: Array<[RegExp, number]> = [
-  [/升级城市/, 100], [/放置定居点/, 90], [/打出骑士/, 60], [/购买发展卡/, 55], [/放置道路/, 50],
-  [/打出道路建设/, 45], [/移动强盗/, 40], [/弃牌/, 38], [/掷骰/, 35], [/银行贸易/, 10], [/结束回合/, 1],
+  [/升级港镇/, 100], [/建造渔村/, 90], [/打出骑士/, 60], [/购买发展卡/, 55], [/铺设栈道/, 50],
+  [/打出道路建设/, 45], [/移动雾灯/, 40], [/弃牌/, 38], [/掷骰/, 35], [/银行贸易/, 10], [/结束回合/, 1],
 ];
 const score = (label: string) => PRIORITY.find(([re]) => re.test(label))?.[1] ?? -1;
 
@@ -106,7 +115,7 @@ for (const mobile of [false, true]) {
     const page = await ctx.newPage();
     const board = await openAiRoom(page);
     const hud = board.getByRole("region", { name: "对局状态" });
-    const img = page.getByRole("img", { name: "卡坦六角岛" });
+    const img = page.getByRole("img", { name: "汐屿六角岛" });
     await expect(page.locator("svg polygon")).toHaveCount(0);
     await page.screenshot({ path: `${out}/${tag}-start.png` });
     let mine = 0;

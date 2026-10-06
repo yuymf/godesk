@@ -103,7 +103,7 @@ THE SOFTWARE.
 
 ## 明确不包含
 
-- settlecoast.com 及其任何模型、音频、插画、文案、shader
+- 任何第三方商业桌游产品的模型、音频、插画、文案、shader
 - 任何 CC BY 或附加署名限制的素材（SPEC §5.1 不允许）
 
 ## ambientCG textures (G3D-22)

@@ -2253,13 +2253,28 @@ export function buildWarnings(record: ProjectRecord) {
   ];
 }
 
+/**
+ * Stored-data compat (pre-public rename): states persisted before the rename
+ * keep the hex-island board under the legacy key below (stored id: the string
+ * literal is intentionally kept; only the symbol was renamed). Kernel replay always rebuilds `hexIsland`; this covers the
+ * few paths that return a stored state without replaying the log.
+ */
+export const LEGACY_HEX_ISLAND_STATE_KEY = "catan";
+export function withHexIslandStateKey<T extends SessionState | undefined>(state: T): T {
+  if (!state) return state;
+  const legacy = (state as unknown as Record<string, unknown>)[LEGACY_HEX_ISLAND_STATE_KEY];
+  if (legacy === undefined || state.hexIsland) return state;
+  const { [LEGACY_HEX_ISLAND_STATE_KEY]: _legacy, ...rest } = state as unknown as Record<string, unknown>;
+  return { ...rest, hexIsland: legacy } as unknown as T;
+}
+
 export function visibleSession(
   session: StoredSharedSession,
   viewerSeat: number | null = null,
 ): SharedSessionSnapshot {
   const scoped = {
     ...session,
-    state: scopeSessionState(session.state, viewerSeat),
+    state: scopeSessionState(withHexIslandStateKey(session.state), viewerSeat),
     acceptedActions: session.acceptedActions.map((action) => ({
       ...action,
       state: scopeSessionState(action.state, viewerSeat),
@@ -2272,7 +2287,7 @@ export function visibleSession(
 }
 
 
-/** Persist action logs without per-ply genre blobs (catan/othello/…).
+/** Persist action logs without per-ply genre blobs (hexIsland/othello/…).
  *  Reconstruct rebuilds full state from intentId/actionId/payload + seed.
  *  Keeps DO/SQLite under SQLITE_TOOBIG for long seeded bot runs (~800+ plies).
  */
@@ -2333,7 +2348,7 @@ export function reconstructActions(
  * G3D-04c: kernels whose per-ply genre state is large and whose games run
  * long (hundreds of actions). Rooms on these kernels get periodic full-state
  * snapshots and a slim per-action log in Room output (the client only reads
- * `room.state` for these genres; per-action catan/othello/network blobs were
+ * `room.state` for these genres; per-action hex-island/othello/network blobs were
  * never rendered).
  */
 const SNAPSHOT_KERNELS = new Set([

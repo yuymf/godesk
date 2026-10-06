@@ -2,7 +2,7 @@
   "id": "rule_system_7161442e-eba0-4773-8d03-3cf135b80e3a",
   "version": 2,
   "name": "G3D-12 v1 六角岛",
-  "pitch": "做一款可以与电脑对战的卡坦岛基础版",
+  "pitch": "做一款可以与电脑对战的汐屿六角岛资源建造游戏",
   "participants": {
     "min": 2,
     "max": 4,
@@ -13,7 +13,7 @@
   "rules": [
     {
       "id": "source-rule-1",
-      "text": "做一款可以与电脑对战的卡坦岛基础版",
+      "text": "做一款可以与电脑对战的汐屿六角岛资源建造游戏",
       "sourceId": "source_job_ea8baa31-05f3-4d4d-8dc4-8c8002a47eb9",
       "provenance": "source-anchored",
       "confidence": 0.72
@@ -22,7 +22,7 @@
   "constraints": [],
   "entities": [],
   "setup": [
-    "做一款可以与电脑对战的卡坦岛基础版"
+    "做一款可以与电脑对战的汐屿六角岛资源建造游戏"
   ],
   "actions": [
     {
@@ -115,7 +115,7 @@
   "runtimeSupport": {
     "status": "executable",
     "unsupported": [
-      "hex-settlement-v1 executes beginner-board Catan basics (placement, production, robber/discard, build+connectivity, bank/port + simple player trade, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — full negotiated multi-resource trades remain out of scope."
+      "hex-settlement-v1 executes beginner-board hex-island basics (placement, production, robber/discard, build+connectivity, bank/port + simple player trade, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — full negotiated multi-resource trades remain out of scope."
     ],
     "kernel": {
       "type": "hex-settlement-v1",
@@ -129,12 +129,12 @@
     "requestedMechanics": [
       "hex-settlement"
     ],
-    "sourcePrompt": "做一款可以与电脑对战的卡坦岛基础版",
+    "sourcePrompt": "做一款可以与电脑对战的汐屿六角岛资源建造游戏",
     "seed": 1847253068,
     "assumptions": [
       "规则来自当前来源的确定性抽取，尚未获得完整规则实现保证。",
       "配置内核后，初始状态、可见性、阶段推进和终局由该版本内核负责。",
-      "提议的内核及参数：{\"op\":\"configure_hex_settlement\",\"config\":{\"playerCount\":2,\"victoryPointsToWin\":10,\"unsupported\":[\"hex-settlement-v1 executes beginner-board Catan basics (placement, production, robber/discard, build+connectivity, bank/port + simple player trade, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — full negotiated multi-resource trades remain out of scope.\"]}}"
+      "提议的内核及参数：{\"op\":\"configure_hex_settlement\",\"config\":{\"playerCount\":2,\"victoryPointsToWin\":10,\"unsupported\":[\"hex-settlement-v1 executes beginner-board hex-island basics (placement, production, robber/discard, build+connectivity, bank/port + simple player trade, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — full negotiated multi-resource trades remain out of scope.\"]}}"
     ]
   },
   "gameSpec": {
@@ -148,12 +148,12 @@
       "requestedMechanics": [
         "hex-settlement"
       ],
-      "sourcePrompt": "做一款可以与电脑对战的卡坦岛基础版",
+      "sourcePrompt": "做一款可以与电脑对战的汐屿六角岛资源建造游戏",
       "seed": 1847253068,
       "assumptions": [
         "规则来自当前来源的确定性抽取，尚未获得完整规则实现保证。",
         "配置内核后，初始状态、可见性、阶段推进和终局由该版本内核负责。",
-        "提议的内核及参数：{\"op\":\"configure_hex_settlement\",\"config\":{\"playerCount\":2,\"victoryPointsToWin\":10,\"unsupported\":[\"hex-settlement-v1 executes beginner-board Catan basics (placement, production, robber/discard, build+connectivity, bank/port + simple player trade, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — full negotiated multi-resource trades remain out of scope.\"]}}"
+        "提议的内核及参数：{\"op\":\"configure_hex_settlement\",\"config\":{\"playerCount\":2,\"victoryPointsToWin\":10,\"unsupported\":[\"hex-settlement-v1 executes beginner-board hex-island basics (placement, production, robber/discard, build+connectivity, bank/port + simple player trade, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — full negotiated multi-resource trades remain out of scope.\"]}}"
       ]
     },
     "players": {

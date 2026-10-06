@@ -65,7 +65,7 @@ export function mechanicsCapabilityGap(mechanics: readonly string[], kernelType?
 export function inferRequestedMechanics(corpus: string): string[] {
   const mechanics: string[] = [];
   if (/拍卖|竞价|出价|\bauction\b|\bbid(?:s|ding)?\b/i.test(corpus)) mechanics.push("auction-bidding");
-  if (/\bcatan\b|settlecoast|卡坦|卡版|六角.*(?:资源|建造)|hex.*(?:resource|build)/i.test(corpus)) mechanics.push("hex-settlement");
+  if (/汐屿|\btidewell\b|hex[- ]?island|六角.*(?:资源|建造)|hex.*(?:resource|build)/i.test(corpus)) mechanics.push("hex-settlement");
   if (/\bothello\b|\breversi\b|黑白棋|翻转棋|翻子|flipp?ing.*dis[ck]|dis[ck].*flipp?ing/i.test(corpus)) mechanics.push("disc-flipping");
   // Line / route network (PR11) — must not also match hex or disc cues above.
   if (/线路网络|路线连接|铺设路线|连接城市|route\s*network|connect(?:ing)?\s+cities|claim(?:ing)?\s+routes/i.test(corpus)) {

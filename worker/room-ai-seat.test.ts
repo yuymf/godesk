@@ -46,7 +46,7 @@ async function waitForJob(id: string) {
   throw new Error(`job ${id} did not finish`);
 }
 
-async function catanBuild(key: string) {
+async function hexIslandBuild(key: string) {
   const { project } = await (await post("/api/projects", { name: `AI seat ${key}` })).json<{ project: GameProject }>();
   const queued = await (await post(`/api/projects/${project.id}/jobs`, {
     kind: "generate-rule-system",
@@ -150,7 +150,7 @@ describe("Room AI seat (G3D-04b)", () => {
   });
 
   it("rejects bad options, AI seat claims and human intents on the AI seat", async () => {
-    const { build } = await catanBuild("guards");
+    const { build } = await hexIslandBuild("guards");
     expect((await createRoom(build.id, { aiSeats: [0, 1] })).status).toBe(400);
     expect((await createRoom(build.id, { aiSeats: [1], aiThinkMs: 99_999 })).status).toBe(400);
     const created = await createRoom(build.id, { aiSeats: [1], aiThinkMs: 0 });
@@ -170,7 +170,7 @@ describe("Room AI seat (G3D-04b)", () => {
   });
 
   it("takes its setup turns from the alarm exactly once, across eviction and duplicate alarms", async () => {
-    const { build } = await catanBuild("setup");
+    const { build } = await hexIslandBuild("setup");
     const room = await (await createRoom(build.id, { aiSeats: [1], aiThinkMs: 5_000 })).json<{ id: string }>();
     const { seatToken } = await claimSeat(room.id, 0);
     // Snake setup for 2 seats: 0 (settlement, road), 1, 1, 0.
@@ -215,7 +215,7 @@ describe("Room AI seat (G3D-04b)", () => {
   }, 60_000);
 
   it("plays a full game on real alarms vs a scripted human to game over, matching the bot simulation picker", async () => {
-    const { build, ruleSystem } = await catanBuild("full");
+    const { build, ruleSystem } = await hexIslandBuild("full");
     // Full-length seed 42 (~865 actions): fits CI since G3D-04c made each
     // move incremental (memory cache + snapshots) instead of a full replay.
     const room = await (await createRoom(build.id, { seed: 42, aiSeats: [1], aiThinkMs: 0 })).json<{ id: string }>();
