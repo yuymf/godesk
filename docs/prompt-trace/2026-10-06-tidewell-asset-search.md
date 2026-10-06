@@ -27,6 +27,8 @@ Cursor Cloud Agent（Codex 额度耗尽兜底）
 - Worker 代理与 `POST /api/projects/:id/imported-assets`
 - `docs/asset-server.md`、`docs/G3D-STATUS.md`、`assets/imported/README.md`
 - e2e `e2e/asset-search-panel.spec.ts`（sidecar 存活则打真搜索；下载一律 mock 为小文件）
+- 本机：`typecheck` ✅；`pnpm test` 60/453 ✅；`pnpm test:worker` 20/217 ✅；`pnpm test:e2e` 59 passed / 4 skipped ✅；`verify:assets` OK；homepage 165.78/170 KB
+- PR：https://github.com/yuymf/godesk/pull/153 （draft；CI 计费拦截）
 
 ## links
 
