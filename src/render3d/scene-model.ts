@@ -12,7 +12,13 @@ export type SceneNodeKind =
   | "die"
   | "dice-tray"
   | "cliff"
-  | "decor";
+  | "decor"
+  // G3D-14 通用桌面（mappers/tabletop.ts）：格位 / 棋子 / 连线 / 合法提示 / 桌面底板。
+  | "cell"
+  | "piece"
+  | "link"
+  | "hint"
+  | "table";
 
 export type SceneNode = {
   id: string;
@@ -25,6 +31,10 @@ export type SceneNode = {
   /** Number token face value (2–12), when kind is number-token. */
   number?: number | null;
   seat?: number;
+  /** G3D-14：RenderSpec 内置网格（bindings[].mesh），通用桌面节点使用。 */
+  mesh?: string;
+  /** G3D-14：材质库 key（含材质值摘要，材质被 configure_render 改动时 key 随之变化）。 */
+  material?: string;
 };
 
 export type SceneModel = {

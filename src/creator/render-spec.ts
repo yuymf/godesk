@@ -324,6 +324,9 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
   }
   if (kernelType === "disc-flipping-v1") {
     Object.assign(render.materials, {
+      // 翻转棋的棋子必须黑白分明：座位 0 = 黑、座位 1 = 白（G3D-14）。
+      seat0: material("#1d1d1f", "none", 0.42, 0, 0.3),
+      seat1: material("#f4efe6", "none", 0.42, 0, 0.3),
       board: material("#1f6b4a", "cloth", 0.78),
       piece: material("#f4efe6", "none", 0.45),
     });

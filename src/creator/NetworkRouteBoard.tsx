@@ -7,6 +7,8 @@ import {
 } from "../runtime/adapters/network-route";
 import type { PlayState } from "../runtime/play-kernel";
 import type { RoomLocale } from "./room-presentation";
+import type { RenderSpec } from "./render-spec";
+import { TabletopStage } from "./TabletopStage";
 
 export type NetworkRouteBoardState = {
   cities: Array<{ id: string; name: string; x: number; y: number }>;
@@ -129,6 +131,7 @@ export function NetworkRouteBoard({
   winnerSeat = null,
   busy = false,
   onAct,
+  render,
 }: {
   networkRoute: NetworkRouteBoardState;
   activeSeat: number;
@@ -140,6 +143,8 @@ export function NetworkRouteBoard({
   winnerSeat?: number | null;
   busy?: boolean;
   onAct?: (actionId: string, payload?: Record<string, unknown>) => void;
+  /** G3D-14：build.ruleSystem.presentation.render（缺省用平台默认）。 */
+  render?: RenderSpec;
 }) {
   const copy = COPY[locale];
   const interactive =
@@ -249,6 +254,8 @@ export function NetworkRouteBoard({
           {goalLine}
         </p>
       </section>
+
+      <TabletopStage kernel="network-route-v1" legal={[...legalEdges]} onAct={showLegal ? onAct : undefined} render={render} state={networkRoute} />
 
       <svg
         aria-label={copy.board}

@@ -20,6 +20,7 @@ import {
   matchPickToLegalAction,
   pickFromPointerEvent,
   type PickableLegalAction,
+  type PickTarget,
 } from "./pick";
 import { reconcileScene } from "./reconcile";
 import type { SceneModel, SceneNode } from "./scene-model";
@@ -55,6 +56,23 @@ import {
   type TierCaps,
 } from "./tiers";
 
+/**
+ * G3D-14：通用场景适配器。提供时 SceneHost 不走 hex mapper，而是 reconcile `model`，
+ * 用 `create` / `update` 构建对象（工厂在调用方的懒加载 chunk 里），拾取经 `resolvePick` 映射为动作。
+ */
+export type SceneAdapter = {
+  model: SceneModel;
+  create: (node: SceneNode, ctx: { library: MaterialLibrary; caps: TierCaps }) => Object3D;
+  update: (object: Object3D, node: SceneNode, ctx: { library: MaterialLibrary; caps: TierCaps }) => void;
+  resolvePick?: (target: PickTarget) => { type: string; payload?: Record<string, unknown> } | null;
+  /** 包围球：阴影相机与机位按它适配。 */
+  bounds?: { center: readonly [number, number, number]; radius: number };
+  /** 布局摘要：变化时重算阴影相机与机位。 */
+  layoutKey?: string;
+  /** RenderSpec.camera。 */
+  camera?: { fovDeg: number; distance: number; minPolarDeg: number; maxPolarDeg: number; pan: boolean };
+};
+
 export type SceneHostProps = {
   className?: string;
   ariaLabel?: string;
@@ -68,6 +86,8 @@ export type SceneHostProps = {
   lighting?: LightingSpec;
   /** G3D-09: active seat; a change triggers the turn camera reframe. */
   activeSeat?: number | null;
+  /** G3D-14：通用桌面场景（见 SceneAdapter）。 */
+  scene?: SceneAdapter | null;
 };
 
 /** 阴影贴图在场景变化后继续逐帧重绘的时长（覆盖 place/move/dice 动效）。 */
@@ -101,7 +121,8 @@ function hexShape(radius: number, bevel = 0.04): Shape {
 function disposeObject(object: Object3D): void {
   object.traverse((child) => {
     const mesh = child as Mesh;
-    if (!mesh.isMesh) return;
+    // G3D-14：通用桌面的网格线是 LineSegments，同样要释放几何 / 材质。
+    if (!mesh.isMesh && !(child as { isLine?: boolean }).isLine) return;
     mesh.geometry?.dispose();
     const material = mesh.material;
     // 共享材质由 MaterialLibrary 在卸载时统一释放（G3D-07）。
@@ -238,6 +259,7 @@ export function SceneHost({
   onPick,
   lighting,
   activeSeat = null,
+  scene: adapter = null,
 }: SceneHostProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [unsupported, setUnsupported] = useState(false);
@@ -261,6 +283,12 @@ export function SceneHost({
   interactiveRef.current = interactive;
   legalActionsRef.current = legalActions;
   onPickRef.current = onPick;
+  const adapterRef = useRef(adapter);
+  adapterRef.current = adapter;
+  const layoutKeyRef = useRef<string | null>(null);
+  const cameraKeyRef = useRef<string | null>(null);
+  /** G3D-14：按 RenderSpec.camera 与当前宽高比放置机位（窄屏时拉远，保证桌面左右不出画）。 */
+  const fitCameraRef = useRef<() => void>(() => {});
   // G3D-05: bumping the epoch tears the 3D host down and rebuilds it (perf leak check).
   const [hostEpoch, setHostEpoch] = useState(0);
   const [perfMode] = useState(() => perfModeEnabled());
@@ -284,11 +312,19 @@ export function SceneHost({
   function buildHost(root: Object3D, getCaps: () => TierCaps, library: MaterialLibrary, motion: MotionController) {
     return {
       root,
-      create: (node: SceneNode) => createNodeObject(node, getCaps(), library),
-      update: (object: Object3D, node: SceneNode) => updateNodeObject(object, node, library),
+      create: (node: SceneNode) => adapterRef.current
+        ? adapterRef.current.create(node, { library, caps: getCaps() })
+        : createNodeObject(node, getCaps(), library),
+      update: (object: Object3D, node: SceneNode) => adapterRef.current
+        ? adapterRef.current.update(object, node, { library, caps: getCaps() })
+        : updateNodeObject(object, node, library),
       disposeObject,
       motion: {
         added: (object: Object3D, node: SceneNode) => {
+          if (node.kind === "piece") {
+            motion.place(object, node.id);
+            return;
+          }
           if (node.kind !== "settlement" && node.kind !== "city" && node.kind !== "road") return;
           motion.place(object, node.id);
           reframe(node.position, `build:${node.id}`);
@@ -297,7 +333,9 @@ export function SceneHost({
           motion.remove(object, id, detach);
         },
         updated: (object: Object3D, prev: SceneNode, node: SceneNode) => {
-          if (node.kind === "robber" && prev.position.join() !== node.position.join()) {
+          if (node.kind === "piece" && prev.position.join() !== node.position.join()) {
+            motion.moveArc(object, node.id, prev.position);
+          } else if (node.kind === "robber" && prev.position.join() !== node.position.join()) {
             motion.moveArc(object, node.id, prev.position);
             reframe(node.position, "robber");
           } else if (node.kind === "die" && prev.number !== node.number) {
@@ -409,7 +447,8 @@ export function SceneHost({
         target ??
         pickFromPointerEvent(event, renderer.domElement, camera, contentRoot);
       if (!resolved) return;
-      const matched = matchPickToLegalAction(resolved, legalActionsRef.current);
+      const resolvePick = adapterRef.current?.resolvePick;
+      const matched = resolvePick ? resolvePick(resolved) : matchPickToLegalAction(resolved, legalActionsRef.current);
       if (!matched) return;
       event.preventDefault();
       onPickRef.current(matched);
@@ -424,7 +463,7 @@ export function SceneHost({
     });
 
     // Fallback test cube when no hex state yet (G3D-02 smoke path).
-    if (!hexSettlement) {
+    if (!hexSettlement && !adapterRef.current) {
       const geom = new BoxGeometry(1, 1, 1);
       const cube = new Mesh(geom, library.get("seat-0", seatMaterial(0)));
       cube.position.set(0, 0.5, 0);
@@ -467,6 +506,7 @@ export function SceneHost({
       const dpr = Math.min(window.devicePixelRatio || 1, caps.dprCap);
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
+      fitCameraRef.current();
       renderer.setPixelRatio(dpr);
       renderer.setSize(width, height, false);
     };
@@ -640,6 +680,9 @@ export function SceneHost({
       lastSeatRef.current = null;
       lastActionRef.current = undefined;
       modelRef.current = null;
+      layoutKeyRef.current = null;
+      cameraKeyRef.current = null;
+      fitCameraRef.current = () => {};
       setReady(false);
     };
     // hexSettlement applied in separate effect against stable host
@@ -685,6 +728,53 @@ export function SceneHost({
     }
   }, [hexSettlement, ready, hostEpoch]);
 
+  // G3D-14：通用桌面场景 reconcile + 按包围球适配阴影相机 / 机位。
+  useEffect(() => {
+    const host = reconcileHostRef.current;
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    if (!host || !adapter || !ready) return;
+    modelRef.current = reconcileScene(host, modelRef.current, adapter.model, registryRef.current);
+    const container = containerRef.current;
+    if (container) container.dataset.sceneNodes = String(adapter.model.nodes.length);
+    const bounds = adapter.bounds;
+    if (bounds && adapter.layoutKey !== layoutKeyRef.current) {
+      layoutKeyRef.current = adapter.layoutKey ?? null;
+      rigRef.current?.fitToBounds(bounds.center, bounds.radius);
+    }
+    const spec = adapter.camera;
+    const cameraKey = spec ? `${JSON.stringify(spec)}|${adapter.layoutKey ?? ""}` : null;
+    if (spec && camera && controls && cameraKey !== cameraKeyRef.current) {
+      cameraKeyRef.current = cameraKey;
+      const minPolar = (spec.minPolarDeg * Math.PI) / 180;
+      const maxPolar = (spec.maxPolarDeg * Math.PI) / 180;
+      const polar = (minPolar + maxPolar) / 2;
+      const radius = bounds?.radius ?? 7.5;
+      const center = bounds?.center ?? [0, 0, 0];
+      fitCameraRef.current = () => {
+        // RenderSpec 距离按约 7.5 单位半径的场景标定；桌面更大 / 更小时等比缩放，
+        // 窄屏（水平视角小于垂直视角）时再拉远到包围半径能水平放下。
+        const halfH = Math.atan(Math.tan((spec.fovDeg * Math.PI) / 360) * camera.aspect);
+        const distance = Math.max(
+          spec.distance * Math.min(Math.max(radius / 7.5, 0.5), 1.6),
+          (radius * 0.92) / Math.tan(halfH),
+        );
+        camera.fov = spec.fovDeg;
+        camera.position.set(center[0], center[1] + distance * Math.cos(polar), center[2] + distance * Math.sin(polar));
+        camera.updateProjectionMatrix();
+        controls.target.set(center[0], center[1], center[2]);
+        controls.minDistance = distance * 0.5;
+        controls.maxDistance = distance * 1.8;
+        controls.update();
+      };
+      controls.minPolarAngle = minPolar;
+      controls.maxPolarAngle = maxPolar;
+      controls.enablePan = spec.pan;
+      fitCameraRef.current();
+    }
+    markShadowsDirtyRef.current();
+  }, [adapter, ready, hostEpoch]);
+
   // G3D-09 turn camera: reframe toward the island centre when the active seat changes.
   useEffect(() => {
     if (!ready || activeSeat === null || activeSeat === undefined) return;
@@ -713,7 +803,7 @@ export function SceneHost({
       hitRoot.remove(child);
       disposeHitOverlay(child);
     }
-    if (!interactive || legalActions.length === 0) return;
+    if (!interactive || legalActions.length === 0 || adapterRef.current) return;
     for (const overlay of buildLegalHitOverlays(legalActions)) {
       hitRoot.add(overlay);
     }
