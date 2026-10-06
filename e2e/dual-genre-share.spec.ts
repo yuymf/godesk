@@ -1,5 +1,5 @@
 import { expect, type Browser, type Page, test } from "@playwright/test";
-import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
+import { clickTidewellBoardAction, openTidewellBoardTargets, claimTidewellSeat } from "./helpers/tidewell-actions";
 import {
   TIDEWELL_PROMPT,
   OTHELLO_PROMPT,
@@ -26,8 +26,7 @@ async function guestJoinClaimAndAct(
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
     expect(new URL(page.url()).searchParams.get("share")).toBeTruthy();
 
-    await page.getByLabel("你的席位").selectOption("0");
-
+    await claimTidewellSeat(page, 0);
     if (genre === "othello") {
       const board = page.getByRole("region", { name: "黑白棋盘" });
       await expect(board).toBeVisible();

@@ -160,6 +160,19 @@
 
 - `scripts/data/paper001-color-512.jpg`：ambientCG [Paper001](https://ambientcg.com/a/Paper001) **CC0-1.0** Color 裁 512，仅供 `gen-card-art.py` / `gen-brand-art.py` 合成羊皮纸底；不部署、不进 `ASSET_MANIFEST`。成品卡/品牌仍登记为 `LicenseRef-GoDesk-Original`（修改说明列已记 CC0 底纹）。
 
+| ui/ai/icons/build-road | assets/ui/ai/icons/build-road-{64,96}.webp | HUD 建造砖·栈道图标 | 自制 | assets/ui/ai/icons/build-road-96.webp | LicenseRef-GoDesk-Original | GoDesk Track B（程序化 PIL） | 2026-10-06 | 否 | 木纹底 + 几何栈道示意，非 settlecoast 复制 | G3D-JUDGE-HUD-2h3 |
+| ui/ai/icons/build-settlement | assets/ui/ai/icons/build-settlement-{64,96}.webp | HUD 建造砖·渔村图标 | 自制 | assets/ui/ai/icons/build-settlement-96.webp | LicenseRef-GoDesk-Original | GoDesk Track B（程序化 PIL） | 2026-10-06 | 否 | 木纹底 + 几何小屋示意，非 settlecoast 复制 | G3D-JUDGE-HUD-2h3 |
+| ui/ai/icons/build-city | assets/ui/ai/icons/build-city-{64,96}.webp | HUD 建造砖·港镇图标 | 自制 | assets/ui/ai/icons/build-city-96.webp | LicenseRef-GoDesk-Original | GoDesk Track B（程序化 PIL） | 2026-10-06 | 否 | 木纹底 + 几何双楼示意，非 settlecoast 复制 | G3D-JUDGE-HUD-2h3 |
+| ui/ai/icons/build-card | assets/ui/ai/icons/build-card-{64,96}.webp | HUD 建造砖·买卡图标 | 自制 | assets/ui/ai/icons/build-card-96.webp | LicenseRef-GoDesk-Original | GoDesk Track B（程序化 PIL） | 2026-10-06 | 否 | 木纹底 + 几何卷轴示意，非 settlecoast 复制 | G3D-JUDGE-HUD-2h3 |
+
+| illustration/portrait-0 | assets/illustrations/brand/portrait-0{,-128}.webp | HUD 玩家肖像章·赤席 | 自制 | assets/illustrations/brand/portrait-0.webp | LicenseRef-GoDesk-Original | GoDesk Track B（程序化 PIL 手绘风兜帽肖像） | 2026-10-06 | 否 | 圆形羊皮纸底 + 席位色兜帽，非 settlecoast 复制 | G3D-JUDGE-HUD-2h4 |
+| illustration/portrait-1 | assets/illustrations/brand/portrait-1{,-128}.webp | HUD 玩家肖像章·蓝席 | 自制 | assets/illustrations/brand/portrait-1.webp | LicenseRef-GoDesk-Original | GoDesk Track B（程序化 PIL） | 2026-10-06 | 否 | 同上，蓝席 | G3D-JUDGE-HUD-2h4 |
+| illustration/portrait-2 | assets/illustrations/brand/portrait-2{,-128}.webp | HUD 玩家肖像章·翠席 | 自制 | assets/illustrations/brand/portrait-2.webp | LicenseRef-GoDesk-Original | GoDesk Track B（程序化 PIL） | 2026-10-06 | 否 | 同上，翠席 | G3D-JUDGE-HUD-2h4 |
+| illustration/portrait-3 | assets/illustrations/brand/portrait-3{,-128}.webp | HUD 玩家肖像章·金席 | 自制 | assets/illustrations/brand/portrait-3.webp | LicenseRef-GoDesk-Original | GoDesk Track B（程序化 PIL） | 2026-10-06 | 否 | 同上，金席 | G3D-JUDGE-HUD-2h4 |
+| ui/ai/icons/build-road-128 | assets/ui/ai/icons/build-road-{64,96,128}.webp | HUD 建造砖·栈道（2h4 插画） | 自制 | assets/ui/ai/icons/build-road-128.webp | LicenseRef-GoDesk-Original | GoDesk Track B（程序化 PIL 木框插画） | 2026-10-06 | 是 | 木框+羊皮纸板+栈道示意；替换 2h3 几何图标 | G3D-JUDGE-HUD-2h4 |
+| ui/ai/icons/build-settlement-128 | assets/ui/ai/icons/build-settlement-{64,96,128}.webp | HUD 建造砖·渔村（2h4） | 自制 | assets/ui/ai/icons/build-settlement-128.webp | LicenseRef-GoDesk-Original | GoDesk Track B（程序化 PIL） | 2026-10-06 | 是 | 木框小屋插画 | G3D-JUDGE-HUD-2h4 |
+| ui/ai/icons/build-city-128 | assets/ui/ai/icons/build-city-{64,96,128}.webp | HUD 建造砖·港镇（2h4） | 自制 | assets/ui/ai/icons/build-city-128.webp | LicenseRef-GoDesk-Original | GoDesk Track B（程序化 PIL） | 2026-10-06 | 是 | 木框双楼插画 | G3D-JUDGE-HUD-2h4 |
+| ui/ai/icons/build-card-128 | assets/ui/ai/icons/build-card-{64,96,128}.webp | HUD 建造砖·买卡（2h4） | 自制 | assets/ui/ai/icons/build-card-128.webp | LicenseRef-GoDesk-Original | GoDesk Track B（程序化 PIL） | 2026-10-06 | 是 | 木框卷轴插画 | G3D-JUDGE-HUD-2h4 |
 ## G3D-ISLAND / G3D-PROPS 运行时程序化（不产生文件，不入表）
 
 - `src/render3d/terrain-props.ts`（松林 / 羊群与水槽 / 灰岩 / 陶土丘与砖垛 / 麦束行 / 沙丘与卵石）与 `src/render3d/island.ts`（岩壁台基、岸石、木码头、港口牌、帆船）：全部为运行时代码生成的低多边形几何与 canvas 程序化贴图（岩壁纹、2:1 / 3:1 牌面图集），**LicenseRef-GoDesk-Original**，GoDesk Track D 手写，2026-10-06；无 AI 生图、无第三方素材，未参考或复制 settlecoast 的任何素材 / 代码。

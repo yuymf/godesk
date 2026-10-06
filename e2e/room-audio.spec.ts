@@ -1,6 +1,6 @@
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
 import { NORTH_STAR_TIDEWELL_PROMPT, shareHrefFromStudio } from "./helpers/sol-max-baseline";
-import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
+import { clickTidewellBoardAction, openTidewellBoardTargets, claimTidewellSeat } from "./helpers/tidewell-actions";
 
 /**
  * G3D-10：房间音效。素材（G3D-26 / G3D-27）合入前，引擎只记 cue 日志不出声；
@@ -63,14 +63,14 @@ test("hex-settlement room audio: cues from play events, touch unlock, settings p
     await guestPage.waitForTimeout(2_000);
     const audioRoot = guestPage.locator("[data-sound-settings]");
     await expect(audioRoot).toHaveAttribute("data-audio-context", "suspended", { timeout: 30_000 });
-    await guestPage.getByRole("heading").first().tap();
+    await guestPage.getByRole("region", { name: "汐屿" }).click();
     await expect(audioRoot).toHaveAttribute("data-audio-context", "running");
     await waitForAudio(guestPage);
 
     await page.goto(shareUrl);
     await waitForAudio(page);
-    await page.getByLabel("你的席位").selectOption("1");
-    await guestPage.getByLabel("你的席位").selectOption("0");
+    await claimTidewellSeat(page, 1);
+    await claimTidewellSeat(guestPage, 0);
     await expect(guestPage.getByLabel("你的席位")).toHaveValue("0");
 
     const guestBoard = guestPage.getByRole("region", { name: "汐屿" });
@@ -135,10 +135,10 @@ test("hex-settlement room audio: cues from play events, touch unlock, settings p
     expect((await cueLog(page)).find((e) => e.cue === "illegal")?.source).toBe("ui:error");
 
     // 声音设置（桌面端）：panel / toggle cue、静音、音量、曲目切换，刷新后保持。
-    await page.getByRole("heading").first().click();
+    await page.getByRole("region", { name: "汐屿" }).click();
     await expect(page.locator("[data-sound-settings]")).toHaveAttribute("data-audio-context", "running");
     await expect.poll(async () => (await audioSnapshot(page))?.currentTrack, { timeout: 15_000 }).toBe("theme");
-    await page.getByRole("button", { name: /声音设置/ }).click();
+    await page.locator(".tidewell-sound-chip").click();
     const panel = page.getByRole("group", { name: "声音设置" });
     await expect(panel).toBeVisible();
     await panel.getByLabel("曲目").selectOption("finale");
@@ -157,7 +157,7 @@ test("hex-settlement room audio: cues from play events, touch unlock, settings p
     await page.reload();
     await waitForAudio(page);
     expect((await audioSnapshot(page))?.settings).toEqual(settingsBefore);
-    await page.getByRole("button", { name: /声音设置/ }).click();
+    await page.locator(".tidewell-sound-chip").click();
     const panelAfter = page.getByRole("group", { name: "声音设置" });
     await expect(panelAfter.getByLabel("声音")).not.toBeChecked();
     await expect(panelAfter.getByLabel("曲目")).toHaveValue("finale");

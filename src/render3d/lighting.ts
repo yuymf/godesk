@@ -174,17 +174,23 @@ void main() {
 }
 `;
 
-/** §5.5 S-01：程序化渐变天空穹顶（0 B 资源，1 次 draw）。 */
-export function createSkyDome(): Mesh {
+/** §5.5 S-01：程序化渐变天空穹顶（0 B 资源，1 次 draw）。
+ *  Optional `colors` override (Tidewell sea gradient — avoids light letterbox band). */
+export function createSkyDome(colors?: {
+  top?: string;
+  horizon?: string;
+  bottom?: string;
+  exponent?: number;
+}): Mesh {
   const sky = SCENE_TOKENS.sky;
   const geometry = new SphereGeometry(sky.radius, 24, 12);
   const material = new ShaderMaterial({
     name: "gd:sky",
     uniforms: {
-      uGdTop: { value: new Color(sky.top) },
-      uGdHorizon: { value: new Color(sky.horizon) },
-      uGdBottom: { value: new Color(sky.bottom) },
-      uGdExponent: { value: sky.exponent },
+      uGdTop: { value: new Color(colors?.top ?? sky.top) },
+      uGdHorizon: { value: new Color(colors?.horizon ?? sky.horizon) },
+      uGdBottom: { value: new Color(colors?.bottom ?? sky.bottom) },
+      uGdExponent: { value: colors?.exponent ?? sky.exponent },
     },
     vertexShader: SKY_VERTEX,
     fragmentShader: SKY_FRAGMENT,

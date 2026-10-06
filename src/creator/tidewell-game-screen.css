@@ -1,0 +1,1161 @@
+/* G3D-judge-HUD · full-viewport Tidewell game screen (lazy with HexSettlementBoard).
+   Own wood/parchment/wax look — no settlecoast assets. Round 2h2: true 100vw×100dvh. */
+
+/* —— Immersive room shell: game IS the viewport —— */
+.room-view-tidewell.room-view-tidewell-immersive {
+  --tw-wood: #4a2f1c;
+  --tw-wood-edge: #2c1a10;
+  --tw-parchment: #f3e7c9;
+  --tw-parchment-deep: #e8d3a2;
+  --tw-ink: #2a1c12;
+  --tw-gold: #c9a227;
+  --tw-sea: #2e7f86;
+  --tw-side: 260px;
+  --tw-dock: 196px;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 80;
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100vw !important;
+  max-width: none !important;
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  background:
+    radial-gradient(ellipse at 50% 18%, #5a3a22 0%, transparent 55%),
+    linear-gradient(180deg, #1a120c 0%, #0f0b08 100%);
+  color: var(--tw-parchment);
+  grid-template-columns: none !important;
+  gap: 0 !important;
+}
+
+html:has(.room-view-tidewell-immersive),
+body:has(.room-view-tidewell-immersive) {
+  overflow: hidden !important;
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+.room-view-tidewell-immersive > .action-log,
+.room-view-tidewell-immersive > .room-shell-header,
+.room-view-tidewell-immersive > .room-invitation {
+  display: none !important;
+}
+
+.room-view-tidewell-immersive > .tidewell-board {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* Hide floating feedback FAB + sound FAB — controls live in top-bar menu */
+.room-view-tidewell-immersive > .room-feedback-drawer,
+.room-view-tidewell-immersive .room-sound-settings {
+  position: fixed !important;
+  right: 12px;
+  top: 48px;
+  bottom: auto !important;
+  z-index: 95;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+/* When opened via topbar, restore interaction */
+.room-view-tidewell-immersive > .room-feedback-drawer[open],
+.room-view-tidewell-immersive .room-sound-settings[data-open="1"],
+.room-view-tidewell-immersive .room-sound-settings:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  max-width: min(360px, calc(100vw - 24px));
+}
+
+.room-feedback-drawer > summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid #c9a227;
+  background: linear-gradient(180deg, #5c3a22, #3a2416);
+  color: #f3e7c9;
+  font-size: 12px;
+}
+.room-feedback-drawer > summary::-webkit-details-marker { display: none; }
+.room-feedback-drawer[open] > .room-feedback-panel {
+  display: block;
+  margin-top: 8px;
+  max-height: min(50vh, 420px);
+  overflow: auto;
+  border-radius: 12px;
+  border: 2px solid #c9a22788;
+  background: #f3e7c9;
+  color: #2a1c12;
+  padding: 12px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+}
+
+/* —— Game screen grid —— */
+.tidewell-game-screen {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) var(--tw-dock, 196px);
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  color: var(--tw-ink, #2a1c12);
+}
+
+.tidewell-topbar {
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px;
+  min-height: 40px;
+  background: linear-gradient(180deg, #6b4428 0%, #3e2616 100%);
+  border-bottom: 2px solid var(--tw-gold, #c9a227);
+  color: var(--tw-parchment, #f3e7c9);
+  z-index: 5;
+}
+.tidewell-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: Georgia, "Times New Roman", serif;
+  letter-spacing: 0.02em;
+}
+.tidewell-home-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #c9a22788;
+  background: linear-gradient(180deg, #5c3a22, #3a2416);
+  color: #f3e7c9;
+  text-decoration: none;
+  font-size: 16px;
+  line-height: 1;
+}
+.tidewell-wax-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #e85d4c, #8b1e1e 70%);
+  box-shadow: 0 0 0 2px #c9a22755;
+}
+.tidewell-topbar-status {
+  flex: 1;
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tidewell-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tidewell-chip-btn {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid #c9a227aa;
+  background: linear-gradient(180deg, #5c3a22, #3a2416);
+  color: #f3e7c9;
+  font-size: 11px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.tidewell-menu {
+  position: relative;
+}
+.tidewell-menu > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.tidewell-menu > summary::-webkit-details-marker { display: none; }
+.tidewell-menu-panel {
+  position: fixed;
+  right: 8px;
+  top: 48px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid #c9a22788;
+  background: #2c1a10;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+.tidewell-menu-panel .tidewell-chip-btn,
+.tidewell-menu-panel button,
+.tidewell-menu-panel a {
+  width: 100%;
+  text-align: left;
+  box-sizing: border-box;
+}
+.tidewell-seat-select {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 2px 6px;
+  border-bottom: 1px solid #c9a22744;
+  margin-bottom: 4px;
+  font-size: 11px;
+  color: #f3e7c9;
+}
+.tidewell-seat-select select {
+  min-height: 32px;
+  border-radius: 6px;
+  border: 1px solid #c9a22788;
+  background: #f3e7c9;
+  color: #2a1c12;
+}
+
+.tidewell-game-body {
+  display: grid;
+  grid-template-columns: var(--tw-side, 260px) minmax(0, 1fr) var(--tw-side, 260px);
+  gap: 0;
+  min-height: 0;
+  padding: 0;
+  /* Centre ~62–68% at 1440: (1440-520)/1440 ≈ 64% */
+}
+
+.tidewell-panel-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-family: Georgia, serif;
+  color: var(--tw-wood, #4a2f1c);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tidewell-players,
+.tidewell-turn-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  padding: 10px;
+  border: none;
+  border-right: 2px solid #c9a22766;
+  border-radius: 0;
+  background:
+    linear-gradient(180deg, rgba(243, 231, 201, 0.97), rgba(232, 211, 162, 0.95)),
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(74, 47, 28, 0.03) 3px);
+  box-shadow: inset 0 0 0 1px rgba(201, 162, 39, 0.25);
+  overflow: auto;
+}
+.tidewell-turn-column {
+  border-right: none;
+  border-left: 2px solid #c9a22766;
+}
+
+.tidewell-player-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tidewell-player-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(255, 252, 245, 0.65);
+  border: 1px solid rgba(74, 47, 28, 0.18);
+}
+.tidewell-player-card.is-active {
+  box-shadow: 0 0 0 2px var(--seat-color, #c9a227), 0 0 12px rgba(201, 162, 39, 0.55);
+  background: #fff8e8;
+}
+.tidewell-player-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--seat-color, #888);
+  background: #ddd;
+}
+.tidewell-player-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.tidewell-seat-swatch {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--seat-color, #888);
+}
+.tidewell-player-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.tidewell-player-meta b { font-size: 13px; }
+.tidewell-player-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  color: #5a4634;
+}
+.tidewell-turn-badge {
+  position: absolute;
+  top: -8px;
+  right: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, #f0d060, #b8860b);
+  color: #2a1c12;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.tidewell-hud-awards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 8px 0 0;
+  font-size: 11px;
+}
+.tidewell-hud-awards dt { margin: 0; color: #6b543c; }
+.tidewell-hud-awards dd { margin: 0; font-weight: 600; }
+
+
+/* 2h3: round wooden icon buttons + centred island name */
+.tidewell-topbar-center {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  text-align: center;
+  gap: 2px;
+}
+.tidewell-island-name {
+  font-family: Georgia, "Noto Serif CJK SC", serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #f0d060;
+  text-shadow: 0 1px 0 #2a1c12;
+}
+.tidewell-topbar-center .tidewell-topbar-status {
+  margin: 0;
+  font-size: 11px;
+  opacity: 0.85;
+  max-width: 28vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tidewell-brand-name {
+  font-family: Georgia, serif;
+  font-size: 14px;
+}
+.tidewell-wood-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid #c9a227;
+  background:
+    radial-gradient(circle at 35% 30%, #7a5230, #3e2616 70%),
+    linear-gradient(180deg, #5c3a22, #2c1a10);
+  color: #f3e7c9;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,220,140,0.25);
+  list-style: none;
+}
+.tidewell-wood-icon::-webkit-details-marker { display: none; }
+.tidewell-menu > summary.tidewell-wood-icon { list-style: none; }
+.tidewell-menu-panel .tidewell-seat-select {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #f3e7c9;
+}
+.tidewell-menu-panel .tidewell-seat-select select {
+  min-height: 36px;
+  border-radius: 8px;
+  border: 1px solid #c9a22788;
+  background: #2c1a10;
+  color: #f3e7c9;
+  padding: 4px 8px;
+}
+
+/* 2h3: dark-wood player cards + medallions */
+.tidewell-players {
+  background:
+    linear-gradient(180deg, #4a2f1c 0%, #2c1a10 100%) !important;
+  color: #f3e7c9;
+  border-right: 2px solid #c9a22788 !important;
+  box-shadow: inset 0 0 0 1px rgba(201, 162, 39, 0.2);
+}
+.tidewell-players .tidewell-panel-title {
+  color: #f0d060;
+}
+.tidewell-player-card {
+  background:
+    linear-gradient(145deg, #5a3820 0%, #3a2416 55%, #2c1a10 100%) !important;
+  border: 1px solid #c9a22788 !important;
+  color: #f3e7c9;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,220,140,0.12);
+}
+.tidewell-player-card.is-active {
+  background: linear-gradient(145deg, #6b4428, #3e2616) !important;
+  box-shadow: 0 0 0 2px var(--seat-color, #c9a227), 0 0 14px rgba(201, 162, 39, 0.55);
+}
+.tidewell-player-meta b { color: #f3e7c9; }
+.tidewell-house-name {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #d4b56a;
+  opacity: 0.9;
+}
+.tidewell-player-stats { color: #d8c9a8 !important; }
+.tidewell-medallion {
+  width: 56px !important;
+  height: 56px !important;
+  border-width: 3px !important;
+  box-shadow: 0 0 0 2px #c9a227aa, 0 3px 8px rgba(0,0,0,0.45);
+}
+.tidewell-player-card {
+  grid-template-columns: 60px 1fr !important;
+  gap: 10px !important;
+  padding: 10px !important;
+}
+.tidewell-player-vp {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f0d060;
+  letter-spacing: 0.02em;
+}
+.tidewell-house-name {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #d4b56a;
+}
+.tidewell-hud-awards { color: #d8c9a8; }
+.tidewell-hud-awards dt { color: #c9a227aa !important; }
+.tidewell-hud-awards dd { color: #f3e7c9; }
+
+/* 2h3: cream turn card + flourish */
+.tidewell-turn-column {
+  background:
+    linear-gradient(180deg, rgba(243, 231, 201, 0.98), rgba(232, 211, 162, 0.96)) !important;
+}
+.tidewell-turn-card {
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid #c9a22788;
+  background:
+    linear-gradient(180deg, #fff8e8 0%, #f3e7c9 100%);
+  box-shadow: 0 4px 12px rgba(74, 47, 28, 0.15), inset 0 0 0 1px rgba(255,255,255,0.4);
+}
+.tidewell-turn-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tidewell-turn-flourish {
+  flex: 0 0 auto;
+  width: 72px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #c9a22766;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.tidewell-primary-cta {
+  border-radius: 12px !important;
+  border: 2px solid #c9a227 !important;
+  background:
+    linear-gradient(180deg, #6b4428 0%, #3e2616 55%, #2c1a10 100%) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,220,140,0.3) !important;
+}
+.tidewell-log-panel {
+  margin-top: 6px;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(255, 252, 245, 0.55);
+  border: 1px solid rgba(74, 47, 28, 0.15);
+}
+
+/* 2h3: larger parchment resource cards + wooden build tiles */
+.tidewell-dock {
+  --tw-dock: 196px;
+  height: var(--tw-dock, 196px);
+  max-height: var(--tw-dock, 196px);
+}
+.room-view-tidewell-immersive {
+  --tw-dock: 196px;
+}
+.tidewell-resource-tile {
+  width: 88px !important;
+}
+.tidewell-resource-art {
+  width: 84px !important;
+  height: 112px !important;
+  border-radius: 6px !important;
+  border: 2px solid #c9a227 !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.15) !important;
+}
+.tidewell-resource-count {
+  min-width: 24px !important;
+  padding: 2px 7px !important;
+  background: #f3e7c9 !important;
+  border: 1px solid #c9a227aa;
+  font-size: 13px !important;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+.tidewell-build-btn {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 3px !important;
+  min-width: 96px !important;
+  min-height: 128px !important;
+  padding: 4px 4px 6px !important;
+  border-radius: 10px !important;
+  border: 2px solid #c9a227 !important;
+  background:
+    linear-gradient(160deg, #6b4428 0%, #3e2616 55%, #2a1810 100%) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,220,140,0.2) !important;
+}
+.tidewell-build-art {
+  display: block;
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border-radius: 8px;
+  image-rendering: auto;
+}
+.tidewell-build-label {
+  font-size: 11px !important;
+  color: #f3e7c9 !important;
+}
+.tidewell-build-cost img {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+/* Canvas dominates — sea fill, no letterbox.
+   Track C (#151) pins the dice tray as a WebGL corner overlay inside the canvas —
+   keep bottom-right of .tidewell-stage-wrap free of DOM (no FAB / chip / drawer there).
+   Desktop: dock sits below the stage; iPhone: mobile bar sits below — both leave BR clear. */
+
+.tidewell-stage-wrap {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  border-radius: 0;
+  overflow: hidden;
+  border: none;
+  box-shadow: none;
+  background: radial-gradient(ellipse at 50% 30%, #3a9aaa 0%, var(--tw-sea, #2e7f86) 45%, #1a4f5a 100%);
+}
+.tidewell-game-screen .g3d-stage {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  aspect-ratio: auto !important;
+  box-shadow: none !important;
+  /* Override surface.css clamp(280px, 56vh, 620px) */
+}
+.tidewell-game-screen .g3d-stage,
+.tidewell-game-screen [data-testid="g3d-scene-host"],
+.tidewell-game-screen .room-g3d-scene-host {
+  height: 100% !important;
+  min-height: 100% !important;
+  width: 100% !important;
+  background: transparent !important;
+}
+.tidewell-game-screen .g3d-stage canvas {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.tidewell-turn-panel { display: flex; flex-direction: column; gap: 8px; }
+.tidewell-turn-blurb { margin: 0; font-size: 13px; color: #3d2c1c; }
+.tidewell-hud-dice { margin: 0; font-size: 12px; color: #5a4634; }
+.tidewell-primary-cta {
+  min-height: 48px;
+  border-radius: 999px;
+  border: 2px solid #c9a227;
+  background:
+    radial-gradient(circle at 50% 20%, #8b1e1e, #5a1414 70%),
+    linear-gradient(180deg, #6b4428, #2c1a10);
+  color: #f3e7c9;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 220, 140, 0.25);
+}
+.tidewell-primary-cta:disabled { opacity: 0.5; cursor: not-allowed; }
+.tidewell-turn-idle { margin: 0; font-size: 12px; color: #7a6550; }
+.tidewell-action-row {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tidewell-log-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  flex: 1;
+}
+.tidewell-log-tabs { display: flex; gap: 4px; }
+.tidewell-log-tabs button {
+  flex: 1;
+  min-height: 32px;
+  border: 1px solid rgba(74, 47, 28, 0.25);
+  border-radius: 8px;
+  background: rgba(255, 252, 245, 0.5);
+  color: #4a2f1c;
+  font-size: 11px;
+  cursor: pointer;
+}
+.tidewell-log-tabs button.is-active {
+  background: linear-gradient(180deg, #f7ecd2, #e5d0a0);
+  border-color: #c9a227;
+  font-weight: 700;
+}
+.tidewell-log-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  font-size: 12px;
+}
+.tidewell-chronicle {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #3d2c1c;
+}
+.tidewell-log-empty { margin: 0; color: #7a6550; }
+
+/* Bottom dock ~150–170px */
+.tidewell-dock {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  height: var(--tw-dock, 196px);
+  max-height: var(--tw-dock, 196px);
+  box-sizing: border-box;
+  padding: 8px 12px;
+  background: linear-gradient(180deg, #5a3820 0%, #2c1a10 100%);
+  border-top: 2px solid #c9a227;
+  color: #f3e7c9;
+  z-index: 5;
+}
+.tidewell-hand {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+  justify-content: flex-start;
+}
+.tidewell-hand::-webkit-scrollbar { height: 4px; }
+.tidewell-hand::-webkit-scrollbar-thumb { background: #c9a22788; border-radius: 4px; }
+.tidewell-resource-tile {
+  position: relative;
+  flex: 0 0 auto;
+  width: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.tidewell-resource-art {
+  display: block;
+  width: 52px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 5px;
+  border: 2px solid #c9a227aa;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  background: #e8d3a2;
+}
+.tidewell-resource-art.is-fallback {
+  display: grid;
+  place-items: center;
+}
+.tidewell-resource-name { font-size: 10px; opacity: 0.9; }
+.tidewell-resource-count {
+  min-width: 20px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: #f3e7c9;
+  color: #2a1c12;
+  font-size: 11px;
+  text-align: center;
+}
+.tidewell-resource-pop {
+  position: absolute;
+  top: -6px;
+  right: -2px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: #2f7d4a;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  animation: tidewell-pop 1.4s ease-out forwards;
+}
+@keyframes tidewell-pop {
+  0% { transform: translateY(6px); opacity: 0; }
+  20% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-10px); opacity: 0; }
+}
+
+.tidewell-dev-slot {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 88px;
+  max-width: 120px;
+  height: 72px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #c9a22788;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 11px;
+  box-sizing: border-box;
+}
+.tidewell-dev-slot .tidewell-kicker { opacity: 0.75; }
+.tidewell-dev-slot strong { font-size: 18px; }
+
+.tidewell-build-row {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  overflow-x: auto;
+}
+.tidewell-build-btn {
+  width: 68px;
+  min-height: 78px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  border: 2px solid #c9a227;
+  background: radial-gradient(circle at 50% 20%, #6b4428, #2c1a10 75%);
+  color: #f3e7c9;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 220, 140, 0.2);
+  flex: 0 0 auto;
+}
+.tidewell-build-btn.is-disabled,
+.tidewell-build-btn:disabled {
+  opacity: 0.42;
+  filter: grayscale(0.35);
+  cursor: not-allowed;
+}
+.tidewell-build-label { font-size: 11px; font-weight: 700; }
+.tidewell-build-cost {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: center;
+}
+.tidewell-build-cost img {
+  border-radius: 2px;
+  background: #f3e7c9;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.tidewell-game-screen > .hex-settlement-actions {
+  position: absolute;
+  left: 8px;
+  bottom: calc(var(--tw-dock, 160px) + 8px);
+  z-index: 70;
+  max-width: min(360px, 40vw);
+}
+.tidewell-game-screen .hex-settlement-board-targets {
+  background: rgba(243, 231, 201, 0.95);
+  border-radius: 8px;
+  border: 1px solid #c9a22788;
+  color: #2a1c12;
+}
+.tidewell-game-screen .hex-settlement-board-targets > summary {
+  cursor: pointer;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+/* Open drawer: fixed centered overlay so e2e/keyboard targets stay in-viewport
+   under overflow:hidden fullscreen shell. */
+.tidewell-game-screen .hex-settlement-board-targets[open] {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 120;
+  width: min(440px, calc(100vw - 24px));
+  max-width: min(440px, calc(100vw - 24px));
+  max-height: min(70vh, 560px);
+  overflow: auto;
+  padding: 8px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+.tidewell-game-screen .hex-settlement-board-targets[open] .hex-settlement-action-list {
+  max-height: none;
+  overflow: visible;
+}
+
+/* Mobile bottom chrome — hidden on desktop (sheet duplicates dock content) */
+.tidewell-mobile-bar,
+.tidewell-table-sheet {
+  display: none;
+}
+
+/* —— Mobile ≤800: board fullscreen + table sheet —— */
+@media (max-width: 800px) {
+  .room-view-tidewell-immersive {
+    --tw-dock: 0px;
+  }
+  .tidewell-game-screen {
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    --tw-dock: 0px;
+  }
+  .tidewell-topbar-status { display: none; }
+  /* Log opens from menu on phone; keep sound / replay / menu wood icons */
+  .tidewell-topbar-actions > button.tidewell-log-chip {
+    display: none;
+  }
+  .tidewell-topbar-actions > .tidewell-menu > summary {
+    display: inline-grid;
+  }
+  .tidewell-menu-panel .tidewell-chip-btn {
+    display: block;
+  }
+
+  .tidewell-game-body {
+    display: contents;
+  }
+
+  /* Player strip under topbar — does not cover canvas */
+  .tidewell-players {
+    order: 2;
+    grid-row: 2;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 6px 8px;
+    border: none;
+    border-bottom: 1px solid #c9a22755;
+    background: rgba(30, 18, 10, 0.94) !important;
+    color: #f3e7c9;
+    max-height: 72px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tidewell-players .tidewell-panel-title,
+  .tidewell-players .tidewell-hud-awards,
+  .tidewell-players .tidewell-hud-status,
+  .tidewell-players .tidewell-hud-scores {
+    display: none !important;
+  }
+  .tidewell-player-list {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 6px;
+    width: max-content;
+  }
+  /* Compact portrait medallions with VP (ref style) */
+  .tidewell-player-list {
+    gap: 10px;
+    padding: 0 4px;
+  }
+  .tidewell-player-list {
+    width: 100%;
+    justify-content: space-evenly;
+    gap: 4px;
+  }
+  .tidewell-player-card {
+    min-width: 0;
+    max-width: none;
+    flex: 1 1 0;
+    grid-template-columns: 1fr !important;
+    justify-items: center;
+    text-align: center;
+    padding: 2px 2px 4px;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #f3e7c9;
+    gap: 2px;
+  }
+  .tidewell-player-card.is-active {
+    background: transparent !important;
+  }
+  .tidewell-player-avatar,
+  .tidewell-medallion {
+    width: 48px !important;
+    height: 48px !important;
+  }
+  .tidewell-player-vp {
+    font-size: 11px;
+    color: #f0d060;
+  }
+  .tidewell-player-stats {
+    display: none !important;
+  }
+  .tidewell-player-meta {
+    align-items: center;
+  }
+  .tidewell-player-meta b {
+    font-size: 10px;
+    color: #f3e7c9;
+    max-width: 56px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tidewell-house-name { display: none; }
+  .tidewell-player-stats {
+    font-size: 10px;
+    color: #f0d060;
+    gap: 0;
+    justify-content: center;
+  }
+  .tidewell-player-stats span:not([title="胜利点"]):not([title="Victory points"]) {
+    display: none;
+  }
+  /* Keep VP span; hide card/dev counts on compact medallions via nth */
+  .tidewell-player-stats span:nth-child(2),
+  .tidewell-player-stats span:nth-child(3) {
+    display: none;
+  }
+  .tidewell-turn-badge {
+    font-size: 7px;
+    top: -4px;
+    right: 0;
+    padding: 1px 5px;
+  }
+  .tidewell-topbar-center .tidewell-topbar-status { display: none; }
+  .tidewell-island-name { font-size: 13px; }
+
+  .tidewell-stage-wrap {
+    order: 3;
+    grid-row: 3;
+    height: auto;
+    min-height: 0;
+    /* fills remaining — no white letterbox */
+  }
+
+  /* Right column becomes log drawer only */
+  .tidewell-turn-column {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 40;
+    max-height: 52dvh;
+    transform: translateY(110%);
+    transition: transform 0.22s ease;
+    border-radius: 16px 16px 0 0;
+    border: none;
+    background: #f3e7c9;
+  }
+  .tidewell-turn-column.is-open {
+    transform: translateY(0);
+  }
+  .tidewell-turn-column .tidewell-turn-panel {
+    display: none; /* primary CTA lives in mobile bar */
+  }
+
+  /* Dock becomes pull-up table sheet */
+  .tidewell-dock {
+    display: none; /* replaced by mobile bar + sheet */
+  }
+  .tidewell-mobile-bar {
+    display: flex;
+    order: 4;
+    grid-row: 4;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, #5a3820 0%, #2c1a10 100%);
+    border-top: 2px solid #c9a227;
+    z-index: 30;
+  }
+  .tidewell-table-toggle {
+    min-height: 52px;
+    min-width: 72px;
+    padding: 0 14px;
+    border-radius: 12px;
+    border: 2px solid #c9a227;
+    background: linear-gradient(180deg, #6b4428, #3a2416);
+    color: #f3e7c9;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,220,140,0.2);
+  }
+  .tidewell-mobile-bar .tidewell-primary-cta {
+    flex: 1;
+    min-height: 48px;
+  }
+
+  .tidewell-table-sheet {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    max-height: 62dvh;
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+    border-radius: 18px 18px 0 0;
+    background:
+      linear-gradient(180deg, #f3e7c9 0%, #e8d3a2 28%, #3e2616 28%, #2c1a10 100%);
+    color: #f3e7c9;
+    box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.45);
+    transform: translateY(110%);
+    transition: transform 0.22s ease;
+    overflow: auto;
+  }
+  .tidewell-table-sheet.is-open {
+    transform: translateY(0);
+  }
+  .tidewell-table-sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #2a1c12;
+    padding-bottom: 4px;
+  }
+  .tidewell-table-sheet-head strong {
+    font-family: Georgia, serif;
+    font-size: 16px;
+  }
+  .tidewell-table-sheet .tidewell-hand {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    overflow: visible;
+  }
+  .tidewell-table-sheet .tidewell-resource-tile {
+    width: auto;
+    min-width: 0;
+  }
+  .tidewell-table-sheet .tidewell-resource-art {
+    width: 100%;
+    max-width: 56px;
+    height: 64px;
+    margin: 0 auto;
+  }
+  .tidewell-table-sheet .tidewell-dev-slot {
+    flex-direction: row;
+    width: 100%;
+    max-width: none;
+    height: 44px;
+    min-height: 44px;
+    justify-content: space-between;
+    padding: 0 12px;
+    color: #f3e7c9;
+  }
+  .tidewell-table-sheet .tidewell-build-row {
+    justify-content: space-between;
+    overflow: visible;
+  }
+  .tidewell-table-sheet .tidewell-build-btn {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    min-height: 72px;
+  }
+
+  .tidewell-game-screen > .hex-settlement-actions {
+    bottom: 64px;
+    max-width: calc(100vw - 16px);
+  }
+}
+
+@media (min-width: 801px) and (max-width: 1100px) {
+  .room-view-tidewell-immersive {
+    --tw-side: 220px;
+    --tw-dock: 188px;
+  }
+}

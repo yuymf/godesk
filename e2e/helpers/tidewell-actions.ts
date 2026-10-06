@@ -1,4 +1,4 @@
-import { expect, type Locator } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 /** Expand the keyboard/assistive board-target drawer (G3D-13). */
 export async function openTidewellBoardTargets(board: Locator): Promise<void> {
@@ -18,4 +18,19 @@ export async function clickTidewellBoardAction(
   const button = board.getByRole("button", { name }).first();
   await expect(button).toBeVisible({ timeout: 20_000 });
   await button.click();
+}
+
+/** Claim a Tidewell seat (select lives in the top-bar ⚙ menu after 2h3). */
+export async function claimTidewellSeat(page: Page, seat: string | number): Promise<void> {
+  const select = page.getByLabel("你的席位");
+  await expect(select).toHaveCount(1, { timeout: 30_000 });
+  const menu = page.locator("details.tidewell-menu");
+  if ((await menu.count()) > 0) {
+    if ((await menu.getAttribute("open")) === null) {
+      await menu.locator("summary").click();
+      await expect(menu).toHaveAttribute("open", "", { timeout: 5_000 });
+    }
+  }
+  await expect(select).toBeVisible({ timeout: 10_000 });
+  await select.selectOption(String(seat));
 }

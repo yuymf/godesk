@@ -78,11 +78,6 @@ const CASTS: Record<PropKind, boolean> = {
 const SMOOTH: Record<PropKind, boolean> = {
   pine: true, canopy: true, sheep: true, trough: false, boulder: false, clay: true, bricks: false, sheaf: true, wheatrow: true, dune: true, pebble: false, blobshadow: true,
 };
-/** 树冠 / 接触阴影用半透明材质（每类仍 1 个 InstancedMesh）。 */
-const TRANSLUCENT: Record<PropKind, boolean> = {
-  pine: false, canopy: true, sheep: false, trough: false, boulder: false, clay: false, bricks: false, sheaf: false, wheatrow: false, dune: false, pebble: false, blobshadow: true,
-};
-
 /** 地块顶面高度（SceneHost sharedTileGeom 拉伸深度）。 */
 export const TILE_TOP = 0.28;
 /** 中心禁区：数字筹码（0.22 × 1.8）+ 余量；沙漠为强盗。 */
@@ -452,12 +447,14 @@ export function createTerrainPropLayer(): TerrainPropLayer {
   const smoothMaterial = new MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.9, metalness: 0 });
   const canopyMaterial = new MeshStandardMaterial({
     vertexColors: true, flatShading: false, roughness: 1, metalness: 0,
-    transparent: true, opacity: 0.55, depthWrite: false, depthWrite: false,
+    transparent: true, opacity: 0.55,
   });
+  canopyMaterial.depthWrite = false;
   const shadowMaterial = new MeshStandardMaterial({
     color: "#1a1814", flatShading: true, roughness: 1, metalness: 0,
-    transparent: true, opacity: 0.28, depthWrite: false, depthWrite: false,
+    transparent: true, opacity: 0.28,
   });
+  shadowMaterial.depthWrite = false;
   const geometries = new Map<PropKind, BufferGeometry>();
   let key = "";
   let tier: RenderTierId | null = null;

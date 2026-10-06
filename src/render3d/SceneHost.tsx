@@ -35,6 +35,7 @@ import { createNumberLabelLayer, projectLabels, type NumberLabelLayer } from "./
 import { JUDGE_PRESETS, judgeCamera, type JudgePreset } from "./judge-camera";
 import { REPLACED_NODE_KINDS } from "./dressing-kinds";
 import type { HexDressing } from "./hex-dressing";
+import { framePose, type ViewportFrame } from "./viewport-frame";
 import type { SceneModel, SceneNode } from "./scene-model";
 import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
 import { markInteractive, perfModeEnabled, perfRecorder } from "./perf";
@@ -101,6 +102,11 @@ export type SceneHostProps = {
   activeSeat?: number | null;
   /** G3D-14：通用桌面场景（见 SceneAdapter）。 */
   scene?: SceneAdapter | null;
+  /**
+   * Track B HUD framing (2h3). Island fill / polar for hex-settlement only.
+   * Track C owns the full camera-rig (#151); this is a minimal viewport param.
+   */
+  viewportFrame?: ViewportFrame | null;
 };
 
 /** 阴影贴图在场景变化后继续逐帧重绘的时长（覆盖 place/move/dice 动效）。 */
@@ -360,6 +366,7 @@ export function SceneHost({
   lighting,
   activeSeat = null,
   scene: adapter = null,
+  viewportFrame = null,
 }: SceneHostProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [unsupported, setUnsupported] = useState(false);
@@ -408,6 +415,9 @@ export function SceneHost({
   onPickRef.current = onPick;
   const adapterRef = useRef(adapter);
   adapterRef.current = adapter;
+  const viewportFrameRef = useRef(viewportFrame);
+  viewportFrameRef.current = viewportFrame;
+  const appliedFrameKeyRef = useRef<string | null>(null);
   const layoutKeyRef = useRef<string | null>(null);
   const cameraKeyRef = useRef<string | null>(null);
   /** G3D-14：按 RenderSpec.camera 与当前宽高比放置机位（窄屏时拉远，保证桌面左右不出画）。 */
@@ -484,7 +494,9 @@ export function SceneHost({
     }
 
     const scene = new Scene();
-    scene.background = new Color(SCENE_TOKENS.sky.horizon);
+    // Tidewell: sea clear/horizon (avoids light letterbox band). Other genres keep parchment horizon.
+    const clearHex = hexSettlement ? "#2e7f86" : SCENE_TOKENS.sky.horizon;
+    scene.background = new Color(clearHex);
 
     const camera = new PerspectiveCamera(45, 1, 0.1, 100);
     camera.position.set(0, 9, 12);
@@ -501,7 +513,7 @@ export function SceneHost({
     configureRenderer(renderer, lightingRef.current);
     // 静止场景复用阴影贴图；内容变化后 SHADOW_REFRESH_MS 内逐帧重绘（见 tick）。
     renderer.shadowMap.autoUpdate = false;
-    renderer.setClearColor(new Color(SCENE_TOKENS.sky.horizon), 1);
+    renderer.setClearColor(new Color(clearHex), 1);
     rendererRef.current = renderer;
     // setSize(..., false) leaves the canvas CSS size unset, so on DPR > 1 the
     // canvas laid out at its backing-store width (e.g. 824 px on a 412 px
@@ -563,7 +575,11 @@ export function SceneHost({
 
     const rig = createLightingRig(scene, lightingRef.current, caps);
     rigRef.current = rig;
-    const sky = createSkyDome();
+    const sky = createSkyDome(
+      hexSettlement
+        ? { top: "#5a9eb8", horizon: "#2e7f86", bottom: "#1a4f5a", exponent: 0.85 }
+        : undefined,
+    );
     scene.add(sky);
     const library = new MaterialLibrary({ clearcoat: caps.id === "high" });
     // high 档：RoomEnvironment 环境反射（强度 0.35，只挂光泽材质）；medium / low 关闭（§4.7）。
@@ -962,6 +978,34 @@ export function SceneHost({
     if (tilesChanged) {
       const bounds = islandBounds(next.nodes);
       rigRef.current?.fitToBounds(bounds.center, bounds.radius);
+      appliedFrameKeyRef.current = null; // force re-frame on new island layout
+    }
+    // Track B framing: fit island into the canvas (fill/polar). Install on
+    // fitCameraRef so ResizeObserver re-applies when the stage gets a real size
+    // (immersive layout often mounts at 0×0 then expands).
+    const frame = viewportFrameRef.current;
+    if (frame && cameraRef.current && controlsRef.current) {
+      const bounds = islandBounds(next.nodes);
+      const applyFrame = () => {
+        const cam = cameraRef.current;
+        const ctl = controlsRef.current;
+        const fr = viewportFrameRef.current;
+        if (!cam || !ctl || !fr) return;
+        const key = `${bounds.radius.toFixed(2)}|${cam.aspect.toFixed(3)}|${fr.fill ?? ""}|${fr.polarDeg ?? ""}|${fr.azimuthDeg ?? ""}`;
+        if (key === appliedFrameKeyRef.current) return;
+        const pose = framePose(bounds.center, bounds.radius, cam.aspect, fr);
+        cam.fov = pose.fov;
+        cam.position.set(pose.position[0], pose.position[1], pose.position[2]);
+        cam.updateProjectionMatrix();
+        ctl.target.set(pose.target[0], pose.target[1], pose.target[2]);
+        ctl.minDistance = pose.distance * 0.45;
+        ctl.maxDistance = pose.distance * 2.2;
+        ctl.update();
+        appliedFrameKeyRef.current = key;
+        markShadowsDirtyRef.current();
+      };
+      fitCameraRef.current = applyFrame;
+      applyFrame();
     }
     // G3D-08: first hex model mounts water; later tile-layout changes rebuild the coast field.
     // Synchronous mount lock: hex reconcile can fire twice before the first async controller
@@ -1093,6 +1137,13 @@ export function SceneHost({
     }
     markShadowsDirtyRef.current();
   }, [adapter, ready, hostEpoch]);
+
+  // Track B: re-fit when HUD passes a new viewportFrame (e.g. narrow ↔ desktop).
+  useEffect(() => {
+    if (!ready || !hexSettlement || !viewportFrame) return;
+    appliedFrameKeyRef.current = null;
+    fitCameraRef.current();
+  }, [viewportFrame, ready, hostEpoch, hexSettlement]);
 
   // G3D-09 turn camera: reframe toward the island centre when the active seat changes.
   useEffect(() => {

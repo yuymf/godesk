@@ -436,7 +436,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       : copy.points;
 
   return (
-    <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute || auction ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-tidewell" : ""} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
+    <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute || auction ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-tidewell room-view-tidewell-immersive" : ""} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
       <header className="room-shell-header">
         <div className="room-title-block">
           <span className="room-brand-mark" aria-hidden="true"><GameMark /></span>
@@ -464,7 +464,8 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         </div>
       </header>
 
-      <section aria-label={copy.invitation} className="room-invitation room-invitation-rich">
+{!hexSettlement ? (
+            <section aria-label={copy.invitation} className="room-invitation room-invitation-rich">
         <div className="invitation-heading">
           <span className="room-kicker">{copy.invitation}</span>
           <strong>{copy.invitationHint}</strong>
@@ -559,8 +560,10 @@ export function RoomView({ sessionId }: { sessionId: string }) {
           </label>
         </div>
       </section>
+      ) : null}
 
-      {room.state.status === "active" &&
+      {!hexSettlement &&
+        room.state.status === "active" &&
         room.seats.length + (room.aiSeats?.length ?? 0) < room.state.scores.length && (
         <section aria-live="polite" className="room-waiting-empty">
           <div aria-hidden="true" className="room-waiting-mark">◇</div>
@@ -571,7 +574,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         </section>
       )}
 
-      {room.experiment && (
+      {!hexSettlement && room.experiment && (
         <section
           aria-labelledby="experiment-brief-title"
           className="room-experiment-brief"
@@ -634,6 +637,10 @@ export function RoomView({ sessionId }: { sessionId: string }) {
             onAct={(actionId, payload) => {
               void act(actionId, -1, payload);
             }}
+            onClaimSeat={(next) => {
+              void claimSeat(next);
+            }}
+            replayUrl={room.replayUrl}
             status={room.state.status}
             viewerSeat={seat}
             winnerSeat={room.state.winnerSeat}
@@ -964,7 +971,10 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         </section>
       )}
 
-      <section aria-label={copy.feedbackTitle} className="room-feedback-panel">
+{hexSettlement ? (
+        <details className="room-feedback-drawer" id="room-feedback-drawer">
+          <summary>{copy.feedbackTitle}</summary>
+                <section aria-label={copy.feedbackTitle} className="room-feedback-panel">
         <header>
           <div>
             <span className="room-kicker">{copy.feedbackTitle}</span>
@@ -1028,6 +1038,73 @@ export function RoomView({ sessionId }: { sessionId: string }) {
           </form>
         )}
       </section>
+        </details>
+      ) : (
+              <section aria-label={copy.feedbackTitle} className="room-feedback-panel">
+        <header>
+          <div>
+            <span className="room-kicker">{copy.feedbackTitle}</span>
+            <h2>{copy.feedbackTitle}</h2>
+          </div>
+          <p>{room.experiment ? copy.experimentFeedbackHint : copy.feedbackHint}</p>
+        </header>
+        {seat === null ? (
+          <div className="action-reminder">⌁ {copy.claimSeat}</div>
+        ) : !latestOwnAction ? (
+          <div className="action-reminder">⌁ {copy.feedbackActionRequired}</div>
+        ) : (
+          <form
+            className="room-feedback-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submitFeedback();
+            }}
+          >
+            <fieldset>
+              <legend>{copy.feedbackRating}</legend>
+              <div aria-label={copy.feedbackRating} className="feedback-rating" role="group">
+                {([1, 2, 3, 4, 5] as const).map((rating) => (
+                  <button
+                    aria-pressed={feedbackRating === rating}
+                    className={feedbackRating >= rating ? "is-selected" : ""}
+                    disabled={busy}
+                    key={rating}
+                    onClick={() => setFeedbackRating(rating)}
+                    type="button"
+                  >
+                    <span aria-hidden="true">★</span>
+                    <span className="sr-only">{rating} / 5</span>
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            <label>
+              <span>{room.experiment ? copy.experimentFeedbackComment : copy.feedbackComment}</span>
+              <textarea
+                maxLength={1000}
+                onChange={(event) => setFeedbackComment(event.currentTarget.value)}
+                placeholder={copy.feedbackPlaceholder}
+                rows={3}
+                value={feedbackComment}
+              />
+            </label>
+            <button
+              className="feedback-submit"
+              disabled={busy || feedbackRating === 0 || feedbackComment.trim().length < 2}
+              type="submit"
+            >
+              {copy.feedbackSubmit}
+            </button>
+            {room.feedback.filter((entry) => entry.seat === seat).map((entry) => (
+              <p className="feedback-saved" key={entry.id}>
+                {copy.feedbackSubmitted} · {locale === "zh" ? "行动" : "Action"} #{entry.moment.actionSequence} · {build.ruleSystem.actions
+                  .find((action) => action.id === entry.moment.actionId)?.label ?? entry.moment.actionId} · {"★".repeat(entry.rating)} · {entry.comment}
+              </p>
+            ))}
+          </form>
+        )}
+      </section>
+      )}
 
       {hexSettlement ? (
         <Suspense fallback={null}>
