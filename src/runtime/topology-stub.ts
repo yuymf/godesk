@@ -2,7 +2,7 @@
  * Topology stubs for genre adapters (PR4).
  *
  * Public play-kernel never interprets hex/grid itself. PR5 (Othello) fills
- * grid directional flips; PR6 (Catan) fills hex tile/vertex/edge. Stubs only.
+ * grid directional flips; PR6 (Tidewell) fills hex tile/vertex/edge. Stubs only.
  */
 
 /** Rectangular grid coordinates — Othello/Reversi will use these in PR5. */
@@ -16,7 +16,7 @@ export type GridTopologyStub = {
   directions: readonly GridCoord[];
 };
 
-/** Hex axial coordinates — Catan will use these in PR6. Not required by public kernel. */
+/** Hex axial coordinates — Tidewell will use these in PR6. Not required by public kernel. */
 export type HexCoord = { q: number; r: number };
 
 export type HexTopologyStub = {
@@ -58,7 +58,7 @@ export function createGridTopologyStub(rows: number, cols: number): GridTopology
   };
 }
 
-/** All axial cells inside a hexagon of the given radius (Catan board = 2). */
+/** All axial cells inside a hexagon of the given radius (Tidewell board = 2). */
 function hexesInRadius(radius: number): HexCoord[] {
   const cells: HexCoord[] = [];
   for (let q = -radius; q <= radius; q += 1) {

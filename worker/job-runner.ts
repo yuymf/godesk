@@ -255,7 +255,7 @@ export async function runCreatorJob(
         isMultiActHiddenRoleCorpus(authoredMaterial);
       const hiddenRoleRuntimeConfigured =
         sourceGenre === "hidden-role" && !multiActHiddenRoleRefused;
-      // PR5/PR6/PR11/PR12 thin bind: Othello → disc-flipping-v1; Catan → hex-settlement-v1;
+      // PR5/PR6/PR11/PR12 thin bind: Othello → disc-flipping-v1; Tidewell → hex-settlement-v1;
       // line network → network-route-v1; card/area-control → hand-play-v1.
       // Never silently substitute across genres.
       const requestedMechanics = inferRequestedMechanics(
@@ -393,7 +393,7 @@ export async function runCreatorJob(
               playerCount: 2,
               victoryPointsToWin: 10,
               unsupported: [
-                "hex-settlement-v1 executes beginner-board Catan basics (placement, production, robber/discard, build+connectivity, bank/port + simple player trade, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — full negotiated multi-resource trades remain out of scope.",
+                "hex-settlement-v1 executes beginner-board Tidewell basics (placement, production, robber/discard, build+connectivity, bank/port + simple player trade, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — full negotiated multi-resource trades remain out of scope.",
               ],
             },
           }

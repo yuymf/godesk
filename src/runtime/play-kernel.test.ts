@@ -205,7 +205,7 @@ describe("public play-kernel contract", () => {
     expect(createSeededRng(42).at(3)).toBe(a[2]);
   });
 
-  it("public config/state types do not require Catan-only fields", () => {
+  it("public config/state types do not require Tidewell-only fields", () => {
     const requiredConfigKeys = [
       "kernelType",
       "playerCount",

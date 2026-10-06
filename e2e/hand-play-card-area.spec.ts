@@ -16,7 +16,7 @@ test.describe("PR13 hand-play card-area HUD", () => {
 
     const card = await openLobbyCard(page, projectId);
     await expect(card.locator('[data-lobby-mark="card"]')).toBeVisible();
-    await expect(card.locator('[data-lobby-mark="catan"]')).toHaveCount(0);
+    await expect(card.locator('[data-lobby-mark="tidewell"]')).toHaveCount(0);
     await expect(card.locator('[data-lobby-mark="othello"]')).toHaveCount(0);
     await expect(card.locator('[data-lobby-mark="network"]')).toHaveCount(0);
     await expect(card.locator('[data-lobby-mark="card"] img')).toHaveAttribute(

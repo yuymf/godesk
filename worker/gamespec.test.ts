@@ -25,7 +25,7 @@ async function readRule(projectId: string) {
 }
 
 describe("GameSpec generation, save and build gate", () => {
-  it("proposes hex-settlement-v1 for Catan baseline without silent Othello substitute", async () => {
+  it("proposes hex-settlement-v1 for Tidewell baseline without silent Othello substitute", async () => {
     const idea = BASELINE_PROMPTS[0];
     const { project, job } = await generate(idea);
     expect(job.result?.artifactState).toMatchObject({ status: "awaiting-approval" });
@@ -38,10 +38,10 @@ describe("GameSpec generation, save and build gate", () => {
       op: "configure_hex_settlement",
       config: { playerCount: 2, victoryPointsToWin: 10 },
     });
-    // Must not silently bind Othello for a Catan prompt.
+    // Must not silently bind Othello for a Tidewell prompt.
     expect(generationPlan.proposedRuntime?.op).not.toBe("configure_disc_flipping");
     const approved = await (await post(`/api/projects/${project.id}/changes`, {
-      expectedVersion: 2, idempotencyKey: "approve-catan",
+      expectedVersion: 2, idempotencyKey: "approve-hexSettlement",
       operations: [
         { op: "approve_generation_plan", planId: generationPlan.id },
         generationPlan.proposedRuntime as NonNullable<typeof generationPlan.proposedRuntime>,
@@ -54,13 +54,13 @@ describe("GameSpec generation, save and build gate", () => {
     expect(ruleSystemSpecIssues(approved.ruleSystem)).toEqual([]);
     const build = await post(`/api/projects/${project.id}/builds`, {
       expectedVersion: approved.project.version,
-      idempotencyKey: "catan-build",
+      idempotencyKey: "hexSettlement-build",
     });
     expect([200, 201]).toContain(build.status);
     expect(approved.ruleSystem.runtimeSupport.status).toBe("executable");
   });
 
-  it("proposes disc-flipping-v1 for Othello baseline without silent Catan substitute", async () => {
+  it("proposes disc-flipping-v1 for Othello baseline without silent Tidewell substitute", async () => {
     const idea = BASELINE_PROMPTS[1];
     const { project, job } = await generate(idea);
     expect(job.result?.artifactState).toMatchObject({ status: "awaiting-approval" });
@@ -259,7 +259,7 @@ const OTHER_UNSEEN_PROMPTS = [
   "随便做个桌游",
 ] as const;
 
-describe("unseen prompts never silent-bind Catan or Othello", () => {
+describe("unseen prompts never silent-bind Tidewell or Othello", () => {
   it("auction prompt proposes the auction adapter and passes the build gate", async () => {
     const { project } = await generate(AUCTION_PROMPT);
     const rule = await readRule(project.id);
@@ -277,7 +277,7 @@ describe("unseen prompts never silent-bind Catan or Othello", () => {
     });
     expect([200, 201]).toContain(built.status);
   });
-  it("线路网络 proposes network-route-v1 (never Catan/Othello)", async () => {
+  it("线路网络 proposes network-route-v1 (never Tidewell/Othello)", async () => {
     const { project, job } = await generate(NETWORK_PROMPT);
     expect(job.status).toBe("succeeded");
     const rule = await readRule(project.id);

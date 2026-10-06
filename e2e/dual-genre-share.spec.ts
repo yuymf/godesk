@@ -1,7 +1,7 @@
 import { expect, type Browser, type Page, test } from "@playwright/test";
 import {
 import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
-  CATAN_PROMPT,
+  TIDEWELL_PROMPT,
   OTHELLO_PROMPT,
   generateApproveAndPlayable,
   shareHrefFromStudio,
@@ -16,7 +16,7 @@ import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/ti
 async function guestJoinClaimAndAct(
   browser: Browser,
   shareUrl: string,
-  genre: "othello" | "catan",
+  genre: "othello" | "hexSettlement",
 ) {
   const guest = await browser.newContext();
   try {
@@ -96,7 +96,7 @@ test.describe("PR10 share= dual-genre guest join", () => {
     });
   });
 
-  test("卡坦: 一句话生成 → share= 交接 guest claim + setup settlement", async ({
+  test("汐屿: 一句话生成 → share= 交接 guest claim + setup settlement", async ({
     page,
     browser,
   }) => {
@@ -105,13 +105,13 @@ test.describe("PR10 share= dual-genre guest join", () => {
 
     let shareUrl = "";
     await test.step("一句话生成 + approve → playable share link", async () => {
-      await generateApproveAndPlayable(page, CATAN_PROMPT);
+      await generateApproveAndPlayable(page, TIDEWELL_PROMPT);
       shareUrl = await shareHrefFromStudio(page);
       expect(new URL(shareUrl).searchParams.get("share")).toBeTruthy();
     });
 
     await test.step("share= 交接: second context claims seat and acts", async () => {
-      await guestJoinClaimAndAct(browser, shareUrl, "catan");
+      await guestJoinClaimAndAct(browser, shareUrl, "hexSettlement");
     });
   });
 

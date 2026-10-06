@@ -100,9 +100,9 @@ export function ReplayView({ replayId }: { replayId: string }) {
             viewerSeat={null}
             winnerSeat={replay.finalState.winnerSeat}
           />
-        ) : replay.finalState.catan ? (
+        ) : replay.finalState.hexSettlement ? (
           <HexSettlementScenePreview
-            catan={replay.finalState.catan as HexSettlementBoardState}
+            hexSettlement={replay.finalState.hexSettlement as HexSettlementBoardState}
           />
         ) : replay.finalState.networkRoute ? (
           <NetworkRouteBoard render={build?.ruleSystem.presentation.render}

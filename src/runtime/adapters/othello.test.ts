@@ -74,7 +74,7 @@ describe("disc-flipping-v1 othello adapter", () => {
     );
   });
 
-  it("creates standard 8×8 opening without Catan fields on the public envelope", () => {
+  it("creates standard 8×8 opening without Tidewell fields on the public envelope", () => {
     const state = createInitialState(othelloAdapter, config, 42);
     expect(state.seed).toBe(42);
     expect(state.phase).toBe("play");

@@ -25,7 +25,7 @@ describe("inferRequestedMechanics — baseline vs unseen", () => {
   });
   it("keeps mixed auction and other genre requests visible as a capability gap", () => {
     for (const [prompt, otherKernel] of [
-      ["拍卖竞价卡坦岛", "hex-settlement-v1"],
+      ["拍卖竞价汐屿", "hex-settlement-v1"],
       ["auction with an Othello board", "disc-flipping-v1"],
       ["拍卖竞价线路网络", "network-route-v1"],
       ["拍卖竞价卡牌区域控制", "hand-play-v1"],
@@ -37,9 +37,9 @@ describe("inferRequestedMechanics — baseline vs unseen", () => {
       expect(mechanicsCapabilityGap(mechanics, "auction-bidding-v1")).toContain("能力缺口");
     }
   });
-  it("binds hex-settlement only for Catan-shaped baseline prompts", () => {
+  it("binds hex-settlement only for Tidewell-shaped baseline prompts", () => {
     expect(inferRequestedMechanics(BASELINE_PROMPTS[0])).toEqual(["hex-settlement"]);
-    expect(inferRequestedMechanics("帮我生成一个卡坦岛游戏")).toEqual(["hex-settlement"]);
+    expect(inferRequestedMechanics("帮我生成一个汐屿游戏")).toEqual(["hex-settlement"]);
     expect(inferRequestedMechanics(BASELINE_PROMPTS[1])).toEqual(["disc-flipping"]);
   });
 

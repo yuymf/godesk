@@ -3,7 +3,7 @@ import { GENERATOR_VERSION, RULES_VERSION, refreshGameSpec, type GameSpec } from
 import { defaultRenderSpec } from "../render-spec";
 
 export const BASELINE_PROMPTS = [
-  "做一款可以与电脑对战的卡坦岛基础版",
+  "做一款可以与电脑对战的汐屿基础版",
   "做一款可以与电脑对战的黑白棋",
 ] as const;
 
@@ -85,10 +85,10 @@ export function executableOthelloSpecFixture(): RuleSystem {
 }
 
 
-/** Executable Catan / hex-settlement RuleSystem for PR6 thin bind tests. */
-export function executableCatanSpecFixture(): RuleSystem {
+/** Executable Tidewell / hex-settlement RuleSystem for PR6 thin bind tests. */
+export function executableTidewellSpecFixture(): RuleSystem {
   const rule: RuleSystem = {
-    id: "rule-system-catan-fixture", version: 1, name: "卡坦岛基础版", pitch: "Hex settlement",
+    id: "rule-system-hexSettlement-fixture", version: 1, name: "汐屿基础版", pitch: "Hex settlement",
     generation: {
       generatorVersion: GENERATOR_VERSION, rulesVersion: RULES_VERSION,
       sourcePrompt: BASELINE_PROMPTS[0], assumptions: ["Basic Settlers beginner board"],

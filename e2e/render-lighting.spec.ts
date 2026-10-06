@@ -5,18 +5,18 @@ import { expect, test } from "@playwright/test";
  * 每档断言 AgX、阴影贴图尺寸（2048 / 1024 / 512）与 KTX2 PBR 套件流式替换（512 / 512 / 256），
  * 且贴图与 Basis 转码器请求全部成功。
  */
-const CATAN_PROMPT = "做一款可以与电脑对战的卡坦岛基础版";
+const TIDEWELL_PROMPT = "做一款可以与电脑对战的汐屿基础版";
 const EXPECTED = {
   high: { shadow: "2048", pbr: "512" },
   medium: { shadow: "1024", pbr: "512" },
   low: { shadow: "512", pbr: "256" },
 } as const;
 
-test("卡坦 3D: lighting, soft shadows and KTX2 PBR per quality tier", async ({ page }) => {
+test("汐屿 3D: lighting, soft shadows and KTX2 PBR per quality tier", async ({ page }) => {
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/chatgpt-plugin/new");
-  await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(CATAN_PROMPT);
+  await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(TIDEWELL_PROMPT);
   await page.getByRole("button", { name: "生成可玩版本" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 90_000 });
   await page.getByRole("button", { name: "确认玩法并开始试玩" }).click();

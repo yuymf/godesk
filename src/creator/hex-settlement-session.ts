@@ -3,27 +3,27 @@
  * Legal-action listing + initial session slice; no SVG board.
  */
 import {
-  catanAdapter,
-  catanToSessionFields,
-  createCatanKernelConfig,
-  parseCatanConfig,
-  type CatanGenre,
-  type CatanPlayer,
-  type CatanPort,
-  type CatanTile,
+  hexSettlementAdapter,
+  hexSettlementToSessionFields,
+  createHexSettlementKernelConfig,
+  parseHexSettlementConfig,
+  type HexSettlementGenre,
+  type HexSettlementPlayer,
+  type HexSettlementPort,
+  type HexSettlementTile,
   type DevCardKind,
   type ResourceBank,
-} from "../runtime/adapters/catan";
+} from "../runtime/adapters/hex-settlement";
 import { createInitialState, type PlayState } from "../runtime/play-kernel";
 
 export type HexSettlementBoardState = {
   phase: string;
   playerCount: number;
   victoryPointsToWin: number;
-  tiles: CatanTile[];
+  tiles: HexSettlementTile[];
   robberHex: string;
-  ports: CatanPort[];
-  players: CatanPlayer[];
+  ports: HexSettlementPort[];
+  players: HexSettlementPlayer[];
   setupStep: number;
   pendingRoadVertex: string | null;
   lastDice: [number, number] | null;
@@ -45,17 +45,17 @@ const EMPTY_BANK = (): ResourceBank => ({
   ore: 0,
 });
 
-export function toHexSettlementGenre(catan: HexSettlementBoardState): CatanGenre {
+export function toHexSettlementGenre(hexSettlement: HexSettlementBoardState): HexSettlementGenre {
   return {
-    playerCount: catan.playerCount,
-    victoryPointsToWin: catan.victoryPointsToWin,
-    tiles: catan.tiles.map((tile) => ({ ...tile })),
-    robberHex: catan.robberHex,
-    ports: catan.ports.map((port) => ({
+    playerCount: hexSettlement.playerCount,
+    victoryPointsToWin: hexSettlement.victoryPointsToWin,
+    tiles: hexSettlement.tiles.map((tile) => ({ ...tile })),
+    robberHex: hexSettlement.robberHex,
+    ports: hexSettlement.ports.map((port) => ({
       ...port,
       vertices: [...port.vertices],
     })),
-    players: catan.players.map((player) => ({
+    players: hexSettlement.players.map((player) => ({
       resources: { ...EMPTY_BANK(), ...player.resources },
       settlements: [...player.settlements],
       cities: [...player.cities],
@@ -65,58 +65,58 @@ export function toHexSettlementGenre(catan: HexSettlementBoardState): CatanGenre
       vpCards: player.vpCards,
       newDevCards: [...player.newDevCards] as DevCardKind[],
     })),
-    setupStep: catan.setupStep,
-    pendingRoadVertex: catan.pendingRoadVertex,
-    lastDice: catan.lastDice ? ([...catan.lastDice] as [number, number]) : null,
-    discardQueue: [...catan.discardQueue],
-    discardRemaining: catan.discardRemaining,
-    devDeck: [...catan.devDeck] as DevCardKind[],
-    longestRoadOwner: catan.longestRoadOwner,
-    largestArmyOwner: catan.largestArmyOwner,
-    freeRoadsRemaining: catan.freeRoadsRemaining,
-    lastAction: catan.lastAction,
-    turnPlayer: catan.turnPlayer,
+    setupStep: hexSettlement.setupStep,
+    pendingRoadVertex: hexSettlement.pendingRoadVertex,
+    lastDice: hexSettlement.lastDice ? ([...hexSettlement.lastDice] as [number, number]) : null,
+    discardQueue: [...hexSettlement.discardQueue],
+    discardRemaining: hexSettlement.discardRemaining,
+    devDeck: [...hexSettlement.devDeck] as DevCardKind[],
+    longestRoadOwner: hexSettlement.longestRoadOwner,
+    largestArmyOwner: hexSettlement.largestArmyOwner,
+    freeRoadsRemaining: hexSettlement.freeRoadsRemaining,
+    lastAction: hexSettlement.lastAction,
+    turnPlayer: hexSettlement.turnPlayer,
   };
 }
 
 function playStateFromSession(
-  catan: HexSettlementBoardState,
+  hexSettlement: HexSettlementBoardState,
   activeSeat: number,
   status: "active" | "complete",
   winnerSeat: number | null = null,
-): PlayState<CatanGenre> {
+): PlayState<HexSettlementGenre> {
   return {
     seed: 0,
     sequence: 0,
-    phase: status === "complete" ? "ended" : catan.phase,
+    phase: status === "complete" ? "ended" : hexSettlement.phase,
     activePlayerId: activeSeat,
-    playerCount: catan.playerCount,
+    playerCount: hexSettlement.playerCount,
     status,
     winnerId: winnerSeat,
     events: [],
-    genre: toHexSettlementGenre(catan),
+    genre: toHexSettlementGenre(hexSettlement),
   };
 }
 
-export function listCatanLegalActionsForSession(input: {
-  catan: HexSettlementBoardState;
+export function listHexSettlementLegalActionsForSession(input: {
+  hexSettlement: HexSettlementBoardState;
   activeSeat: number;
   status: "active" | "complete";
   playerId: number;
 }) {
-  const config = createCatanKernelConfig({
-    playerCount: input.catan.playerCount,
-    victoryPointsToWin: input.catan.victoryPointsToWin,
+  const config = createHexSettlementKernelConfig({
+    playerCount: input.hexSettlement.playerCount,
+    victoryPointsToWin: input.hexSettlement.victoryPointsToWin,
   });
-  const parsed = parseCatanConfig(config.adapter);
+  const parsed = parseHexSettlementConfig(config.adapter);
   if (!parsed) return [];
-  const state = playStateFromSession(input.catan, input.activeSeat, input.status);
-  return catanAdapter.listLegalActions(state, input.playerId, parsed);
+  const state = playStateFromSession(input.hexSettlement, input.activeSeat, input.status);
+  return hexSettlementAdapter.listLegalActions(state, input.playerId, parsed);
 }
 
 /** Starting beginner-island session slice for preview / lobby. */
-export function createInitialCatanSessionSlice(playerCount = 2) {
-  const config = createCatanKernelConfig({ playerCount });
-  const state = createInitialState(catanAdapter, config, 0);
-  return catanToSessionFields(state).catan;
+export function createInitialHexSettlementSessionSlice(playerCount = 2) {
+  const config = createHexSettlementKernelConfig({ playerCount });
+  const state = createInitialState(hexSettlementAdapter, config, 0);
+  return hexSettlementToSessionFields(state).hexSettlement;
 }

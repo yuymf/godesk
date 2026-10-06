@@ -2272,7 +2272,7 @@ export function visibleSession(
 }
 
 
-/** Persist action logs without per-ply genre blobs (catan/othello/…).
+/** Persist action logs without per-ply genre blobs (hexSettlement/othello/…).
  *  Reconstruct rebuilds full state from intentId/actionId/payload + seed.
  *  Keeps DO/SQLite under SQLITE_TOOBIG for long seeded bot runs (~800+ plies).
  */

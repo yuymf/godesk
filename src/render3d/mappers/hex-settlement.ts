@@ -1,4 +1,4 @@
-import type { Terrain } from "../../runtime/adapters/catan";
+import type { Terrain } from "../../runtime/adapters/hex-settlement";
 import type { SceneModel, SceneNode, SceneVec3 } from "../scene-model";
 import { NUMBER_TOKEN_SCALE } from "../tokens";
 

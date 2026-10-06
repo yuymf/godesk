@@ -61,7 +61,7 @@ const SEAT_COLOR = ["#b45309", "#0369a1", "#15803d", "#7c3aed"] as const;
 
 /**
  * Cards-surface HUD for hand-play-v1 (not a spatial board).
- * Mirrors othello/catan/network HUD readability: status, scores, log, hand.
+ * Mirrors othello/hexSettlement/network HUD readability: status, scores, log, hand.
  */
 export function HandPlayBoard({
   handPlay,

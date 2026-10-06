@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   createBeginnerTiles,
-  type CatanGenre,
-  type CatanPlayer,
+  type HexSettlementGenre,
+  type HexSettlementPlayer,
   type ResourceBank,
-} from "../../runtime/adapters/catan";
+} from "../../runtime/adapters/hex-settlement";
 import { diffSceneModels } from "../scene-model";
 import { mapHexSettlementToScene } from "./hex-settlement";
 
@@ -12,7 +12,7 @@ function emptyBank(): ResourceBank {
   return { wood: 0, brick: 0, sheep: 0, wheat: 0, ore: 0 };
 }
 
-function emptyPlayer(): CatanPlayer {
+function emptyPlayer(): HexSettlementPlayer {
   return {
     resources: emptyBank(),
     settlements: [],
@@ -25,8 +25,8 @@ function emptyPlayer(): CatanPlayer {
   };
 }
 
-function baseGenre(overrides: Partial<CatanGenre> = {}): Pick<
-  CatanGenre,
+function baseGenre(overrides: Partial<HexSettlementGenre> = {}): Pick<
+  HexSettlementGenre,
   "tiles" | "robberHex" | "ports" | "players" | "lastDice"
 > {
   const tiles = createBeginnerTiles();

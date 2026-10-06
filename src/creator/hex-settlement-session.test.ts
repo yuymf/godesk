@@ -1,23 +1,23 @@
 import { describe, expect, it } from "vitest";
 import {
-  createInitialCatanSessionSlice,
-  listCatanLegalActionsForSession,
+  createInitialHexSettlementSessionSlice,
+  listHexSettlementLegalActionsForSession,
 } from "./hex-settlement-session";
 
-describe("createInitialCatanSessionSlice", () => {
+describe("createInitialHexSettlementSessionSlice", () => {
   it("returns beginner tiles and setup phase for 2 players", () => {
-    const catan = createInitialCatanSessionSlice(2);
-    expect(catan.playerCount).toBe(2);
-    expect(catan.tiles).toHaveLength(19);
-    expect(catan.phase).toBe("setup");
+    const hexSettlement = createInitialHexSettlementSessionSlice(2);
+    expect(hexSettlement.playerCount).toBe(2);
+    expect(hexSettlement.tiles).toHaveLength(19);
+    expect(hexSettlement.phase).toBe("setup");
   });
 });
 
-describe("listCatanLegalActionsForSession", () => {
+describe("listHexSettlementLegalActionsForSession", () => {
   it("lists place_settlement during setup for active seat", () => {
-    const catan = createInitialCatanSessionSlice(2);
-    const legal = listCatanLegalActionsForSession({
-      catan,
+    const hexSettlement = createInitialHexSettlementSessionSlice(2);
+    const legal = listHexSettlementLegalActionsForSession({
+      hexSettlement,
       activeSeat: 0,
       status: "active",
       playerId: 0,
@@ -26,10 +26,10 @@ describe("listCatanLegalActionsForSession", () => {
   });
 
   it("returns empty when status is complete", () => {
-    const catan = createInitialCatanSessionSlice(2);
+    const hexSettlement = createInitialHexSettlementSessionSlice(2);
     expect(
-      listCatanLegalActionsForSession({
-        catan,
+      listHexSettlementLegalActionsForSession({
+        hexSettlement,
         activeSeat: 0,
         status: "complete",
         playerId: 0,

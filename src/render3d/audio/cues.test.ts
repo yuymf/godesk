@@ -13,7 +13,7 @@ import {
 const res = (wood = 0, brick = 0, sheep = 0, wheat = 0, ore = 0) => ({ wood, brick, sheep, wheat, ore });
 
 function state(players: ReturnType<typeof res>[], status: "active" | "complete" = "active", winnerSeat: number | null = null): AudioSessionState {
-  return { status, winnerSeat, catan: { players: players.map((resources) => ({ resources })) } };
+  return { status, winnerSeat, hexSettlement: { players: players.map((resources) => ({ resources })) } };
 }
 
 function room(s: AudioSessionState, actions: AudioRoomSnapshot["acceptedActions"] = []): AudioRoomSnapshot {

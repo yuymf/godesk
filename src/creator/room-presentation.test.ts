@@ -196,14 +196,14 @@ describe("isHexSettlement", () => {
     }))).toBe(false);
   });
 
-  it("keeps Catan off the score-track surface", () => {
-    const catan = base({
+  it("keeps Tidewell off the score-track surface", () => {
+    const hexSettlement = base({
       type: "hex-settlement-v1",
       playerCount: 3,
       victoryPointsToWin: 10,
     });
-    expect(isHexSettlement(catan)).toBe(true);
-    expect(usesScoreTrackSurface(catan)).toBe(false);
+    expect(isHexSettlement(hexSettlement)).toBe(true);
+    expect(usesScoreTrackSurface(hexSettlement)).toBe(false);
   });
 });
 
