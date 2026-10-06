@@ -30,6 +30,7 @@
     "perf:emulate": "node scripts/perf-emulate.mjs",
     "perf:ci": "node scripts/perf-emulate.mjs --ci",
     "perf:serve": "node scripts/perf-serve.mjs",
+    "launch:check": "node scripts/launch-checklist.mjs",
     "lighthouse": "lhci autorun"
   },
   "dependencies": {
