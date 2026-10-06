@@ -89,10 +89,10 @@ test("Studio 资产搜索 renders licences and writes LICENSES.md on 加入项�
     await panel.getByRole("checkbox", { name: "优先免费直链源" }).uncheck();
   }
   await panel.getByRole("button", { name: "搜索" }).click();
-  await expect(panel.getByText(/许可证：/)).toBeVisible({ timeout: 30_000 });
+  await expect(panel.locator(".asset-search-card").first()).toContainText("许可证：", { timeout: 30_000 });
   if (!sidecarLive) {
-    await expect(panel.getByText("仅外链")).toBeVisible();
-    await expect(panel.getByText("需署名")).toBeVisible();
+    await expect(panel.getByText("仅外链", { exact: true })).toBeVisible();
+    await expect(panel.getByText("需署名", { exact: true })).toBeVisible();
   }
   await panel.getByRole("button", { name: "加入项目" }).first().click();
   await expect(panel.getByText(/已加入项目/)).toBeVisible({ timeout: 30_000 });
