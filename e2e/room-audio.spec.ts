@@ -1,6 +1,6 @@
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
 import { NORTH_STAR_TIDEWELL_PROMPT, shareHrefFromStudio } from "./helpers/sol-max-baseline";
-import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
+import { clickTidewellBoardAction, openTidewellBoardTargets, claimTidewellSeat } from "./helpers/tidewell-actions";
 
 /**
  * G3D-10：房间音效。素材（G3D-26 / G3D-27）合入前，引擎只记 cue 日志不出声；
@@ -69,8 +69,8 @@ test("hex-settlement room audio: cues from play events, touch unlock, settings p
 
     await page.goto(shareUrl);
     await waitForAudio(page);
-    await page.getByLabel("你的席位").selectOption("1");
-    await guestPage.getByLabel("你的席位").selectOption("0");
+    await claimTidewellSeat(page, 1);
+    await claimTidewellSeat(guestPage, 0);
     await expect(guestPage.getByLabel("你的席位")).toHaveValue("0");
 
     const guestBoard = guestPage.getByRole("region", { name: "汐屿" });
