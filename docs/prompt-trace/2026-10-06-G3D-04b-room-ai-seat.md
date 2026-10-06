@@ -45,9 +45,14 @@
   - EP-I 390×844 触摸：8.4m，同样 683 手
   - 两局都由座位 0 获胜（10:9）
   - AI 动作覆盖 roll / build / bank_trade / player_trade / buy_dev / play_knight / move_robber / discard / end_turn
-  - 证据在 `/workspace/g3d-evidence/M1-ai/pr-branch/`；合入后在 main 上重跑的证据在 `/workspace/g3d-evidence/M1-ai/`
+  - 首次运行证据在 `/workspace/g3d-evidence/M1-ai/pr-branch/`
+- M1 出口复跑（PR head `48646eb`，已含 G3D-07）：3 passed / 27.0m
+  - EP-D 13.7m，EP-I 12.9m，均为 683 手
+  - 证据在 `/workspace/g3d-evidence/M1-ai/`
+- CI 修复：G3D-09 的 motion spec 原用墙钟上限，SwiftShader + G3D-07 下失稳（main 本地也失败）。改为在页面内点击，并断言点击时 tween Group 仍在运行（`__g3dMotionBusy`）。
+- 合入前最后一轮本地（`2bdcfae`）：typecheck 0、unit 420、worker 210、e2e 54 passed / 4 skipped；CI run 37407433885 绿。
 
 ## links
 
-- PR（待填）
+- PR #132 https://github.com/yuymf/godesk/pull/132 · squash `0c4ac5a` · CI https://github.com/yuymf/godesk/actions/runs/37407433885
 - Notion G3D-04b 任务卡
