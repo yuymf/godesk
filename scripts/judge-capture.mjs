@@ -72,9 +72,15 @@ async function openAiRoom(page, projectId) {
   const url = new URL(page.url());
   url.searchParams.set("judge", "1");
   await page.goto(url.href, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  // 2h3: seat select lives in the top-bar ⚙ menu
+  const menu = page.locator("details.tidewell-menu");
+  await menu.locator("summary").click();
+  await menu.waitFor({ state: "attached", timeout: 10_000 });
   const seat = page.getByLabel("你的席位");
-  await seat.waitFor({ timeout: 60_000 });
+  await seat.waitFor({ state: "visible", timeout: 60_000 });
   if ((await seat.inputValue().catch(() => "")) !== "0") await seat.selectOption("0");
+  // close menu so it does not cover the canvas in shots
+  await menu.locator("summary").click().catch(() => null);
   const board = page.getByRole("region", { name: "汐屿" });
   await board.waitFor({ timeout: 60_000 });
   await page.waitForFunction(() => {
