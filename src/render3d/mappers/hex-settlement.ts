@@ -122,12 +122,14 @@ export function mapHexSettlementToScene(genre: HexSettlementSceneInput): SceneMo
       kind: "port",
       position: toWorld(point.x * 1.08, point.y * 1.08, 0.05),
       tag: port.kind,
+      scale: [1, 1, 1],
     });
     nodes.push({
       id: `ship:${index}`,
       kind: "ship",
       position: toWorld(point.x * 1.22, point.y * 1.22, 0.12),
       tag: index % 2 === 0 ? "ship-a" : "ship-b",
+      scale: [1, 1, 1],
     });
   });
 
@@ -138,9 +140,10 @@ export function mapHexSettlementToScene(genre: HexSettlementSceneInput): SceneMo
       nodes.push({
         id: `settle:${vertexId}`,
         kind: "settlement",
-        position: toWorld(point.x, point.y, 0.35),
+        position: toWorld(point.x, point.y, 0.22),
         seat,
         tag: `seat${seat}`,
+        scale: [1, 1, 1],
       });
     }
     for (const vertexId of player.cities) {
@@ -149,9 +152,10 @@ export function mapHexSettlementToScene(genre: HexSettlementSceneInput): SceneMo
       nodes.push({
         id: `city:${vertexId}`,
         kind: "city",
-        position: toWorld(point.x, point.y, 0.45),
+        position: toWorld(point.x, point.y, 0.28),
         seat,
         tag: `seat${seat}`,
+        scale: [1, 1, 1],
       });
     }
     for (const edgeId of player.roads) {

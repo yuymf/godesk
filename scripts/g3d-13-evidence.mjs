@@ -24,7 +24,11 @@ const viewportDefs = {
 async function waitHost(page) {
   const host = page.getByTestId("g3d-scene-host");
   await host.waitFor({ timeout: 60_000 });
-  await page.waitForTimeout(2_500);
+  await page.waitForFunction(() => {
+    const el = document.querySelector('[data-testid="g3d-scene-host"]');
+    return el?.getAttribute("data-water") === "on";
+  }, undefined, { timeout: 60_000 }).catch(() => null);
+  await page.waitForTimeout(1_500);
   return host;
 }
 

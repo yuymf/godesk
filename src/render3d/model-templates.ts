@@ -3,13 +3,32 @@
  * Replaces G3D-03 procedural placeholders once loaded.
  */
 import {
+  Box3,
   BoxGeometry,
   BufferGeometry,
   CylinderGeometry,
   Mesh,
   Object3D,
+  Vector3,
   type Material,
 } from "three";
+
+/** Fit geometry so its longest axis equals `maxExtent` (world units). Mutates in place. */
+function normalizeExtent(geom: BufferGeometry, maxExtent: number): BufferGeometry {
+  geom.computeBoundingBox();
+  const box = geom.boundingBox ?? new Box3();
+  const size = new Vector3();
+  box.getSize(size);
+  const longest = Math.max(size.x, size.y, size.z, 1e-6);
+  const s = maxExtent / longest;
+  geom.scale(s, s, s);
+  geom.computeBoundingBox();
+  const mid = new Vector3();
+  geom.boundingBox!.getCenter(mid);
+  geom.translate(-mid.x, -geom.boundingBox!.min.y, -mid.z);
+  return geom;
+}
+
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import type { SceneNode } from "./scene-model";
@@ -133,17 +152,40 @@ export async function ensureTidewellGeometries(): Promise<TidewellGeometries> {
         const g = pick(decor, ...names) ?? pick(pieces, ...names);
         if (g) decorByTerrain[terrain] = g;
       }
+      const settle = pick(pieces, "settlement") ?? FALLBACK.settlement;
+      const city = pick(pieces, "city") ?? FALLBACK.city;
+      const robber = pick(pieces, "fog_lamp", "fog-lamp") ?? FALLBACK.robber;
+      const road = pick(pieces, "road") ?? FALLBACK.road;
+      const sheep = pick(pieces, "sheep") ?? FALLBACK.sheep;
+      const dock = pick(props, "dock") ?? FALLBACK.dock;
+      const shipA = pick(props, "boat-a", "boat_a") ?? FALLBACK.shipA;
+      const shipB = pick(props, "boat-b", "boat_b") ?? FALLBACK.shipB;
+      const die = pick(props, "dice", "die") ?? FALLBACK.die;
+      const diceTray = pick(props, "dice_tray", "dice-tray") ?? FALLBACK.diceTray;
+      // G3D-13 proportions vs TILE_RADIUS≈0.95: settlement ~0.25 hex, dock <0.6 edge.
+      if (settle !== FALLBACK.settlement) normalizeExtent(settle, 0.48);
+      if (city !== FALLBACK.city) normalizeExtent(city, 0.58);
+      if (robber !== FALLBACK.robber) normalizeExtent(robber, 0.7);
+      if (dock !== FALLBACK.dock) normalizeExtent(dock, 0.52);
+      if (shipA !== FALLBACK.shipA) normalizeExtent(shipA, 0.4);
+      if (shipB !== FALLBACK.shipB) normalizeExtent(shipB, 0.4);
+      if (road !== FALLBACK.road) normalizeExtent(road, 0.55);
+      if (die !== FALLBACK.die) normalizeExtent(die, 0.22);
+      if (diceTray !== FALLBACK.diceTray) normalizeExtent(diceTray, 0.7);
+      for (const [key, geom] of Object.entries(decorByTerrain)) {
+        if (geom !== FALLBACK.decorByTerrain[key]) normalizeExtent(geom, 0.4);
+      }
       cache = {
-        settlement: pick(pieces, "settlement") ?? FALLBACK.settlement,
-        city: pick(pieces, "city") ?? FALLBACK.city,
-        robber: pick(pieces, "fog_lamp", "fog-lamp") ?? FALLBACK.robber,
-        road: pick(pieces, "road") ?? FALLBACK.road,
-        sheep: pick(pieces, "sheep") ?? FALLBACK.sheep,
-        dock: pick(props, "dock") ?? FALLBACK.dock,
-        shipA: pick(props, "boat-a", "boat_a") ?? FALLBACK.shipA,
-        shipB: pick(props, "boat-b", "boat_b") ?? FALLBACK.shipB,
-        die: pick(props, "dice", "die") ?? FALLBACK.die,
-        diceTray: pick(props, "dice_tray", "dice-tray") ?? FALLBACK.diceTray,
+        settlement: settle,
+        city,
+        robber,
+        road,
+        sheep: sheep !== FALLBACK.sheep ? normalizeExtent(sheep, 0.35) : sheep,
+        dock,
+        shipA,
+        shipB,
+        die,
+        diceTray,
         decorByTerrain,
         ready: true,
       };

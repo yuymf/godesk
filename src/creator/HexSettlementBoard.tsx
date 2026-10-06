@@ -165,6 +165,31 @@ function shortLabelForAction(
   }
 }
 
+
+/** Player-visible label for Kernel lastAction type ids (never show raw place_road etc.). */
+export function formatLastAction(
+  lastAction: string | null | undefined,
+  locale: RoomLocale,
+): string {
+  if (!lastAction) return COPY[locale].noLast;
+  const copy = COPY[locale];
+  const map: Record<string, string> = {
+    place_settlement: copy.placeSettlement,
+    place_city: copy.placeCity,
+    place_road: copy.placeRoad,
+    move_robber: copy.moveRobber,
+    roll_dice: copy.roll,
+    end_turn: copy.endTurn,
+    buy_dev: copy.buyDev,
+    play_knight: copy.playKnight,
+    play_road_building: copy.playRoadBuilding,
+    discard: copy.discard,
+    bank_trade: copy.bankTrade,
+    player_trade: copy.playerTrade,
+  };
+  return map[lastAction] ?? copy.noLast;
+}
+
 /** Unique accessible name (may include payload ids for disambiguation). */
 function labelForBoardAction(
   action: LegalAction,
@@ -388,7 +413,7 @@ export function HexSettlementBoard({
           </div>
           <div>
             <dt>{copy.lastAction}</dt>
-            <dd>{hexSettlement.lastAction ?? copy.noLast}</dd>
+            <dd>{formatLastAction(hexSettlement.lastAction, locale)}</dd>
           </div>
         </dl>
       </section>

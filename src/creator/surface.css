@@ -4472,19 +4472,44 @@ summary:focus-visible {
   color: var(--ink, #2a2118);
   border-color: rgb(120 90 50 / 35%);
 }
-/* Mobile: hide coordinate action clutter under the board; expand via summary (keyboard / e2e). */
+/* Mobile: board above the fold; compact HUD strip below; drawer for coord actions. */
 @media (max-width: 767px) {
+  .tidewell-board {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
   .tidewell-board .g3d-stage {
-    min-height: 52vh;
+    order: -1;
+    min-height: 44vh;
+    max-height: 50vh;
+    height: clamp(240px, 46vh, 420px);
   }
   .tidewell-hud {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.35rem 0.55rem;
+    padding: 0.45rem 0.55rem;
+    font-size: 0.8rem;
+  }
+  .tidewell-hud-status {
+    grid-column: 1 / -1;
+  }
+  .tidewell-hud-status strong {
+    font-size: 0.95rem;
+  }
+  .tidewell-hud-status p {
+    margin: 0.15rem 0 0;
+  }
+  .tidewell-hud-awards {
+    display: none; /* details live in status line; frees fold for the board */
+  }
+  .tidewell-hud-resources ul {
+    gap: 0.25rem;
   }
   .tidewell-board .hex-settlement-board-targets {
     order: 3;
   }
   .tidewell-board .hex-settlement-board-targets:not([open]) .hex-settlement-action-list {
-    /* Keep in a11y tree when details polyfills fail; otherwise details hides children when closed. */
     position: absolute;
     width: 1px;
     height: 1px;
@@ -4496,7 +4521,7 @@ summary:focus-visible {
     border: 0;
   }
   .tidewell-board .hex-settlement-action-list {
-    max-height: 9rem;
+    max-height: 7rem;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
   }

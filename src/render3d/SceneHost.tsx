@@ -399,8 +399,6 @@ export function SceneHost({
   const markShadowsDirtyRef = useRef<() => void>(() => {});
   const [pbrState, setPbrState] = useState<"off" | "pending" | "512" | "256" | "error">("pending");
   /** G3D-13: flip when pieces/decor/props GLBs replace procedural placeholders. */
-  const [modelsReady, setModelsReady] = useState(false);
-  const modelsRemountedRef = useRef(false);
 
   function reframe(focus: readonly [number, number, number], id: string) {
     const motion = motionRef.current;
@@ -537,7 +535,6 @@ export function SceneHost({
     hitRootRef.current = hitRoot;
     cameraRef.current = camera;
     canvasRef.current = renderer.domElement;
-    setReady(true);
 
     const onPointerUp = (event: PointerEvent) => {
       if (!interactiveRef.current || !onPickRef.current) return;
@@ -585,6 +582,10 @@ export function SceneHost({
 
     let frameId = 0;
     let disposed = false;
+    // G3D-13: load Tidewell GLBs before hex reconcile (avoids remount that aborted water).
+    void ensureTidewellGeometries().finally(() => {
+      if (!disposed) setReady(true);
+    });
     let lastFrameAt: number | null = null;
     let warmFrames = 0;
     const downgradeMonitor = new RuntimeDowngradeMonitor();
@@ -839,13 +840,6 @@ export function SceneHost({
   useEffect(() => {
     const host = reconcileHostRef.current;
     if (!host || !hexSettlement) return;
-    // When GLB templates arrive, remount the WebGL host so InstancedMesh pools
-    // are created against the final GLB geometries (avoids duplicate pool draws).
-    if (modelsReady && modelRef.current && !modelsRemountedRef.current) {
-      modelsRemountedRef.current = true;
-      setHostEpoch((epoch) => epoch + 1);
-      return;
-    }
     const prev = modelRef.current;
     const next = mapHexSettlementToScene(hexSettlement);
     const hadModel = prev !== null;
@@ -939,7 +933,7 @@ export function SceneHost({
         if (node.id === "die:0") reframe(node.position, "dice");
       }
     }
-  }, [hexSettlement, ready, hostEpoch, modelsReady]);
+  }, [hexSettlement, ready, hostEpoch]);
 
   // G3D-14：通用桌面场景 reconcile + 按包围球适配阴影相机 / 机位。
   useEffect(() => {

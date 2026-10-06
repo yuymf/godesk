@@ -49,7 +49,17 @@ export function PerfOverlay() {
         pointerEvents: "auto",
       }}
     >
-      <div>档位 {snapshot?.tier ?? "—"}{snapshot?.tierSource === "query" ? "（?tier）" : ""}</div>
+      <div>
+        档位{" "}
+        {snapshot?.tier === "high"
+          ? "高"
+          : snapshot?.tier === "medium"
+            ? "中"
+            : snapshot?.tier === "low"
+              ? "低"
+              : (snapshot?.tier ?? "—")}
+        {snapshot?.tierSource === "query" ? "（URL 指定）" : ""}
+      </div>
       <div>fps {snapshot?.fps?.toFixed(1) ?? "—"}</div>
       <div>p50 {formatMs(snapshot?.frameTimeMs.p50 ?? null)} · p95 {formatMs(snapshot?.frameTimeMs.p95 ?? null)}</div>
       <div>draw {snapshot?.renderer.calls ?? "—"} · tris {snapshot?.renderer.triangles ?? "—"}</div>

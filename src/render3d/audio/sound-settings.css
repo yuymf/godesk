@@ -36,3 +36,14 @@
 .room-sound-settings-row input[type="range"] {
   flex: 1;
 }
+
+
+/* G3D-13: never cover the 3D canvas on phone — pin to top (HUD band), not bottom-over-board. */
+@media (max-width: 767px) {
+  .room-view-tidewell .room-sound-settings,
+  .room-view-voyage.room-view-tidewell .room-sound-settings {
+    top: max(8px, env(safe-area-inset-top));
+    bottom: auto;
+    right: max(8px, env(safe-area-inset-right));
+  }
+}
