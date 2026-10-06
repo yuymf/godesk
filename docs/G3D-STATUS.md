@@ -83,7 +83,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
-| G3D-17 预备：上线前清单自动化 | Track C | `feat/g3d-17-launch-checklist` · [#__PR__](https://github.com/yuymf/godesk/pull/__PR__) | `scripts/launch-checklist.mjs`：法务待审条数 / 包体 / Lighthouse warn 级断言 / 分档 draw call / HUD 原始动作 id，现为 warning，转阻断开关见 [`docs/perf/launch-checklist.md`](./perf/launch-checklist.md)；G3D-16 等 G3D-13（#138） |
+| G3D-17 预备：上线前清单自动化 | Track C | `feat/g3d-17-launch-checklist` · [#144](https://github.com/yuymf/godesk/pull/144) | `scripts/launch-checklist.mjs`：法务待审条数 / 包体 / Lighthouse warn 级断言 / 分档 draw call / HUD 原始动作 id，现为 warning，转阻断开关见 [`docs/perf/launch-checklist.md`](./perf/launch-checklist.md)；G3D-16 等 G3D-13（#138） |
 
 ## 阻塞
 
@@ -107,7 +107,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 > Track A：拥有 **18（已合）/ 09**；G3D-06 → Track B（已合 #122）、G3D-07 → Track C（2026-10-06 再平衡）。Track C：**05 / 10 / 15 / 07 / 14**。Track B 素材轨 **G3D-11、19–27 已全部合入**。
 
-1. Track C：M4 平台化 Done（G3D-14 后续修补 #139 `2c56f22` 已合入）。G3D-16 预备等 G3D-13（#138，Track B）→ 先做 G3D-17 不阻塞的预备：上线前清单自动化 #__PR__（warning 模式）。
+1. Track C：M4 平台化 Done（G3D-14 后续修补 #139 `2c56f22` 已合入）。G3D-16 预备等 G3D-13（#138，Track B）→ 先做 G3D-17 不阻塞的预备：上线前清单自动化 #144（warning 模式）。
 2. Track A：G3D-09 已合入 `d2f58ab`；Track A 队列清空（G3D-07 由 Track C）。
 3. Track B：G3D-08 已合入 `e8b59e8` → **G3D-13 Tidewell**（开发可开工；**合入等 #132 G3D-04b**）；G3D-ART 已由 Track D 用 AI 生图完成（#137），`assets/ui/ai/` 图标 / 9-slice 框 / 筹码面待 G3D-13 HUD 接线。
 
@@ -115,14 +115,14 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 - [ ] **法务审查：`assets/LICENSES.md` 中每一行 `LicenseRef-AI-Generated`（当前 68 行，`pnpm verify:assets` 的 warning 会列出）必须由法务审查通过**，通过后把该行 `法务审查: 待 G3D-17` 改为 `法务审查: 已通过 <日期/审查人>`、manifest `legalReview` 改为 `"cleared"`；未通过的资产须替换（委托 / CC0 / 购买）。warning 清零前不得上线。
 - [ ] G3D-05 备注 ⑤：Lighthouse LCP / TBT 由 warn 改为 error（见上）。
-- [ ] **自动化清单转阻断**：`scripts/launch-checklist.mjs`（#__PR__）在 Verify / Lighthouse CI 里以 warning 模式汇总 `asset-legal`（AI 待法务审查条数）、`size-budgets`（超限 / 余量 < 2%）、`lighthouse`（仍为 warn 级的断言）、`draw-calls`（high 150 / medium 100 / low 60，稳态与峰值取大）、`hud-raw-action-ids`（Room 可见文本 / aria-label 中的原始动作 id，桌面 + iPhone 12 Pro，入座 0）。全部 pass 后把两个 workflow 的 `GODESK_LAUNCH_GATE` 改为 `block`；可先用 `GODESK_LAUNCH_GATE_BLOCK` 逐项转正。步骤见 [`docs/perf/launch-checklist.md`](./perf/launch-checklist.md)。基线（2026-10-06，本地 SwiftShader）：asset-legal warn（68 项）；size-budgets warn（size-limit 首页 168.68 / 170 kB，余量 0.8%）；lighthouse warn（首页 LCP、Room TBT / CLS 仍为 warn 级）；draw-calls fail（high 140 / 140、medium 80 / 140、low 80 / 121，稳态 / 峰值）；hud-raw-action-ids warn（桌面 + iPhone 各 54 种顶点坐标键，如「放置定居点 · -100:-173」，等 G3D-13 HUD）。
+- [ ] **自动化清单转阻断**：`scripts/launch-checklist.mjs`（#144）在 Verify / Lighthouse CI 里以 warning 模式汇总 `asset-legal`（AI 待法务审查条数）、`size-budgets`（超限 / 余量 < 2%）、`lighthouse`（仍为 warn 级的断言）、`draw-calls`（high 150 / medium 100 / low 60，稳态与峰值取大）、`hud-raw-action-ids`（Room 可见文本 / aria-label 中的原始动作 id，桌面 + iPhone 12 Pro，入座 0）。全部 pass 后把两个 workflow 的 `GODESK_LAUNCH_GATE` 改为 `block`；可先用 `GODESK_LAUNCH_GATE_BLOCK` 逐项转正。步骤见 [`docs/perf/launch-checklist.md`](./perf/launch-checklist.md)。基线（2026-10-06，本地 SwiftShader）：asset-legal warn（68 项）；size-budgets warn（size-limit 首页 168.68 / 170 kB，余量 0.8%）；lighthouse warn（首页 LCP、Room TBT / CLS 仍为 warn 级）；draw-calls fail（high 140 / 140、medium 80 / 140、low 80 / 121，稳态 / 峰值）；hud-raw-action-ids warn（桌面 + iPhone 各 54 种顶点坐标键，如「放置定居点 · -100:-173」，等 G3D-13 HUD）。
 
 
 ## 开着的 PR / 分支
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
-| `feat/g3d-17-launch-checklist` | [#__PR__](https://github.com/yuymf/godesk/pull/__PR__) | G3D-17 预备：上线前清单自动化（warning 模式 + 转阻断开关）（Track C） | open · 本 PR |
+| `feat/g3d-17-launch-checklist` | [#144](https://github.com/yuymf/godesk/pull/144) | G3D-17 预备：上线前清单自动化（warning 模式 + 转阻断开关）（Track C） | open · 本 PR |
 | `feat/g3d-13-tidewell` | — | G3D-13 Tidewell 集成（Track B） | 开工 · 合入等 #132 |
 
 ## 修订记录
