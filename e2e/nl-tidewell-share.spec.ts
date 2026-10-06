@@ -90,8 +90,8 @@ test("NL Tidewell proposal → hex-settlement build → share= guest setup settl
     await evidenceScreenshot(guestPage, "tidewell-guest-setup");
 
     await clickTidewellBoardAction(guestBoard, /建造渔村/);
-    await expect(hostHud).toContainText("place_settlement");
-    await expect(guestHud).toContainText("place_settlement");
+    await expect(hostHud).toContainText("建造渔村");
+    await expect(guestHud).toContainText("建造渔村");
     await expect(hostHud.getByLabel("胜利点")).toContainText("座位 0 · 1 胜利点");
     await expect(guestHud.getByLabel("胜利点")).toContainText("座位 0 · 1 胜利点");
     await expect(guestBoard.getByRole("button", { name: /铺设栈道/ }).first()).toBeVisible();

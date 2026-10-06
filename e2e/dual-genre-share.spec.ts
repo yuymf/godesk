@@ -57,7 +57,7 @@ async function guestJoinClaimAndAct(
       const hud = board.getByRole("region", { name: "对局状态" });
       await expect(hud).toContainText("轮到你行动");
       await clickTidewellBoardAction(board, /建造渔村/);
-      await expect(hud).toContainText("place_settlement");
+      await expect(hud).toContainText("建造渔村");
       await expect(
         board.getByRole("button", { name: /铺设栈道/ }).first(),
       ).toBeVisible({ timeout: 15_000 });

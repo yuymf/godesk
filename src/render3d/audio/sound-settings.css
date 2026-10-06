@@ -37,13 +37,12 @@
   flex: 1;
 }
 
-
-/* G3D-13: never cover the 3D canvas on phone — pin to top (HUD band), not bottom-over-board. */
+/* G3D-13: board sits above the fold on phone — keep FAB at bottom (default), clear of canvas. */
 @media (max-width: 767px) {
   .room-view-tidewell .room-sound-settings,
   .room-view-voyage.room-view-tidewell .room-sound-settings {
-    top: max(8px, env(safe-area-inset-top));
-    bottom: auto;
+    top: auto;
+    bottom: max(12px, env(safe-area-inset-bottom));
     right: max(8px, env(safe-area-inset-right));
   }
 }

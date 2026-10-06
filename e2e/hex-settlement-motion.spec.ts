@@ -17,7 +17,7 @@ async function openRoom(page: Page) {
   await page.getByRole("button", { name: "确认玩法并开始试玩" }).click();
   await expect(page.getByRole("heading", { name: "现在就开玩" })).toBeVisible({ timeout: 90_000 });
   const projectId = new URL(page.url()).pathname.split("/").at(-1)!;
-  await page.goto("/chatgpt-plugin/game");
+  await page.goto("/chatgpt-plugin/games");
   const card = page.locator(".lobby-card").filter({ has: page.locator(`a[href$="/studio/${projectId}"]`) });
   await card.getByRole("link", { name: "继续这一局" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
@@ -80,7 +80,7 @@ for (const mode of ["no-preference", "reduce"] as const) {
       observer.observe(document.body, { subtree: true, childList: true, attributes: true });
       setTimeout(() => { observer.disconnect(); reject(new Error("road button never enabled")); }, 15_000);
     }));
-    await expect(hud).toContainText("place_road");
+    await expect(hud).toContainText("铺设栈道");
     expect(clickedDuringTween.placeAt).not.toBeNull();
     if (!reduced) {
       expect(clickedDuringTween.placeMs).toBe(280);

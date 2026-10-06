@@ -11,7 +11,7 @@ async function openBoard(page: import("@playwright/test").Page) {
   await page.getByRole("button", { name: "确认玩法并开始试玩" }).click();
   await expect(page.getByRole("heading", { name: "现在就开玩" })).toBeVisible({ timeout: 90_000 });
   const projectId = new URL(page.url()).pathname.split("/").at(-1)!;
-  await page.goto("/chatgpt-plugin/game");
+  await page.goto("/chatgpt-plugin/games");
   const card = page.locator(".lobby-card").filter({ has: page.locator(`a[href$="/studio/${projectId}"]`) });
   await card.getByRole("link", { name: "继续这一局" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });

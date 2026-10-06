@@ -147,7 +147,7 @@ test.describe("dual-genre boards: Othello + Tidewell generate → lobby → act"
     await settlement.first().click();
 
     // Authority: last action + phase / resources region reflect the setup place.
-    await expect(hud).toContainText("place_settlement");
+    await expect(hud).toContainText("建造渔村");
     await expect(hud).toContainText("初始放置");
     await expect(board.getByLabel("你的资源")).toBeVisible();
     // After settlement, setup wants a road — legal road hits appear.

@@ -59,8 +59,8 @@ function stubPillar(): BufferGeometry {
 }
 
 const FALLBACK: TidewellGeometries = {
-  settlement: new BoxGeometry(0.28, 0.28, 0.28),
-  city: new BoxGeometry(0.36, 0.48, 0.36),
+  settlement: new BoxGeometry(0.22, 0.22, 0.22),
+  city: new BoxGeometry(0.3, 0.34, 0.3),
   robber: new CylinderGeometry(0.12, 0.18, 0.7, 12),
   road: new BoxGeometry(1, 1, 1),
   sheep: stubPillar(),
@@ -162,10 +162,10 @@ export async function ensureTidewellGeometries(): Promise<TidewellGeometries> {
       const shipB = pick(props, "boat-b", "boat_b") ?? FALLBACK.shipB;
       const die = pick(props, "dice", "die") ?? FALLBACK.die;
       const diceTray = pick(props, "dice_tray", "dice-tray") ?? FALLBACK.diceTray;
-      // G3D-13 proportions vs TILE_RADIUS≈0.95: settlement ~0.25 hex, dock <0.6 edge.
-      if (settle !== FALLBACK.settlement) normalizeExtent(settle, 0.48);
-      if (city !== FALLBACK.city) normalizeExtent(city, 0.58);
-      if (robber !== FALLBACK.robber) normalizeExtent(robber, 0.7);
+      // G3D-13 proportions vs TILE_RADIUS≈0.95 (≈hex edge): settlement footprint ~0.25 edge, dock <0.6 edge.
+      if (settle !== FALLBACK.settlement) normalizeExtent(settle, 0.25);
+      if (city !== FALLBACK.city) normalizeExtent(city, 0.36);
+      if (robber !== FALLBACK.robber) normalizeExtent(robber, 0.55);
       if (dock !== FALLBACK.dock) normalizeExtent(dock, 0.52);
       if (shipA !== FALLBACK.shipA) normalizeExtent(shipA, 0.4);
       if (shipB !== FALLBACK.shipB) normalizeExtent(shipB, 0.4);

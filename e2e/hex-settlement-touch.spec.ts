@@ -31,9 +31,9 @@ test("汐屿 room: iPhone 12 Pro touch taps a legal settlement", async ({ browse
     const { openTidewellBoardTargets } = await import("./helpers/tidewell-actions");
     await openTidewellBoardTargets(board);
     await board.getByRole("button", { name: /建造渔村/ }).first().tap({ timeout: 10_000 });
-    await expect(board.getByRole("region", { name: "对局状态" })).toContainText("place_settlement");
+    await expect(board.getByRole("region", { name: "对局状态" })).toContainText("建造渔村");
     await board.getByRole("button", { name: /铺设栈道/ }).first().tap({ timeout: 10_000 });
-    await expect(board.getByRole("region", { name: "对局状态" })).toContainText("place_road");
+    await expect(board.getByRole("region", { name: "对局状态" })).toContainText("铺设栈道");
   } finally {
     await ctx.close();
   }

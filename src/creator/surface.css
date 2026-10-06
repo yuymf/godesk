@@ -4474,6 +4474,44 @@ summary:focus-visible {
 }
 /* Mobile: board above the fold; compact HUD strip below; drawer for coord actions. */
 @media (max-width: 767px) {
+  /* Pull 3D board above room chrome (invite / seat rail) so canvas is in the fold. */
+  .room-view-tidewell {
+    display: flex;
+    flex-direction: column;
+  }
+  .room-view-tidewell > .tidewell-board,
+  .room-view-tidewell > .hex-settlement-board {
+    order: -1;
+  }
+  .room-view-tidewell .room-invitation-rich {
+    display: none;
+  }
+  .room-view-tidewell .room-shell-header {
+    padding: 0.35rem 0.75rem;
+    gap: 0.35rem;
+  }
+  .room-view-tidewell .room-shell-header h1 {
+    font-size: 1rem;
+    margin: 0;
+  }
+  .room-view-tidewell .room-header-actions {
+    display: none;
+  }
+  .room-view-tidewell .seat-rail {
+    padding: 0.35rem 0.75rem;
+    gap: 0.35rem;
+  }
+  .room-view-tidewell .seat-chip-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  .room-view-tidewell .seat-chip {
+    padding: 0.25rem 0.45rem;
+    min-height: 0;
+  }
+  .room-view-tidewell .seat-chip small {
+    display: none;
+  }
   .tidewell-board {
     display: flex;
     flex-direction: column;
