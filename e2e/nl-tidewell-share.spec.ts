@@ -1,7 +1,7 @@
 import { chromium, expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
-import {
 import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
+import {
   NORTH_STAR_TIDEWELL_PROMPT,
   openLobbyCard,
   shareHrefFromStudio,
@@ -89,7 +89,6 @@ test("NL Tidewell proposal → hex-settlement build → share= guest setup settl
     await expect(guestBoard.getByLabel("你的资源")).toBeVisible();
     await evidenceScreenshot(guestPage, "tidewell-guest-setup");
 
-    const { clickTidewellBoardAction } = await import("./helpers/tidewell-actions");
     await clickTidewellBoardAction(guestBoard, /建造渔村/);
     await expect(hostHud).toContainText("place_settlement");
     await expect(guestHud).toContainText("place_settlement");

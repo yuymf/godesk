@@ -5719,7 +5719,6 @@ summary:focus-visible {
     flex-wrap: wrap;
   }
 }
-}
 
 /* G3D-04/18 — 3D stage: explicit height so the WebGL canvas never overflows into HUD/actions */
 .g3d-stage {

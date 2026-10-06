@@ -1,6 +1,6 @@
 import { expect, type Browser, type Page, test } from "@playwright/test";
-import {
 import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
+import {
   TIDEWELL_PROMPT,
   OTHELLO_PROMPT,
   generateApproveAndPlayable,
@@ -16,7 +16,7 @@ import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/ti
 async function guestJoinClaimAndAct(
   browser: Browser,
   shareUrl: string,
-  genre: "othello" | "hexSettlement",
+  genre: "othello" | "tidewell",
 ) {
   const guest = await browser.newContext();
   try {
@@ -56,7 +56,6 @@ async function guestJoinClaimAndAct(
       await expect(board).toBeVisible();
       const hud = board.getByRole("region", { name: "对局状态" });
       await expect(hud).toContainText("轮到你行动");
-      const { clickTidewellBoardAction } = await import("./helpers/tidewell-actions");
       await clickTidewellBoardAction(board, /建造渔村/);
       await expect(hud).toContainText("place_settlement");
       await expect(
@@ -111,7 +110,7 @@ test.describe("PR10 share= dual-genre guest join", () => {
     });
 
     await test.step("share= 交接: second context claims seat and acts", async () => {
-      await guestJoinClaimAndAct(browser, shareUrl, "hexSettlement");
+      await guestJoinClaimAndAct(browser, shareUrl, "tidewell");
     });
   });
 
