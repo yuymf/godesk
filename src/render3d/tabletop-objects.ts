@@ -8,14 +8,16 @@ import {
   BufferGeometry,
   CylinderGeometry,
   DoubleSide,
+  DynamicDrawUsage,
   ExtrudeGeometry,
   Float32BufferAttribute,
+  InstancedMesh,
   LatheGeometry,
   LineBasicMaterial,
   LineSegments,
   Mesh,
   MeshBasicMaterial,
-  type Object3D,
+  Object3D,
   RingGeometry,
   Shape,
   Vector2,
@@ -135,6 +137,116 @@ function gridLines(tag: string | undefined): BufferGeometry {
   return geom;
 }
 
+/**
+ * 实例化合批（G3D-14 follow-up）：翻转棋满盘 64 子若每子一个 Mesh 就是 64 次 draw call，
+ * 超过 low 档 ≤ 60。`disc` 节点改为不渲染的代理 Object3D（位姿 / 动效 / 拾取语义不变），
+ * 同一共享材质的代理合进同一个 InstancedMesh：满盘只剩每个座位材质 1 次 draw call。
+ */
+export const INSTANCED_MESHES: ReadonlySet<string> = new Set(["disc"]);
+
+type InstanceBatch = { key: string; mesh: InstancedMesh; proxies: Object3D[] };
+
+/** 父节点（SceneHost 内容根）→ 材质 key → 合批。 */
+const batchesByParent = new WeakMap<Object3D, Map<string, InstanceBatch>>();
+
+function syncBatch(batch: InstanceBatch): void {
+  const { mesh, proxies } = batch;
+  for (let i = 0; i < proxies.length; i += 1) {
+    const proxy = proxies[i]!;
+    proxy.updateMatrix();
+    mesh.setMatrixAt(i, proxy.matrix);
+  }
+  mesh.count = proxies.length;
+  mesh.instanceMatrix.needsUpdate = true;
+}
+
+function createBatch(parent: Object3D, key: string, geometryKey: string, material: Material, capacity: number): InstanceBatch {
+  const mesh = new InstancedMesh(geometryFor(geometryKey), material, capacity);
+  mesh.instanceMatrix.setUsage(DynamicDrawUsage);
+  mesh.count = 0;
+  // 实例遍布整个盘面；包围球按单个几何体算会被错误剔除。
+  mesh.frustumCulled = false;
+  mesh.castShadow = false;
+  mesh.receiveShadow = true;
+  // 拾取穿过棋子落到盘面（翻转棋已有子的格不是合法目标）。
+  mesh.raycast = () => {};
+  mesh.userData.instanceBatch = key;
+  mesh.userData.mesh = geometryKey;
+  const batch: InstanceBatch = { key, mesh, proxies: [] };
+  // 渲染器每帧先 updateMatrixWorld 再上传实例缓冲：在这里同步代理位姿，动效当帧生效。
+  const base = mesh.updateMatrixWorld.bind(mesh);
+  mesh.updateMatrixWorld = (force?: boolean) => {
+    syncBatch(batch);
+    base(force);
+  };
+  parent.add(mesh);
+  return batch;
+}
+
+function attachProxy(proxy: Object3D): void {
+  const parent = proxy.parent;
+  const key = proxy.userData.batchKey as string | undefined;
+  const material = proxy.userData.batchMaterial as Material | undefined;
+  if (!parent || !key || !material) return;
+  let batches = batchesByParent.get(parent);
+  if (!batches) {
+    batches = new Map();
+    batchesByParent.set(parent, batches);
+  }
+  let batch = batches.get(key);
+  if (batch && batch.proxies.length >= batch.mesh.instanceMatrix.count) {
+    // 容量不足：按 2 倍重建（材质共享，只释放旧几何）。
+    const grown = createBatch(parent, key, String(proxy.userData.mesh), material, batch.mesh.instanceMatrix.count * 2);
+    grown.proxies.push(...batch.proxies);
+    parent.remove(batch.mesh);
+    batch.mesh.geometry.dispose();
+    batch.mesh.dispose();
+    batches.set(key, grown);
+    batch = grown;
+  }
+  if (!batch) {
+    batch = createBatch(parent, key, String(proxy.userData.mesh), material, 64);
+    batches.set(key, batch);
+  }
+  batch.proxies.push(proxy);
+  batch.mesh.count = batch.proxies.length;
+  proxy.userData.batchParent = parent;
+}
+
+function detachProxy(proxy: Object3D): void {
+  const parent = proxy.userData.batchParent as Object3D | undefined;
+  const key = proxy.userData.batchKey as string | undefined;
+  delete proxy.userData.batchParent;
+  if (!parent || !key) return;
+  const batches = batchesByParent.get(parent);
+  const batch = batches?.get(key);
+  if (!batches || !batch) return;
+  const index = batch.proxies.indexOf(proxy);
+  if (index >= 0) batch.proxies.splice(index, 1);
+  batch.mesh.count = batch.proxies.length;
+  if (batch.proxies.length === 0) {
+    parent.remove(batch.mesh);
+    batch.mesh.geometry.dispose();
+    batch.mesh.dispose();
+    batches.delete(key);
+  }
+}
+
+function createInstanceProxy(mesh: string, node: SceneNode, ctx: TabletopObjectContext): Object3D {
+  const proxy = new Object3D();
+  proxy.userData.mesh = mesh;
+  proxy.userData.batchKey = node.material ?? "tt-fallback";
+  proxy.userData.batchMaterial = materialFor(node, ctx);
+  proxy.addEventListener("added", () => attachProxy(proxy));
+  proxy.addEventListener("removed", () => detachProxy(proxy));
+  return proxy;
+}
+
+/** 当前内容根下的实例合批（测试 / perf 诊断用）。 */
+export function instanceBatchesOf(parent: Object3D): ReadonlyArray<{ key: string; count: number }> {
+  return [...(batchesByParent.get(parent)?.values() ?? [])].map((batch) => ({ key: batch.key, count: batch.proxies.length }));
+}
+
 function materialFor(node: SceneNode, ctx: TabletopObjectContext): Material {
   const key = node.material ?? "tt-fallback";
   return ctx.library.get(key, ctx.materials[key] ?? FALLBACK_TOKEN);
@@ -162,6 +274,8 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     // 合法目标提示：每个提示独立（非共享）材质，随节点释放。
     const hint = new Mesh(geom, new MeshBasicMaterial({ color: HINT_COLOR, transparent: true, opacity: 0.85, side: DoubleSide, depthWrite: false }));
     object = hint;
+  } else if (INSTANCED_MESHES.has(mesh)) {
+    object = createInstanceProxy(mesh, node, ctx);
   } else {
     const built = new Mesh(geometryFor(mesh), materialFor(node, ctx));
     built.castShadow = !NO_CAST.has(mesh) && node.kind !== "table" && node.kind !== "cell";
@@ -180,6 +294,18 @@ export function updateTabletopObject(object: Object3D, node: SceneNode, ctx: Tab
   if ((object as LineSegments).isLineSegments) {
     const token = node.material ? ctx.materials[node.material] : undefined;
     ((object as LineSegments).material as LineBasicMaterial).color.set(token?.base ?? "#1d2a24");
+    return;
+  }
+  if (object.userData.batchKey !== undefined) {
+    // 翻面 / configure_render 改色：代理换到对应材质的合批。
+    const key = node.material ?? "tt-fallback";
+    if (key !== object.userData.batchKey) {
+      const parent = object.userData.batchParent as Object3D | undefined;
+      detachProxy(object);
+      object.userData.batchKey = key;
+      object.userData.batchMaterial = materialFor(node, ctx);
+      if (parent && object.parent === parent) attachProxy(object);
+    }
     return;
   }
   const mesh = object as Mesh;
