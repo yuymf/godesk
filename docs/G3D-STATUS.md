@@ -11,7 +11,7 @@
 | SPEC | 仓外 `/workspace/godesk-3d-spec/SPEC.md`（v0.2）；指针见 [`docs/G3D-SPEC-POINTER.md`](./G3D-SPEC-POINTER.md) |
 | Notion 项目 | https://app.notion.com/p/3f05fabdfe81810e90ade6b4fe2de7c2 |
 | 任务范围 | G3D-01 至 G3D-27；里程碑 M0–M5；人日上限 91 |
-| 代码基线 | `yuymf/godesk` `main` @ `902075e`（#137 G3D-ART AI；#132 G3D-04b；#131 G3D-08；#134 G3D-15 第二刀；#133 G3D-14） |
+| 代码基线 | `yuymf/godesk` `main` @ `45a5a1c`（#142 G3D-ART-2；#139 G3D-14 后续修补；#137 G3D-ART AI；#132 G3D-04b；#131 G3D-08；#134 G3D-15 第二刀；#133 G3D-14） |
 | 状态文件维护人 | 劳埃德(工程) / Track B（素材） |
 | 最近更新 | 2026-10-06（Asia/Shanghai） |
 
@@ -76,7 +76,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | G3D-15 第二刀 | 生成默认集成验收（Track C）：e2e `nl-othello-render-rounds`——「做一款两人翻转棋」→ Studio 确认 → 3D Room，再经 MCP `apply_project_patch` 做 3 轮 `configure_render`（水面色 / 太阳高度角 / 棋子材质），每轮 compile-build + 新开一局，断言 3D 舞台 DOM 生效值与截图像素差；轨迹 [`docs/prompt-trace/2026-10-06-G3D-15-part2.md`](./prompt-trace/2026-10-06-G3D-15-part2.md) | PR [#134](https://github.com/yuymf/godesk/pull/134) squash `98f5de0` |
 | G3D-08 | 自研水体 shader + 海岸距离场（Track B）：`src/render3d/water/` Gerstner / DT / foam / sea KTX2；懒加载 `tide-water-*`；替换灰石板 surround；轨迹 [`docs/prompt-trace/2026-10-06-G3D-08.md`](./prompt-trace/2026-10-06-G3D-08.md) | PR [#131](https://github.com/yuymf/godesk/pull/131) squash `e8b59e8` |
 | G3D-ART | 美术 AI 生图（Track D；用户 2026-10-06 11:08 决定允许 AI 生图，**G3D-17 前法务审查**）：地形 PBR 7 套 + 筹码面 t11（512/256，albedo 无缝化，normal/ORM 由 albedo 推导）、资源/发展卡 6 张原位替换；新增资源图标×5（128/64）、HUD 面板框 / 卡框 9-slice、筹码面 UI（`assets/ui/ai/`，待 G3D-13 接线）；新 SPDX `LicenseRef-AI-Generated`（CI warning 列出待法务资产，不失败）；提示词全文 [`docs/art/ai-provenance.md`](./art/ai-provenance.md)；轨迹 [`docs/prompt-trace/2026-10-06-G3D-ART.md`](./prompt-trace/2026-10-06-G3D-ART.md)。已知：`t04-wheat` 平铺条纹过于规整（建议重生成）；3D 模型网格仍为 bpy 自制 | PR [#137](https://github.com/yuymf/godesk/pull/137) squash `902075e` |
-| G3D-14 后续修补 | 翻转棋圆子按座位材质 `InstancedMesh` 合批（满盘 64 子 low / medium 档 68 → 6 draw call）；2D 棋盘 / 计分面板棋子随编译后的 `materials.seat0/1`；iPhone 12 Pro 390 px 横向溢出（391）修复；毡面（`cloth`）不再挂单级 mip 的 t10-canvas PBR；单测 `tabletop-draw-calls.test.ts` + e2e `nl-othello-render-rounds` 加断言；轨迹 [`docs/prompt-trace/2026-10-06-G3D-14-followups.md`](./prompt-trace/2026-10-06-G3D-14-followups.md) | PR [#139](https://github.com/yuymf/godesk/pull/139) squash（合入 SHA 下次 STATUS 更新回填） |
+| G3D-14 后续修补 | 翻转棋圆子按座位材质 `InstancedMesh` 合批（满盘 64 子 low / medium 档 68 → 6 draw call）；2D 棋盘 / 计分面板棋子随编译后的 `materials.seat0/1`；iPhone 12 Pro 390 px 横向溢出（391）修复；毡面（`cloth`）不再挂单级 mip 的 t10-canvas PBR；单测 `tabletop-draw-calls.test.ts` + e2e `nl-othello-render-rounds` 加断言；轨迹 [`docs/prompt-trace/2026-10-06-G3D-14-followups.md`](./prompt-trace/2026-10-06-G3D-14-followups.md) | PR [#139](https://github.com/yuymf/godesk/pull/139) squash `2c56f22` |
 | G3D-ART-2 | Track D 跟进：`t04-wheat` 改用 T3b 不规则麦丛（无缝，2×2 平铺检查）；**点数筹码数字修复**（原先只有圆柱、没有数字网格；新增 `number-labels.ts` Canvas 图集合并网格 +1 draw call，6/8 赤陶色、羊皮纸筹码面，筹码放大 1.6×；e2e `hex-number-tokens.spec.ts` 桌面/iPhone 断言 18 个贴花可见且有墨色像素）。**地形 3D 小道具（第 3 步）等 #138 G3D-13 合入后基于 InstancePools 另开 PR**；main 上 medium/low draw calls（144/125）已超出 100/60 目标，待 #138 降低 | PR [#142](https://github.com/yuymf/godesk/pull/142) |
 
 仓外已完成（不记入上表）：SPEC v0.2 起草与 §9 拍板修订；Notion 项目与任务卡建立。
@@ -85,6 +85,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
+| G3D-17 预备：上线前清单自动化 | Track C | `feat/g3d-17-launch-checklist` · [#144](https://github.com/yuymf/godesk/pull/144) | `scripts/launch-checklist.mjs`：法务待审条数 / 包体 / Lighthouse warn 级断言 / 分档 draw call / HUD 原始动作 id，现为 warning，转阻断开关见 [`docs/perf/launch-checklist.md`](./perf/launch-checklist.md)；G3D-16 等 G3D-13（#138） |
 
 ## 阻塞
 
@@ -108,14 +109,16 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 > Track A：拥有 **18（已合）/ 09**；G3D-06 → Track B（已合 #122）、G3D-07 → Track C（2026-10-06 再平衡）。Track C：**05 / 10 / 15 / 07 / 14**。Track B 素材轨 **G3D-11、19–27 已全部合入**。
 
-1. Track C：G3D-14 `28792e0`、G3D-15 第二刀 `98f5de0` 已合入，M4 平台化 Done；G3D-14 后续修补 #139 合入后 Track C 队列清空，待派。
-2. Track A：G3D-09 已合入 `d2f58ab`，G3D-04b `0c4ac5a`；G3D-04c（Room 增量状态，#141）可以合入，等 CI 恢复。
-3. Track B：G3D-08 已合入 `e8b59e8` → **G3D-13 Tidewell**（#132 G3D-04b 已合入 `0c4ac5a`，已解锁；HUD 备注：iPhone 12 Pro 上 Room 底部露出带坐标串的原始合法动作按钮列表，HUD 重做须隐藏 / 替换）；G3D-ART 已由 Track D 用 AI 生图完成（#137），`assets/ui/ai/` 图标 / 9-slice 框 / 筹码面待 G3D-13 HUD 接线。
+1. Track C：M4 平台化 Done（G3D-14 后续修补 #139）。G3D-16 预备等 G3D-13（#138 已合入）→ 先做 G3D-17 不阻塞的预备：上线前清单自动化 #144（warning 模式）。
+2. Track A：G3D-09 / G3D-04b / G3D-04c（#141）已合入；队列清空。
+3. Track B：G3D-08 / G3D-13（#138）已合入；G3D-ART 已由 Track D 用 AI 生图完成（#137），`assets/ui/ai/` 图标 / 9-slice 框 / 筹码面已由 G3D-13 HUD 接线。
+
 
 ## G3D-17 上线前清单（发布闸门）
 
 - [ ] **法务审查：`assets/LICENSES.md` 中每一行 `LicenseRef-AI-Generated`（当前 68 行，`pnpm verify:assets` 的 warning 会列出）必须由法务审查通过**，通过后把该行 `法务审查: 待 G3D-17` 改为 `法务审查: 已通过 <日期/审查人>`、manifest `legalReview` 改为 `"cleared"`；未通过的资产须替换（委托 / CC0 / 购买）。warning 清零前不得上线。
 - [ ] G3D-05 备注 ⑤：Lighthouse LCP / TBT 由 warn 改为 error（见上）。
+- [ ] **自动化清单转阻断**：`scripts/launch-checklist.mjs`（#144）在 Verify / Lighthouse CI 里以 warning 模式汇总 `asset-legal`（AI 待法务审查条数）、`size-budgets`（超限 / 余量 < 2%）、`lighthouse`（仍为 warn 级的断言）、`draw-calls`（high 150 / medium 100 / low 60，稳态与峰值取大）、`hud-raw-action-ids`（Room 可见文本 / aria-label 中的原始动作 id，桌面 + iPhone 12 Pro，入座 0）。全部 pass 后把两个 workflow 的 `GODESK_LAUNCH_GATE` 改为 `block`；可先用 `GODESK_LAUNCH_GATE_BLOCK` 逐项转正。步骤见 [`docs/perf/launch-checklist.md`](./perf/launch-checklist.md)。基线（2026-10-06，本地 SwiftShader）：asset-legal warn（68 项）；size-budgets warn（size-limit 首页 168.68 / 170 kB，余量 0.8%）；lighthouse warn（首页 LCP、Room TBT / CLS 仍为 warn 级）；draw-calls fail（high 140 / 140、medium 80 / 140、low 80 / 121，稳态 / 峰值）；hud-raw-action-ids warn（桌面 + iPhone 各 54 种顶点坐标键，如「放置定居点 · -100:-173」，等 G3D-13 HUD）。
 - [ ] **仓库公开（Track A 预备，`chore/pre-public-cleanup`）**：品牌中性化（仓内 第三方六角岛桌游品牌词（中英文）→ 汐屿 / Tidewell Isles / `hexIsland` / `hex-island`；只保留旧存储键（`LEGACY_HEX_ISLAND_STATE_KEY`），用于兼容已存的房间）；第三方参考站点引用清零（统一改为「业界 3D 桌游品质对标」）；第三方商标从用户可见文案移除（Ticket to Ride、Othello 文案）；新增 `LICENSE`（source-available，保留所有权利）；commit 身份改为 noreply；fork PR 审批设为所有外部贡献者。**可见性由主管在用户直接确认后切换；未合入。**
 
 
@@ -123,7 +126,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
-| `feat/g3d-14-followups` | [#139](https://github.com/yuymf/godesk/pull/139) | G3D-14 后续修补 + M4 收官：圆子实例化、2D 棋子随座位材质、390 px 溢出、毡面、STATUS（Track C） | open · 本 PR |
+| `feat/g3d-17-launch-checklist` | [#144](https://github.com/yuymf/godesk/pull/144) | G3D-17 预备：上线前清单自动化（warning 模式 + 转阻断开关）（Track C） | open · 本 PR |
 | `feat/g3d-13-tidewell` | — | G3D-13 Tidewell 集成（Track B） | 开工 · 合入等 #132 |
 | `chore/pre-public-cleanup` | 见 PR | 仓库公开前清理：品牌中性化、LICENSE、第三方参考站点引用清零（Track A） | open · 不合入（等用户确认） |
 | `feat/g3d-04c-incremental-room-state` | [#141](https://github.com/yuymf/godesk/pull/141) | G3D-04c Room 内核状态增量化（Track A） | open · 本机门禁全过；合入 main（#138 后）重跑 CI 后 squash 合入 |
@@ -172,3 +175,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | CI 瘦身 PR `ci/slim-actions`：verify 草稿 PR 只跑快速子集、ready / `full-e2e` 标签才跑全量 Playwright；三条 workflow 忽略纯文档变更；Lighthouse 只在前端 / Worker 路径变更时跑、去掉 push main、PR 单次采样；deploy 不再重跑 e2e；Playwright 浏览器缓存；AGENTS.md 加 CI 分钟规则（文档随代码同一次 push、只在冲突时合 main、迭代期开 draft）；阻塞表 GitHub Actions 改为计费拦截 | Track C |
 | 2026-10-06 | G3D-04c Room 内核状态增量化 #141（内存缓存 + 每 50 手快照；后盘单步 4.1 s → 0.11 s）；记录决定：Studio 自动开房默认人对人，大厅「和电脑对战」为 AI 入口 | Track A |
 | 2026-10-06 | GitHub Actions 因账户付费被阻塞（约 12:54 起）；#141 本机门禁全过，等 CI 恢复后合入 | Track A |
+| 2026-10-06 | G3D-17 预备（Track C）上线前清单自动化 PR：回填 #139 合入 SHA `2c56f22`；进行中加 G3D-17 预备；G3D-17 上线前清单加「自动化清单转阻断」项与基线；开着的 PR #139 → 本 PR；代码基线 → `45a5a1c` | Track C |
