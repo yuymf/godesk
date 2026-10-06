@@ -884,8 +884,8 @@ export interface SessionState {
     lastMove: { row: number; col: number; flipped: number } | null;
     lastAction: "place" | "pass" | null;
   };
-  /** Present when the build kernel is hex-settlement-v1 (Catan). */
-  catan?: {
+  /** Present when the build kernel is hex-settlement-v1 (hex-island). */
+  hexIsland?: {
     phase: string;
     playerCount: number;
     victoryPointsToWin: number;

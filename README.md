@@ -58,9 +58,9 @@ Executable Builds run on one of these authoritative kernels (`src/runtime/`):
 
 | Kernel | Play shape |
 |:---|:---|
-| `disc-flipping-v1` | Othello / Reversi board |
+| `disc-flipping-v1` | Reversi-style disc-flipping board |
 | `auction-bidding-v1` | Auction and bidding board |
-| `hex-settlement-v1` | Catan-style hex settlement |
+| `hex-settlement-v1` | Hex-island resource & build board (汐屿 / Tidewell Isles) |
 | `network-route-v1` | Route-claiming network map |
 | `hand-play-v1` | Card hand / play area |
 | `worker-placement-v1` | Worker placement regions |
@@ -125,7 +125,7 @@ pnpm deploy:dry-run
 
 | Command | Role |
 |:---|:---|
-| `pnpm test` / `pnpm test:worker` / `pnpm typecheck` / `pnpm build` / `pnpm verify:plugin` | CI (`verify.yml`, `deploy.yml`) plus Playwright |
+| `pnpm test` / `pnpm test:worker` / `pnpm typecheck` / `pnpm build` / `pnpm verify:plugin` | CI (`verify.yml` on PRs, `deploy.yml` on `main`); Playwright runs in `verify.yml` for ready PRs (see [docs/ci/actions-budget.md](docs/ci/actions-budget.md)) |
 | `pnpm test:e2e` | Starts the local Worker; Chromium charter path: home → playable Shared Session → friend join → action |
 | `pnpm verify:local-routes` | OAuth metadata, login/callback, MCP route contracts |
 | `pnpm verify:local-loop` | Full prompt → Generation Plan → approval → Build → fixed-seed self-play → Finding → revised Build → Shared Session → Replay |
@@ -166,4 +166,4 @@ GitHub Actions also needs `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`. Ne
 
 ## License
 
-No SPDX license file is published in this repository yet.
+Source-available, **all rights reserved** — see [`LICENSE`](./LICENSE). Copyright (c) 2026 俞孟凡 (yuymf). You may view the code on GitHub; no license is granted to use, copy, modify or distribute it. This is not an open-source (MIT/Apache/GPL) project. Third-party components keep their own licenses ([`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md), [`assets/LICENSES.md`](./assets/LICENSES.md)).

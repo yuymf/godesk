@@ -56,7 +56,7 @@ Turn-limit / termination reminders (also owned by that table's semantics):
    Presentation Floor supports the selected play surface. A kit alone is not
    enough for conversation / cards / placement: friends must also see transcript,
    hand/play areas, or named regions ("桌子好看但还不是那款游戏"). Harbor /
-   `港口十三号` uses settlecoast as a rights-safe visual reference for token
+   `港口十三号` uses an original, rights-safe visual language for token
    hierarchy, cargo/dock affordances, and spectator landmarks; ADR 0014 owns
    the Three.js default render-surface contract.
 4. Submit `compile-build` with the latest version and track it to terminal.

@@ -11,7 +11,7 @@
 
 ## prompts used
 
-（本刀未成功跑通 Codex；实现依据 SPEC §5.5 / §6.3 G3D-23 与用户硬规则：原创 SVG、OFL 字体、禁止 settlecoast。）
+（本刀未成功跑通 Codex；实现依据 SPEC §5.5 / §6.3 G3D-23 与用户硬规则：原创 SVG、OFL 字体、禁止拷贝第三方产品。）
 
 ## decisions
 
@@ -48,7 +48,7 @@
 - `gh run watch` 三次均失败于 hosted runner not-acquired。
 
 ### outcomes
-- 本地 Playwright（新鲜 wrangler）`nl-catan-share` + `nl-othello-share` 2/2 通过；截图在 `/workspace/g3d-evidence/G3D-23/e2e-shots/`。
+- 本地 Playwright（新鲜 wrangler）`nl-hex-island-share` + `nl-othello-share` 2/2 通过；截图在 `/workspace/g3d-evidence/G3D-23/e2e-shots/`。
 - **暂不合入 #108**；记 STATUS 阻塞；并行开工 G3D-26（仅依赖 G3D-11）。
 
 ## 2026-10-06 ~05:15 Asia/Shanghai · Actions major_outage
