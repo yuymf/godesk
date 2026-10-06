@@ -91,7 +91,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 项 | 原因 | 解除条件 |
 | --- | --- | --- |
 | box Codex 用量上限 | 至 2026-11-05 02:04 Asia/Shanghai；Cloud Agent 兜底（本席无该工具时手写） | 用量恢复 |
-| GitHub Actions | 现 **operational**。deploy @ `41e352b` 生产 smoke 曾失败（ChatGPT Connector heading）；后续 deploy 通过 → 瞬时 | 禁无绿合入 |
+| **GitHub Actions（账户付费）** | 2026-10-06 约 12:54 起，所有 job 1–2 s 内失败：「recent account payments have failed or your spending limit needs to be increased」，不是代码问题。此前 deploy @ `41e352b` 的 smoke 失败是瞬时问题 | 用户在 Billing & plans 处理；禁无绿合入（#141 等 CI） |
 
 ## 下一刀
 
@@ -108,7 +108,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 > Track A：拥有 **18（已合）/ 09**；G3D-06 → Track B（已合 #122）、G3D-07 → Track C（2026-10-06 再平衡）。Track C：**05 / 10 / 15 / 07 / 14**。Track B 素材轨 **G3D-11、19–27 已全部合入**。
 
 1. Track C：G3D-14 `28792e0`、G3D-15 第二刀 `98f5de0` 已合入，M4 平台化 Done；G3D-14 后续修补 #139 合入后 Track C 队列清空，待派。
-2. Track A：G3D-09 已合入 `d2f58ab`，G3D-04b `0c4ac5a`；G3D-04c（Room 增量状态，#141）进行中。
+2. Track A：G3D-09 已合入 `d2f58ab`，G3D-04b `0c4ac5a`；G3D-04c（Room 增量状态，#141）可以合入，等 CI 恢复。
 3. Track B：G3D-08 已合入 `e8b59e8` → **G3D-13 Tidewell**（#132 G3D-04b 已合入 `0c4ac5a`，已解锁；HUD 备注：iPhone 12 Pro 上 Room 底部露出带坐标串的原始合法动作按钮列表，HUD 重做须隐藏 / 替换）；G3D-ART 已由 Track D 用 AI 生图完成（#137），`assets/ui/ai/` 图标 / 9-slice 框 / 筹码面待 G3D-13 HUD 接线。
 
 ## G3D-17 上线前清单（发布闸门）
@@ -121,7 +121,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
-| `feat/g3d-04c-incremental-room-state` | [#141](https://github.com/yuymf/godesk/pull/141) | G3D-04c Room 内核状态增量化（Track A） | open |
+| `feat/g3d-04c-incremental-room-state` | [#141](https://github.com/yuymf/godesk/pull/141) | G3D-04c Room 内核状态增量化（Track A） | open · 本机门禁全过；`1c65f4d` 时 CI 全绿；合入 main 后的 head 等 CI（GitHub Actions 被账户付费问题阻塞） |
 | `feat/g3d-13-tidewell` | — | G3D-13 Tidewell 集成（Track B） | 开工（#132 已合，已解锁） |
 
 ## 修订记录
@@ -165,3 +165,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | G3D-14 后续修补 + M4 收官（Track C）PR：回填 G3D-15 第二刀 #134 合入 SHA `98f5de0`；开着的 PR 移除 #134；当前里程碑加 M4 平台化 Done（合入 PR 列表）；已完成加 G3D-14 后续修补；加后续修补备注（实例化 draw call / 2D 棋子色 / 溢出 / 毡面 mip）；代码基线 → `902075e`；开着的 PR 移除已合入的 #132 | Track C |
 | 2026-10-06 | G3D-ART-2 #142：T3b 麦田、点数筹码数字贴花（6/8 赤陶）；地形道具暂缓到 #138 之后 | Track D |
 | 2026-10-06 | G3D-04c Room 内核状态增量化 #141（内存缓存 + 每 50 手快照；后盘单步 4.1 s → 0.11 s）；记录决定：Studio 自动开房默认人对人，大厅「和电脑对战」为 AI 入口 | Track A |
+| 2026-10-06 | GitHub Actions 因账户付费被阻塞（约 12:54 起）；#141 本机门禁全过，等 CI 恢复后合入 | Track A |

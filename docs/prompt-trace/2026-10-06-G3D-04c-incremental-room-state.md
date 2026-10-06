@@ -35,6 +35,10 @@
 
 测试：`worker/room-snapshot.test.ts`（状态哈希对比 + 中途 3 次 DO 重启）；`worker/room-ai-seat.test.ts` 整局测试恢复为种子 42（本机 56 s）。
 
+## 合入状态
+- 本机门禁（head `87e9240`，已合入 main 的 #139 / #142）：typecheck 0；unit 430 passed；worker 212 passed；e2e（端口 8811）见 PR 证据评论。
+- CI：`1c65f4d` 时 Tests and Playwright（run 37411963017）与 Lighthouse（run 37411963086）全绿。合入 main 后的 head `87e9240` 上 CI 没有启动：GitHub Actions 账户付费失败 / 支出上限（约 12:54 起全仓库都失败）。按规则，CI 恢复变绿后再 squash 合入；不使用任何绕过手段。
+
 ## 链接
 - PR [#141](https://github.com/yuymf/godesk/pull/141)
 - 证据：`/workspace/g3d-evidence/g3d-04c/`（`bench-before.log`、`bench-after.log`、门禁日志）
