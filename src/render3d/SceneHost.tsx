@@ -689,6 +689,9 @@ export function SceneHost({
       rig.dispose();
       rigRef.current = null;
       library.dispose();
+      // 须在 perf 快照前释放贴花图集，否则计为残留纹理。
+      numberLabelsRef.current?.dispose();
+      numberLabelsRef.current = null;
       perf?.beforeDispose(renderer);
       detachPerf?.();
       renderer.dispose();
@@ -708,8 +711,6 @@ export function SceneHost({
       lastSeatRef.current = null;
       lastActionRef.current = undefined;
       modelRef.current = null;
-      numberLabelsRef.current?.dispose();
-      numberLabelsRef.current = null;
       layoutKeyRef.current = null;
       cameraKeyRef.current = null;
       fitCameraRef.current = () => {};
