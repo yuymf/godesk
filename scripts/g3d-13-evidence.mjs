@@ -163,10 +163,10 @@ async function main() {
     // Newest Tidewell build is sorted first; prefer the card for this projectId when present.
     const card = page.locator(".lobby-card").filter({ has: page.locator(`a[href*="/studio/${projectId}"]`) });
     const vsAi = (await card.count())
-      ? card.getByRole("button", { name: "和电脑对战" })
-      : page.getByRole("button", { name: "和电脑对战" }).first();
-    await vsAi.first().waitFor({ state: "visible", timeout: 60_000 });
-    await vsAi.first().click();
+      ? card.getByRole("button", { name: "和电脑对战" }).first()
+      : page.locator("button.lobby-vs-computer").first();
+    await vsAi.waitFor({ state: "visible", timeout: 60_000 });
+    await vsAi.click();
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 60_000 });
     await page.getByLabel("你的席位").selectOption("0");
     const board = page.getByRole("region", { name: "汐屿" });
