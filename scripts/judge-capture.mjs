@@ -93,13 +93,15 @@ async function settle(page, ms = 1_200) {
 async function shot(page, vp, id, preset, files) {
   if (preset) await page.evaluate((p) => globalThis.__g3dJudge.set(p), preset);
   await settle(page);
+  // 主棋盘（带水面、挂 __g3dJudge 的第一个 host；页面下方还有一个无水面的预览 host）。
   const host = page.getByTestId("g3d-scene-host").first();
-  await host.scrollIntoViewIfNeeded().catch(() => null);
-  await page.waitForTimeout(300);
+  // 整页图：把主棋盘居中到视口再拍（先拍整页，避免 element screenshot 的滚动把视口带偏）。
+  await host.evaluate((el) => el.scrollIntoView({ block: "center", inline: "center" }));
+  await page.waitForTimeout(500);
   const canvas = path.join(OUT, `${vp.id}-${id}.png`);
   const whole = path.join(OUT, `${vp.id}-${id}-page.png`);
-  await host.screenshot({ path: canvas, animations: "disabled" });
   await page.screenshot({ path: whole, fullPage: false });
+  await host.screenshot({ path: canvas, animations: "disabled" });
   files.push({ id, preset, canvas, page: whole });
   log(vp.id, id, "→", canvas);
 }
@@ -212,8 +214,9 @@ async function runViewport(browser, projectId, vpKey) {
   // 资源手牌 + HUD：整页（默认机位）。
   await page.evaluate(() => globalThis.__g3dJudge.set("a-default"));
   await settle(page);
-  const hand = page.locator(".hex-settlement-hand, [aria-label*='手牌'], [aria-label*='资源']").first();
-  if (await hand.count()) await hand.scrollIntoViewIfNeeded().catch(() => null);
+  // HUD（对局状态 + 你的资源）在主棋盘上方：滚到 HUD 顶部，视口里同时有手牌和棋盘上沿。
+  await board.getByRole("region", { name: "对局状态" }).evaluate((el) => el.scrollIntoView({ block: "start" })).catch(() => null);
+  await page.waitForTimeout(400);
   const dHud = path.join(OUT, `${vp.id}-d-hand-hud.png`);
   await page.screenshot({ path: dHud, fullPage: false });
   const dFull = path.join(OUT, `${vp.id}-d-hand-hud-full.png`);

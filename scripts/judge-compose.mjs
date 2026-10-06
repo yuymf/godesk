@@ -4,6 +4,9 @@
  *
  *   node scripts/judge-compose.mjs <round> [--variant page|canvas|both]
  *
+ * 默认 page：桌面汐屿用 1440×900 整页截图（参照图是 1280×800 含浏览器框的整屏，比的是观感不是像素）。
+ * 每个参照变体（a3 / b2 / b3 / e-road / f2 / g-trade …）各出一张，配同一视图字母的汐屿截图。
+ *
  * 参考：/workspace/g3d-evidence/judge/ref/<vp>-<letter>-<name>.png（如 desktop-a-default.png、
  *   iphone-b-terrain-closeup.png）。匹配宽松：按视口（desktop | iphone/mobile）+ 视图字母，
  *   名字后缀可以不同；缺参考图时左栏画「参考图缺失」占位，不报错。
@@ -22,7 +25,7 @@ if (!round) {
   process.exit(2);
 }
 const vi = args.indexOf("--variant");
-const VARIANT = vi >= 0 ? args[vi + 1] : "both";
+const VARIANT = vi >= 0 ? args[vi + 1] : "page";
 const ROOT = process.env.JUDGE_ROOT || "/workspace/g3d-evidence/judge";
 const REF = path.join(ROOT, "ref");
 const SHOTS = path.join(ROOT, `round-${round}`, "tidewell");
@@ -46,13 +49,16 @@ async function listPng(dir) {
   }
 }
 
-/** 宽松匹配参考图：<vp别名>[-_]<字母>[-_ ...].png，优先完全同名。 */
-function findRef(refs, vp, letter, id) {
-  const exact = refs.find((f) => f.toLowerCase() === `${vp}-${id}.png`);
-  if (exact) return exact;
+/**
+ * 宽松匹配参考图：<vp别名>[-_]<字母>[数字变体][-_ ...].png（如 desktop-b2-terrain-151pct.png）。
+ * 返回该视图的全部参考变体，完全同名的排第一。
+ */
+function findRefs(refs, vp, letter, id) {
   const aliases = VP_ALIASES[vp] ?? [vp];
-  const re = new RegExp(`^(${aliases.join("|")})[-_ ]?${letter}(?:[-_ .]|$)`, "i");
-  return refs.find((f) => re.test(f)) ?? null;
+  const re = new RegExp(`^(${aliases.join("|")})[-_ ]?${letter}\\d*(?:[-_ .]|$)`, "i");
+  const all = refs.filter((f) => re.test(f)).sort();
+  const exact = all.find((f) => f.toLowerCase() === `${vp}-${id}.png`);
+  return exact ? [exact, ...all.filter((f) => f !== exact)] : all;
 }
 
 async function dataUrl(file) {
@@ -70,7 +76,8 @@ async function main() {
   const variants = VARIANT === "both" ? ["page", "canvas"] : [VARIANT];
   for (const vp of ["desktop", "iphone"]) {
     for (const [letter, id, title] of VIEWS) {
-      const refName = findRef(refs, vp, letter, id);
+      const matched = findRefs(refs, vp, letter, id);
+      for (const refName of matched.length ? matched : [null]) {
       for (const variant of variants) {
         // d-hand-hud 只有整页图（-page 是整页滚动全图）；其它视图按变体取。
         const candidates = id === "d-hand-hud"
@@ -78,7 +85,8 @@ async function main() {
           : [variant === "page" ? `${vp}-${id}-page.png` : `${vp}-${id}.png`];
         const shotName = candidates.find((c) => shots.includes(c));
         if (!shotName) continue;
-        const outName = `${vp}-${id}${variant === "canvas" ? "-canvas" : ""}.png`;
+        const stem = refName && refName !== `${vp}-${id}.png` ? refName.replace(/\.png$/i, "") : `${vp}-${id}`;
+        const outName = `${stem}${variant === "canvas" ? "-canvas" : ""}.png`;
         const png = await page.evaluate(
           async ({ ref, shot, labels, height }) => {
             const load = async (src) => {
@@ -130,18 +138,19 @@ async function main() {
             ref: refName ? await dataUrl(path.join(REF, refName)) : null,
             shot: await dataUrl(path.join(SHOTS, shotName)),
             labels: {
-              left: `参考 settlecoast.com · ${vp} · ${letter} ${title}`,
-              right: `汐屿 Tidewell · round-${round} · ${vp} · ${letter} ${title}`,
+              left: `参照 settlecoast · ${vp} · ${letter} ${title}`,
+              right: `汐屿 · round-${round} · ${vp} · ${letter} ${title}`,
               leftFile: refName ? `ref/${refName}` : "ref/（缺失）",
               rightFile: `round-${round}/tidewell/${shotName}`,
             },
-            height: vp === "iphone" ? 1400 : 900,
+            height: vp === "iphone" ? 1400 : 900, // 全高：桌面 900（参照 800 放大到同高）
           },
         );
         const file = path.join(OUT, outName);
         await writeFile(file, Buffer.from(png, "base64"));
         index.push({ vp, view: id, variant, ref: refName ? path.join(REF, refName) : null, shot: path.join(SHOTS, shotName), out: file });
         console.log(`${refName ? "pair " : "noref"} ${file}`);
+      }
       }
     }
   }
