@@ -54,15 +54,15 @@ import {
   type OthelloGenre,
 } from "../src/runtime/adapters/othello";
 import {
-  bindHexSettlementFromRuntimeKernel,
-  hexSettlementAdapter,
-  hexSettlementToSessionFields,
-  pickHexSettlementBotAction,
-  playActionFromHexSettlementIntent,
-  type HexSettlementGenre,
-  type HexSettlementPlayer,
+  bindHexIslandFromRuntimeKernel,
+  hexIslandAdapter,
+  hexIslandToSessionFields,
+  pickHexIslandBotAction,
+  playActionFromHexIslandIntent,
+  type HexIslandGenre,
+  type HexIslandPlayer,
   type DevCardKind
-} from "../src/runtime/adapters/hex-settlement";
+} from "../src/runtime/adapters/hex-island";
 import {
   bindNetworkRouteFromRuntimeKernel,
   networkRouteAdapter,
@@ -314,14 +314,14 @@ export function initialSessionState(
   }
   if (runtime?.kernel.type === "hex-settlement-v1") {
     const play = createInitialState(
-      hexSettlementAdapter,
-      bindHexSettlementFromRuntimeKernel({
+      hexIslandAdapter,
+      bindHexIslandFromRuntimeKernel({
         playerCount: runtime.kernel.playerCount,
         victoryPointsToWin: runtime.kernel.victoryPointsToWin,
       }),
       _seed,
     );
-    const fields = hexSettlementToSessionFields(play);
+    const fields = hexIslandToSessionFields(play);
     return {
       turn: fields.turn,
       activeSeat: fields.activeSeat,
@@ -889,7 +889,7 @@ export function acceptIntent(
     if (state.status !== "active" || !state.hexSettlement || intent.seat !== state.activeSeat) {
       return null;
     }
-    const kernelConfig = bindHexSettlementFromRuntimeKernel({
+    const kernelConfig = bindHexIslandFromRuntimeKernel({
       playerCount: runtime.kernel.playerCount,
       victoryPointsToWin: runtime.kernel.victoryPointsToWin,
     });
@@ -902,16 +902,16 @@ export function acceptIntent(
       status: state.status,
       winnerId: state.winnerSeat,
       events: [] as const,
-      genre: sessionHexSettlementToGenre(state.hexSettlement),
+      genre: sessionHexIslandToGenre(state.hexSettlement),
     };
     const result = applyAction(
-      hexSettlementAdapter,
+      hexIslandAdapter,
       playState,
-      playActionFromHexSettlementIntent(intent.seat, intent.actionId, intent.payload),
+      playActionFromHexIslandIntent(intent.seat, intent.actionId, intent.payload),
       kernelConfig,
     );
     if (!result.ok) return null;
-    const fields = hexSettlementToSessionFields(result.state);
+    const fields = hexIslandToSessionFields(result.state);
     return {
       sequence,
       intentId: intent.intentId,
@@ -1116,7 +1116,7 @@ export function pickBotIntent(
   if (state.status !== "active") return null;
   if (runtime.kernel.type === "hex-settlement-v1") {
     if (!state.hexSettlement) return null;
-    const kernelConfig = bindHexSettlementFromRuntimeKernel({
+    const kernelConfig = bindHexIslandFromRuntimeKernel({
       playerCount: runtime.kernel.playerCount,
       victoryPointsToWin: runtime.kernel.victoryPointsToWin,
     });
@@ -1129,9 +1129,9 @@ export function pickBotIntent(
       status: state.status,
       winnerId: state.winnerSeat,
       events: [] as const,
-      genre: sessionHexSettlementToGenre(state.hexSettlement),
+      genre: sessionHexIslandToGenre(state.hexSettlement),
     };
-    const bot = pickHexSettlementBotAction(playState, kernelConfig, seed, state.turn + 1);
+    const bot = pickHexIslandBotAction(playState, kernelConfig, seed, state.turn + 1);
     if (!bot) return null;
     return {
       seat: state.activeSeat,
@@ -1710,23 +1710,23 @@ export function scopeSessionState(
   };
 }
 
-function sessionHexSettlementToGenre(hexSettlement: NonNullable<import("../src/creator/project-contract").SessionState["hexSettlement"]>): HexSettlementGenre {
+function sessionHexIslandToGenre(hexSettlement: NonNullable<import("../src/creator/project-contract").SessionState["hexSettlement"]>): HexIslandGenre {
   return {
     playerCount: hexSettlement.playerCount,
     victoryPointsToWin: hexSettlement.victoryPointsToWin,
     tiles: hexSettlement.tiles.map((tile) => ({
       q: tile.q,
       r: tile.r,
-      terrain: tile.terrain as HexSettlementGenre["tiles"][number]["terrain"],
+      terrain: tile.terrain as HexIslandGenre["tiles"][number]["terrain"],
       number: tile.number,
     })),
     robberHex: hexSettlement.robberHex,
     ports: hexSettlement.ports.map((port) => ({
       vertices: [...port.vertices],
-      kind: port.kind as HexSettlementGenre["ports"][number]["kind"],
+      kind: port.kind as HexIslandGenre["ports"][number]["kind"],
     })),
     players: hexSettlement.players.map((player) => ({
-      resources: { ...(player.resources as HexSettlementPlayer["resources"]) },
+      resources: { ...(player.resources as HexIslandPlayer["resources"]) },
       settlements: [...player.settlements],
       cities: [...player.cities],
       roads: [...player.roads],

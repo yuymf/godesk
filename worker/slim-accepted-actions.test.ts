@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { executableTidewellSpecFixture } from "../src/creator/fixtures/game-spec";
+import { executableHexIslandSpecFixture } from "../src/creator/fixtures/game-spec";
 import {
   reconstructActions,
   slimAcceptedActionsForStorage,
@@ -11,7 +11,7 @@ describe("slimAcceptedActionsForStorage", () => {
   it(
     "keeps seed-42 bot log under 1MB and reconstructs the same terminal state",
     () => {
-    const rule = executableTidewellSpecFixture();
+    const rule = executableHexIslandSpecFixture();
     const simulation = runBotSimulation(rule, 42);
     expect(simulation.acceptedActions.length).toBeGreaterThan(100);
 

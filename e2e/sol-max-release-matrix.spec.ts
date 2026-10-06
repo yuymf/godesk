@@ -31,7 +31,7 @@ test.describe("Sol max release matrix — automatable row index", () => {
     // 一句话生成 + lobby mark + one legal act (both genres)
     expect(boards).toMatch(/做一款可以与电脑对战的汐屿基础版/);
     expect(boards).toMatch(/做一款可以与电脑对战的黑白棋/);
-    expect(boards).toMatch(/data-lobby-mark="tidewell"/);
+    expect(boards).toMatch(/data-lobby-mark="hexIsland"/);
     expect(boards).toMatch(/data-lobby-mark="othello"/);
     expect(boards).toMatch(/建造渔村|可落子/);
 

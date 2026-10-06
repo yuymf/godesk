@@ -85,7 +85,7 @@ async function main() {
     return next.href;
   };
 
-  const log = { captures: [], budgets: { mediumMax: 100, lowMax: 60 }, rgCatan: 0 };
+  const log = { captures: [], budgets: { mediumMax: 100, lowMax: 60 }, rgLegacyBrand: 0 };
   for (const vpKey of VIEWPORTS) {
     const vp = viewportDefs[vpKey];
     for (const tier of TIERS) {

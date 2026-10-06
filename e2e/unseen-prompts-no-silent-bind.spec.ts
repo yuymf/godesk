@@ -2,8 +2,8 @@ import { expect, test } from "@playwright/test";
 import {
   CARD_AREA_PROMPT,
   AUCTION_PROMPT,
-  TIDEWELL_PROMPT,
-  NORTH_STAR_TIDEWELL_PROMPT,
+  HEX_ISLAND_PROMPT,
+  NORTH_STAR_HEX_ISLAND_PROMPT,
   NORTH_STAR_OTHELLO_ALT_PROMPT,
   NORTH_STAR_OTHELLO_PROMPT,
   NETWORK_PROMPT,
@@ -37,8 +37,8 @@ test.describe("PR10/PR11/PR12 unseen prompts: no silent Tidewell/Othello bind", 
   test("hex and disc ideas propose only their own kernel", async ({ page }) => {
     test.setTimeout(240_000);
     for (const [prompt, expected] of [
-      [TIDEWELL_PROMPT, "configure_hex_settlement"],
-      [NORTH_STAR_TIDEWELL_PROMPT, "configure_hex_settlement"],
+      [HEX_ISLAND_PROMPT, "configure_hex_settlement"],
+      [NORTH_STAR_HEX_ISLAND_PROMPT, "configure_hex_settlement"],
       [OTHELLO_PROMPT, "configure_disc_flipping"],
       [NORTH_STAR_OTHELLO_PROMPT, "configure_disc_flipping"],
       [NORTH_STAR_OTHELLO_ALT_PROMPT, "configure_disc_flipping"],
@@ -90,7 +90,7 @@ test.describe("PR10/PR11/PR12 unseen prompts: no silent Tidewell/Othello bind", 
 
     await expect(page.getByRole("region", { name: "黑白棋盘" })).toHaveCount(0);
     await expect(page.getByRole("region", { name: "汐屿" })).toHaveCount(0);
-    await expect(page.locator('[data-lobby-mark="tidewell"]')).toHaveCount(0);
+    await expect(page.locator('[data-lobby-mark="hexIsland"]')).toHaveCount(0);
     await expect(page.locator('[data-lobby-mark="othello"]')).toHaveCount(0);
 
     const projectId = new URL(page.url()).pathname.split("/").at(-1)!;
@@ -131,7 +131,7 @@ test.describe("PR10/PR11/PR12 unseen prompts: no silent Tidewell/Othello bind", 
     await expect(page.getByRole("region", { name: "黑白棋盘" })).toHaveCount(0);
     await expect(page.getByRole("region", { name: "汐屿" })).toHaveCount(0);
     await expect(page.getByRole("region", { name: "线路网络盘" })).toHaveCount(0);
-    await expect(page.locator('[data-lobby-mark="tidewell"]')).toHaveCount(0);
+    await expect(page.locator('[data-lobby-mark="hexIsland"]')).toHaveCount(0);
     await expect(page.locator('[data-lobby-mark="othello"]')).toHaveCount(0);
     await expect(page.locator('[data-lobby-mark="network"]')).toHaveCount(0);
 
@@ -178,7 +178,7 @@ test.describe("PR10/PR11/PR12 unseen prompts: no silent Tidewell/Othello bind", 
       await expect(page.getByRole("region", { name: "黑白棋盘" })).toHaveCount(0);
       await expect(page.getByRole("region", { name: "汐屿" })).toHaveCount(0);
       await expect(page.getByRole("region", { name: "线路网络盘" })).toHaveCount(0);
-      await expect(page.locator('[data-lobby-mark="tidewell"]')).toHaveCount(0);
+      await expect(page.locator('[data-lobby-mark="hexIsland"]')).toHaveCount(0);
       await expect(page.locator('[data-lobby-mark="othello"]')).toHaveCount(0);
       await expect(page.locator('[data-lobby-mark="network"]')).toHaveCount(0);
 

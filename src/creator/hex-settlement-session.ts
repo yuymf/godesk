@@ -3,27 +3,27 @@
  * Legal-action listing + initial session slice; no SVG board.
  */
 import {
-  hexSettlementAdapter,
-  hexSettlementToSessionFields,
-  createHexSettlementKernelConfig,
-  parseHexSettlementConfig,
-  type HexSettlementGenre,
-  type HexSettlementPlayer,
-  type HexSettlementPort,
-  type HexSettlementTile,
+  hexIslandAdapter,
+  hexIslandToSessionFields,
+  createHexIslandKernelConfig,
+  parseHexIslandConfig,
+  type HexIslandGenre,
+  type HexIslandPlayer,
+  type HexIslandPort,
+  type HexIslandTile,
   type DevCardKind,
   type ResourceBank,
-} from "../runtime/adapters/hex-settlement";
+} from "../runtime/adapters/hex-island";
 import { createInitialState, type PlayState } from "../runtime/play-kernel";
 
 export type HexSettlementBoardState = {
   phase: string;
   playerCount: number;
   victoryPointsToWin: number;
-  tiles: HexSettlementTile[];
+  tiles: HexIslandTile[];
   robberHex: string;
-  ports: HexSettlementPort[];
-  players: HexSettlementPlayer[];
+  ports: HexIslandPort[];
+  players: HexIslandPlayer[];
   setupStep: number;
   pendingRoadVertex: string | null;
   lastDice: [number, number] | null;
@@ -45,7 +45,7 @@ const EMPTY_BANK = (): ResourceBank => ({
   ore: 0,
 });
 
-export function toHexSettlementGenre(hexSettlement: HexSettlementBoardState): HexSettlementGenre {
+export function toHexSettlementGenre(hexSettlement: HexSettlementBoardState): HexIslandGenre {
   return {
     playerCount: hexSettlement.playerCount,
     victoryPointsToWin: hexSettlement.victoryPointsToWin,
@@ -84,7 +84,7 @@ function playStateFromSession(
   activeSeat: number,
   status: "active" | "complete",
   winnerSeat: number | null = null,
-): PlayState<HexSettlementGenre> {
+): PlayState<HexIslandGenre> {
   return {
     seed: 0,
     sequence: 0,
@@ -98,25 +98,25 @@ function playStateFromSession(
   };
 }
 
-export function listHexSettlementLegalActionsForSession(input: {
+export function listHexIslandLegalActionsForSession(input: {
   hexSettlement: HexSettlementBoardState;
   activeSeat: number;
   status: "active" | "complete";
   playerId: number;
 }) {
-  const config = createHexSettlementKernelConfig({
+  const config = createHexIslandKernelConfig({
     playerCount: input.hexSettlement.playerCount,
     victoryPointsToWin: input.hexSettlement.victoryPointsToWin,
   });
-  const parsed = parseHexSettlementConfig(config.adapter);
+  const parsed = parseHexIslandConfig(config.adapter);
   if (!parsed) return [];
   const state = playStateFromSession(input.hexSettlement, input.activeSeat, input.status);
-  return hexSettlementAdapter.listLegalActions(state, input.playerId, parsed);
+  return hexIslandAdapter.listLegalActions(state, input.playerId, parsed);
 }
 
 /** Starting beginner-island session slice for preview / lobby. */
-export function createInitialHexSettlementSessionSlice(playerCount = 2) {
-  const config = createHexSettlementKernelConfig({ playerCount });
-  const state = createInitialState(hexSettlementAdapter, config, 0);
-  return hexSettlementToSessionFields(state).hexSettlement;
+export function createInitialHexIslandSessionSlice(playerCount = 2) {
+  const config = createHexIslandKernelConfig({ playerCount });
+  const state = createInitialState(hexIslandAdapter, config, 0);
+  return hexIslandToSessionFields(state).hexSettlement;
 }

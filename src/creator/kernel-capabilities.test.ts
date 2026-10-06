@@ -37,7 +37,7 @@ describe("inferRequestedMechanics — baseline vs unseen", () => {
       expect(mechanicsCapabilityGap(mechanics, "auction-bidding-v1")).toContain("能力缺口");
     }
   });
-  it("binds hex-settlement only for Tidewell-shaped baseline prompts", () => {
+  it("binds hex-settlement only for hex-island-shaped baseline prompts", () => {
     expect(inferRequestedMechanics(BASELINE_PROMPTS[0])).toEqual(["hex-settlement"]);
     expect(inferRequestedMechanics("帮我生成一个汐屿游戏")).toEqual(["hex-settlement"]);
     expect(inferRequestedMechanics(BASELINE_PROMPTS[1])).toEqual(["disc-flipping"]);

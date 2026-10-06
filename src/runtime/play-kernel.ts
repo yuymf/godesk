@@ -55,7 +55,7 @@ export type PlayState<TGenre = unknown> = {
   genre: TGenre;
 };
 
-/** Kernel binding used to create initial state. No Tidewell-only required keys. */
+/** Kernel binding used to create initial state. No hex-island-only required keys. */
 export type PlayKernelConfig = {
   /** Must match a registered Executable Kernel type when bound to GameSpec. */
   kernelType: string;

@@ -46,7 +46,7 @@ async function waitForJob(id: string) {
   throw new Error(`job ${id} did not finish`);
 }
 
-async function tidewellBuild(key: string) {
+async function hexIslandBuild(key: string) {
   const { project } = await (await post("/api/projects", { name: `AI seat ${key}` })).json<{ project: GameProject }>();
   const queued = await (await post(`/api/projects/${project.id}/jobs`, {
     kind: "generate-rule-system",
@@ -150,7 +150,7 @@ describe("Room AI seat (G3D-04b)", () => {
   });
 
   it("rejects bad options, AI seat claims and human intents on the AI seat", async () => {
-    const { build } = await tidewellBuild("guards");
+    const { build } = await hexIslandBuild("guards");
     expect((await createRoom(build.id, { aiSeats: [0, 1] })).status).toBe(400);
     expect((await createRoom(build.id, { aiSeats: [1], aiThinkMs: 99_999 })).status).toBe(400);
     const created = await createRoom(build.id, { aiSeats: [1], aiThinkMs: 0 });
@@ -170,7 +170,7 @@ describe("Room AI seat (G3D-04b)", () => {
   });
 
   it("takes its setup turns from the alarm exactly once, across eviction and duplicate alarms", async () => {
-    const { build } = await tidewellBuild("setup");
+    const { build } = await hexIslandBuild("setup");
     const room = await (await createRoom(build.id, { aiSeats: [1], aiThinkMs: 5_000 })).json<{ id: string }>();
     const { seatToken } = await claimSeat(room.id, 0);
     // Snake setup for 2 seats: 0 (settlement, road), 1, 1, 0.
@@ -215,7 +215,7 @@ describe("Room AI seat (G3D-04b)", () => {
   }, 60_000);
 
   it("plays a full game on real alarms vs a scripted human to game over, matching the bot simulation picker", async () => {
-    const { build, ruleSystem } = await tidewellBuild("full");
+    const { build, ruleSystem } = await hexIslandBuild("full");
     // Seed 7 is a ~420-action bot game (keeps CI fast; seed 42 is ~865).
     const room = await (await createRoom(build.id, { seed: 7, aiSeats: [1], aiThinkMs: 0 })).json<{ id: string }>();
     const { seatToken } = await claimSeat(room.id, 0);

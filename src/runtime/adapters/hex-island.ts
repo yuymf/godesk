@@ -29,7 +29,7 @@ import {
 
 export const HEX_SETTLEMENT_KERNEL_TYPE = "hex-settlement-v1" as const;
 
-const HEX_SETTLEMENT_PHASES = [
+const HEX_ISLAND_PHASES = [
   { id: "setup", name: "Initial placement" },
   { id: "roll", name: "Roll dice" },
   { id: "discard", name: "Discard on 7" },
@@ -52,12 +52,12 @@ const RESOURCES: readonly Resource[] = [
 
 export type ResourceBank = Record<Resource, number>;
 
-type HexSettlementConfig = {
+type HexIslandConfig = {
   playerCount: number;
   victoryPointsToWin: number;
 };
 
-export type HexSettlementPlayer = {
+export type HexIslandPlayer = {
   resources: ResourceBank;
   settlements: string[];
   cities: string[];
@@ -71,7 +71,7 @@ export type HexSettlementPlayer = {
   newDevCards: DevCardKind[];
 };
 
-export type HexSettlementTile = {
+export type HexIslandTile = {
   q: number;
   r: number;
   terrain: Terrain;
@@ -80,20 +80,20 @@ export type HexSettlementTile = {
 
 export type PortKind = "any3" | Resource;
 
-export type HexSettlementPort = {
+export type HexIslandPort = {
   /** Coastal vertices that grant this port. */
   vertices: string[];
   kind: PortKind;
 };
 
-export type HexSettlementGenre = {
+export type HexIslandGenre = {
   playerCount: number;
   victoryPointsToWin: number;
-  tiles: HexSettlementTile[];
+  tiles: HexIslandTile[];
   /** Robber occupies this hex key "q,r". */
   robberHex: string;
-  ports: HexSettlementPort[];
-  players: HexSettlementPlayer[];
+  ports: HexIslandPort[];
+  players: HexIslandPlayer[];
   /** Setup: 0 .. 4*playerCount - 1 (settle/road interleaved). */
   setupStep: number;
   /** Vertex of settlement just placed (road must touch it). */
@@ -187,13 +187,13 @@ const BEGINNER_NUMBERS: Array<number | null> = [
 
 let CACHED_GRAPH: HexBoardGraph | null = null;
 
-export function hexSettlementBoardGraph(): HexBoardGraph {
+export function hexIslandBoardGraph(): HexBoardGraph {
   if (!CACHED_GRAPH) CACHED_GRAPH = createHexBoardGraph(2);
   return CACHED_GRAPH;
 }
 
-export function createBeginnerTiles(): HexSettlementTile[] {
-  const graph = hexSettlementBoardGraph();
+export function createBeginnerTiles(): HexIslandTile[] {
+  const graph = hexIslandBoardGraph();
   return graph.cells.map((cell, index) => ({
     q: cell.q,
     r: cell.r,
@@ -202,13 +202,13 @@ export function createBeginnerTiles(): HexSettlementTile[] {
   }));
 }
 
-function desertHexKey(tiles: HexSettlementTile[]): string {
+function desertHexKey(tiles: HexIslandTile[]): string {
   const desert = tiles.find((tile) => tile.terrain === "desert");
   return desert ? hexKey(desert.q, desert.r) : "0,0";
 }
 
 /** Coastal vertices sorted; assign ports in stable rings for bank/port trade. */
-function createBeginnerPorts(graph: HexBoardGraph): HexSettlementPort[] {
+function createBeginnerPorts(graph: HexBoardGraph): HexIslandPort[] {
   const coastal = graph.vertexIds.filter(
     (vertex) => (graph.vertexHexes[vertex] ?? []).length <= 2,
   );
@@ -223,7 +223,7 @@ function createBeginnerPorts(graph: HexBoardGraph): HexSettlementPort[] {
     "wheat",
     "ore",
   ];
-  const ports: HexSettlementPort[] = [];
+  const ports: HexIslandPort[] = [];
   for (let index = 0; index < kinds.length; index += 1) {
     const a = coastal[(index * 2) % coastal.length];
     const b = coastal[(index * 2 + 1) % coastal.length];
@@ -232,7 +232,7 @@ function createBeginnerPorts(graph: HexBoardGraph): HexSettlementPort[] {
   return ports;
 }
 
-function emptyPlayer(): HexSettlementPlayer {
+function emptyPlayer(): HexIslandPlayer {
   return {
     resources: EMPTY_BANK(),
     settlements: [],
@@ -261,9 +261,9 @@ function shuffleDevDeck(seed: number): DevCardKind[] {
   return deck;
 }
 
-export function parseHexSettlementConfig(
+export function parseHexIslandConfig(
   raw: Record<string, unknown>,
-): HexSettlementConfig | null {
+): HexIslandConfig | null {
   const playerCount = raw.playerCount ?? 2;
   const victoryPointsToWin = raw.victoryPointsToWin ?? 10;
   if (
@@ -286,14 +286,14 @@ export function parseHexSettlementConfig(
   };
 }
 
-export function createHexSettlementKernelConfig(input?: {
+export function createHexIslandKernelConfig(input?: {
   playerCount?: number;
   victoryPointsToWin?: number;
 }): PlayKernelConfig {
   return {
     kernelType: HEX_SETTLEMENT_KERNEL_TYPE,
     playerCount: input?.playerCount ?? 2,
-    phases: HEX_SETTLEMENT_PHASES.map((phase) => ({ ...phase })),
+    phases: HEX_ISLAND_PHASES.map((phase) => ({ ...phase })),
     adapter: {
       playerCount: input?.playerCount ?? 2,
       victoryPointsToWin: input?.victoryPointsToWin ?? 10,
@@ -302,7 +302,7 @@ export function createHexSettlementKernelConfig(input?: {
 }
 
 export function publicVictoryPoints(
-  genre: HexSettlementGenre,
+  genre: HexIslandGenre,
   playerId: PlayerId,
 ): number {
   const player = genre.players[playerId];
@@ -312,7 +312,7 @@ export function publicVictoryPoints(
   return points;
 }
 
-function occupiedVertices(genre: HexSettlementGenre): Set<string> {
+function occupiedVertices(genre: HexIslandGenre): Set<string> {
   const set = new Set<string>();
   for (const player of genre.players) {
     for (const vertex of player.settlements) set.add(vertex);
@@ -329,7 +329,7 @@ function isTooClose(graph: HexBoardGraph, vertex: string, occupied: Set<string>)
   return false;
 }
 
-function playerNetworkVertices(player: HexSettlementPlayer, graph: HexBoardGraph): Set<string> {
+function playerNetworkVertices(player: HexIslandPlayer, graph: HexBoardGraph): Set<string> {
   const set = new Set<string>();
   for (const vertex of player.settlements) set.add(vertex);
   for (const vertex of player.cities) set.add(vertex);
@@ -343,13 +343,13 @@ function playerNetworkVertices(player: HexSettlementPlayer, graph: HexBoardGraph
   return set;
 }
 
-function legalSetupSettlements(genre: HexSettlementGenre, graph: HexBoardGraph): string[] {
+function legalSetupSettlements(genre: HexIslandGenre, graph: HexBoardGraph): string[] {
   const occupied = occupiedVertices(genre);
   return graph.vertexIds.filter((vertex) => !isTooClose(graph, vertex, occupied));
 }
 
 function legalSetupRoads(
-  genre: HexSettlementGenre,
+  genre: HexIslandGenre,
   playerId: PlayerId,
   graph: HexBoardGraph,
 ): string[] {
@@ -366,7 +366,7 @@ function legalSetupRoads(
 }
 
 function legalMainRoads(
-  genre: HexSettlementGenre,
+  genre: HexIslandGenre,
   playerId: PlayerId,
   graph: HexBoardGraph,
 ): string[] {
@@ -383,7 +383,7 @@ function legalMainRoads(
 }
 
 function legalMainSettlements(
-  genre: HexSettlementGenre,
+  genre: HexIslandGenre,
   playerId: PlayerId,
   graph: HexBoardGraph,
 ): string[] {
@@ -395,7 +395,7 @@ function legalMainSettlements(
   );
 }
 
-function roadPathLength(player: HexSettlementPlayer, graph: HexBoardGraph): number {
+function roadPathLength(player: HexIslandPlayer, graph: HexBoardGraph): number {
   if (!player.roads.length) return 0;
   const adj = new Map<string, Array<{ to: string; edge: string }>>();
   for (const road of player.roads) {
@@ -421,7 +421,7 @@ function roadPathLength(player: HexSettlementPlayer, graph: HexBoardGraph): numb
   return best;
 }
 
-function updateAwards(genre: HexSettlementGenre, graph: HexBoardGraph): void {
+function updateAwards(genre: HexIslandGenre, graph: HexBoardGraph): void {
   let longestOwner: PlayerId | null = null;
   let longestLen = 4; // need ≥5 roads worth of path
   for (let seat = 0; seat < genre.playerCount; seat += 1) {
@@ -456,7 +456,7 @@ function updateAwards(genre: HexSettlementGenre, graph: HexBoardGraph): void {
   genre.largestArmyOwner = armyOwner;
 }
 
-function clonePlayers(players: HexSettlementPlayer[]): HexSettlementPlayer[] {
+function clonePlayers(players: HexIslandPlayer[]): HexIslandPlayer[] {
   return players.map((player) => ({
     resources: cloneBank(player.resources),
     settlements: [...player.settlements],
@@ -469,7 +469,7 @@ function clonePlayers(players: HexSettlementPlayer[]): HexSettlementPlayer[] {
   }));
 }
 
-function cloneGenre(genre: HexSettlementGenre): HexSettlementGenre {
+function cloneGenre(genre: HexIslandGenre): HexIslandGenre {
   return {
     ...genre,
     tiles: genre.tiles.map((tile) => ({ ...tile })),
@@ -483,7 +483,7 @@ function cloneGenre(genre: HexSettlementGenre): HexSettlementGenre {
   };
 }
 
-function setupActiveSeat(genre: HexSettlementGenre): PlayerId {
+function setupActiveSeat(genre: HexIslandGenre): PlayerId {
   const n = genre.playerCount;
   const pair = Math.floor(genre.setupStep / 2);
   // Round 1 pairs 0..n-1, round 2 pairs n..2n-1 reversed
@@ -492,7 +492,7 @@ function setupActiveSeat(genre: HexSettlementGenre): PlayerId {
 }
 
 function collectStartingResources(
-  genre: HexSettlementGenre,
+  genre: HexIslandGenre,
   playerId: PlayerId,
   vertex: string,
   graph: HexBoardGraph,
@@ -505,7 +505,7 @@ function collectStartingResources(
   }
 }
 
-function produceResources(genre: HexSettlementGenre, roll: number, graph: HexBoardGraph): void {
+function produceResources(genre: HexIslandGenre, roll: number, graph: HexBoardGraph): void {
   for (const tile of genre.tiles) {
     if (tile.number !== roll) continue;
     if (hexKey(tile.q, tile.r) === genre.robberHex) continue;
@@ -521,7 +521,7 @@ function produceResources(genre: HexSettlementGenre, roll: number, graph: HexBoa
   }
 }
 
-function portRatio(genre: HexSettlementGenre, playerId: PlayerId, resource: Resource): number {
+function portRatio(genre: HexIslandGenre, playerId: PlayerId, resource: Resource): number {
   const player = genre.players[playerId];
   const owned = new Set([...player.settlements, ...player.cities]);
   let best = 4;
@@ -534,12 +534,12 @@ function portRatio(genre: HexSettlementGenre, playerId: PlayerId, resource: Reso
 }
 
 function maybeEnd(
-  genre: HexSettlementGenre,
+  genre: HexIslandGenre,
   playerId: PlayerId,
   activePlayerId: PlayerId,
   phase: PlayPhaseId,
 ): {
-  genre: HexSettlementGenre;
+  genre: HexIslandGenre;
   phase: PlayPhaseId;
   activePlayerId: PlayerId;
   status: "active" | "complete";
@@ -570,19 +570,19 @@ function payloadNumber(action: PlayAction, key: string): number | null {
 }
 
 
-function playableDevCount(player: HexSettlementPlayer, kind: DevCardKind): number {
+function playableDevCount(player: HexIslandPlayer, kind: DevCardKind): number {
   const held = player.devCards.filter((card) => card === kind).length;
   const fresh = player.newDevCards.filter((card) => card === kind).length;
   return Math.max(0, held - fresh);
 }
 
-export const hexSettlementAdapter: PlayKernelAdapter<HexSettlementGenre, HexSettlementConfig> = {
+export const hexIslandAdapter: PlayKernelAdapter<HexIslandGenre, HexIslandConfig> = {
   kernelType: HEX_SETTLEMENT_KERNEL_TYPE,
 
-  parseConfig: parseHexSettlementConfig,
+  parseConfig: parseHexIslandConfig,
 
   createGenreState(config, seed, playerCount) {
-    const graph = hexSettlementBoardGraph();
+    const graph = hexIslandBoardGraph();
     const tiles = createBeginnerTiles();
     return {
       playerCount,
@@ -612,7 +612,7 @@ export const hexSettlementAdapter: PlayKernelAdapter<HexSettlementGenre, HexSett
   listLegalActions(state, playerId) {
     if (state.status !== "active" || playerId !== state.activePlayerId) return [];
     const genre = state.genre;
-    const graph = hexSettlementBoardGraph();
+    const graph = hexIslandBoardGraph();
     const phase = state.phase;
     const actions: LegalAction[] = [];
 
@@ -819,7 +819,7 @@ export const hexSettlementAdapter: PlayKernelAdapter<HexSettlementGenre, HexSett
     if (state.status !== "active" || action.playerId !== state.activePlayerId) {
       return null;
     }
-    const graph = hexSettlementBoardGraph();
+    const graph = hexIslandBoardGraph();
     const genre = cloneGenre(state.genre);
     const playerId = action.playerId;
     const player = genre.players[playerId];
@@ -1096,14 +1096,14 @@ export const hexSettlementAdapter: PlayKernelAdapter<HexSettlementGenre, HexSett
 };
 
 function applyKnight(
-  genre: HexSettlementGenre,
+  genre: HexIslandGenre,
   playerId: PlayerId,
   finish: (
     nextPhase: PlayPhaseId,
     nextActive: PlayerId,
     extras?: { passed?: boolean; endReason?: string },
   ) => {
-    genre: HexSettlementGenre;
+    genre: HexIslandGenre;
     phase: PlayPhaseId;
     activePlayerId: PlayerId;
     status: "active" | "complete";
@@ -1123,7 +1123,7 @@ function applyKnight(
 }
 
 function stealCandidates(
-  genre: HexSettlementGenre,
+  genre: HexIslandGenre,
   thief: PlayerId,
   hex: string,
   graph: HexBoardGraph,
@@ -1146,7 +1146,7 @@ function stealCandidates(
 }
 
 function stealOne(
-  genre: HexSettlementGenre,
+  genre: HexIslandGenre,
   thief: PlayerId,
   victim: PlayerId,
   seed: number,
@@ -1164,7 +1164,7 @@ function stealOne(
   genre.players[thief].resources[pick] += 1;
 }
 
-export function hexSettlementToSessionFields(state: PlayState<HexSettlementGenre>): {
+export function hexIslandToSessionFields(state: PlayState<HexIslandGenre>): {
   turn: number;
   activeSeat: number;
   scores: number[];
@@ -1174,10 +1174,10 @@ export function hexSettlementToSessionFields(state: PlayState<HexSettlementGenre
     phase: string;
     playerCount: number;
     victoryPointsToWin: number;
-    tiles: HexSettlementTile[];
+    tiles: HexIslandTile[];
     robberHex: string;
-    ports: HexSettlementPort[];
-    players: HexSettlementPlayer[];
+    ports: HexIslandPort[];
+    players: HexIslandPlayer[];
     setupStep: number;
     pendingRoadVertex: string | null;
     lastDice: [number, number] | null;
@@ -1228,21 +1228,21 @@ export function hexSettlementToSessionFields(state: PlayState<HexSettlementGenre
   };
 }
 
-export function bindHexSettlementFromRuntimeKernel(input: {
+export function bindHexIslandFromRuntimeKernel(input: {
   playerCount?: number;
   victoryPointsToWin?: number;
 }): PlayKernelConfig {
   const playerCount = input.playerCount ?? 2;
   if (playerCount < 2 || playerCount > 4) {
-    throw new Error("hex_settlement_requires_2_to_4_players");
+    throw new Error("hex_island_requires_2_to_4_players");
   }
-  return createHexSettlementKernelConfig({
+  return createHexIslandKernelConfig({
     playerCount,
     victoryPointsToWin: input.victoryPointsToWin ?? 10,
   });
 }
 
-export function playActionFromHexSettlementIntent(
+export function playActionFromHexIslandIntent(
   seat: number,
   actionId: string,
   payload?: Record<string, unknown>,
@@ -1284,15 +1284,15 @@ function botActionWeight(action: LegalAction): number {
   }
 }
 
-export function pickHexSettlementBotAction(
-  state: PlayState<HexSettlementGenre>,
+export function pickHexIslandBotAction(
+  state: PlayState<HexIslandGenre>,
   config: PlayKernelConfig,
   seed: number,
   sequence: number,
 ): PlayAction | null {
-  const parsed = parseHexSettlementConfig(config.adapter);
+  const parsed = parseHexIslandConfig(config.adapter);
   if (!parsed) return null;
-  const legal = hexSettlementAdapter.listLegalActions(state, state.activePlayerId, parsed);
+  const legal = hexIslandAdapter.listLegalActions(state, state.activePlayerId, parsed);
   if (!legal.length) return null;
   const weights = legal.map(botActionWeight);
   const total = weights.reduce((sum, value) => sum + value, 0);
@@ -1313,25 +1313,25 @@ export function pickHexSettlementBotAction(
   };
 }
 
-export function autoPlayHexSettlementGame(
+export function autoPlayHexIslandGame(
   seed: number,
-  config: PlayKernelConfig = createHexSettlementKernelConfig(),
+  config: PlayKernelConfig = createHexIslandKernelConfig(),
 ): {
-  state: PlayState<HexSettlementGenre>;
+  state: PlayState<HexIslandGenre>;
   actions: PlayAction[];
 } {
-  let state = createInitialState(hexSettlementAdapter, config, seed);
+  let state = createInitialState(hexIslandAdapter, config, seed);
   const actions: PlayAction[] = [];
   const maxPlies = 12000;
   let guard = 0;
 
   while (state.status === "active" && guard < maxPlies) {
     guard += 1;
-    const bot = pickHexSettlementBotAction(state, config, seed, state.sequence + 1);
+    const bot = pickHexIslandBotAction(state, config, seed, state.sequence + 1);
     if (!bot) break;
-    const result = applyAction(hexSettlementAdapter, state, bot, config);
+    const result = applyAction(hexIslandAdapter, state, bot, config);
     if (!result.ok) {
-      throw new Error(`hex_settlement_auto_play_illegal:${result.reason}:${bot.type}`);
+      throw new Error(`hex_island_auto_play_illegal:${result.reason}:${bot.type}`);
     }
     actions.push(bot);
     state = result.state;

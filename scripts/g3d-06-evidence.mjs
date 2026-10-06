@@ -9,7 +9,7 @@ import path from "node:path";
 
 const OUT = process.env.G3D_EVIDENCE_DIR || "/workspace/g3d-evidence/G3D-06";
 const BASE = process.env.G3D_BASE_URL || "http://127.0.0.1:8799/chatgpt-plugin";
-const TIDEWELL_PROMPT = "做一款可以与电脑对战的汐屿基础版";
+const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿基础版";
 
 const viewports = [
   { id: "desktop-1440x900", width: 1440, height: 900, isMobile: false },
@@ -37,7 +37,7 @@ async function main() {
 
   const bootstrap = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   await bootstrap.goto(`${BASE}/new`, { waitUntil: "domcontentloaded", timeout: 60_000 });
-  await bootstrap.getByRole("textbox", { name: "描述你的游戏想法" }).fill(TIDEWELL_PROMPT);
+  await bootstrap.getByRole("textbox", { name: "描述你的游戏想法" }).fill(HEX_ISLAND_PROMPT);
   await bootstrap.getByRole("button", { name: "生成可玩版本" }).click();
   await bootstrap.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 90_000 });
   await bootstrap.getByRole("button", { name: "确认玩法并开始试玩" }).click();

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   createBeginnerTiles,
-  type HexSettlementGenre,
-  type HexSettlementPlayer,
+  type HexIslandGenre,
+  type HexIslandPlayer,
   type ResourceBank,
-} from "../../runtime/adapters/hex-settlement";
+} from "../../runtime/adapters/hex-island";
 import { diffSceneModels } from "../scene-model";
 import { mapHexSettlementToScene } from "./hex-settlement";
 
@@ -12,7 +12,7 @@ function emptyBank(): ResourceBank {
   return { wood: 0, brick: 0, sheep: 0, wheat: 0, ore: 0 };
 }
 
-function emptyPlayer(): HexSettlementPlayer {
+function emptyPlayer(): HexIslandPlayer {
   return {
     resources: emptyBank(),
     settlements: [],
@@ -25,8 +25,8 @@ function emptyPlayer(): HexSettlementPlayer {
   };
 }
 
-function baseGenre(overrides: Partial<HexSettlementGenre> = {}): Pick<
-  HexSettlementGenre,
+function baseGenre(overrides: Partial<HexIslandGenre> = {}): Pick<
+  HexIslandGenre,
   "tiles" | "robberHex" | "ports" | "players" | "lastDice"
 > {
   const tiles = createBeginnerTiles();

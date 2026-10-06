@@ -7,11 +7,11 @@ import { openTidewellBoardTargets } from "./helpers/tidewell-actions";
  * Seat 1 is a second browser context on the same share link (rooms have no in-room bot).
  */
 type MotionEntry = { kind: string; id: string; durationMs: number; reduced: boolean };
-const TIDEWELL_PROMPT = "做一款可以与电脑对战的汐屿基础版";
+const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿基础版";
 
 async function openRoom(page: Page) {
   await page.goto("/chatgpt-plugin/new");
-  await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(TIDEWELL_PROMPT);
+  await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(HEX_ISLAND_PROMPT);
   await page.getByRole("button", { name: "生成可玩版本" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 90_000 });
   await page.getByRole("button", { name: "确认玩法并开始试玩" }).click();

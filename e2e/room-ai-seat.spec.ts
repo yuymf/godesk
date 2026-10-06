@@ -10,11 +10,11 @@ import { mkdirSync } from "node:fs";
  * - `@slow` (GODESK_E2E_SLOW=1): full game to game over vs the AI seat on
  *   desktop 1440×900 (mouse) and iPhone 12 Pro 390×844 (touch).
  */
-const TIDEWELL_PROMPT = "做一款可以与电脑对战的汐屿基础版";
+const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿基础版";
 
 async function openAiRoom(page: Page) {
   await page.goto("/chatgpt-plugin/new");
-  await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(TIDEWELL_PROMPT);
+  await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(HEX_ISLAND_PROMPT);
   await page.getByRole("button", { name: "生成可玩版本" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 90_000 });
   await page.getByRole("button", { name: "确认玩法并开始试玩" }).click();

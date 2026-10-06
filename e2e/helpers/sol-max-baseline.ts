@@ -1,8 +1,8 @@
 import { expect, type Page } from "@playwright/test";
 
 /** Frozen Sol max baseline prompts (GameSpec fixtures). */
-export const TIDEWELL_PROMPT = "做一款可以与电脑对战的汐屿基础版";
-export const NORTH_STAR_TIDEWELL_PROMPT = "帮我生成一个汐屿游戏";
+export const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿基础版";
+export const NORTH_STAR_HEX_ISLAND_PROMPT = "帮我生成一个汐屿游戏";
 export const OTHELLO_PROMPT = "做一款可以与电脑对战的黑白棋";
 export const NORTH_STAR_OTHELLO_PROMPT = "帮我生成一个黑白棋游戏";
 export const NORTH_STAR_OTHELLO_ALT_PROMPT = "做一款翻转棋 othello";

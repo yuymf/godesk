@@ -86,9 +86,9 @@ export function executableOthelloSpecFixture(): RuleSystem {
 
 
 /** Executable Tidewell / hex-settlement RuleSystem for PR6 thin bind tests. */
-export function executableTidewellSpecFixture(): RuleSystem {
+export function executableHexIslandSpecFixture(): RuleSystem {
   const rule: RuleSystem = {
-    id: "rule-system-hexSettlement-fixture", version: 1, name: "汐屿基础版", pitch: "Hex settlement",
+    id: "rule-system-hex-island-fixture", version: 1, name: "汐屿基础版", pitch: "Hex settlement",
     generation: {
       generatorVersion: GENERATOR_VERSION, rulesVersion: RULES_VERSION,
       sourcePrompt: BASELINE_PROMPTS[0], assumptions: ["Basic Settlers beginner board"],

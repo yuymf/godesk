@@ -41,7 +41,7 @@ describe("GameSpec generation, save and build gate", () => {
     // Must not silently bind Othello for a Tidewell prompt.
     expect(generationPlan.proposedRuntime?.op).not.toBe("configure_disc_flipping");
     const approved = await (await post(`/api/projects/${project.id}/changes`, {
-      expectedVersion: 2, idempotencyKey: "approve-hexSettlement",
+      expectedVersion: 2, idempotencyKey: "approve-hex-island",
       operations: [
         { op: "approve_generation_plan", planId: generationPlan.id },
         generationPlan.proposedRuntime as NonNullable<typeof generationPlan.proposedRuntime>,
@@ -54,7 +54,7 @@ describe("GameSpec generation, save and build gate", () => {
     expect(ruleSystemSpecIssues(approved.ruleSystem)).toEqual([]);
     const build = await post(`/api/projects/${project.id}/builds`, {
       expectedVersion: approved.project.version,
-      idempotencyKey: "hexSettlement-build",
+      idempotencyKey: "hex-island-build",
     });
     expect([200, 201]).toContain(build.status);
     expect(approved.ruleSystem.runtimeSupport.status).toBe("executable");
