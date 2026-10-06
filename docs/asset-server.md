@@ -34,6 +34,8 @@ pnpm dev:worker              # http://127.0.0.1:8799
 
 打开任意 Game Project 的 Studio，导航「资产搜索」。默认筛选：仅免费 + 可直接下载 + 优先源（Poly Haven、ambientCG、Kenney、TextureCan、BlenderKit 免费、HDRMaps 免费）。Fab / Poliigon / TurboSquid 显示「仅外链」，不能「加入项目」。
 
+Studio 路由与搜索 fetch 都是懒加载，不打进首页 `index-*.js`（Lighthouse 首页 TBT ≤ 200 ms）。
+
 ## 「加入项目」写什么
 
 可直链且 SPDX 能映射到 `verify:assets` 白名单（当前主要是 `CC0-1.0`）的条目：

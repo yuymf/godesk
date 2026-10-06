@@ -89,7 +89,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
 | G3D-17 预备：上线前清单自动化 | Track C | `feat/g3d-17-launch-checklist` · [#144](https://github.com/yuymf/godesk/pull/144) | `scripts/launch-checklist.mjs`：法务待审条数 / 包体 / Lighthouse warn 级断言 / 分档 draw call / HUD 原始动作 id，现为 warning，转阻断开关见 [`docs/perf/launch-checklist.md`](./perf/launch-checklist.md)；G3D-16 等 G3D-13（#138） |
-| Tidewell 资产搜索（3d-asset-server sidecar） | Cloud Agent | `cursor/tidewell-asset-search-14b1` · [#153](https://github.com/yuymf/godesk/pull/153) draft | Live：sidecar `:8787`、Worker `:8799`、`q=trees` 24 条。跟进：按元数据选格式（勿写死 glb）、1.5 MB DO/SQLite 写入上限、超限明确拒绝。见 [`docs/asset-server.md`](./asset-server.md) |
+| Tidewell 资产搜索（3d-asset-server sidecar） | Cloud Agent | `cursor/tidewell-asset-search-14b1` · [#153](https://github.com/yuymf/godesk/pull/153) | Live：sidecar `:8787`。格式按元数据选择；1.5 MB DO 上限。首页 TBT：Studio 路由懒加载 + 搜索 API 不进 `project-api`。见 [`docs/asset-server.md`](./asset-server.md) |
 
 ## 阻塞
 
@@ -134,7 +134,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | `feat/g3d-13-tidewell` | — | G3D-13 Tidewell 集成（Track B） | 开工 · 合入等 #132 |
 | `chore/pre-public-cleanup` | 见 PR | 仓库公开前清理：品牌中性化、LICENSE、第三方参考站点引用清零（Track A） | open · 不合入（等用户确认） |
 | `feat/g3d-04c-incremental-room-state` | [#141](https://github.com/yuymf/godesk/pull/141) | G3D-04c Room 内核状态增量化（Track A） | open · 本机门禁全过；合入 main（#138 后）重跑 CI 后 squash 合入 |
-| `cursor/tidewell-asset-search-14b1` | [#153](https://github.com/yuymf/godesk/pull/153) | Tidewell 资产搜索：Studio 面板 + sidecar `http://127.0.0.1:8787`；box live 搜索 24 / 导入 bark；证据 `panel-live/` | open · draft |
+| `cursor/tidewell-asset-search-14b1` | [#153](https://github.com/yuymf/godesk/pull/153) | Tidewell 资产搜索：Studio 面板 + sidecar `http://127.0.0.1:8787`；box live 搜索 24 / 导入 bark；证据 `panel-live/` | open |
 
 ## 修订记录
 
@@ -186,3 +186,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | Tidewell 资产搜索：Creator Studio 面板调用仓外 3d-asset-server（默认 `http://127.0.0.1:8787`）；「加入项目」写入 Game Project `assets/imported/` + `assets/LICENSES.md`；文档 [`docs/asset-server.md`](./asset-server.md) | Cloud Agent |
 | 2026-10-07 | Tidewell 资产搜索 box live：sidecar `/health` + `/v1/search?q=trees`→24；Worker 8799 代理；导入 `assets/imported/polyhaven-tree_bark_03/tree_bark_03_diff_1k.jpg`；Playwright 面板截图；证据 `/workspace/g3d-evidence/asset-server/panel-live/`；#153 保持 draft | Cloud Agent |
 | 2026-10-07 | #153 跟进：按搜索元数据选格式（gltf/glb/zip/jpg，不写死 glb）；1.5 MB DO/SQLite 写入上限，超限 413 明确拒绝，避免 SQLITE_TOOBIG | Cloud Agent |
+| 2026-10-07 | #153 Lighthouse 首页 TBT：资产搜索 API 移出 `project-api`；`/studio` 懒加载 `ProjectStudio`，避免打进首页主包 | Cloud Agent |

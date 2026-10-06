@@ -1,11 +1,27 @@
+import { lazy, Suspense } from "react";
 import { logicalPathname } from "../public-mount";
 import { CreatorHome } from "./CreatorHome";
 import { PlayablePreview } from "./PlayablePreview";
-import { ProjectStudio } from "./ProjectStudio";
 import { ReplayView } from "./ReplayView";
 import { RoomView } from "./RoomView";
 import { GameLobby } from "./GameLobby";
 import { CreatorSettings } from "./CreatorSettings";
+
+// Keep ProjectStudio off the homepage graph. Sync-importing it (plus the
+// asset-search fetch helpers it used to pull through project-api) pushed
+// Lighthouse homepage TBT over the 200 ms error budget.
+const ProjectStudio = lazy(async () => {
+  const mod = await import("./ProjectStudio");
+  return { default: mod.ProjectStudio };
+});
+
+function StudioRouteFallback() {
+  return (
+    <main className="creator-studio" id="main" aria-busy="true">
+      <p>正在打开工作室…</p>
+    </main>
+  );
+}
 
 export function CreatorWorkspace() {
   const pathname = logicalPathname(window.location.pathname);
@@ -13,7 +29,11 @@ export function CreatorWorkspace() {
   if (pathname === "/settings") return <CreatorSettings />;
   const studioMatch = pathname.match(/^\/studio\/([^/]+)$/);
   if (studioMatch) {
-    return <ProjectStudio projectId={decodeURIComponent(studioMatch[1])} />;
+    return (
+      <Suspense fallback={<StudioRouteFallback />}>
+        <ProjectStudio projectId={decodeURIComponent(studioMatch[1])} />
+      </Suspense>
+    );
   }
   const playMatch = pathname.match(/^\/play\/([^/]+)$/);
   if (playMatch) {

@@ -20,6 +20,7 @@ Cursor Cloud Agent（Codex 额度耗尽兜底）
 4. 默认筛选：仅免费 + 可直接下载 + 优先源（Poly Haven / ambientCG / Kenney / TextureCan / BlenderKit 免费 / HDRMaps 免费）。Fab / Poliigon / TurboSquid 为「仅外链」。
 5. 只导入能映射到白名单 SPDX 的许可证（实践中 CC0 → `CC0-1.0`）。面板懒加载，避免压首页 170 KB 预算。
 6. 「加入项目」按 `formats`/`resolutions` 选下载规格（Poly Haven 树=`gltf`+`1k`，材质=`jpg`+`1k`），不写死 `glb`。写入上限 1.5 MB（SQLite DO 单值 2 MB）；超限拒绝并提示「打开来源」，避免 SQLITE_TOOBIG。
+7. 搜索 HTTP 不放进 `project-api.ts`（首页 CreatorHome 也会 import 该模块，导出无法摇掉）。`/studio` 路由懒加载 `ProjectStudio`，否则工作室 JSX 会打进首页，Lighthouse 首页 TBT 超过 200 ms error 门。
 
 ## outcomes
 
@@ -29,7 +30,8 @@ Cursor Cloud Agent（Codex 额度耗尽兜底）
 - `docs/asset-server.md`、`docs/G3D-STATUS.md`、`assets/imported/README.md`
 - e2e `e2e/asset-search-panel.spec.ts`（sidecar 存活则打真搜索；下载一律 mock 为小文件）
 - 本机：`typecheck` ✅；`pnpm test` 60/453 ✅；`pnpm test:worker` 20/217 ✅；`pnpm test:e2e` 59 passed / 4 skipped ✅；`verify:assets` OK；homepage 165.78/170 KB
-- PR：https://github.com/yuymf/godesk/pull/153 （draft；CI 计费拦截）
+- PR：https://github.com/yuymf/godesk/pull/153
+- CI 首页 TBT 229 > 200：把 sidecar fetch 移出 `project-api`，Studio 路由改懒加载
 
 ## links
 

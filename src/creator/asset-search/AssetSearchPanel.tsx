@@ -5,7 +5,7 @@ import {
   getImportedAssets,
   importExternalAsset,
   searchExternalAssets,
-} from "../project-api";
+} from "./api";
 import { bytesToBase64 } from "./client";
 import { downloadQuery, describeDownloadSpec, pickDownloadSpec } from "./download-spec";
 import {
