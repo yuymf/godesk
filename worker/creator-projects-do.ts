@@ -24,6 +24,7 @@ import { playabilityFloor } from "../src/runtime/playability-floor";
 import { presentationFloor } from "../src/runtime/presentation-floor";
 import { buildMeetsShareGate, shareGateRefusal } from "../src/runtime/share-gate";
 import type { AssetServerAsset, ImportedAssetFile } from "../src/creator/asset-search/types";
+import { importTooLargeMessage } from "../src/creator/asset-search/config";
 import { isValidAssetServerId } from "./asset-server";
 import {
   applyImportedAsset,
@@ -680,7 +681,7 @@ export class CreatorProjects extends DurableObject<Env> {
       files = decodeImportFiles(Array.isArray(body.files) ? body.files as ImportedAssetFile[] : []);
     } catch (reason) {
       const code = reason instanceof Error ? reason.message : "invalid_import_file";
-      if (code === "import_too_large") return error("资产超过大小上限，未写入项目。", 413);
+      if (code === "import_too_large") return error(importTooLargeMessage(), 413);
       return error("导入文件无效。", 400);
     }
     const projectKey = `${PROJECT_PREFIX}${projectId}`;
@@ -751,6 +752,9 @@ export class CreatorProjects extends DurableObject<Env> {
       return json(outcome.value, outcome.status);
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : "import_failed";
+      if (/SQLITE_TOOBIG|string or blob too big/i.test(message)) {
+        return error(importTooLargeMessage(), 413);
+      }
       if (message === "import_files_required" || message === "invalid_import_file" || message === "invalid_import_path") {
         return error("导入文件无效。", 400);
       }

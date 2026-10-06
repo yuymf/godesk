@@ -1,4 +1,4 @@
-import { DEFAULT_ASSET_SERVER_URL, MAX_IMPORT_BYTES, normalizeAssetServerUrl } from "./config";
+import { DEFAULT_ASSET_SERVER_URL, MAX_IMPORT_BYTES, importTooLargeMessage, normalizeAssetServerUrl } from "./config";
 import type {
   AssetSearchQuery,
   AssetSearchResponse,
@@ -164,9 +164,13 @@ export async function downloadAssetBytes(
     const body = await response.json().catch(() => ({})) as { error?: string };
     throw new Error(body.error ?? `资产下载失败（${response.status}）。`);
   }
+  const announced = Number(response.headers.get("content-length") ?? "");
+  if (Number.isFinite(announced) && announced > MAX_IMPORT_BYTES) {
+    throw new Error(importTooLargeMessage(announced));
+  }
   const buffer = new Uint8Array(await response.arrayBuffer());
   if (buffer.byteLength > MAX_IMPORT_BYTES) {
-    throw new Error(`资产超过 ${MAX_IMPORT_BYTES} 字节上限，未写入项目。`);
+    throw new Error(importTooLargeMessage(buffer.byteLength));
   }
   const mimeType = response.headers.get("content-type")?.split(";")[0]?.trim()
     || "application/octet-stream";

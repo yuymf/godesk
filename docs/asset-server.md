@@ -44,6 +44,8 @@ pnpm dev:worker              # http://127.0.0.1:8799
 
 这些文件活在 Durable Object 里，**不会**自动进 git。提升进 Tidewell 套件时再拷到仓库 `assets/` 并登记 `src/render3d/assets/manifest.ts`，否则 `pnpm verify:assets` 会失败。
 
+「加入项目」按搜索元数据选格式（`gltf` / `glb` / `zip` / `jpg` 等），**不**写死 `format=glb`。材质 / HDRI 优先 `1k`。单文件写入上限 **1.5 MB**（SQLite DO `storage.put` 键+值合计 2 MB）。超过则 413，文案说明改用 1k 或「打开来源」，避免 `SQLITE_TOOBIG`。Worker 代理按 `Content-Length` / 流式读取截断，不把大 zip 缓冲进 DO。
+
 禁止拷贝 settlecoast 的任何代码、模型、音频、插画、文案。
 
 ## 工程箱 live 状态（2026-10-07）

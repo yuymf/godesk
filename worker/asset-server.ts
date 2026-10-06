@@ -1,5 +1,5 @@
 // Box live proxy smoke: ASSET_SERVER_URL → 127.0.0.1:8787 (2026-10-07).
-import { MAX_IMPORT_BYTES, normalizeAssetServerUrl } from "../src/creator/asset-search/config";
+import { MAX_IMPORT_BYTES, importTooLargeMessage, normalizeAssetServerUrl } from "../src/creator/asset-search/config";
 import { assetDownloadUrl, filenameFromDisposition } from "../src/creator/asset-search/client";
 import { error, json } from "./project-operations";
 
@@ -63,15 +63,15 @@ async function proxyAssetDownload(baseUrl: string, url: URL): Promise<Response> 
       const body = await response.json().catch(() => ({})) as { error?: string };
       return error(body.error ?? `资产下载失败（${response.status}）。`, response.status === 409 ? 409 : 502);
     }
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.byteLength > MAX_IMPORT_BYTES) {
-      return error(`资产超过 ${MAX_IMPORT_BYTES} 字节上限，未写入项目。`, 413);
-    }
+    const limited = await readBodyWithinBudget(response);
+    if (limited instanceof Response) return limited;
+    const copy = new Uint8Array(limited.byteLength);
+    copy.set(limited);
     const filename = filenameFromDisposition(
       response.headers.get("content-disposition"),
       `${id.replace(/[^A-Za-z0-9._-]+/g, "-")}.bin`,
     );
-    return new Response(bytes, {
+    return new Response(copy, {
       status: 200,
       headers: {
         "content-type": response.headers.get("content-type") ?? "application/octet-stream",
@@ -90,4 +90,37 @@ async function proxyAssetDownload(baseUrl: string, url: URL): Promise<Response> 
 
 export function isValidAssetServerId(id: string): boolean {
   return ASSET_ID.test(id);
+}
+
+/** Stream sidecar bytes and abort before SQLite/DO can see a >2 MB blob. */
+async function readBodyWithinBudget(response: Response): Promise<Uint8Array | Response> {
+  const announced = Number(response.headers.get("content-length") ?? "");
+  if (Number.isFinite(announced) && announced > MAX_IMPORT_BYTES) {
+    return error(importTooLargeMessage(announced), 413);
+  }
+  if (!response.body) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.byteLength > MAX_IMPORT_BYTES) return error(importTooLargeMessage(bytes.byteLength), 413);
+    return bytes;
+  }
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_IMPORT_BYTES) {
+      await reader.cancel();
+      return error(importTooLargeMessage(total), 413);
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
 }

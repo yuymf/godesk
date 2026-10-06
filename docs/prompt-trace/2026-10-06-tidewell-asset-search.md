@@ -19,6 +19,7 @@ Cursor Cloud Agent（Codex 额度耗尽兜底）
 3. 「加入项目」写入 **Game Project**（Durable Object）的 `assets/imported/` + 项目内 `assets/LICENSES.md`（11 列，与 `scripts/verify-assets.mjs` 同形）。不自动改仓库根 `assets/LICENSES.md`，以免未登记 manifest 时 CI 门失败。提升进 Tidewell 套件须另登清单。
 4. 默认筛选：仅免费 + 可直接下载 + 优先源（Poly Haven / ambientCG / Kenney / TextureCan / BlenderKit 免费 / HDRMaps 免费）。Fab / Poliigon / TurboSquid 为「仅外链」。
 5. 只导入能映射到白名单 SPDX 的许可证（实践中 CC0 → `CC0-1.0`）。面板懒加载，避免压首页 170 KB 预算。
+6. 「加入项目」按 `formats`/`resolutions` 选下载规格（Poly Haven 树=`gltf`+`1k`，材质=`jpg`+`1k`），不写死 `glb`。写入上限 1.5 MB（SQLite DO 单值 2 MB）；超限拒绝并提示「打开来源」，避免 SQLITE_TOOBIG。
 
 ## outcomes
 

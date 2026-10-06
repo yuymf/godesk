@@ -22,6 +22,8 @@ const MOCK_SEARCH = {
       },
       price: { free: true },
       downloadable: true,
+      formats: ["gltf", "blend", "fbx", "usd"],
+      resolutions: ["1k", "2k", "4k", "8k"],
       score: 1,
     },
     {
@@ -58,7 +60,9 @@ async function mockAssetServer(page: Page) {
       });
     });
   }
+  const downloadUrls: string[] = [];
   await page.route("**/api/asset-download**", async (route) => {
+    downloadUrls.push(route.request().url());
     await route.fulfill({
       status: 200,
       headers: {
@@ -68,11 +72,11 @@ async function mockAssetServer(page: Page) {
       body: Buffer.from("glTF"),
     });
   });
-  return sidecarLive;
+  return { sidecarLive, downloadUrls };
 }
 
 test("Studio 资产搜索 renders licences and writes LICENSES.md on 加入项目", async ({ page }) => {
-  const sidecarLive = await mockAssetServer(page);
+  const { sidecarLive, downloadUrls } = await mockAssetServer(page);
   const created = await page.request.post("/api/projects", {
     data: { name: "汐屿资产搜索" },
   });
@@ -93,9 +97,17 @@ test("Studio 资产搜索 renders licences and writes LICENSES.md on 加入项�
   if (!sidecarLive) {
     await expect(panel.getByText("仅外链", { exact: true })).toBeVisible();
     await expect(panel.getByText("需署名", { exact: true })).toBeVisible();
+    await expect(panel.getByText("gltf · 1k")).toBeVisible();
   }
   await panel.getByRole("button", { name: "加入项目" }).first().click();
   await expect(panel.getByText(/已加入项目/)).toBeVisible({ timeout: 30_000 });
+  expect(downloadUrls.length).toBeGreaterThan(0);
+  if (!sidecarLive) {
+    expect(downloadUrls[0]).toContain("format=gltf");
+    expect(downloadUrls[0]).not.toContain("format=glb");
+  } else {
+    expect(downloadUrls[0]).toMatch(/format=(gltf|glb|zip|jpg|jpeg|png|hdr)/);
+  }
   const imported = await (await page.request.get(
     `/api/projects/${project.id}?view=imported-assets`,
   )).json();

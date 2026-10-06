@@ -23,6 +23,7 @@ import type {
 import type { DefaultExampleId } from "./default-examples";
 import { mountHref } from "../public-mount";
 import { filenameFromDisposition } from "./asset-search/client";
+import { MAX_IMPORT_BYTES, importTooLargeMessage } from "./asset-search/config";
 import type {
   AssetSearchQuery,
   AssetSearchResponse,
@@ -442,7 +443,14 @@ export async function downloadImportedAssetBytes(
     const body = await response.json().catch(() => ({})) as { error?: string };
     throw new ProjectApiError(body.error ?? "资产下载失败。", response.status, body);
   }
+  const announced = Number(response.headers.get("content-length") ?? "");
+  if (Number.isFinite(announced) && announced > MAX_IMPORT_BYTES) {
+    throw new ProjectApiError(importTooLargeMessage(announced), 413, {});
+  }
   const bytes = await response.arrayBuffer();
+  if (bytes.byteLength > MAX_IMPORT_BYTES) {
+    throw new ProjectApiError(importTooLargeMessage(bytes.byteLength), 413, {});
+  }
   return {
     filename: filenameFromDisposition(
       response.headers.get("content-disposition"),

@@ -41,7 +41,22 @@ export const SEARCH_TYPES = [
   { id: "hdri", label: "HDRI" },
 ] as const;
 
-export const MAX_IMPORT_BYTES = 12 * 1024 * 1024;
+/** SQLite-backed Durable Object `storage.put()`: key + value combined ≤ 2 MB. */
+export const SQLITE_DO_VALUE_LIMIT_BYTES = 2 * 1024 * 1024;
+
+/**
+ * Per-file budget for Game Project imports. Stays under the 2 MB SQLite blob cap
+ * (wrapper `{ path, mimeType, bytes }` + key). Prefer 1k maps; refuse large gltf/zip.
+ */
+export const MAX_IMPORT_BYTES = 1536 * 1024;
+
+export function importTooLargeMessage(bytes?: number): string {
+  const size = bytes != null ? `（${bytes.toLocaleString("zh-CN")} 字节）` : "";
+  return (
+    `文件超过项目存储上限${size}。Durable Object SQLite 单值上限 2 MB，本面板写入上限 ` +
+    `${MAX_IMPORT_BYTES.toLocaleString("zh-CN")} 字节。材质请用 1k 贴图；大模型 zip / gltf 请点「打开来源」下载，不要写入项目。`
+  );
+}
 
 export function providerLabel(id: string): string {
   return PROVIDER_LABELS[id] ?? id;

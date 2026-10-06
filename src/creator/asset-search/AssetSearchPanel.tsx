@@ -7,6 +7,7 @@ import {
   searchExternalAssets,
 } from "../project-api";
 import { bytesToBase64 } from "./client";
+import { downloadQuery, describeDownloadSpec, pickDownloadSpec } from "./download-spec";
 import {
   isLinkOnlyAsset,
   importEligibility,
@@ -91,10 +92,8 @@ export default function AssetSearchPanel({
     setError("");
     setNotice("");
     try {
-      const downloaded = await downloadImportedAssetBytes(asset.id, {
-        format: asset.type === "hdri" ? "hdr" : "glb",
-        resolution: "1k",
-      });
+      const spec = pickDownloadSpec(asset);
+      const downloaded = await downloadImportedAssetBytes(asset.id, downloadQuery(spec));
       const bytes = new Uint8Array(downloaded.bytes);
       const filename = downloaded.filename.replace(/[^A-Za-z0-9._-]+/g, "-") || "asset.bin";
       const relativePath = `${importedAssetFolder(asset)}/${filename}`;
@@ -126,6 +125,7 @@ export default function AssetSearchPanel({
           <h2>资产搜索</h2>
           <p>
             自然语言检索模型 / 材质 / HDRI。默认只查免费可直链来源（Poly Haven、ambientCG、Kenney、TextureCan、BlenderKit 免费、HDRMaps 免费）。
+            按条目实际格式下载（gltf / glb / zip / jpg），材质优先 1k。超过 1.5 MB 不写入项目（Durable Object SQLite 上限）。
             服务：<code>{baseUrl}</code>
           </p>
         </div>
@@ -199,6 +199,7 @@ export default function AssetSearchPanel({
           {response.results.map((asset) => {
             const linkOnly = isLinkOnlyAsset(asset);
             const eligibility = importEligibility(asset);
+            const spec = pickDownloadSpec(asset);
             const already = imported.some((item) => item.assetServerId === asset.id);
             return (
               <li className="asset-search-card" key={asset.id}>
@@ -213,6 +214,7 @@ export default function AssetSearchPanel({
                     {providerLabel(asset.provider)}
                     {asset.author ? ` · ${asset.author}` : ""}
                     {asset.type ? ` · ${asset.type}` : ""}
+                    {` · ${describeDownloadSpec(spec)}`}
                   </p>
                   <p>
                     许可证：{asset.license?.name ?? "未标明"}

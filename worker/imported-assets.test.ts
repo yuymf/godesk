@@ -106,4 +106,34 @@ describe("imported 3d assets", () => {
     );
     expect(refused.status).toBe(400);
   });
+
+  it("refuses payloads over the SQLite DO import budget", async () => {
+    const created = await SELF.fetch("https://godesk.test/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "超限" }),
+    }).then((response) => response.json<{ project: { id: string; version: number } }>());
+    const blob = "x".repeat(1536 * 1024 + 64);
+    const refused = await SELF.fetch(
+      `https://godesk.test/api/projects/${created.project.id}/imported-assets`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          expectedVersion: created.project.version,
+          idempotencyKey: "import-too-big",
+          asset: TREE,
+          files: [{
+            relativePath: "assets/imported/polyhaven-tree_small_02/huge.bin",
+            contentBase64: btoa(blob),
+            mimeType: "application/octet-stream",
+            bytes: blob.length,
+          }],
+        }),
+      },
+    );
+    expect(refused.status).toBe(413);
+    const body = await refused.json<{ error: string }>();
+    expect(body.error).toContain("SQLite");
+  });
 });
