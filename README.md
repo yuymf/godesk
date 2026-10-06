@@ -125,7 +125,7 @@ pnpm deploy:dry-run
 
 | Command | Role |
 |:---|:---|
-| `pnpm test` / `pnpm test:worker` / `pnpm typecheck` / `pnpm build` / `pnpm verify:plugin` | CI (`verify.yml`, `deploy.yml`) plus Playwright |
+| `pnpm test` / `pnpm test:worker` / `pnpm typecheck` / `pnpm build` / `pnpm verify:plugin` | CI (`verify.yml` on PRs, `deploy.yml` on `main`); Playwright runs in `verify.yml` for ready PRs (see [docs/ci/actions-budget.md](docs/ci/actions-budget.md)) |
 | `pnpm test:e2e` | Starts the local Worker; Chromium charter path: home → playable Shared Session → friend join → action |
 | `pnpm verify:local-routes` | OAuth metadata, login/callback, MCP route contracts |
 | `pnpm verify:local-loop` | Full prompt → Generation Plan → approval → Build → fixed-seed self-play → Finding → revised Build → Shared Session → Replay |
