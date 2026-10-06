@@ -4315,12 +4315,14 @@ summary:focus-visible {
   border: 1px solid rgb(0 0 0 / 18%);
 }
 
-.othello-disc-swatch.is-black { background: #141414; }
-.othello-disc-swatch.is-white { background: #f7f7f7; }
+.othello-disc-swatch.is-black { background: var(--othello-seat0, #141414); }
+.othello-disc-swatch.is-white { background: var(--othello-seat1, #f7f7f7); }
 
 .othello-grid {
   display: grid;
   gap: 0;
+  /* G3D-14 follow-up：内边距 + 边框计入宽度，390 px 手机上不再横向溢出 1 px。 */
+  box-sizing: border-box;
   width: min(100%, 28rem);
   margin: 0 auto;
   padding: .55rem;
@@ -4377,8 +4379,9 @@ summary:focus-visible {
   box-shadow: 0 1px 2px rgb(0 0 0 / 25%);
 }
 
-.othello-disc.is-black { background: radial-gradient(circle at 32% 28%, #444, #111 62%); }
-.othello-disc.is-white { background: radial-gradient(circle at 32% 28%, #fff, #e8e8e8 62%); }
+/* G3D-14 follow-up：座位色来自 build 的 render.materials.seat0 / seat1（OthelloBoard 写入 CSS 变量）。 */
+.othello-disc.is-black { background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--othello-seat0, #111) 75%, #fff), var(--othello-seat0, #111) 62%); }
+.othello-disc.is-white { background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--othello-seat1, #e8e8e8) 30%, #fff), var(--othello-seat1, #e8e8e8) 62%); }
 
 .othello-legal-dot {
   width: 22%;

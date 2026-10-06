@@ -119,9 +119,13 @@ const FALLBACK_MESH: Record<string, string> = {
   die: "die",
 };
 
+/**
+ * cloth（呢面盘面）不借 PBR 套件（G3D-14 follow-up）：t10-canvas 是粗帆布纹，KTX2 只有 1 级 mip。
+ * 盘面盒子的 UV 按面归一，整块盘面只铺半张贴图 → 帆布纹被放大成约 2 px 的硬边方块（低太阳角下法线放大更明显）；
+ * 若按世界单位加密又会在无 mip 的情况下缩小走样闪烁。呢面保留程序化 cloth pattern（细、柔），与 GPU / SwiftShader 无关。
+ */
 const PATTERN_PBR: Partial<Record<MaterialPattern, { set: PbrSetId; repeat: number }>> = {
   grain: { set: "t08-wood", repeat: 0.5 },
-  cloth: { set: "t10-canvas", repeat: 0.5 },
   stone: { set: "t07-cliff", repeat: 0.5 },
   grass: { set: "t03-meadow", repeat: 0.5 },
   sand: { set: "t06-sand", repeat: 0.5 },
