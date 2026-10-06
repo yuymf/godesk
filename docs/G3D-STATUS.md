@@ -29,8 +29,9 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 值 |
 | --- | --- |
-| 里程碑 | **M1 最小端到端 3D 切片**（进行中）+ **M3 素材管线并行**（Track B） |
+| 里程碑 | **M1 最小端到端 3D 切片**（**Done** 2026-10-06）+ **M3 素材管线并行**（Track B） |
 | 本阶段出口 | G3D-02 → G3D-03 → G3D-04 → G3D-18：六角岛 Room 在 3D 中与 AI 打完一整局（EP-D + EP-I）；`CatanBoard.tsx` 删除且 `rg CatanBoard` 在 `src e2e` 为 0；e2e 全绿 |
+| M1 出口证明 | **Done** 2026-10-06。main `73d4c80`：`rg -n "CatanBoard" src e2e` 0 行、`CatanBoard.tsx` 不存在；`GODESK_E2E_PORT=8811 pnpm test:e2e` 45 passed / 4 skipped；整局（main `d7dd1a5` 构建）EP-D 1440×900 鼠标（16.6m，640 次 UI 行动）、EP-I iPhone 12 Pro 触摸（17.5m，541 次）均至「对局结束 · 获胜者」，各 1 passed。**注**：Room 无内置 AI 席位（Catan bot 仅 worker `runBotSimulation`），座位 1 由第二浏览器上下文脚本按合法动作优先级驱动。证据仓外 `/workspace/g3d-evidence/M1/`（截图、ep-d.log / ep-i.log、e2e-main.log、full-game-vs-ai.spec.ts；脚本未入库） |
 | M0 | 已完成：Bootstrap #102（`f13c8ce`）、G3D-01 #103（`332275d`） |
 
 ## 已完成
@@ -47,6 +48,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | G3D-26 | SFX sprites×30 + ambient×2（Track B） | PR [#111](https://github.com/yuymf/godesk/pull/111) squash `41e352b` |
 | G3D-27 | 音乐循环×3 CC0 120s（Track B） | PR [#112](https://github.com/yuymf/godesk/pull/112) squash `757c9bc` |
 | G3D-04 | 拾取 → 合法动作、HUD、HexSettlementBoard（Track A） | PR [#109](https://github.com/yuymf/godesk/pull/109) squash `6d4db72` |
+| G3D-18 | 删除 2D 六角盘面路径；预览/回放/大厅 3D（Track A） | PR [#119](https://github.com/yuymf/godesk/pull/119) squash `d7dd1a5` |
 
 | G3D-24 | 资源/发展卡插画×8（Track B）**shipped；G3D-ART 2D 回炉 #125 `465f7fa`（分层插画+Cycles）— 仍待 G3D-13 接线入局** | PR [#113](https://github.com/yuymf/godesk/pull/113) squash `fd3f54e` + G3D-ART PR |
 
@@ -72,7 +74,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
 | G3D-ART：美术质量回炉（2D） | Track B | [#125](https://github.com/yuymf/godesk/pull/125) + fix PR | **improved, still below settlecoast bar; real art quality needs a user decision on sourcing (commission an artist / buy a CC0-compatible commercial pack / allow AI-generated art with a legal review at G3D-17)** · **Blocked (user decision)**；artifact clip fix 本 PR；此后不再继续 art pass |
-| G3D-09：动效 | Track A | （未开） | M1 后；Track A 拥有 |
+| G3D-09：动效 | Track A | `feat/g3d-09-motion` / [PR #129](https://github.com/yuymf/godesk/pull/129) | tween.js 25.0.0；place 280 / 删除 160 / 强盗 420 / 骰子 900 / 镜头 600；reduced motion 0；与 G3D-06 分级兼容（时长按墙钟） |
 | G3D-15：生成默认集成 | Track C | `feat/g3d-15-render-defaults` / [PR #123](https://github.com/yuymf/godesk/pull/123) | 第一刀：生成写 render、MCP `configure_render` 局部 patch、skills；第二刀（「做一款两人翻转棋」→ 3D Room e2e + 3 轮截图）等 G3D-14 |
 
 ## 阻塞
@@ -92,10 +94,10 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 > G3D-05 备注：① 120 秒对局后 draw call 为 162–170，超过 high 档 ≤ 150（初始局面为 140），G3D-07 需要实例化或合批（G3D-04 已合入，其拾取热点叠加层另计）。② 移动画像按 low 档评估，要等 G3D-06 自动分级。③ 测量时（G3D-04 合入前）2D `CatanBoard` 在 412 px 下横向溢出到 451 px，G3D-18 删除 2D 盘面后复测。④ box 无 GPU（llvmpipe / SwiftShader），帧率只是代理值，桌面门需要有硬件 GPU 的机器（A7）。⑤ **新增 §9 问题（待用户决定）**：Lighthouse 基线中首页 LCP（本机 3 173 ms / CI 3 499 ms，阈值 2 500）、Room TBT（本机 4 697 ms，阈值 600；CI 上为 SwiftShader 持续渲染造成的无效值）、Room CLS（CI 0.132，阈值 0.1）未达 §4.6.3。目前这三项阈值不变，级别为 warn；Performance 按「不低于基线」取 CI 3 次最低值（首页 0.81 / Room 0.52）。需要用户选择：收紧回 error（需要先优化），或修改阈值。合入后以 `main` 的 Lighthouse 运行复核。⑥ rebase 到 G3D-04 后 Room CLS 回归（0 → 0.243，懒加载盘面把反馈面板下推，Room Performance 跌到 0.43）已在 #110 用同外框占位修复，本机 Room 回到 0.56–0.59、CLS 0，门槛未改（协议 §6.2）。
 
-> Track A：拥有 **18（已合）/ 09 / 06 / 07**。Track C：**05 / 10 / 15 / 14**。Track B 素材轨 **G3D-11、19–27 已全部合入**。
+> Track A：拥有 **18（已合）/ 09**；G3D-06 → Track B（已合 #122）、G3D-07 → Track C（2026-10-06 再平衡）。Track C：**05 / 10 / 15 / 14**。Track B 素材轨 **G3D-11、19–27 已全部合入**。
 
 1. Track C：G3D-10 #120 已合入（`67e5383`）；**G3D-15 第一刀 #123** 合入后，第二刀（翻转棋 3D Room e2e + 逐轮截图）与 **G3D-14** 等 G3D-07 上 `main`。
-2. Track A：**G3D-09 → G3D-07**（G3D-06 已由 Track B 合入）。
+2. Track A：**G3D-09**（G3D-07 改由 Track C）。
 3. Track B：G3D-ART 2D #125 已合；**G3D-08 / G3D-13 仍阻塞**（等 G3D-07）；**G3D-07 一合入 main 立即接 G3D-08**，再 13。
 
 ## 开着的 PR / 分支
@@ -131,3 +133,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | G3D-ART 2D：卡/品牌/ink 分层插画回炉；G3D-13 HUD 备注（iPhone 合法动作坐标按钮）；等 G3D-07→08 | Track B |
 | 2026-10-06 | G3D-ART 2D #125 合入 `465f7fa`；contact sheet `/workspace/g3d-evidence/G3D-ART/`；等 G3D-07→08 | Track B |
 | 2026-10-06 | G3D-ART artifact clip fix（hatch 裁剪/去叠层、loading 去朱印）；STATUS：ART Blocked(user decision)；此后不再 art pass | Track B |
+| 2026-10-06 | M1 出口 Done（整局 EP-D/EP-I、rg 0、e2e 45/4，证据 `/workspace/g3d-evidence/M1/`）；G3D-09 PR；再平衡 06→Track B、07→Track C | Track A |

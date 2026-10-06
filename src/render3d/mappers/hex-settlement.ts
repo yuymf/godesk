@@ -64,6 +64,8 @@ export type HexSettlementSceneInput = {
     roads: readonly string[];
   }[];
   lastDice: readonly [number, number] | null;
+  /** G3D-09: a change into "roll_dice" marks a roll even when the faces repeat. */
+  lastAction?: string | null;
 };
 
 export function mapHexSettlementToScene(genre: HexSettlementSceneInput): SceneModel {

@@ -37,6 +37,8 @@ export function pickFromPointerEvent(
   for (const hit of hits) {
     let current: Object3D | null = hit.object;
     while (current) {
+      // G3D-09: objects fading out (already gone from state) are never pickable.
+      if (current.userData?.removing) break;
       const nodeId = current.userData?.nodeId;
       if (typeof nodeId === "string" && nodeId.length > 0) {
         return { nodeId, kind: String(current.userData?.kind ?? "") };
