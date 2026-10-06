@@ -31,6 +31,12 @@ const aiIconUrls = import.meta.glob("../../assets/ui/ai/icons/*-64.webp", {
   import: "default",
 }) as Record<string, string>;
 
+const buildWideUrls = import.meta.glob("../../assets/ui/ai/icons/build-*-wide.webp", {
+  eager: true,
+  query: "?url",
+  import: "default",
+}) as Record<string, string>;
+
 const buildIconUrls = import.meta.glob("../../assets/ui/ai/icons/build-*-128.webp", {
   eager: true,
   query: "?url",
@@ -78,10 +84,11 @@ export const RESOURCE_ICON_ID: Record<string, string> = {
 };
 
 export const BUILD_ICON_URL: Record<string, string | undefined> = {
-  road: pick(buildIconUrls, "build-road"),
-  settlement: pick(buildIconUrls, "build-settlement"),
-  city: pick(buildIconUrls, "build-city"),
-  buy: pick(buildIconUrls, "build-card"),
+  // R9: horizontal wood-brick plaques (settlecoast-style bottom row).
+  road: pick(buildWideUrls, "build-road-wide") ?? pick(buildIconUrls, "build-road"),
+  settlement: pick(buildWideUrls, "build-settlement-wide") ?? pick(buildIconUrls, "build-settlement"),
+  city: pick(buildWideUrls, "build-city-wide") ?? pick(buildIconUrls, "build-city"),
+  buy: pick(buildWideUrls, "build-card-wide") ?? pick(buildIconUrls, "build-card"),
 };
 
 export const PANEL_FRAME_URL = pick(uiAiUrls, "panel-frame");

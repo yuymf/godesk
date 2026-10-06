@@ -971,9 +971,9 @@ export function HexSettlementBoard({
                   <img
                     alt=""
                     className="tidewell-build-art"
-                    height={64}
+                    height={72}
                     src={BUILD_ICON_URL[build.id]}
-                    width={64}
+                    width={196}
                   />
                 ) : null}
                 <span className="tidewell-build-label">{build.label}</span>
@@ -1100,9 +1100,9 @@ export function HexSettlementBoard({
                   <img
                     alt=""
                     className="tidewell-build-art"
-                    height={64}
+                    height={72}
                     src={BUILD_ICON_URL[build.id]}
-                    width={64}
+                    width={196}
                   />
                 ) : null}
                 <span className="tidewell-build-label">{build.label}</span>

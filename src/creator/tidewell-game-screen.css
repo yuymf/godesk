@@ -1491,39 +1491,59 @@ body:has(.room-view-tidewell-immersive) {
   color: #3d2c1c !important;
 }
 
-/* Dock: wood table lip; build buttons = wood-brick illustration tiles */
+/* Dock: wood table lip; R9 build = horizontal large wood bricks */
 .tidewell-dock {
+  --tw-dock: 148px;
+  height: var(--tw-dock, 132px) !important;
+  max-height: var(--tw-dock, 132px) !important;
   background:
-    linear-gradient(180deg, rgba(255, 248, 232, 0.12) 0%, rgba(42, 24, 12, 0.15) 18%, rgba(42, 24, 12, 0.55) 100%),
+    linear-gradient(180deg, rgba(255, 248, 232, 0.14) 0%, rgba(42, 24, 12, 0.18) 16%, rgba(42, 24, 12, 0.62) 100%),
     var(--tw-tex-wood),
     linear-gradient(180deg, #6b4428 0%, #2c1a10 100%) !important;
   background-size: auto, 260px 260px, auto !important;
-  border-top: 3px solid var(--tw-gold-mid, #c9a227) !important;
+  border-top: 4px solid var(--tw-gold-mid, #c9a227) !important;
+  box-shadow: inset 0 3px 0 rgba(255, 220, 140, 0.18) !important;
+}
+.room-view-tidewell-immersive {
+  --tw-dock: 148px;
+}
+.tidewell-build-row {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  overflow-x: auto !important;
 }
 .tidewell-build-btn {
   position: relative !important;
-  min-width: 84px !important;
-  min-height: 112px !important;
-  width: 84px !important;
+  display: block !important;
+  flex: 0 0 auto !important;
+  min-width: 196px !important;
+  width: 196px !important;
+  min-height: 72px !important;
+  height: 72px !important;
   padding: 0 !important;
   gap: 0 !important;
   border: none !important;
-  border-radius: 10px !important;
+  border-radius: 8px !important;
   background: transparent !important;
   box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.45),
-    0 0 0 1px rgba(26, 14, 8, 0.65) !important;
+    0 5px 14px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(26, 14, 8, 0.75),
+    inset 0 1px 0 rgba(255, 220, 140, 0.22) !important;
   overflow: hidden !important;
 }
 .tidewell-build-btn .tidewell-build-art {
   display: block !important;
-  width: 84px !important;
-  height: 112px !important;
+  width: 196px !important;
+  height: 72px !important;
   object-fit: fill !important;
-  border-radius: 10px !important;
+  border-radius: 8px !important;
   border: none !important;
 }
-/* Label + cost baked into / clutter wood brick — hide DOM duplicates */
+/* Label + cost baked into horizontal wood brick */
 .tidewell-build-btn .tidewell-build-label,
 .tidewell-build-btn .tidewell-build-cost {
   display: none !important;
@@ -1531,6 +1551,23 @@ body:has(.room-view-tidewell-immersive) {
 .tidewell-build-btn.is-disabled .tidewell-build-art,
 .tidewell-build-btn:disabled .tidewell-build-art {
   filter: grayscale(0.4) brightness(0.85);
+}
+
+/* R9 ①: deeper carved wood lip — island reads as tray inset in desk */
+.tidewell-stage-wrap {
+  box-shadow:
+    inset 0 0 0 2px #140a06,
+    inset 0 0 0 5px #5a3a18,
+    inset 0 0 0 7px #c9a227,
+    inset 0 0 0 9px rgba(232, 200, 90, 0.55),
+    inset 0 0 0 14px rgba(42, 24, 12, 0.92),
+    inset 0 0 36px 16px rgba(28, 16, 8, 0.72),
+    inset 0 0 12px 3px rgba(201, 162, 39, 0.22) !important;
+}
+.tidewell-stage-wrap::after {
+  box-shadow:
+    inset 0 0 42px 18px rgba(32, 18, 8, 0.72),
+    inset 0 0 10px 3px rgba(201, 162, 39, 0.28) !important;
 }
 
 /* Awards plaque on parchment */

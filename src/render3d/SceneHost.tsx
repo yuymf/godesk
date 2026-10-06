@@ -8,8 +8,6 @@ import {
   Object3D,
   PerspectiveCamera,
   Scene,
-  Vector3,
-  MeshStandardMaterial,
   Shape,
   SphereGeometry,
   type Texture,
@@ -563,10 +561,7 @@ export function SceneHost({
         ? adapterRef.current.create(node, { library, caps: getCaps() })
         : createNodeObject(node, getCaps(), library, pools, overlayRef.current),
       update: (object: Object3D, node: SceneNode) => {
-          // Never snap an in-flight hop/place/dice pose back to SceneModel mid-tween
-          // (HUD +N re-renders must not kill MotionController.hop).
           if (motion.isAnimating(object)) return;
-          // Judge demo hides the pooled robber and hops a Mesh — do not restore instance.
           if (object.userData.gdJudgeDemoLock) return;
           if (adapterRef.current) {
             adapterRef.current.update(object, node, { library, caps: getCaps() });
@@ -656,8 +651,12 @@ export function SceneHost({
     const judgeEnabled = new URLSearchParams(window.location.search).get("judge") === "1";
     // Dev-only presets load lazily (own chunk; not part of the production render core).
     const freezeDressing = judgeEnabled || prefersReducedMotion();
-    if (judgeEnabled) void import("./judge-camera").then(({ JUDGE_PRESETS, judgeCamera }) => {
+    if (judgeEnabled) void Promise.all([import("./judge-camera"), import("../g3d-judge/motion-demo")]).then(([{ JUDGE_PRESETS, judgeCamera }, { createJudgeMotion }]) => {
       if (disposed) return;
+      const judgeMotion = createJudgeMotion({
+        registryRef, contentRootRef, cameraRef, rendererRef, sceneRef, controlsRef, directorRef, reconcileHostRef, markShadowsDirtyRef,
+        motion, library, kit: () => hexKit, vcMaterial, figureToken: FIGURE_VC_TOKEN, pieceToken: PIECE_VC_TOKEN,
+      });
       (globalThis as { __g3dJudge?: unknown }).__g3dJudge = {
         presets: JUDGE_PRESETS,
         set(preset: JudgePreset): boolean {
@@ -687,281 +686,7 @@ export function SceneHost({
           markShadowsDirtyRef.current();
           return true;
         },
-        debugRobber(): { x: number; y: number; z: number; busy: boolean; scale: number; demo?: boolean } | null {
-          const demo = (globalThis as { __g3dJudgeDemoMesh?: Mesh }).__g3dJudgeDemoMesh;
-          const robber = demo ?? registryRef.current.get("robber");
-          if (!robber) return null;
-          return {
-            x: robber.position.x,
-            y: robber.position.y,
-            z: robber.position.z,
-            busy: motion.isAnimating(robber),
-            scale: robber.scale.x,
-            demo: Boolean(demo),
-          };
-        },
-        /**
-         * Freeze controls and reframe so an apexHeight≥2.5 hop stays on screen.
-         * Tight b-robber (dist≈3.6, camY≈3.1) puts Y=2.8+ above the camera — invisible.
-         */
-        lockCamera(): boolean {
-          const ctl = controlsRef.current;
-          const cam = cameraRef.current;
-          const robber = registryRef.current.get("robber");
-          if (!ctl || !cam) return false;
-          ctl.enabled = false;
-          directorRef.current?.pinFree();
-          motion.noteUserDrag(Number.POSITIVE_INFINITY);
-          motion.stopCamera();
-          const tx = robber?.position.x ?? 0;
-          const tz = robber?.position.z ?? 0;
-          // Look at mid-hop height; sit farther + more oblique so feet→apex stay in FOV.
-          const targetY = 2.2;
-          ctl.target.set(tx, targetY, tz);
-          const dist = 7.8;
-          const polar = (58 * Math.PI) / 180;
-          cam.fov = 52;
-          const az = 0;
-          cam.position.set(
-            tx + Math.sin(az) * Math.sin(polar) * dist,
-            targetY + Math.cos(polar) * dist,
-            tz + Math.cos(az) * Math.sin(polar) * dist,
-          );
-          cam.near = 0.05;
-          cam.far = 200;
-          cam.updateProjectionMatrix();
-          ctl.update();
-          return true;
-        },
-        /** Force a present WebGL frame then read pixels (headless-safe). */
-        captureFrame(): {
-          pose: { x: number; y: number; z: number; busy: boolean; scale: number; demo?: boolean; worldY?: number; visible?: boolean; parent?: string } | null;
-          dataUrl: string | null;
-        } {
-          const renderer = rendererRef.current;
-          const scene = sceneRef.current;
-          const cam = cameraRef.current;
-          const demo = (globalThis as { __g3dJudgeDemoMesh?: Mesh }).__g3dJudgeDemoMesh;
-          const poseObj = demo ?? registryRef.current.get("robber");
-          if (demo) demo.updateMatrixWorld(true);
-          const worldY = demo ? demo.getWorldPosition(new Vector3()).y : undefined;
-          const pose = poseObj
-            ? {
-                x: poseObj.position.x,
-                y: poseObj.position.y,
-                z: poseObj.position.z,
-                busy: motion.isAnimating(poseObj),
-                scale: poseObj.scale.x,
-                demo: Boolean(demo),
-                worldY,
-                visible: demo?.visible,
-                parent: demo?.parent?.type,
-              }
-            : null;
-          if (!renderer || !scene || !cam) return { pose, dataUrl: null };
-          renderer.render(scene, cam);
-          return { pose, dataUrl: renderer.domElement.toDataURL("image/png") };
-        },
-        /**
-         * R7 Mesh-swap hop, but ENDS at elevated hover so apex is held on screen
-         * (tight b-robber framing was clipping a pure mid-arc peak out of view).
-         */
-        playMotionDemo(): { hopMs: number; reduced: boolean; apexHeight: number } | false {
-          const robber = registryRef.current.get("robber");
-          const root = contentRootRef.current;
-          const kit = hexKit;
-          const cam = cameraRef.current;
-          const canvas = rendererRef.current?.domElement;
-          if (!robber || !root || !kit || !cam || !canvas) return false;
-          const reduced = prefersReducedMotion();
-          const upMs = 2200;
-          const holdMs = 2800;
-          const downMs = 2200;
-          const apexHeight = 2.6;
-          const from: [number, number, number] = [robber.position.x, robber.position.y, robber.position.z];
-          // Hover slightly offset so shadow gap reads; stay inside b-robber framing.
-          const hover: [number, number, number] = [from[0] + 0.55, from[1] + apexHeight, from[2] - 0.35];
-
-          // Lock handle so reconcile/resource-gain cannot restore the pooled instance mid-demo.
-          robber.userData.gdJudgeDemoLock = true;
-          robber.position.set(from[0], -9999, from[2]);
-          robber.scale.setScalar(0);
-          robber.updateMatrix();
-          const inst = robber.userData.gdInstance as { poolKey: string; index: number } | undefined;
-          const pools = (reconcileHostRef.current as { pools?: InstancePools } | null)?.pools;
-          if (inst && pools) pools.setMatrix(inst.poolKey, inst.index, robber);
-
-          const g = (globalThis as { __g3dJudgeDemoMesh?: Mesh; __g3dJudgeDemoSettle?: Mesh });
-          g.__g3dJudgeDemoMesh?.removeFromParent();
-          g.__g3dJudgeDemoSettle?.removeFromParent();
-          document.querySelectorAll(".g3d-judge-hop-ghost").forEach((el) => el.remove());
-
-          // Prefer outer scene: contentRoot.parent is the render Scene.
-          const outer = (root.parent as Object3D | null) ?? sceneRef.current ?? root;
-          const robGeom = kit.pieceGeometry("robber").clone();
-          // Unlit magenta first to prove draw; vertex cloak via color multiply.
-          const robMat = new MeshStandardMaterial({
-            roughness: 0.72,
-            metalness: 0,
-            vertexColors: true,
-          });
-          const demo = new Mesh(robGeom, robMat);
-          demo.position.set(...from);
-          demo.scale.setScalar(2.2);
-          demo.castShadow = true;
-          demo.receiveShadow = true;
-          demo.frustumCulled = false;
-          demo.matrixAutoUpdate = true;
-          demo.visible = true;
-          demo.layers.enableAll();
-          demo.name = "g3d-judge-demo-robber";
-          demo.userData.gdSharedGeometry = false;
-          demo.renderOrder = 999;
-          outer.add(demo);
-          demo.updateMatrix();
-          demo.updateMatrixWorld(true);
-          g.__g3dJudgeDemoMesh = demo;
-
-          // Settlement: delayed, secondary hop (same locked frame).
-          const settleGeom = kit.pieceGeometry("settlement", 0).clone();
-          const settleMat = vcMaterial(library, "piece-vc", PIECE_VC_TOKEN).clone();
-          const settle = new Mesh(settleGeom, settleMat);
-          settle.position.set(from[0] - 1.15, from[1], from[2] + 0.9);
-          settle.scale.setScalar(1.85);
-          settle.castShadow = true;
-          settle.frustumCulled = false;
-          settle.name = "g3d-judge-demo-settle";
-          settle.userData.gdSharedGeometry = false;
-          settle.visible = false;
-          ((root.parent as Object3D | null) ?? sceneRef.current ?? root).add(settle);
-          g.__g3dJudgeDemoSettle = settle;
-
-          const host = document.body;
-          let toast = host.querySelector(".g3d-judge-plusn-toast") as HTMLDivElement | null;
-          if (!toast) {
-            toast = document.createElement("div");
-            toast.className = "g3d-judge-plusn-toast";
-            toast.setAttribute("data-testid", "g3d-judge-plusn-toast");
-            host.appendChild(toast);
-          }
-          let toastHideTimer = 0;
-          let trackRaf = 0;
-          const projectToast = () => {
-            if (!demo.parent || !toast) {
-              trackRaf = requestAnimationFrame(projectToast);
-              return;
-            }
-            demo.updateMatrixWorld(true);
-            const v = demo.position.clone();
-            v.y += 1.2;
-            v.project(cam);
-            const rect = canvas.getBoundingClientRect();
-            const x = (v.x * 0.5 + 0.5) * rect.width + rect.left;
-            const y = (-v.y * 0.5 + 0.5) * rect.height + rect.top;
-            toast.style.transform = `translate(${x}px, ${y}px) translate(-50%, -130%)`;
-            trackRaf = requestAnimationFrame(projectToast);
-          };
-          const showToast = (text: string) => {
-            toast!.textContent = text;
-            toast!.setAttribute("data-visible", "1");
-            window.clearTimeout(toastHideTimer);
-            toastHideTimer = window.setTimeout(() => toast?.setAttribute("data-visible", "0"), 2800);
-          };
-          trackRaf = requestAnimationFrame(projectToast);
-
-          const ctl = controlsRef.current;
-          if (ctl) ctl.enabled = false;
-          directorRef.current?.pinFree();
-          motion.noteUserDrag(Number.POSITIVE_INFINITY);
-
-          // Hop UP to elevated hover (end pose is mid-air — held for stills/video).
-          demo.position.set(...hover);
-          const msUp = motion.hop(demo, "judge-demo-robber", from, {
-            ms: upMs,
-            ignoreReducedMotion: true,
-            apexHeight: 0.9,
-            hops: 1,
-          });
-          markShadowsDirtyRef.current();
-          showToast("+2 木  +1 麦  +1 羊");
-          window.dispatchEvent(new CustomEvent("g3d-judge-resource-gain", {
-            detail: { wood: 2, wheat: 1, sheep: 1 },
-          }));
-
-          const cleanupDemo = () => {
-            cancelAnimationFrame(trackRaf);
-            toast?.setAttribute("data-visible", "0");
-            demo.removeFromParent();
-            settle.removeFromParent();
-            if (!demo.userData.gdSharedGeometry) {
-              demo.geometry.dispose();
-              const m = demo.material;
-              if (!Array.isArray(m)) m.dispose();
-            }
-            if (!settle.userData.gdSharedGeometry) {
-              settle.geometry.dispose();
-              const m = settle.material;
-              if (!Array.isArray(m)) m.dispose();
-            }
-            if (g.__g3dJudgeDemoMesh === demo) delete g.__g3dJudgeDemoMesh;
-            if (g.__g3dJudgeDemoSettle === settle) delete g.__g3dJudgeDemoSettle;
-            delete robber.userData.gdJudgeDemoLock;
-            robber.position.set(...from);
-            robber.scale.setScalar(1);
-            robber.userData.baseY = from[1];
-            robber.updateMatrix();
-            if (inst && pools) pools.setMatrix(inst.poolKey, inst.index, robber);
-            markShadowsDirtyRef.current();
-          };
-
-          // Hold at hover, then hop down to ground; second cycle with distinct +N.
-          window.setTimeout(() => {
-            const cur: [number, number, number] = [demo.position.x, demo.position.y, demo.position.z];
-            demo.position.set(...from);
-            const msDown = motion.hop(demo, "judge-demo-robber", cur, {
-              ms: downMs,
-              ignoreReducedMotion: true,
-              apexHeight: 0.85,
-              hops: 1,
-            });
-            markShadowsDirtyRef.current();
-            showToast("+2 砖  +1 矿");
-            window.dispatchEvent(new CustomEvent("g3d-judge-resource-gain", {
-              detail: { brick: 2, ore: 1 },
-            }));
-
-            // Settlement hop while robber lands.
-            settle.visible = true;
-            motion.place(settle, "judge-demo-settle");
-            window.setTimeout(() => {
-              const sFrom: [number, number, number] = [settle.position.x, settle.position.y, settle.position.z];
-              const sHover: [number, number, number] = [sFrom[0] + 0.7, sFrom[1] + 2.2, sFrom[2] - 0.45];
-              settle.position.set(...sHover);
-              motion.hop(settle, "judge-demo-settle", sFrom, {
-                ms: 2000,
-                ignoreReducedMotion: true,
-                apexHeight: 0.7,
-                hops: 1,
-              });
-              window.setTimeout(() => {
-                const sCur: [number, number, number] = [settle.position.x, settle.position.y, settle.position.z];
-                settle.position.set(...sFrom);
-                const sDown = motion.hop(settle, "judge-demo-settle", sCur, {
-                  ms: 1800,
-                  ignoreReducedMotion: true,
-                  apexHeight: 0.6,
-                  hops: 1,
-                });
-                window.setTimeout(cleanupDemo, sDown + 400);
-              }, 2000 + 900);
-            }, 450);
-
-            // Keep hopMs as full up+hold+down for capture waits.
-            void msDown;
-          }, msUp + holdMs);
-
-          return { hopMs: upMs + holdMs + downMs, reduced, apexHeight };
-        }
+        ...judgeMotion,
       };
     });
 

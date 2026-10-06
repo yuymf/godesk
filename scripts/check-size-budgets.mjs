@@ -37,10 +37,15 @@ const assets = files.filter((f) => /^render3d-assets-.*\.js$/.test(f));
 const render3d = files.filter(
   (f) => /^render3d-.*\.js$/.test(f) && !/^render3d-assets-/.test(f),
 );
+// Judge-only lazy demos (playMotionDemo) — not part of production render core.
+const judgeMotion = files.filter((f) => /^(g3d-judge-|motion-demo-).*\.js$/.test(f));
 
 let ok = true;
 ok = check("homepage index JS", index, 170) && ok;
 ok = check("render3d core (excl. assets)", render3d, 210) && ok;
+if (judgeMotion.length) {
+  ok = check("g3d-judge-motion (lazy, judge=1)", judgeMotion, 12) && ok;
+}
 ok = check("render3d-assets", assets, 60) && ok;
 const tideWater = files.filter((f) => /^tide-water-.*\.js$/.test(f));
 if (tideWater.length) {
