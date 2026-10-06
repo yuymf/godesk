@@ -132,9 +132,16 @@ def bake_one(tid: str, stem: str, target, url: str):
     return summary
 
 
+# G3D-ART：以下套件已换成 AI 生图（scripts/process-ai-art.py 产出，LicenseRef-AI-Generated），本脚本不再覆盖。
+AI_REPLACED = {"t01-pine", "t02-clay", "t03-meadow", "t04-wheat", "t05-reef", "t06-sand", "t08-wood", "t11-parchment"}
+
+
 def main():
     results = []
     for tid, stem, target, url in SETS:
+        if tid in AI_REPLACED and not os.environ.get("BAKE_FORCE_CC0"):
+            print(f"skip {tid}（G3D-ART AI 套件）")
+            continue
         results.append(bake_one(tid, stem, target, url))
     (EV / "bake-summary.json").write_text(json.dumps(results, indent=2))
     bad = [r for r in results if not all(v["ok"] for v in r["sizes"].values())]
