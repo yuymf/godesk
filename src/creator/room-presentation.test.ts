@@ -196,14 +196,14 @@ describe("isHexSettlement", () => {
     }))).toBe(false);
   });
 
-  it("keeps Catan off the score-track surface", () => {
-    const catan = base({
+  it("keeps hex-island off the score-track surface", () => {
+    const hexIsland = base({
       type: "hex-settlement-v1",
       playerCount: 3,
       victoryPointsToWin: 10,
     });
-    expect(isHexSettlement(catan)).toBe(true);
-    expect(usesScoreTrackSurface(catan)).toBe(false);
+    expect(isHexSettlement(hexIsland)).toBe(true);
+    expect(usesScoreTrackSurface(hexIsland)).toBe(false);
   });
 });
 

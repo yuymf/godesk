@@ -9,7 +9,7 @@ import { expect, test, type Page } from "@playwright/test";
  *   独立于 mapper）；整盘是卡坦标准点数分布（远处「12」曾被看成「17」，见 number-labels.ts）。
  */
 const STANDARD_NUMBERS = [2, 3, 3, 4, 4, 5, 5, 6, 6, 8, 8, 9, 9, 10, 10, 11, 11, 12];
-const PROMPT = "做一款可以与电脑对战的卡坦岛基础版";
+const PROMPT = "做一款可以与电脑对战的汐屿六角岛资源建造游戏";
 
 type ScreenLabel = { id: string; number: number; hot: boolean; box: [number, number, number, number]; inView: boolean; facing: boolean };
 

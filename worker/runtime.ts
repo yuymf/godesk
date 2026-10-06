@@ -54,15 +54,15 @@ import {
   type OthelloGenre,
 } from "../src/runtime/adapters/othello";
 import {
-  bindCatanFromRuntimeKernel,
-  catanAdapter,
-  catanToSessionFields,
-  pickCatanBotAction,
-  playActionFromCatanIntent,
-  type CatanGenre,
-  type CatanPlayer,
+  bindHexIslandFromRuntimeKernel,
+  hexIslandAdapter,
+  hexIslandToSessionFields,
+  pickHexIslandBotAction,
+  playActionFromHexIslandIntent,
+  type HexIslandGenre,
+  type HexIslandPlayer,
   type DevCardKind
-} from "../src/runtime/adapters/catan";
+} from "../src/runtime/adapters/hex-island";
 import {
   bindNetworkRouteFromRuntimeKernel,
   networkRouteAdapter,
@@ -314,21 +314,21 @@ export function initialSessionState(
   }
   if (runtime?.kernel.type === "hex-settlement-v1") {
     const play = createInitialState(
-      catanAdapter,
-      bindCatanFromRuntimeKernel({
+      hexIslandAdapter,
+      bindHexIslandFromRuntimeKernel({
         playerCount: runtime.kernel.playerCount,
         victoryPointsToWin: runtime.kernel.victoryPointsToWin,
       }),
       _seed,
     );
-    const fields = catanToSessionFields(play);
+    const fields = hexIslandToSessionFields(play);
     return {
       turn: fields.turn,
       activeSeat: fields.activeSeat,
       scores: fields.scores,
       status: fields.status,
       winnerSeat: fields.winnerSeat,
-      catan: fields.catan,
+      hexIsland: fields.hexIsland,
     };
   }
   if (runtime?.kernel.type === "network-route-v1") {
@@ -886,32 +886,32 @@ export function acceptIntent(
   }
 
   if (runtime.kernel.type === "hex-settlement-v1") {
-    if (state.status !== "active" || !state.catan || intent.seat !== state.activeSeat) {
+    if (state.status !== "active" || !state.hexIsland || intent.seat !== state.activeSeat) {
       return null;
     }
-    const kernelConfig = bindCatanFromRuntimeKernel({
+    const kernelConfig = bindHexIslandFromRuntimeKernel({
       playerCount: runtime.kernel.playerCount,
       victoryPointsToWin: runtime.kernel.victoryPointsToWin,
     });
     const playState = {
       seed,
       sequence: state.turn,
-      phase: state.catan.phase,
+      phase: state.hexIsland.phase,
       activePlayerId: state.activeSeat,
       playerCount: runtime.kernel.playerCount,
       status: state.status,
       winnerId: state.winnerSeat,
       events: [] as const,
-      genre: sessionCatanToGenre(state.catan),
+      genre: sessionHexIslandToGenre(state.hexIsland),
     };
     const result = applyAction(
-      catanAdapter,
+      hexIslandAdapter,
       playState,
-      playActionFromCatanIntent(intent.seat, intent.actionId, intent.payload),
+      playActionFromHexIslandIntent(intent.seat, intent.actionId, intent.payload),
       kernelConfig,
     );
     if (!result.ok) return null;
-    const fields = catanToSessionFields(result.state);
+    const fields = hexIslandToSessionFields(result.state);
     return {
       sequence,
       intentId: intent.intentId,
@@ -925,7 +925,7 @@ export function acceptIntent(
         scores: fields.scores,
         status: fields.status,
         winnerSeat: fields.winnerSeat,
-        catan: fields.catan,
+        hexIsland: fields.hexIsland,
       },
     };
   }
@@ -1115,23 +1115,23 @@ export function pickBotIntent(
 ): BotIntent | null {
   if (state.status !== "active") return null;
   if (runtime.kernel.type === "hex-settlement-v1") {
-    if (!state.catan) return null;
-    const kernelConfig = bindCatanFromRuntimeKernel({
+    if (!state.hexIsland) return null;
+    const kernelConfig = bindHexIslandFromRuntimeKernel({
       playerCount: runtime.kernel.playerCount,
       victoryPointsToWin: runtime.kernel.victoryPointsToWin,
     });
     const playState = {
       seed,
       sequence: state.turn,
-      phase: state.catan.phase,
+      phase: state.hexIsland.phase,
       activePlayerId: state.activeSeat,
       playerCount: runtime.kernel.playerCount,
       status: state.status,
       winnerId: state.winnerSeat,
       events: [] as const,
-      genre: sessionCatanToGenre(state.catan),
+      genre: sessionHexIslandToGenre(state.hexIsland),
     };
-    const bot = pickCatanBotAction(playState, kernelConfig, seed, state.turn + 1);
+    const bot = pickHexIslandBotAction(playState, kernelConfig, seed, state.turn + 1);
     if (!bot) return null;
     return {
       seat: state.activeSeat,
@@ -1625,7 +1625,7 @@ export function runBotSimulation(
 
   if (runtime.kernel.type === "hex-settlement-v1") {
     let guard = 0;
-    while (state.status === "active" && state.catan && guard < 8000) {
+    while (state.status === "active" && state.hexIsland && guard < 8000) {
       guard += 1;
       const bot = pickBotIntent(state, runtime, seed);
       if (!bot) throw new Error("bot_action_unavailable");
@@ -1710,23 +1710,23 @@ export function scopeSessionState(
   };
 }
 
-function sessionCatanToGenre(catan: NonNullable<import("../src/creator/project-contract").SessionState["catan"]>): CatanGenre {
+function sessionHexIslandToGenre(hexIsland: NonNullable<import("../src/creator/project-contract").SessionState["hexIsland"]>): HexIslandGenre {
   return {
-    playerCount: catan.playerCount,
-    victoryPointsToWin: catan.victoryPointsToWin,
-    tiles: catan.tiles.map((tile) => ({
+    playerCount: hexIsland.playerCount,
+    victoryPointsToWin: hexIsland.victoryPointsToWin,
+    tiles: hexIsland.tiles.map((tile) => ({
       q: tile.q,
       r: tile.r,
-      terrain: tile.terrain as CatanGenre["tiles"][number]["terrain"],
+      terrain: tile.terrain as HexIslandGenre["tiles"][number]["terrain"],
       number: tile.number,
     })),
-    robberHex: catan.robberHex,
-    ports: catan.ports.map((port) => ({
+    robberHex: hexIsland.robberHex,
+    ports: hexIsland.ports.map((port) => ({
       vertices: [...port.vertices],
-      kind: port.kind as CatanGenre["ports"][number]["kind"],
+      kind: port.kind as HexIslandGenre["ports"][number]["kind"],
     })),
-    players: catan.players.map((player) => ({
-      resources: { ...(player.resources as CatanPlayer["resources"]) },
+    players: hexIsland.players.map((player) => ({
+      resources: { ...(player.resources as HexIslandPlayer["resources"]) },
       settlements: [...player.settlements],
       cities: [...player.cities],
       roads: [...player.roads],
@@ -1735,18 +1735,18 @@ function sessionCatanToGenre(catan: NonNullable<import("../src/creator/project-c
       vpCards: player.vpCards,
       newDevCards: [...player.newDevCards] as DevCardKind[],
     })),
-    setupStep: catan.setupStep,
-    pendingRoadVertex: catan.pendingRoadVertex,
-    lastDice: catan.lastDice
-      ? ([...catan.lastDice] as [number, number])
+    setupStep: hexIsland.setupStep,
+    pendingRoadVertex: hexIsland.pendingRoadVertex,
+    lastDice: hexIsland.lastDice
+      ? ([...hexIsland.lastDice] as [number, number])
       : null,
-    discardQueue: [...catan.discardQueue],
-    discardRemaining: catan.discardRemaining,
-    devDeck: [...catan.devDeck] as DevCardKind[],
-    longestRoadOwner: catan.longestRoadOwner,
-    largestArmyOwner: catan.largestArmyOwner,
-    freeRoadsRemaining: catan.freeRoadsRemaining,
-    lastAction: catan.lastAction,
-    turnPlayer: catan.turnPlayer,
+    discardQueue: [...hexIsland.discardQueue],
+    discardRemaining: hexIsland.discardRemaining,
+    devDeck: [...hexIsland.devDeck] as DevCardKind[],
+    longestRoadOwner: hexIsland.longestRoadOwner,
+    largestArmyOwner: hexIsland.largestArmyOwner,
+    freeRoadsRemaining: hexIsland.freeRoadsRemaining,
+    lastAction: hexIsland.lastAction,
+    turnPlayer: hexIsland.turnPlayer,
   };
 }

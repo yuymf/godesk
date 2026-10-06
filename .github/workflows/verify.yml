@@ -1,21 +1,45 @@
 name: Verify pull request
 
+# CI minute budget (see docs/ci/actions-budget.md):
+# - Docs-only PRs (docs/**, **/*.md, STATUS, prompt-trace) do not trigger this
+#   workflow. No branch protection requires this check today; if a required
+#   check is ever added, follow docs/ci/actions-budget.md#required-checks.
+# - Draft PRs run the fast subset only (unit, Worker, typecheck, build, asset /
+#   size / plugin gates). Full Playwright + perf:ci run on every non-draft
+#   event (opened ready, ready_for_review, synchronize/reopened while ready) or
+#   when the PR carries the `full-e2e` label, so a full e2e always runs on the
+#   final head before a ready PR is merged.
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "**/STATUS*"
+      - "**/prompt-trace/**"
 
 permissions:
   contents: read
 
 concurrency:
-  group: godesk-verify-${{ github.ref }}
+  # Unrelated `labeled` events get their own group so they never cancel a real run.
+  group: >-
+    godesk-verify-${{ github.ref }}${{
+      github.event.action == 'labeled' && github.event.label.name != 'full-e2e'
+      && format('-label-{0}', github.run_id) || '' }}
   cancel-in-progress: true
 
 jobs:
   verify:
+    # Check name kept stable ("Tests and Playwright") for any merge gate.
     name: Tests and Playwright
+    # Labels other than `full-e2e` do not need a run (skipped jobs bill 0 minutes).
+    if: github.event.action != 'labeled' || github.event.label.name == 'full-e2e'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      FULL_E2E: ${{ !github.event.pull_request.draft || contains(github.event.pull_request.labels.*.name, 'full-e2e') }}
     steps:
       - uses: actions/checkout@v6
 
@@ -28,6 +52,14 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: CI mode
+        run: |
+          if [ "$FULL_E2E" = "true" ]; then
+            echo "::notice::Full verify: fast subset + Playwright e2e + perf:ci"
+          else
+            echo "::notice::Draft PR: fast subset only. Mark ready for review (or add label full-e2e) to run Playwright."
+          fi
+
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
       - run: node scripts/verify-release-records.mjs
@@ -37,13 +69,40 @@ jobs:
       - run: pnpm test:worker
       - run: pnpm typecheck
       - run: pnpm verify:plugin
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e
+
+      - name: Resolve Playwright version
+        if: env.FULL_E2E == 'true'
+        id: playwright
+        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        if: env.FULL_E2E == 'true'
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      - name: Install Playwright Chromium
+        if: env.FULL_E2E == 'true' && steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install Playwright system deps (browser cache hit)
+        if: env.FULL_E2E == 'true' && steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+
+      - name: Playwright e2e
+        if: env.FULL_E2E == 'true'
+        run: pnpm test:e2e
+
       # SPEC §4.6.1 CI gate: deterministic render budgets under SwiftShader
       # (bytes, requests, draw calls, triangles, GPU estimate, leaks, context loss).
-      - run: pnpm perf:ci --out perf-results
+      - name: Render budgets (perf:ci)
+        if: env.FULL_E2E == 'true'
+        run: pnpm perf:ci --out perf-results
+
       - name: Upload CI render budget report
-        if: always()
+        if: always() && env.FULL_E2E == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: perf-ci-budgets

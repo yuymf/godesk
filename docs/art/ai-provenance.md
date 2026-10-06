@@ -3,7 +3,7 @@
 - 决策：用户 2026-10-06 11:08（Asia/Shanghai）允许汐屿美术使用 AI 生图；**G3D-17 正式上线前须完成法务审查**。
 - 许可证 id：`LicenseRef-AI-Generated`（已加入 `scripts/verify-assets.mjs` 白名单；CI 对每条此类资产输出 warning「法务审查: 待 G3D-17」，不失败）。
 - 生成工具：Grok Bot GenerateImage（工具返回名；底层模型名未返回）。生成日期：2026-10-06（11:10–11:15 Asia/Shanghai）。
-- 输入：仅文本提示词；无任何参考图输入；**未使用 settlecoast 或任何第三方图像**，也未临摹。
+- 输入：仅文本提示词；无任何参考图输入；**未使用任何第三方图像**，也未临摹。
 - 原始输出：均为 1280x720 JPEG（工具忽略宽高比参数）。原始 JPEG 与生成清单不入库，保存在工作机 `/workspace/g3d-evidence/G3D-ART/raw/`。
 - 后处理脚本：`scripts/process-ai-art.py`（裁切、无缝化、法线/ORM 推导、键出 alpha、9-slice 重建、toktx/WebP 压缩）；登记脚本：`scripts/register-ai-art.mjs`。
 - 每个文件的逐行记录（工具、完整提示词、日期、后处理、`法务审查: 待 G3D-17`）见 `assets/LICENSES.md` 中 `LicenseRef-AI-Generated` 行。

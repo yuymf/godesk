@@ -37,7 +37,7 @@ test("NL auction proposal → playable build → share= guest bid → award", as
   });
   const card = await openLobbyCard(page, projectId);
   await expect(card.locator('[data-lobby-mark="auction"]')).toBeVisible();
-  for (const mark of ["catan", "othello", "network", "card"]) {
+  for (const mark of ["hexIsland", "othello", "network", "card"]) {
     await expect(card.locator(`[data-lobby-mark="${mark}"]`)).toHaveCount(0);
   }
   await page.goto(`/chatgpt-plugin/studio/${projectId}`);

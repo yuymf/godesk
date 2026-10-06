@@ -20,7 +20,7 @@
 ### 实现约束（用户硬规则摘要）
 
 - 仅自有 / CC0-1.0 / OFL；逐项登记 `assets/LICENSES.md`
-- 禁止 settlecoast 任何拷贝/描摹/下载
+- 禁止拷贝 / 描摹 / 下载任何第三方产品
 - 工作树 `/workspace/godesk-trackB`；不碰 `/workspace/godesk` 检出分支
 - 合入前须 ADR 0014 已在 `origin/main`（已满足：`332275d`）
 
