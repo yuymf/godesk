@@ -29,8 +29,9 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 值 |
 | --- | --- |
-| 里程碑 | **M1 最小端到端 3D 切片**（进行中）+ **M3 素材管线并行**（Track B） |
+| 里程碑 | **M1 最小端到端 3D 切片**（**Done** 2026-10-06）+ **M3 素材管线并行**（Track B） |
 | 本阶段出口 | G3D-02 → G3D-03 → G3D-04 → G3D-18：六角岛 Room 在 3D 中与 AI 打完一整局（EP-D + EP-I）；`CatanBoard.tsx` 删除且 `rg CatanBoard` 在 `src e2e` 为 0；e2e 全绿 |
+| M1 出口证明 | **Done** 2026-10-06。main `73d4c80`：`rg -n "CatanBoard" src e2e` 0 行、`CatanBoard.tsx` 不存在；`GODESK_E2E_PORT=8811 pnpm test:e2e` 45 passed / 4 skipped；整局（main `d7dd1a5` 构建）EP-D 1440×900 鼠标（16.6m，640 次 UI 行动）、EP-I iPhone 12 Pro 触摸（17.5m，541 次）均至「对局结束 · 获胜者」，各 1 passed。**注**：Room 无内置 AI 席位（Catan bot 仅 worker `runBotSimulation`），座位 1 由第二浏览器上下文脚本按合法动作优先级驱动。证据仓外 `/workspace/g3d-evidence/M1/`（截图、ep-d.log / ep-i.log、e2e-main.log、full-game-vs-ai.spec.ts；脚本未入库） |
 | M0 | 已完成：Bootstrap #102（`f13c8ce`）、G3D-01 #103（`332275d`） |
 
 ## 已完成
@@ -47,6 +48,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | G3D-26 | SFX sprites×30 + ambient×2（Track B） | PR [#111](https://github.com/yuymf/godesk/pull/111) squash `41e352b` |
 | G3D-27 | 音乐循环×3 CC0 120s（Track B） | PR [#112](https://github.com/yuymf/godesk/pull/112) squash `757c9bc` |
 | G3D-04 | 拾取 → 合法动作、HUD、HexSettlementBoard（Track A） | PR [#109](https://github.com/yuymf/godesk/pull/109) squash `6d4db72` |
+| G3D-18 | 删除 2D 六角盘面路径；预览/回放/大厅 3D（Track A） | PR [#119](https://github.com/yuymf/godesk/pull/119) squash `d7dd1a5` |
 
 | G3D-24 | 资源/发展卡插画×8（Track B）**shipped；G3D-ART 2D 回炉 #125 `465f7fa`（分层插画+Cycles）— 仍待 G3D-13 接线入局** | PR [#113](https://github.com/yuymf/godesk/pull/113) squash `fd3f54e` + G3D-ART PR |
 
@@ -73,8 +75,8 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
-| G3D-ART：美术质量回炉（2D） | Track B | [#125](https://github.com/yuymf/godesk/pull/125) squash `465f7fa` | **2D 位图回炉已合入**：G3D-24/25/23 ink；证据 `/workspace/g3d-evidence/G3D-ART/`；3D 素材（19–22）回炉仍等 G3D-13 |
-| G3D-09：动效 | Track A | （未开） | M1 后；Track A 拥有 |
+| G3D-ART：美术质量回炉（2D） | Track B | [#125](https://github.com/yuymf/godesk/pull/125) + fix PR | **improved, still below settlecoast bar; real art quality needs a user decision on sourcing (commission an artist / buy a CC0-compatible commercial pack / allow AI-generated art with a legal review at G3D-17)** · **Blocked (user decision)**；artifact clip fix 本 PR；此后不再继续 art pass |
+| G3D-09：动效 | Track A | `feat/g3d-09-motion` / [PR #129](https://github.com/yuymf/godesk/pull/129) | tween.js 25.0.0；place 280 / 删除 160 / 强盗 420 / 骰子 900 / 镜头 600；reduced motion 0；与 G3D-06 分级兼容（时长按墙钟） |
 | G3D-15 第二刀：生成默认集成验收 | Track C | （未开） | 第一刀 #123 已合入 `31cc0df`；第二刀（「做一款两人翻转棋」→ 3D Room e2e + 3 轮截图）等 G3D-14 |
 | G3D-14：通用 3D 桌面 mapper | Track C | （G3D-07 合入后开） | 依赖 G3D-07（本 PR）与 G3D-12（已合） |
 
@@ -83,6 +85,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 项 | 原因 | 解除条件 |
 | --- | --- | --- |
 | box Codex 用量上限 | 至 2026-11-05 02:04 Asia/Shanghai；Cloud Agent 兜底（本席无该工具时手写） | 用量恢复 |
+| **G3D-ART（user decision）** | improved but below settlecoast bar；需用户决定 sourcing（委托画师 / 购 CC0 兼容商用包 / 允许 AI 并在 G3D-17 做法务审） | 用户拍板 |
 | **G3D-08（Track B）** | 依赖 G3D-07（Track C，PR #128）；G3D-06 #122 已合入 | G3D-07 上 `main` 后开工 |
 | **G3D-13（Track B）** | 依赖 G3D-07/08/09/10 + 素材 19–25；素材已齐；G3D-10 #120 已合入，缺 07–09。**HUD 备注（iPhone 12 Pro 模拟）**：Room 在棋盘下方露出合法动作的原始按钮列表，文案含坐标串（例：`放置道路 · -200:173|-250:87`）— HUD 重做须隐藏/替换此层 | 07+08+09 上 main |
 | GitHub Actions | 现 **operational**。deploy @ `41e352b` 生产 smoke 曾失败（ChatGPT Connector heading）；后续 deploy 通过 → 瞬时 | 禁无绿合入 |
@@ -96,10 +99,10 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 > G3D-07 备注：① draw call：静止帧复用阴影贴图（场景 / 档位变化后 1.5 s 内逐帧重绘），固定局面稳态 82、含阴影重绘帧峰值 145（high / medium）/ 126（low），G3D-07 前每帧 140。high ≤ 150 稳态与峰值均达标；medium ≤ 100 仅稳态达标；low ≤ 60 稳态与峰值均未达标（G3D-07 前三档每帧 140，同样未达标）；实例化 / 合批留给 G3D-13 换 GLB 时一起做。CI 新增 `drawCallsPeak(high)` 断言。② 环境反射只挂光泽材质（棋子 / 雾灯 / 骰子）：`scene.environment` 会把地块软阴影冲淡。③ 座位棋子只用彩漆木的 normal + ORM，不用 baseColor（木纹底色会把座位色压成棕色）。④ `--surface-raised` 改为 §3.7 的白色后，原「浅灰填充」角色改名 `--surface-sunken`（`#f5f5f5` 不变），45 处 CSS 引用随之改名；`--canvas` / `--paper` 不变（页面与房间仍为白底），房间头部随 `--surface-paper` 变为纸色 #fbf8f1（charter e2e 同步），DESIGN.md 同步。⑤ 运行时降档到 low 会重建 SceneHost（MSAA 只能构造时设）：KTX2 字节跨挂载缓存，low 复用降档前已下载的 512 套件，perf:ci 首局请求 80 → 51；`leak.memoryDriftAfter10Remounts` 改为同档位比较（high 多一张 PMREM 环境贴图）。⑥ box 无 GPU：截图与帧率来自 SwiftShader。
 
-> Track A：拥有 **18（已合）/ 09**（G3D-07 于 2026-10-06 改派 Track C）。Track C：**05 / 10 / 15 / 07 / 14**。Track B 素材轨 **G3D-11、19–27 已全部合入**。
+> Track A：拥有 **18（已合）/ 09**；G3D-06 → Track B（已合 #122）、G3D-07 → Track C（2026-10-06 再平衡）。Track C：**05 / 10 / 15 / 07 / 14**。Track B 素材轨 **G3D-11、19–27 已全部合入**。
 
 1. Track C：**G3D-07 #128** 合入后开 **G3D-14**，再做 **G3D-15 第二刀**（翻转棋 3D Room e2e + 逐轮截图）。
-2. Track A：**G3D-09**（G3D-07 已改派 Track C）。
+2. Track A：**G3D-09**（G3D-07 改由 Track C）。
 3. Track B：G3D-ART 2D #125 已合；**G3D-08 / G3D-13 仍阻塞**（等 G3D-07）；**G3D-07 一合入 main 立即接 G3D-08**，再 13。
 
 ## 开着的 PR / 分支
@@ -135,4 +138,6 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | G3D-06 #122 合入 `96a9d70`；卡面/品牌 bitmap 去 CJK tofu；G3D-ART 仍待品质回炉 | Track B |
 | 2026-10-06 | G3D-ART 2D：卡/品牌/ink 分层插画回炉；G3D-13 HUD 备注（iPhone 合法动作坐标按钮）；等 G3D-07→08 | Track B |
 | 2026-10-06 | G3D-ART 2D #125 合入 `465f7fa`；contact sheet `/workspace/g3d-evidence/G3D-ART/`；等 G3D-07→08 | Track B |
+| 2026-10-06 | G3D-ART artifact clip fix（hatch 裁剪/去叠层、loading 去朱印）；STATUS：ART Blocked(user decision)；此后不再 art pass | Track B |
+| 2026-10-06 | M1 出口 Done（整局 EP-D/EP-I、rg 0、e2e 45/4，证据 `/workspace/g3d-evidence/M1/`）；G3D-09 PR；再平衡 06→Track B、07→Track C | Track A |
 | 2026-10-06 | G3D-07（Track C，改派自 Track A）PR #128：已完成加 G3D-07 与 G3D-15 第一刀（回填 #123 `31cc0df`）；进行中改为 G3D-15 第二刀 / G3D-14；G3D-05 备注 ⑤ 记为劳埃德已决（LCP / TBT 保持 warn，G3D-17 前优化后改 error）；加 G3D-07 备注 | Track C |

@@ -327,6 +327,7 @@ export function HexSettlementBoard({
             ariaLabel={copy.board}
             className="room-g3d-scene-host"
             hexSettlement={catan}
+            activeSeat={activeSeat}
             interactive={showLegal}
             legalActions={pickableActions}
             onPick={handlePick}

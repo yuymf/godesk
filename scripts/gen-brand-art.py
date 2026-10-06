@@ -19,6 +19,7 @@ from lib.parchment import (  # noqa: E402
     WOOD,
     ZHU,
     hatch,
+    hatch_in_mask,
     parchment_base,
     paste_render,
     pine_tree,
@@ -51,7 +52,10 @@ def seat_badge(i: int) -> Image.Image:
     d.ellipse((40, 40, 216, 216), fill=c, outline=INK, width=3)
     # inner parchment disk
     d.ellipse((70, 70, 186, 186), fill=PAPER, outline=PAPER_DEEP, width=2)
-    hatch(d, (80, 80, 176, 176), spacing=5, angle=35 + i * 12, fill=tuple(max(0, x - 30) for x in c), width=1)
+    smask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(smask).ellipse((74, 74, 182, 182), fill=255)
+    img = hatch_in_mask(img, smask, spacing=5, angle=35 + i * 12, fill=tuple(max(0, x - 30) for x in c), width=1)
+    d = ImageDraw.Draw(img)
     # tide mark
     d.arc((85, 95, 171, 175), 200, 340, fill=SEA, width=3)
     d.arc((95, 105, 161, 165), 210, 330, fill=SEA_NEAR, width=2)
@@ -63,8 +67,6 @@ def seat_badge(i: int) -> Image.Image:
         x1, y1 = 128 + math.cos(ang) * 108, 128 + math.sin(ang) * 108
         d.line((x0, y0, x1, y1), fill=FOAM if k % 2 == 0 else INK, width=2)
     d.text((116, 148), f"S{i}", fill=INK)
-    # tiny seal
-    seal_stamp(d, 200, 200, 22, ZHU)
     return img
 
 
@@ -75,20 +77,24 @@ def flourish() -> Image.Image:
     wave_band(d, 175, w, amp=16, color=SEA, width=3, phases=3)
     # island silhouette mid
     cx = w // 2
-    d.polygon([(cx - 160, 150), (cx - 80, 70), (cx - 20, 100), (cx + 40, 55), (cx + 120, 95), (cx + 170, 150)], fill=WOOD, outline=INK)
-    hatch(d, (cx - 150, 70, cx + 160, 150), spacing=6, angle=28, fill=INK, width=1)
+    island = [(cx - 160, 150), (cx - 80, 70), (cx - 20, 100), (cx + 40, 55), (cx + 120, 95), (cx + 170, 150)]
+    d.polygon(island, fill=WOOD, outline=INK)
+    # subtle inner shade without hatch slabs
+    shade = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    ImageDraw.Draw(shade).polygon(island, fill=(42, 36, 28, 40))
+    img = Image.alpha_composite(img.convert("RGBA"), shade).convert("RGB")
+    d = ImageDraw.Draw(img)
     pine_tree(d, cx - 30, 40, 90, WOOD)
     pine_tree(d, cx + 50, 55, 70, WOOD)
-    # ornamental knots
-    for x in (90, w // 2, w - 90):
-        seal_stamp(d, x, 55, 28, ZHU if x == w // 2 else COPPER)
+    for x in (90, w - 90):
+        seal_stamp(d, x, 55, 22, COPPER)
     # title banner
     d.rounded_rectangle((cx - 160, 185, cx + 160, 230), radius=4, outline=INK, fill=PAPER_DEEP, width=2)
     d.text((cx - 70, 200), "TIDEWELL ISLES", fill=INK)
     # corner flourishes
     for x0 in (40, w - 40):
         d.arc((x0 - 30, 20, x0 + 30, 80), 200, 340, fill=COPPER, width=2)
-        d.arc((x0 - 20, 35, x0 + 20, 75), 200, 340, fill=ZHU, width=1)
+        d.arc((x0 - 20, 35, x0 + 20, 75), 200, 340, fill=SEA, width=1)
     return img
 
 
@@ -127,13 +133,15 @@ def loading() -> Image.Image:
             pts = [(hx + hex_r * _m.cos(_m.radians(60 * i - 30)), hy + hex_r * _m.sin(_m.radians(60 * i - 30))) for i in range(6)]
             shade = tuple(max(0, c - ring * 8) for c in col)
             d.polygon(pts, fill=shade, outline=INK)
-            hatch(d, (hx - 40, hy - 35, hx + 40, hy + 35), spacing=5, angle=30 + k * 5, fill=INK, width=1)
+            # soft inner vignette per hex (no hatch)
+            inset = [(hx + (hex_r - 10) * _m.cos(_m.radians(60 * i - 30)), hy + (hex_r - 10) * _m.sin(_m.radians(60 * i - 30))) for i in range(6)]
+            d.polygon(inset, outline=tuple(max(0, c - 25) for c in shade))
 
     # composite mesh renders as harbor props
     dock = tone_render(RENDERS / "dock.png", 320, tint=COPPER)
     lamp = tone_render(RENDERS / "fog-lamp.png", 260, tint=SEA)
-    sett = tone_render(RENDERS / "settlement.png", 220, tint=SEATS[0])
-    city = tone_render(RENDERS / "city.png", 240, tint=SEATS[2])
+    sett = tone_render(RENDERS / "settlement.png", 220, tint=COPPER)
+    city = tone_render(RENDERS / "city.png", 240, tint=COPPER)
     if dock:
         img = paste_render(img, dock, cx - 280, int(h * 0.58), 0.9)
     if lamp:
@@ -145,7 +153,7 @@ def loading() -> Image.Image:
     d = ImageDraw.Draw(img)
     pine_tree(d, cx - 200, cy - 80, 120, WOOD)
     pine_tree(d, cx + 200, cy - 60, 100, WOOD)
-    seal_stamp(d, cx, int(h * 0.78), 48, ZHU)
+    # no floating seal — loading chrome is the caption band only
     d.rounded_rectangle((cx - 200, int(h * 0.86), cx + 200, int(h * 0.93)), radius=6, outline=INK, fill=PAPER_DEEP, width=2)
     d.text((cx - 90, int(h * 0.88)), "LOADING TIDEWELL…", fill=INK)
     return img

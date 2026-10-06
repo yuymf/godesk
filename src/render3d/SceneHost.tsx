@@ -25,6 +25,7 @@ import { reconcileScene } from "./reconcile";
 import type { SceneModel, SceneNode } from "./scene-model";
 import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
 import { markInteractive, perfModeEnabled, perfRecorder } from "./perf";
+import { dieFaceEuler, MotionController } from "./motion";
 import { PerfOverlay } from "./PerfOverlay";
 import {
   configureRenderer,
@@ -65,6 +66,8 @@ export type SceneHostProps = {
   onPick?: (action: { type: string; payload?: Record<string, unknown> }) => void;
   /** RenderSpec.lighting（G3D-14/15 传入）；缺省为 SCENE_TOKENS.lighting。 */
   lighting?: LightingSpec;
+  /** G3D-09: active seat; a change triggers the turn camera reframe. */
+  activeSeat?: number | null;
 };
 
 /** 阴影贴图在场景变化后继续逐帧重绘的时长（覆盖 place/move/dice 动效）。 */
@@ -189,6 +192,11 @@ function createNodeObject(node: SceneNode, caps: TierCaps, library: MaterialLibr
   }
 
   if (node.kind === "port" || node.kind === "ship" || node.kind === "die" || node.kind === "dice-tray" || node.kind === "decor") {
+    const finish = (mesh: Mesh) => {
+      const posed = applyPose(mesh);
+      if (node.kind === "die") posed.rotation.set(...dieFaceEuler(node.number));
+      return posed;
+    };
     const geom =
       node.kind === "ship"
         ? new BoxGeometry(0.5, 0.18, 0.22)
@@ -197,7 +205,7 @@ function createNodeObject(node: SceneNode, caps: TierCaps, library: MaterialLibr
           : node.kind === "decor"
             ? new SphereGeometry(0.18, 10, 10)
             : new BoxGeometry(0.4, 0.12, 0.4);
-    return applyPose(new Mesh(geom, mat));
+    return finish(new Mesh(geom, mat));
   }
 
   // cliff default
@@ -208,6 +216,8 @@ function updateNodeObject(object: Object3D, node: SceneNode, library: MaterialLi
   object.position.set(node.position[0], node.position[1], node.position[2]);
   if (node.rotationY !== undefined) object.rotation.y = node.rotationY;
   if (node.scale) object.scale.set(node.scale[0], node.scale[1], node.scale[2]);
+  else if (node.kind === "settlement" || node.kind === "city" || node.kind === "robber") object.scale.set(1, 1, 1);
+  if (node.kind === "die") object.rotation.set(...dieFaceEuler(node.number));
   const mesh = object as Mesh;
   if (!mesh.isMesh) return;
   // 地形 / 座位变化：换成对应的共享材质（不改共享材质本身的颜色）。
@@ -227,6 +237,7 @@ export function SceneHost({
   legalActions = [],
   onPick,
   lighting,
+  activeSeat = null,
 }: SceneHostProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [unsupported, setUnsupported] = useState(false);
@@ -238,6 +249,12 @@ export function SceneHost({
   const cameraRef = useRef<PerspectiveCamera | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const hitRootRef = useRef<Object3D | null>(null);
+  const motionRef = useRef<MotionController | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
+  const lastSeatRef = useRef<number | null>(null);
+  const diceSeedRef = useRef(1);
+  const diceAnimatedRef = useRef(false);
+  const lastActionRef = useRef<string | null | undefined>(undefined);
   const interactiveRef = useRef(interactive);
   const legalActionsRef = useRef(legalActions);
   const onPickRef = useRef(onPick);
@@ -257,12 +274,40 @@ export function SceneHost({
   const markShadowsDirtyRef = useRef<() => void>(() => {});
   const [pbrState, setPbrState] = useState<"off" | "pending" | "512" | "256" | "error">("pending");
 
-  function buildHost(root: Object3D, getCaps: () => TierCaps, library: MaterialLibrary) {
+  function reframe(focus: readonly [number, number, number], id: string) {
+    const motion = motionRef.current;
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    if (motion && camera && controls) motion.reframe(camera, controls, focus, id);
+  }
+
+  function buildHost(root: Object3D, getCaps: () => TierCaps, library: MaterialLibrary, motion: MotionController) {
     return {
       root,
       create: (node: SceneNode) => createNodeObject(node, getCaps(), library),
       update: (object: Object3D, node: SceneNode) => updateNodeObject(object, node, library),
       disposeObject,
+      motion: {
+        added: (object: Object3D, node: SceneNode) => {
+          if (node.kind !== "settlement" && node.kind !== "city" && node.kind !== "road") return;
+          motion.place(object, node.id);
+          reframe(node.position, `build:${node.id}`);
+        },
+        removed: (object: Object3D, id: string, detach: () => void) => {
+          motion.remove(object, id, detach);
+        },
+        updated: (object: Object3D, prev: SceneNode, node: SceneNode) => {
+          if (node.kind === "robber" && prev.position.join() !== node.position.join()) {
+            motion.moveArc(object, node.id, prev.position);
+            reframe(node.position, "robber");
+          } else if (node.kind === "die" && prev.number !== node.number) {
+            diceSeedRef.current += 1;
+            diceAnimatedRef.current = true;
+            motion.dice(object, node.id, node.number ?? 1, diceSeedRef.current);
+            if (node.id === "die:0") reframe(node.position, "dice");
+          }
+        },
+      },
     };
   }
 
@@ -304,6 +349,12 @@ export function SceneHost({
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
+    const motion = new MotionController();
+    motionRef.current = motion;
+    controlsRef.current = controls;
+    const onControlsStart = () => motion.noteUserDrag();
+    controls.addEventListener("start", onControlsStart);
+    controls.addEventListener("end", onControlsStart);
     controls.target.set(0, 0, 0);
     controls.maxPolarAngle = Math.PI * 0.48;
 
@@ -333,7 +384,7 @@ export function SceneHost({
     const contentRoot = new Scene();
     scene.add(contentRoot);
     contentRootRef.current = contentRoot;
-    reconcileHostRef.current = buildHost(contentRoot, () => caps, library);
+    reconcileHostRef.current = buildHost(contentRoot, () => caps, library, motion);
     const hitRoot = new Scene();
     scene.add(hitRoot);
     hitRootRef.current = hitRoot;
@@ -510,6 +561,7 @@ export function SceneHost({
         }
       }
 
+      motion.update(now);
       controls.update();
       // 阴影：内容 / 档位变化后 SHADOW_REFRESH_MS 内逐帧重绘，之后复用（方向光阴影与机位无关）。
       if (now < shadowDirtyUntil || shadowFrames < 2) {
@@ -535,6 +587,10 @@ export function SceneHost({
       window.removeEventListener("resize", onWindowResize);
       renderer.domElement.removeEventListener("pointerup", onPointerUp);
       observer?.disconnect();
+      // Fading objects detach + dispose via their completion callbacks.
+      motion.finishAll();
+      controls.removeEventListener("start", onControlsStart);
+      controls.removeEventListener("end", onControlsStart);
       controls.dispose();
       for (const object of registryRef.current.values()) {
         contentRoot.remove(object);
@@ -577,6 +633,10 @@ export function SceneHost({
       canvasRef.current = null;
       rendererRef.current = null;
       markShadowsDirtyRef.current = () => {};
+      motionRef.current = null;
+      controlsRef.current = null;
+      lastSeatRef.current = null;
+      lastActionRef.current = undefined;
       modelRef.current = null;
       setReady(false);
     };
@@ -589,6 +649,10 @@ export function SceneHost({
     if (!host || !hexSettlement) return;
     const prev = modelRef.current;
     const next = mapHexSettlementToScene(hexSettlement);
+    const hadModel = prev !== null;
+    const previousAction = lastActionRef.current;
+    lastActionRef.current = hexSettlement.lastAction;
+    diceAnimatedRef.current = false;
     modelRef.current = reconcileScene(host, prev, next, registryRef.current);
     // 阴影相机只在布局（地块集合）变化时按包围球重算一次（§4.3）。
     const tileKey = (model: SceneModel | null) =>
@@ -597,8 +661,37 @@ export function SceneHost({
       const bounds = islandBounds(next.nodes);
       rigRef.current?.fitToBounds(bounds.center, bounds.radius);
     }
+    // 覆盖 G3D-09 放置 / 强盗 / 骰子动效时长（SHADOW_REFRESH_MS ≥ 900 ms）。
     markShadowsDirtyRef.current();
+    // Repeated faces (e.g. 1+1 after the [1,1] rest pose) produce no node diff;
+    // a transition into roll_dice still tumbles both dice.
+    const rolled =
+      hadModel &&
+      hexSettlement.lastAction === "roll_dice" &&
+      previousAction !== undefined &&
+      previousAction !== "roll_dice";
+    const motion = motionRef.current;
+    if (rolled && !diceAnimatedRef.current && motion) {
+      for (const node of next.nodes) {
+        if (node.kind !== "die") continue;
+        const object = registryRef.current.get(node.id);
+        if (!object) continue;
+        diceSeedRef.current += 1;
+        motion.dice(object, node.id, node.number ?? 1, diceSeedRef.current);
+        if (node.id === "die:0") reframe(node.position, "dice");
+      }
+    }
   }, [hexSettlement, ready, hostEpoch]);
+
+  // G3D-09 turn camera: reframe toward the island centre when the active seat changes.
+  useEffect(() => {
+    if (!ready || activeSeat === null || activeSeat === undefined) return;
+    const previous = lastSeatRef.current;
+    lastSeatRef.current = activeSeat;
+    if (previous === null || previous === activeSeat) return;
+    reframe([0, 0, 0], `turn:${activeSeat}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSeat, ready, hostEpoch]);
 
   useEffect(() => {
     const rig = rigRef.current;
