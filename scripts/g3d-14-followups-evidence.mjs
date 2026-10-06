@@ -130,7 +130,9 @@ async function capture(browser, url, name, { tier, perf = true, extra = "" }, lo
       if (box2) await p.screenshot({ path: path.join(OUT, `${base}-stage.png`), clip: box2 });
     }
     await p.getByRole("region", { name: "对局状态" }).first().screenshot({ path: path.join(OUT, `${base}-hud.png`) }).catch(() => {});
-    await p.screenshot({ path: path.join(OUT, `${base}-page.png`) });
+    await p.screenshot({ path: path.join(OUT, `${base}-page.png`), timeout: 60_000 }).catch((error) => {
+      results[`${vpId}-pageError`] = String(error.message).split("\n")[0];
+    });
     const info = await p.evaluate(() => {
       const perfSnap = window.__godeskPerf?.snapshot?.() ?? null;
       const swatch = (cls) => {
@@ -162,6 +164,7 @@ async function capture(browser, url, name, { tier, perf = true, extra = "" }, lo
     await ctx.close();
   }
   log.captures[name] = results;
+  await writeFile(path.join(OUT, "capture-log.json"), JSON.stringify(log, null, 2));
 }
 
 async function main() {
@@ -169,9 +172,13 @@ async function main() {
   const browser = await chromium.launch({ headless: true, args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
   const log = { origin: ORIGIN, captures: {} };
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  const { projectId, roomUrl } = await generate(page);
-  log.projectId = projectId;
-  await playToEnd(browser, roomUrl, log);
+  // FU_PROJECT + FU_ROOM：复用已下满的一局（跳过生成与约 10 分钟的对局）。
+  const { projectId, roomUrl } = process.env.FU_PROJECT && process.env.FU_ROOM
+    ? { projectId: process.env.FU_PROJECT, roomUrl: process.env.FU_ROOM }
+    : await generate(page);
+  Object.assign(log, { projectId, roomUrl });
+  await writeFile(path.join(OUT, "capture-log.json"), JSON.stringify(log, null, 2));
+  if (!process.env.FU_ROOM) await playToEnd(browser, roomUrl, log);
   await capture(browser, roomUrl, "full-board-low", { tier: "low" }, log);
   await capture(browser, roomUrl, "full-board-medium", { tier: "medium" }, log);
 
