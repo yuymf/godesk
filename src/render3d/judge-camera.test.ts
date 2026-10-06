@@ -27,14 +27,23 @@ describe("judge camera presets (G3D-JUDGE, ?judge=1 only)", () => {
     expect(c[0]).toBeGreaterThan(R);
     const pose = judgeCamera("b-terrain", NODES, 1.6)!;
     expect(pose.target).toEqual(c);
-    expect(Math.hypot(pose.position[0] - c[0], pose.position[1] - c[1], pose.position[2] - c[2])).toBeCloseTo(3.6, 5);
+    expect(Math.hypot(pose.position[0] - c[0], pose.position[1] - c[1], pose.position[2] - c[2])).toBeCloseTo(4.6, 5);
   });
 
-  it("coast picks the camera-side harbour and stands out at sea, low and looking inward", () => {
+  it("coast picks the camera-side harbour; c-coast / a3 frame the whole island like the reference", () => {
     expect(pickCoast(NODES)!.port).toEqual([0.5, 0.05, 4.4]);
-    const pose = judgeCamera("c-coast", NODES, 1.6)!;
-    expect(pose.position[2]).toBeGreaterThan(pose.target[2]);
-    expect(pose.position[1]).toBeLessThan(2.5);
+    const pitch = (p: { position: readonly number[]; target: readonly number[] }) => {
+      const dy = p.position[1]! - p.target[1]!;
+      const h = Math.hypot(p.position[0]! - p.target[0]!, p.position[2]! - p.target[2]!);
+      return (Math.atan2(dy, h) * 180) / Math.PI;
+    };
+    const coast = judgeCamera("c-coast", NODES, 1.6)!;
+    expect(pitch(coast)).toBeGreaterThan(55);
+    expect(pitch(coast)).toBeLessThan(62);
+    expect(coast.position[2]).toBeGreaterThan(coast.target[2]);
+    expect(pitch(judgeCamera("a3-topdown", NODES, 1.6)!)).toBeGreaterThan(85);
+    const d = (p: { position: readonly number[]; target: readonly number[] }) => Math.hypot(...p.position.map((v, i) => v - p.target[i]!) as [number, number, number]);
+    expect(d(judgeCamera("c-coast", NODES, 0.46)!)).toBeGreaterThan(d(coast));
   });
 
   it("dice preset frames die:0; narrow (iPhone) presets pull back further", () => {

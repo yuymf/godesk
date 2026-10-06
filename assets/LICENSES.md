@@ -163,4 +163,4 @@
 ## G3D-ISLAND / G3D-PROPS 运行时程序化（不产生文件，不入表）
 
 - `src/render3d/terrain-props.ts`（松林 / 羊群与水槽 / 灰岩 / 陶土丘与砖垛 / 麦束行 / 沙丘与卵石）与 `src/render3d/island.ts`（岩壁台基、岸石、木码头、港口牌、帆船）：全部为运行时代码生成的低多边形几何与 canvas 程序化贴图（岩壁纹、2:1 / 3:1 牌面图集），**LicenseRef-GoDesk-Original**，GoDesk Track D 手写，2026-10-06；无 AI 生图、无第三方素材，未参考或复制 settlecoast 的任何素材 / 代码。
-- 若后续换用 AI 贴图（岩壁 / 港口牌），按上表 `LicenseRef-AI-Generated` 规则另行登记文件行。
+- round-2d2（2026-10-06 22:30）：本轮执行环境里没有 GenerateImage 工具，所以没有新生成 AI 贴图。岩壁、港口牌仍是运行时 canvas 程序化贴图（不产生文件），地块表面继续用上表已登记的 G3D-ART AI 贴图（t01–t06）。若后续换用 AI 贴图（岩壁 / 港口牌 / 地块），按上表 `LicenseRef-AI-Generated` 规则另行登记文件行。

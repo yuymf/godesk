@@ -17,6 +17,7 @@ import {
   IcosahedronGeometry,
   InstancedBufferAttribute,
   InstancedMesh,
+  Mesh,
   Matrix4,
   MeshStandardMaterial,
   Object3D,
@@ -249,11 +250,12 @@ function signAtlas(): Texture | null {
     x.textAlign = "center";
     x.textBaseline = "middle";
     x.fillStyle = "#2f2a24";
-    x.font = `900 ${Math.round(cell * 0.3)}px "Helvetica Neue", Helvetica, Arial, "Noto Sans", sans-serif`;
-    x.fillText(label.ratio, cx, cy - cell * 0.07);
+    x.font = `900 ${Math.round(cell * 0.27)}px "Helvetica Neue", Helvetica, Arial, "Noto Sans", sans-serif`;
+    x.fillText(label.ratio, cx, cy - cell * 0.12);
+    // 第二行（资源）放大到与比例同级，远看可读。
     x.fillStyle = label.color;
-    x.font = `700 ${Math.round(cell * 0.19)}px "PingFang SC", "Noto Sans CJK SC", "Noto Sans CJK JP", sans-serif`;
-    x.fillText(label.word, cx, cy + cell * 0.2);
+    x.font = `900 ${Math.round(cell * (label.word.length > 1 ? 0.25 : 0.3))}px "PingFang SC", "Noto Sans CJK SC", "Noto Sans CJK JP", sans-serif`;
+    x.fillText(label.word, cx, cy + cell * 0.16);
   });
   const tex = new CanvasTexture(c);
   tex.colorSpace = SRGBColorSpace;
@@ -263,23 +265,70 @@ function signAtlas(): Texture | null {
 
 // ── 几何 ───────────────────────────────────────────────────────────────────
 
-/** 六角岩壁裙：平顶六边形（角朝 0°/60°…），下宽上窄，侧面按位置做确定性凹凸。 */
-export function skirtGeometry(): BufferGeometry {
-  const h = SKIRT_TOP_Y - SKIRT_BOTTOM_Y;
-  const geom = new CylinderGeometry(HEX_LAYOUT_RADIUS * 1.0, HEX_LAYOUT_RADIUS * 1.08, h, 6, 5, false, Math.PI / 6);
-  geom.translate(0, SKIRT_BOTTOM_Y + h / 2, 0);
-  const pos = geom.getAttribute("position") as BufferAttribute;
-  const v = new Vector3();
-  for (let i = 0; i < pos.count; i += 1) {
-    v.fromBufferAttribute(pos, i);
-    if (v.y > SKIRT_TOP_Y - 0.001 || Math.hypot(v.x, v.z) < 0.05) continue;
-    const a = Math.atan2(v.z, v.x);
-    const n = Math.sin(a * 9 + v.y * 13) * 0.025 + Math.sin(a * 23 - v.y * 31) * 0.015;
-    const k = 1 + n / HEX_LAYOUT_RADIUS;
-    pos.setXYZ(i, v.x * k, v.y, v.z * k);
+/**
+ * 连续岩壁：沿外圈海岸边逐边挤出，上沿贴格子边、下沿外扩入水；位移只由世界坐标决定
+ * （方向取离岛心的径向），相邻边共享的角点完全重合 → 没有接缝。另加每格一块六边形顶盖
+ * （y = SKIRT_TOP_Y，半径 1.0）填满格子之间的缝。u 沿岛周角度连续，v 自上而下。
+ */
+export function coastWallGeometry(tiles: readonly IslandTile[]): BufferGeometry {
+  const ROWS = 5;
+  const SEGS = 3;
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const colors: number[] = [];
+  const vert = (x: number, z: number, t: number): [number, number, number, number, number] => {
+    const y = SKIRT_TOP_Y + (SKIRT_BOTTOM_Y - SKIRT_TOP_Y) * t;
+    const rl = Math.hypot(x, z) || 1;
+    const nx = x / rl;
+    const nz = z / rl;
+    const noise = t === 0 ? 0 : (Math.sin(x * 7.1 + y * 9.3) * 0.03 + Math.sin(z * 8.7 - y * 13.1) * 0.022 + Math.sin((x + z) * 15.3 + y * 21) * 0.012);
+    const out = 0.015 + t * t * 0.14 + noise;
+    const wx = x + nx * out;
+    const wz = z + nz * out;
+    const u = (Math.atan2(z, x) / (Math.PI * 2) + 0.5) * 26;
+    return [wx, y, wz, u, t];
+  };
+  for (const [a, b] of coastEdges(tiles)) {
+    for (let sgi = 0; sgi < SEGS; sgi += 1) {
+      const s0 = sgi / SEGS;
+      const s1 = (sgi + 1) / SEGS;
+      const ax = a[0] + (b[0] - a[0]) * s0, az = a[2] + (b[2] - a[2]) * s0;
+      const bx = a[0] + (b[0] - a[0]) * s1, bz = a[2] + (b[2] - a[2]) * s1;
+      for (let k = 0; k < ROWS; k += 1) {
+        const t0 = k / ROWS;
+        const t1 = (k + 1) / ROWS;
+        const p00 = vert(ax, az, t0), p10 = vert(bx, bz, t0), p01 = vert(ax, az, t1), p11 = vert(bx, bz, t1);
+        let u0 = p00[3], u1 = p10[3];
+        if (Math.abs(u1 - u0) > 13) { if (u1 < u0) u1 += 26; else u0 += 26; }
+        const quad: Array<[typeof p00, number]> = [[p00, u0], [p01, u0], [p10, u1], [p10, u1], [p01, u0], [p11, u1]];
+        for (const [pt, u] of quad) {
+          positions.push(pt[0], pt[1], pt[2]);
+          uvs.push(u, 1 - pt[4]);
+          colors.push(1, 1, 1);
+        }
+      }
+    }
   }
-  pos.needsUpdate = true;
+  // 顶盖：每格一块平顶六边形（角朝 0° / 60° …），法线朝上。
+  for (const t of tiles) {
+    for (let i = 0; i < 6; i += 1) {
+      const a0 = (Math.PI / 3) * i;
+      const a1 = (Math.PI / 3) * (i + 1);
+      const c = [t.center[0], SKIRT_TOP_Y - 0.005, t.center[2]];
+      const pa = [c[0]! + Math.cos(a0) * HEX_LAYOUT_RADIUS, c[1]!, c[2]! + Math.sin(a0) * HEX_LAYOUT_RADIUS];
+      const pb = [c[0]! + Math.cos(a1) * HEX_LAYOUT_RADIUS, c[1]!, c[2]! + Math.sin(a1) * HEX_LAYOUT_RADIUS];
+      positions.push(...c as number[], ...pb as number[], ...pa as number[]);
+      uvs.push(0.5, 0.05, 0.5, 0.05, 0.5, 0.05);
+      // 顶盖压暗：格子之间只露一道深色细缝（参照的地块接缝）。
+      for (let k = 0; k < 3; k += 1) colors.push(0.3, 0.26, 0.22);
+    }
+  }
+  const geom = new BufferGeometry();
+  geom.setAttribute("position", new BufferAttribute(new Float32Array(positions), 3));
+  geom.setAttribute("uv", new BufferAttribute(new Float32Array(uvs), 2));
+  geom.setAttribute("color", new BufferAttribute(new Float32Array(colors), 3));
   geom.computeVertexNormals();
+  geom.computeBoundingSphere();
   return geom;
 }
 
@@ -332,6 +381,10 @@ function boatGeometry(): BufferGeometry {
 // ── 图层 ───────────────────────────────────────────────────────────────────
 
 /** 帆船停泊点：岛外一圈，避开右前方骰盘（≈(4.2, 3.2)）。 */
+/** 港口牌半径 / 帆船缩放（round-2d2：放大，远景可读）。 */
+export const SIGN_RADIUS = 0.21;
+export const BOAT_SCALE = 1.7;
+
 export const BOAT_SPOTS: ReadonlyArray<{ x: number; z: number; yaw: number; phase: number }> = [
   { x: -6.1, z: 2.4, yaw: 0.9, phase: 0 },
   { x: 6.4, z: -1.6, yaw: -2.2, phase: 1.7 },
@@ -354,7 +407,7 @@ export function createIslandLayer(): IslandLayer {
   group.name = "island";
   const vertexMat = new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85 });
   const rockMap = rockTexture();
-  const rockMat = new MeshStandardMaterial({ color: "#ffffff", map: rockMap, roughness: 0.95, metalness: 0 });
+  const rockMat = new MeshStandardMaterial({ color: "#ffffff", map: rockMap, vertexColors: true, roughness: 0.95, metalness: 0 });
   if (!rockMap) rockMat.color.set("#5a5149");
   const signMap = signAtlas();
   const signMat = new MeshStandardMaterial({ map: signMap, transparent: true, alphaTest: 0.4, roughness: 0.8 });
@@ -366,17 +419,17 @@ export function createIslandLayer(): IslandLayer {
         `#include <uv_vertex>\n#ifdef USE_MAP\nvMapUv = vMapUv * vec2(${(1 / SIGN_COLS).toFixed(6)}, ${(1 / SIGN_ROWS).toFixed(6)}) + aCell;\n#endif`,
       );
   };
-  const skirtGeom = skirtGeometry();
   const stoneGeom = shoreStoneGeometry();
   const dockGeom = dockGeometry();
   const boatGeom = boatGeometry();
-  const signGeom = new CircleGeometry(0.15, 24);
+  const signGeom = new CircleGeometry(SIGN_RADIUS, 28);
   const m = new Matrix4();
   const q = new Quaternion();
   const p = new Vector3();
   const s = new Vector3();
   const up = new Vector3(0, 1, 0);
   let layoutKey = "";
+  let wallGeom: BufferGeometry | null = null;
   let dockList: Dock[] = [];
   let boats: InstancedMesh | null = null;
   let signs: InstancedMesh | null = null;
@@ -413,14 +466,15 @@ export function createIslandLayer(): IslandLayer {
       if (tiles.length === 0) return;
       const rand = mulberry32(4242);
 
-      // 岩壁裙：每格一份（缝里露岩 + 外圈岩壁），朝向随机取 60° 的倍数打散纹理。
-      const skirts = new InstancedMesh(skirtGeom, rockMat, tiles.length);
-      tiles.forEach((t, i) => {
-        q.setFromAxisAngle(up, Math.floor(rand() * 6) * (Math.PI / 3));
-        m.compose(p.set(t.center[0], 0, t.center[2]), q, s.set(1, 1, 1));
-        skirts.setMatrixAt(i, m);
-      });
-      add(skirts, "island:cliff", castShadow);
+      // 连续岩壁 + 顶盖（1 个 draw call，几何随地块集合重建）。
+      wallGeom?.dispose();
+      wallGeom = coastWallGeometry(tiles);
+      const wall = new Mesh(wallGeom, rockMat);
+      wall.name = "island:cliff";
+      wall.castShadow = castShadow;
+      wall.receiveShadow = true;
+      wall.userData.gdShared = true;
+      group.add(wall);
 
       // 岸石：每条外圈海岸边 3–5 颗圆石，落在水线。
       const edges = coastEdges(tiles);
@@ -477,6 +531,7 @@ export function createIslandLayer(): IslandLayer {
         BOAT_SPOTS.forEach((b, i) => {
           dummy.position.set(b.x, WATER_Y + 0.02 + Math.sin(t * 1.3 + b.phase) * 0.018, b.z);
           dummy.rotation.set(Math.sin(t * 0.9 + b.phase) * 0.05, b.yaw, Math.sin(t * 1.1 + b.phase * 1.3) * 0.06);
+          dummy.scale.setScalar(BOAT_SCALE);
           dummy.updateMatrix();
           boats!.setMatrixAt(i, dummy.matrix);
         });
@@ -489,7 +544,8 @@ export function createIslandLayer(): IslandLayer {
           const px = d.tip[0] + d.dir[1] * 0.1 - d.dir[0] * 0.02;
           const pz = d.tip[2] - d.dir[0] * 0.1 - d.dir[1] * 0.02;
           const yaw = camera ? Math.atan2(camera.position.x - px, camera.position.z - pz) : Math.atan2(d.dir[0], d.dir[1]);
-          dummy.position.set(px, 0.5, pz);
+          dummy.position.set(px, 0.56, pz);
+          dummy.scale.setScalar(1);
           dummy.rotation.set(-0.35, yaw, 0, "YXZ");
           dummy.updateMatrix();
           signs!.setMatrixAt(i, dummy.matrix);
@@ -505,7 +561,9 @@ export function createIslandLayer(): IslandLayer {
     },
     dispose() {
       clear();
-      for (const g of [skirtGeom, stoneGeom, dockGeom, boatGeom, signGeom]) g.dispose();
+      for (const g of [stoneGeom, dockGeom, boatGeom, signGeom]) g.dispose();
+      wallGeom?.dispose();
+      wallGeom = null;
       for (const mat of [vertexMat, rockMat, signMat]) mat.dispose();
       rockMap?.dispose();
       signMap?.dispose();

@@ -80,6 +80,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | G3D-ART-3 | Track D：**远处点数「12」看成「17」修复**。不是数据 bug：棋盘与贴花逐格一致，图集只收 2–12。原因是字形：`Georgia` 在无该字体的机器上落到 Gelasio 衬线体，远处筹码数字只有约 5px 高、又被俯视角纵向压缩约一半，「2」的细底横消失、斜笔读成「7」。改为粗无衬线等高数字，图集预先纵向拉伸 1.5×，1024 图集，各向异性 8；贴花 1.85r，筹码放大 1.8×。e2e 断言每个值都在 2..12（无 7）、是标准分布，且与 `__g3dBoardNumbers` 逐格一致；单测锁字体和范围。**地形道具暂缓**：等 #138 合入后基于 InstancePools 做（low 档零道具）。**GitHub Actions 因账户账单受阻**，合入暂缓 | PR [#145](https://github.com/yuymf/godesk/pull/145)（待 CI 恢复） |
 | G3D-JUDGE | Track D：**新的停止条件（用户 19:16）**：持续迭代，直到汐屿视觉达到 settlecoast.com 的水准，由大主管按左右对照逐轮评判。评审工具（dev tooling，输出不入库）：`scripts/judge-capture.mjs <N>` 起 8844 本地汐屿对电脑房间（固定 prompt / seed，脚本化行动），拍 a 默认整盘 / b 地形近景 / c 海岸水面崖壁港口 / d 手牌 HUD / e 放置高亮 / f 掷骰 / g 中局，桌面 1440×900 + iPhone 12 Pro（390×844 DPR 3），输出到 `/workspace/g3d-evidence/judge/round-N/tidewell/`；`?judge=1` 才暴露调试机位（`src/render3d/judge-camera.ts`），评审图不带性能浮层。`scripts/judge-compose.mjs <N>` 生成左参考 / 右汐屿对照图到 `round-N/compare/`，缺参考图时画占位。分支 `feat/g3d-judge-r1` 叠在 #138 `29d9c03` 之上并合入 #145；**CI 仍因账单受阻，不合入** | draft PR（base `feat/g3d-13-tidewell`） |
 | G3D-ISLAND / G3D-PROPS | Track D（judge round-2）：地形道具（`src/render3d/terrain-props.ts`：松 24 / 羊 9 + 水槽 / 灰岩 5 + 卵石 / 陶土丘 + 砖垛 / 麦束成行 16 / 沙丘 + 卵石；每类 1 个 InstancedMesh，medium 减量，low 为 0）；岛屿海岸（`src/render3d/island.ts`：外圈格岩壁台基、岸石、木码头 + canvas 2:1 / 3:1 港口牌、4 艘起伏帆船，`?judge=1` / 减少动态效果时冻结）；替换 #138 的灰石板 / 灰盒港口 / 船 / 地块中心装饰（`dressing-kinds.ts` 过滤，不改 mapper）；远海环 ±60 + 波浪边缘淡出，视野内无水面边界；筹码缩到 1.45；两层懒加载为 `board-dressing-*`（≤ 30 KB gzip，size 脚本已加预算）。draw call 峰值 high 52 / medium 52 / low 44（预算 150 / 100 / 60）。**CI 账单受阻，不合入** | draft PR #148 |
+| G3D-JUDGE round-2d2 | Track D：道具约 2 倍覆盖、更圆润（高档松 56 / 羊 14 / 麦垄 30 / 灰岩 7 + 碎石 10 / 陶土丘 6；平滑着色 + 自下而上的顶点色渐变 + 每实例色相 / 缩放 / 纵向挤压抖动；道具三角形 high ≈101k、medium ≈58k）；岩壁改为沿海岸边整圈连续挤出，并加深色顶盖（无接缝，格子之间只露深色细缝）；港口牌放大（半径 0.21，资源字与比例同级），帆船 ×1.7；海面改为整片青绿（去掉亮色光晕），远海环 UV 与主水面一致，水面不接收阴影（去掉直线接缝）；评审机位 b / c / a3 对齐参照（c / a3 俯视整岛四周留海，俯仰约 58° / 87°）。本 session 没有 GenerateImage，地块继续用 G3D-ART 的 AI 贴图，没有新增贴图文件 | draft PR #148 |
 
 仓外已完成（不记入上表）：SPEC v0.2 起草与 §9 拍板修订；Notion 项目与任务卡建立。
 
@@ -170,3 +171,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | G3D-ART-3 #145：点数筹码字形修复（12≠17）；地形道具暂缓到 #138；Actions 账单受阻，合入暂缓 | Track D |
 | 2026-10-06 | 用户 19:16：AI 美术法务闸门豁免（仍须登记来源）；新停止条件为汐屿对标 settlecoast，由大主管逐轮评判；G3D-JUDGE 评审截图与对照工具，round-1 已拍 | Track D |
 | 2026-10-06 | G3D-JUDGE round-2（Track D）：地形道具与岛屿海岸接入 SceneHost；round-2 对照图与 GAPS 自评；推到 #148（draft） | Track D |
+| 2026-10-06 | G3D-JUDGE round-2d2（Track D）：道具加密、更圆润，连续岩壁，海面去光晕 / 接缝，评审机位对齐参照；对照图与 GAPS 在 `round-2d2/` | Track D |

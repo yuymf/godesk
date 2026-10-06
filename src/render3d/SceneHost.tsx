@@ -546,6 +546,11 @@ export function SceneHost({
           }
           if (pose?.fov) cam.fov = pose.fov;
           cam.updateProjectionMatrix();
+          // 评审机位不受交互限位约束（俯视 / 远景）。
+          ctl.minDistance = 0;
+          ctl.maxDistance = Number.POSITIVE_INFINITY;
+          ctl.minPolarAngle = 0;
+          ctl.maxPolarAngle = Math.PI * 0.49;
           ctl.update();
           // 抑制建造 / 换手 / 掷骰的自动 reframe，保证截图机位稳定。
           motion.noteUserDrag(Number.POSITIVE_INFINITY);

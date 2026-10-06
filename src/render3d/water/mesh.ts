@@ -55,6 +55,13 @@ function farSeaRing(): BufferGeometry {
   outer.holes.push(hole);
   const geom = new ShapeGeometry(outer, 1);
   geom.rotateX(-Math.PI / 2);
+  // UV 与主水面（PlaneGeometry 2h×2h 旋到 XZ）同一映射：法线贴图切线空间与平铺频率一致，接缝不露。
+  const pos = geom.getAttribute("position");
+  const uv = geom.getAttribute("uv");
+  for (let i = 0; i < pos.count; i += 1) {
+    uv.setXY(i, pos.getX(i) / (2 * h) + 0.5, 0.5 - pos.getZ(i) / (2 * h));
+  }
+  uv.needsUpdate = true;
   return geom;
 }
 
@@ -130,7 +137,8 @@ export async function createWaterController(options: {
   far.userData.kind = "water";
   far.userData.nodeId = "water-far";
   mesh.add(far);
-  mesh.receiveShadow = true;
+  // round-2d2：水面不接收阴影 —— 阴影相机只罩住岛，罩外是亮的，会在海面上留一道直线接缝。
+  mesh.receiveShadow = false;
   mesh.castShadow = false;
   mesh.userData.kind = "water";
   mesh.userData.nodeId = "water";

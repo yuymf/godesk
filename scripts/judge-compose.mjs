@@ -32,6 +32,7 @@ const SHOTS = path.join(ROOT, `round-${round}`, "tidewell");
 const OUT = path.join(ROOT, `round-${round}`, "compare");
 const VIEWS = [
   ["a", "a-default", "默认整盘"],
+  ["a3", "a3-topdown", "俯视整岛"],
   ["b", "b-terrain-closeup", "地形近景"],
   ["c", "c-coast", "海岸 / 水面 / 崖壁 / 港口"],
   ["d", "d-hand-hud", "资源手牌 + HUD"],
@@ -56,7 +57,10 @@ async function listPng(dir) {
 function findRefs(refs, vp, letter, id) {
   const aliases = VP_ALIASES[vp] ?? [vp];
   const re = new RegExp(`^(${aliases.join("|")})[-_ ]?${letter}\\d*(?:[-_ .]|$)`, "i");
-  const all = refs.filter((f) => re.test(f)).sort();
+  // 更具体的视图（如 a3）自己的参照不再配给泛视图（a）。
+  const specific = VIEWS.map(([l]) => l).filter((l) => l !== letter && l.startsWith(letter));
+  const specificRe = specific.length ? new RegExp(`^(${aliases.join("|")})[-_ ]?(${specific.join("|")})(?:[-_ .]|$)`, "i") : null;
+  const all = refs.filter((f) => re.test(f) && !(specificRe && specificRe.test(f))).sort();
   const exact = all.find((f) => f.toLowerCase() === `${vp}-${id}.png`);
   return exact ? [exact, ...all.filter((f) => f !== exact)] : all;
 }

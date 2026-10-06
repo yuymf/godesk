@@ -2,7 +2,7 @@ import { PerspectiveCamera } from "three";
 import { describe, expect, it } from "vitest";
 import { dressingInputs, tileCenter, vertexWorld, withoutReplacedNodes } from "./hex-dressing";
 import { mapHexSettlementToScene } from "./mappers/hex-settlement";
-import { SIGN_KINDS, coastEdges, createIslandLayer, docksFor, outerTiles, signCell } from "./island";
+import { SIGN_KINDS, SKIRT_BOTTOM_Y, SKIRT_TOP_Y, coastEdges, coastWallGeometry, createIslandLayer, docksFor, outerTiles, signCell } from "./island";
 import { beginnerSceneInput } from "./terrain-dressing.fixture";
 
 const input = beginnerSceneInput();
@@ -23,6 +23,17 @@ describe("G3D-ISLAND island + coast", () => {
   it("finds the 12 outer hexes and the 30 coast edges of the beginner board", () => {
     expect(outerTiles(tiles)).toHaveLength(12);
     expect(coastEdges(tiles)).toHaveLength(30);
+  });
+
+  it("builds one continuous coast wall (30 edges × 3 segs × 5 rows) plus a cap per tile", () => {
+    const geom = coastWallGeometry(tiles);
+    const pos = geom.getAttribute("position");
+    expect(pos.count).toBe(30 * 3 * 5 * 6 + tiles.length * 18);
+    let minY = Infinity, maxY = -Infinity;
+    for (let i = 0; i < pos.count; i += 1) { minY = Math.min(minY, pos.getY(i)); maxY = Math.max(maxY, pos.getY(i)); }
+    expect(maxY).toBeCloseTo(SKIRT_TOP_Y, 5);
+    expect(minY).toBeCloseTo(SKIRT_BOTTOM_Y, 5);
+    geom.dispose();
   });
 
   it("docks point outward from the island, one per port", () => {

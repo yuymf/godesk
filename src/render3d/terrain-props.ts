@@ -13,7 +13,6 @@ import {
   BufferAttribute,
   BufferGeometry,
   Color,
-  ConeGeometry,
   CylinderGeometry,
   DodecahedronGeometry,
   Group,
@@ -32,8 +31,8 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import type { RenderTierId } from "./tiers";
 import { NUMBER_TOKEN_SCALE } from "./tokens";
 
-export type PropKind = "pine" | "sheep" | "trough" | "boulder" | "clay" | "bricks" | "sheaf" | "dune" | "pebble";
-export const PROP_KINDS: readonly PropKind[] = ["pine", "sheep", "trough", "boulder", "clay", "bricks", "sheaf", "dune", "pebble"];
+export type PropKind = "pine" | "sheep" | "trough" | "boulder" | "clay" | "bricks" | "sheaf" | "wheatrow" | "dune" | "pebble";
+export const PROP_KINDS: readonly PropKind[] = ["pine", "sheep", "trough", "boulder", "clay", "bricks", "sheaf", "wheatrow", "dune", "pebble"];
 
 /** 地形 → 道具（先放大件）。Tidewell 地形键见 runtime/adapters/hex-settlement。 */
 export const TERRAIN_PROPS: Record<string, readonly PropKind[]> = {
@@ -41,7 +40,7 @@ export const TERRAIN_PROPS: Record<string, readonly PropKind[]> = {
   sheep: ["trough", "sheep"],
   ore: ["boulder", "pebble"],
   brick: ["clay", "bricks"],
-  wheat: ["sheaf"],
+  wheat: ["wheatrow", "sheaf"],
   desert: ["dune", "pebble"],
 };
 
@@ -49,30 +48,34 @@ type Counts = Partial<Record<PropKind, number>>;
 /** 每格数量：terrain → kind → count。low 档全 0。 */
 export const PROP_COUNTS: Record<RenderTierId, Record<string, Counts>> = {
   high: {
-    wood: { pine: 24 },
-    sheep: { trough: 1, sheep: 9 },
-    ore: { boulder: 5, pebble: 7 },
-    brick: { clay: 4, bricks: 3 },
-    wheat: { sheaf: 16 },
-    desert: { dune: 3, pebble: 6 },
+    wood: { pine: 56 },
+    sheep: { trough: 1, sheep: 14 },
+    ore: { boulder: 7, pebble: 10 },
+    brick: { clay: 6, bricks: 3 },
+    wheat: { wheatrow: 30, sheaf: 3 },
+    desert: { dune: 4, pebble: 7 },
   },
   medium: {
-    wood: { pine: 14 },
-    sheep: { trough: 1, sheep: 5 },
-    ore: { boulder: 3, pebble: 4 },
-    brick: { clay: 3, bricks: 2 },
-    wheat: { sheaf: 10 },
-    desert: { dune: 2, pebble: 3 },
+    wood: { pine: 30 },
+    sheep: { trough: 1, sheep: 8 },
+    ore: { boulder: 4, pebble: 5 },
+    brick: { clay: 4, bricks: 2 },
+    wheat: { wheatrow: 18, sheaf: 2 },
+    desert: { dune: 3, pebble: 4 },
   },
   low: {},
 };
 
 /** 道具间最小间距（相邻两件取均值）。 */
 const SPACING: Record<PropKind, number> = {
-  pine: 0.1, sheep: 0.15, trough: 0.22, boulder: 0.2, clay: 0.22, bricks: 0.17, sheaf: 0.12, dune: 0.28, pebble: 0.08,
+  pine: 0.1, sheep: 0.16, trough: 0.22, boulder: 0.18, clay: 0.2, bricks: 0.17, sheaf: 0.12, wheatrow: 0.1, dune: 0.28, pebble: 0.07,
 };
 const CASTS: Record<PropKind, boolean> = {
-  pine: true, sheep: true, trough: true, boulder: true, clay: false, bricks: true, sheaf: true, dune: false, pebble: false,
+  pine: true, sheep: true, trough: true, boulder: true, clay: false, bricks: true, sheaf: true, wheatrow: true, dune: false, pebble: false,
+};
+/** 圆润有机体用平滑着色，岩石 / 砖保持平面着色。 */
+const SMOOTH: Record<PropKind, boolean> = {
+  pine: true, sheep: true, trough: false, boulder: false, clay: true, bricks: false, sheaf: true, wheatrow: true, dune: true, pebble: false,
 };
 
 /** 地块顶面高度（SceneHost sharedTileGeom 拉伸深度）。 */
@@ -102,6 +105,27 @@ function paint(geom: BufferGeometry, hex: string, jitter = 0): BufferGeometry {
   g.setAttribute("color", new BufferAttribute(colors, 3));
   if (g.getAttribute("uv")) g.deleteAttribute("uv");
   g.computeVertexNormals();
+  return g;
+}
+
+/** 按高度渐变的顶点色（保留原平滑法线；painterly 体积感）。 */
+function grad(geom: BufferGeometry, bottom: string, top: string, y0: number, y1: number, jitter = 0): BufferGeometry {
+  const g = geom.index ? geom.toNonIndexed() : geom;
+  const pos = g.getAttribute("position");
+  const colors = new Float32Array(pos.count * 3);
+  const a = new Color(bottom);
+  const b = new Color(top);
+  const c = new Color();
+  for (let i = 0; i < pos.count; i += 1) {
+    const t = Math.min(1, Math.max(0, (pos.getY(i) - y0) / Math.max(y1 - y0, 1e-6)));
+    const k = 1 + (jitter ? ((((i / 3) | 0) * 7919) % 97 / 97 - 0.5) * jitter : 0);
+    c.copy(a).lerp(b, t * t * (3 - 2 * t));
+    colors[i * 3] = Math.min(1, c.r * k);
+    colors[i * 3 + 1] = Math.min(1, c.g * k);
+    colors[i * 3 + 2] = Math.min(1, c.b * k);
+  }
+  g.setAttribute("color", new BufferAttribute(colors, 3));
+  if (g.getAttribute("uv")) g.deleteAttribute("uv");
   return g;
 }
 
@@ -135,24 +159,28 @@ function jag(geom: BufferGeometry, amount: number, seed: number): BufferGeometry
   return geom;
 }
 
-/** 松树：树干 + 三层错位圆锥，高约 0.4（色调由 instanceColor 再分深 / 中 / 浅三档）。 */
+/** 松树：圆润的分层针叶（车削轮廓，三段裙摆），自下而上深绿 → 嫩绿，高约 0.43。 */
 function pineGeometry(): BufferGeometry {
+  const profile = [
+    [0, 0.05], [0.13, 0.07], [0.125, 0.11], [0.085, 0.15], [0.112, 0.175], [0.09, 0.215],
+    [0.062, 0.245], [0.082, 0.27], [0.055, 0.31], [0.04, 0.35], [0.018, 0.405], [0, 0.432],
+  ].map(([x, y]) => new Vector2(x!, y!));
   return merged([
-    paint(at(new CylinderGeometry(0.018, 0.026, 0.08, 6), 0, 0.04, 0), "#5e4128"),
-    paint(at(new ConeGeometry(0.12, 0.16, 7), 0, 0.15, 0), "#2d5a37", 0.2),
-    paint(at(new ConeGeometry(0.095, 0.15, 7), 0, 0.24, 0, 1, 1, 1, 0.4), "#386a42", 0.2),
-    paint(at(new ConeGeometry(0.065, 0.13, 7), 0, 0.33, 0, 1, 1, 1, 0.9), "#467c4e", 0.2),
+    grad(at(new CylinderGeometry(0.018, 0.026, 0.07, 5, 1, true), 0, 0.035, 0), "#4a3220", "#6b4a2c", 0, 0.07),
+    grad(new LatheGeometry(profile, 8), "#1f4a2c", "#6aa45a", 0.05, 0.43, 0.08),
   ]);
 }
 
-/** 羊：蓬松身体 + 黑脸 + 耳 + 四腿，高约 0.13，朝 +X。 */
+/** 羊：大而亮的圆润羊毛身体（主体 + 三团羊毛）+ 深色脸、耳、四腿，高约 0.17，朝 +X。 */
 function sheepGeometry(): BufferGeometry {
-  const leg = (x: number, z: number) => paint(at(new BoxGeometry(0.02, 0.055, 0.02), x, 0.028, z), "#2f2a26");
+  const leg = (x: number, z: number) => grad(at(new CylinderGeometry(0.012, 0.011, 0.07, 4, 1, true), x, 0.035, z), "#2a2522", "#3a332e", 0, 0.07);
+  const wool = (x: number, y: number, z: number, r: number) => grad(at(new SphereGeometry(r, 7, 4), x, y, z), "#ece6dc", "#ffffff", y - r, y + r);
   return merged([
-    paint(jag(new IcosahedronGeometry(0.066, 1), 0.08, 3), "#f3efe7", 0.1).applyMatrix4(new Matrix4().compose(new Vector3(0, 0.09, 0), new Quaternion(), new Vector3(1.4, 0.9, 1.0))),
-    paint(at(new IcosahedronGeometry(0.034, 0), 0.098, 0.11, 0, 1.2, 0.95, 0.85), "#2f2a26"),
-    paint(at(new BoxGeometry(0.016, 0.012, 0.06), 0.088, 0.135, 0), "#2f2a26"),
-    leg(0.048, 0.032), leg(0.048, -0.032), leg(-0.048, 0.032), leg(-0.048, -0.032),
+    grad(at(new SphereGeometry(0.085, 10, 6), 0, 0.115, 0, 1.38, 0.92, 1.02), "#e3ddd2", "#ffffff", 0.04, 0.2),
+    wool(-0.03, 0.165, 0.025, 0.045), wool(0.035, 0.168, -0.02, 0.042), wool(-0.06, 0.15, -0.03, 0.04),
+    grad(at(new SphereGeometry(0.038, 6, 4), 0.122, 0.135, 0, 1.25, 0.95, 0.85), "#2e2824", "#4a413a", 0.1, 0.17),
+    grad(at(new BoxGeometry(0.016, 0.012, 0.07), 0.112, 0.162, 0), "#2e2824", "#2e2824", 0, 1),
+    leg(0.055, 0.035), leg(0.055, -0.035), leg(-0.055, 0.035), leg(-0.055, -0.035),
   ]);
 }
 
@@ -203,6 +231,17 @@ function sheafGeometry(): BufferGeometry {
   ]);
 }
 
+/** 麦垄：一条金色麦穗垄（底垄 + 5 簇竖长穗团），长约 0.27，沿 X。成行铺满麦田。 */
+function wheatRowGeometry(): BufferGeometry {
+  const parts: BufferGeometry[] = [grad(at(new BoxGeometry(0.28, 0.04, 0.075), 0, 0.02, 0), "#8f6a1c", "#b5841f", 0, 0.04)];
+  for (let i = 0; i < 7; i += 1) {
+    const x = -0.12 + i * 0.04;
+    const h = 1.6 + ((i * 37) % 5) * 0.1;
+    parts.push(grad(at(new SphereGeometry(0.036, 6, 4), x, 0.07, (i % 2 ? 0.014 : -0.014), 1.05, h, 1.05), "#b07a14", "#f2c447", 0.0, 0.14));
+  }
+  return merged(parts);
+}
+
 /** 沙丘：拉长的半球，比沙地略深。 */
 function duneGeometry(): BufferGeometry {
   return paint(jag(at(new SphereGeometry(0.12, 10, 4, 0, Math.PI * 2, 0, Math.PI / 2), 0, 0, 0, 1.7, 0.42, 1), 0.05, 6), "#d2b47e", 0.12);
@@ -219,7 +258,7 @@ function pebbleGeometry(): BufferGeometry {
 
 const BUILDERS: Record<PropKind, () => BufferGeometry> = {
   pine: pineGeometry, sheep: sheepGeometry, trough: troughGeometry, boulder: boulderGeometry, clay: clayGeometry,
-  bricks: bricksGeometry, sheaf: sheafGeometry, dune: duneGeometry, pebble: pebbleGeometry,
+  bricks: bricksGeometry, sheaf: sheafGeometry, wheatrow: wheatRowGeometry, dune: duneGeometry, pebble: pebbleGeometry,
 };
 
 export function buildPropGeometry(kind: PropKind): BufferGeometry {
@@ -257,7 +296,11 @@ export function inPropRegion(dx: number, dz: number): boolean {
 }
 
 export type PropTile = { q: number; r: number; terrain: string; center: readonly [number, number, number] };
-export type PropPlacement = { kind: PropKind; terrain: string; x: number; y: number; z: number; yaw: number; scale: number; tone: number };
+export type PropPlacement = {
+  kind: PropKind; terrain: string; x: number; y: number; z: number; yaw: number; scale: number;
+  /** 纵向挤压 / 拉伸系数（squash-and-stretch）。 */
+  stretch: number; tone: number; hue: number;
+};
 
 /** 一格的全部道具（纯函数）。麦束按行排；其余拒绝采样。 */
 export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] {
@@ -271,19 +314,23 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
     if (want <= 0) continue;
     const s = SPACING[kind];
     let candidates: Array<[number, number]> = [];
-    if (kind === "sheaf") {
-      // 成行：行距 0.17、列距 0.14，整片随格子转 0° / 60° / 120°。
-      const rot = Math.floor(rand() * 3) * (Math.PI / 3);
-      const cr = Math.cos(rot);
-      const sr = Math.sin(rot);
-      for (let row = -4; row <= 4; row += 1) {
-        for (let col = -5; col <= 5; col += 1) {
-          const lx = col * 0.14 + (row % 2 ? 0.07 : 0);
-          const lz = row * 0.17;
-          candidates.push([lx * cr - lz * sr, lx * sr + lz * cr]);
+    let rowYaw = 0;
+    if (kind === "wheatrow") {
+      // 麦垄：行距 0.105、垄长 0.34，整片随格子转 0° / 60° / 120°；两端都要在可摆放区内。
+      rowYaw = Math.floor(rand() * 3) * (Math.PI / 3);
+      const cr = Math.cos(rowYaw);
+      const sr = Math.sin(rowYaw);
+      const rot = (lx: number, lz: number): [number, number] => [lx * cr - lz * sr, lx * sr + lz * cr];
+      for (let row = -7; row <= 7; row += 1) {
+        for (let col = -4; col <= 4; col += 1) {
+          const lx = col * 0.275 + (row % 2 ? 0.1375 : 0);
+          const lz = row * 0.1;
+          const c = rot(lx, lz);
+          const e1 = rot(lx - 0.12, lz);
+          const e2 = rot(lx + 0.12, lz);
+          if (inPropRegion(...c) && inPropRegion(...e1) && inPropRegion(...e2)) candidates.push(c);
         }
       }
-      candidates = candidates.filter(([x, z]) => inPropRegion(x, z));
       for (let i = candidates.length - 1; i > 0; i -= 1) {
         const j = Math.floor(rand() * (i + 1));
         [candidates[i], candidates[j]] = [candidates[j]!, candidates[i]!];
@@ -293,7 +340,7 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
     for (let attempt = 0; placed < want && attempt < 1200; attempt += 1) {
       let dx: number;
       let dz: number;
-      if (kind === "sheaf") {
+      if (kind === "wheatrow") {
         const c = candidates[attempt];
         if (!c) break;
         [dx, dz] = c;
@@ -309,9 +356,11 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
         x: tile.center[0] + dx,
         y: TILE_TOP,
         z: tile.center[2] + dz,
-        yaw: kind === "sheaf" ? rand() * 0.6 : rand() * Math.PI * 2,
-        scale: kind === "pine" ? 0.9 + rand() * 0.55 : 0.95 + rand() * 0.3,
+        yaw: kind === "wheatrow" ? -rowYaw + (rand() - 0.5) * 0.06 : rand() * Math.PI * 2,
+        scale: kind === "pine" ? 0.85 + rand() * 0.6 : kind === "sheep" ? 1.05 + rand() * 0.25 : 0.95 + rand() * 0.3,
+        stretch: kind === "pine" ? 0.85 + rand() * 0.35 : kind === "wheatrow" ? 1 : 0.92 + rand() * 0.16,
         tone: rand(),
+        hue: rand(),
       });
       placed += 1;
     }
@@ -337,10 +386,18 @@ const PINE_TONES = [new Color(0.8, 0.88, 0.82), new Color(1, 1, 1), new Color(1.
 const PEBBLE_TINT: Record<string, Color> = { desert: new Color("#e6d2a6"), ore: new Color("#9a9ea4") };
 
 function toneFor(p: PropPlacement, out: Color): Color {
-  if (p.kind === "pine") return out.copy(PINE_TONES[Math.floor(p.tone * PINE_TONES.length) % PINE_TONES.length]!);
-  if (p.kind === "pebble") return out.copy(PEBBLE_TINT[p.terrain] ?? PEBBLE_TINT.desert!);
-  const k = 0.92 + p.tone * 0.16;
-  return out.setRGB(k, k, k);
+  if (p.kind === "pine") out.copy(PINE_TONES[Math.floor(p.tone * PINE_TONES.length) % PINE_TONES.length]!);
+  else if (p.kind === "pebble") out.copy(PEBBLE_TINT[p.terrain] ?? PEBBLE_TINT.desert!);
+  else {
+    const k = 0.92 + p.tone * 0.16;
+    out.setRGB(k, k, k);
+  }
+  // 每实例轻微色相 / 明度抖动，避免整齐划一。
+  const j = p.hue - 0.5;
+  out.r = Math.max(0, out.r * (1 + j * 0.06));
+  out.g = Math.max(0, out.g * (1 - Math.abs(j) * 0.03));
+  out.b = Math.max(0, out.b * (1 - j * 0.06));
+  return out;
 }
 
 // ── 场景图层 ───────────────────────────────────────────────────────────────
@@ -357,6 +414,7 @@ export function createTerrainPropLayer(): TerrainPropLayer {
   const group = new Group();
   group.name = "terrain-props";
   const material = new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85, metalness: 0 });
+  const smoothMaterial = new MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.9, metalness: 0 });
   const geometries = new Map<PropKind, BufferGeometry>();
   let key = "";
   let tier: RenderTierId | null = null;
@@ -388,13 +446,13 @@ export function createTerrainPropLayer(): TerrainPropLayer {
           geom = buildPropGeometry(kind);
           geometries.set(kind, geom);
         }
-        const mesh = new InstancedMesh(geom, material, list.length);
+        const mesh = new InstancedMesh(geom, SMOOTH[kind] ? smoothMaterial : material, list.length);
         mesh.name = `prop:${kind}`;
         mesh.castShadow = castShadow && CASTS[kind];
         mesh.receiveShadow = true;
         list.forEach((p, i) => {
           quat.setFromAxisAngle(up, p.yaw);
-          matrix.compose(pos.set(p.x, p.y, p.z), quat, scl.setScalar(p.scale));
+          matrix.compose(pos.set(p.x, p.y, p.z), quat, scl.set(p.scale, p.scale * p.stretch, p.scale));
           mesh.setMatrixAt(i, matrix);
           mesh.setColorAt(i, toneFor(p, tint));
         });
@@ -416,6 +474,7 @@ export function createTerrainPropLayer(): TerrainPropLayer {
       for (const g of geometries.values()) g.dispose();
       geometries.clear();
       material.dispose();
+      smoothMaterial.dispose();
       key = "";
     },
   };

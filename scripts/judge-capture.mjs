@@ -100,8 +100,9 @@ async function shot(page, vp, id, preset, files) {
   await page.waitForTimeout(500);
   const canvas = path.join(OUT, `${vp.id}-${id}.png`);
   const whole = path.join(OUT, `${vp.id}-${id}-page.png`);
-  await page.screenshot({ path: whole, fullPage: false });
-  await host.screenshot({ path: canvas, animations: "disabled" });
+  // box 上 SwiftShader 在高负载时一帧可达数秒：放宽截图超时。
+  await page.screenshot({ path: whole, fullPage: false, timeout: 120_000 });
+  await host.screenshot({ path: canvas, animations: "disabled", timeout: 120_000 });
   files.push({ id, preset, canvas, page: whole });
   log(vp.id, id, "→", canvas);
 }
@@ -192,6 +193,7 @@ async function runViewport(browser, projectId, vpKey) {
     await shot(page, vp, "a-default", "a-default", files);
     await shot(page, vp, "b-terrain-closeup", "b-terrain", files);
     await shot(page, vp, "c-coast", "c-coast", files);
+    await shot(page, vp, "a3-topdown", "a3-topdown", files);
     await page.evaluate(() => globalThis.__g3dJudge.set("a-default"));
   }
   // 掷骰。
