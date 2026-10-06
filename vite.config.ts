@@ -7,6 +7,8 @@ import react from "@vitejs/plugin-react";
  * G3D-11：GLTF/KTX2/meshopt 加载器 → `render3d-assets-*`（≤ 60 KB gzip）。
  * G3D-08：水体 shader → `tide-water-*`（懒加载，不计入 render3d core 210 KB）。
  * Basis 转码器经 import.meta.url 产出独立文件，不计入 60 KB。
+ * 首页：Vite 预加载 helper 与纯数据资产清单各自成小 chunk（`vite-preload-*` / `asset-manifest-*`），
+ * 否则 Rollup 会把它们并进 tide-water / render3d-assets，首页入口因此静态拉起整份 three（#138 Lighthouse）。
  */
 export default defineConfig({
   plugins: [react()],
@@ -25,6 +27,9 @@ export default defineConfig({
             : "assets/[name]-[hash].js",
         manualChunks(id) {
           const normalized = id.replace(/\\/g, "/");
+          // Keep the homepage entry free of three: these two are needed on every route.
+          if (normalized.includes("vite/preload-helper")) return "vite-preload";
+          if (normalized.endsWith("/src/render3d/assets/manifest.ts")) return "asset-manifest";
           if (
             normalized.includes("/src/render3d/assets/") ||
             normalized.includes("/examples/jsm/loaders/GLTFLoader") ||
@@ -45,6 +50,9 @@ export default defineConfig({
         },
         chunkFileNames(chunkInfo) {
           const facade = chunkInfo.facadeModuleId?.replace(/\\/g, "/") ?? "";
+          if (chunkInfo.name === "vite-preload" || chunkInfo.name === "asset-manifest") {
+            return "assets/[name]-[hash].js";
+          }
           if (chunkInfo.name === "render3d-assets") {
             return "assets/render3d-assets-[hash].js";
           }

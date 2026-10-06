@@ -11,7 +11,7 @@ Link may be exposed.
 
 Supersession note: ADR 0014 supersedes only the two historical Consequences
 clauses marked below: the GameFactory-3A "not a 3D engine target" sentence and
-the `港口十三号` / settlecoast dimensional presentation clause. The
+the `港口十三号` dimensional presentation clause. The
 Playability Floor and all other ADR 0012 contracts remain accepted.
 
 ## Context
@@ -77,6 +77,6 @@ LLM-authored briefs remain allowed. Accepted Actions remain Kernel-only
   click a scored button.
 - **Partially superseded by ADR 0014.** GameFactory-3A is a process reference (plan, mechanic/UI contract, play to
   validate). It is not a 3D engine target.
-- **Superseded by ADR 0014.** `港口十三号` / settlecoast visual quality is the **2D presentation bar** for
+- **Superseded by ADR 0014.** `港口十三号` visual quality is the **2D presentation bar** for
   harbor Room tables (token hierarchy, cargo/dock affordances, spectator
-  legibility). It is not a settlecoast port and not a GameFactory-3D build.
+  legibility). It is an original design, not a port of any third-party product, and not a GameFactory-3D build.

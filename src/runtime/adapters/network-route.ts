@@ -3,7 +3,7 @@
  *
  * Scope: claim unclaimed undirected edges on a fixed city graph; first player
  * whose claimed edges form a path between two fixed terminal hubs wins.
- * Not Ticket to Ride (no tickets deck, multi-color routes, or scoring table).
+ * Minimal original route game (no tickets deck, multi-color routes, or scoring table).
  *
  * Win condition (deterministic): terminals `A` (north) ↔ `F` (south).
  */

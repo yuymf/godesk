@@ -177,7 +177,7 @@ export function hexSettlementKernel(
     : null;
 }
 
-/** Catan / hex-settlement — dedicated hex board HUD, never ScoreTrackRoom. */
+/** hex-island / hex-settlement — dedicated hex board HUD, never ScoreTrackRoom. */
 export function isHexSettlement(ruleSystem: RuleSystem): boolean {
   return Boolean(hexSettlementKernel(ruleSystem));
 }

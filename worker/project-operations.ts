@@ -2253,13 +2253,28 @@ export function buildWarnings(record: ProjectRecord) {
   ];
 }
 
+/**
+ * Stored-data compat (pre-public rename): states persisted before the rename
+ * keep the hex-island board under the legacy key below (stored id: the string
+ * literal is intentionally kept; only the symbol was renamed). Kernel replay always rebuilds `hexIsland`; this covers the
+ * few paths that return a stored state without replaying the log.
+ */
+export const LEGACY_HEX_ISLAND_STATE_KEY = "catan";
+export function withHexIslandStateKey<T extends SessionState | undefined>(state: T): T {
+  if (!state) return state;
+  const legacy = (state as unknown as Record<string, unknown>)[LEGACY_HEX_ISLAND_STATE_KEY];
+  if (legacy === undefined || state.hexIsland) return state;
+  const { [LEGACY_HEX_ISLAND_STATE_KEY]: _legacy, ...rest } = state as unknown as Record<string, unknown>;
+  return { ...rest, hexIsland: legacy } as unknown as T;
+}
+
 export function visibleSession(
   session: StoredSharedSession,
   viewerSeat: number | null = null,
 ): SharedSessionSnapshot {
   const scoped = {
     ...session,
-    state: scopeSessionState(session.state, viewerSeat),
+    state: scopeSessionState(withHexIslandStateKey(session.state), viewerSeat),
     acceptedActions: session.acceptedActions.map((action) => ({
       ...action,
       state: scopeSessionState(action.state, viewerSeat),
@@ -2272,11 +2287,11 @@ export function visibleSession(
 }
 
 
-/** Persist action logs without per-ply genre blobs (catan/othello/…).
+/** Persist action logs without per-ply genre blobs (hexIsland/othello/…).
  *  Reconstruct rebuilds full state from intentId/actionId/payload + seed.
  *  Keeps DO/SQLite under SQLITE_TOOBIG for long seeded bot runs (~800+ plies).
  */
-function slimAcceptedActionForStorage(action: AcceptedAction): AcceptedAction {
+export function slimAcceptedActionForStorage(action: AcceptedAction): AcceptedAction {
   const slimState: SessionState = {
     turn: action.state.turn,
     activeSeat: action.state.activeSeat,
@@ -2329,20 +2344,143 @@ export function reconstructActions(
   return { state, acceptedActions: reconstructed };
 }
 
+/**
+ * G3D-04c: kernels whose per-ply genre state is large and whose games run
+ * long (hundreds of actions). Rooms on these kernels get periodic full-state
+ * snapshots and a slim per-action log in Room output (the client only reads
+ * `room.state` for these genres; per-action hex-island/othello/network blobs were
+ * never rendered).
+ */
+const SNAPSHOT_KERNELS = new Set([
+  "hex-settlement-v1",
+  "disc-flipping-v1",
+  "network-route-v1",
+]);
+
+export const SESSION_SNAPSHOT_EVERY = 50;
+
+export interface SessionStateSnapshot {
+  /** acceptedActions.length the state corresponds to. */
+  count: number;
+  /** intentId of action #count (guards against a diverged log). */
+  lastIntentId: string;
+  state: SessionState;
+}
+
+export function sessionSnapshotKey(sessionId: string) {
+  return `session-snapshot:${sessionId}`;
+}
+
+export function buildUsesSessionSnapshots(build: StoredPlayableBuild) {
+  const runtime = executableRuntime(build.ruleSystem);
+  return Boolean(runtime && SNAPSHOT_KERNELS.has(runtime.kernel.type));
+}
+
+/** Snapshot to persist after an action, or null when none is due. */
+export function sessionSnapshotFor(
+  build: StoredPlayableBuild,
+  session: Pick<StoredSharedSession, "acceptedActions" | "state">,
+): SessionStateSnapshot | null {
+  const count = session.acceptedActions.length;
+  if (!count || count % SESSION_SNAPSHOT_EVERY !== 0) return null;
+  if (!buildUsesSessionSnapshots(build)) return null;
+  return {
+    count,
+    lastIntentId: session.acceptedActions[count - 1].intentId,
+    state: session.state,
+  };
+}
+
+/** Room output form of one accepted action (slim for snapshot kernels). */
+export function roomLogAction(
+  build: StoredPlayableBuild,
+  action: AcceptedAction,
+): AcceptedAction {
+  return buildUsesSessionSnapshots(build)
+    ? slimAcceptedActionForStorage(action)
+    : action;
+}
+
+/**
+ * Rebuild the authoritative Room state through the Executable Kernel.
+ * With a valid snapshot only the tail after it is replayed; otherwise the
+ * whole log is replayed (legacy rooms, non-snapshot kernels). Both paths run
+ * the same `acceptIntent` and yield the same state (see room-snapshot tests).
+ */
 export function reconstructSession(
   session: StoredSharedSession,
   build: StoredPlayableBuild,
+  snapshot?: SessionStateSnapshot | null,
 ): StoredSharedSession {
-  const reconstructed = reconstructActions(
+  const slim = buildUsesSessionSnapshots(build);
+  const usable =
+    slim &&
+    snapshot &&
+    snapshot.count > 0 &&
+    snapshot.count <= session.acceptedActions.length &&
+    session.acceptedActions[snapshot.count - 1]?.intentId === snapshot.lastIntentId
+      ? snapshot
+      : null;
+  if (!usable) {
+    const reconstructed = reconstructActions(
+      build,
+      session.acceptedActions,
+      session.seed,
+    );
+    return {
+      ...session,
+      state: reconstructed.state,
+      acceptedActions: slim
+        ? reconstructed.acceptedActions.map(slimAcceptedActionForStorage)
+        : reconstructed.acceptedActions,
+    };
+  }
+  const tail = replayTail(
     build,
-    session.acceptedActions,
+    usable.state,
+    session.acceptedActions.slice(usable.count),
+    usable.count,
     session.seed,
   );
   return {
     ...session,
-    state: reconstructed.state,
-    acceptedActions: reconstructed.acceptedActions,
+    state: tail.state,
+    acceptedActions: [
+      ...session.acceptedActions.slice(0, usable.count).map(slimAcceptedActionForStorage),
+      ...tail.acceptedActions.map(slimAcceptedActionForStorage),
+    ],
   };
+}
+
+/** Apply logged actions after `offset` starting from `state` (kernel only). */
+export function replayTail(
+  build: StoredPlayableBuild,
+  state: SessionState,
+  tail: GameReplay["acceptedActions"],
+  offset: number,
+  seed = 42,
+) {
+  const runtime = executableRuntime(build.ruleSystem);
+  if (!runtime) throw new Error("runtime_not_executable");
+  let current = state;
+  const acceptedActions = tail.map((logged, index) => {
+    const accepted = acceptIntent(
+      current,
+      runtime,
+      {
+        intentId: logged.intentId,
+        seat: logged.seat,
+        actionId: logged.actionId,
+        payload: logged.payload,
+      },
+      offset + index + 1,
+      seed,
+    );
+    if (!accepted) throw new Error("action_log_invalid");
+    current = accepted.state;
+    return accepted;
+  });
+  return { state: current, acceptedActions };
 }
 
 export function reconstructReplay(
