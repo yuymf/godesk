@@ -213,8 +213,17 @@ function batchableKind(kind: SceneNode["kind"]): boolean {
     kind === "decor" ||
     kind === "settlement" ||
     kind === "city" ||
-    kind === "robber"
+    kind === "robber" ||
+    kind === "number-token" ||
+    kind === "port" ||
+    kind === "ship"
   );
+}
+
+let SHARED_NUMBER_GEOM: BufferGeometry | null = null;
+function sharedNumberGeom(): BufferGeometry {
+  if (!SHARED_NUMBER_GEOM) SHARED_NUMBER_GEOM = new CylinderGeometry(0.22, 0.22, 0.06, 24);
+  return SHARED_NUMBER_GEOM;
 }
 
 function geomForBatch(node: SceneNode): BufferGeometry {
@@ -222,7 +231,14 @@ function geomForBatch(node: SceneNode): BufferGeometry {
   if (node.kind === "tile") return sharedTileGeom();
   if (node.kind === "road") return tide.ready ? tide.road : sharedRoadGeom();
   if (node.kind === "decor") return geometryForNode(node, tide);
-  if (node.kind === "settlement" || node.kind === "city" || node.kind === "robber") {
+  if (node.kind === "number-token") return sharedNumberGeom();
+  if (
+    node.kind === "settlement" ||
+    node.kind === "city" ||
+    node.kind === "robber" ||
+    node.kind === "port" ||
+    node.kind === "ship"
+  ) {
     return geometryForNode(node, tide);
   }
   return sharedDecorGeom();
@@ -246,7 +262,12 @@ function createNodeObject(node: SceneNode, caps: TierCaps, library: MaterialLibr
 
   if (pools && batchableKind(node.kind)) {
     const geom = geomForBatch(node);
-    const castShadow = node.kind === "tile" ? caps.tilesCastShadow : node.kind !== "number-token";
+    const castShadow =
+      node.kind === "number-token"
+        ? false
+        : node.kind === "tile"
+          ? caps.tilesCastShadow
+          : true;
     const poolKey = `${node.kind}:${key}`;
     const { index } = pools.acquire(poolKey, geom, mat, castShadow);
     const handle = new Object3D();
@@ -379,6 +400,7 @@ export function SceneHost({
   const [pbrState, setPbrState] = useState<"off" | "pending" | "512" | "256" | "error">("pending");
   /** G3D-13: flip when pieces/decor/props GLBs replace procedural placeholders. */
   const [modelsReady, setModelsReady] = useState(false);
+  const modelsRemountedRef = useRef(false);
 
   function reframe(focus: readonly [number, number, number], id: string) {
     const motion = motionRef.current;
@@ -817,14 +839,12 @@ export function SceneHost({
   useEffect(() => {
     const host = reconcileHostRef.current;
     if (!host || !hexSettlement) return;
-    // When GLB templates arrive, drop prior procedural instances so pools rebuild.
-    if (modelsReady && modelRef.current) {
-      for (const object of [...registryRef.current.values()]) {
-        host.root.remove(object);
-        host.disposeObject(object);
-      }
-      registryRef.current.clear();
-      modelRef.current = null;
+    // When GLB templates arrive, remount the WebGL host so InstancedMesh pools
+    // are created against the final GLB geometries (avoids duplicate pool draws).
+    if (modelsReady && modelRef.current && !modelsRemountedRef.current) {
+      modelsRemountedRef.current = true;
+      setHostEpoch((epoch) => epoch + 1);
+      return;
     }
     const prev = modelRef.current;
     const next = mapHexSettlementToScene(hexSettlement);
