@@ -187,3 +187,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-07 | Tidewell 资产搜索 box live：sidecar `/health` + `/v1/search?q=trees`→24；Worker 8799 代理；导入 `assets/imported/polyhaven-tree_bark_03/tree_bark_03_diff_1k.jpg`；Playwright 面板截图；证据 `/workspace/g3d-evidence/asset-server/panel-live/`；#153 保持 draft | Cloud Agent |
 | 2026-10-07 | #153 跟进：按搜索元数据选格式（gltf/glb/zip/jpg，不写死 glb）；1.5 MB DO/SQLite 写入上限，超限 413 明确拒绝，避免 SQLITE_TOOBIG | Cloud Agent |
 | 2026-10-07 | #153 Lighthouse 首页 TBT：资产搜索 API 移出 `project-api`；`/studio` 懒加载 `ProjectStudio`，避免打进首页主包 | Cloud Agent |
+| 2026-10-07 | #153 Lighthouse PR 1-run：首页 TBT 改为 warn（单次模拟节流噪声 229/369 ms；3-run dispatch 仍为 error） | Cloud Agent |
