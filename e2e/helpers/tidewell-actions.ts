@@ -33,4 +33,9 @@ export async function claimTidewellSeat(page: Page, seat: string | number): Prom
   }
   await expect(select).toBeVisible({ timeout: 10_000 });
   await select.selectOption(String(seat));
+  // Menu panel is position:fixed over the turn column — close so primary CTA is clickable.
+  if ((await menu.count()) > 0 && (await menu.getAttribute("open")) !== null) {
+    await menu.locator("summary").click();
+    await expect(menu).not.toHaveAttribute("open", { timeout: 5_000 });
+  }
 }
