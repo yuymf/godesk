@@ -250,6 +250,15 @@ export function SceneHost({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const hitRootRef = useRef<Object3D | null>(null);
   const motionRef = useRef<MotionController | null>(null);
+  /** G3D-08 tide water (lazy chunk). */
+  const waterRef = useRef<{
+    update(now: number): void;
+    setTier(tier: "high" | "medium" | "low"): void;
+    rebuildDistance(model: SceneModel | null): void;
+    dispose(): void;
+    lastDistanceMs: number;
+  } | null>(null);
+  const waterAliveRef = useRef(false);
   const controlsRef = useRef<OrbitControls | null>(null);
   const lastSeatRef = useRef<number | null>(null);
   const diceSeedRef = useRef(1);
@@ -385,6 +394,9 @@ export function SceneHost({
     scene.add(contentRoot);
     contentRootRef.current = contentRoot;
     reconcileHostRef.current = buildHost(contentRoot, () => caps, library, motion);
+
+    // G3D-08: water mounts on first hex reconcile (lazy chunk); smoke path keeps BoxGeometry ground.
+    waterAliveRef.current = true;
     const hitRoot = new Scene();
     scene.add(hitRoot);
     hitRootRef.current = hitRoot;
@@ -446,6 +458,7 @@ export function SceneHost({
       rig.applyCaps(next);
       applyEnvironment(next);
       library.setClearcoat(next.id === "high");
+      waterRef.current?.setTier(next.id);
       markShadowsDirty();
       container.dataset.shadowMapSize = String(next.shadowMapSize);
       // Tile castShadow: update existing meshes
@@ -562,6 +575,7 @@ export function SceneHost({
       }
 
       motion.update(now);
+      waterRef.current?.update(now);
       controls.update();
       // 阴影：内容 / 档位变化后 SHADOW_REFRESH_MS 内逐帧重绘，之后复用（方向光阴影与机位无关）。
       if (now < shadowDirtyUntil || shadowFrames < 2) {
@@ -588,6 +602,9 @@ export function SceneHost({
       renderer.domElement.removeEventListener("pointerup", onPointerUp);
       observer?.disconnect();
       // Fading objects detach + dispose via their completion callbacks.
+      waterAliveRef.current = false;
+      waterRef.current?.dispose();
+      waterRef.current = null;
       motion.finishAll();
       controls.removeEventListener("start", onControlsStart);
       controls.removeEventListener("end", onControlsStart);
@@ -657,9 +674,45 @@ export function SceneHost({
     // 阴影相机只在布局（地块集合）变化时按包围球重算一次（§4.3）。
     const tileKey = (model: SceneModel | null) =>
       model ? model.nodes.filter((node) => node.kind === "tile").map((node) => node.id).join("|") : "";
-    if (tileKey(prev) !== tileKey(next)) {
+    const tilesChanged = tileKey(prev) !== tileKey(next);
+    if (tilesChanged) {
       const bounds = islandBounds(next.nodes);
       rigRef.current?.fitToBounds(bounds.center, bounds.radius);
+    }
+    // G3D-08: first hex model mounts water; later tile-layout changes rebuild the coast field.
+    if (!waterRef.current) {
+      void import("./water").then(async ({ createWaterController }) => {
+        const renderer = rendererRef.current;
+        const root = contentRootRef.current;
+        const el = containerRef.current;
+        if (!renderer || !root || !waterAliveRef.current || waterRef.current) return;
+        const tierAttr = el?.dataset.tier;
+        const tier =
+          tierAttr === "high" || tierAttr === "medium" || tierAttr === "low" ? tierAttr : "medium";
+        try {
+          const water = await createWaterController({
+            renderer,
+            parent: root,
+            model: next,
+            tier,
+          });
+          if (!waterAliveRef.current || !contentRootRef.current) {
+            water.dispose();
+            return;
+          }
+          waterRef.current = water;
+          if (el) {
+            el.dataset.water = "on";
+            el.dataset.waterDistMs = String(Math.round(water.lastDistanceMs));
+          }
+        } catch (error) {
+          console.warn("[godesk.water] mount failed", error);
+        }
+      });
+    } else if (tilesChanged) {
+      waterRef.current.rebuildDistance(next);
+      const el = containerRef.current;
+      if (el) el.dataset.waterDistMs = String(Math.round(waterRef.current.lastDistanceMs));
     }
     // 覆盖 G3D-09 放置 / 强盗 / 骰子动效时长（SHADOW_REFRESH_MS ≥ 900 ms）。
     markShadowsDirtyRef.current();
