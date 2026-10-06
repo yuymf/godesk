@@ -650,12 +650,10 @@ body:has(.room-view-tidewell-immersive) {
   overflow: visible;
 }
 
-/* Mobile bottom chrome helpers (JS toggles .is-open on table sheet) */
-.tidewell-mobile-bar {
-  display: none;
-}
+/* Mobile bottom chrome — hidden on desktop (sheet duplicates dock content) */
+.tidewell-mobile-bar,
 .tidewell-table-sheet {
-  display: contents;
+  display: none;
 }
 
 /* —— Mobile ≤800: board fullscreen + table sheet —— */
