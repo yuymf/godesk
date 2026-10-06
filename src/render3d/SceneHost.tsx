@@ -5,7 +5,6 @@ import {
   CylinderGeometry,
   ExtrudeGeometry,
   Mesh,
-  MeshStandardMaterial,
   Object3D,
   PerspectiveCamera,
   Scene,
@@ -695,99 +694,74 @@ export function SceneHost({
             demo: Boolean(demo),
           };
         },
-        /** round-7 ④：非实例 Mesh 大弧 hop（InstancedMesh 在 headless 录像里几乎看不见位移）. */
+        /**
+         * round-7 ④：隐藏 InstancedMesh 强盗，换成同款斗篷 Mesh 做可见抛物线 hop
+         * （headless 录像对 instanceMatrix 不敏感；真实 Mesh 会进画面）。禁止金球/DOM ghost。
+         */
         playMotionDemo(): { hopMs: number; reduced: boolean } | false {
           const robber = registryRef.current.get("robber");
           const root = contentRootRef.current;
-          if (!robber || !root) return false;
+          const kit = hexKit;
+          if (!robber || !root || !kit) return false;
           const reduced = prefersReducedMotion();
-          const hopMs = 2400;
-          const apexHeight = 2.15;
+          const hopMs = 2600;
+          const apexHeight = 1.85;
           const from: [number, number, number] = [robber.position.x, robber.position.y, robber.position.z];
-          const to: [number, number, number] = [from[0] + 3.2, from[1], from[2] - 2.0];
+          const to: [number, number, number] = [from[0] + 2.6, from[1], from[2] - 1.7];
 
-          // Wide play framing so the arc stays in-shot (b-robber clipped Y≈3).
-          const judge = globalThis as { __g3dJudge?: { set?: (p: string) => boolean } };
-          judge.__g3dJudge?.set?.("a-default");
+          // Close on robber so the cloak silhouette leaving the hex is readable.
+          (globalThis as { __g3dJudge?: { set?: (p: string) => boolean } }).__g3dJudge?.set?.("b-robber");
 
-          // Hide instanced robber (handle → pool matrix).
+          // Hide pooled instance.
           robber.scale.setScalar(0);
           robber.updateMatrix();
           const inst = robber.userData.gdInstance as { poolKey: string; index: number } | undefined;
           const pools = (reconcileHostRef.current as { pools?: InstancePools } | null)?.pools;
           if (inst && pools) pools.setMatrix(inst.poolKey, inst.index, robber);
 
-          // Bright non-instanced stand-in — guaranteed to move in WebGL + video.
           const g = (globalThis as { __g3dJudgeDemoMesh?: Mesh; __g3dJudgeDemoSettle?: Mesh });
           g.__g3dJudgeDemoMesh?.removeFromParent();
           g.__g3dJudgeDemoSettle?.removeFromParent();
-          const mat = new MeshStandardMaterial({
-            color: "#ffe566",
-            emissive: "#ff9900",
-            emissiveIntensity: 1.25,
-            roughness: 0.35,
-            metalness: 0.2,
-          });
-          const demo = new Mesh(new SphereGeometry(0.85, 28, 18), mat);
+          // Tear down any leftover gold-ball / DOM ghost from older builds.
+          document.querySelectorAll(".g3d-judge-hop-ghost").forEach((el) => el.remove());
+
+          // Same cloaked-robber geometry + vertex-colour material the player sees.
+          const robGeom = kit.pieceGeometry("robber");
+          const robMat = vcMaterial(library, "figure-vc", FIGURE_VC_TOKEN);
+          const demo = new Mesh(robGeom, robMat);
           demo.position.set(...from);
+          demo.scale.setScalar(2.15); // readable under b-robber framing
           demo.castShadow = true;
+          demo.frustumCulled = false;
           demo.name = "g3d-judge-demo-robber";
+          demo.userData.gdSharedGeometry = true;
           root.add(demo);
           g.__g3dJudgeDemoMesh = demo;
 
-          // DOM ghost follows projected mesh — Playwright video always sees this even if WebGL encode stalls.
-          let hopGhost = document.querySelector(".g3d-judge-hop-ghost") as HTMLDivElement | null;
-          if (!hopGhost) {
-            hopGhost = document.createElement("div");
-            hopGhost.className = "g3d-judge-hop-ghost";
-            hopGhost.setAttribute("data-testid", "g3d-judge-hop-ghost");
-            document.body.appendChild(hopGhost);
-          }
-          hopGhost.setAttribute("data-visible", "1");
-          let ghostRaf = 0;
-          const projectGhost = () => {
-            const cam = cameraRef.current;
-            const canvas = rendererRef.current?.domElement;
-            if (!cam || !canvas || !demo.parent) {
-              hopGhost?.setAttribute("data-visible", "0");
-              return;
-            }
-            demo.updateMatrixWorld(true);
-            const v = demo.position.clone().project(cam);
-            const rect = canvas.getBoundingClientRect();
-            const x = (v.x * 0.5 + 0.5) * rect.width + rect.left;
-            const y = (-v.y * 0.5 + 0.5) * rect.height + rect.top;
-            hopGhost!.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
-            hopGhost!.style.setProperty("--hop-y", String(demo.position.y));
-            ghostRaf = requestAnimationFrame(projectGhost);
-          };
-          ghostRaf = requestAnimationFrame(projectGhost);
-          const stopGhost = () => {
-            cancelAnimationFrame(ghostRaf);
-            hopGhost?.setAttribute("data-visible", "0");
-          };
-
-          // Ground marker (stays put) so height above hex is obvious on video.
-          const padMat = new MeshStandardMaterial({ color: "#1a1a1a", roughness: 0.9, transparent: true, opacity: 0.55 });
-          const pad = new Mesh(new CylinderGeometry(0.7, 0.7, 0.06, 24), padMat);
-          pad.position.set(from[0], 0.05, from[2]);
-          pad.name = "g3d-judge-demo-pad";
-          root.add(pad);
-
-          // Settlement drop-in beside the hop path (place animation).
-          const settleMat = new MeshStandardMaterial({
-            color: "#e85d4c",
-            emissive: "#8a2018",
-            emissiveIntensity: 0.55,
-            roughness: 0.55,
-          });
-          const settle = new Mesh(new SphereGeometry(0.55, 20, 14), settleMat);
-          settle.position.set(from[0] - 1.1, from[1], from[2] + 0.9);
+          // Settlement cottage Mesh — place() drop-in then a short hop (same art).
+          const settleGeom = kit.pieceGeometry("settlement", 0);
+          const settleMat = vcMaterial(library, "piece-vc", PIECE_VC_TOKEN);
+          const settle = new Mesh(settleGeom, settleMat);
+          settle.position.set(from[0] - 1.35, from[1], from[2] + 1.05);
+          settle.scale.setScalar(1.9);
           settle.castShadow = true;
+          settle.frustumCulled = false;
           settle.name = "g3d-judge-demo-settle";
+          settle.userData.gdSharedGeometry = true;
           root.add(settle);
           g.__g3dJudgeDemoSettle = settle;
           motion.place(settle, "judge-demo-settle");
+          window.setTimeout(() => {
+            const sFrom: [number, number, number] = [settle.position.x, settle.position.y, settle.position.z];
+            const sTo: [number, number, number] = [sFrom[0] + 1.4, sFrom[1], sFrom[2] - 0.9];
+            settle.position.set(...sTo);
+            motion.hop(settle, "judge-demo-settle", sFrom, {
+              ms: 1800,
+              ignoreReducedMotion: true,
+              apexHeight: 1.35,
+              hops: 2,
+            });
+          }, 500);
 
           demo.position.set(...to);
           const ms = motion.hop(demo, "judge-demo-robber", from, {
@@ -819,16 +793,10 @@ export function SceneHost({
           }));
 
           const cleanupDemo = () => {
-            stopGhost();
             demo.removeFromParent();
             settle.removeFromParent();
-            pad.removeFromParent();
             if (g.__g3dJudgeDemoMesh === demo) delete g.__g3dJudgeDemoMesh;
             if (g.__g3dJudgeDemoSettle === settle) delete g.__g3dJudgeDemoSettle;
-            mat.dispose();
-            settleMat.dispose();
-            padMat.dispose();
-            // Restore instanced robber at home.
             robber.position.set(...from);
             robber.scale.setScalar(1);
             robber.userData.baseY = from[1];
@@ -851,8 +819,8 @@ export function SceneHost({
             window.dispatchEvent(new CustomEvent("g3d-judge-resource-gain", {
               detail: { brick: 2, ore: 1 },
             }));
-            window.setTimeout(cleanupDemo, backMs + 200);
-          }, ms + 400);
+            window.setTimeout(cleanupDemo, backMs + 250);
+          }, ms + 450);
 
           return { hopMs: ms, reduced };
         }

@@ -112,7 +112,7 @@ async function main() {
   }
   if (!apex1) log("WARN no apex1 y>1.2");
   await page.screenshot({ path: path.join(path.dirname(OUT), "motion-frame-hop1.png"), fullPage: false });
-  await page.waitForTimeout(3200); // finish 2400ms hop + pause before return
+  await page.waitForTimeout(3600); // finish 2600ms hop + pause before return
   // Return hop + second toast (~1.7s after first hop ends)
   await page.locator('[data-testid="g3d-judge-plusn-toast"][data-visible="1"]').waitFor({ timeout: 5000 }).catch((e) => log("toast2 wait", e.message));
   await page.waitForTimeout(400);
@@ -131,7 +131,7 @@ async function main() {
   }
   if (!apex3) log("WARN no apex3 y>1.2");
   await page.screenshot({ path: path.join(path.dirname(OUT), "motion-frame-hop3.png") });
-  await page.waitForTimeout(3200);
+  await page.waitForTimeout(3600);
   await page.locator('[data-testid="g3d-judge-plusn-toast"][data-visible="1"]').waitFor({ timeout: 5000 }).catch((e) => log("toast4 wait", e.message));
   await page.waitForTimeout(400);
   await page.screenshot({ path: path.join(path.dirname(OUT), "motion-frame-hop4.png") });
@@ -142,7 +142,9 @@ async function main() {
   const canvasCount = await page.locator("canvas").count();
   // Verify toast was created
   const toastExists = await page.locator('[data-testid="g3d-judge-plusn-toast"]').count();
-  log("end", { canvasCount, overlayEnd, toastExists, demoMs: Date.now() - tDemo });
+  const ghostCount = await page.locator(".g3d-judge-hop-ghost, [data-testid=\"g3d-judge-hop-ghost\"]").count();
+  log("end", { canvasCount, overlayEnd, toastExists, ghostCount, demoMs: Date.now() - tDemo });
+  if (ghostCount > 0) throw new Error("gold hop-ghost must not appear in capture");
 
   const video = page.video();
   await context.close();
