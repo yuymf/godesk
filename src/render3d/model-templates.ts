@@ -40,9 +40,10 @@ const MODEL_URLS = import.meta.glob("../../assets/models/{pieces,decor,props}.gl
 }) as Record<string, () => Promise<string>>;
 
 /**
- * G3D-JUDGE-PIECES: settlement / city / road / robber / dice / tray are own-modelled
- * procedural geometry now (`assets/pieces.ts`, `assets/dice-geometry.ts`); the GLB
- * bundle still supplies decor, sheep, docks and ships.
+ * G3D-JUDGE round-3/4 knife ②: settlement / city / road / robber are hand-built
+ * miniature meshes in `assets/pieces.ts` (merged → InstancedMesh pools); dice/tray
+ * stay thin felt pad in `assets/dice-geometry.ts`. GLB bundle still supplies
+ * decor / sheep / docks / ships only — not piece buildings.
  */
 export type TidewellGeometries = {
   sheep: BufferGeometry;

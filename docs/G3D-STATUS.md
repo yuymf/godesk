@@ -172,3 +172,5 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | G3D-ART-3 #145：点数筹码字形修复（12≠17）；地形道具暂缓到 #138；Actions 账单受阻，合入暂缓 | Track D |
 | 2026-10-06 | 用户 19:16：AI 美术法务闸门豁免（仍须登记来源）；新停止条件为汐屿对标 settlecoast，由大主管逐轮评判；G3D-JUDGE 评审截图与对照工具，round-1 已拍 | Track D |
 | 2026-10-06 | G3D-JUDGE round-2（Track D）：地形道具与岛屿海岸接入 SceneHost；round-2 对照图与 GAPS 自评；推到 #148（draft） | Track D |
+
+| 2026-10-07 | G3D-JUDGE round-3/4 刀序②（`feat/g3d-judge-r3-pieces`）：微缩渔村/港镇/木板路 + 斗篷强盗；薄毡垫骰盘保留；round-4 叠屏由 Track D 截；手写（Codex 额度用尽） | Track C |
