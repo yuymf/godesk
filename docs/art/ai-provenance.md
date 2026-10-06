@@ -24,6 +24,7 @@
 | T1 | `T1-forest.jpg` | Seamless tileable square texture, orthographic top-down albedo only, no lighting direction, no baked shadows, no border, evenly distributed detail across the whole square, edges wrap seamlessly: dense stylised pine and broadleaf forest canopy clusters seen from directly above, with small gaps of mossy ground. Hand-painted stylised board-game look, palette moss green #6E9A4A, deep pine green, sea teal accents. |
 | T2 | `T2-pasture.jpg` | Seamless tileable square texture, orthographic top-down albedo only, no lighting direction, no baked shadows, no border, evenly distributed detail across the whole square, edges wrap seamlessly: soft green grass meadow seen from directly above with small clover patches and tiny scattered wildflowers. |
 | T3 | `T3-fields.jpg` | Seamless tileable square texture, orthographic top-down albedo only, no lighting direction, no baked shadows, no border, evenly distributed detail across the whole square, edges wrap seamlessly: golden wheat field seen from directly above, parallel rows of ripe wheat with subtle variation in ripeness. |
+| T3b | `T3b-fields-clumps.jpg` | Seamless tileable square texture, orthographic top-down albedo only, no lighting direction, no baked shadows, no border, edges wrap seamlessly: a ripe wheat field seen from directly above as irregular organic clumps of wheat ears and stalk tufts scattered in random directions, NO rows, NO stripes, NO parallel lines, with small patches of lighter straw and a few tiny red poppies, uneven natural variation in gold tones. Hand-painted stylised board-game look, clean readable shapes, palette wheat gold #E3B341, warm ochre, pale straw, tiny touches of moss green. No text, no logos, no watermark. |
 | T4 | `T4-hills-clay.jpg` | Seamless tileable square texture, orthographic top-down albedo only, no lighting direction, no baked shadows, no border, evenly distributed detail across the whole square, edges wrap seamlessly: terracotta clay earth seen from directly above with shallow terrace lines, small clay pits and sparse dry grass tufts. |
 | T5 | `T5-mountain-ore.jpg` | Seamless tileable square texture, orthographic top-down albedo only, no lighting direction, no baked shadows, no border, evenly distributed detail across the whole square, edges wrap seamlessly: grey-blue rocky mountain ground seen from directly above with angular stones, scree and faint bluish ore veins. |
 | T6 | `T6-desert.jpg` | Seamless tileable square texture, orthographic top-down albedo only, no lighting direction, no baked shadows, no border, evenly distributed detail across the whole square, edges wrap seamlessly: warm desert sand seen from directly above with soft wind ripples and small scattered pebbles. |
@@ -45,7 +46,8 @@
 - S4：资源图标 ×5
 - T1：t01-pine
 - T2：t03-meadow
-- T3：t04-wheat
+- T3：已弃用（平行麦垄平铺过于规整，G3D-ART-2 由 T3b 取代）
+- T3b：t04-wheat（2026-10-06 12:05 生成）
 - T4：t02-clay
 - T5：t05-reef
 - T6：t06-sand

@@ -1,5 +1,6 @@
 import type { Terrain } from "../../runtime/adapters/catan";
 import type { SceneModel, SceneNode, SceneVec3 } from "../scene-model";
+import { NUMBER_TOKEN_SCALE } from "../tokens";
 
 /** Match topology-stub / hex-settlement flat-top pixel size, then scale to world units. */
 const HEX_PIXEL_SIZE = 100;
@@ -95,6 +96,8 @@ export function mapHexSettlementToScene(genre: HexSettlementSceneInput): SceneMo
         position: toWorld(center.x, center.y, 0.42),
         number: tile.number,
         tag: tile.number === 6 || tile.number === 8 ? "hot" : "normal",
+        // G3D-ART-2：筹码放大到约 37% 六角宽，数字贴花才读得出（见 number-labels.ts）。
+        scale: [NUMBER_TOKEN_SCALE, 1, NUMBER_TOKEN_SCALE],
       });
     }
   }
