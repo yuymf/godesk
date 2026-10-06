@@ -29,9 +29,9 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 值 |
 | --- | --- |
-| 里程碑 | **M1 最小端到端 3D 切片**（**Done** 2026-10-06）+ **M3 素材管线并行**（Track B） |
+| 里程碑 | **M1 最小端到端 3D 切片**（**未达成 · 重开** 2026-10-06：缺 Room AI 座位，由 G3D-04b 补齐后重跑）+ **M3 素材管线并行**（Track B） |
 | 本阶段出口 | G3D-02 → G3D-03 → G3D-04 → G3D-18：六角岛 Room 在 3D 中与 AI 打完一整局（EP-D + EP-I）；`CatanBoard.tsx` 删除且 `rg CatanBoard` 在 `src e2e` 为 0；e2e 全绿 |
-| M1 出口证明 | **Done** 2026-10-06。main `73d4c80`：`rg -n "CatanBoard" src e2e` 0 行、`CatanBoard.tsx` 不存在；`GODESK_E2E_PORT=8811 pnpm test:e2e` 45 passed / 4 skipped；整局（main `d7dd1a5` 构建）EP-D 1440×900 鼠标（16.6m，640 次 UI 行动）、EP-I iPhone 12 Pro 触摸（17.5m，541 次）均至「对局结束 · 获胜者」，各 1 passed。**注**：Room 无内置 AI 席位（Catan bot 仅 worker `runBotSimulation`），座位 1 由第二浏览器上下文脚本按合法动作优先级驱动。证据仓外 `/workspace/g3d-evidence/M1/`（截图、ep-d.log / ep-i.log、e2e-main.log、full-game-vs-ai.spec.ts；脚本未入库） |
+| M1 出口证明 | **未达成（更正）**。原先标 Done 不成立：出口要求「与 AI 打完一整局」，但当时 Room 没有 AI 座位（Catan bot 只存在于 worker `runBotSimulation`），座位 1 是第二个浏览器上下文用脚本按优先级点击驱动，等于两个真人席，不是 AI。这次脚本局（main `d7dd1a5`：EP-D 16.6m / 640 次、EP-I 17.5m / 541 次，`rg CatanBoard` 0，e2e 45/4，证据 `/workspace/g3d-evidence/M1/`）只能作为「3D 盘面能跑完整局 + 2D 已删除」的**部分证明**。真 AI 证明：G3D-04b 分支（单浏览器，座位 1 = 服务器端 AI）EP-D 8.9m、EP-I 8.4m 均打到「对局结束」，AI 落子 341 次，覆盖弃牌 / 强盗 / 骑士 / 交易（`/workspace/g3d-evidence/M1-ai/pr-branch/`）。合入后在 main 上重跑，通过后再标 Done |
 | M0 | 已完成：Bootstrap #102（`f13c8ce`）、G3D-01 #103（`332275d`） |
 
 ## 已完成
@@ -50,6 +50,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | G3D-04 | 拾取 → 合法动作、HUD、HexSettlementBoard（Track A） | PR [#109](https://github.com/yuymf/godesk/pull/109) squash `6d4db72` |
 | G3D-18 | 删除 2D 六角盘面路径；预览/回放/大厅 3D（Track A） | PR [#119](https://github.com/yuymf/godesk/pull/119) squash `d7dd1a5` |
 | G3D-09 | 动效：tween.js 放置 280 / 删除 160 / 强盗 420 / 骰子 900 / 回合镜头 600；reduced motion 0（Track A） | PR [#129](https://github.com/yuymf/godesk/pull/129) squash `d2f58ab` |
+| G3D-04b | Room AI 座位：DO alarm 驱动 `aiSeats`，复用 `pickBotIntent`（与 `runBotSimulation` 同一选手），只经 `acceptIntent`；思考 900 ms；同事务 pending 防重复落子；大厅「和电脑对战」（Track A） | PR 待开 |
 
 | G3D-24 | 资源/发展卡插画×8（Track B）**shipped；G3D-ART 2D 回炉 #125 `465f7fa`（分层插画+Cycles）— 仍待 G3D-13 接线入局** | PR [#113](https://github.com/yuymf/godesk/pull/113) squash `fd3f54e` + G3D-ART PR |
 
@@ -147,4 +148,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | G3D-15 第二刀（Track C）PR：已完成加 G3D-15 第二刀；回填 G3D-14 #133 合入 SHA `28792e0`；进行中移除 G3D-15 第二刀；下一刀 Track C 队列清空 | Track C |
 | 2026-10-06 | G3D-08（Track B）水体 + 海岸距离场：替换灰石板；懒加载 tide-water；证据 `/workspace/g3d-evidence/G3D-08/`；rebase main（#133/#134）；下一刀 G3D-13（合入等 #132） | Track B |
 | 2026-10-06 | G3D-08 #131 合入 `e8b59e8`；STATUS 回填；开 G3D-13（合入等 #132） | Track B |
-
+| 2026-10-06 | 更正：M1 没有 Room AI 座位，Done 撤回（脚本第二浏览器只是部分证明）；G3D-04b Room AI 座位 PR | Track A |

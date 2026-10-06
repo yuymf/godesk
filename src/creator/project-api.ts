@@ -309,7 +309,13 @@ export function getValidation(id: string) {
 
 export function createSharedSession(
   buildId: string,
-  input: { seed: number; idempotencyKey: string; hypothesisId?: string },
+  input: {
+    seed: number;
+    idempotencyKey: string;
+    hypothesisId?: string;
+    /** G3D-04b: seats the worker drives with the kernel bot. */
+    aiSeats?: number[];
+  },
 ) {
   return fetch(apiPath(`/api/builds/${encodeURIComponent(buildId)}/sessions`), {
     method: "POST",

@@ -57,16 +57,42 @@ for (const mode of ["no-preference", "reduce"] as const) {
     const reduced = mode === "reduce";
 
     // Input during animation: settlement place starts a 280 ms tween; the road
-    // click lands immediately (well inside the tween) and must still be applied.
+    // click must land while that tween is in flight and still be applied.
+    // Click from inside the page the moment the road button renders (same task
+    // as the reconcile that started the tween): Playwright's own actionability
+    // waits take 0.7–2 s under SwiftShader + G3D-07 shadows, which made the old
+    // wall-clock bound measure the runner, not the product.
     await board.getByRole("button", { name: /放置定居点/ }).first().click();
-    const road = board.getByRole("button", { name: /放置道路/ }).first();
-    await road.waitFor({ state: "visible" });
-    const tPlace = await page.evaluate(() => performance.now());
-    // dispatchEvent: intentional mid-tween input (placement 280 ms); avoids Playwright hit-check flakes while the canvas keeps redrawing waves.
-    await road.dispatchEvent("click");
-    const tRoad = await page.evaluate(() => performance.now());
+    const clickedDuringTween = await page.evaluate(() => new Promise<{ placeAt: number | null; placeMs: number; busyAtClick: boolean }>((resolve, reject) => {
+      const find = () => [...document.querySelectorAll<HTMLButtonElement>("button")]
+        .find((button) => /放置道路/.test(button.textContent ?? "") && !button.disabled);
+      const tryClick = () => {
+        const road = find();
+        if (road) {
+          const log = (globalThis as { __g3dMotionLog?: Array<{ kind: string; at: number; durationMs: number }> }).__g3dMotionLog ?? [];
+          const place = log.filter((entry) => entry.kind === "place").at(-1);
+          const busyAtClick = (globalThis as { __g3dMotionBusy?: () => boolean }).__g3dMotionBusy?.() ?? false;
+          road.click();
+          resolve({ placeAt: place?.at ?? null, placeMs: place?.durationMs ?? 0, busyAtClick });
+          return true;
+        }
+        return false;
+      };
+      if (tryClick()) return;
+      const observer = new MutationObserver(() => { if (tryClick()) observer.disconnect(); });
+      observer.observe(document.body, { subtree: true, childList: true, attributes: true });
+      setTimeout(() => { observer.disconnect(); reject(new Error("road button never enabled")); }, 15_000);
+    }));
     await expect(hud).toContainText("place_road");
-    if (!reduced) expect(tRoad - tPlace).toBeLessThan(1_500);
+    // The place tween had started when the road click was dispatched and (with
+    // motion on) was still in flight in the tween Group — i.e. input during
+    // animation. Wall-clock can't prove this on SwiftShader, where one frame
+    // can exceed the whole 280 ms tween.
+    expect(clickedDuringTween.placeAt).not.toBeNull();
+    if (!reduced) {
+      expect(clickedDuringTween.placeMs).toBe(280);
+      expect(clickedDuringTween.busyAtClick).toBe(true);
+    }
 
     const opp = await joinSeat1(browser, page.url(), mode);
     // Setup snake order for 2 seats: 0, 1, 1, 0.
