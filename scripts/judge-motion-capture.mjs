@@ -134,6 +134,22 @@ async function main() {
   }
   if (stills.length < 3) throw new Error(`self-fail: only ${stills.length}/3 elevated stills; last=${JSON.stringify(triple.at(-1))}`);
   log("apexPose", apexPose);
+  // R9 FYI self-check: floating +N must stay stable across apex hold (no mid-hold hard cut).
+  const toastSamples = [];
+  for (let i = 0; i < 8; i += 1) {
+    const t = await page.evaluate(() => {
+      const el = document.querySelector(".g3d-judge-plusn-toast");
+      if (!el || el.getAttribute("data-visible") !== "1") return null;
+      return el.textContent || "";
+    });
+    if (t) toastSamples.push(t);
+    await page.waitForTimeout(200);
+  }
+  const uniqueToast = [...new Set(toastSamples)];
+  log("toastSamples", toastSamples);
+  if (uniqueToast.length !== 1) {
+    throw new Error(`self-fail: mid-hold +N hard cut → ${JSON.stringify(uniqueToast)}`);
+  }
   const { writeFileSync } = await import("node:fs");
   const outNames = ["webm-hop-apex.png", "webm-hop-apex-a.png", "webm-hop-apex-b.png", "webm-hop-apex-c.png"];
   for (let i = 0; i < Math.min(3, stills.length); i++) {
@@ -182,13 +198,15 @@ async function main() {
     demo2,
     rest,
     apexPose,
+    toastLine: uniqueToast[0],
+    toastSamples,
     triple: triple.map((p) => p && { y: p.y, x: p.x, z: p.z, demo: p.demo }),
     triple2: triple2.map((p) => p && { y: p.y, demo: p.demo }),
     reduced,
     locked,
     banned,
     demoWallMs: Date.now() - tDemo,
-    notes: "b-robber THEN lockCamera; Mesh hop apexHeight=2.6 hold-hover; self-checked 3 elevated Y samples",
+    notes: "b-robber THEN lockCamera; Mesh hop apexHeight=2.6 hold-hover; 3 elevated Y samples; stable +N across apex hold (R9 FYI)",
   };
   await writeFile(OUT.replace(/\.webm$/, ".json"), JSON.stringify(meta, null, 2));
   log("wrote", OUT, meta);

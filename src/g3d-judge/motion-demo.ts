@@ -117,7 +117,21 @@ export function createJudgeMotion(c: JudgeMotionCtx) {
           const holdMs = 2800;
           const downMs = 2200;
           const apexHeight = 2.6;
-          const from: [number, number, number] = [robber.position.x, robber.position.y, robber.position.z];
+          // R9 FYI fix: one demo = one stable +N line from lift-off through landing (no swap / no
+          // auto-hide inside the apex hold). Consecutive demos alternate lines; a newer demo
+          // supersedes an older one's pending timers so it cannot hide/replace the live toast.
+          const g = (globalThis as { __g3dJudgeDemoMesh?: Mesh; __g3dJudgeDemoSettle?: Mesh; __g3dJudgeDemoGen?: number; __g3dJudgeDemoRest?: [number, number, number] });
+          const gen = (g.__g3dJudgeDemoGen ?? 0) + 1;
+          g.__g3dJudgeDemoGen = gen;
+          const isCurrent = () => g.__g3dJudgeDemoGen === gen;
+          const gain = gen % 2 === 1
+            ? { text: "+2 木  +1 麦  +1 羊", detail: { wood: 2, wheat: 1, sheep: 1 } }
+            : { text: "+2 砖  +1 矿", detail: { brick: 2, ore: 1 } };
+          // If a previous demo still holds the robber hidden, reuse its true rest pose.
+          const from: [number, number, number] = robber.userData.gdJudgeDemoLock && g.__g3dJudgeDemoRest
+            ? [...g.__g3dJudgeDemoRest]
+            : [robber.position.x, robber.position.y, robber.position.z];
+          g.__g3dJudgeDemoRest = [...from];
           const hover: [number, number, number] = [from[0] + 0.55, from[1] + apexHeight, from[2] - 0.35];
 
           robber.userData.gdJudgeDemoLock = true;
@@ -128,7 +142,6 @@ export function createJudgeMotion(c: JudgeMotionCtx) {
           const pools = (reconcileHostRef.current as { pools?: InstancePools } | null)?.pools;
           if (inst && pools) pools.setMatrix(inst.poolKey, inst.index, robber);
 
-          const g = (globalThis as { __g3dJudgeDemoMesh?: Mesh; __g3dJudgeDemoSettle?: Mesh });
           g.__g3dJudgeDemoMesh?.removeFromParent();
           g.__g3dJudgeDemoSettle?.removeFromParent();
           document.querySelectorAll(".g3d-judge-hop-ghost").forEach((el) => el.remove());
@@ -178,7 +191,6 @@ export function createJudgeMotion(c: JudgeMotionCtx) {
             toast.setAttribute("data-testid", "g3d-judge-plusn-toast");
             host.appendChild(toast);
           }
-          let toastHideTimer = 0;
           let trackRaf = 0;
           const projectToast = () => {
             if (!demo.parent || !toast) {
@@ -198,8 +210,10 @@ export function createJudgeMotion(c: JudgeMotionCtx) {
           const showToast = (text: string) => {
             toast!.textContent = text;
             toast!.setAttribute("data-visible", "1");
-            window.clearTimeout(toastHideTimer);
-            toastHideTimer = window.setTimeout(() => toast?.setAttribute("data-visible", "0"), 2800);
+            toast!.setAttribute("data-demo-gen", String(gen));
+          };
+          const hideToast = () => {
+            if (isCurrent()) toast?.setAttribute("data-visible", "0");
           };
           trackRaf = requestAnimationFrame(projectToast);
 
@@ -216,14 +230,12 @@ export function createJudgeMotion(c: JudgeMotionCtx) {
             hops: 1,
           });
           markShadowsDirtyRef.current();
-          showToast("+2 木  +1 麦  +1 羊");
-          window.dispatchEvent(new CustomEvent("g3d-judge-resource-gain", {
-            detail: { wood: 2, wheat: 1, sheep: 1 },
-          }));
+          showToast(gain.text);
+          window.dispatchEvent(new CustomEvent("g3d-judge-resource-gain", { detail: gain.detail }));
 
           const cleanupDemo = () => {
             cancelAnimationFrame(trackRaf);
-            toast?.setAttribute("data-visible", "0");
+            hideToast();
             demo.removeFromParent();
             settle.removeFromParent();
             if (!demo.userData.gdSharedGeometry) {
@@ -238,7 +250,12 @@ export function createJudgeMotion(c: JudgeMotionCtx) {
             }
             if (g.__g3dJudgeDemoMesh === demo) delete g.__g3dJudgeDemoMesh;
             if (g.__g3dJudgeDemoSettle === settle) delete g.__g3dJudgeDemoSettle;
+            if (!isCurrent()) {
+              markShadowsDirtyRef.current();
+              return; // a newer demo owns the robber + toast now
+            }
             delete robber.userData.gdJudgeDemoLock;
+            delete g.__g3dJudgeDemoRest;
             robber.position.set(...from);
             robber.scale.setScalar(1);
             robber.userData.baseY = from[1];
@@ -248,6 +265,7 @@ export function createJudgeMotion(c: JudgeMotionCtx) {
           };
 
           window.setTimeout(() => {
+            if (!isCurrent()) return;
             const cur: [number, number, number] = [demo.position.x, demo.position.y, demo.position.z];
             demo.position.set(...from);
             const msDown = motion.hop(demo, "judge-demo-robber", cur, {
@@ -257,10 +275,8 @@ export function createJudgeMotion(c: JudgeMotionCtx) {
               hops: 1,
             });
             markShadowsDirtyRef.current();
-            showToast("+2 砖  +1 矿");
-            window.dispatchEvent(new CustomEvent("g3d-judge-resource-gain", {
-              detail: { brick: 2, ore: 1 },
-            }));
+            // Same +N line stays up through the descent; drop it once the robber has landed.
+            window.setTimeout(hideToast, msDown + 250);
 
             // Settlement hop while robber lands.
             settle.visible = true;
@@ -289,7 +305,6 @@ export function createJudgeMotion(c: JudgeMotionCtx) {
             }, 450);
 
             // Keep hopMs as full up+hold+down for capture waits.
-            void msDown;
           }, msUp + holdMs);
 
           return { hopMs: upMs + holdMs + downMs, reduced, apexHeight };
