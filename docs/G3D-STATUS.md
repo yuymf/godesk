@@ -85,7 +85,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
 | G3D-13 Tidewell 集成 | Track B | `feat/g3d-13-tidewell` [#138](https://github.com/yuymf/godesk/pull/138) @ `29d9c03` | 本地门禁已过；**合入阻塞：GitHub Actions billing/spending limit**（禁无绿合入 / 禁 workaround） |
-| G3D-16 首页汐屿 showcase | Track B | `feat/g3d-16-homepage`（叠在 #138 上；draft PR base=`feat/g3d-13-tidewell`） | 海报 + 上线开关 `GODESK_FEATURE_TIDEWELL` 默认关；#138 合入后 rebase→main 并改 base |
+| G3D-16 首页汐屿 showcase | Track B | `feat/g3d-16-homepage` [#146](https://github.com/yuymf/godesk/pull/146) draft | 海报 + `GODESK_FEATURE_TIDEWELL` 默认关；base=`feat/g3d-13-tidewell`；#138 合入后 rebase→main |
 
 ## 阻塞
 
@@ -125,7 +125,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
 | `feat/g3d-13-tidewell` | [#138](https://github.com/yuymf/godesk/pull/138) | G3D-13 Tidewell 集成（Track B）@ `29d9c03` | open · 合入等 Actions billing |
-| `feat/g3d-16-homepage` | （本刀开 draft） | G3D-16 首页汐屿 showcase；base=`feat/g3d-13-tidewell` | draft · 叠分支；#138 后 rebase→main |
+| `feat/g3d-16-homepage` | [#146](https://github.com/yuymf/godesk/pull/146) | G3D-16 首页汐屿 showcase；base=`feat/g3d-13-tidewell` @ `ef3c97f` | draft · 叠分支；#138 后 rebase→main；**不合入**（Actions billing） |
 
 ## 修订记录
 
