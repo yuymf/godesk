@@ -563,6 +563,7 @@ export function HexSettlementBoard({
         <div className="tidewell-topbar-actions">
           {replayUrl ? (
             <a
+              aria-label={copy.replay}
               className="tidewell-wood-icon tidewell-replay-link"
               href={replayUrl}
               title={copy.replay}
