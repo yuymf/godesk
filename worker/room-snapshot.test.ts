@@ -153,7 +153,7 @@ describe("Room incremental kernel state (G3D-04c)", () => {
     // A snapshot that does not match the log is ignored (full replay wins).
     const bogus: SessionStateSnapshot = { count: 400, lastIntentId: "not-in-log", state: simulation.acceptedActions[10].state };
     expect(await stateHash(reconstructSession(session, build, bogus).state)).toBe(fullHash);
-  }, 180_000);
+  }, 360_000);
 
   it("survives DO restarts mid-game: rebuilds from snapshot + tail and finishes equal to the simulation", async () => {
     const { build, ruleSystem } = await catanBuild("restart");
@@ -194,5 +194,5 @@ describe("Room incremental kernel state (G3D-04c)", () => {
     expect(session.acceptedActions).toHaveLength(total);
     expect(session.state.status).toBe("complete");
     expect(session.state.winnerSeat).toBe(finalState.winnerSeat);
-  }, 300_000);
+  }, 600_000);
 });

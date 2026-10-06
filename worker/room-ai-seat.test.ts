@@ -216,8 +216,9 @@ describe("Room AI seat (G3D-04b)", () => {
 
   it("plays a full game on real alarms vs a scripted human to game over, matching the bot simulation picker", async () => {
     const { build, ruleSystem } = await catanBuild("full");
-    // Seed 7 is a ~420-action bot game (keeps CI fast; seed 42 is ~865).
-    const room = await (await createRoom(build.id, { seed: 7, aiSeats: [1], aiThinkMs: 0 })).json<{ id: string }>();
+    // Full-length seed 42 (~865 actions): fits CI since G3D-04c made each
+    // move incremental (memory cache + snapshots) instead of a full replay.
+    const room = await (await createRoom(build.id, { seed: 42, aiSeats: [1], aiThinkMs: 0 })).json<{ id: string }>();
     const { seatToken } = await claimSeat(room.id, 0);
     let snapshot = await readRoom(room.id);
     for (let guard = 0; guard < 40_000 && snapshot.room.state.status === "active"; guard += 1) {
@@ -239,11 +240,11 @@ describe("Room AI seat (G3D-04b)", () => {
     }
     // Same picker as runBotSimulation (no parallel engine): with both seats
     // driven by pickBotIntent the Room log equals the simulation log.
-    const simulation = runBotSimulation(ruleSystem, 7);
+    const simulation = runBotSimulation(ruleSystem, 42);
     expect(actions.map((action) => [action.seat, action.actionId, action.payload ?? null]))
       .toEqual(simulation.acceptedActions.map((action) => [action.seat, action.actionId, action.payload ?? null]));
     const aiKinds = new Set(actions.filter((entry) => entry.seat === 1).map((entry) => entry.actionId));
     expect(aiKinds.has("roll_dice")).toBe(true);
     expect(aiKinds.has("end_turn")).toBe(true);
-  }, 180_000);
+  }, 420_000);
 });
