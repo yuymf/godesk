@@ -227,7 +227,7 @@ async function claimSeat(page, seat) {
 /** One seeded legal action on whichever page currently has enabled board buttons. */
 async function autoMove(pages, random) {
   for (const page of pages) {
-    const board = page.getByRole("region", { name: "卡坦六角岛" });
+    const board = page.getByRole("region", { name: "汐屿" });
     const buttons = board.locator("button:not([disabled])");
     const count = await buttons.count().catch(() => 0);
     if (!count) continue;
