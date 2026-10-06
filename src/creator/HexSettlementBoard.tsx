@@ -23,7 +23,7 @@ const RESOURCE_LABEL = {
 
 const COPY = {
   zh: {
-    board: "卡坦六角岛",
+    board: "汐屿",
     hud: "对局状态",
     active: "当前行动",
     seat: "座位",
@@ -32,8 +32,8 @@ const COPY = {
     noDice: "尚未掷骰",
     resources: "你的资源",
     vp: "胜利点",
-    robber: "强盗",
-    longestRoad: "最长道路",
+    robber: "雾灯",
+    longestRoad: "最长栈道",
     largestArmy: "最大军队",
     none: "无",
     lastAction: "最近行动",
@@ -51,14 +51,16 @@ const COPY = {
     discard: "弃牌",
     bankTrade: "银行贸易",
     playerTrade: "玩家贸易",
-    placeSettlement: "放置定居点",
-    placeCity: "升级城市",
-    placeRoad: "放置道路",
-    moveRobber: "移动强盗",
+    placeSettlement: "建造渔村",
+    placeCity: "升级港镇",
+    placeRoad: "铺设栈道",
+    moveRobber: "移动雾灯",
     actions: "可用行动",
+    boardTargets: "棋盘落点（键盘 / 辅助）",
+    primary: "本回合",
   },
   en: {
-    board: "Catan hex island",
+    board: "Tidewell Isles",
     hud: "Match status",
     active: "Active seat",
     seat: "Seat",
@@ -67,8 +69,8 @@ const COPY = {
     noDice: "No roll yet",
     resources: "Your resources",
     vp: "VP",
-    robber: "Robber",
-    longestRoad: "Longest road",
+    robber: "Fog lantern",
+    longestRoad: "Longest causeway",
     largestArmy: "Largest army",
     none: "None",
     lastAction: "Last action",
@@ -86,11 +88,13 @@ const COPY = {
     discard: "Discard",
     bankTrade: "Bank trade",
     playerTrade: "Player trade",
-    placeSettlement: "Place settlement",
-    placeCity: "Upgrade city",
-    placeRoad: "Place road",
-    moveRobber: "Move robber",
+    placeSettlement: "Build fishing village",
+    placeCity: "Upgrade harbor town",
+    placeRoad: "Lay causeway",
+    moveRobber: "Move fog lantern",
     actions: "Available actions",
+    boardTargets: "Board targets (keyboard / assistive)",
+    primary: "This turn",
   },
 } as const;
 
@@ -103,27 +107,27 @@ function phaseLabel(phase: string, locale: RoomLocale): string {
     setup: { zh: "初始放置", en: "Setup" },
     roll: { zh: "掷骰", en: "Roll" },
     discard: { zh: "弃牌", en: "Discard" },
-    robber: { zh: "移动强盗", en: "Robber" },
+    robber: { zh: "移动雾灯", en: "Fog lantern" },
     main: { zh: "建造/贸易", en: "Build / trade" },
     ended: { zh: "结束", en: "Ended" },
   };
   return map[phase]?.[locale] ?? phase;
 }
 
-function labelForBoardAction(
+function shortLabelForAction(
   action: LegalAction,
   copy: (typeof COPY)[RoomLocale],
   resourceLabel: (typeof RESOURCE_LABEL)[RoomLocale],
 ): string {
   switch (action.type) {
     case "place_settlement":
-      return `${copy.placeSettlement} · ${String(action.payload?.vertexId ?? "")}`;
+      return copy.placeSettlement;
     case "place_city":
-      return `${copy.placeCity} · ${String(action.payload?.vertexId ?? "")}`;
+      return copy.placeCity;
     case "place_road":
-      return `${copy.placeRoad} · ${String(action.payload?.edgeId ?? "")}`;
+      return copy.placeRoad;
     case "move_robber":
-      return `${copy.moveRobber} · ${String(action.payload?.hex ?? "")}`;
+      return copy.moveRobber;
     case "roll_dice":
       return copy.roll;
     case "end_turn":
@@ -152,6 +156,26 @@ function labelForBoardAction(
     }
     default:
       return action.label;
+  }
+}
+
+/** Unique accessible name (may include payload ids for disambiguation). */
+function labelForBoardAction(
+  action: LegalAction,
+  copy: (typeof COPY)[RoomLocale],
+  resourceLabel: (typeof RESOURCE_LABEL)[RoomLocale],
+): string {
+  switch (action.type) {
+    case "place_settlement":
+      return `${copy.placeSettlement} · ${String(action.payload?.vertexId ?? "")}`;
+    case "place_city":
+      return `${copy.placeCity} · ${String(action.payload?.vertexId ?? "")}`;
+    case "place_road":
+      return `${copy.placeRoad} · ${String(action.payload?.edgeId ?? "")}`;
+    case "move_robber":
+      return `${copy.moveRobber} · ${String(action.payload?.hex ?? "")}`;
+    default:
+      return shortLabelForAction(action, copy, resourceLabel);
   }
 }
 
@@ -257,11 +281,11 @@ export function HexSettlementBoard({
   return (
     <div
       aria-label={copy.board}
-      className="catan-board hex-settlement-board"
+      className="catan-board hex-settlement-board tidewell-board"
       data-status={status}
       role="region"
     >
-      <section aria-label={copy.hud} className="catan-hud">
+      <section aria-label={copy.hud} className="catan-hud tidewell-hud">
         <div className="catan-hud-status">
           <span className="catan-kicker">{copy.active}</span>
           <strong>
@@ -342,13 +366,21 @@ export function HexSettlementBoard({
         </Suspense>
       </div>
 
-      {accessibleActions.length > 0 && (
-        <ul aria-label={copy.actions} className="catan-action-row hex-settlement-action-list">
-          {accessibleActions.map((action) => (
+      {accessibleActions.length > 0 && (() => {
+        const boardTargetTypes = new Set([
+          "place_settlement",
+          "place_city",
+          "place_road",
+          "move_robber",
+        ]);
+        const primary = accessibleActions.filter((a) => !boardTargetTypes.has(a.type));
+        const targets = accessibleActions.filter((a) => boardTargetTypes.has(a.type));
+        const renderButtons = (actions: LegalAction[], compact: boolean) =>
+          actions.map((action) => (
             <li key={actionKey(action)}>
               <button
                 aria-label={labelForBoardAction(action, copy, resourceLabel)}
-                className="catan-action"
+                className={`catan-action${compact ? " is-board-target" : ""}`}
                 disabled={busy}
                 onClick={() =>
                   onAct?.(
@@ -360,12 +392,30 @@ export function HexSettlementBoard({
                 }
                 type="button"
               >
-                {labelForBoardAction(action, copy, resourceLabel)}
+                {shortLabelForAction(action, copy, resourceLabel)}
               </button>
             </li>
-          ))}
-        </ul>
-      )}
+          ));
+        return (
+          <div className="hex-settlement-actions">
+            {primary.length > 0 && (
+              <ul aria-label={copy.primary} className="catan-action-row hex-settlement-primary-actions">
+                {renderButtons(primary, false)}
+              </ul>
+            )}
+            {targets.length > 0 && (
+              <details className="hex-settlement-board-targets" open>
+                <summary>
+                  {copy.boardTargets} · {targets.length}
+                </summary>
+                <ul aria-label={copy.actions} className="catan-action-row hex-settlement-action-list">
+                  {renderButtons(targets, true)}
+                </ul>
+              </details>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

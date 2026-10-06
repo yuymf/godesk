@@ -89,7 +89,7 @@ test.describe("PR10/PR11/PR12 unseen prompts: no silent Catan/Othello bind", () 
     ).toBeVisible({ timeout: 90_000 });
 
     await expect(page.getByRole("region", { name: "黑白棋盘" })).toHaveCount(0);
-    await expect(page.getByRole("region", { name: "卡坦六角岛" })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "汐屿" })).toHaveCount(0);
     await expect(page.locator('[data-lobby-mark="catan"]')).toHaveCount(0);
     await expect(page.locator('[data-lobby-mark="othello"]')).toHaveCount(0);
 
@@ -129,7 +129,7 @@ test.describe("PR10/PR11/PR12 unseen prompts: no silent Catan/Othello bind", () 
     ).toBeVisible({ timeout: 90_000 });
 
     await expect(page.getByRole("region", { name: "黑白棋盘" })).toHaveCount(0);
-    await expect(page.getByRole("region", { name: "卡坦六角岛" })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "汐屿" })).toHaveCount(0);
     await expect(page.getByRole("region", { name: "线路网络盘" })).toHaveCount(0);
     await expect(page.locator('[data-lobby-mark="catan"]')).toHaveCount(0);
     await expect(page.locator('[data-lobby-mark="othello"]')).toHaveCount(0);
@@ -176,7 +176,7 @@ test.describe("PR10/PR11/PR12 unseen prompts: no silent Catan/Othello bind", () 
       ).toBeVisible({ timeout: 90_000 });
 
       await expect(page.getByRole("region", { name: "黑白棋盘" })).toHaveCount(0);
-      await expect(page.getByRole("region", { name: "卡坦六角岛" })).toHaveCount(0);
+      await expect(page.getByRole("region", { name: "汐屿" })).toHaveCount(0);
       await expect(page.getByRole("region", { name: "线路网络盘" })).toHaveCount(0);
       await expect(page.locator('[data-lobby-mark="catan"]')).toHaveCount(0);
       await expect(page.locator('[data-lobby-mark="othello"]')).toHaveCount(0);

@@ -1,6 +1,7 @@
 import { chromium, expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import {
+import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
   NORTH_STAR_CATAN_PROMPT,
   openLobbyCard,
   shareHrefFromStudio,
@@ -11,7 +12,7 @@ const evidenceDir = process.env.GODESK_E2E_EVIDENCE_DIR;
 async function evidenceScreenshot(page: Page, name: string) {
   if (!evidenceDir) return;
   await mkdir(evidenceDir, { recursive: true });
-  await page.getByRole("region", { name: "卡坦六角岛" }).screenshot({
+  await page.getByRole("region", { name: "汐屿" }).screenshot({
     path: `${evidenceDir}/${name}.png`,
   });
 }
@@ -73,28 +74,28 @@ test("NL Catan proposal → hex-settlement build → share= guest setup settleme
     await page.getByLabel("你的席位").selectOption("1");
     await guestPage.getByLabel("你的席位").selectOption("0");
 
-    const hostBoard = page.getByRole("region", { name: "卡坦六角岛" });
-    const guestBoard = guestPage.getByRole("region", { name: "卡坦六角岛" });
+    const hostBoard = page.getByRole("region", { name: "汐屿" });
+    const guestBoard = guestPage.getByRole("region", { name: "汐屿" });
     await expect(hostBoard).toBeVisible();
     await expect(guestBoard).toBeVisible();
-    await expect(guestBoard.getByRole("img", { name: "卡坦六角岛" })).toBeVisible();
+    await expect(guestBoard.getByRole("img", { name: "汐屿" })).toBeVisible();
     const hostHud = hostBoard.getByRole("region", { name: "对局状态" });
     const guestHud = guestBoard.getByRole("region", { name: "对局状态" });
     await expect(hostHud).toContainText("座位 0 · 阶段 初始放置");
     await expect(hostHud).toContainText("等待对方 · 座位 0");
     await expect(guestHud).toContainText("座位 0 · 阶段 初始放置");
     await expect(guestHud).toContainText("轮到你行动");
-    await expect(hostBoard.getByRole("button", { name: /放置定居点/ })).toHaveCount(0);
+    await expect(hostBoard.getByRole("button", { name: /建造渔村/ })).toHaveCount(0);
     await expect(guestBoard.getByLabel("你的资源")).toBeVisible();
     await evidenceScreenshot(guestPage, "catan-guest-setup");
 
-    await guestBoard.getByRole("button", { name: /放置定居点/ }).first().click();
+    await guestBoard.getByRole("button", { name: /建造渔村/ }).first().click();
     await expect(hostHud).toContainText("place_settlement");
     await expect(guestHud).toContainText("place_settlement");
     await expect(hostHud.getByLabel("胜利点")).toContainText("座位 0 · 1 胜利点");
     await expect(guestHud.getByLabel("胜利点")).toContainText("座位 0 · 1 胜利点");
-    await expect(guestBoard.getByRole("button", { name: /放置道路/ }).first()).toBeVisible();
-    await expect(hostBoard.getByRole("button", { name: /放置道路/ })).toHaveCount(0);
+    await expect(guestBoard.getByRole("button", { name: /铺设栈道/ }).first()).toBeVisible();
+    await expect(hostBoard.getByRole("button", { name: /铺设栈道/ })).toHaveCount(0);
     await evidenceScreenshot(guestPage, "catan-guest-settlement");
   } finally {
     await guest.close();

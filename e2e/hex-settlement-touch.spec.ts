@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
 
 /** G3D-04 EP-I: iPhone 12 Pro touch emulation can tap a legal action (no HUD/header overlap). */
 test("卡坦 room: iPhone 12 Pro touch taps a legal settlement", async ({ browser }) => {
@@ -25,11 +26,11 @@ test("卡坦 room: iPhone 12 Pro touch taps a legal settlement", async ({ browse
     await card.getByRole("link", { name: "继续这一局" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/room\//);
     await page.getByLabel("你的席位").selectOption("0");
-    const board = page.getByRole("region", { name: "卡坦六角岛" });
-    await expect(page.getByRole("img", { name: "卡坦六角岛" })).toBeVisible();
-    await board.getByRole("button", { name: /放置定居点/ }).first().tap({ timeout: 10_000 });
+    const board = page.getByRole("region", { name: "汐屿" });
+    await expect(page.getByRole("img", { name: "汐屿" })).toBeVisible();
+    await board.getByRole("button", { name: /建造渔村/ }).first().tap({ timeout: 10_000 });
     await expect(board.getByRole("region", { name: "对局状态" })).toContainText("place_settlement");
-    await board.getByRole("button", { name: /放置道路/ }).first().tap({ timeout: 10_000 });
+    await board.getByRole("button", { name: /铺设栈道/ }).first().tap({ timeout: 10_000 });
     await expect(board.getByRole("region", { name: "对局状态" })).toContainText("place_road");
   } finally {
     await ctx.close();

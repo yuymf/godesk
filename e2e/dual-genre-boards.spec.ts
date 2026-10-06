@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
 
 /** Frozen Sol max baseline prompts (GameSpec fixtures). */
 const CATAN_PROMPT = "做一款可以与电脑对战的卡坦岛基础版";
@@ -127,19 +128,19 @@ test.describe("dual-genre boards: Othello + Catan generate → lobby → act", (
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
     expect(new URL(page.url()).searchParams.get("share")).toBeTruthy();
 
-    const board = page.getByRole("region", { name: "卡坦六角岛" });
+    const board = page.getByRole("region", { name: "汐屿" });
     await expect(board).toBeVisible();
     const hud = board.getByRole("region", { name: "对局状态" });
     await expect(hud).toBeVisible();
     await expect(hud).toContainText("初始放置");
-    await expect(page.getByRole("img", { name: "卡坦六角岛" })).toBeVisible();
+    await expect(page.getByRole("img", { name: "汐屿" })).toBeVisible();
 
     await page.getByLabel("你的席位").selectOption("0");
     await expect(hud).toContainText("轮到你行动");
     await capture(page, "room-catan");
     await expect(board.getByLabel("你的资源")).toBeVisible();
 
-    const settlement = board.getByRole("button", { name: /放置定居点/ });
+    const settlement = board.getByRole("button", { name: /建造渔村/ });
     await expect(settlement.first()).toBeVisible();
     await settlement.first().click();
 
@@ -148,10 +149,10 @@ test.describe("dual-genre boards: Othello + Catan generate → lobby → act", (
     await expect(hud).toContainText("初始放置");
     await expect(board.getByLabel("你的资源")).toBeVisible();
     // After settlement, setup wants a road — legal road hits appear.
-    await expect(board.getByRole("button", { name: /放置道路/ }).first()).toBeVisible({
+    await expect(board.getByRole("button", { name: /铺设栈道/ }).first()).toBeVisible({
       timeout: 15_000,
     });
 
-    await assertBoardHudNotClipped(page, "卡坦六角岛");
+    await assertBoardHudNotClipped(page, "汐屿");
   });
 });

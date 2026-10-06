@@ -1,4 +1,5 @@
 import { expect, type Browser, type Locator, type Page, test } from "@playwright/test";
+import { openTidewellBoardTargets } from "./helpers/tidewell-actions";
 
 /**
  * G3D-09: motion durations (place 280 / dice 900 / turn camera 600), reduced motion → 0 ms,
@@ -6,23 +7,23 @@ import { expect, type Browser, type Locator, type Page, test } from "@playwright
  * Seat 1 is a second browser context on the same share link (rooms have no in-room bot).
  */
 type MotionEntry = { kind: string; id: string; durationMs: number; reduced: boolean };
-const CATAN_PROMPT = "做一款可以与电脑对战的卡坦岛基础版";
+const TIDEWELL_PROMPT = "做一款可以与电脑对战的汐屿基础版";
 
 async function openRoom(page: Page) {
   await page.goto("/chatgpt-plugin/new");
-  await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(CATAN_PROMPT);
+  await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(TIDEWELL_PROMPT);
   await page.getByRole("button", { name: "生成可玩版本" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 90_000 });
   await page.getByRole("button", { name: "确认玩法并开始试玩" }).click();
   await expect(page.getByRole("heading", { name: "现在就开玩" })).toBeVisible({ timeout: 90_000 });
   const projectId = new URL(page.url()).pathname.split("/").at(-1)!;
-  await page.goto("/chatgpt-plugin/games");
+  await page.goto("/chatgpt-plugin/game");
   const card = page.locator(".lobby-card").filter({ has: page.locator(`a[href$="/studio/${projectId}"]`) });
   await card.getByRole("link", { name: "继续这一局" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
   await page.getByLabel("你的席位").selectOption("0");
-  const board = page.getByRole("region", { name: "卡坦六角岛" });
-  await expect(page.getByRole("img", { name: "卡坦六角岛" })).toBeVisible();
+  const board = page.getByRole("region", { name: "汐屿" });
+  await expect(page.getByRole("img", { name: "汐屿" })).toBeVisible();
   await expect(page.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
   // G3D-08: wait for tide-water mount+shader warm so cold compile does not eat the mid-tween click budget.
   await expect(page.getByTestId("g3d-scene-host")).toHaveAttribute("data-water", "on", { timeout: 60_000 });
@@ -34,7 +35,7 @@ async function joinSeat1(browser: Browser, url: string, reducedMotion: "reduce" 
   const page = await ctx.newPage();
   await page.goto(url);
   await page.getByLabel("你的席位").selectOption("1");
-  const board = page.getByRole("region", { name: "卡坦六角岛" });
+  const board = page.getByRole("region", { name: "汐屿" });
   await expect(board).toBeVisible({ timeout: 30_000 });
   return { ctx, page, board };
 }
@@ -43,8 +44,10 @@ const motionLog = (page: Page) =>
   page.evaluate(() => ((globalThis as { __g3dMotionLog?: MotionEntry[] }).__g3dMotionLog ?? []).slice());
 
 async function setupTurn(board: Locator) {
-  await board.getByRole("button", { name: /放置定居点/ }).first().click();
-  await board.getByRole("button", { name: /放置道路/ }).first().click();
+  await openTidewellBoardTargets(board);
+  await board.getByRole("button", { name: /建造渔村/ }).first().click();
+  await openTidewellBoardTargets(board);
+  await board.getByRole("button", { name: /铺设栈道/ }).first().click();
 }
 
 for (const mode of ["no-preference", "reduce"] as const) {
@@ -62,10 +65,11 @@ for (const mode of ["no-preference", "reduce"] as const) {
     // as the reconcile that started the tween): Playwright's own actionability
     // waits take 0.7–2 s under SwiftShader + G3D-07 shadows, which made the old
     // wall-clock bound measure the runner, not the product.
-    await board.getByRole("button", { name: /放置定居点/ }).first().click();
+    await openTidewellBoardTargets(board);
+    await board.getByRole("button", { name: /建造渔村/ }).first().click();
     const clickedDuringTween = await page.evaluate(() => new Promise<{ placeAt: number | null; placeMs: number; busyAtClick: boolean }>((resolve, reject) => {
       const find = () => [...document.querySelectorAll<HTMLButtonElement>("button")]
-        .find((button) => /放置道路/.test(button.textContent ?? "") && !button.disabled);
+        .find((button) => /铺设栈道/.test(button.textContent ?? "") && !button.disabled);
       const tryClick = () => {
         const road = find();
         if (road) {

@@ -1,5 +1,6 @@
 import { expect, type Browser, type Page, test } from "@playwright/test";
 import {
+import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
   CATAN_PROMPT,
   OTHELLO_PROMPT,
   generateApproveAndPlayable,
@@ -51,14 +52,14 @@ async function guestJoinClaimAndAct(
         await expect(board.getByLabel("子数")).toContainText(/黑\s*[3-9]/);
       }
     } else {
-      const board = page.getByRole("region", { name: "卡坦六角岛" });
+      const board = page.getByRole("region", { name: "汐屿" });
       await expect(board).toBeVisible();
       const hud = board.getByRole("region", { name: "对局状态" });
       await expect(hud).toContainText("轮到你行动");
-      await board.getByRole("button", { name: /放置定居点/ }).first().click();
+      await board.getByRole("button", { name: /建造渔村/ }).first().click();
       await expect(hud).toContainText("place_settlement");
       await expect(
-        board.getByRole("button", { name: /放置道路/ }).first(),
+        board.getByRole("button", { name: /铺设栈道/ }).first(),
       ).toBeVisible({ timeout: 15_000 });
     }
   } finally {

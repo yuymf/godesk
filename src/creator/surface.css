@@ -4431,6 +4431,71 @@ summary:focus-visible {
   }
 }
 
+/* —— G3D-13 Tidewell HUD (parchment + mobile action drawer) —— */
+.tidewell-board {
+  background:
+    linear-gradient(180deg, rgb(251 248 241 / 92%) 0%, rgb(245 238 224 / 96%) 100%),
+    url("/assets/ui/paper-noise.webp");
+  background-size: auto, 256px 256px;
+  border-color: rgb(120 90 50 / 28%);
+  box-shadow: 0 12px 32px rgb(60 40 20 / 10%);
+}
+.tidewell-hud {
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgb(120 90 50 / 22%);
+  border-radius: 0.85rem;
+  background: rgb(255 252 245 / 88%);
+}
+.hex-settlement-actions {
+  display: grid;
+  gap: 0.65rem;
+}
+.hex-settlement-board-targets {
+  border: 1px solid rgb(120 90 50 / 20%);
+  border-radius: 0.75rem;
+  background: rgb(255 252 245 / 70%);
+  padding: 0.35rem 0.55rem 0.55rem;
+}
+.hex-settlement-board-targets > summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--ink, #2a2118);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  list-style: none;
+}
+.hex-settlement-board-targets > summary::-webkit-details-marker { display: none; }
+.hex-settlement-board-targets[open] > summary { margin-bottom: 0.4rem; }
+.hex-settlement-action-list .catan-action.is-board-target {
+  background: var(--surface-paper, #fbf8f1);
+  color: var(--ink, #2a2118);
+  border-color: rgb(120 90 50 / 35%);
+}
+/* Mobile: board-target chips stay available (e2e / keyboard) but compact under the stage. */
+@media (max-width: 767px) {
+  .tidewell-board .g3d-stage {
+    min-height: 52vh;
+  }
+  .tidewell-hud {
+    grid-template-columns: 1fr;
+  }
+  .tidewell-board .hex-settlement-board-targets {
+    order: 3;
+  }
+  .tidewell-board .hex-settlement-action-list {
+    max-height: 5.5rem;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tidewell-board .hex-settlement-action-list .catan-action {
+    min-height: 44px;
+    font-size: 0.8rem;
+    padding: 0.35rem 0.65rem;
+  }
+}
+
 /* —— Catan / hex-settlement board HUD (PR8) —— */
 .catan-board {
   display: grid;

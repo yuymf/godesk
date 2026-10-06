@@ -1,5 +1,6 @@
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
 import { NORTH_STAR_CATAN_PROMPT, shareHrefFromStudio } from "./helpers/sol-max-baseline";
+import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
 
 /**
  * G3D-10：房间音效。素材（G3D-26 / G3D-27）合入前，引擎只记 cue 日志不出声；
@@ -71,13 +72,13 @@ test("hex-settlement room audio: cues from play events, touch unlock, settings p
     await page.getByLabel("你的席位").selectOption("1");
     await guestPage.getByLabel("你的席位").selectOption("0");
 
-    const guestBoard = guestPage.getByRole("region", { name: "卡坦六角岛" });
-    const hostBoard = page.getByRole("region", { name: "卡坦六角岛" });
+    const guestBoard = guestPage.getByRole("region", { name: "汐屿" });
+    const hostBoard = page.getByRole("region", { name: "汐屿" });
     // 手机视口下 main 上 2D 盘面的热点被 3D canvas 盖住（DPR > 1 时 canvas 溢出，G3D-05 #110 已修，
     // 2D 盘面由 G3D-18 删除），所以这里直接派发 click。
-    await guestBoard.getByRole("button", { name: /放置定居点/ }).first().dispatchEvent("click");
-    await expect(guestBoard.getByRole("button", { name: /放置道路/ }).first()).toBeVisible();
-    await guestBoard.getByRole("button", { name: /放置道路/ }).first().dispatchEvent("click");
+    await guestBoard.getByRole("button", { name: /建造渔村/ }).first().dispatchEvent("click");
+    await expect(guestBoard.getByRole("button", { name: /铺设栈道/ }).first()).toBeVisible();
+    await guestBoard.getByRole("button", { name: /铺设栈道/ }).first().dispatchEvent("click");
 
     // 两端都从房间快照差量得到 place / road cue。
     for (const p of [page, guestPage]) {
@@ -90,14 +91,14 @@ test("hex-settlement room audio: cues from play events, touch unlock, settings p
     expect((await cueLog(guestPage)).map((e) => e.cue)).toContain("select");
 
     // 桌面端 hover / select：轮到座位 1。
-    const hostSettle = hostBoard.getByRole("button", { name: /放置定居点/ }).first();
+    const hostSettle = hostBoard.getByRole("button", { name: /建造渔村/ }).first();
     await expect(hostSettle).toBeVisible();
     await hostSettle.hover();
     await expect.poll(async () => (await cueLog(page)).map((e) => e.cue)).toContain("hover");
 
     // 走完初始放置（2 人蛇形，余下 3 个定居点 + 3 条道路），再由座位 0 掷骰、结束回合：dice / turn（及可能的 gain）。
     const boards = [hostBoard, guestBoard];
-    const setupAction = /^(放置定居点|放置道路) · /;
+    const setupAction = /^(建造渔村|铺设栈道) · /;
     for (let step = 0; step < 6; step += 1) {
       let active: Locator | null = null;
       await expect.poll(async () => {
@@ -109,10 +110,10 @@ test("hex-settlement room audio: cues from play events, touch unlock, settings p
         .toBeGreaterThanOrEqual(3 + step);
     }
     await clickAction(guestBoard, /^掷骰$/);
-    // 掷出 7 时先处理弃牌 / 移动强盗，直到出现「结束回合」。
+    // 掷出 7 时先处理弃牌 / 移动雾灯，直到出现「结束回合」。
     for (let guard = 0; guard < 12 && !(await hasAction(guestBoard, /^结束回合$/)); guard += 1) {
       for (const board of boards) {
-        if (await hasAction(board, /^(弃牌|移动强盗)/)) await clickAction(board, /^(弃牌|移动强盗)/);
+        if (await hasAction(board, /^(弃牌|移动雾灯)/)) await clickAction(board, /^(弃牌|移动雾灯)/);
       }
       await guestPage.waitForTimeout(500);
     }

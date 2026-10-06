@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
 
 /** G3D-18: preview and replay mount the read-only 3D SceneHost (no SVG board). */
 const CATAN_PROMPT = "做一款可以与电脑对战的卡坦岛基础版";
@@ -25,7 +26,7 @@ test("卡坦: preview + replay render 3D canvas, no SVG board", async ({ page })
   await page.goto(`/chatgpt-plugin/play/${encodeURIComponent(buildId)}`);
   const preview = page.getByRole("region", { name: "卡坦可玩桌面" });
   await expect(preview).toBeVisible({ timeout: 30_000 });
-  await expect(preview.getByRole("img", { name: "卡坦六角岛" })).toBeVisible();
+  await expect(preview.getByRole("img", { name: "汐屿" })).toBeVisible();
   await expect(preview.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
   await expect(preview.locator("svg polygon")).toHaveCount(0);
 
@@ -36,14 +37,14 @@ test("卡坦: preview + replay render 3D canvas, no SVG board", async ({ page })
   await page.goto(tryUrl);
   await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
   await page.getByLabel("你的席位").selectOption("0");
-  const board = page.getByRole("region", { name: "卡坦六角岛" });
-  await board.getByRole("button", { name: /放置定居点/ }).first().click();
+  const board = page.getByRole("region", { name: "汐屿" });
+  await board.getByRole("button", { name: /建造渔村/ }).first().click();
   await expect(board.getByRole("region", { name: "对局状态" })).toContainText(
     "place_settlement",
   );
   await page.getByRole("link", { name: "只读回放" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/replay\//, { timeout: 30_000 });
-  const replayBoard = page.getByRole("region", { name: "卡坦六角岛" });
+  const replayBoard = page.getByRole("region", { name: "汐屿" });
   await expect(replayBoard).toBeVisible();
   await expect(replayBoard.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
   await expect(replayBoard.locator("svg polygon")).toHaveCount(0);
