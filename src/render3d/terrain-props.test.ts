@@ -66,3 +66,16 @@ describe("G3D-PROPS terrain props", () => {
     layer.dispose();
   });
 });
+
+  it("builds distinct pine species and readable sheep / wheatrow geometry", () => {
+    const tall = buildPropGeometry("pineTall");
+    const round = buildPropGeometry("pineRound");
+    const small = buildPropGeometry("pineSmall");
+    expect(tall.getAttribute("position").count).not.toBe(round.getAttribute("position").count);
+    expect(small.getAttribute("position").count).toBeLessThan(tall.getAttribute("position").count);
+    const sheep = buildPropGeometry("sheep");
+    expect(sheep.getAttribute("position").count).toBeGreaterThan(80);
+    const wheat = buildPropGeometry("wheatrow");
+    expect(wheat.getAttribute("position").count).toBeGreaterThan(120);
+    tall.dispose(); round.dispose(); small.dispose(); sheep.dispose(); wheat.dispose();
+  });

@@ -38,7 +38,6 @@ export const PROP_KINDS: readonly PropKind[] = [
   "pineTall", "pineRound", "pineSmall", "canopy",
   "sheep", "trough", "boulder", "clay", "bricks", "sheaf", "wheatrow", "dune", "pebble", "blobshadow",
 ];
-const PINE_KINDS: readonly PropKind[] = ["pineTall", "pineRound", "pineSmall"];
 function isPine(kind: PropKind): boolean {
   return kind === "pineTall" || kind === "pineRound" || kind === "pineSmall";
 }
