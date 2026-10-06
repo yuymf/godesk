@@ -546,16 +546,35 @@ async function runCi({ browser, roomUrl, outDir }) {
     }
   }
   // 6. G3D-17 上线前清单（只记录）：Room 可见文本 / aria-label 里不得出现原始动作 id（坐标串、内部 id、动作类型）。
-  //    桌面 1440×900 与 iPhone 12 Pro 各扫一次；不带 ?perf=1，免得 perf 浮层的数字混进来。
+  //    桌面 1440×900 与 iPhone 12 Pro 各扫一次，都以同一身份入座 0（旁观者看不到合法动作；入座失败时 seat=null 按旁观记）；
+  //    不带 ?perf=1，免得 perf 浮层的数字混进来。这是最后一段：入座会改房间状态。
   const { defaultBrowserType: _ignored, ...iphone12Pro } = devices["iPhone 12 Pro"];
+  let seatClaims = {};
   for (const [viewport, contextOptions] of [["desktop-1440x900", { viewport: { width: 1440, height: 900 } }], ["iphone12pro-390x844", iphone12Pro]]) {
     const context = await browser.newContext(contextOptions);
+    // 席位凭证存在 sessionStorage：把上一个视口的凭证带过来，第二个视口以同一身份入座 0（否则 409 seat_claimed）。
+    await context.addInitScript((entries) => {
+      for (const [key, value] of Object.entries(entries)) window.sessionStorage.setItem(key, value);
+    }, seatClaims);
     const page = await context.newPage();
     try {
       await page.goto(roomUrl, { waitUntil: "commit" });
       await page.waitForFunction(() => Boolean(document.querySelector('[data-testid="g3d-scene-host"]')), undefined, { timeout: 120_000 });
       await page.waitForTimeout(2_000);
-      hudScans.push({ viewport, ...findRawActionIds(await collectRoomTexts(page)) });
+      // 旁观者看不到合法动作；先入座 0（开局放置阶段，合法动作最多），再扫。
+      const seatSelect = page.getByLabel("你的席位");
+      let seat = null;
+      if (await seatSelect.count() && (await seatSelect.inputValue().catch(() => "")) === "0") {
+        seat = 0; // 已用带过来的凭证恢复入座
+      } else if (await seatSelect.count()) {
+        const claim = page.waitForResponse((response) => /\/seats$/.test(new URL(response.url()).pathname), { timeout: 15_000 }).catch(() => null);
+        await seatSelect.selectOption("0").catch(() => {});
+        const response = await claim;
+        seat = response?.ok() ? 0 : null;
+        await page.waitForTimeout(2_500);
+      }
+      hudScans.push({ viewport, seat, ...findRawActionIds(await collectRoomTexts(page)) });
+      seatClaims = await page.evaluate(() => Object.fromEntries(Object.entries(window.sessionStorage))).catch(() => seatClaims);
     } catch (error) {
       hudScans.push({ viewport, error: String(error?.message ?? error).split("\n")[0] });
     } finally {

@@ -141,10 +141,10 @@ export function evaluateHud(perfReport) {
   if (!Array.isArray(scans) || !scans.length) return item("hud-raw-action-ids", "missing", "perf 报告里没有 launchChecklist.hudRawActionIds（跑 pnpm perf:ci）");
   const errored = scans.filter((scan) => scan.error);
   const total = scans.reduce((sum, scan) => sum + (scan.count ?? 0), 0);
-  const per = scans.map((scan) => `${scan.viewport} ${scan.error ? `出错（${scan.error}）` : scan.count}`).join("；");
+  const per = scans.map((scan) => `${scan.viewport}${scan.seat === null ? "（旁观）" : ""} ${scan.error ? `出错（${scan.error}）` : `${scan.count} 处 / ${scan.unique ?? "?"} 种`}`).join("；");
   if (total > 0) {
     const example = scans.flatMap((scan) => scan.samples ?? []).slice(0, 3).map((s) => `「${s.context}」`).join(" ");
-    return item("hud-raw-action-ids", "warn", `Room 露出 ${total} 处原始动作 id（${per}）例：${example}`, { scans });
+    return item("hud-raw-action-ids", "warn", `Room 露出原始动作 id（${per}）例：${example}`, { scans });
   }
   if (errored.length) return item("hud-raw-action-ids", "warn", `扫描未完成：${per}`, { scans });
   return item("hud-raw-action-ids", "pass", `未发现原始动作 id（${per}）`, { scans });

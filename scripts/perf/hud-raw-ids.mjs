@@ -41,6 +41,7 @@ export const RAW_ACTION_ID_RULES = [
 export function findRawActionIds(entries, { maxSamples = 12 } = {}) {
   const byRule = Object.fromEntries(RAW_ACTION_ID_RULES.map((rule) => [rule.id, 0]));
   const samples = [];
+  const uniqueMatches = new Set();
   let count = 0;
   for (const { source, text } of entries) {
     if (!text) continue;
@@ -52,12 +53,13 @@ export function findRawActionIds(entries, { maxSamples = 12 } = {}) {
       byRule[rule.id] += matches.length;
       count += matches.length;
       for (const match of matches) {
+        uniqueMatches.add(match);
         if (samples.length < maxSamples) samples.push({ rule: rule.id, match, source, context: snippet(remaining, match) });
       }
       remaining = remaining.replace(rule.pattern, " ");
     }
   }
-  return { count, byRule, samples };
+  return { count, unique: uniqueMatches.size, byRule, samples };
 }
 
 function snippet(text, match) {
