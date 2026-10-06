@@ -1,4 +1,4 @@
-/** Default 3d-asset-server sidecar (engineering box binds HOST=localhost). */
+/** Default 3d-asset-server sidecar (engineering box binds HOST=localhost; live smoke 2026-10-07). */
 export const DEFAULT_ASSET_SERVER_URL = "http://127.0.0.1:8787";
 
 /** Free sources that support direct download without paid API keys. */

@@ -45,3 +45,10 @@ pnpm dev:worker              # http://127.0.0.1:8799
 这些文件活在 Durable Object 里，**不会**自动进 git。提升进 Tidewell 套件时再拷到仓库 `assets/` 并登记 `src/render3d/assets/manifest.ts`，否则 `pnpm verify:assets` 会失败。
 
 禁止拷贝 settlecoast 的任何代码、模型、音频、插画、文案。
+
+## 工程箱 live 状态（2026-10-07）
+
+- Sidecar：`http://127.0.0.1:8787`（`GET /health` → `{"ok":true}`）
+- Worker：`ASSET_SERVER_URL=http://127.0.0.1:8787`，本机 `pnpm`/`wrangler` 在 **8799**
+- 实测：`GET /api/asset-search?q=trees` → 24 条；「加入项目」写入 Durable Object `assets/imported/` + 项目内 `assets/LICENSES.md`
+- 证据目录（仓外）：`/workspace/g3d-evidence/asset-server/panel-live/`

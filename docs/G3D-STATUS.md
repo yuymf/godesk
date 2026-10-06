@@ -13,7 +13,7 @@
 | 任务范围 | G3D-01 至 G3D-27；里程碑 M0–M5；人日上限 91 |
 | 代码基线 | `yuymf/godesk` `main` @ `45a5a1c`（#142 G3D-ART-2；#139 G3D-14 后续修补；#137 G3D-ART AI；#132 G3D-04b；#131 G3D-08；#134 G3D-15 第二刀；#133 G3D-14） |
 | 状态文件维护人 | 劳埃德(工程) / Track B（素材） |
-| 最近更新 | 2026-10-06（Asia/Shanghai） |
+| 最近更新 | 2026-10-07（Asia/Shanghai） |
 
 ## 硬约束（三条）
 
@@ -88,7 +88,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
 | G3D-17 预备：上线前清单自动化 | Track C | `feat/g3d-17-launch-checklist` · [#144](https://github.com/yuymf/godesk/pull/144) | `scripts/launch-checklist.mjs`：法务待审条数 / 包体 / Lighthouse warn 级断言 / 分档 draw call / HUD 原始动作 id，现为 warning，转阻断开关见 [`docs/perf/launch-checklist.md`](./perf/launch-checklist.md)；G3D-16 等 G3D-13（#138） |
-| Tidewell 资产搜索（3d-asset-server sidecar） | Cloud Agent | `cursor/tidewell-asset-search-14b1` · [#153](https://github.com/yuymf/godesk/pull/153) | Creator Studio「资产搜索」面板；默认 `http://127.0.0.1:8787`；不 vendoring sidecar；见 [`docs/asset-server.md`](./asset-server.md) |
+| Tidewell 资产搜索（3d-asset-server sidecar） | Cloud Agent | `cursor/tidewell-asset-search-14b1` · [#153](https://github.com/yuymf/godesk/pull/153) draft | **Live on box**：sidecar `http://127.0.0.1:8787`（`/health` ok）；Worker `ASSET_SERVER_URL` → `http://127.0.0.1:8799`；`GET /api/asset-search?q=trees` → **24**；「加入项目」写入 DO `assets/imported/polyhaven-tree_bark_03/…` + 项目内 `assets/LICENSES.md`（CC0-1.0）；证据 `/workspace/g3d-evidence/asset-server/panel-live/`；见 [`docs/asset-server.md`](./asset-server.md) |
 
 ## 阻塞
 
@@ -96,7 +96,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | --- | --- | --- |
 | box Codex 用量上限 | 至 2026-11-05 02:04 Asia/Shanghai；Cloud Agent 兜底（本席无该工具时手写） | 用量恢复 |
 | **G3D-13（Track B）** | 依赖 G3D-07/08/09/10 + 素材 19–25 已齐。**合入阻塞：G3D-04b（Track A，#132 Room AI 座位）** — Tidewell 示例 AI 座位依赖它；可先开分支开发，**须等 #132 合入后再合 G3D-13**。**HUD 备注（iPhone 12 Pro 模拟）**：Room 在棋盘下方露出合法动作的原始按钮列表，文案含坐标串（例：`放置道路 · -200:173|-250:87`）— HUD 重做须隐藏/替换此层 | 开工中；合入等 #132 |
-| GitHub Actions | **账户计费拦截**（2026-10-05 16:02 起；10 月 2000 分钟私有免费额度已用完，godesk 占 1445）。CI 瘦身 PR `ci/slim-actions`（G1–G8，见 [`docs/ci/actions-budget.md`](./ci/actions-budget.md)）恢复后**最先合入**，再合 G3D 批次 | 计费恢复（预算或 11-01 额度重置）；禁无绿合入 |
+| GitHub Actions | 仓库已 **public**（2026-10-06 后）；私有额度耗尽时期的计费拦截应解除。#153 此前无 Actions run；本刀 push 触发 draft 快速子集。仍禁无绿合入 | #153 CI 绿；保持 draft 至 live 证据已贴 |
 
 ## 下一刀
 
@@ -133,7 +133,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | `feat/g3d-13-tidewell` | — | G3D-13 Tidewell 集成（Track B） | 开工 · 合入等 #132 |
 | `chore/pre-public-cleanup` | 见 PR | 仓库公开前清理：品牌中性化、LICENSE、第三方参考站点引用清零（Track A） | open · 不合入（等用户确认） |
 | `feat/g3d-04c-incremental-room-state` | [#141](https://github.com/yuymf/godesk/pull/141) | G3D-04c Room 内核状态增量化（Track A） | open · 本机门禁全过；合入 main（#138 后）重跑 CI 后 squash 合入 |
-| `cursor/tidewell-asset-search-14b1` | [#153](https://github.com/yuymf/godesk/pull/153) | Tidewell 资产搜索：Studio 面板 + 3d-asset-server sidecar（默认 `http://127.0.0.1:8787`），不 vendoring | open · draft |
+| `cursor/tidewell-asset-search-14b1` | [#153](https://github.com/yuymf/godesk/pull/153) | Tidewell 资产搜索：Studio 面板 + sidecar `http://127.0.0.1:8787`；box live 搜索 24 / 导入 bark；证据 `panel-live/` | open · draft |
 
 ## 修订记录
 
@@ -182,3 +182,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | G3D-17 预备（Track C）上线前清单自动化 PR：回填 #139 合入 SHA `2c56f22`；进行中加 G3D-17 预备；G3D-17 上线前清单加「自动化清单转阻断」项与基线；开着的 PR #139 → 本 PR；代码基线 → `45a5a1c` | Track C |
 | 2026-10-06 | G3D-ART-2 #142 合入 `45a5a1c`；STATUS 回填 SHA；Notion G3D-ART 追加跟进记录 | Track D |
 | 2026-10-06 | Tidewell 资产搜索：Creator Studio 面板调用仓外 3d-asset-server（默认 `http://127.0.0.1:8787`）；「加入项目」写入 Game Project `assets/imported/` + `assets/LICENSES.md`；文档 [`docs/asset-server.md`](./asset-server.md) | Cloud Agent |
+| 2026-10-07 | Tidewell 资产搜索 box live：sidecar `/health` + `/v1/search?q=trees`→24；Worker 8799 代理；导入 `assets/imported/polyhaven-tree_bark_03/tree_bark_03_diff_1k.jpg`；Playwright 面板截图；证据 `/workspace/g3d-evidence/asset-server/panel-live/`；#153 保持 draft | Cloud Agent |
