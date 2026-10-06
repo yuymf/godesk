@@ -84,9 +84,12 @@ async function main() {
       for (const refName of matched.length ? matched : [null]) {
       for (const variant of variants) {
         // d-hand-hud 只有整页图（-page 是整页滚动全图）；其它视图按变体取。
+        // 参考变体有同名截图（如 desktop-a3-topdown-ai-turn-page.png）时优先配对，否则退回视图默认截图。
+        const refStem = refName ? refName.replace(/\.png$/i, "") : null;
+        const stemShot = refStem && refStem !== `${vp}-${id}` ? (variant === "page" ? `${refStem}-page.png` : `${refStem}.png`) : null;
         const candidates = id === "d-hand-hud"
           ? [variant === "page" ? `${vp}-${id}.png` : null].filter(Boolean)
-          : [variant === "page" ? `${vp}-${id}-page.png` : `${vp}-${id}.png`];
+          : [stemShot, variant === "page" ? `${vp}-${id}-page.png` : `${vp}-${id}.png`].filter(Boolean);
         const shotName = candidates.find((c) => shots.includes(c));
         if (!shotName) continue;
         const stem = refName && refName !== `${vp}-${id}.png` ? refName.replace(/\.png$/i, "") : `${vp}-${id}`;

@@ -46,12 +46,9 @@ describe("judge camera presets (G3D-JUDGE, ?judge=1 only)", () => {
     expect(d(judgeCamera("c-coast", NODES, 0.46)!)).toBeGreaterThan(d(coast));
   });
 
-  it("dice preset frames die:0; narrow (iPhone) presets pull back further", () => {
-    const wide = judgeCamera("f-dice", NODES, 1.6)!;
-    const narrow = judgeCamera("f-dice", NODES, 0.46)!;
-    expect(wide.target[0]).toBeCloseTo(4.2, 5);
-    const d = (p: typeof wide) => Math.hypot(...p.position.map((v, i) => v - p.target[i]!) as [number, number, number]);
-    expect(d(narrow)).toBeGreaterThan(d(wide));
+  it("dice preset uses the director's play framing (tray is a screen-corner overlay)", () => {
+    expect(judgeCamera("f-dice", NODES, 1.6)).toBeNull();
+    expect(judgeCamera("f-dice", NODES, 0.46)).toBeNull();
   });
 
   it("orbit puts polar 0 straight above the target", () => {

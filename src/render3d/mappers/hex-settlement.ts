@@ -1,6 +1,7 @@
 import type { Terrain } from "../../runtime/adapters/hex-settlement";
 import type { SceneModel, SceneNode, SceneVec3 } from "../scene-model";
 import { NUMBER_TOKEN_SCALE } from "../tokens";
+import { diceLayout } from "../dice";
 
 /** Match topology-stub / hex-settlement flat-top pixel size, then scale to world units. */
 const HEX_PIXEL_SIZE = 100;
@@ -69,6 +70,11 @@ export type HexSettlementSceneInput = {
   lastAction?: string | null;
 };
 
+/** Tile top surface (tile extrude depth); pieces stand on it. */
+export const TILE_TOP_Y = 0.28;
+/** Robber stands beside the number token on numbered tiles (desert: centre). */
+export const ROBBER_TOKEN_OFFSET: readonly [number, number] = [0.42, -0.32];
+
 export function mapHexSettlementToScene(genre: HexSettlementSceneInput): SceneModel {
   const nodes: SceneNode[] = [];
 
@@ -105,10 +111,12 @@ export function mapHexSettlementToScene(genre: HexSettlementSceneInput): SceneMo
   const robberTile = genre.tiles.find((tile) => `${tile.q},${tile.r}` === genre.robberHex);
   if (robberTile) {
     const center = hexCenter(robberTile.q, robberTile.r);
+    const [ox, oz] = robberTile.number !== null ? ROBBER_TOKEN_OFFSET : [0, 0];
+    const at = toWorld(center.x, center.y, TILE_TOP_Y);
     nodes.push({
       id: "robber",
       kind: "robber",
-      position: toWorld(center.x, center.y, 0.85),
+      position: [at[0] + ox, at[1], at[2] + oz],
       tag: "fog-lantern",
     });
   }
@@ -140,7 +148,7 @@ export function mapHexSettlementToScene(genre: HexSettlementSceneInput): SceneMo
       nodes.push({
         id: `settle:${vertexId}`,
         kind: "settlement",
-        position: toWorld(point.x, point.y, 0.22),
+        position: toWorld(point.x, point.y, TILE_TOP_Y - 0.01),
         seat,
         tag: `seat${seat}`,
         scale: [1, 1, 1],
@@ -152,7 +160,7 @@ export function mapHexSettlementToScene(genre: HexSettlementSceneInput): SceneMo
       nodes.push({
         id: `city:${vertexId}`,
         kind: "city",
-        position: toWorld(point.x, point.y, 0.28),
+        position: toWorld(point.x, point.y, TILE_TOP_Y - 0.01),
         seat,
         tag: `seat${seat}`,
         scale: [1, 1, 1],
@@ -167,33 +175,33 @@ export function mapHexSettlementToScene(genre: HexSettlementSceneInput): SceneMo
       nodes.push({
         id: `road:${edgeId}`,
         kind: "road",
-        position: toWorld(mid.x, mid.y, 0.18),
+        position: toWorld(mid.x, mid.y, TILE_TOP_Y - 0.012),
         rotationY: -angle,
         seat,
         tag: `seat${seat}`,
-        scale: [0.55, 0.12, 0.12],
+        scale: [1, 1, 1],
       });
     }
   });
 
+  // Dice tray + dice: local to the screen-corner dice overlay (dice-overlay.ts), not world space.
+  const layout = diceLayout();
   nodes.push({
     id: "dice-tray",
     kind: "dice-tray",
-    position: [4.2, 0.05, 3.2],
+    position: layout.tray.position,
+    rotationY: layout.tray.rotationY,
     tag: "tray",
   });
   const dice = genre.lastDice ?? ([1, 1] as const);
-  nodes.push({
-    id: "die:0",
-    kind: "die",
-    position: [4.0, 0.25, 3.2],
-    number: dice[0],
-  });
-  nodes.push({
-    id: "die:1",
-    kind: "die",
-    position: [4.4, 0.25, 3.2],
-    number: dice[1],
+  layout.dice.forEach((die, index) => {
+    nodes.push({
+      id: `die:${index}`,
+      kind: "die",
+      position: die.position,
+      rotationY: die.rotationY,
+      number: dice[index],
+    });
   });
   // G3D-08: water plane in SceneHost. G3D-13: island cliff base ring.
   nodes.push({

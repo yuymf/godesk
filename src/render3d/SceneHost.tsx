@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import {
   BoxGeometry,
   Color,
@@ -15,7 +15,6 @@ import {
   type BufferGeometry,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { buildLegalHitOverlays, disposeHitOverlay, disposeSharedHitResources } from "./hit-targets";
 import { createInstancePools, type InstancePools } from "./instance-pools";
 import {
   disposeTidewellGeometryCache,
@@ -23,7 +22,6 @@ import {
   geometryForNode,
   getTidewellGeometriesSync,
 } from "./model-templates";
-import { mapHexSettlementToScene } from "./mappers/hex-settlement";
 import {
   matchPickToLegalAction,
   pickFromPointerEvent,
@@ -31,15 +29,25 @@ import {
   type PickTarget,
 } from "./pick";
 import { reconcileScene } from "./reconcile";
-import { createNumberLabelLayer, projectLabels, type NumberLabelLayer } from "./number-labels";
-import { JUDGE_PRESETS, judgeCamera, type JudgePreset } from "./judge-camera";
+import type { NumberLabelLayer } from "./number-labels";
+import type { JudgePreset } from "./judge-camera";
 import { REPLACED_NODE_KINDS } from "./dressing-kinds";
 import type { HexDressing } from "./hex-dressing";
 import { framePose, type ViewportFrame } from "./viewport-frame";
 import type { SceneModel, SceneNode } from "./scene-model";
 import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
 import { markInteractive, perfModeEnabled, perfRecorder } from "./perf";
-import { dieFaceEuler, MotionController, prefersReducedMotion } from "./motion";
+import { applyDieOrientation, idleBob, MotionController, prefersReducedMotion } from "./motion";
+import type { CameraDirector, CameraRigApi } from "./camera-rig";
+import type { DiceOverlay } from "./dice-overlay";
+/**
+ * Hex-board-only code (camera director, dice overlay, mapper, number decals,
+ * hit targets, procedural pieces) loads lazily before the first hex reconcile.
+ */
+type HexKit = typeof import("./hex-kit");
+let hexKit: HexKit | null = null;
+/** Toolbar is UI chrome, not render core: its own lazy chunk (keeps render3d core ≤ 210 KB). */
+const CameraToolbar = lazy(async () => ({ default: (await import("./overlay/CameraToolbar")).CameraToolbar }));
 import { PerfOverlay } from "./PerfOverlay";
 import {
   configureRenderer,
@@ -61,13 +69,13 @@ import {
 } from "./tokens";
 import {
   RuntimeDowngradeMonitor,
-  TIER_CAPS,
   detectEnvFromBrowser,
   downgradeTier,
   resolveTier,
   tierLogLine,
   type RenderTierId,
   type TierCaps,
+  TIER_CAPS,
 } from "./tiers";
 
 /**
@@ -103,11 +111,75 @@ export type SceneHostProps = {
   /** G3D-14：通用桌面场景（见 SceneAdapter）。 */
   scene?: SceneAdapter | null;
   /**
-   * Track B HUD framing (2h3). Island fill / polar for hex-settlement only.
-   * Track C owns the full camera-rig (#151); this is a minimal viewport param.
+   * Track B HUD framing (2h3/2h4). Island fill / polar for hex-settlement only.
+   * Track C owns the full camera-rig; this is a minimal viewport param.
    */
   viewportFrame?: ViewportFrame | null;
+  /**
+   * G3D-JUDGE-PIECES: the viewer's seat. Local player's turn → tilted 3/4 "play" camera;
+   * anyone else's turn → near top-down "overview". null (spectator / preview) → "play".
+   */
+  localSeat?: number | null;
+  /** Show the on-canvas camera toolbar (hex scenes). Default true. */
+  cameraToolbar?: boolean;
+  /** Receives the camera API (zoom / rotate / reset / subscribe) for external HUD controls. */
+  onCameraApi?: (api: CameraRigApi | null) => void;
 };
+
+/** Vertex-coloured procedural pieces share three white materials (seat colour is baked). */
+const PIECE_VC_TOKEN: MaterialToken = {
+  base: "#ffffff",
+  roughness: 0.5,
+  metalness: 0,
+  clearcoat: 0.3,
+  pattern: "none",
+  pbrSet: "t09-paintwood",
+  pbrRepeat: 1,
+  pbrBaseColor: false,
+};
+const FIGURE_VC_TOKEN: MaterialToken = { base: "#ffffff", roughness: 0.66, metalness: 0, pattern: "none" };
+const DICE_VC_TOKEN: MaterialToken = { base: "#ffffff", roughness: 0.34, metalness: 0, clearcoat: 0.5, pattern: "none" };
+
+function vcMaterial(library: MaterialLibrary, key: string, token: MaterialToken) {
+  const material = library.get(key, token);
+  if (!material.vertexColors) {
+    material.vertexColors = true;
+    material.needsUpdate = true;
+  }
+  return material;
+}
+
+/** Procedural (own-modelled) geometry + material for pieces / dice / tray; null for other kinds. */
+function proceduralFor(
+  node: SceneNode,
+  library: MaterialLibrary,
+): { geometry: BufferGeometry; material: ReturnType<MaterialLibrary["get"]>; poolKey: string } | null {
+  const kit = hexKit;
+  if (!kit) return null;
+  const { pieceGeometry, dieGeometry, diceTrayGeometry } = kit;
+  const seat = node.seat ?? 0;
+  switch (node.kind) {
+    case "settlement":
+    case "city":
+    case "road":
+      return {
+        geometry: pieceGeometry(node.kind, seat),
+        material: vcMaterial(library, "piece-vc", PIECE_VC_TOKEN),
+        poolKey: `${node.kind}:s${seat}`,
+      };
+    case "robber":
+      return { geometry: pieceGeometry("robber"), material: vcMaterial(library, "figure-vc", FIGURE_VC_TOKEN), poolKey: "robber:vc" };
+    case "die":
+      return { geometry: dieGeometry(), material: vcMaterial(library, "dice-vc", DICE_VC_TOKEN), poolKey: "die:vc" };
+    case "dice-tray":
+      return { geometry: diceTrayGeometry(), material: vcMaterial(library, "piece-vc", PIECE_VC_TOKEN), poolKey: "dice-tray:vc" };
+    default:
+      return null;
+  }
+}
+
+/** Dice are thrown in from the tray's back-left corner and slide to rest. */
+const DICE_THROW_SLIDE: readonly [number, number] = [-0.32, -0.22];
 
 /** 阴影贴图在场景变化后继续逐帧重绘的时长（覆盖 place/move/dice 动效）。 */
 const SHADOW_REFRESH_MS = 1_500;
@@ -139,7 +211,6 @@ function hexShape(radius: number, bevel = 0.04): Shape {
 
 /** Shared template geometries for G3D-13 InstancedMesh pools (one draw call per group). */
 let SHARED_TILE_GEOM: BufferGeometry | null = null;
-let SHARED_ROAD_GEOM: BufferGeometry | null = null;
 let SHARED_DECOR_GEOM: BufferGeometry | null = null;
 
 function sharedTileGeom(): BufferGeometry {
@@ -150,16 +221,18 @@ function sharedTileGeom(): BufferGeometry {
   }
   return SHARED_TILE_GEOM;
 }
-function sharedRoadGeom(): BufferGeometry {
-  if (!SHARED_ROAD_GEOM) SHARED_ROAD_GEOM = new BoxGeometry(1, 1, 1);
-  return SHARED_ROAD_GEOM;
-}
 function sharedDecorGeom(): BufferGeometry {
   if (!SHARED_DECOR_GEOM) SHARED_DECOR_GEOM = new SphereGeometry(0.18, 10, 10);
   return SHARED_DECOR_GEOM;
 }
 
 function disposeObject(object: Object3D, pools?: InstancePools | null): void {
+  const overlay = object.userData.gdOverlay as DiceOverlay | undefined;
+  if (overlay) {
+    overlay.detach(object);
+    object.userData.gdOverlay = undefined;
+    return;
+  }
   const inst = object.userData.gdInstance as { poolKey: string; index: number } | undefined;
   if (inst && pools) {
     pools.release(inst.poolKey, inst.index);
@@ -170,7 +243,7 @@ function disposeObject(object: Object3D, pools?: InstancePools | null): void {
     const mesh = child as Mesh;
     // G3D-14：通用桌面的网格线是 LineSegments，同样要释放几何 / 材质。
     if (!mesh.isMesh && !(child as { isLine?: boolean }).isLine) return;
-    mesh.geometry?.dispose();
+    if (!mesh.userData.gdSharedGeometry) mesh.geometry?.dispose();
     const material = mesh.material;
     // 共享材质由 MaterialLibrary 在卸载时统一释放（G3D-07）。
     if (Array.isArray(material)) {
@@ -227,7 +300,8 @@ function batchableKind(kind: SceneNode["kind"]): boolean {
     kind === "robber" ||
     kind === "number-token" ||
     kind === "port" ||
-    kind === "ship"
+    kind === "ship" ||
+    kind === "die"
   );
 }
 
@@ -239,11 +313,9 @@ function sharedNumberGeom(): BufferGeometry {
 
 function disposeSharedSceneGeometries(): void {
   SHARED_TILE_GEOM?.dispose();
-  SHARED_ROAD_GEOM?.dispose();
   SHARED_DECOR_GEOM?.dispose();
   SHARED_NUMBER_GEOM?.dispose();
   SHARED_TILE_GEOM = null;
-  SHARED_ROAD_GEOM = null;
   SHARED_DECOR_GEOM = null;
   SHARED_NUMBER_GEOM = null;
 }
@@ -252,22 +324,19 @@ function disposeSharedSceneGeometries(): void {
 function geomForBatch(node: SceneNode): BufferGeometry {
   const tide = getTidewellGeometriesSync();
   if (node.kind === "tile") return sharedTileGeom();
-  if (node.kind === "road") return tide.ready ? tide.road : sharedRoadGeom();
   if (node.kind === "decor") return geometryForNode(node, tide);
   if (node.kind === "number-token") return sharedNumberGeom();
-  if (
-    node.kind === "settlement" ||
-    node.kind === "city" ||
-    node.kind === "robber" ||
-    node.kind === "port" ||
-    node.kind === "ship"
-  ) {
-    return geometryForNode(node, tide);
-  }
+  if (node.kind === "port" || node.kind === "ship") return geometryForNode(node, tide);
   return sharedDecorGeom();
 }
 
-function createNodeObject(node: SceneNode, caps: TierCaps, library: MaterialLibrary, pools?: InstancePools | null): Object3D {
+function createNodeObject(
+  node: SceneNode,
+  caps: TierCaps,
+  library: MaterialLibrary,
+  pools?: InstancePools | null,
+  overlay?: DiceOverlay | null,
+): Object3D {
   const { key, token } = materialFor(node);
   const mat = library.get(key, token);
   const applyPose = (mesh: Mesh) => {
@@ -282,6 +351,43 @@ function createNodeObject(node: SceneNode, caps: TierCaps, library: MaterialLibr
     mesh.userData.kind = node.kind;
     return mesh;
   };
+
+  const procedural = proceduralFor(node, library);
+  // Dice + tray render in the screen-corner overlay; the world tree keeps an invisible handle.
+  if (procedural && overlay && (node.kind === "die" || node.kind === "dice-tray")) {
+    const handle = new Object3D();
+    handle.position.set(node.position[0], node.position[1], node.position[2]);
+    if (node.rotationY !== undefined) handle.rotation.y = node.rotationY;
+    if (node.kind === "die") applyDieOrientation(handle, node.number, node.rotationY ?? 0);
+    handle.userData.nodeId = node.id;
+    handle.userData.kind = node.kind;
+    handle.userData.baseY = node.position[1];
+    handle.userData.gdOverlay = overlay;
+    const mesh = new Mesh(procedural.geometry, procedural.material);
+    mesh.userData.gdSharedGeometry = true;
+    overlay.attach(handle, mesh);
+    return handle;
+  }
+  if (procedural && pools && node.kind !== "dice-tray") {
+    const { index } = pools.acquire(procedural.poolKey, procedural.geometry, procedural.material, true);
+    const handle = new Object3D();
+    handle.position.set(node.position[0], node.position[1], node.position[2]);
+    if (node.rotationY !== undefined) handle.rotation.y = node.rotationY;
+    if (node.kind === "die") applyDieOrientation(handle, node.number, node.rotationY ?? 0);
+    handle.userData.nodeId = node.id;
+    handle.userData.kind = node.kind;
+    handle.userData.baseY = node.position[1];
+    handle.userData.gdInstance = { poolKey: procedural.poolKey, index };
+    pools.setMatrix(procedural.poolKey, index, handle);
+    return handle;
+  }
+  if (procedural) {
+    const mesh = applyPose(new Mesh(procedural.geometry, procedural.material));
+    mesh.userData.gdSharedGeometry = true;
+    if (node.kind === "die") applyDieOrientation(mesh, node.number, node.rotationY ?? 0);
+    mesh.userData.baseY = node.position[1];
+    return mesh;
+  }
 
   if (pools && batchableKind(node.kind)) {
     const geom = geomForBatch(node);
@@ -313,20 +419,8 @@ function createNodeObject(node: SceneNode, caps: TierCaps, library: MaterialLibr
   }
 
   const tide = getTidewellGeometriesSync();
-  if (
-    node.kind === "robber" ||
-    node.kind === "settlement" ||
-    node.kind === "city" ||
-    node.kind === "road" ||
-    node.kind === "port" ||
-    node.kind === "ship" ||
-    node.kind === "die" ||
-    node.kind === "dice-tray" ||
-    node.kind === "decor"
-  ) {
-    const mesh = applyPose(new Mesh(geometryForNode(node, tide).clone(), mat));
-    if (node.kind === "die") mesh.rotation.set(...dieFaceEuler(node.number));
-    return mesh;
+  if (node.kind === "port" || node.kind === "ship" || node.kind === "decor") {
+    return applyPose(new Mesh(geometryForNode(node, tide).clone(), mat));
   }
 
   // cliff default
@@ -338,7 +432,8 @@ function updateNodeObject(object: Object3D, node: SceneNode, library: MaterialLi
   if (node.rotationY !== undefined) object.rotation.y = node.rotationY;
   if (node.scale) object.scale.set(node.scale[0], node.scale[1], node.scale[2]);
   else if (node.kind === "settlement" || node.kind === "city" || node.kind === "robber") object.scale.set(1, 1, 1);
-  if (node.kind === "die") object.rotation.set(...dieFaceEuler(node.number));
+  if (node.kind === "die") applyDieOrientation(object, node.number, node.rotationY ?? 0);
+  object.userData.baseY = node.position[1];
   const inst = object.userData.gdInstance as { poolKey: string; index: number } | undefined;
   if (inst && pools) {
     // Material group changes are rare for tiles; pose sync is the hot path.
@@ -346,7 +441,7 @@ function updateNodeObject(object: Object3D, node: SceneNode, library: MaterialLi
     return;
   }
   const mesh = object as Mesh;
-  if (!mesh.isMesh) return;
+  if (!mesh.isMesh || mesh.userData.gdSharedGeometry) return;
   // 地形 / 座位变化：换成对应的共享材质（不改共享材质本身的颜色）。
   const { key, token } = materialFor(node);
   const next = library.get(key, token);
@@ -367,6 +462,9 @@ export function SceneHost({
   activeSeat = null,
   scene: adapter = null,
   viewportFrame = null,
+  localSeat = null,
+  cameraToolbar = true,
+  onCameraApi,
 }: SceneHostProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [unsupported, setUnsupported] = useState(false);
@@ -374,14 +472,6 @@ export function SceneHost({
   const modelRef = useRef<SceneModel | null>(null);
   /** G3D-ART-2：点数筹码数字贴花（1 draw call，不进实例池）。 */
   const numberLabelsRef = useRef<NumberLabelLayer | null>(null);
-  /** G3D-ISLAND / PROPS：地形道具 + 岛屿海岸（汐屿专用图层）。 */
-  const dressingRef = useRef<HexDressing | null>(null);
-  /** 道具 / 岛屿层懒加载（不进 render3d 核心包体）。 */
-  const dressingModRef = useRef<typeof import("./hex-dressing") | null>(null);
-  const dressingLoadingRef = useRef(false);
-  /** 汐屿盘面的道具层在懒加载中：性能采样（挂载内存基线）等它就位，避免首挂载与重挂载口径不一。 */
-  const dressingPendingRef = useRef(false);
-  const [dressingReady, setDressingReady] = useState(0);
   const registryRef = useRef(new Map<string, Object3D>());
   const contentRootRef = useRef<Object3D | null>(null);
   const reconcileHostRef = useRef<ReturnType<typeof buildHost> | null>(null);
@@ -396,17 +486,36 @@ export function SceneHost({
     rebuildDistance(model: SceneModel | null): void;
     dispose(): void;
     lastDistanceMs: number;
-    seaHalfExtent: number;
   } | null>(null);
   const waterAliveRef = useRef(false);
   const waterAbortRef = useRef<AbortController | null>(null);
   const waterMountPromiseRef = useRef<Promise<void>>(Promise.resolve());
   const waterMountingRef = useRef(false);
   const controlsRef = useRef<OrbitControls | null>(null);
-  const lastSeatRef = useRef<number | null>(null);
+  const lastModeKeyRef = useRef<string | null>(null);
+  /** G3D-JUDGE-PIECES: auto-framing + turn modes + toolbar API (hex scenes only). */
+  const directorRef = useRef<CameraDirector | null>(null);
+  const [cameraApi, setCameraApi] = useState<CameraDirector | null>(null);
+  const overlayRef = useRef<DiceOverlay | null>(null);
+  const [compactToolbar, setCompactToolbar] = useState(false);
+  const framingKeyRef = useRef<string | null>(null);
   const diceSeedRef = useRef(1);
   const diceAnimatedRef = useRef(false);
   const lastActionRef = useRef<string | null | undefined>(undefined);
+  const localSeatRef = useRef(localSeat);
+  localSeatRef.current = localSeat;
+  const viewportFrameRef = useRef(viewportFrame);
+  viewportFrameRef.current = viewportFrame;
+  /** G3D-ISLAND / PROPS：地形道具 + 岛屿海岸（汐屿专用图层）。 */
+  const dressingRef = useRef<HexDressing | null>(null);
+  const dressingModRef = useRef<typeof import("./hex-dressing") | null>(null);
+  const dressingLoadingRef = useRef(false);
+  /** 汐屿盘面的道具层在懒加载中：性能采样等它就位。 */
+  const dressingPendingRef = useRef(false);
+  const [dressingReady, setDressingReady] = useState(0);
+
+  const activeSeatRef = useRef(activeSeat);
+  activeSeatRef.current = activeSeat;
   const interactiveRef = useRef(interactive);
   const legalActionsRef = useRef(legalActions);
   const onPickRef = useRef(onPick);
@@ -415,9 +524,6 @@ export function SceneHost({
   onPickRef.current = onPick;
   const adapterRef = useRef(adapter);
   adapterRef.current = adapter;
-  const viewportFrameRef = useRef(viewportFrame);
-  viewportFrameRef.current = viewportFrame;
-  const appliedFrameKeyRef = useRef<string | null>(null);
   const layoutKeyRef = useRef<string | null>(null);
   const cameraKeyRef = useRef<string | null>(null);
   /** G3D-14：按 RenderSpec.camera 与当前宽高比放置机位（窄屏时拉远，保证桌面左右不出画）。 */
@@ -436,11 +542,12 @@ export function SceneHost({
   const [pbrState, setPbrState] = useState<"off" | "pending" | "512" | "256" | "error">("pending");
   /** G3D-13: flip when pieces/decor/props GLBs replace procedural placeholders. */
 
-  function reframe(focus: readonly [number, number, number], id: string) {
-    const motion = motionRef.current;
-    const camera = cameraRef.current;
-    const controls = controlsRef.current;
-    if (motion && camera && controls) motion.reframe(camera, controls, focus, id);
+  function rollDie(motion: MotionController, object: Object3D, node: SceneNode) {
+    diceSeedRef.current += 1;
+    const slide: [number, number] = node.id === "die:1"
+      ? [DICE_THROW_SLIDE[0] * 0.8, DICE_THROW_SLIDE[1] * 1.2]
+      : [DICE_THROW_SLIDE[0], DICE_THROW_SLIDE[1]];
+    motion.dice(object, node.id, node.number ?? 1, diceSeedRef.current, node.rotationY ?? 0, slide);
   }
 
   function buildHost(root: Object3D, getCaps: () => TierCaps, library: MaterialLibrary, motion: MotionController) {
@@ -450,7 +557,7 @@ export function SceneHost({
       pools,
       create: (node: SceneNode) => adapterRef.current
         ? adapterRef.current.create(node, { library, caps: getCaps() })
-        : createNodeObject(node, getCaps(), library, pools),
+        : createNodeObject(node, getCaps(), library, pools, overlayRef.current),
       update: (object: Object3D, node: SceneNode) => adapterRef.current
         ? adapterRef.current.update(object, node, { library, caps: getCaps() })
         : updateNodeObject(object, node, library, pools),
@@ -463,7 +570,6 @@ export function SceneHost({
           }
           if (node.kind !== "settlement" && node.kind !== "city" && node.kind !== "road") return;
           motion.place(object, node.id);
-          reframe(node.position, `build:${node.id}`);
         },
         removed: (object: Object3D, id: string, detach: () => void) => {
           motion.remove(object, id, detach);
@@ -472,13 +578,10 @@ export function SceneHost({
           if (node.kind === "piece" && prev.position.join() !== node.position.join()) {
             motion.moveArc(object, node.id, prev.position);
           } else if (node.kind === "robber" && prev.position.join() !== node.position.join()) {
-            motion.moveArc(object, node.id, prev.position);
-            reframe(node.position, "robber");
+            motion.hop(object, node.id, prev.position);
           } else if (node.kind === "die" && prev.number !== node.number) {
-            diceSeedRef.current += 1;
             diceAnimatedRef.current = true;
-            motion.dice(object, node.id, node.number ?? 1, diceSeedRef.current);
-            if (node.id === "die:0") reframe(node.position, "dice");
+            rollDie(motion, object, node);
           }
         },
       },
@@ -494,9 +597,7 @@ export function SceneHost({
     }
 
     const scene = new Scene();
-    // Tidewell: sea clear/horizon (avoids light letterbox band). Other genres keep parchment horizon.
-    const clearHex = hexSettlement ? "#2e7f86" : SCENE_TOKENS.sky.horizon;
-    scene.background = new Color(clearHex);
+    scene.background = new Color(SCENE_TOKENS.sky.horizon);
 
     const camera = new PerspectiveCamera(45, 1, 0.1, 100);
     camera.position.set(0, 9, 12);
@@ -513,7 +614,9 @@ export function SceneHost({
     configureRenderer(renderer, lightingRef.current);
     // 静止场景复用阴影贴图；内容变化后 SHADOW_REFRESH_MS 内逐帧重绘（见 tick）。
     renderer.shadowMap.autoUpdate = false;
-    renderer.setClearColor(new Color(clearHex), 1);
+    // Two passes per frame (board + dice overlay): count draw calls per frame, not per render().
+    renderer.info.autoReset = false;
+    renderer.setClearColor(new Color(SCENE_TOKENS.sky.horizon), 1);
     rendererRef.current = renderer;
     // setSize(..., false) leaves the canvas CSS size unset, so on DPR > 1 the
     // canvas laid out at its backing-store width (e.g. 824 px on a 412 px
@@ -537,9 +640,10 @@ export function SceneHost({
     controls.maxPolarAngle = Math.PI * 0.48;
     // G3D-JUDGE：仅 `?judge=1` 时暴露评审机位（dev-only；生产 URL 不带此参数时无任何行为变化）。
     const judgeEnabled = new URLSearchParams(window.location.search).get("judge") === "1";
-    // 帆船起伏：减少动态效果或评审截图时冻结。
+    // Dev-only presets load lazily (own chunk; not part of the production render core).
     const freezeDressing = judgeEnabled || prefersReducedMotion();
-    if (judgeEnabled) {
+    if (judgeEnabled) void import("./judge-camera").then(({ JUDGE_PRESETS, judgeCamera }) => {
+      if (disposed) return;
       (globalThis as { __g3dJudge?: unknown }).__g3dJudge = {
         presets: JUDGE_PRESETS,
         set(preset: JudgePreset): boolean {
@@ -548,8 +652,12 @@ export function SceneHost({
           const model = modelRef.current;
           if (!cam || !ctl) return false;
           motion.finishAll();
+          const director = directorRef.current;
           const pose = judgeCamera(preset, [...(model?.nodes ?? []), ...(dressingRef.current?.portNodes() ?? [])], cam.aspect);
-          if (pose) {
+          if (!pose && director) {
+            director.pinToMode(preset === "a-topdown" ? "overview" : "play");
+          } else if (pose) {
+            director?.pinFree();
             cam.position.set(...pose.position);
             ctl.target.set(...pose.target);
           } else {
@@ -559,11 +667,6 @@ export function SceneHost({
           }
           if (pose?.fov) cam.fov = pose.fov;
           cam.updateProjectionMatrix();
-          // 评审机位不受交互限位约束（俯视 / 远景）。
-          ctl.minDistance = 0;
-          ctl.maxDistance = Number.POSITIVE_INFINITY;
-          ctl.minPolarAngle = 0;
-          ctl.maxPolarAngle = Math.PI * 0.49;
           ctl.update();
           // 抑制建造 / 换手 / 掷骰的自动 reframe，保证截图机位稳定。
           motion.noteUserDrag(Number.POSITIVE_INFINITY);
@@ -571,15 +674,11 @@ export function SceneHost({
           return true;
         },
       };
-    }
+    });
 
     const rig = createLightingRig(scene, lightingRef.current, caps);
     rigRef.current = rig;
-    const sky = createSkyDome(
-      hexSettlement
-        ? { top: "#5a9eb8", horizon: "#2e7f86", bottom: "#1a4f5a", exponent: 0.85 }
-        : undefined,
-    );
+    const sky = createSkyDome();
     scene.add(sky);
     const library = new MaterialLibrary({ clearcoat: caps.id === "high" });
     // high 档：RoomEnvironment 环境反射（强度 0.35，只挂光泽材质）；medium / low 关闭（§4.7）。
@@ -661,8 +760,25 @@ export function SceneHost({
 
     let frameId = 0;
     let disposed = false;
+    const reducedQuery = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
     // G3D-13: load Tidewell GLBs before hex reconcile (avoids remount that aborted water).
-    void ensureTidewellGeometries().finally(() => {
+    const createOverlay = (kit: HexKit) => {
+      if (disposed || overlayRef.current) return;
+      const overlay = new kit.DiceOverlay();
+      overlay.setCanvasSize(Math.max(container.clientWidth, 1), Math.max(container.clientHeight, 1));
+      overlayRef.current = overlay;
+    };
+    // Remount (perf remount / context-loss rebuild): the kit is already loaded and the hex effect of
+    // this same commit still sees the previous `ready`, so the overlay must exist synchronously or
+    // the dice would fall back into the world scene (and the first-frame memory would differ).
+    if (!adapterRef.current && hexKit) createOverlay(hexKit);
+    const kitReady = adapterRef.current
+      ? Promise.resolve()
+      : import("./hex-kit").then((kit) => {
+          hexKit = kit;
+          createOverlay(kit);
+        });
+    void Promise.allSettled([ensureTidewellGeometries(), kitReady]).then(() => {
       if (!disposed) setReady(true);
     });
     let lastFrameAt: number | null = null;
@@ -695,6 +811,14 @@ export function SceneHost({
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       fitCameraRef.current();
+      setCompactToolbar(width < 480);
+      directorRef.current?.onResize();
+      const overlay = overlayRef.current;
+      if (overlay) {
+        overlay.setCanvasSize(width, height);
+        const r = overlay.viewport;
+        container.dataset.diceOverlay = `${r.x},${r.y},${r.width},${r.height}`;
+      }
       renderer.setPixelRatio(dpr);
       renderer.setSize(width, height, false);
     };
@@ -770,8 +894,7 @@ export function SceneHost({
 
       // Runtime downgrade after 180 warm-up frames (§4.7 / §4.6.3).
       if (warmFrames > 180 && delta !== null) {
-        // 评审截图（?judge=1）不做运行时降档：box 上 SwiftShader 慢，降档会让评审图失真（道具在 low 档为 0）。
-        if (!judgeEnabled && downgradeMonitor.shouldDowngrade(caps.id, now, delta)) {
+        if (downgradeMonitor.shouldDowngrade(caps.id, now, delta)) {
           const nextId = downgradeTier(caps.id);
           if (nextId !== caps.id) {
             runtimeFloorRef.current = nextId;
@@ -794,14 +917,36 @@ export function SceneHost({
 
       motion.update(now);
       dressingRef.current?.update(now, camera, freezeDressing);
+      // Pooled pieces: tweens pose the handle; push the pose into the InstancedMesh.
+      const livePools = (reconcileHostRef.current as { pools?: InstancePools } | null)?.pools;
+      for (const object of motion.drainDirty()) {
+        const inst = (object as Object3D).userData?.gdInstance as { poolKey: string; index: number } | undefined;
+        if (inst && livePools) livePools.setMatrix(inst.poolKey, inst.index, object as Object3D);
+      }
+      // Robber idle bob (frozen in judge mode and under reduced motion).
+      const robber = registryRef.current.get("robber");
+      if (robber && !motion.isAnimating(robber) && typeof robber.userData.baseY === "number") {
+        const frozen = judgeEnabled || (reducedQuery?.matches ?? false);
+        if (!frozen || robber.userData.bobbing) {
+          const bob = idleBob(now, frozen);
+          robber.position.y = robber.userData.baseY + bob.y;
+          robber.rotation.z = bob.tilt;
+          robber.userData.bobbing = !frozen;
+          const inst = robber.userData.gdInstance as { poolKey: string; index: number } | undefined;
+          if (inst && livePools) livePools.setMatrix(inst.poolKey, inst.index, robber);
+        }
+      }
       waterRef.current?.update(now);
       controls.update();
+      directorRef.current?.update();
       // 阴影：内容 / 档位变化后 SHADOW_REFRESH_MS 内逐帧重绘，之后复用（方向光阴影与机位无关）。
       if (now < shadowDirtyUntil || shadowFrames < 2) {
         renderer.shadowMap.needsUpdate = true;
         shadowFrames += 1;
       }
+      renderer.info.reset();
       renderer.render(scene, camera);
+      overlayRef.current?.render(renderer);
       const hasContent = contentRoot.children.length > 0;
       if (hasContent && renderer.info.render.calls > 0) {
         markInteractive();
@@ -828,6 +973,10 @@ export function SceneHost({
       waterRef.current?.dispose();
       waterRef.current = null;
       motion.finishAll();
+      directorRef.current?.dispose();
+      directorRef.current = null;
+      setCameraApi(null);
+      framingKeyRef.current = null;
       controls.removeEventListener("start", onControlsStart);
       controls.removeEventListener("end", onControlsStart);
       controls.dispose();
@@ -839,8 +988,10 @@ export function SceneHost({
       while (hitRoot.children.length > 0) {
         const child = hitRoot.children[0]!;
         hitRoot.remove(child);
-        disposeHitOverlay(child);
+        hexKit?.disposeHitOverlay(child);
       }
+      overlayRef.current?.dispose();
+      overlayRef.current = null;
       contentRoot.traverse((child) => {
         const mesh = child as Mesh;
         if (!mesh.isMesh) return;
@@ -870,8 +1021,10 @@ export function SceneHost({
       const hostPools = reconcileHostRef.current as { pools?: InstancePools } | null;
       hostPools?.pools?.dispose();
       disposeSharedSceneGeometries();
-      disposeSharedHitResources();
+      hexKit?.disposeSharedHitResources();
       disposeTidewellGeometryCache();
+      hexKit?.disposePieceGeometries();
+      hexKit?.disposeDiceGeometries();
       perf?.beforeDispose(renderer);
       detachPerf?.();
       renderer.dispose();
@@ -888,7 +1041,7 @@ export function SceneHost({
       markShadowsDirtyRef.current = () => {};
       motionRef.current = null;
       controlsRef.current = null;
-      lastSeatRef.current = null;
+      lastModeKeyRef.current = null;
       lastActionRef.current = undefined;
       modelRef.current = null;
       layoutKeyRef.current = null;
@@ -903,7 +1056,9 @@ export function SceneHost({
   function syncNumberLabels(model: SceneModel, tiles: readonly { q: number; r: number; number: number | null }[]) {
     const root = contentRootRef.current;
     if (!root) return;
-    const layer = (numberLabelsRef.current ??= createNumberLabelLayer());
+    const kit = hexKit;
+    if (!kit) return;
+    const layer = (numberLabelsRef.current ??= kit.createNumberLabelLayer());
     if (layer.mesh.parent !== root) root.add(layer.mesh);
     layer.sync(model.nodes);
     const container = containerRef.current;
@@ -913,7 +1068,7 @@ export function SceneHost({
       const camera = cameraRef.current;
       const canvas = canvasRef.current;
       if (!camera || !canvas) return [];
-      return projectLabels(numberLabelsRef.current?.labels() ?? [], camera, canvas.clientWidth, canvas.clientHeight);
+      return kit.projectLabels(numberLabelsRef.current?.labels() ?? [], camera, canvas.clientWidth, canvas.clientHeight);
     };
     // e2e：渲染输入的棋盘点数（与贴花逐格对照，独立于 mapper）。
     (globalThis as { __g3dBoardNumbers?: unknown }).__g3dBoardNumbers = tiles
@@ -960,9 +1115,10 @@ export function SceneHost({
 
   useEffect(() => {
     const host = reconcileHostRef.current;
-    if (!host || !hexSettlement) return;
+    const kit = hexKit;
+    if (!host || !hexSettlement || !kit) return;
     const prev = modelRef.current;
-    const mapped = mapHexSettlementToScene(hexSettlement);
+    const mapped = kit.mapHexSettlementToScene(hexSettlement);
     const next: SceneModel = { ...mapped, nodes: mapped.nodes.filter((n) => !REPLACED_NODE_KINDS.has(n.kind)) };
     const hadModel = prev !== null;
     const previousAction = lastActionRef.current;
@@ -970,7 +1126,6 @@ export function SceneHost({
     diceAnimatedRef.current = false;
     modelRef.current = reconcileScene(host, prev, next, registryRef.current);
     syncNumberLabels(next, hexSettlement.tiles);
-    syncDressing();
     // 阴影相机只在布局（地块集合）变化时按包围球重算一次（§4.3）。
     const tileKey = (model: SceneModel | null) =>
       model ? model.nodes.filter((node) => node.kind === "tile").map((node) => node.id).join("|") : "";
@@ -978,34 +1133,26 @@ export function SceneHost({
     if (tilesChanged) {
       const bounds = islandBounds(next.nodes);
       rigRef.current?.fitToBounds(bounds.center, bounds.radius);
-      appliedFrameKeyRef.current = null; // force re-frame on new island layout
     }
-    // Track B framing: fit island into the canvas (fill/polar). Install on
-    // fitCameraRef so ResizeObserver re-applies when the stage gets a real size
-    // (immersive layout often mounts at 0×0 then expands).
-    const frame = viewportFrameRef.current;
-    if (frame && cameraRef.current && controlsRef.current) {
-      const bounds = islandBounds(next.nodes);
-      const applyFrame = () => {
-        const cam = cameraRef.current;
-        const ctl = controlsRef.current;
-        const fr = viewportFrameRef.current;
-        if (!cam || !ctl || !fr) return;
-        const key = `${bounds.radius.toFixed(2)}|${cam.aspect.toFixed(3)}|${fr.fill ?? ""}|${fr.polarDeg ?? ""}|${fr.azimuthDeg ?? ""}`;
-        if (key === appliedFrameKeyRef.current) return;
-        const pose = framePose(bounds.center, bounds.radius, cam.aspect, fr);
-        cam.fov = pose.fov;
-        cam.position.set(pose.position[0], pose.position[1], pose.position[2]);
-        cam.updateProjectionMatrix();
-        ctl.target.set(pose.target[0], pose.target[1], pose.target[2]);
-        ctl.minDistance = pose.distance * 0.45;
-        ctl.maxDistance = pose.distance * 2.2;
-        ctl.update();
-        appliedFrameKeyRef.current = key;
-        markShadowsDirtyRef.current();
-      };
-      fitCameraRef.current = applyFrame;
-      applyFrame();
+    // G3D-JUDGE-PIECES: auto-framing (island + harbours; the dice tray is a screen overlay) for the hex scene.
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    const motionForCamera = motionRef.current;
+    if (camera && controls && motionForCamera) {
+      let director = directorRef.current;
+      if (!director) {
+        director = new kit.CameraDirector(camera, controls, motionForCamera);
+        director.mode = kit.cameraModeFor(localSeatRef.current, activeSeatRef.current);
+        directorRef.current = director;
+        setCameraApi(director);
+      }
+      const framingKey = tileKey(next);
+      if (framingKey !== framingKeyRef.current) {
+        framingKeyRef.current = framingKey;
+        const island = kit.islandCenter(next.nodes);
+        const tiles = next.nodes.filter((node) => node.kind === "tile");
+        director.setFraming(kit.framingPoints(next.nodes), island.center, island.radius, true, kit.framingPoints(tiles));
+      }
     }
     // G3D-08: first hex model mounts water; later tile-layout changes rebuild the coast field.
     // Synchronous mount lock: hex reconcile can fire twice before the first async controller
@@ -1036,6 +1183,13 @@ export function SceneHost({
                 return;
               }
               waterRef.current = water;
+              // TODO(Track D): far-sea ring (±60) should expose `seaHalfExtent` on the water
+              // controller so play framing can keep ≥35° tilt sky-free on wide canvases. Use it when
+              // present; do not block SceneHost on Track D landing.
+              const seaHalf = (water as { seaHalfExtent?: number }).seaHalfExtent;
+              if (typeof seaHalf === "number" && Number.isFinite(seaHalf) && seaHalf > 0) {
+                directorRef.current?.setSeaExtent(seaHalf);
+              }
               // Warm custom water program on SwiftShader before the first user click
               // (cold compile can block the main thread long enough to flake mid-tween clicks).
               const cam = cameraRef.current;
@@ -1049,12 +1203,7 @@ export function SceneHost({
               if (el) {
                 el.dataset.water = "on";
                 el.dataset.waterDistMs = String(Math.round(water.lastDistanceMs));
-                el.dataset.seaHalfExtent = String(water.seaHalfExtent);
               }
-              // Track C 取景：可见海面半宽（与 water.seaHalfExtent / dataset 同值）。
-              (globalThis as { __g3dWater?: { seaHalfExtent: number } }).__g3dWater = {
-                seaHalfExtent: water.seaHalfExtent,
-              };
             } catch (error) {
               if (error instanceof DOMException && error.name === "AbortError") return;
               console.warn("[godesk.water] mount failed", error);
@@ -1084,9 +1233,7 @@ export function SceneHost({
         if (node.kind !== "die") continue;
         const object = registryRef.current.get(node.id);
         if (!object) continue;
-        diceSeedRef.current += 1;
-        motion.dice(object, node.id, node.number ?? 1, diceSeedRef.current);
-        if (node.id === "die:0") reframe(node.position, "dice");
+        rollDie(motion, object, node);
       }
     }
   }, [hexSettlement, ready, hostEpoch]);
@@ -1115,6 +1262,23 @@ export function SceneHost({
       const radius = bounds?.radius ?? 7.5;
       const center = bounds?.center ?? [0, 0, 0];
       fitCameraRef.current = () => {
+        const fr = viewportFrameRef.current;
+        if (fr) {
+          const tiles = modelRef.current?.nodes.filter((n) => n.kind === "tile") ?? [];
+          if (tiles.length > 0 && cameraRef.current && controlsRef.current) {
+            const xs = tiles.map((t) => t.position[0]);
+            const zs = tiles.map((t) => t.position[2]);
+            const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+            const cz = (Math.min(...zs) + Math.max(...zs)) / 2;
+            const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs), 8);
+            const pose = framePose([cx, 0, cz], span * 0.55, cameraRef.current.aspect, fr);
+            cameraRef.current.position.set(...pose.position);
+            controlsRef.current.target.set(...pose.target);
+            controlsRef.current.update();
+            return;
+          }
+        }
+
         // RenderSpec 距离按约 7.5 单位半径的场景标定；桌面更大 / 更小时等比缩放，
         // 窄屏（水平视角小于垂直视角）时再拉远到包围半径能水平放下。
         const halfH = Math.atan(Math.tan((spec.fovDeg * Math.PI) / 360) * camera.aspect);
@@ -1138,22 +1302,35 @@ export function SceneHost({
     markShadowsDirtyRef.current();
   }, [adapter, ready, hostEpoch]);
 
-  // Track B: re-fit when HUD passes a new viewportFrame (e.g. narrow ↔ desktop).
+  // G3D-09 / G3D-JUDGE-PIECES turn camera: local turn → tilted "play", others → top-down "overview".
   useEffect(() => {
-    if (!ready || !hexSettlement || !viewportFrame) return;
-    appliedFrameKeyRef.current = null;
-    fitCameraRef.current();
-  }, [viewportFrame, ready, hostEpoch, hexSettlement]);
+    const director = directorRef.current;
+    const kit = hexKit;
+    if (!ready || !director || !kit) return;
+    const mode = kit.cameraModeFor(localSeat, activeSeat);
+    const key = `${activeSeat ?? "-"}|${localSeat ?? "-"}`;
+    const previous = lastModeKeyRef.current;
+    lastModeKeyRef.current = key;
+    if (previous === null) {
+      director.setMode(mode, `turn:${activeSeat ?? "-"}`, true);
+      return;
+    }
+    if (previous === key) return;
+    director.setMode(mode, `turn:${activeSeat ?? "-"}`);
+  }, [activeSeat, localSeat, ready, hostEpoch, cameraApi]);
 
-  // G3D-09 turn camera: reframe toward the island centre when the active seat changes.
   useEffect(() => {
-    if (!ready || activeSeat === null || activeSeat === undefined) return;
-    const previous = lastSeatRef.current;
-    lastSeatRef.current = activeSeat;
-    if (previous === null || previous === activeSeat) return;
-    reframe([0, 0, 0], `turn:${activeSeat}`);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSeat, ready, hostEpoch]);
+    onCameraApi?.(cameraApi);
+  }, [cameraApi, onCameraApi]);
+
+  const [cameraMode, setCameraMode] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (!cameraApi) {
+      setCameraMode(undefined);
+      return;
+    }
+    return cameraApi.subscribe((state) => setCameraMode(state.mode));
+  }, [cameraApi]);
 
   useEffect(() => {
     const rig = rigRef.current;
@@ -1168,13 +1345,14 @@ export function SceneHost({
   useEffect(() => {
     const hitRoot = hitRootRef.current;
     if (!hitRoot || !ready) return;
+    const kit = hexKit;
     while (hitRoot.children.length > 0) {
       const child = hitRoot.children[0]!;
       hitRoot.remove(child);
-      disposeHitOverlay(child);
+      kit?.disposeHitOverlay(child);
     }
-    if (!interactive || legalActions.length === 0 || adapterRef.current) return;
-    for (const overlay of buildLegalHitOverlays(legalActions)) {
+    if (!interactive || legalActions.length === 0 || adapterRef.current || !kit) return;
+    for (const overlay of kit.buildLegalHitOverlays(legalActions)) {
       hitRoot.add(overlay);
     }
   }, [interactive, legalActions, ready, hostEpoch]);
@@ -1195,18 +1373,34 @@ export function SceneHost({
     );
   }
 
+
+  // Track B: re-fit when HUD passes a new viewportFrame (e.g. narrow ↔ desktop).
+  useEffect(() => {
+    if (!ready || !hexSettlement || !viewportFrame) return;
+    fitCameraRef.current();
+  }, [viewportFrame, ready, hostEpoch, hexSettlement]);
+
   return (
-    <div
-      aria-label={ariaLabel}
-      className={className}
-      data-testid="g3d-scene-host"
-      data-tier={activeTier}
-      data-pbr={pbrState}
-      ref={containerRef}
-      role="img"
-      style={{ width: "100%", height: "100%", minHeight: 280, touchAction: "none", position: perfMode ? "relative" : undefined }}
-    >
-      {perfMode && <PerfOverlay />}
-    </div>
+    <>
+      <div
+        aria-label={ariaLabel}
+        className={className}
+        data-testid="g3d-scene-host"
+        data-tier={activeTier}
+        data-pbr={pbrState}
+        data-camera-mode={cameraMode}
+        ref={containerRef}
+        role="img"
+        style={{ width: "100%", height: "100%", minHeight: 280, touchAction: "none", position: perfMode ? "relative" : undefined }}
+      >
+        {perfMode && <PerfOverlay />}
+      </div>
+      {/* Sibling of the role="img" host (children of an img are not exposed to assistive tech). */}
+      {cameraToolbar && cameraApi && hexSettlement && (
+        <Suspense fallback={null}>
+          <CameraToolbar api={cameraApi} compact={compactToolbar} />
+        </Suspense>
+      )}
+    </>
   );
 }

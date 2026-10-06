@@ -4,8 +4,17 @@
  */
 import type { SceneNode, SceneVec3 } from "./scene-model";
 
-export type JudgePreset = "a-default" | "a3-topdown" | "b-terrain" | "c-coast" | "f-dice" | "g-midgame";
-export const JUDGE_PRESETS: readonly JudgePreset[] = ["a-default", "a3-topdown", "b-terrain", "c-coast", "f-dice", "g-midgame"];
+export type JudgePreset = "a-default" | "a-topdown" | "a3-topdown" | "b-terrain" | "b-robber" | "c-coast" | "f-dice" | "g-midgame";
+export const JUDGE_PRESETS: readonly JudgePreset[] = [
+  "a-default",
+  "a-topdown",
+  "a3-topdown",
+  "b-terrain",
+  "b-robber",
+  "c-coast",
+  "f-dice",
+  "g-midgame",
+];
 
 export type JudgeCamera = { position: SceneVec3; target: SceneVec3; fov?: number };
 
@@ -54,37 +63,47 @@ export function pickCoast(nodes: readonly SceneNode[]): { port: SceneVec3; outwa
   return { port: port.position, outward: [port.position[0] / len, port.position[2] / len] };
 }
 
-/** 让约 12 × 11 的整岛（含码头）落进 45° 竖直视场。 */
-export function wholeIslandDistance(aspect: number): number {
-  const halfV = Math.tan((45 / 2) * (Math.PI / 180));
-  const byHeight = 11 / (2 * halfV);
-  const byWidth = 12.5 / (2 * halfV * Math.max(aspect, 0.1));
-  return Math.max(byHeight, byWidth) * 1.06;
-}
-
-/** 预设 → 机位；`a-default` 返回 null（保持 SceneHost 自适应的默认机位）。 */
+/**
+ * 预设 → 机位；`a-default` / `a-topdown` 返回 null（SceneHost 的 CameraDirector 自适应取景：
+ * a-default = 本方回合的 3/4 斜视，a-topdown = 电脑 / 对手回合的近俯视）。
+ */
 export function judgeCamera(preset: JudgePreset, nodes: readonly SceneNode[], aspect: number): JudgeCamera | null {
   const narrow = aspect < 0.8;
   switch (preset) {
     case "a-default":
+    case "a-topdown":
       return null;
     case "a3-topdown":
-      // 对齐参照 a3：近乎正俯视整岛，四周留海。
-      return { target: [0, 0, 0], position: orbit([0, 0, 0], wholeIslandDistance(aspect) * 0.9, 3, 0) };
+      // 对齐参照 a3：近乎正俯视整岛（显式机位；a-topdown 交给 CameraDirector）。
+      return { target: [0, 0, 0], position: orbit([0, 0, 0], 14, 3, 0) };
+    case "b-robber": {
+      // ≈320% 近景：雾灯（盗贼）与周边地块，斜 38°。
+      const robber = nodes.find((n) => n.kind === "robber");
+      const center: SceneVec3 = robber ? [robber.position[0], 0.3, robber.position[2]] : [0, 0.3, 0];
+      return { target: center, position: orbit(center, narrow ? 5.0 : 3.6, 38, 0) };
+    }
     case "b-terrain": {
-      // 对齐参照 b（约 225% 缩放）：俯仰约 58°（polar 32°），正面看 3–4 块地形。
       const center = pickTerrainCluster(nodes) ?? [0, 0.3, 0];
-      return { target: center, position: orbit(center, narrow ? 7.2 : 4.6, 32, 0) };
+      return { target: center, position: orbit(center, narrow ? 5.2 : 3.6, 52, 18) };
     }
-    case "c-coast":
-      // 对齐参照 c（99% 缩放）：俯仰约 58° 看整座岛和四周海面、崖壁、码头。
-      return { target: [0, 0, 0.3], position: orbit([0, 0, 0.3], wholeIslandDistance(aspect) * 0.86, 32, 0) };
-    case "f-dice": {
-      const die = nodes.find((n) => n.id === "die:0");
-      const tray = nodes.find((n) => n.kind === "dice-tray");
-      const center: SceneVec3 = die ? [die.position[0] + 0.2, die.position[1], die.position[2]] : tray?.position ?? [4.2, 0.2, 3.2];
-      return { target: center, position: orbit(center, narrow ? 3.2 : 2.4, 48, -25) };
+    case "c-coast": {
+      const coast = pickCoast(nodes);
+      if (!coast) return { target: [0, 0, 4], position: [3, 2, 9] };
+      const [ox, oz] = coast.outward;
+      // 站在海上、斜对海岸线，低角度看港口、崖壁与水面。
+      const target: SceneVec3 = [coast.port[0] * 0.92, 0.1, coast.port[2] * 0.92];
+      const side: [number, number] = [-oz, ox];
+      const back = narrow ? 4.4 : 3.2;
+      const position: SceneVec3 = [
+        target[0] + ox * back + side[0] * 1.8,
+        narrow ? 2.4 : 1.7,
+        target[2] + oz * back + side[1] * 1.8,
+      ];
+      return { target, position };
     }
+    case "f-dice":
+      // The dice tray is a fixed screen-corner overlay: judge it in the default play framing.
+      return null;
     case "g-midgame":
       return { target: [0, 0, 0.4], position: orbit([0, 0, 0.4], narrow ? 13.5 : 10.5, 46, 22) };
   }

@@ -6,16 +6,17 @@
  * - node removed (settlement → city) → scale fade-out 160 ms
  * - robber position change → arc `moveMs` 420
  * - lastDice change → precomputed tumble `diceMs` 900 (no physics engine)
- * - turn / dice / robber / build → camera reframe `cameraMs` 600, in-out-sine;
- *   skipped when the user dragged within the last 3 s
- * - `prefers-reduced-motion: reduce` → every duration is 0 and the camera never auto-moves
+ * - turn → camera mode transition `cameraMs` 600, in-out-sine (camera-rig.ts CameraDirector:
+ *   own turn tilted 3/4, AI / opponent turns near top-down); skipped while the user drags
+ * - robber position change → hop-walk along a bowed arc (`hop`), facing travel
+ * - `prefers-reduced-motion: reduce` → every duration is 0 (camera snaps)
  *
  * Tweens never gate input: picks hit the hit-overlay layer, which is rebuilt
  * synchronously from legal actions, and a new tween on the same object first
  * `end()`s the previous one so the final pose always converges to the state.
  */
 import { Easing, Group, Tween } from "@tweenjs/tween.js";
-import type { Object3D } from "three";
+import { Euler, Quaternion, Vector3, type Object3D } from "three";
 import type { SceneVec3 } from "./scene-model";
 
 export const MOTION_MS = {
@@ -146,8 +147,55 @@ export function arcLift(p: number, height = 0.9): number {
   return Math.sin(Math.PI * Math.min(Math.max(p, 0), 1)) * height;
 }
 
-type CameraLike = { position: { x: number; y: number; z: number; set(x: number, y: number, z: number): unknown } };
-type ControlsLike = { target: { x: number; y: number; z: number; set(x: number, y: number, z: number): unknown } };
+/**
+ * Robber hop-walk: horizontal path bows sideways (quadratic arc), the figure
+ * makes `hops` small hops plus a gentle overall lift, and faces the travel
+ * direction. Pure so it can be unit-tested.
+ */
+export function hopPath(
+  from: SceneVec3,
+  to: SceneVec3,
+  p: number,
+  hops = 2,
+): { position: SceneVec3; facing: number } {
+  const t = Math.min(Math.max(p, 0), 1);
+  const dx = to[0] - from[0];
+  const dz = to[2] - from[2];
+  const len = Math.hypot(dx, dz) || 1;
+  // Perpendicular control-point offset (bow), proportional to distance, capped.
+  const bow = Math.min(len * 0.22, 0.9);
+  const cx = (from[0] + to[0]) / 2 + (-dz / len) * bow;
+  const cz = (from[2] + to[2]) / 2 + (dx / len) * bow;
+  const u = 1 - t;
+  const x = u * u * from[0] + 2 * u * t * cx + t * t * to[0];
+  const z = u * u * from[2] + 2 * u * t * cz + t * t * to[2];
+  // Tangent of the quadratic Bézier.
+  const tx = 2 * u * (cx - from[0]) + 2 * t * (to[0] - cx);
+  const tz = 2 * u * (cz - from[2]) + 2 * t * (to[2] - cz);
+  const baseY = from[1] + (to[1] - from[1]) * t;
+  const y = t >= 1 ? to[1] : baseY + Math.abs(Math.sin(Math.PI * hops * t)) * 0.16 + Math.sin(Math.PI * t) * 0.12;
+  return { position: t >= 1 ? [to[0], to[1], to[2]] : [x, y, z], facing: Math.atan2(tx, tz) };
+}
+
+/** Robber idle bob offset (y) at time `ms`; 0 when frozen. */
+export function idleBob(ms: number, frozen: boolean): { y: number; tilt: number } {
+  if (frozen) return { y: 0, tilt: 0 };
+  const s = ms / 1000;
+  return { y: (Math.sin(s * 2.4) * 0.5 + 0.5) * 0.022, tilt: Math.sin(s * 1.2) * 0.035 };
+}
+
+const _yawQ = new Quaternion();
+const _faceQ = new Quaternion();
+const _euler = new Euler();
+const _yAxis = new Vector3(0, 1, 0);
+
+/** Rest orientation of a die: yaw about world Y, then face-up rotation. */
+export function applyDieOrientation(object: Object3D, face: number | null | undefined, yaw = 0): void {
+  const [x, y, z] = dieFaceEuler(face);
+  _faceQ.setFromEuler(_euler.set(x, y, z));
+  _yawQ.setFromAxisAngle(_yAxis, yaw);
+  object.quaternion.copy(_yawQ.multiply(_faceQ));
+}
 
 export type MotionControllerOptions = {
   reduced?: () => boolean;
@@ -160,6 +208,9 @@ export class MotionController {
   private readonly reduced: () => boolean;
   private readonly now: () => number;
   private lastUserDragAt = Number.NEGATIVE_INFINITY;
+  /** Objects whose pose a tween touched since the last `drainDirty()` (InstancedMesh sync). */
+  private readonly dirty = new Set<object>();
+  private readonly cameraKey = {};
 
   constructor(options: MotionControllerOptions = {}) {
     this.reduced = options.reduced ?? (() => prefersReducedMotion());
@@ -175,8 +226,26 @@ export class MotionController {
     return this.running.size > 0;
   }
 
+  /** True while `object` has a tween in flight. */
+  isAnimating(object: object): boolean {
+    return this.running.has(object);
+  }
+
+  /** Objects posed by tweens since the previous call (includes just-finished tweens). */
+  drainDirty(): object[] {
+    if (this.dirty.size === 0) return [];
+    const out = [...this.dirty];
+    this.dirty.clear();
+    return out;
+  }
+
   noteUserDrag(at = this.now()): void {
     this.lastUserDragAt = at;
+  }
+
+  /** Last user camera drag (judge mode pins this to +∞). */
+  get lastDragAt(): number {
+    return this.lastUserDragAt;
   }
 
   /** Finish every tween immediately (unmount / remount). */
@@ -193,10 +262,16 @@ export class MotionController {
     easing: (amount: number) => number,
     step: (p: number) => void,
     done?: () => void,
+    durationOverrideMs?: number,
   ): number {
     this.running.get(key)?.end();
+    const touch = step;
+    step = (p: number) => {
+      touch(p);
+      this.dirty.add(key);
+    };
     const reduced = this.reduced();
-    const durationMs = motionDurationMs(kind, reduced);
+    const durationMs = reduced ? 0 : durationOverrideMs ?? motionDurationMs(kind, reduced);
     recordMotion({ kind, id, durationMs, reduced, at: this.now() });
     if (durationMs === 0) {
       step(1);
@@ -264,40 +339,48 @@ export class MotionController {
     });
   }
 
-  /** Precomputed tumble ending on `face`; rest position = object's current position. */
-  dice(object: Object3D, id: string, face: number, seed: number): number {
-    const restY = object.position.y;
-    const keys = precomputeDiceTumble(face, seed);
-    return this.run(object, "dice", id, Easing.Linear.None, (p) => {
-      const k = sampleDiceTumble(keys, p);
-      object.rotation.set(k.rotation[0], k.rotation[1], k.rotation[2]);
-      object.position.y = restY + k.lift;
+  /** Hop-walk along a bowed arc to the object's current (final) position, facing travel. */
+  hop(object: Object3D, id: string, from: SceneVec3): number {
+    const to: SceneVec3 = [object.position.x, object.position.y, object.position.z];
+    const finalYaw = object.rotation.y;
+    return this.run(object, "robber", id, Easing.Sinusoidal.InOut, (p) => {
+      const { position, facing } = hopPath(from, to, p);
+      object.position.set(position[0], position[1], position[2]);
+      object.rotation.set(0, p >= 1 ? (Math.hypot(to[0] - from[0], to[2] - from[2]) > 1e-6 ? facing : finalYaw) : facing, 0);
     });
   }
 
   /**
-   * Reframe camera + orbit target toward `focus` (keeps the current camera offset).
-   * Returns -1 when skipped (reduced motion or recent user drag).
+   * Precomputed tumble ending on `face`; rest position = object's current position.
+   * The die is thrown in from `slide` (local offset, decays to 0) and settles with `yaw`.
    */
-  reframe(camera: CameraLike, controls: ControlsLike, focus: SceneVec3, id: string, pull = 0.35): number {
-    if (this.reduced()) {
-      recordMotion({ kind: "camera", id, durationMs: 0, reduced: true, at: this.now() });
-      return -1;
-    }
-    if (this.now() - this.lastUserDragAt < CAMERA_DRAG_GRACE_MS) return -1;
-    const fromT: SceneVec3 = [controls.target.x, controls.target.y, controls.target.z];
-    const toT: SceneVec3 = [focus[0] * pull, 0, focus[2] * pull];
-    const offset: SceneVec3 = [
-      camera.position.x - fromT[0],
-      camera.position.y - fromT[1],
-      camera.position.z - fromT[2],
-    ];
-    return this.run(controls, "camera", id, Easing.Sinusoidal.InOut, (p) => {
-      const tx = fromT[0] + (toT[0] - fromT[0]) * p;
-      const ty = fromT[1] + (toT[1] - fromT[1]) * p;
-      const tz = fromT[2] + (toT[2] - fromT[2]) * p;
-      controls.target.set(tx, ty, tz);
-      camera.position.set(tx + offset[0], ty + offset[1], tz + offset[2]);
+  dice(object: Object3D, id: string, face: number, seed: number, yaw = 0, slide: readonly [number, number] = [0, 0]): number {
+    const restX = object.position.x;
+    const restY = object.position.y;
+    const restZ = object.position.z;
+    const keys = precomputeDiceTumble(face, seed);
+    return this.run(object, "dice", id, Easing.Linear.None, (p) => {
+      const k = sampleDiceTumble(keys, p);
+      if (p >= 1) {
+        applyDieOrientation(object, face, yaw);
+        object.position.set(restX, restY, restZ);
+        return;
+      }
+      _faceQ.setFromEuler(_euler.set(k.rotation[0], k.rotation[1], k.rotation[2]));
+      _yawQ.setFromAxisAngle(_yAxis, yaw);
+      object.quaternion.copy(_yawQ.multiply(_faceQ));
+      const remain = (1 - p) ** 2;
+      object.position.set(restX + slide[0] * remain, restY + k.lift * 0.45, restZ + slide[1] * remain);
     });
+  }
+
+  /** Stop an in-flight camera tween where it is (user grabbed the camera). */
+  stopCamera(): void {
+    this.running.get(this.cameraKey)?.stop();
+  }
+
+  /** Generic camera tween (logged as kind "camera", 600 ms; reduced motion → instant). */
+  camera(id: string, step: (p: number) => void, options: { ms?: number; done?: () => void } = {}): number {
+    return this.run(this.cameraKey, "camera", id, Easing.Sinusoidal.InOut, step, options.done, options.ms);
   }
 }

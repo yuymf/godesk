@@ -788,6 +788,7 @@ export function HexSettlementBoard({
                 className="room-g3d-scene-host"
                 hexSettlement={hexSettlement}
                 activeSeat={activeSeat}
+                localSeat={viewerSeat}
                 interactive={showLegal}
                 legalActions={pickableActions}
                 onPick={handlePick}

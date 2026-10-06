@@ -1,8 +1,7 @@
-import { Object3D, PerspectiveCamera, Vector3 } from "three";
+import { Object3D } from "three";
 import { describe, expect, it } from "vitest";
 import {
   arcLift,
-  CAMERA_DRAG_GRACE_MS,
   dieFaceEuler,
   MOTION_MS,
   MotionController,
@@ -123,24 +122,6 @@ describe("MotionController", () => {
     expect(die.rotation.x).toBeCloseTo(-Math.PI / 2);
   });
 
-  it("camera reframe: 600 ms, skipped after a recent drag and under reduced motion", () => {
-    const c = clock(10_000);
-    const motion = new MotionController({ reduced: () => false, now: c.now });
-    const camera = new PerspectiveCamera();
-    camera.position.set(0, 9, 12);
-    const controls = { target: new Vector3(0, 0, 0) };
-    expect(motion.reframe(camera, controls, [4, 0, 2], "build")).toBe(600);
-    motion.update(c.advance(601));
-    expect(controls.target.x).toBeCloseTo(4 * 0.35);
-    expect(camera.position.y).toBeCloseTo(9);
-    motion.noteUserDrag(c.now());
-    expect(motion.reframe(camera, controls, [0, 0, 0], "turn:1")).toBe(-1);
-    c.advance(CAMERA_DRAG_GRACE_MS + 1);
-    expect(motion.reframe(camera, controls, [0, 0, 0], "turn:1")).toBe(600);
-    const reduced = new MotionController({ reduced: () => true, now: c.now });
-    expect(reduced.reframe(camera, controls, [1, 0, 1], "turn:0")).toBe(-1);
-  });
-
   it("G3D-06 low tier (maxFps 30): durations are wall-clock, not frame-count", () => {
     const c = clock();
     const motion = new MotionController({ reduced: () => false, now: c.now });
@@ -202,5 +183,62 @@ describe("reconcile motion hooks", () => {
     h.pending[0]!();
     expect(h.root.children).toHaveLength(2);
     expect(log.filter((e) => e === "dispose")).toHaveLength(1);
+  });
+});
+
+describe("G3D-JUDGE-PIECES motion additions", () => {
+  it("hopPath starts / ends exactly, hops above the straight line, faces travel", async () => {
+    const { hopPath } = await import("./motion");
+    const from = [0, 0.28, 0] as const;
+    const to = [2, 0.28, 0] as const;
+    expect(hopPath(from, to, 0).position).toEqual([0, 0.28, 0]);
+    expect(hopPath(from, to, 1).position).toEqual([2, 0.28, 0]);
+    const mid = hopPath(from, to, 0.25);
+    expect(mid.position[1]).toBeGreaterThan(0.28);
+    // Bowed sideways (not on the straight segment).
+    expect(Math.abs(hopPath(from, to, 0.5).position[2])).toBeGreaterThan(0.1);
+    // Moving along +X → facing ≈ +π/2 (atan2(dx, dz)), within the bow angle.
+    expect(Math.abs(hopPath(from, to, 0.5).facing - Math.PI / 2)).toBeLessThan(0.05);
+  });
+
+  it("idleBob is zero when frozen and small otherwise", async () => {
+    const { idleBob } = await import("./motion");
+    expect(idleBob(1234, true)).toEqual({ y: 0, tilt: 0 });
+    for (const t of [0, 300, 900, 4000]) {
+      const bob = idleBob(t, false);
+      expect(bob.y).toBeGreaterThanOrEqual(0);
+      expect(bob.y).toBeLessThan(0.03);
+      expect(Math.abs(bob.tilt)).toBeLessThan(0.05);
+    }
+  });
+
+  it("drainDirty reports objects posed by tweens, including the final frame", async () => {
+    const { MotionController } = await import("./motion");
+    const { Object3D } = await import("three");
+    let now = 0;
+    const motion = new MotionController({ reduced: () => false, now: () => now });
+    const piece = new Object3D();
+    motion.place(piece, "p");
+    expect(motion.drainDirty()).toContain(piece);
+    now = 1000;
+    motion.update(now);
+    expect(motion.busy).toBe(false);
+    expect(motion.drainDirty()).toContain(piece);
+    expect(motion.drainDirty()).toEqual([]);
+  });
+
+  it("camera tweens log kind camera 600 ms, reduced → 0, and stopCamera halts in place", async () => {
+    const { MotionController } = await import("./motion");
+    let now = 0;
+    const seen: number[] = [];
+    const motion = new MotionController({ reduced: () => false, now: () => now });
+    expect(motion.camera("c", (p) => seen.push(p))).toBe(600);
+    now = 300;
+    motion.update(now);
+    motion.stopCamera();
+    expect(motion.busy).toBe(false);
+    expect(seen.at(-1)!).toBeLessThan(1);
+    const reduced = new MotionController({ reduced: () => true, now: () => 0 });
+    expect(reduced.camera("c", () => {})).toBe(0);
   });
 });
