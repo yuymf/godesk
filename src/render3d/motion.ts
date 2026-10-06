@@ -157,13 +157,15 @@ export function hopPath(
   to: SceneVec3,
   p: number,
   hops = 3,
+  /** Peak height above the ground line (default ~0.66 ≈ old small hops). */
+  apexHeight = 0.66,
 ): { position: SceneVec3; facing: number } {
   const t = Math.min(Math.max(p, 0), 1);
   const dx = to[0] - from[0];
   const dz = to[2] - from[2];
   const len = Math.hypot(dx, dz) || 1;
   // Perpendicular control-point offset (bow), proportional to distance, capped.
-  const bow = Math.min(len * 0.22, 0.9);
+  const bow = Math.min(len * 0.22, Math.max(0.9, apexHeight * 0.35));
   const cx = (from[0] + to[0]) / 2 + (-dz / len) * bow;
   const cz = (from[2] + to[2]) / 2 + (dx / len) * bow;
   const u = 1 - t;
@@ -173,7 +175,9 @@ export function hopPath(
   const tx = 2 * u * (cx - from[0]) + 2 * t * (to[0] - cx);
   const tz = 2 * u * (cz - from[2]) + 2 * t * (to[2] - cz);
   const baseY = from[1] + (to[1] - from[1]) * t;
-  const y = t >= 1 ? to[1] : baseY + Math.abs(Math.sin(Math.PI * hops * t)) * 0.38 + Math.sin(Math.PI * t) * 0.28;
+  const hopAmp = apexHeight * 0.35;
+  const arcAmp = apexHeight * 0.65;
+  const y = t >= 1 ? to[1] : baseY + Math.abs(Math.sin(Math.PI * hops * t)) * hopAmp + Math.sin(Math.PI * t) * arcAmp;
   return { position: t >= 1 ? [to[0], to[1], to[2]] : [x, y, z], facing: Math.atan2(tx, tz) };
 }
 
@@ -343,23 +347,21 @@ export class MotionController {
   }
 
   /** Hop-walk along a bowed arc to the object's current (final) position, facing travel. */
-  hop(object: Object3D, id: string, from: SceneVec3, options?: { ms?: number; ignoreReducedMotion?: boolean }): number {
+  hop(object: Object3D, id: string, from: SceneVec3, options?: { ms?: number; ignoreReducedMotion?: boolean; apexHeight?: number; hops?: number }): number {
     const to: SceneVec3 = [object.position.x, object.position.y, object.position.z];
     const finalYaw = object.rotation.y;
     const forceMs = options?.ignoreReducedMotion ? (options.ms ?? MOTION_MS.robber) : options?.ms;
-    // When ignoreReducedMotion, temporarily pretend reduced is false via duration override.
-    if (options?.ignoreReducedMotion) {
-      return this.run(object, "robber", id, Easing.Sinusoidal.InOut, (p) => {
-        const { position, facing } = hopPath(from, to, p);
-        object.position.set(position[0], position[1], position[2]);
-        object.rotation.set(0, p >= 1 ? (Math.hypot(to[0] - from[0], to[2] - from[2]) > 1e-6 ? facing : finalYaw) : facing, 0);
-      }, undefined, forceMs ?? MOTION_MS.robber);
-    }
-    return this.run(object, "robber", id, Easing.Sinusoidal.InOut, (p) => {
-      const { position, facing } = hopPath(from, to, p);
+    const apex = options?.apexHeight ?? 0.66;
+    const hops = options?.hops ?? 3;
+    const step = (p: number) => {
+      const { position, facing } = hopPath(from, to, p, hops, apex);
       object.position.set(position[0], position[1], position[2]);
       object.rotation.set(0, p >= 1 ? (Math.hypot(to[0] - from[0], to[2] - from[2]) > 1e-6 ? facing : finalYaw) : facing, 0);
-    }, undefined, forceMs);
+    };
+    if (options?.ignoreReducedMotion) {
+      return this.run(object, "robber", id, Easing.Sinusoidal.InOut, step, undefined, forceMs ?? MOTION_MS.robber);
+    }
+    return this.run(object, "robber", id, Easing.Sinusoidal.InOut, step, undefined, forceMs);
   }
 
   /**

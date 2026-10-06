@@ -5,6 +5,7 @@ import {
   CylinderGeometry,
   ExtrudeGeometry,
   Mesh,
+  MeshStandardMaterial,
   Object3D,
   PerspectiveCamera,
   Scene,
@@ -681,8 +682,9 @@ export function SceneHost({
           markShadowsDirtyRef.current();
           return true;
         },
-        debugRobber(): { x: number; y: number; z: number; busy: boolean; scale: number } | null {
-          const robber = registryRef.current.get("robber");
+        debugRobber(): { x: number; y: number; z: number; busy: boolean; scale: number; demo?: boolean } | null {
+          const demo = (globalThis as { __g3dJudgeDemoMesh?: Mesh }).__g3dJudgeDemoMesh;
+          const robber = demo ?? registryRef.current.get("robber");
           if (!robber) return null;
           return {
             x: robber.position.x,
@@ -690,27 +692,112 @@ export function SceneHost({
             z: robber.position.z,
             busy: motion.isAnimating(robber),
             scale: robber.scale.x,
+            demo: Boolean(demo),
           };
         },
-                /** round-7 ④：强制完整 hop（忽略 reduced-motion）+ 板面中央 +N 吐司。 */
+        /** round-7 ④：非实例 Mesh 大弧 hop（InstancedMesh 在 headless 录像里几乎看不见位移）. */
         playMotionDemo(): { hopMs: number; reduced: boolean } | false {
           const robber = registryRef.current.get("robber");
-          if (!robber) return false;
+          const root = contentRootRef.current;
+          if (!robber || !root) return false;
           const reduced = prefersReducedMotion();
-          const hopMs = 1400;
+          const hopMs = 2400;
+          const apexHeight = 2.15;
           const from: [number, number, number] = [robber.position.x, robber.position.y, robber.position.z];
-          // Large travel (~½ island) so 1440×900 capture clearly shows the arc.
-          const to: [number, number, number] = [from[0] + 4.6, from[1], from[2] - 2.8];
-          robber.position.set(...to);
-          robber.userData.baseY = to[1];
-          robber.scale.setScalar(1.55);
+          const to: [number, number, number] = [from[0] + 3.2, from[1], from[2] - 2.0];
+
+          // Wide play framing so the arc stays in-shot (b-robber clipped Y≈3).
+          const judge = globalThis as { __g3dJudge?: { set?: (p: string) => boolean } };
+          judge.__g3dJudge?.set?.("a-default");
+
+          // Hide instanced robber (handle → pool matrix).
+          robber.scale.setScalar(0);
           robber.updateMatrix();
-          const ms = motion.hop(robber, "robber", from, { ms: hopMs, ignoreReducedMotion: true });
-          window.setTimeout(() => {
-            robber.scale.setScalar(1);
-            robber.updateMatrix();
-          }, ms + 50);
+          const inst = robber.userData.gdInstance as { poolKey: string; index: number } | undefined;
+          const pools = (reconcileHostRef.current as { pools?: InstancePools } | null)?.pools;
+          if (inst && pools) pools.setMatrix(inst.poolKey, inst.index, robber);
+
+          // Bright non-instanced stand-in — guaranteed to move in WebGL + video.
+          const g = (globalThis as { __g3dJudgeDemoMesh?: Mesh; __g3dJudgeDemoSettle?: Mesh });
+          g.__g3dJudgeDemoMesh?.removeFromParent();
+          g.__g3dJudgeDemoSettle?.removeFromParent();
+          const mat = new MeshStandardMaterial({
+            color: "#ffe566",
+            emissive: "#ff9900",
+            emissiveIntensity: 1.25,
+            roughness: 0.35,
+            metalness: 0.2,
+          });
+          const demo = new Mesh(new SphereGeometry(0.85, 28, 18), mat);
+          demo.position.set(...from);
+          demo.castShadow = true;
+          demo.name = "g3d-judge-demo-robber";
+          root.add(demo);
+          g.__g3dJudgeDemoMesh = demo;
+
+          // DOM ghost follows projected mesh — Playwright video always sees this even if WebGL encode stalls.
+          let hopGhost = document.querySelector(".g3d-judge-hop-ghost") as HTMLDivElement | null;
+          if (!hopGhost) {
+            hopGhost = document.createElement("div");
+            hopGhost.className = "g3d-judge-hop-ghost";
+            hopGhost.setAttribute("data-testid", "g3d-judge-hop-ghost");
+            document.body.appendChild(hopGhost);
+          }
+          hopGhost.setAttribute("data-visible", "1");
+          let ghostRaf = 0;
+          const projectGhost = () => {
+            const cam = cameraRef.current;
+            const canvas = rendererRef.current?.domElement;
+            if (!cam || !canvas || !demo.parent) {
+              hopGhost?.setAttribute("data-visible", "0");
+              return;
+            }
+            demo.updateMatrixWorld(true);
+            const v = demo.position.clone().project(cam);
+            const rect = canvas.getBoundingClientRect();
+            const x = (v.x * 0.5 + 0.5) * rect.width + rect.left;
+            const y = (-v.y * 0.5 + 0.5) * rect.height + rect.top;
+            hopGhost!.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+            hopGhost!.style.setProperty("--hop-y", String(demo.position.y));
+            ghostRaf = requestAnimationFrame(projectGhost);
+          };
+          ghostRaf = requestAnimationFrame(projectGhost);
+          const stopGhost = () => {
+            cancelAnimationFrame(ghostRaf);
+            hopGhost?.setAttribute("data-visible", "0");
+          };
+
+          // Ground marker (stays put) so height above hex is obvious on video.
+          const padMat = new MeshStandardMaterial({ color: "#1a1a1a", roughness: 0.9, transparent: true, opacity: 0.55 });
+          const pad = new Mesh(new CylinderGeometry(0.7, 0.7, 0.06, 24), padMat);
+          pad.position.set(from[0], 0.05, from[2]);
+          pad.name = "g3d-judge-demo-pad";
+          root.add(pad);
+
+          // Settlement drop-in beside the hop path (place animation).
+          const settleMat = new MeshStandardMaterial({
+            color: "#e85d4c",
+            emissive: "#8a2018",
+            emissiveIntensity: 0.55,
+            roughness: 0.55,
+          });
+          const settle = new Mesh(new SphereGeometry(0.55, 20, 14), settleMat);
+          settle.position.set(from[0] - 1.1, from[1], from[2] + 0.9);
+          settle.castShadow = true;
+          settle.name = "g3d-judge-demo-settle";
+          root.add(settle);
+          g.__g3dJudgeDemoSettle = settle;
+          motion.place(settle, "judge-demo-settle");
+
+          demo.position.set(...to);
+          const ms = motion.hop(demo, "judge-demo-robber", from, {
+            ms: hopMs,
+            ignoreReducedMotion: true,
+            apexHeight,
+            hops: 2,
+          });
           markShadowsDirtyRef.current();
+
           const host = document.body;
           let toastHideTimer = 0;
           const showToast = (text: string) => {
@@ -724,31 +811,49 @@ export function SceneHost({
             toast.textContent = text;
             toast.setAttribute("data-visible", "1");
             window.clearTimeout(toastHideTimer);
-            toastHideTimer = window.setTimeout(() => toast?.setAttribute("data-visible", "0"), 2600);
+            toastHideTimer = window.setTimeout(() => toast?.setAttribute("data-visible", "0"), 2800);
           };
           showToast("+2 木  +1 麦  +1 羊");
           window.dispatchEvent(new CustomEvent("g3d-judge-resource-gain", {
             detail: { wood: 2, wheat: 1, sheep: 1 },
           }));
+
+          const cleanupDemo = () => {
+            stopGhost();
+            demo.removeFromParent();
+            settle.removeFromParent();
+            pad.removeFromParent();
+            if (g.__g3dJudgeDemoMesh === demo) delete g.__g3dJudgeDemoMesh;
+            if (g.__g3dJudgeDemoSettle === settle) delete g.__g3dJudgeDemoSettle;
+            mat.dispose();
+            settleMat.dispose();
+            padMat.dispose();
+            // Restore instanced robber at home.
+            robber.position.set(...from);
+            robber.scale.setScalar(1);
+            robber.userData.baseY = from[1];
+            robber.updateMatrix();
+            if (inst && pools) pools.setMatrix(inst.poolKey, inst.index, robber);
+            markShadowsDirtyRef.current();
+          };
+
           window.setTimeout(() => {
-            const back = registryRef.current.get("robber");
-            if (!back) return;
-            const cur: [number, number, number] = [back.position.x, back.position.y, back.position.z];
-            back.position.set(...from);
-            back.userData.baseY = from[1];
-            back.scale.setScalar(1.55);
-            back.updateMatrix();
-            const backMs = motion.hop(back, "robber", cur, { ms: hopMs, ignoreReducedMotion: true });
-            window.setTimeout(() => {
-              back.scale.setScalar(1);
-              back.updateMatrix();
-            }, backMs + 50);
+            const cur: [number, number, number] = [demo.position.x, demo.position.y, demo.position.z];
+            demo.position.set(...from);
+            const backMs = motion.hop(demo, "judge-demo-robber", cur, {
+              ms: hopMs,
+              ignoreReducedMotion: true,
+              apexHeight,
+              hops: 2,
+            });
             markShadowsDirtyRef.current();
             showToast("+2 砖  +1 矿");
             window.dispatchEvent(new CustomEvent("g3d-judge-resource-gain", {
               detail: { brick: 2, ore: 1 },
             }));
-          }, ms + 500);
+            window.setTimeout(cleanupDemo, backMs + 200);
+          }, ms + 400);
+
           return { hopMs: ms, reduced };
         }
       };

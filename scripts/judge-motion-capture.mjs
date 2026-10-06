@@ -87,9 +87,9 @@ async function main() {
   const overlayOpen = await page.locator("details.hex-settlement-board-targets[open]").count();
   log("overlayOpen", overlayOpen);
 
-  await page.evaluate(() => globalThis.__g3dJudge?.set?.("a-default"));
+  await page.evaluate(() => globalThis.__g3dJudge?.set?.("b-robber"));
   await page.waitForTimeout(500);
-  await closeOverlays(page); // set() shouldn't reopen, but belt+suspenders
+  await closeOverlays(page);
 
   const reduced = await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches);
   log("prefers-reduced-motion", reduced, "3D ready — demos only (no placement overlay)");
@@ -100,33 +100,38 @@ async function main() {
   log("demo1", demo1);
   await page.locator('[data-testid="g3d-judge-plusn-toast"][data-visible="1"]').waitFor({ timeout: 3000 });
   // Wait until robber is clearly mid-travel (|x| > 2) then freeze a still
-  for (let i = 0; i < 20; i += 1) {
+  let apex1 = null;
+  for (let i = 0; i < 40; i += 1) {
     const pose = await page.evaluate(() => globalThis.__g3dJudge?.debugRobber?.());
-    if (pose && Math.abs(pose.x) > 2) {
-      log("mid-hop1 pose", pose);
+    if (pose && pose.y > 1.2) {
+      apex1 = pose;
+      log("apex-hop1", pose);
       break;
     }
-    await page.waitForTimeout(80);
+    await page.waitForTimeout(60);
   }
+  if (!apex1) log("WARN no apex1 y>1.2");
   await page.screenshot({ path: path.join(path.dirname(OUT), "motion-frame-hop1.png"), fullPage: false });
-  await page.waitForTimeout(2200); // finish hop1 + pause before return
+  await page.waitForTimeout(3200); // finish 2400ms hop + pause before return
   // Return hop + second toast (~1.7s after first hop ends)
   await page.locator('[data-testid="g3d-judge-plusn-toast"][data-visible="1"]').waitFor({ timeout: 5000 }).catch((e) => log("toast2 wait", e.message));
   await page.waitForTimeout(400);
   await page.screenshot({ path: path.join(path.dirname(OUT), "motion-frame-hop2.png") });
-  await page.waitForTimeout(2200);
+  await page.waitForTimeout(3000);
 
   await closeOverlays(page);
   const demo2 = await page.evaluate(() => globalThis.__g3dJudge.playMotionDemo());
   log("demo2", demo2);
   await page.locator('[data-testid="g3d-judge-plusn-toast"][data-visible="1"]').waitFor({ timeout: 3000 }).catch((e) => log("toast3 wait", e.message));
-  for (let i = 0; i < 20; i += 1) {
+  let apex3 = null;
+  for (let i = 0; i < 40; i += 1) {
     const pose = await page.evaluate(() => globalThis.__g3dJudge?.debugRobber?.());
-    if (pose && Math.abs(pose.x) > 2) { log("mid-hop3 pose", pose); break; }
-    await page.waitForTimeout(80);
+    if (pose && pose.y > 1.2) { apex3 = pose; log("apex-hop3", pose); break; }
+    await page.waitForTimeout(60);
   }
+  if (!apex3) log("WARN no apex3 y>1.2");
   await page.screenshot({ path: path.join(path.dirname(OUT), "motion-frame-hop3.png") });
-  await page.waitForTimeout(2200);
+  await page.waitForTimeout(3200);
   await page.locator('[data-testid="g3d-judge-plusn-toast"][data-visible="1"]').waitFor({ timeout: 5000 }).catch((e) => log("toast4 wait", e.message));
   await page.waitForTimeout(400);
   await page.screenshot({ path: path.join(path.dirname(OUT), "motion-frame-hop4.png") });
