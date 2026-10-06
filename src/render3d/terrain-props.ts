@@ -37,7 +37,7 @@ export const PROP_KINDS: readonly PropKind[] = ["pine", "canopy", "sheep", "trou
 
 /** 地形 → 道具（先放大件）。Tidewell 地形键见 runtime/adapters/hex-settlement。 */
 export const TERRAIN_PROPS: Record<string, readonly PropKind[]> = {
-  wood: ["pine", "canopy"],
+  wood: ["canopy", "pine"],
   sheep: ["trough", "sheep"],
   ore: ["boulder", "pebble"],
   brick: ["clay", "bricks"],
@@ -49,7 +49,7 @@ type Counts = Partial<Record<PropKind, number>>;
 /** 每格数量：terrain → kind → count。low 档全 0。 */
 export const PROP_COUNTS: Record<RenderTierId, Record<string, Counts>> = {
   high: {
-    wood: { pine: 56, canopy: 18, blobshadow: 56 },
+    wood: { pine: 56, canopy: 10, blobshadow: 56 },
     sheep: { trough: 1, sheep: 14, blobshadow: 15 },
     ore: { boulder: 7, pebble: 10, blobshadow: 7 },
     brick: { clay: 6, bricks: 3 },
@@ -69,7 +69,7 @@ export const PROP_COUNTS: Record<RenderTierId, Record<string, Counts>> = {
 
 /** 道具间最小间距（相邻两件取均值）。 */
 const SPACING: Record<PropKind, number> = {
-  pine: 0.1, canopy: 0.2, sheep: 0.16, trough: 0.22, boulder: 0.18, clay: 0.2, bricks: 0.17, sheaf: 0.12, wheatrow: 0.1, dune: 0.28, pebble: 0.07, blobshadow: 0.08,
+  pine: 0.1, canopy: 0.14, sheep: 0.16, trough: 0.22, boulder: 0.18, clay: 0.2, bricks: 0.17, sheaf: 0.12, wheatrow: 0.1, dune: 0.28, pebble: 0.07, blobshadow: 0.08,
 };
 const CASTS: Record<PropKind, boolean> = {
   pine: true, canopy: false, sheep: true, trough: true, boulder: true, clay: false, bricks: true, sheaf: true, wheatrow: true, dune: false, pebble: false, blobshadow: false,

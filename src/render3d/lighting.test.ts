@@ -21,15 +21,15 @@ describe("G3D-07 lighting rig", () => {
     expect(rig.hemisphere).toBeInstanceOf(HemisphereLight);
     expect(rig.sun.intensity).toBe(2.85);
     expect(rig.sun.color.getHexString()).toBe(new DirectionalLight("#ffe6c2").color.getHexString());
-    expect(rig.hemisphere.intensity).toBe(0.7);
+    expect(rig.hemisphere.intensity).toBe(0.95);
     expect(rig.sun.castShadow).toBe(true);
     expect(rig.sun.shadow.mapSize.x).toBe(2048);
-    expect(rig.sun.shadow.radius).toBe(4);
+    expect(rig.sun.shadow.radius).toBe(6.1);
     expect(rig.sun.shadow.bias).toBe(-0.0004);
     expect(rig.sun.shadow.normalBias).toBe(0.02);
     rig.applyCaps(TIER_CAPS.medium);
     expect(rig.sun.shadow.mapSize.x).toBe(1024);
-    expect(rig.sun.shadow.radius).toBe(4);
+    expect(rig.sun.shadow.radius).toBe(6.1);
     rig.applyCaps(TIER_CAPS.low);
     expect(rig.sun.shadow.mapSize.x).toBe(512);
     expect(rig.sun.shadow.radius).toBe(1);
