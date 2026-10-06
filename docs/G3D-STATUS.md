@@ -115,7 +115,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 - [ ] **法务审查：`assets/LICENSES.md` 中每一行 `LicenseRef-AI-Generated`（当前 68 行，`pnpm verify:assets` 的 warning 会列出）必须由法务审查通过**，通过后把该行 `法务审查: 待 G3D-17` 改为 `法务审查: 已通过 <日期/审查人>`、manifest `legalReview` 改为 `"cleared"`；未通过的资产须替换（委托 / CC0 / 购买）。warning 清零前不得上线。
 - [ ] G3D-05 备注 ⑤：Lighthouse LCP / TBT 由 warn 改为 error（见上）。
-- [ ] **仓库公开（Track A 预备，`chore/pre-public-cleanup`）**：品牌中性化（仓内 第三方六角岛桌游品牌词（中英文）→ 汐屿 / Tidewell Isles / `hexIsland` / `hex-island`；只保留旧存储键（`LEGACY_HEX_ISLAND_STATE_KEY`），用于兼容已存的房间）；settlecoast 引用清零（统一改为「业界 3D 桌游品质对标」）；第三方商标从用户可见文案移除（Ticket to Ride、Othello 文案）；新增 `LICENSE`（source-available，保留所有权利）；commit 身份改为 noreply；fork PR 审批设为所有外部贡献者。**可见性由主管在用户直接确认后切换；未合入。**
+- [ ] **仓库公开（Track A 预备，`chore/pre-public-cleanup`）**：品牌中性化（仓内 第三方六角岛桌游品牌词（中英文）→ 汐屿 / Tidewell Isles / `hexIsland` / `hex-island`；只保留旧存储键（`LEGACY_HEX_ISLAND_STATE_KEY`），用于兼容已存的房间）；第三方参考站点引用清零（统一改为「业界 3D 桌游品质对标」）；第三方商标从用户可见文案移除（Ticket to Ride、Othello 文案）；新增 `LICENSE`（source-available，保留所有权利）；commit 身份改为 noreply；fork PR 审批设为所有外部贡献者。**可见性由主管在用户直接确认后切换；未合入。**
 
 
 ## 开着的 PR / 分支
@@ -124,7 +124,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | --- | --- | --- | --- |
 | `feat/g3d-14-followups` | [#139](https://github.com/yuymf/godesk/pull/139) | G3D-14 后续修补 + M4 收官：圆子实例化、2D 棋子随座位材质、390 px 溢出、毡面、STATUS（Track C） | open · 本 PR |
 | `feat/g3d-13-tidewell` | — | G3D-13 Tidewell 集成（Track B） | 开工 · 合入等 #132 |
-| `chore/pre-public-cleanup` | 见 PR | 仓库公开前清理：品牌中性化、LICENSE、settlecoast 引用清零（Track A） | open · 不合入（等用户确认） |
+| `chore/pre-public-cleanup` | 见 PR | 仓库公开前清理：品牌中性化、LICENSE、第三方参考站点引用清零（Track A） | open · 不合入（等用户确认） |
 
 ## 修订记录
 
@@ -166,4 +166,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | G3D-ART #137 合入 `902075e`；STATUS 回填 SHA；Notion G3D-ART → Done（AI 法务审查闸门在 G3D-17） | Track D |
 | 2026-10-06 | G3D-14 后续修补 + M4 收官（Track C）PR：回填 G3D-15 第二刀 #134 合入 SHA `98f5de0`；开着的 PR 移除 #134；当前里程碑加 M4 平台化 Done（合入 PR 列表）；已完成加 G3D-14 后续修补；加后续修补备注（实例化 draw call / 2D 棋子色 / 溢出 / 毡面 mip）；代码基线 → `902075e`；开着的 PR 移除已合入的 #132 | Track C |
 | 2026-10-06 | G3D-ART-2 #142：T3b 麦田、点数筹码数字贴花（6/8 赤陶）；地形道具暂缓到 #138 之后 | Track D |
-| 2026-10-06 | 仓库公开前清理（Track A）：第三方六角岛桌游品牌词（中英文）→ 汐屿 / `hexIsland` / `hex-island`（文件、标识符、测试 ID、CSS 类、文案、文档全量改名；历史文档中旧 2D 六角盘面组件统一写作 `HexIslandBoard.tsx`，该文件已在 G3D-18 删除）；只保留旧存储状态键（`LEGACY_HEX_ISLAND_STATE_KEY`）；settlecoast 引用清零；LICENSE 改为 source-available、保留所有权利 | Track A |
+| 2026-10-06 | 仓库公开前清理（Track A）：第三方六角岛桌游品牌词（中英文）→ 汐屿 / `hexIsland` / `hex-island`（文件、标识符、测试 ID、CSS 类、文案、文档全量改名；历史文档中旧 2D 六角盘面组件统一写作 `HexIslandBoard.tsx`，该文件已在 G3D-18 删除）；只保留旧存储状态键（`LEGACY_HEX_ISLAND_STATE_KEY`）；第三方参考站点引用清零；LICENSE 改为 source-available、保留所有权利 | Track A |
