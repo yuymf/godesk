@@ -1414,7 +1414,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "texture/t08-wood/512/baseColor",
     "file": "assets/textures/pbr/t08-wood/512/baseColor.ktx2",
     "kind": "texture",
-    "bytes": 48202,
+    "bytes": 49898,
     "tier": "high-medium",
     "source": "ai-generated",
     "license": {
@@ -1423,7 +1423,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "author": "Grok Bot GenerateImage（AI 生成，俞孟凡 / GoDesk 委托）",
       "obtainedAt": "2026-10-06",
       "modified": true,
-      "modificationNote": "AI 生图（T8）；中心方块裁切→1024→逐轴 offset-by-half 羽化混合无缝化→512²→toktx ETC1S",
+      "modificationNote": "AI 生图（T8）；中心方块裁切→1024→逐轴 offset-by-half 羽化混合无缝化→去饱和 0.25、提亮 1.55（漂流木灰，木色由 token 决定）→512²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
       "legalReview": "pending-G3D-17"
@@ -1433,7 +1433,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "texture/t08-wood/512/normal",
     "file": "assets/textures/pbr/t08-wood/512/normal.ktx2",
     "kind": "texture",
-    "bytes": 45894,
+    "bytes": 58464,
     "tier": "high-medium",
     "source": "ai-generated",
     "license": {
@@ -1452,7 +1452,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "texture/t08-wood/512/orm",
     "file": "assets/textures/pbr/t08-wood/512/orm.ktx2",
     "kind": "texture",
-    "bytes": 10941,
+    "bytes": 17968,
     "tier": "high-medium",
     "source": "ai-generated",
     "license": {
@@ -1471,7 +1471,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "texture/t08-wood/256/baseColor",
     "file": "assets/textures/pbr/t08-wood/256/baseColor.ktx2",
     "kind": "texture",
-    "bytes": 12378,
+    "bytes": 12894,
     "tier": "low",
     "source": "ai-generated",
     "license": {
@@ -1480,7 +1480,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "author": "Grok Bot GenerateImage（AI 生成，俞孟凡 / GoDesk 委托）",
       "obtainedAt": "2026-10-06",
       "modified": true,
-      "modificationNote": "AI 生图（T8）；中心方块裁切→1024→逐轴 offset-by-half 羽化混合无缝化→256²→toktx ETC1S",
+      "modificationNote": "AI 生图（T8）；中心方块裁切→1024→逐轴 offset-by-half 羽化混合无缝化→去饱和 0.25、提亮 1.55（漂流木灰，木色由 token 决定）→256²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
       "legalReview": "pending-G3D-17"
@@ -1490,7 +1490,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "texture/t08-wood/256/normal",
     "file": "assets/textures/pbr/t08-wood/256/normal.ktx2",
     "kind": "texture",
-    "bytes": 12822,
+    "bytes": 16826,
     "tier": "low",
     "source": "ai-generated",
     "license": {
@@ -1509,7 +1509,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "texture/t08-wood/256/orm",
     "file": "assets/textures/pbr/t08-wood/256/orm.ktx2",
     "kind": "texture",
-    "bytes": 5464,
+    "bytes": 6676,
     "tier": "low",
     "source": "ai-generated",
     "license": {

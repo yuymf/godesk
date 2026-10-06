@@ -42,6 +42,9 @@ CARDS = {  # 文件名 → (raw, 目标尺寸)
     "resource-ore": ("C5-resource-ore.jpg", (384, 512)),
     "dev-fog-signal": ("C6-dev-fog-signal.jpg", (512, 768)),
 }
+# 调色（后处理）：码头木板原图偏青灰，会被 wood token 的暖棕底色乘成暗橄榄色 → 去饱和并提亮成浅漂流木灰，
+# 让 token 底色决定木色。 (饱和度系数, 亮度增益)
+GRADE = {"t08-wood": (0.25, 1.55)}
 ICONS = ["wood", "brick", "sheep", "wheat", "ore"]
 
 
@@ -116,6 +119,10 @@ def toktx(src: Path, dst: Path, uastc: bool, q: int = 128, clevel: int = 2, rdo:
 def bake_texture(tid: str, raw: str, rough: float, strength: float, seed: int, summary: dict):
     im = center_square(Image.open(RAW / raw).convert("RGB")).resize((1024, 1024), Image.Resampling.LANCZOS)
     a = make_seamless(np.asarray(im, dtype=np.float32), seed)
+    if tid in GRADE:
+        sat, gain = GRADE[tid]
+        lum = (a[..., 0] * 0.3 + a[..., 1] * 0.59 + a[..., 2] * 0.11)[..., None]
+        a = np.clip((lum + (a - lum) * sat) * gain, 0, 255)
     seam = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
     # 2x2 平铺校验图
     tile = Image.new("RGB", (1024, 1024))
@@ -369,6 +376,11 @@ def main():
     only = os.environ.get("AI_ONLY", "").split(",") if os.environ.get("AI_ONLY") else None
     if only:
         for k in only:
+            if k.startswith("tex:"):
+                tid = k[4:]
+                raw, rough, strength = TEXTURES[tid]
+                bake_texture(tid, raw, rough, strength, 17 + list(TEXTURES).index(tid), summary)
+                continue
             {"token": bake_token, "cards": bake_cards, "icons": bake_icons, "frames": bake_frames}[k](summary)
         print("DONE", only)
         return

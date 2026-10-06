@@ -42,7 +42,7 @@ for (const [tid, [raw, cn]] of Object.entries(TEX)) {
       const post = tid === "t11-parchment"
         ? (slot === "baseColor" ? `圆盘裁切→圆外以边缘色填充→${res}²→toktx ETC1S` : `由 AI albedo 亮度推导 ${slot}（自有算法）→${res}²→toktx`)
         : (slot === "baseColor"
-          ? `中心方块裁切→1024→逐轴 offset-by-half 羽化混合无缝化→${res}²→toktx ETC1S`
+          ? `中心方块裁切→1024→逐轴 offset-by-half 羽化混合无缝化${tid === "t08-wood" ? "→去饱和 0.25、提亮 1.55（漂流木灰，木色由 token 决定）" : ""}→${res}²→toktx ETC1S`
           : `由无缝 AI albedo 亮度高度场推导 ${slot}（自有算法，非 AI）→${res}²→toktx ${slot === "normal" ? "UASTC+zstd" : "ETC1S"}`);
       items.push({
         id: `texture/${tid}/${res}/${slot}`,
