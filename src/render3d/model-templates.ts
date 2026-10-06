@@ -58,27 +58,31 @@ function stubPillar(): BufferGeometry {
   return new CylinderGeometry(0.14, 0.18, 0.35, 8);
 }
 
-const FALLBACK: TidewellGeometries = {
-  settlement: new BoxGeometry(0.22, 0.22, 0.22),
-  city: new BoxGeometry(0.3, 0.34, 0.3),
-  robber: new CylinderGeometry(0.12, 0.18, 0.7, 12),
-  road: new BoxGeometry(1, 1, 1),
-  sheep: stubPillar(),
-  dock: new BoxGeometry(0.4, 0.12, 0.4),
-  shipA: new BoxGeometry(0.5, 0.18, 0.22),
-  shipB: new BoxGeometry(0.5, 0.18, 0.22),
-  die: new BoxGeometry(0.22, 0.22, 0.22),
-  diceTray: new BoxGeometry(0.7, 0.1, 0.5),
-  decorByTerrain: {
-    wood: stubPillar(),
-    brick: stubPillar(),
+function makeFallback(): TidewellGeometries {
+  return {
+    settlement: new BoxGeometry(0.22, 0.22, 0.22),
+    city: new BoxGeometry(0.3, 0.34, 0.3),
+    robber: new CylinderGeometry(0.12, 0.18, 0.7, 12),
+    road: new BoxGeometry(1, 1, 1),
     sheep: stubPillar(),
-    wheat: stubPillar(),
-    ore: stubPillar(),
-    desert: stubPillar(),
-  },
-  ready: false,
-};
+    dock: new BoxGeometry(0.4, 0.12, 0.4),
+    shipA: new BoxGeometry(0.5, 0.18, 0.22),
+    shipB: new BoxGeometry(0.5, 0.18, 0.22),
+    die: new BoxGeometry(0.22, 0.22, 0.22),
+    diceTray: new BoxGeometry(0.7, 0.1, 0.5),
+    decorByTerrain: {
+      wood: stubPillar(),
+      brick: stubPillar(),
+      sheep: stubPillar(),
+      wheat: stubPillar(),
+      ore: stubPillar(),
+      desert: stubPillar(),
+    },
+    ready: false,
+  };
+}
+
+let FALLBACK: TidewellGeometries = makeFallback();
 
 let cache: TidewellGeometries | null = null;
 let loadPromise: Promise<TidewellGeometries> | null = null;
@@ -198,6 +202,44 @@ export async function ensureTidewellGeometries(): Promise<TidewellGeometries> {
     }
   })();
   return loadPromise;
+}
+
+
+/** Release GLB / fallback geometries so remount leak checks see 0 residual. */
+export function disposeTidewellGeometryCache(): void {
+  const bags: TidewellGeometries[] = [];
+  if (cache) bags.push(cache);
+  bags.push(FALLBACK);
+  const seen = new Set<BufferGeometry>();
+  for (const bag of bags) {
+    for (const key of [
+      "settlement",
+      "city",
+      "robber",
+      "road",
+      "sheep",
+      "dock",
+      "shipA",
+      "shipB",
+      "die",
+      "diceTray",
+    ] as const) {
+      const geom = bag[key];
+      if (geom && !seen.has(geom)) {
+        seen.add(geom);
+        geom.dispose();
+      }
+    }
+    for (const geom of Object.values(bag.decorByTerrain)) {
+      if (geom && !seen.has(geom)) {
+        seen.add(geom);
+        geom.dispose();
+      }
+    }
+  }
+  cache = null;
+  loadPromise = null;
+  FALLBACK = makeFallback();
 }
 
 export function getTidewellGeometriesSync(): TidewellGeometries {

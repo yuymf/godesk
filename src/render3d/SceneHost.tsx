@@ -15,9 +15,10 @@ import {
   type BufferGeometry,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { buildLegalHitOverlays, disposeHitOverlay } from "./hit-targets";
+import { buildLegalHitOverlays, disposeHitOverlay, disposeSharedHitResources } from "./hit-targets";
 import { createInstancePools, type InstancePools } from "./instance-pools";
 import {
+  disposeTidewellGeometryCache,
   ensureTidewellGeometries,
   geometryForNode,
   getTidewellGeometriesSync,
@@ -225,6 +226,18 @@ function sharedNumberGeom(): BufferGeometry {
   if (!SHARED_NUMBER_GEOM) SHARED_NUMBER_GEOM = new CylinderGeometry(0.22, 0.22, 0.06, 24);
   return SHARED_NUMBER_GEOM;
 }
+
+function disposeSharedSceneGeometries(): void {
+  SHARED_TILE_GEOM?.dispose();
+  SHARED_ROAD_GEOM?.dispose();
+  SHARED_DECOR_GEOM?.dispose();
+  SHARED_NUMBER_GEOM?.dispose();
+  SHARED_TILE_GEOM = null;
+  SHARED_ROAD_GEOM = null;
+  SHARED_DECOR_GEOM = null;
+  SHARED_NUMBER_GEOM = null;
+}
+
 
 function geomForBatch(node: SceneNode): BufferGeometry {
   const tide = getTidewellGeometriesSync();
@@ -784,6 +797,11 @@ export function SceneHost({
       // 须在 perf 快照前释放贴花图集，否则计为残留纹理。
       numberLabelsRef.current?.dispose();
       numberLabelsRef.current = null;
+      const hostPools = reconcileHostRef.current as { pools?: InstancePools } | null;
+      hostPools?.pools?.dispose();
+      disposeSharedSceneGeometries();
+      disposeSharedHitResources();
+      disposeTidewellGeometryCache();
       perf?.beforeDispose(renderer);
       detachPerf?.();
       renderer.dispose();
@@ -792,8 +810,6 @@ export function SceneHost({
         container.removeChild(renderer.domElement);
       }
       contentRootRef.current = null;
-      const hostPools = reconcileHostRef.current as { pools?: InstancePools } | null;
-      hostPools?.pools?.dispose();
       reconcileHostRef.current = null;
       hitRootRef.current = null;
       cameraRef.current = null;

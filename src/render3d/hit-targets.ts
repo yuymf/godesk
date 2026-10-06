@@ -13,14 +13,14 @@ import type { PickableLegalAction } from "./pick";
 const WORLD_SCALE = 0.01;
 const _dummy = new Object3D();
 
-const RING_GEOM_SETTLE = new TorusGeometry(0.2, 0.035, 8, 24);
+let RING_GEOM_SETTLE = new TorusGeometry(0.2, 0.035, 8, 24);
 RING_GEOM_SETTLE.rotateX(Math.PI / 2);
-const RING_GEOM_CITY = new TorusGeometry(0.26, 0.035, 8, 24);
+let RING_GEOM_CITY = new TorusGeometry(0.26, 0.035, 8, 24);
 RING_GEOM_CITY.rotateX(Math.PI / 2);
-const ROAD_HIT_GEOM = new BoxGeometry(0.55, 0.08, 0.18);
-const ROBBER_HIT_GEOM = new CylinderGeometry(0.85, 0.85, 0.08, 6);
+let ROAD_HIT_GEOM = new BoxGeometry(0.55, 0.08, 0.18);
+let ROBBER_HIT_GEOM = new CylinderGeometry(0.85, 0.85, 0.08, 6);
 
-const RING_MAT = new MeshStandardMaterial({
+let RING_MAT = new MeshStandardMaterial({
   color: 0xffe066,
   emissive: 0xffc107,
   emissiveIntensity: 0.85,
@@ -29,7 +29,7 @@ const RING_MAT = new MeshStandardMaterial({
   roughness: 0.4,
 });
 RING_MAT.userData.gdShared = true;
-const ROAD_HIT_MAT = new MeshStandardMaterial({
+let ROAD_HIT_MAT = new MeshStandardMaterial({
   color: 0xffe066,
   emissive: 0xffc107,
   emissiveIntensity: 0.7,
@@ -37,7 +37,7 @@ const ROAD_HIT_MAT = new MeshStandardMaterial({
   opacity: 0.85,
 });
 ROAD_HIT_MAT.userData.gdShared = true;
-const ROBBER_HIT_MAT = new MeshStandardMaterial({
+let ROBBER_HIT_MAT = new MeshStandardMaterial({
   color: 0xff6b6b,
   emissive: 0xc0392b,
   emissiveIntensity: 0.55,
@@ -117,6 +117,53 @@ function packInstances(
  * Build highlight/hit meshes for legal place_* and move_robber actions.
  * G3D-13: InstancedMesh per action family so setup (dozens of settlements) stays in draw budget.
  */
+
+function rebuildHitMaterials(): void {
+  RING_MAT = new MeshStandardMaterial({
+    color: 0xffe066,
+    emissive: 0xffc107,
+    emissiveIntensity: 0.85,
+    transparent: true,
+    opacity: 0.95,
+    roughness: 0.4,
+  });
+  RING_MAT.userData.gdShared = true;
+  ROAD_HIT_MAT = new MeshStandardMaterial({
+    color: 0xffe066,
+    emissive: 0xffc107,
+    emissiveIntensity: 0.7,
+    transparent: true,
+    opacity: 0.85,
+  });
+  ROAD_HIT_MAT.userData.gdShared = true;
+  ROBBER_HIT_MAT = new MeshStandardMaterial({
+    color: 0xff6b6b,
+    emissive: 0xc0392b,
+    emissiveIntensity: 0.55,
+    transparent: true,
+    opacity: 0.45,
+  });
+  ROBBER_HIT_MAT.userData.gdShared = true;
+}
+
+/** Drop shared hit geoms/mats after host teardown (perf residual gate). */
+export function disposeSharedHitResources(): void {
+  RING_GEOM_SETTLE.dispose();
+  RING_GEOM_CITY.dispose();
+  ROAD_HIT_GEOM.dispose();
+  ROBBER_HIT_GEOM.dispose();
+  RING_MAT.dispose();
+  ROAD_HIT_MAT.dispose();
+  ROBBER_HIT_MAT.dispose();
+  RING_GEOM_SETTLE = new TorusGeometry(0.2, 0.035, 8, 24);
+  RING_GEOM_SETTLE.rotateX(Math.PI / 2);
+  RING_GEOM_CITY = new TorusGeometry(0.26, 0.035, 8, 24);
+  RING_GEOM_CITY.rotateX(Math.PI / 2);
+  ROAD_HIT_GEOM = new BoxGeometry(0.55, 0.08, 0.18);
+  ROBBER_HIT_GEOM = new CylinderGeometry(0.85, 0.85, 0.08, 6);
+  rebuildHitMaterials();
+}
+
 export function buildLegalHitOverlays(
   legalActions: readonly PickableLegalAction[],
 ): Object3D[] {
@@ -182,8 +229,10 @@ export function disposeHitOverlay(object: Object3D): void {
     const mesh = child as Mesh;
     if (!mesh.isMesh) return;
     if (mesh.userData.gdShared) {
-      // InstancedMesh.dispose frees GPU resources but shared geom/mat stay.
+      // Shared templates disposed via disposeSharedHitResources after host teardown.
       if ((mesh as InstancedMesh).isInstancedMesh) {
+        mesh.geometry = null as unknown as typeof mesh.geometry;
+        mesh.material = null as unknown as typeof mesh.material;
         (mesh as InstancedMesh).dispose();
       }
       return;
