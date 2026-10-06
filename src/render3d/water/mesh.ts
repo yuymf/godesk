@@ -10,7 +10,6 @@ import {
   UnsignedByteType,
   type Object3D,
   type Scene,
-  type Texture,
   type WebGLRenderer,
 } from "three";
 import { prefersReducedMotion } from "../motion";
@@ -45,7 +44,6 @@ function coastsFromModel(model: SceneModel | null): CoastSample[] {
 }
 
 function makeDistTexture(data: Float32Array, size: number): DataTexture {
-  // RGBA8 is widely supported (incl. SwiftShader); R channel = normalized distance.
   const bytes = new Uint8Array(size * size * 4);
   for (let i = 0; i < size * size; i += 1) {
     const v = Math.max(0, Math.min(255, Math.round(data[i]! * 255)));
@@ -77,10 +75,15 @@ export async function createWaterController(options: {
   model: SceneModel | null;
   tier: RenderTierId;
   spec?: Partial<TideWaterSpec>;
+  signal?: AbortSignal;
 }): Promise<WaterController> {
+  const signal = options.signal;
+  if (signal?.aborted) throw new DOMException("water mount aborted", "AbortError");
+
   let features = waterFeaturesFor(options.tier);
   const spec: TideWaterSpec = { ...DEFAULT_SPEC, ...options.spec };
-  const { material, uniforms } = createTideWaterMaterial(spec, features);
+  const { material, uniforms, setOwnedTexture, releaseOwned, disposeOwnedTextures } =
+    createTideWaterMaterial(spec, features);
   const geom = new PlaneGeometry(
     WATER_HALF_EXTENT * 2,
     WATER_HALF_EXTENT * 2,
@@ -94,45 +97,81 @@ export async function createWaterController(options: {
   mesh.castShadow = false;
   mesh.userData.kind = "water";
   mesh.userData.nodeId = "water";
-  options.parent.add(mesh);
 
   uniforms.uTideHalf.value = WATER_HALF_EXTENT;
 
-  let distTex: Texture | null = null;
   let sea: SeaTextures | null = null;
   let lastDistanceMs = 0;
   let waveHeightBase = features.waveCount === 0 ? 0 : spec.waveHeight;
   let disposed = false;
+  let committed = false;
   const t0 = performance.now();
 
+  const teardown = () => {
+    if (disposed) return;
+    disposed = true;
+    if (committed) options.parent.remove(mesh);
+    if (sea) {
+      releaseOwned(sea.normal);
+      releaseOwned(sea.foam);
+      uniforms.uTideNormal.value = null;
+      uniforms.uTideFoamMap.value = null;
+      sea.dispose();
+      sea = null;
+    }
+    disposeOwnedTextures();
+    geom.dispose();
+    material.dispose();
+  };
+
+  const onAbort = () => teardown();
+  signal?.addEventListener("abort", onAbort, { once: true });
+
   const rebuildDistance = (model: SceneModel | null) => {
+    if (disposed) return;
     const field = buildCoastDistanceField(
       coastsFromModel(model),
       features.mapSize,
       WATER_HALF_EXTENT,
     );
     lastDistanceMs = field.elapsedMs;
-    const next = makeDistTexture(field.data, field.size);
-    distTex?.dispose();
-    distTex = next;
-    uniforms.uTideDist.value = next;
+    setOwnedTexture("uTideDist", makeDistTexture(field.data, field.size));
     console.info(
       `[godesk.water] distance-field ${field.size}² in ${field.elapsedMs.toFixed(1)}ms tier=${options.tier}`,
     );
   };
-  rebuildDistance(options.model);
 
   try {
-    sea = await loadSeaTextures(options.renderer);
-    if (disposed) {
-      sea.dispose();
-      sea = null;
-    } else {
-      uniforms.uTideNormal.value = sea.normal;
-      uniforms.uTideFoamMap.value = sea.foam;
+    rebuildDistance(options.model);
+    if (signal?.aborted) throw new DOMException("water mount aborted", "AbortError");
+
+    try {
+      sea = await loadSeaTextures(options.renderer, signal);
+      if (disposed || signal?.aborted) {
+        sea.dispose();
+        sea = null;
+        throw new DOMException("water mount aborted", "AbortError");
+      }
+      setOwnedTexture("uTideNormal", sea.normal);
+      setOwnedTexture("uTideFoamMap", sea.foam);
+      releaseOwned(sea.normal);
+      releaseOwned(sea.foam);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") throw error;
+      console.warn("[godesk.water] sea KTX2 load failed; foam/normal fallback", error);
     }
+
+    if (disposed || signal?.aborted) {
+      throw new DOMException("water mount aborted", "AbortError");
+    }
+
+    options.parent.add(mesh);
+    committed = true;
+    signal?.removeEventListener("abort", onAbort);
   } catch (error) {
-    console.warn("[godesk.water] sea KTX2 load failed; foam/normal fallback", error);
+    signal?.removeEventListener("abort", onAbort);
+    teardown();
+    throw error;
   }
 
   return {
@@ -144,7 +183,6 @@ export async function createWaterController(options: {
       if (disposed) return;
       const reduced = prefersReducedMotion();
       setTideWaveHeight(uniforms, reduced ? 0 : waveHeightBase);
-      // Static (or near-static foam scroll) when reduced-motion is on.
       setTideTime(uniforms, reduced ? 0 : (nowMs - t0) / 1000);
     },
     setTier(tier: RenderTierId) {
@@ -159,12 +197,8 @@ export async function createWaterController(options: {
     },
     rebuildDistance,
     dispose() {
-      disposed = true;
-      options.parent.remove(mesh);
-      geom.dispose();
-      material.dispose();
-      distTex?.dispose();
-      sea?.dispose();
+      signal?.removeEventListener("abort", onAbort);
+      teardown();
     },
   };
 }

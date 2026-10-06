@@ -1,28 +1,18 @@
 /**
  * G3D-08 · Tide water material (MeshStandardMaterial + onBeforeCompile).
  * Uniforms use uTide* prefix (SPEC §4.4). Lean GLSL for chunk budget.
+ *
+ * Sampler uniforms start as null (three binds its emptyTexture singleton) so we
+ * never allocate extra 1×1 DataTextures that remount leak accounting would see.
  */
 import {
   Color,
-  DataTexture,
   MeshStandardMaterial,
-  NearestFilter,
-  RGBAFormat,
-  UnsignedByteType,
   type IUniform,
   type Texture,
   type WebGLProgramParametersWithUniforms,
 } from "three";
 import type { WaterTierFeatures } from "./tiers";
-
-function fallbackTex(rgb: [number, number, number]): DataTexture {
-  const data = new Uint8Array([rgb[0], rgb[1], rgb[2], 255]);
-  const tex = new DataTexture(data, 1, 1, RGBAFormat, UnsignedByteType);
-  tex.magFilter = NearestFilter;
-  tex.minFilter = NearestFilter;
-  tex.needsUpdate = true;
-  return tex;
-}
 
 export type TideWaterUniforms = {
   uTideTime: IUniform<number>;
@@ -110,13 +100,23 @@ const FRAG_NORMAL = [
   "}",
 ].join("\n");
 
+export type TideWaterMaterialBundle = {
+  material: MeshStandardMaterial;
+  uniforms: TideWaterUniforms;
+  setOwnedTexture(slot: "uTideDist" | "uTideNormal" | "uTideFoamMap", next: Texture | null): void;
+  releaseOwned(tex: Texture | null): void;
+  disposeOwnedTextures(): void;
+};
+
 export function createTideWaterMaterial(
   spec: TideWaterSpec,
   features: WaterTierFeatures,
-): { material: MeshStandardMaterial; uniforms: TideWaterUniforms } {
+): TideWaterMaterialBundle {
+  const owned = new Set<Texture>();
+
   const uniforms: TideWaterUniforms = {
     uTideTime: { value: 0 },
-    uTideDist: { value: fallbackTex([255, 0, 0]) },
+    uTideDist: { value: null },
     uTideHalf: { value: 9 },
     uTideShallow: { value: new Color(spec.shallow) },
     uTideDeep: { value: new Color(spec.deep) },
@@ -125,8 +125,8 @@ export function createTideWaterMaterial(
     uTideFoam: { value: features.foam ? spec.foam : 0 },
     uTideWaves: { value: features.waveCount },
     uTideUseN: { value: features.normals ? 1 : 0 },
-    uTideNormal: { value: fallbackTex([128, 128, 255]) },
-    uTideFoamMap: { value: fallbackTex([255, 255, 255]) },
+    uTideNormal: { value: null },
+    uTideFoamMap: { value: null },
   };
 
   const material = new MeshStandardMaterial({
@@ -151,7 +151,29 @@ export function createTideWaterMaterial(
   material.customProgramCacheKey = () =>
     `tide-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
 
-  return { material, uniforms };
+  return {
+    material,
+    uniforms,
+    setOwnedTexture(slot, next) {
+      const prev = uniforms[slot].value;
+      uniforms[slot].value = next;
+      if (prev && owned.has(prev)) {
+        owned.delete(prev);
+        prev.dispose();
+      }
+      if (next) owned.add(next);
+    },
+    releaseOwned(tex) {
+      if (tex) owned.delete(tex);
+    },
+    disposeOwnedTextures() {
+      for (const tex of owned) tex.dispose();
+      owned.clear();
+      uniforms.uTideDist.value = null;
+      uniforms.uTideNormal.value = null;
+      uniforms.uTideFoamMap.value = null;
+    },
+  };
 }
 
 export function setTideTime(uniforms: TideWaterUniforms, seconds: number): void {
