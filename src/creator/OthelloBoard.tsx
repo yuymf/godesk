@@ -8,6 +8,8 @@ import {
 } from "../runtime/adapters/othello";
 import type { PlayState } from "../runtime/play-kernel";
 import type { RoomLocale } from "./room-presentation";
+import type { RenderSpec } from "./render-spec";
+import { TabletopStage } from "./TabletopStage";
 
 type OthelloBoardState = {
   rows: number;
@@ -147,6 +149,7 @@ export function OthelloBoard({
   winnerSeat = null,
   busy = false,
   onAct,
+  render,
 }: {
   othello: OthelloBoardState;
   activeSeat: number;
@@ -158,6 +161,8 @@ export function OthelloBoard({
   winnerSeat?: number | null;
   busy?: boolean;
   onAct?: (actionId: string, payload?: Record<string, unknown>) => void;
+  /** G3D-14：build.ruleSystem.presentation.render（缺省用平台默认）。 */
+  render?: RenderSpec;
 }) {
   const copy = COPY[locale];
   const interactive =
@@ -242,6 +247,8 @@ export function OthelloBoard({
         </div>
         <p className="othello-hud-last">{lastLine}</p>
       </section>
+
+      <TabletopStage kernel="disc-flipping-v1" legal={legalActions} onAct={showLegal ? onAct : undefined} render={render} state={othello} />
 
       <div
         aria-label={copy.board}
