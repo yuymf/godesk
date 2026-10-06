@@ -137,22 +137,86 @@ def apply_torn_frame(img: Image.Image, margin: int, seed: int, ink_w: int = 3) -
     return framed
 
 
+def _clip_segment_to_box(x0, y0, x1, y1, box):
+    """Cohen–Sutherland clip; returns (xa,ya,xb,yb) or None."""
+    xmin, ymin, xmax, ymax = box
+    INSIDE, LEFT, RIGHT, BOTTOM, TOP = 0, 1, 2, 4, 8
+
+    def code(x, y):
+        c = INSIDE
+        if x < xmin: c |= LEFT
+        elif x > xmax: c |= RIGHT
+        if y < ymin: c |= BOTTOM
+        elif y > ymax: c |= TOP
+        return c
+
+    c0, c1 = code(x0, y0), code(x1, y1)
+    for _ in range(8):
+        if not (c0 | c1):
+            return x0, y0, x1, y1
+        if c0 & c1:
+            return None
+        c_out = c0 or c1
+        if c_out & TOP:
+            x = x0 + (x1 - x0) * (ymax - y0) / ((y1 - y0) or 1e-9)
+            y = ymax
+        elif c_out & BOTTOM:
+            x = x0 + (x1 - x0) * (ymin - y0) / ((y1 - y0) or 1e-9)
+            y = ymin
+        elif c_out & RIGHT:
+            y = y0 + (y1 - y0) * (xmax - x0) / ((x1 - x0) or 1e-9)
+            x = xmax
+        else:
+            y = y0 + (y1 - y0) * (xmin - x0) / ((x1 - x0) or 1e-9)
+            x = xmin
+        if c_out == c0:
+            x0, y0 = x, y
+            c0 = code(x0, y0)
+        else:
+            x1, y1 = x, y
+            c1 = code(x1, y1)
+    return None
+
+
 def hatch(draw: ImageDraw.ImageDraw, box, spacing=6, angle=35, fill=INK, width=1, alpha_layer=None):
-    x0, y0, x1, y1 = box
-    # draw on temp if needed — caller manages
-    diag = int(math.hypot(x1 - x0, y1 - y0))
+    """Diagonal hatch strictly clipped to axis-aligned box (no spill past frame)."""
+    x0, y0, x1, y1 = [float(v) for v in box]
+    if x1 <= x0 or y1 <= y0:
+        return
+    diag = int(math.hypot(x1 - x0, y1 - y0)) + 2
     rad = math.radians(angle)
     ca, sa = math.cos(rad), math.sin(rad)
-    for i in range(-diag, diag, spacing):
-        # line through center offset
-        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    for i in range(-diag, diag + 1, max(1, spacing)):
         ox, oy = -sa * i, ca * i
-        x_a, y_a = cx + ox - ca * diag, cy + oy - sa * diag
-        x_b, y_b = cx + ox + ca * diag, cy + oy + sa * diag
-        # clip roughly by checking midpoint in box
-        mx, my = (x_a + x_b) / 2, (y_a + y_b) / 2
-        if x0 - 20 <= mx <= x1 + 20 and y0 - 20 <= my <= y1 + 20:
-            draw.line([(x_a, y_a), (x_b, y_b)], fill=fill, width=width)
+        xa, ya = cx + ox - ca * diag, cy + oy - sa * diag
+        xb, yb = cx + ox + ca * diag, cy + oy + sa * diag
+        clipped = _clip_segment_to_box(xa, ya, xb, yb, (x0, y0, x1, y1))
+        if clipped:
+            draw.line([(clipped[0], clipped[1]), (clipped[2], clipped[3])], fill=fill, width=width)
+
+
+def hatch_in_mask(base: Image.Image, mask: Image.Image, spacing=6, angle=35, fill=INK, width=1) -> Image.Image:
+    """Draw hatch on an overlay, then composite only where mask is opaque."""
+    w, h = base.size
+    bbox = mask.getbbox()
+    if not bbox:
+        return base
+    ink = Image.new("RGB", (w, h), (0, 0, 0))
+    od = ImageDraw.Draw(ink)
+    rgb = fill[:3] if isinstance(fill, (tuple, list)) else fill
+    hatch(od, bbox, spacing=spacing, angle=angle, fill=rgb, width=width)
+    # alpha = mask where ink was drawn (non-black)
+    gray = ink.convert("L")
+    # lines are dark; build alpha from non-background
+    # redraw hatch onto blank L for alpha
+    alpha = Image.new("L", (w, h), 0)
+    ad = ImageDraw.Draw(alpha)
+    hatch(ad, bbox, spacing=spacing, angle=angle, fill=220, width=width)
+    m = mask.convert("L")
+    alpha = Image.composite(alpha, Image.new("L", (w, h), 0), m)
+    overlay = Image.merge("RGBA", (*ink.split(), alpha))
+    return Image.alpha_composite(base.convert("RGBA"), overlay).convert("RGB")
 
 
 def wash_radial(img: Image.Image, cx: int, cy: int, radius: int, color: tuple, strength: int = 70) -> Image.Image:
@@ -286,8 +350,6 @@ def ore_crystal(draw, cx, cy, s, fill=ORE):
     draw.polygon(pts, fill=fill, outline=INK)
     draw.line((cx - s * 0.2, cy - s * 0.4, cx + s * 0.25, cy + s * 0.3), fill=FOAM, width=2)
     draw.line((cx, cy - s * 0.7, cx + s * 0.15, cy), fill=INK, width=1)
-    # cross hatch facet
-    hatch(draw, (cx - s * 0.5, cy - s * 0.3, cx + s * 0.5, cy + s * 0.5), spacing=5, angle=50, fill=INK, width=1)
 
 
 def wave_band(draw, y, w, amp=14, color=SEA, width=3, phases=2):
