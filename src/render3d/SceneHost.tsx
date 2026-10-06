@@ -848,12 +848,6 @@ export function SceneHost({
   }
 
   useEffect(() => {
-    void ensureTidewellGeometries().then((geoms) => {
-      if (geoms.ready) setModelsReady(true);
-    });
-  }, []);
-
-  useEffect(() => {
     const host = reconcileHostRef.current;
     if (!host || !hexSettlement) return;
     const prev = modelRef.current;
