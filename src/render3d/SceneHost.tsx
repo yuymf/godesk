@@ -33,6 +33,7 @@ import {
 import { reconcileScene } from "./reconcile";
 import { createNumberLabelLayer, projectLabels, type NumberLabelLayer } from "./number-labels";
 import { JUDGE_PRESETS, judgeCamera, type JudgePreset } from "./judge-camera";
+import { framePose, type ViewportFrame } from "./viewport-frame";
 import type { SceneModel, SceneNode } from "./scene-model";
 import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
 import { markInteractive, perfModeEnabled, perfRecorder } from "./perf";
@@ -98,6 +99,11 @@ export type SceneHostProps = {
   activeSeat?: number | null;
   /** G3D-14：通用桌面场景（见 SceneAdapter）。 */
   scene?: SceneAdapter | null;
+  /**
+   * Track B HUD framing (2h3). Island fill / polar for hex-settlement only.
+   * Track C owns the full camera-rig (#151); this is a minimal viewport param.
+   */
+  viewportFrame?: ViewportFrame | null;
 };
 
 /** 阴影贴图在场景变化后继续逐帧重绘的时长（覆盖 place/move/dice 动效）。 */
@@ -357,6 +363,7 @@ export function SceneHost({
   lighting,
   activeSeat = null,
   scene: adapter = null,
+  viewportFrame = null,
 }: SceneHostProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [unsupported, setUnsupported] = useState(false);
@@ -396,6 +403,9 @@ export function SceneHost({
   onPickRef.current = onPick;
   const adapterRef = useRef(adapter);
   adapterRef.current = adapter;
+  const viewportFrameRef = useRef(viewportFrame);
+  viewportFrameRef.current = viewportFrame;
+  const appliedFrameKeyRef = useRef<string | null>(null);
   const layoutKeyRef = useRef<string | null>(null);
   const cameraKeyRef = useRef<string | null>(null);
   /** G3D-14：按 RenderSpec.camera 与当前宽高比放置机位（窄屏时拉远，保证桌面左右不出画）。 */
@@ -906,6 +916,28 @@ export function SceneHost({
     if (tilesChanged) {
       const bounds = islandBounds(next.nodes);
       rigRef.current?.fitToBounds(bounds.center, bounds.radius);
+      appliedFrameKeyRef.current = null; // force re-frame on new island layout
+    }
+    // Track B framing: fit island into the canvas (fill/polar). Skip when judge
+    // has pinned a preset (a-default returns null → framing still applies).
+    const frame = viewportFrameRef.current;
+    if (frame && cameraRef.current && controlsRef.current) {
+      const bounds = islandBounds(next.nodes);
+      const cam = cameraRef.current;
+      const ctl = controlsRef.current;
+      const key = `${bounds.radius.toFixed(2)}|${cam.aspect.toFixed(3)}|${frame.fill ?? ""}|${frame.polarDeg ?? ""}|${frame.azimuthDeg ?? ""}`;
+      if (key !== appliedFrameKeyRef.current) {
+        const pose = framePose(bounds.center, bounds.radius, cam.aspect, frame);
+        cam.fov = pose.fov;
+        cam.position.set(pose.position[0], pose.position[1], pose.position[2]);
+        cam.updateProjectionMatrix();
+        ctl.target.set(pose.target[0], pose.target[1], pose.target[2]);
+        ctl.minDistance = pose.distance * 0.45;
+        ctl.maxDistance = pose.distance * 2.2;
+        ctl.update();
+        appliedFrameKeyRef.current = key;
+        markShadowsDirtyRef.current();
+      }
     }
     // G3D-08: first hex model mounts water; later tile-layout changes rebuild the coast field.
     // Synchronous mount lock: hex reconcile can fire twice before the first async controller
@@ -1032,6 +1064,27 @@ export function SceneHost({
     }
     markShadowsDirtyRef.current();
   }, [adapter, ready, hostEpoch]);
+
+  // Track B: re-fit when HUD passes a new viewportFrame (e.g. narrow ↔ desktop).
+  useEffect(() => {
+    if (!ready || !hexSettlement || !viewportFrame) return;
+    appliedFrameKeyRef.current = null;
+    const model = modelRef.current;
+    const cam = cameraRef.current;
+    const ctl = controlsRef.current;
+    if (!model || !cam || !ctl) return;
+    const bounds = islandBounds(model.nodes);
+    const pose = framePose(bounds.center, bounds.radius, cam.aspect, viewportFrame);
+    cam.fov = pose.fov;
+    cam.position.set(pose.position[0], pose.position[1], pose.position[2]);
+    cam.updateProjectionMatrix();
+    ctl.target.set(pose.target[0], pose.target[1], pose.target[2]);
+    ctl.minDistance = pose.distance * 0.45;
+    ctl.maxDistance = pose.distance * 2.2;
+    ctl.update();
+    appliedFrameKeyRef.current = `${bounds.radius.toFixed(2)}|${cam.aspect.toFixed(3)}|${viewportFrame.fill ?? ""}|${viewportFrame.polarDeg ?? ""}|${viewportFrame.azimuthDeg ?? ""}`;
+    markShadowsDirtyRef.current();
+  }, [viewportFrame, ready, hostEpoch, hexSettlement]);
 
   // G3D-09 turn camera: reframe toward the island centre when the active seat changes.
   useEffect(() => {
