@@ -71,8 +71,14 @@ describe("G3D-PROPS terrain props", () => {
     const tall = buildPropGeometry("pineTall");
     const round = buildPropGeometry("pineRound");
     const small = buildPropGeometry("pineSmall");
-    expect(tall.getAttribute("position").count).not.toBe(round.getAttribute("position").count);
-    expect(small.getAttribute("position").count).toBeLessThan(tall.getAttribute("position").count);
+    tall.computeBoundingBox();
+    round.computeBoundingBox();
+    small.computeBoundingBox();
+    const h = (g: ReturnType<typeof buildPropGeometry>) => g.boundingBox!.max.y - g.boundingBox!.min.y;
+    const w = (g: ReturnType<typeof buildPropGeometry>) => g.boundingBox!.max.x - g.boundingBox!.min.x;
+    expect(h(tall)).toBeGreaterThan(h(round) + 0.08);
+    expect(h(round)).toBeGreaterThan(h(small) + 0.05);
+    expect(w(round)).toBeGreaterThan(w(tall));
     const sheep = buildPropGeometry("sheep");
     expect(sheep.getAttribute("position").count).toBeGreaterThan(80);
     const wheat = buildPropGeometry("wheatrow");
