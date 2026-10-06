@@ -206,3 +206,7 @@
 | texture/t09-paintwood | assets/textures/pbr/t09-paintwood/{512,256}/*.ktx2 | 棋子木纹 PBR | CC0 | https://ambientcg.com/a/WoodFloor043 | CC0-1.0 | ambientCG | 2026-10-07 | 是 | 同上；棋子 vertexColors×albedo | G3D-JUDGE-R6-TEX |
 | texture/t10-canvas | assets/textures/pbr/t10-canvas/{512,256}/*.ktx2 | 帆布 PBR | CC0 | https://ambientcg.com/a/Fabric045 | CC0-1.0 | ambientCG | 2026-10-07 | 是 | 同上 | G3D-JUDGE-R6-TEX |
 | texture/t11-parchment | assets/textures/pbr/t11-parchment/{512,256}/*.ktx2 | 羊皮纸 PBR | CC0 | https://ambientcg.com/a/Paper001 | CC0-1.0 | ambientCG | 2026-10-07 | 是 | 同上 | G3D-JUDGE-R6-TEX |
+
+| texture/r7-painterly-albedo/t01–t11 | assets/textures/pbr/t0*/{512,256}/baseColor.ktx2（仅 albedo） | round-7 绘本地块 albedo | 自制 | scripts + PIL | LicenseRef-GoDesk-Original | GoDesk Track R7（程序化绘本树冠/羊群/麦垄等；保留原 normal/ORM；非 settlecoast 复制） | 2026-10-07 | 否 | 预览见 assets/ai-textures/*-painterly-albedo.webp；证据 /workspace/g3d-evidence/judge/round-7/ai-albedo/ | G3D-JUDGE-R7 |
+| ui/ai/icons/build-*-r7 | assets/ui/ai/icons/build-{road,settlement,city,card}-{64,96,128}.webp | HUD 木砖建造钮 | 自制 | PIL wood-brick | LicenseRef-GoDesk-Original | GoDesk Track R7 | 2026-10-07 | 是 | 木框羊皮纸插画砖 | G3D-JUDGE-R7 |
+

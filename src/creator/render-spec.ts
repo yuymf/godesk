@@ -316,7 +316,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       binding("settlement", "house", "piece", 0.8),
       binding("city", "tower", "piece", 0.9),
       binding("road", "road-bar", "piece", 0.75),
-      binding("robber", "pawn", "fog-lantern", 0.8),
+      binding("robber", "disc", "fog-lantern", 0.8),
       binding("port", "ship", "piece", 0.8),
       binding("die", "die", "piece", 0.8),
     ];

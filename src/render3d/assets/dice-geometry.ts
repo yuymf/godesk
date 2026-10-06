@@ -40,21 +40,22 @@ export function buildDieGeometry(): BufferGeometry {
 }
 
 export function buildDiceTrayGeometry(): BufferGeometry {
-  // Thin dark felt pad with a shallow lip — matches the settlecoast silhouette
-  // (not a deep wooden box). Soft under-pad shadow is drawn by DiceOverlay.
+  // round-7 ③：木雕托盘 — 厚橡木墙 + 金唇线 + 凹进绒面，去掉黑矩形垫。
   const { width, depth, baseHeight, rimHeight, rimThickness, feltTop } = TRAY;
   const parts: BufferGeometry[] = [];
-  // Dark under-pad (almost flush with the overlay floor).
-  parts.push(paintPart(new BoxGeometry(width + 0.04, baseHeight, depth + 0.04), DICE_PALETTE.trayWood, { pos: [0, baseHeight / 2, 0] }));
-  // Felt bed fills most of the pad.
+  // Oak floor plank.
+  parts.push(paintPart(new BoxGeometry(width, baseHeight, depth), DICE_PALETTE.trayWood, { pos: [0, baseHeight / 2, 0] }));
+  // Recessed felt bed.
+  const bedW = width - rimThickness * 2;
+  const bedD = depth - rimThickness * 2;
   parts.push(
-    paintPart(new BoxGeometry(width - rimThickness * 0.4, Math.max(feltTop - baseHeight, 0.004), depth - rimThickness * 0.4), DICE_PALETTE.felt, {
+    paintPart(new BoxGeometry(bedW, Math.max(feltTop - baseHeight * 0.4, 0.02), bedD), DICE_PALETTE.felt, {
       pos: [0, (baseHeight + feltTop) / 2, 0],
     }),
   );
-  // Shallow dark lip — low profile, no tall wood walls or bevel caps.
-  const rimY = feltTop + rimHeight / 2;
-  for (const side of [1, -1]) {
+  // Carved wood walls (taller).
+  const rimY = baseHeight + rimHeight / 2;
+  for (const side of [1, -1] as const) {
     parts.push(
       paintPart(new BoxGeometry(width, rimHeight, rimThickness), DICE_PALETTE.trayRim, {
         pos: [0, rimY, side * (depth / 2 - rimThickness / 2)],
@@ -66,6 +67,23 @@ export function buildDiceTrayGeometry(): BufferGeometry {
       }),
     );
   }
+  // Gold lip cap on rim top.
+  const lipH = 0.018;
+  const lipY = baseHeight + rimHeight + lipH / 2;
+  for (const side of [1, -1] as const) {
+    parts.push(
+      paintPart(new BoxGeometry(width + 0.02, lipH, rimThickness * 0.55), DICE_PALETTE.trayGold, {
+        pos: [0, lipY, side * (depth / 2 - rimThickness / 2)],
+      }),
+    );
+    parts.push(
+      paintPart(new BoxGeometry(rimThickness * 0.55, lipH, depth - rimThickness), DICE_PALETTE.trayGold, {
+        pos: [side * (width / 2 - rimThickness / 2), lipY, 0],
+      }),
+    );
+  }
+  // Outer bevel foot.
+  parts.push(paintPart(new BoxGeometry(width + 0.06, 0.02, depth + 0.06), DICE_PALETTE.trayRim, { pos: [0, 0.01, 0] }));
   return mergeParts(parts);
 }
 

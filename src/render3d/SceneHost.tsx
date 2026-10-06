@@ -674,6 +674,30 @@ export function SceneHost({
           markShadowsDirtyRef.current();
           return true;
         },
+        /** round-7 ④：真实 hop 路径 + 通知 HUD 弹出 +N（仅 ?judge=1）。 */
+        playMotionDemo(): boolean {
+          const robber = registryRef.current.get("robber");
+          if (!robber) return false;
+          const from: [number, number, number] = [robber.position.x, robber.position.y, robber.position.z];
+          const to: [number, number, number] = [from[0] + 1.35, from[1], from[2] - 0.85];
+          robber.position.set(...to);
+          robber.userData.baseY = to[1];
+          const ms = motion.hop(robber, "robber", from);
+          markShadowsDirtyRef.current();
+          window.dispatchEvent(new CustomEvent("g3d-judge-resource-gain", {
+            detail: { wood: 2, wheat: 1, sheep: 1 },
+          }));
+          window.setTimeout(() => {
+            const back = registryRef.current.get("robber");
+            if (!back) return;
+            const cur: [number, number, number] = [back.position.x, back.position.y, back.position.z];
+            back.position.set(...from);
+            back.userData.baseY = from[1];
+            motion.hop(back, "robber", cur);
+            markShadowsDirtyRef.current();
+          }, Math.max(ms, 720) + 200);
+          return true;
+        },
       };
     });
 

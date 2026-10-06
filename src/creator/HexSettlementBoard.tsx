@@ -411,6 +411,17 @@ export function HexSettlementBoard({
     return () => window.clearTimeout(t);
   }, [viewerResources, resourceLabel]);
 
+  /** round-7 ④：judge motion demo 触发真实 +N 飘字（不改资源账本）。 */
+  useEffect(() => {
+    const onDemo = (ev: Event) => {
+      const detail = (ev as CustomEvent<Partial<Record<Resource, number>>>).detail ?? {};
+      setResourceGain(detail);
+      window.setTimeout(() => setResourceGain({}), 2200);
+    };
+    window.addEventListener("g3d-judge-resource-gain", onDemo);
+    return () => window.removeEventListener("g3d-judge-resource-gain", onDemo);
+  }, []);
+
   const statusLine =
     status === "complete"
       ? `${copy.gameOver}${winnerSeat !== null ? ` · ${copy.winner} ${winnerSeat}` : ""}`

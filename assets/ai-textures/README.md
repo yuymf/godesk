@@ -1,5 +1,7 @@
-# ai-textures
+# ai-textures (round-7)
 
-Round-6tex (knife ①) filled terrain/wood PBR from **CC0** ambientCG + Poly Haven instead of new AI albedos
-(see `assets/textures/pbr/` and `assets/imported/`). Keep this folder for optional future AI passes;
-register any new file in `assets/LICENSES.md`.
+Painterly **albedo previews** (`*-painterly-albedo.webp`) for hex terrain.
+Production maps: `assets/textures/pbr/<set>/{512,256}/baseColor.ktx2` only —
+normals/ORM unchanged from round-6tex CC0 bake.
+
+Not settlecoast copies. Generated 2026-10-07 with PIL storybook brushes.

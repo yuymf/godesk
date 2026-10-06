@@ -153,8 +153,8 @@ export const PIECE_PALETTE = {
   beamWood: "#7a4e2b",
   beamWoodDark: "#5a3820",
   window: "#f4dfa0",
-  cloak: "#34504a",
-  cloakDark: "#22352f",
+  cloak: "#2a4038",
+  cloakDark: "#1a2822",
   hoodShadow: "#0f1413",
   belt: "#5b3b22",
   lanternFrame: "#2b2622",
@@ -163,7 +163,7 @@ export const PIECE_PALETTE = {
   pennantPole: "#3d2a1a",
   limewash: "#efe4cb",
   timber: "#4b3020",
-  rim: "#efe2b4",
+  rim: "#c4b896",
 } as const;
 
 /** Limewashed wall with a soft seat tint (sRGB mix). */
@@ -500,7 +500,7 @@ export function buildRoadGeometry(seat: number): BufferGeometry {
 }
 
 /** Robber ≈ hooded miniature (not a lathe cylinder). */
-export const ROBBER_SCALE = 2.25;
+export const ROBBER_SCALE = 1.55;
 
 function invertHull(geom: BufferGeometry): BufferGeometry {
   for (const name of ["position", "normal", "color"]) {
@@ -547,17 +547,18 @@ export function buildRobberGeometry(): BufferGeometry {
     parts.push(paintPart(new BoxGeometry(0.014, 0.01, 0.008), PIECE_PALETTE.eyes, { pos: [x, 0.355, 0.072] }));
   }
   // Pale rim outline (inverted hull of a slightly larger cowl) for mountain tiles.
+  // Thin pale rim only (round-7: avoid oversized white cone silhouette at close-up).
   const rimProfile = [
-    new Vector2(0.0, 0.06),
-    new Vector2(0.125, 0.06),
-    new Vector2(0.145, 0.16),
-    new Vector2(0.13, 0.28),
-    new Vector2(0.115, 0.4),
-    new Vector2(0.09, 0.52),
-    new Vector2(0.04, 0.6),
-    new Vector2(0.0, 0.64),
+    new Vector2(0.0, 0.1),
+    new Vector2(0.095, 0.1),
+    new Vector2(0.105, 0.2),
+    new Vector2(0.095, 0.32),
+    new Vector2(0.08, 0.42),
+    new Vector2(0.055, 0.5),
+    new Vector2(0.02, 0.54),
+    new Vector2(0.0, 0.56),
   ];
-  parts.push(invertHull(paintPart(new LatheGeometry(rimProfile, 14), PIECE_PALETTE.rim, { pos: [0, 0, -0.015] })));
+  parts.push(invertHull(paintPart(new LatheGeometry(rimProfile, 12), PIECE_PALETTE.rim, { pos: [0, 0.02, -0.01], scale: [1.02, 1, 1.02] })));
   // Arms + fog lantern.
   parts.push(paintPart(new BoxGeometry(0.035, 0.12, 0.035), PIECE_PALETTE.cloakDark, { pos: [-0.1, 0.2, 0.03], rot: [0.4, 0, 0.35] }));
   parts.push(paintPart(new BoxGeometry(0.035, 0.12, 0.035), PIECE_PALETTE.cloakDark, { pos: [0.1, 0.2, 0.04], rot: [0.5, 0, -0.4] }));

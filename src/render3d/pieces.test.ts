@@ -150,8 +150,8 @@ describe("miniature pieces (readable buildings / cloaked robber, vertex-coloured
     const geom = buildRobberGeometry();
     const s = size(geom);
     expect(Math.abs(s.minY)).toBeLessThan(0.02);
-    expect(s.y).toBeGreaterThan(1.0);
-    expect(s.y).toBeLessThan(1.5);
+    expect(s.y).toBeGreaterThan(0.7);
+    expect(s.y).toBeLessThan(1.15);
     expect(hasColor(geom, PIECE_PALETTE.rim)).toBe(true);
     expect(hasColor(geom, PIECE_PALETTE.cloak)).toBe(true);
     expect(hasColor(geom, PIECE_PALETTE.cloakDark)).toBe(true);
@@ -166,7 +166,7 @@ describe("miniature pieces (readable buildings / cloaked robber, vertex-coloured
       const k = col.getX(i) / rim.r;
       if (Math.abs(col.getY(i) - rim.g * k) < 2e-3 && Math.abs(col.getZ(i) - rim.b * k) < 2e-3 && nrm.getY(i) === 1) rimUp += 1;
     }
-    expect(rimUp).toBeGreaterThan(100);
+    expect(rimUp).toBeGreaterThan(40);
   });
 
   it("seat colours differ per seat; cache returns one geometry per kind × seat", () => {

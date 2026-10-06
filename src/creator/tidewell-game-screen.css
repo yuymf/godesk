@@ -28,7 +28,7 @@
     inset 0 2px 6px rgba(0, 0, 0, 0.45),
     inset 0 -1px 0 rgba(255, 220, 140, 0.12);
   --tw-side: 260px;
-  --tw-dock: 196px;
+  --tw-dock: 148px;
   position: fixed !important;
   inset: 0 !important;
   z-index: 80;
@@ -659,19 +659,19 @@ body:has(.room-view-tidewell-immersive) {
 
 /* 2h3: larger parchment resource cards + wooden build tiles */
 .tidewell-dock {
-  --tw-dock: 196px;
-  height: var(--tw-dock, 196px);
-  max-height: var(--tw-dock, 196px);
+  --tw-dock: 148px;
+  height: var(--tw-dock, 148px);
+  max-height: var(--tw-dock, 148px);
 }
 .room-view-tidewell-immersive {
-  --tw-dock: 196px;
+  --tw-dock: 148px;
 }
 .tidewell-resource-tile {
-  width: 88px !important;
+  width: 64px !important;
 }
 .tidewell-resource-art {
-  width: 84px !important;
-  height: 112px !important;
+  width: 60px !important;
+  height: 80px !important;
   border-radius: 6px !important;
   border: 2px solid #c9a227 !important;
   box-shadow: 0 4px 10px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.15) !important;
@@ -690,14 +690,14 @@ body:has(.room-view-tidewell-immersive) {
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 3px !important;
-  min-width: 96px !important;
-  min-height: 128px !important;
-  padding: 4px 4px 6px !important;
-  border-radius: 10px !important;
+  gap: 2px !important;
+  min-width: 72px !important;
+  min-height: 96px !important;
+  padding: 3px 3px 4px !important;
+  border-radius: 8px !important;
   border: 2px solid #c9a227 !important;
   background:
-    linear-gradient(160deg, #6b4428 0%, #3e2616 55%, #2a1810 100%) !important;
+    linear-gradient(160deg, #7a5230 0%, #4a3018 55%, #2a1810 100%) !important;
   box-shadow: 0 4px 10px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,220,140,0.2) !important;
 }
 .tidewell-build-art {
@@ -881,11 +881,14 @@ body:has(.room-view-tidewell-immersive) {
 }
 .tidewell-hand {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   overflow-x: auto;
-  padding-bottom: 2px;
+  padding-bottom: 0;
   scrollbar-width: thin;
   justify-content: flex-start;
+  align-items: flex-end;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .tidewell-hand::-webkit-scrollbar { height: 4px; }
 .tidewell-hand::-webkit-scrollbar-thumb { background: #c9a22788; border-radius: 4px; }

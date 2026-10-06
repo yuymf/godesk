@@ -6,7 +6,7 @@
  *   geometric pips, merged with baked vertex colours → one InstancedMesh for
  *   both dice. Face layout matches `DIE_FACE_EULER` in motion.ts:
  *   1 = +Y, 6 = −Y, 2 = −Z, 5 = +Z, 3 = +X, 4 = −X.
- * - Tray: thin dark felt pad with a shallow lip (settlecoast silhouette), not a deep wooden box.
+ * - Tray: carved wooden box with warm oak walls + recessed felt bed (round-7 ③).
  */
 
 export const DIE_SIZE = 0.62;
@@ -15,20 +15,21 @@ export const DIE_RADIUS = 0.1;
 export const TRAY = {
   width: 2.05,
   depth: 1.28,
-  baseHeight: 0.01,
-  rimHeight: 0.028,
-  rimThickness: 0.032,
+  baseHeight: 0.06,
+  rimHeight: 0.11,
+  rimThickness: 0.085,
   /** Felt top, local y. */
-  feltTop: 0.016,
+  feltTop: 0.075,
 } as const;
 
 export const DICE_PALETTE = {
   body: "#f7f2e6",
   pip: "#151820",
   pipOne: "#c41e16",
-  trayWood: "#1a1712",
-  trayRim: "#2c2820",
-  felt: "#12100e",
+  trayWood: "#8b5a2b",
+  trayRim: "#6b4420",
+  trayGold: "#c9a227",
+  felt: "#3d2e22",
 } as const;
 
 /** Pip offsets (u, v) in units of the pip grid spacing, per face value. */

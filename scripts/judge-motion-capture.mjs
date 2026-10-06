@@ -1,18 +1,20 @@
 #!/usr/bin/env node
 /**
- * G3D-JUDGE knife ④ — record robber hop + resource +N popup.
+ * G3D-JUDGE round-7 knife ④ — MUST show real robber hop + +N popup.
+ * Uses ?judge=1 __g3dJudge.playMotionDemo() (real MotionController.hop + HUD event).
+ * Also plays through setup placement so building drop-in is on tape.
+ *
  *   node scripts/judge-motion-capture.mjs [--base URL] [--out path.webm]
  */
 import { chromium } from "@playwright/test";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, copyFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i >= 0 ? args[i + 1] : f; };
 const BASE = opt("base", process.env.JUDGE_BASE_URL || "http://127.0.0.1:8844/chatgpt-plugin");
-const OUT = opt("out", "/workspace/g3d-evidence/judge/round-6/motion-hop-plusn.webm");
+const OUT = opt("out", "/workspace/g3d-evidence/judge/round-7/motion-hop-plusn.webm");
 const PROMPT = "做一款可以与电脑对战的汐屿基础版";
-
 const log = (...m) => console.log(`[motion ${new Date().toLocaleTimeString("zh-CN", { hour12: false })}]`, ...m);
 
 async function main() {
@@ -39,29 +41,60 @@ async function main() {
   await page.goto(url.href, { waitUntil: "domcontentloaded" });
   const menu = page.locator("details.tidewell-menu");
   await menu.locator("summary").click();
-  await page.getByRole("radio", { name: /0|席位 0|座位 0/ }).first().click().catch(() => {});
+  await page.getByLabel("你的席位").selectOption("0").catch(async () => {
+    await page.getByRole("radio", { name: /0/ }).first().click().catch(() => {});
+  });
   await page.keyboard.press("Escape").catch(() => {});
-  log("room ready — sampling 90s for hop / +N");
-  // poke legal actions to progress toward robber move / gains
-  const end = Date.now() + 90_000;
-  while (Date.now() < end) {
-    const btn = page.getByRole("button").filter({ hasText: /掷骰|铺设|建造|升级|结束回合|移动雾灯/ }).first();
-    if (await btn.isVisible().catch(() => false)) {
-      await btn.click({ timeout: 2000 }).catch(() => {});
+  const board = page.getByRole("region", { name: "汐屿" });
+  await page.locator("canvas").first().waitFor({ timeout: 60_000 });
+  log("room ready — setup placements (building drop-in)");
+  // Setup: place settlement + road so place() animation is on tape
+  for (let i = 0; i < 2; i += 1) {
+    const settle = board.getByRole("button", { name: /建造渔村|升级港镇/ }).first();
+    if (await settle.isVisible().catch(() => false)) {
+      await settle.click({ timeout: 3000 }).catch(() => {});
+      await page.waitForTimeout(900);
+      // click a legal vertex on canvas — helper if available
+      const canvas = page.locator("canvas").first();
+      const box = await canvas.boundingBox();
+      if (box) {
+        await page.mouse.click(box.x + box.width * 0.45, box.y + box.height * 0.48);
+        await page.waitForTimeout(600);
+      }
     }
-    await page.waitForTimeout(1500);
+    const road = board.getByRole("button", { name: /铺设栈道/ }).first();
+    if (await road.isVisible().catch(() => false)) {
+      await road.click({ timeout: 3000 }).catch(() => {});
+      await page.waitForTimeout(500);
+      const canvas = page.locator("canvas").first();
+      const box = await canvas.boundingBox();
+      if (box) await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.5);
+    }
+    await page.waitForTimeout(2500);
   }
+  log("waiting for __g3dJudge.playMotionDemo");
+  await page.waitForFunction(() => typeof globalThis.__g3dJudge?.playMotionDemo === "function", null, { timeout: 60_000 });
+  // Hold default framing and fire demo twice for clear hop + +N
+  await page.evaluate(() => globalThis.__g3dJudge?.set?.("a-default"));
+  await page.waitForTimeout(800);
+  const ok1 = await page.evaluate(() => globalThis.__g3dJudge.playMotionDemo());
+  log("demo1", ok1);
+  await page.waitForTimeout(2800);
+  const ok2 = await page.evaluate(() => globalThis.__g3dJudge.playMotionDemo());
+  log("demo2", ok2);
+  await page.waitForTimeout(3200);
+  // Keep recording a beat on the +N / hopped board
+  await page.waitForTimeout(1500);
   const video = page.video();
   await context.close();
   await browser.close();
   if (video) {
     const vpath = await video.path();
-    const { copyFile } = await import("node:fs/promises");
     await copyFile(vpath, OUT);
     log("wrote", OUT);
+    await writeFile(OUT.replace(/\.webm$/, ".json"), JSON.stringify({ ok1, ok2, out: OUT }, null, 2));
   } else {
-    await writeFile(OUT.replace(/\.webm$/, ".txt"), "no video — check playwright recordVideo\n");
-    log("no video");
+    throw new Error("no video recorded");
   }
 }
 
