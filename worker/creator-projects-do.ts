@@ -70,6 +70,7 @@ import {
   reconstructReplay,
   slimAcceptedActionsForStorage,
   roomLogAction,
+  buildUsesSessionSnapshots,
   sessionSnapshotFor,
   sessionSnapshotKey,
   type SessionStateSnapshot,
@@ -120,10 +121,14 @@ export class CreatorProjects extends DurableObject<Env> {
    * G3D-04c: reconstructed Rooms kept in memory (validated against storage by
    * log length + last intentId, so a rolled-back transaction or another write
    * path can never serve a stale state). A move applies only the new action.
+   * Only snapshot kernels are cached: their logs are slim (one state per
+   * room), while other kernels keep a full state per action and would blow
+   * the isolate memory limit across many rooms.
    */
   private readonly roomCache = new Map<string, StoredSharedSession>();
 
-  private rememberRoom(room: StoredSharedSession) {
+  private rememberRoom(room: StoredSharedSession, build: StoredPlayableBuild) {
+    if (!buildUsesSessionSnapshots(build)) return;
     this.roomCache.delete(room.id);
     this.roomCache.set(room.id, room);
     while (this.roomCache.size > 16) {
@@ -155,7 +160,7 @@ export class CreatorProjects extends DurableObject<Env> {
       sessionSnapshotKey(stored.id),
     );
     const room = reconstructSession(stored, build, snapshot ?? null);
-    this.rememberRoom(room);
+    this.rememberRoom(room, build);
     return room;
   }
 
@@ -218,7 +223,7 @@ export class CreatorProjects extends DurableObject<Env> {
     }
     // Validated on next read (length + last intentId), so a later rollback
     // of this transaction just falls back to snapshot + tail.
-    this.rememberRoom(updatedRoom);
+    this.rememberRoom(updatedRoom, build);
     return { room: updatedRoom, aiPending };
   }
 
