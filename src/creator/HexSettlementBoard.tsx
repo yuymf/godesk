@@ -697,7 +697,7 @@ export function HexSettlementBoard({
                 >
                   <div className="tidewell-player-avatar tidewell-medallion">
                     {seatMarkUrl(seat) ? (
-                      <img alt="" height={40} src={seatMarkUrl(seat)} width={40} />
+                      <img alt="" height={56} src={seatMarkUrl(seat)} width={56} />
                     ) : (
                       <span aria-hidden="true" className="tidewell-seat-swatch" />
                     )}
@@ -709,10 +709,10 @@ export function HexSettlementBoard({
                     <span className="tidewell-house-name">
                       {HOUSE_NAMES[locale][seat % HOUSE_NAMES[locale].length]}
                     </span>
+                    <span className="tidewell-player-vp" title={copy.vp}>
+                      ♛ {vpScores[seat]} / {hexSettlement.victoryPointsToWin ?? 10}
+                    </span>
                     <span className="tidewell-player-stats">
-                      <span title={copy.vp}>
-                        ♛ {vpScores[seat]}/{hexSettlement.victoryPointsToWin ?? 10}
-                      </span>
                       <span title={copy.resources}>
                         🂠 {cards}
                       </span>
@@ -894,9 +894,9 @@ export function HexSettlementBoard({
                   <img
                     alt=""
                     className="tidewell-resource-art"
-                    height={120}
+                    height={132}
                     src={RESOURCE_CARD_URL[resource]}
-                    width={90}
+                    width={100}
                   />
                 ) : (
                   <div className="tidewell-resource-art is-fallback">
@@ -941,9 +941,9 @@ export function HexSettlementBoard({
                   <img
                     alt=""
                     className="tidewell-build-art"
-                    height={48}
+                    height={64}
                     src={BUILD_ICON_URL[build.id]}
-                    width={48}
+                    width={64}
                   />
                 ) : null}
                 <span className="tidewell-build-label">{build.label}</span>
@@ -1023,9 +1023,9 @@ export function HexSettlementBoard({
                   <img
                     alt=""
                     className="tidewell-resource-art"
-                    height={120}
+                    height={132}
                     src={RESOURCE_CARD_URL[resource]}
-                    width={90}
+                    width={100}
                   />
                 ) : (
                   <div className="tidewell-resource-art is-fallback">
@@ -1070,9 +1070,9 @@ export function HexSettlementBoard({
                   <img
                     alt=""
                     className="tidewell-build-art"
-                    height={48}
+                    height={64}
                     src={BUILD_ICON_URL[build.id]}
-                    width={48}
+                    width={64}
                   />
                 ) : null}
                 <span className="tidewell-build-label">{build.label}</span>

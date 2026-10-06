@@ -11,7 +11,7 @@
   --tw-gold: #c9a227;
   --tw-sea: #2e7f86;
   --tw-side: 260px;
-  --tw-dock: 176px;
+  --tw-dock: 196px;
   position: fixed !important;
   inset: 0 !important;
   z-index: 80;
@@ -115,7 +115,7 @@ body:has(.room-view-tidewell-immersive) {
 /* —— Game screen grid —— */
 .tidewell-game-screen {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) var(--tw-dock, 176px);
+  grid-template-rows: auto minmax(0, 1fr) var(--tw-dock, 196px);
   width: 100%;
   height: 100%;
   max-height: 100%;
@@ -459,10 +459,28 @@ body:has(.room-view-tidewell-immersive) {
 }
 .tidewell-player-stats { color: #d8c9a8 !important; }
 .tidewell-medallion {
-  width: 44px !important;
-  height: 44px !important;
+  width: 56px !important;
+  height: 56px !important;
   border-width: 3px !important;
-  box-shadow: 0 0 0 1px #c9a22788, 0 2px 6px rgba(0,0,0,0.4);
+  box-shadow: 0 0 0 2px #c9a227aa, 0 3px 8px rgba(0,0,0,0.45);
+}
+.tidewell-player-card {
+  grid-template-columns: 60px 1fr !important;
+  gap: 10px !important;
+  padding: 10px !important;
+}
+.tidewell-player-vp {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f0d060;
+  letter-spacing: 0.02em;
+}
+.tidewell-house-name {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #d4b56a;
 }
 .tidewell-hud-awards { color: #d8c9a8; }
 .tidewell-hud-awards dt { color: #c9a227aa !important; }
@@ -513,19 +531,19 @@ body:has(.room-view-tidewell-immersive) {
 
 /* 2h3: larger parchment resource cards + wooden build tiles */
 .tidewell-dock {
-  --tw-dock: 176px;
-  height: var(--tw-dock, 176px);
-  max-height: var(--tw-dock, 176px);
+  --tw-dock: 196px;
+  height: var(--tw-dock, 196px);
+  max-height: var(--tw-dock, 196px);
 }
 .room-view-tidewell-immersive {
-  --tw-dock: 176px;
+  --tw-dock: 196px;
 }
 .tidewell-resource-tile {
-  width: 78px !important;
+  width: 88px !important;
 }
 .tidewell-resource-art {
-  width: 72px !important;
-  height: 96px !important;
+  width: 84px !important;
+  height: 112px !important;
   border-radius: 6px !important;
   border: 2px solid #c9a227 !important;
   box-shadow: 0 4px 10px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.15) !important;
@@ -544,10 +562,10 @@ body:has(.room-view-tidewell-immersive) {
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 4px !important;
-  min-width: 84px !important;
-  min-height: 108px !important;
-  padding: 6px 6px 8px !important;
+  gap: 3px !important;
+  min-width: 96px !important;
+  min-height: 128px !important;
+  padding: 4px 4px 6px !important;
   border-radius: 10px !important;
   border: 2px solid #c9a227 !important;
   background:
@@ -556,10 +574,11 @@ body:has(.room-view-tidewell-immersive) {
 }
 .tidewell-build-art {
   display: block;
-  width: 48px;
-  height: 48px;
+  width: 72px;
+  height: 72px;
   object-fit: contain;
-  border-radius: 6px;
+  border-radius: 8px;
+  image-rendering: auto;
 }
 .tidewell-build-label {
   font-size: 11px !important;
@@ -685,8 +704,8 @@ body:has(.room-view-tidewell-immersive) {
   grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr);
   gap: 10px;
   align-items: center;
-  height: var(--tw-dock, 176px);
-  max-height: var(--tw-dock, 176px);
+  height: var(--tw-dock, 196px);
+  max-height: var(--tw-dock, 196px);
   box-sizing: border-box;
   padding: 8px 12px;
   background: linear-gradient(180deg, #5a3820 0%, #2c1a10 100%);
@@ -928,13 +947,19 @@ body:has(.room-view-tidewell-immersive) {
     gap: 10px;
     padding: 0 4px;
   }
+  .tidewell-player-list {
+    width: 100%;
+    justify-content: space-evenly;
+    gap: 4px;
+  }
   .tidewell-player-card {
-    min-width: 56px;
-    max-width: 64px;
-    grid-template-columns: 1fr;
+    min-width: 0;
+    max-width: none;
+    flex: 1 1 0;
+    grid-template-columns: 1fr !important;
     justify-items: center;
     text-align: center;
-    padding: 4px 4px 6px;
+    padding: 2px 2px 4px;
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
@@ -946,8 +971,15 @@ body:has(.room-view-tidewell-immersive) {
   }
   .tidewell-player-avatar,
   .tidewell-medallion {
-    width: 44px !important;
-    height: 44px !important;
+    width: 48px !important;
+    height: 48px !important;
+  }
+  .tidewell-player-vp {
+    font-size: 11px;
+    color: #f0d060;
+  }
+  .tidewell-player-stats {
+    display: none !important;
   }
   .tidewell-player-meta {
     align-items: center;
@@ -1124,6 +1156,6 @@ body:has(.room-view-tidewell-immersive) {
 @media (min-width: 801px) and (max-width: 1100px) {
   .room-view-tidewell-immersive {
     --tw-side: 220px;
-    --tw-dock: 168px;
+    --tw-dock: 188px;
   }
 }
