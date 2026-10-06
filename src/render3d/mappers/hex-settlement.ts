@@ -188,13 +188,8 @@ export function mapHexSettlementToScene(genre: HexSettlementSceneInput): SceneMo
     position: [4.4, 0.25, 3.2],
     number: dice[1],
   });
-  nodes.push({
-    id: "cliff",
-    kind: "cliff",
-    position: [0, -0.25, 0],
-    tag: "stone",
-    scale: [7.5, 0.5, 7.5],
-  });
+  // G3D-08: grey stone surround slab removed — SceneHost mounts tide water plane instead.
+  // G3D-13 will add ExtrudeGeometry cliff walls for the island base.
 
   return { nodes };
 }
