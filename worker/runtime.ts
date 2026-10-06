@@ -77,7 +77,7 @@ import {
   playActionFromAuctionBiddingIntent, type AuctionBiddingGenre,
 } from "../src/runtime/adapters/auction-bidding";
 
-type ExecutableRuntime = Extract<
+export type ExecutableRuntime = Extract<
   RuleSystem["runtimeSupport"],
   { status: "executable" }
 >;
@@ -1086,6 +1086,62 @@ function uniqueWinnerSeat(scores: number[]) {
   return winners.length === 1 ? winners[0].seat : null;
 }
 
+/** A bot-chosen intent for the seat the kernel is waiting on. */
+export interface BotIntent {
+  seat: number;
+  actionId: string;
+  payload?: Record<string, unknown>;
+}
+
+/**
+ * Kernels whose bot picker is a pure function of (state, seed) and therefore
+ * can drive a Room AI seat server-side (G3D-04b). Any rule system that binds
+ * one of these kernels (e.g. every hex-settlement-v1 variant) gets AI seats
+ * for free; the Executable Kernel stays the sole authority via acceptIntent.
+ */
+export function runtimeSupportsBotSeat(runtime: ExecutableRuntime): boolean {
+  return runtime.kernel.type === "hex-settlement-v1";
+}
+
+/**
+ * Pick the bot's next legal intent for `state.activeSeat` (discard / robber
+ * phases make the acting seat active, so this also covers those). Shared by
+ * runBotSimulation and the Room AI seat driver — no parallel engine.
+ */
+export function pickBotIntent(
+  state: SessionState,
+  runtime: ExecutableRuntime,
+  seed: number,
+): BotIntent | null {
+  if (state.status !== "active") return null;
+  if (runtime.kernel.type === "hex-settlement-v1") {
+    if (!state.catan) return null;
+    const kernelConfig = bindCatanFromRuntimeKernel({
+      playerCount: runtime.kernel.playerCount,
+      victoryPointsToWin: runtime.kernel.victoryPointsToWin,
+    });
+    const playState = {
+      seed,
+      sequence: state.turn,
+      phase: state.catan.phase,
+      activePlayerId: state.activeSeat,
+      playerCount: runtime.kernel.playerCount,
+      status: state.status,
+      winnerId: state.winnerSeat,
+      events: [] as const,
+      genre: sessionCatanToGenre(state.catan),
+    };
+    const bot = pickCatanBotAction(playState, kernelConfig, seed, state.turn + 1);
+    if (!bot) return null;
+    return {
+      seat: state.activeSeat,
+      actionId: bot.type,
+      ...(bot.payload ? { payload: bot.payload as Record<string, unknown> } : {}),
+    };
+  }
+  return null;
+}
+
 export function runBotSimulation(
   ruleSystem: RuleSystem,
   seed: number,
@@ -1568,38 +1624,18 @@ export function runBotSimulation(
   }
 
   if (runtime.kernel.type === "hex-settlement-v1") {
-    const kernelConfig = bindCatanFromRuntimeKernel({
-      playerCount: runtime.kernel.playerCount,
-      victoryPointsToWin: runtime.kernel.victoryPointsToWin,
-    });
     let guard = 0;
     while (state.status === "active" && state.catan && guard < 8000) {
       guard += 1;
-      const playState = {
-        seed,
-        sequence: state.turn,
-        phase: state.catan.phase,
-        activePlayerId: state.activeSeat,
-        playerCount: runtime.kernel.playerCount,
-        status: state.status,
-        winnerId: state.winnerSeat,
-        events: [] as const,
-        genre: sessionCatanToGenre(state.catan),
-      };
-      const bot = pickCatanBotAction(
-        playState,
-        kernelConfig,
-        seed,
-        state.turn + 1,
-      );
+      const bot = pickBotIntent(state, runtime, seed);
       if (!bot) throw new Error("bot_action_unavailable");
       const accepted = acceptIntent(
         state,
         runtime,
         {
           intentId: `bot_${acceptedActions.length + 1}`,
-          seat: state.activeSeat,
-          actionId: bot.type,
+          seat: bot.seat,
+          actionId: bot.actionId,
           payload: bot.payload,
         },
         acceptedActions.length + 1,

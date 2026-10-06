@@ -63,6 +63,8 @@ interface CreatorJobHost {
   ctx: DurableObjectState;
   saveJob(job: CreatorJob, input?: SubmitJobInput): Promise<void>;
   schedulePendingJobRecovery(): Promise<void>;
+  /** Optional: alarm-merging job grace (keeps Room AI turns on time). */
+  requestJobRecoveryAlarm?(): Promise<void>;
   applyProjectChanges(
     projectId: string,
     input: ApplyProjectChangesInput,
@@ -77,7 +79,13 @@ interface CreatorJobHost {
   ): Promise<Response>;
   createBuildSession(
     buildId: string,
-    input: { seed: number; idempotencyKey: string; hypothesisId?: string },
+    input: {
+      seed: number;
+      idempotencyKey: string;
+      hypothesisId?: string;
+      aiSeats?: unknown;
+      aiThinkMs?: unknown;
+    },
   ): Promise<Response>;
 }
 
@@ -143,7 +151,8 @@ export async function runCreatorJob(
   }
   job = { ...job, status: "running", updatedAt: new Date().toISOString() };
   await host.saveJob(job);
-  await host.ctx.storage.setAlarm(Date.now() + 30_000);
+  if (host.requestJobRecoveryAlarm) await host.requestJobRecoveryAlarm();
+  else await host.ctx.storage.setAlarm(Date.now() + 30_000);
 
   try {
     let operation: Response;
