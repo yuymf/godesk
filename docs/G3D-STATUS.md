@@ -91,7 +91,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | --- | --- | --- |
 | box Codex 用量上限 | 至 2026-11-05 02:04 Asia/Shanghai；Cloud Agent 兜底（本席无该工具时手写） | 用量恢复 |
 | **G3D-13（Track B）** | 依赖 G3D-07/08/09/10 + 素材 19–25 已齐。**合入阻塞：G3D-04b（Track A，#132 Room AI 座位）** — Tidewell 示例 AI 座位依赖它；可先开分支开发，**须等 #132 合入后再合 G3D-13**。**HUD 备注（iPhone 12 Pro 模拟）**：Room 在棋盘下方露出合法动作的原始按钮列表，文案含坐标串（例：`放置道路 · -200:173|-250:87`）— HUD 重做须隐藏/替换此层 | 开工中；合入等 #132 |
-| GitHub Actions | 现 **operational**。deploy @ `41e352b` 生产 smoke 曾失败（ChatGPT Connector heading）；后续 deploy 通过 → 瞬时 | 禁无绿合入 |
+| GitHub Actions | **账户计费拦截**（2026-10-05 16:02 起；10 月 2000 分钟私有免费额度已用完，godesk 占 1445）。CI 瘦身 PR `ci/slim-actions`（G1–G8，见 [`docs/ci/actions-budget.md`](./ci/actions-budget.md)）恢复后**最先合入**，再合 G3D 批次 | 计费恢复（预算或 11-01 额度重置）；禁无绿合入 |
 
 ## 下一刀
 
@@ -167,3 +167,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | G3D-14 后续修补 + M4 收官（Track C）PR：回填 G3D-15 第二刀 #134 合入 SHA `98f5de0`；开着的 PR 移除 #134；当前里程碑加 M4 平台化 Done（合入 PR 列表）；已完成加 G3D-14 后续修补；加后续修补备注（实例化 draw call / 2D 棋子色 / 溢出 / 毡面 mip）；代码基线 → `902075e`；开着的 PR 移除已合入的 #132 | Track C |
 | 2026-10-06 | G3D-ART-2 #142：T3b 麦田、点数筹码数字贴花（6/8 赤陶）；地形道具暂缓到 #138 之后 | Track D |
 | 2026-10-06 | 仓库公开前清理（Track A）：第三方六角岛桌游品牌词（中英文）→ 汐屿 / `hexIsland` / `hex-island`（文件、标识符、测试 ID、CSS 类、文案、文档全量改名；历史文档中旧 2D 六角盘面组件统一写作 `HexIslandBoard.tsx`，该文件已在 G3D-18 删除）；只保留旧存储状态键（`LEGACY_HEX_ISLAND_STATE_KEY`）；第三方参考站点引用清零；LICENSE 改为 source-available、保留所有权利 | Track A |
+| 2026-10-06 | CI 瘦身 PR `ci/slim-actions`：verify 草稿 PR 只跑快速子集、ready / `full-e2e` 标签才跑全量 Playwright；三条 workflow 忽略纯文档变更；Lighthouse 只在前端 / Worker 路径变更时跑、去掉 push main、PR 单次采样；deploy 不再重跑 e2e；Playwright 浏览器缓存；AGENTS.md 加 CI 分钟规则（文档随代码同一次 push、只在冲突时合 main、迭代期开 draft）；阻塞表 GitHub Actions 改为计费拦截 | Track C |

@@ -45,6 +45,19 @@ not a substitute. Do not call work done without a green `pnpm test:e2e`.
 - Do not revive "validation platform" or "learning loop as the product" copy
   in user-facing surfaces, Plugin Skills, or agent docs.
 
+## CI minutes
+
+GitHub Actions minutes are a shared, limited budget. Follow
+[`docs/ci/actions-budget.md`](docs/ci/actions-budget.md):
+
+- Put STATUS / prompt-trace updates in the same push as the code. Do not push
+  them separately; use `[skip ci]` only when the previous code head is already
+  green with e2e.
+- Merge `origin/main` into a branch only to resolve a conflict or once before merge.
+- Open PRs as draft while iterating; drafts run only the fast subset. Mark
+  ready for review when done; full Playwright then runs and must be green on
+  the final head before merge.
+
 ## Agent skills
 
 ### Issue tracker
