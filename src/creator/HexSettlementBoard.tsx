@@ -298,11 +298,11 @@ export function HexSettlementBoard({
   return (
     <div
       aria-label={copy.board}
-      className="tidewell-board hex-settlement-board tidewell-board"
+      className="tidewell-board hex-settlement-board"
       data-status={status}
       role="region"
     >
-      <section aria-label={copy.hud} className="tidewell-hud tidewell-hud">
+      <section aria-label={copy.hud} className="tidewell-hud">
         <div className="tidewell-hud-status">
           <span className="tidewell-kicker">{copy.active}</span>
           <strong>
