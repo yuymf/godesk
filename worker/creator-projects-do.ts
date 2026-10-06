@@ -69,6 +69,11 @@ import {
   reconstructSession,
   reconstructReplay,
   slimAcceptedActionsForStorage,
+  roomLogAction,
+  buildUsesSessionSnapshots,
+  sessionSnapshotFor,
+  sessionSnapshotKey,
+  type SessionStateSnapshot,
   type ProjectRecord,
   type StoredPlayableBuild,
   type StoredPlaytest,
@@ -113,6 +118,53 @@ export class CreatorProjects extends DurableObject<Env> {
   }
 
   /**
+   * G3D-04c: reconstructed Rooms kept in memory (validated against storage by
+   * log length + last intentId, so a rolled-back transaction or another write
+   * path can never serve a stale state). A move applies only the new action.
+   * Only snapshot kernels are cached: their logs are slim (one state per
+   * room), while other kernels keep a full state per action and would blow
+   * the isolate memory limit across many rooms.
+   */
+  private readonly roomCache = new Map<string, StoredSharedSession>();
+
+  private rememberRoom(room: StoredSharedSession, build: StoredPlayableBuild) {
+    if (!buildUsesSessionSnapshots(build)) return;
+    this.roomCache.delete(room.id);
+    this.roomCache.set(room.id, room);
+    while (this.roomCache.size > 16) {
+      const oldest = this.roomCache.keys().next().value;
+      if (oldest === undefined) break;
+      this.roomCache.delete(oldest);
+    }
+  }
+
+  /** Authoritative Room: memory cache → latest snapshot + tail → full replay. */
+  private async loadRoom(
+    stored: StoredSharedSession,
+    build: StoredPlayableBuild,
+    transaction?: DurableObjectTransaction,
+  ): Promise<StoredSharedSession> {
+    const cached = this.roomCache.get(stored.id);
+    const length = stored.acceptedActions.length;
+    if (
+      cached &&
+      cached.buildId === stored.buildId &&
+      cached.seed === stored.seed &&
+      cached.acceptedActions.length === length &&
+      cached.acceptedActions[length - 1]?.intentId ===
+        stored.acceptedActions[length - 1]?.intentId
+    ) {
+      return { ...stored, state: cached.state, acceptedActions: cached.acceptedActions };
+    }
+    const snapshot = await (transaction ?? this.ctx.storage).get<SessionStateSnapshot>(
+      sessionSnapshotKey(stored.id),
+    );
+    const room = reconstructSession(stored, build, snapshot ?? null);
+    this.rememberRoom(room, build);
+    return room;
+  }
+
+  /**
    * Persist one kernel-accepted action (room + replay + project record) inside
    * the caller's transaction, and atomically (re)write the Room AI pending turn
    * so a DO restart can never lose or duplicate an AI move.
@@ -121,6 +173,7 @@ export class CreatorProjects extends DurableObject<Env> {
     transaction: DurableObjectTransaction,
     room: StoredSharedSession,
     accepted: AcceptedAction,
+    build: StoredPlayableBuild,
   ): Promise<
     | { room: StoredSharedSession; aiPending: AiPendingTurn | null }
     | { error: { status: number; value: { error: string } } }
@@ -129,8 +182,9 @@ export class CreatorProjects extends DurableObject<Env> {
     const updatedRoom: StoredSharedSession = {
       ...room,
       state: accepted.state,
-      acceptedActions: [...room.acceptedActions, accepted],
+      acceptedActions: [...room.acceptedActions, roomLogAction(build, accepted)],
     };
+    const snapshot = sessionSnapshotFor(build, updatedRoom);
     const persistedRoom: StoredSharedSession = {
       ...updatedRoom,
       acceptedActions: slimAcceptedActionsForStorage(updatedRoom.acceptedActions),
@@ -162,10 +216,14 @@ export class CreatorProjects extends DurableObject<Env> {
       [`replay:${room.replayId}`]: updatedReplay,
       [projectKey]: record,
       ...(aiPending ? { [aiTurnKey(room.id)]: aiPending } : {}),
+      ...(snapshot ? { [sessionSnapshotKey(room.id)]: snapshot } : {}),
     });
     if (!aiPending && room.aiSeats?.length) {
       await transaction.delete(aiTurnKey(room.id));
     }
+    // Validated on next read (length + last intentId), so a later rollback
+    // of this transaction just falls back to snapshot + tail.
+    this.rememberRoom(updatedRoom, build);
     return { room: updatedRoom, aiPending };
   }
 
@@ -232,7 +290,7 @@ export class CreatorProjects extends DurableObject<Env> {
         await transaction.delete(aiTurnKey(turn.sessionId));
         return { kind: "dropped" as const };
       }
-      const room = reconstructSession(storedRoom, build);
+      const room = await this.loadRoom(storedRoom, build, transaction);
       const seat = room.state.activeSeat;
       if (
         room.state.status !== "active" ||
@@ -278,7 +336,7 @@ export class CreatorProjects extends DurableObject<Env> {
         console.warn("room_ai_no_legal_action", room.id, seat, sequence);
         return { kind: "dropped" as const };
       }
-      const persisted = await this.persistAcceptedAction(transaction, room, accepted);
+      const persisted = await this.persistAcceptedAction(transaction, room, accepted, build);
       if ("error" in persisted) {
         await transaction.delete(aiTurnKey(room.id));
         return { kind: "dropped" as const };
@@ -1968,7 +2026,7 @@ export class CreatorProjects extends DurableObject<Env> {
             value: { error: "runtime_not_executable" },
           };
         }
-        const room = reconstructSession(storedRoom, build);
+        const room = await this.loadRoom(storedRoom, build, transaction);
         if (isAiSeat(room, Number(input.seat))) {
           return {
             status: 409,
@@ -2014,7 +2072,7 @@ export class CreatorProjects extends DurableObject<Env> {
             value: { error: "intent_rejected", state: room.state },
           };
         }
-        const persisted = await this.persistAcceptedAction(transaction, room, accepted);
+        const persisted = await this.persistAcceptedAction(transaction, room, accepted, build);
         if ("error" in persisted) return persisted.error;
         const updatedRoom = persisted.room;
         // Response/broadcast keep full in-memory actions; DO stores slim logs.
@@ -2158,7 +2216,7 @@ export class CreatorProjects extends DurableObject<Env> {
       );
       const build = storedBuild ? normalizedBuild(storedBuild) : undefined;
       if (!build) return error("Shared Session 引用的 Build 不存在。", 500);
-      return json(visibleSession(reconstructSession(room, build)));
+      return json(visibleSession(await this.loadRoom(room, build)));
     }
 
     const replayMatch = url.pathname.match(/^\/replays\/([^/]+)$/);
@@ -2196,12 +2254,12 @@ export class CreatorProjects extends DurableObject<Env> {
       const view = url.searchParams.get("view");
       if (view === "rule-system") return json(record.ruleSystem);
       if (view === "activity") {
-        const sessions = record.sessions.slice(-50).map((room) => {
+        const sessions = await Promise.all(record.sessions.slice(-50).map((room) => {
           const build = record.builds.find(
             (candidate) => candidate.id === room.buildId,
           );
-          return build ? reconstructSession(room, build) : room;
-        });
+          return build ? this.loadRoom(room, normalizedBuild(build)) : room;
+        }));
         return json({
           project: record.project,
           jobs: record.jobs.slice(0, 50),
@@ -2289,12 +2347,12 @@ export class CreatorProjects extends DurableObject<Env> {
         return json(paginated(record.playtests, url, "playtests"));
       }
       if (view === "sessions") {
-        const sessions = record.sessions.map((room) => {
+        const sessions = await Promise.all(record.sessions.map((room) => {
           const build = record.builds.find(
             (candidate) => candidate.id === room.buildId,
           );
-          return build ? reconstructSession(room, build) : room;
-        });
+          return build ? this.loadRoom(room, normalizedBuild(build)) : room;
+        }));
         return json(paginated(sessions, url, "sessions"));
       }
       if (view === "jobs") {
@@ -2388,7 +2446,7 @@ export class CreatorProjects extends DurableObject<Env> {
         } satisfies SessionSocketAttachment);
       }
     }
-    const reconstructed = reconstructSession(room, build);
+    const reconstructed = await this.loadRoom(room, build);
     socket.send(JSON.stringify({
       type: "session.snapshot",
       session: visibleSession(reconstructed, viewerSeat),
