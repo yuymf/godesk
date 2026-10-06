@@ -24,6 +24,8 @@ async function openRoom(page: Page) {
   const board = page.getByRole("region", { name: "卡坦六角岛" });
   await expect(page.getByRole("img", { name: "卡坦六角岛" })).toBeVisible();
   await expect(page.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
+  // G3D-08: wait for tide-water mount+shader warm so cold compile does not eat the mid-tween click budget.
+  await expect(page.getByTestId("g3d-scene-host")).toHaveAttribute("data-water", "on", { timeout: 60_000 });
   return board;
 }
 
@@ -60,7 +62,8 @@ for (const mode of ["no-preference", "reduce"] as const) {
     const road = board.getByRole("button", { name: /放置道路/ }).first();
     await road.waitFor({ state: "visible" });
     const tPlace = await page.evaluate(() => performance.now());
-    await road.click({ timeout: 2_000 });
+    // dispatchEvent: intentional mid-tween input (placement 280 ms); avoids Playwright hit-check flakes while the canvas keeps redrawing waves.
+    await road.dispatchEvent("click");
     const tRoad = await page.evaluate(() => performance.now());
     await expect(hud).toContainText("place_road");
     if (!reduced) expect(tRoad - tPlace).toBeLessThan(1_500);

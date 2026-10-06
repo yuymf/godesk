@@ -701,6 +701,16 @@ export function SceneHost({
             return;
           }
           waterRef.current = water;
+          // Warm custom water program on SwiftShader before the first user click
+          // (cold compile can block the main thread long enough to flake mid-tween clicks).
+          const cam = cameraRef.current;
+          if (cam) {
+            try {
+              renderer.compile(root, cam);
+            } catch {
+              /* compile best-effort */
+            }
+          }
           if (el) {
             el.dataset.water = "on";
             el.dataset.waterDistMs = String(Math.round(water.lastDistanceMs));
