@@ -41,6 +41,14 @@ export function pickFromPointerEvent(
     while (current) {
       // G3D-09: objects fading out (already gone from state) are never pickable.
       if (current.userData?.removing) break;
+      const instanceIds = current.userData?.hitInstanceIds as string[] | undefined;
+      if (instanceIds && typeof hit.instanceId === "number" && instanceIds[hit.instanceId]) {
+        return {
+          nodeId: instanceIds[hit.instanceId]!,
+          kind: String(current.userData?.kind ?? "hit"),
+          point: [hit.point.x, hit.point.y, hit.point.z],
+        };
+      }
       const nodeId = current.userData?.nodeId;
       if (typeof nodeId === "string" && nodeId.length > 0) {
         return {

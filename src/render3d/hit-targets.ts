@@ -1,20 +1,22 @@
 import {
   BoxGeometry,
   CylinderGeometry,
+  DynamicDrawUsage,
+  InstancedMesh,
   Mesh,
   MeshStandardMaterial,
-  type Object3D,
+  Object3D,
   TorusGeometry,
 } from "three";
 import type { PickableLegalAction } from "./pick";
 
 const WORLD_SCALE = 0.01;
+const _dummy = new Object3D();
 
-/** Shared highlight materials/geoms — one draw call family instead of per-action alloc. */
-const RING_GEOM_CITY = new TorusGeometry(0.26, 0.035, 8, 24);
-RING_GEOM_CITY.rotateX(Math.PI / 2);
 const RING_GEOM_SETTLE = new TorusGeometry(0.2, 0.035, 8, 24);
 RING_GEOM_SETTLE.rotateX(Math.PI / 2);
+const RING_GEOM_CITY = new TorusGeometry(0.26, 0.035, 8, 24);
+RING_GEOM_CITY.rotateX(Math.PI / 2);
 const ROAD_HIT_GEOM = new BoxGeometry(0.55, 0.08, 0.18);
 const ROBBER_HIT_GEOM = new CylinderGeometry(0.85, 0.85, 0.08, 6);
 
@@ -74,53 +76,72 @@ function toWorld(x: number, y: number, z = 0): [number, number, number] {
   return [x * WORLD_SCALE, z, y * WORLD_SCALE];
 }
 
-function ringMesh(
-  id: string,
+type InstanceSpec = {
+  id: string;
+  position: [number, number, number];
+  rotationY?: number;
+};
+
+function packInstances(
+  specs: InstanceSpec[],
+  geometry: TorusGeometry | BoxGeometry | CylinderGeometry,
+  material: MeshStandardMaterial,
   kind: string,
-  position: [number, number, number],
-  geom: TorusGeometry,
-): Mesh {
-  const mesh = new Mesh(geom, RING_MAT);
-  mesh.position.set(position[0], position[1], position[2]);
-  mesh.userData.nodeId = id;
-  mesh.userData.kind = kind;
-  mesh.userData.hitOverlay = true;
+): Object3D | null {
+  if (specs.length === 0) return null;
+  const mesh = new InstancedMesh(geometry, material, specs.length);
+  mesh.instanceMatrix.setUsage(DynamicDrawUsage);
+  mesh.frustumCulled = false;
   mesh.userData.gdShared = true;
+  mesh.userData.hitOverlay = true;
+  mesh.userData.kind = kind;
+  // Map instance index → nodeId for picking (raycaster hits InstancedMesh with instanceId).
+  const ids: string[] = [];
+  specs.forEach((spec, index) => {
+    _dummy.position.set(spec.position[0], spec.position[1], spec.position[2]);
+    _dummy.rotation.set(0, spec.rotationY ?? 0, 0);
+    _dummy.scale.set(1, 1, 1);
+    _dummy.updateMatrix();
+    mesh.setMatrixAt(index, _dummy.matrix);
+    ids.push(spec.id);
+  });
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.count = specs.length;
+  mesh.userData.hitInstanceIds = ids;
+  // Also expose first id for non-instance fallbacks
+  mesh.userData.nodeId = ids[0];
   return mesh;
 }
 
 /**
  * Build highlight/hit meshes for legal place_* and move_robber actions.
+ * G3D-13: InstancedMesh per action family so setup (dozens of settlements) stays in draw budget.
  */
 export function buildLegalHitOverlays(
   legalActions: readonly PickableLegalAction[],
 ): Object3D[] {
-  const out: Object3D[] = [];
+  const settle: InstanceSpec[] = [];
+  const city: InstanceSpec[] = [];
+  const road: InstanceSpec[] = [];
+  const robber: InstanceSpec[] = [];
+
   for (const action of legalActions) {
     if (action.type === "place_settlement") {
       const vertexId = String(action.payload?.vertexId ?? "");
       const point = parseVertex(vertexId);
       if (!point) continue;
-      out.push(
-        ringMesh(
-          `hit:place_settlement:${vertexId}`,
-          "hit",
-          toWorld(point.x, point.y, 0.55),
-          RING_GEOM_SETTLE,
-        ),
-      );
+      settle.push({
+        id: `hit:place_settlement:${vertexId}`,
+        position: toWorld(point.x, point.y, 0.55),
+      });
     } else if (action.type === "place_city") {
       const vertexId = String(action.payload?.vertexId ?? "");
       const point = parseVertex(vertexId);
       if (!point) continue;
-      out.push(
-        ringMesh(
-          `hit:place_city:${vertexId}`,
-          "hit",
-          toWorld(point.x, point.y, 0.65),
-          RING_GEOM_CITY,
-        ),
-      );
+      city.push({
+        id: `hit:place_city:${vertexId}`,
+        position: toWorld(point.x, point.y, 0.65),
+      });
     } else if (action.type === "place_road") {
       const edgeId = String(action.payload?.edgeId ?? "");
       const ends = edgeEndpoints(edgeId);
@@ -128,15 +149,11 @@ export function buildLegalHitOverlays(
       const [a, b] = ends;
       const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
       const angle = Math.atan2(b.y - a.y, b.x - a.x);
-      const mesh = new Mesh(ROAD_HIT_GEOM, ROAD_HIT_MAT);
-      const pos = toWorld(mid.x, mid.y, 0.28);
-      mesh.position.set(pos[0], pos[1], pos[2]);
-      mesh.rotation.y = -angle;
-      mesh.userData.nodeId = `hit:place_road:${edgeId}`;
-      mesh.userData.kind = "hit";
-      mesh.userData.hitOverlay = true;
-      mesh.userData.gdShared = true;
-      out.push(mesh);
+      road.push({
+        id: `hit:place_road:${edgeId}`,
+        position: toWorld(mid.x, mid.y, 0.28),
+        rotationY: -angle,
+      });
     } else if (action.type === "move_robber") {
       const hex = String(action.payload?.hex ?? "");
       const [qs, rs] = hex.split(",");
@@ -144,16 +161,19 @@ export function buildLegalHitOverlays(
       const r = Number(rs);
       if (!Number.isFinite(q) || !Number.isFinite(r)) continue;
       const center = hexCenter(q, r);
-      const mesh = new Mesh(ROBBER_HIT_GEOM, ROBBER_HIT_MAT);
-      const pos = toWorld(center.x, center.y, 0.32);
-      mesh.position.set(pos[0], pos[1], pos[2]);
-      mesh.userData.nodeId = `hit:move_robber:${hex}`;
-      mesh.userData.kind = "hit";
-      mesh.userData.hitOverlay = true;
-      mesh.userData.gdShared = true;
-      out.push(mesh);
+      robber.push({
+        id: `hit:move_robber:${hex}`,
+        position: toWorld(center.x, center.y, 0.32),
+      });
     }
   }
+
+  const out: Object3D[] = [];
+  const a = packInstances(settle, RING_GEOM_SETTLE, RING_MAT, "hit");
+  const b = packInstances(city, RING_GEOM_CITY, RING_MAT, "hit");
+  const c = packInstances(road, ROAD_HIT_GEOM, ROAD_HIT_MAT, "hit");
+  const d = packInstances(robber, ROBBER_HIT_GEOM, ROBBER_HIT_MAT, "hit");
+  for (const mesh of [a, b, c, d]) if (mesh) out.push(mesh);
   return out;
 }
 
@@ -161,8 +181,13 @@ export function disposeHitOverlay(object: Object3D): void {
   object.traverse((child) => {
     const mesh = child as Mesh;
     if (!mesh.isMesh) return;
-    // Shared templates live for the session.
-    if (mesh.userData.gdShared) return;
+    if (mesh.userData.gdShared) {
+      // InstancedMesh.dispose frees GPU resources but shared geom/mat stay.
+      if ((mesh as InstancedMesh).isInstancedMesh) {
+        (mesh as InstancedMesh).dispose();
+      }
+      return;
+    }
     mesh.geometry?.dispose();
     const material = mesh.material;
     if (Array.isArray(material)) {

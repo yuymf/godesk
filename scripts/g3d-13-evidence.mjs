@@ -149,7 +149,7 @@ async function main() {
 
 
   // One-browser vs real Room AI (G3D-04b lobby「和电脑对战」)
-  {
+  try {
     const context = await browser.newContext(viewportDefs.desktop.context);
     const page = await context.newPage();
     await page.goto(`${BASE}/new`, { waitUntil: "domcontentloaded", timeout: 60_000 });
@@ -161,28 +161,34 @@ async function main() {
     const projectId = new URL(page.url()).pathname.split("/").at(-1);
     await page.goto(`${BASE}/game`);
     const card = page.locator(".lobby-card").filter({ has: page.locator(`a[href$="/studio/${projectId}"]`) });
-    await card.getByRole("button", { name: "和电脑对战" }).click();
+    const vsAi = card.getByRole("button", { name: "和电脑对战" });
+    await vsAi.waitFor({ state: "visible", timeout: 30_000 });
+    await vsAi.click();
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 60_000 });
+    await page.getByLabel("你的席位").selectOption("0");
     const board = page.getByRole("region", { name: "汐屿" });
     await board.waitFor({ timeout: 60_000 });
     await waitHost(page);
-    // Play human setup turns; AI seat responds server-side
-    for (let i = 0; i < 40; i += 1) {
+    for (let i = 0; i < 48; i += 1) {
       const status = await board.getByRole("region", { name: "对局状态" }).innerText().catch(() => "");
       if (/对局结束|获胜/.test(status)) break;
+      if (/电脑思考中/.test(status)) {
+        await page.waitForTimeout(1_200);
+        continue;
+      }
       await openBoardTargets(board);
       const settle = board.getByRole("button", { name: /建造渔村/ }).first();
       const road = board.getByRole("button", { name: /铺设栈道/ }).first();
       const roll = board.getByRole("button", { name: /掷骰/ }).first();
-      const end = board.getByRole("button", { name: /结束回合/ }).first();
+      const endTurn = board.getByRole("button", { name: /结束回合/ }).first();
       if (await settle.isVisible().catch(() => false) && await settle.isEnabled().catch(() => false)) {
         await settle.dispatchEvent("click");
       } else if (await road.isVisible().catch(() => false) && await road.isEnabled().catch(() => false)) {
         await road.dispatchEvent("click");
       } else if (await roll.isVisible().catch(() => false) && await roll.isEnabled().catch(() => false)) {
         await roll.dispatchEvent("click");
-      } else if (await end.isVisible().catch(() => false) && await end.isEnabled().catch(() => false)) {
-        await end.dispatchEvent("click");
+      } else if (await endTurn.isVisible().catch(() => false) && await endTurn.isEnabled().catch(() => false)) {
+        await endTurn.dispatchEvent("click");
       }
       await page.waitForTimeout(900);
     }
@@ -193,6 +199,9 @@ async function main() {
     await host.screenshot({ path: aiCanvas }).catch(() => null);
     log.roomAi = { files: [aiShot, aiCanvas], url: page.url() };
     await context.close();
+  } catch (err) {
+    log.roomAiError = String(err?.message ?? err);
+    console.warn("room AI evidence failed", err);
   }
 
   await writeFile(path.join(OUT, "captures.json"), JSON.stringify(log, null, 2));

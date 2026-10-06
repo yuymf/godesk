@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
 import { mkdirSync } from "node:fs";
 
 /**
@@ -56,8 +57,9 @@ test("G3D-04b · AI seat takes its setup turns (single human browser)", async ({
   const board = await openAiRoom(page);
   const hud = board.getByRole("region", { name: "对局状态" });
   await expect(hud).toContainText("轮到你行动");
-  await board.getByRole("button", { name: /放置定居点/ }).first().click();
-  await board.getByRole("button", { name: /放置道路/ }).first().click();
+  await clickTidewellBoardAction(board, /建造渔村/);
+  await openTidewellBoardTargets(board);
+  await board.getByRole("button", { name: /铺设栈道/ }).first().click();
   // Snake setup 0, 1, 1, 0 — the computer plays both of its turns by itself.
   await expect(hud).toContainText("电脑思考中", { timeout: 15_000 });
   await expect(hud).toContainText("轮到你行动", { timeout: 30_000 });
@@ -72,8 +74,8 @@ test("G3D-04b · AI seat takes its setup turns (single human browser)", async ({
 });
 
 const PRIORITY: Array<[RegExp, number]> = [
-  [/升级城市/, 100], [/放置定居点/, 90], [/打出骑士/, 60], [/购买发展卡/, 55], [/放置道路/, 50],
-  [/打出道路建设/, 45], [/移动强盗/, 40], [/弃牌/, 38], [/掷骰/, 35], [/银行贸易/, 10], [/结束回合/, 1],
+  [/升级港镇/, 100], [/建造渔村/, 90], [/打出骑士/, 60], [/购买发展卡/, 55], [/铺设栈道/, 50],
+  [/打出道路建设/, 45], [/移动雾灯/, 40], [/弃牌/, 38], [/掷骰/, 35], [/银行贸易/, 10], [/结束回合/, 1],
 ];
 const score = (label: string) => PRIORITY.find(([re]) => re.test(label))?.[1] ?? -1;
 
