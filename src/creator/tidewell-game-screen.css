@@ -1343,33 +1343,27 @@ body:has(.room-view-tidewell-immersive) {
   }
 }
 
-/* round-7 ④：板面中央 +N 吐司（motion webm 必见） */
-.tidewell-stage-wrap,
-.tidewell-game-screen .g3d-stage,
-[data-testid="g3d-scene-host"] {
-  position: relative;
-}
+/* round-8：+N 跟棋子（JS 每帧 project → transform） */
 .g3d-judge-plusn-toast {
   position: fixed;
-  left: 50%;
-  top: 38%;
-  transform: translate(-50%, -50%) scale(0.6);
+  left: 0;
+  top: 0;
   z-index: 200;
-  padding: 14px 22px;
+  padding: 12px 18px;
   border-radius: 999px;
   border: 3px solid #f3e7c9;
   background: #1f9a4a;
   color: #fff;
-  font: 800 28px/1.1 system-ui, "PingFang SC", sans-serif;
+  font: 800 24px/1.1 system-ui, "PingFang SC", sans-serif;
   letter-spacing: 0.04em;
   box-shadow: 0 8px 28px rgba(0,0,0,0.45);
   pointer-events: none;
   opacity: 0;
-  transition: opacity 120ms ease, transform 180ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  will-change: transform, opacity;
+  transition: opacity 120ms ease;
 }
 .g3d-judge-plusn-toast[data-visible="1"] {
   opacity: 1;
-  transform: translate(-50%, -50%) scale(1.05);
 }
 
 /* ==== R8 整桌一体感：羊皮嵌板 + 木砖建造钮 + 半身肖像 ==== */

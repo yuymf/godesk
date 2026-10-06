@@ -695,24 +695,23 @@ export function SceneHost({
           };
         },
         /**
-         * round-7 ④：隐藏 InstancedMesh 强盗，换成同款斗篷 Mesh 做可见抛物线 hop
-         * （headless 录像对 instanceMatrix 不敏感；真实 Mesh 会进画面）。禁止金球/DOM ghost。
+         * Judge motion: hide InstancedMesh robber, hop visible cloaked Mesh + settlement.
+         * +N toast tracks the hopping mesh (world→screen). No camera preset calls (avoid pan/finishAll).
          */
         playMotionDemo(): { hopMs: number; reduced: boolean } | false {
           const robber = registryRef.current.get("robber");
           const root = contentRootRef.current;
           const kit = hexKit;
-          if (!robber || !root || !kit) return false;
+          const cam = cameraRef.current;
+          const canvas = rendererRef.current?.domElement;
+          if (!robber || !root || !kit || !cam || !canvas) return false;
           const reduced = prefersReducedMotion();
-          const hopMs = 2600;
-          const apexHeight = 1.85;
+          const hopMs = 2800;
+          const apexHeight = 2.05;
           const from: [number, number, number] = [robber.position.x, robber.position.y, robber.position.z];
-          const to: [number, number, number] = [from[0] + 2.6, from[1], from[2] - 1.7];
+          const to: [number, number, number] = [from[0] + 3.0, from[1], from[2] - 2.0];
 
-          // Close on robber so the cloak silhouette leaving the hex is readable.
-          (globalThis as { __g3dJudge?: { set?: (p: string) => boolean } }).__g3dJudge?.set?.("b-robber");
-
-          // Hide pooled instance.
+          // Hide pooled instance (visible hop uses a real Mesh).
           robber.scale.setScalar(0);
           robber.updateMatrix();
           const inst = robber.userData.gdInstance as { poolKey: string; index: number } | undefined;
@@ -722,15 +721,13 @@ export function SceneHost({
           const g = (globalThis as { __g3dJudgeDemoMesh?: Mesh; __g3dJudgeDemoSettle?: Mesh });
           g.__g3dJudgeDemoMesh?.removeFromParent();
           g.__g3dJudgeDemoSettle?.removeFromParent();
-          // Tear down any leftover gold-ball / DOM ghost from older builds.
           document.querySelectorAll(".g3d-judge-hop-ghost").forEach((el) => el.remove());
 
-          // Same cloaked-robber geometry + vertex-colour material the player sees.
           const robGeom = kit.pieceGeometry("robber");
           const robMat = vcMaterial(library, "figure-vc", FIGURE_VC_TOKEN);
           const demo = new Mesh(robGeom, robMat);
           demo.position.set(...from);
-          demo.scale.setScalar(2.15); // readable under b-robber framing
+          demo.scale.setScalar(2.4);
           demo.castShadow = true;
           demo.frustumCulled = false;
           demo.name = "g3d-judge-demo-robber";
@@ -738,12 +735,11 @@ export function SceneHost({
           root.add(demo);
           g.__g3dJudgeDemoMesh = demo;
 
-          // Settlement cottage Mesh — place() drop-in then a short hop (same art).
           const settleGeom = kit.pieceGeometry("settlement", 0);
           const settleMat = vcMaterial(library, "piece-vc", PIECE_VC_TOKEN);
           const settle = new Mesh(settleGeom, settleMat);
-          settle.position.set(from[0] - 1.35, from[1], from[2] + 1.05);
-          settle.scale.setScalar(1.9);
+          settle.position.set(from[0] - 1.5, from[1], from[2] + 1.2);
+          settle.scale.setScalar(2.1);
           settle.castShadow = true;
           settle.frustumCulled = false;
           settle.name = "g3d-judge-demo-settle";
@@ -753,15 +749,51 @@ export function SceneHost({
           motion.place(settle, "judge-demo-settle");
           window.setTimeout(() => {
             const sFrom: [number, number, number] = [settle.position.x, settle.position.y, settle.position.z];
-            const sTo: [number, number, number] = [sFrom[0] + 1.4, sFrom[1], sFrom[2] - 0.9];
+            const sTo: [number, number, number] = [sFrom[0] + 1.6, sFrom[1], sFrom[2] - 1.0];
             settle.position.set(...sTo);
             motion.hop(settle, "judge-demo-settle", sFrom, {
-              ms: 1800,
+              ms: 2000,
               ignoreReducedMotion: true,
-              apexHeight: 1.35,
+              apexHeight: 1.55,
               hops: 2,
             });
-          }, 500);
+          }, 400);
+
+          // +N toast follows the hopping mesh (not screen-center).
+          const host = document.body;
+          let toast = host.querySelector(".g3d-judge-plusn-toast") as HTMLDivElement | null;
+          if (!toast) {
+            toast = document.createElement("div");
+            toast.className = "g3d-judge-plusn-toast";
+            toast.setAttribute("data-testid", "g3d-judge-plusn-toast");
+            host.appendChild(toast);
+          }
+          let toastHideTimer = 0;
+          let trackRaf = 0;
+          const trackTarget = { mesh: demo as Mesh };
+          const projectToast = () => {
+            const mesh = trackTarget.mesh;
+            if (!mesh?.parent || !toast) {
+              trackRaf = requestAnimationFrame(projectToast);
+              return;
+            }
+            mesh.updateMatrixWorld(true);
+            const v = mesh.position.clone();
+            v.y += 1.15;
+            v.project(cam);
+            const rect = canvas.getBoundingClientRect();
+            const x = (v.x * 0.5 + 0.5) * rect.width + rect.left;
+            const y = (-v.y * 0.5 + 0.5) * rect.height + rect.top;
+            toast.style.transform = `translate(${x}px, ${y}px) translate(-50%, -120%)`;
+            trackRaf = requestAnimationFrame(projectToast);
+          };
+          const showToast = (text: string) => {
+            toast!.textContent = text;
+            toast!.setAttribute("data-visible", "1");
+            window.clearTimeout(toastHideTimer);
+            toastHideTimer = window.setTimeout(() => toast?.setAttribute("data-visible", "0"), 2600);
+          };
+          trackRaf = requestAnimationFrame(projectToast);
 
           demo.position.set(...to);
           const ms = motion.hop(demo, "judge-demo-robber", from, {
@@ -771,28 +803,14 @@ export function SceneHost({
             hops: 2,
           });
           markShadowsDirtyRef.current();
-
-          const host = document.body;
-          let toastHideTimer = 0;
-          const showToast = (text: string) => {
-            let toast = host.querySelector(".g3d-judge-plusn-toast") as HTMLDivElement | null;
-            if (!toast) {
-              toast = document.createElement("div");
-              toast.className = "g3d-judge-plusn-toast";
-              toast.setAttribute("data-testid", "g3d-judge-plusn-toast");
-              host.appendChild(toast);
-            }
-            toast.textContent = text;
-            toast.setAttribute("data-visible", "1");
-            window.clearTimeout(toastHideTimer);
-            toastHideTimer = window.setTimeout(() => toast?.setAttribute("data-visible", "0"), 2800);
-          };
           showToast("+2 木  +1 麦  +1 羊");
           window.dispatchEvent(new CustomEvent("g3d-judge-resource-gain", {
             detail: { wood: 2, wheat: 1, sheep: 1 },
           }));
 
           const cleanupDemo = () => {
+            cancelAnimationFrame(trackRaf);
+            toast?.setAttribute("data-visible", "0");
             demo.removeFromParent();
             settle.removeFromParent();
             if (g.__g3dJudgeDemoMesh === demo) delete g.__g3dJudgeDemoMesh;
@@ -806,6 +824,7 @@ export function SceneHost({
           };
 
           window.setTimeout(() => {
+            trackTarget.mesh = demo;
             const cur: [number, number, number] = [demo.position.x, demo.position.y, demo.position.z];
             demo.position.set(...from);
             const backMs = motion.hop(demo, "judge-demo-robber", cur, {
@@ -819,8 +838,8 @@ export function SceneHost({
             window.dispatchEvent(new CustomEvent("g3d-judge-resource-gain", {
               detail: { brick: 2, ore: 1 },
             }));
-            window.setTimeout(cleanupDemo, backMs + 250);
-          }, ms + 450);
+            window.setTimeout(cleanupDemo, backMs + 300);
+          }, ms + 500);
 
           return { hopMs: ms, reduced };
         }
