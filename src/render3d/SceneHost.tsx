@@ -1,18 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  AmbientLight,
   BoxGeometry,
   Color,
   CylinderGeometry,
-  DirectionalLight,
   ExtrudeGeometry,
   Mesh,
-  MeshStandardMaterial,
   type Object3D,
   PerspectiveCamera,
   Scene,
   Shape,
   SphereGeometry,
+  type Texture,
   WebGLRenderer,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -29,6 +27,24 @@ import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
 import { markInteractive, perfModeEnabled, perfRecorder } from "./perf";
 import { dieFaceEuler, MotionController } from "./motion";
 import { PerfOverlay } from "./PerfOverlay";
+import {
+  configureRenderer,
+  createLightingRig,
+  createRoomEnvironment,
+  createSkyDome,
+} from "./lighting";
+import { MaterialLibrary } from "./materials";
+import {
+  PROP_MATERIALS,
+  SCENE_TOKENS,
+  TERRAIN_MATERIALS,
+  TILE_RADIUS,
+  islandBounds,
+  pbrResolutionFor,
+  seatMaterial,
+  type LightingSpec,
+  type MaterialToken,
+} from "./tokens";
 import {
   RuntimeDowngradeMonitor,
   detectEnvFromBrowser,
@@ -48,20 +64,17 @@ export type SceneHostProps = {
   interactive?: boolean;
   legalActions?: readonly PickableLegalAction[];
   onPick?: (action: { type: string; payload?: Record<string, unknown> }) => void;
+  /** RenderSpec.lighting（G3D-14/15 传入）；缺省为 SCENE_TOKENS.lighting。 */
+  lighting?: LightingSpec;
   /** G3D-09: active seat; a change triggers the turn camera reframe. */
   activeSeat?: number | null;
 };
 
-const TERRAIN_HEX: Record<string, number> = {
-  wood: 0x2f6b3a,
-  brick: 0xb85a3a,
-  sheep: 0x8fbf6a,
-  wheat: 0xd4b84a,
-  ore: 0x6a6f78,
-  desert: 0xc9b896,
-};
+/** 阴影贴图在场景变化后继续逐帧重绘的时长（覆盖 place/move/dice 动效）。 */
+const SHADOW_REFRESH_MS = 1_500;
+/** 可交互后延迟多久开始流式加载 PBR 贴图（避开首屏主线程窗口）。 */
+const PBR_STREAM_DELAY_MS = 1_200;
 
-const SEAT_HEX = [0xc0392b, 0x2980b9, 0x27ae60, 0xf39c12] as const;
 
 function supportsWebGL2(): boolean {
   try {
@@ -91,15 +104,54 @@ function disposeObject(object: Object3D): void {
     if (!mesh.isMesh) return;
     mesh.geometry?.dispose();
     const material = mesh.material;
+    // 共享材质由 MaterialLibrary 在卸载时统一释放（G3D-07）。
     if (Array.isArray(material)) {
-      for (const entry of material) entry.dispose();
-    } else {
-      material?.dispose();
+      for (const entry of material) if (!entry.userData.gdShared) entry.dispose();
+    } else if (material && !material.userData.gdShared) {
+      material.dispose();
     }
   });
 }
 
-function createNodeObject(node: SceneNode, caps: TierCaps): Object3D {
+/** 节点 → 共享材质 key 与 token（§3.7 材质预设）。 */
+export function materialFor(node: SceneNode): { key: string; token: MaterialToken } {
+  switch (node.kind) {
+    case "tile": {
+      const tag = node.tag && TERRAIN_MATERIALS[node.tag] ? node.tag : "desert";
+      return { key: `terrain-${tag}`, token: TERRAIN_MATERIALS[tag]! };
+    }
+    case "decor": {
+      const tag = node.tag && TERRAIN_MATERIALS[node.tag] ? node.tag : "wood";
+      const terrain = TERRAIN_MATERIALS[tag]!;
+      // 装饰物不走地块贴图（尺寸太小），只保留地形色 + pattern。
+      return { key: `decor-${tag}`, token: { ...terrain, pbrSet: undefined, roughness: 0.7 } };
+    }
+    case "number-token":
+      return node.tag === "hot"
+        ? { key: "number-token-hot", token: PROP_MATERIALS["number-token-hot"] }
+        : { key: "number-token", token: PROP_MATERIALS["number-token"] };
+    case "robber":
+      return { key: "robber", token: PROP_MATERIALS.robber };
+    case "settlement":
+    case "city":
+    case "road": {
+      const seat = node.seat ?? 0;
+      return { key: `seat-${seat}`, token: seatMaterial(seat) };
+    }
+    case "die":
+      return { key: "die", token: PROP_MATERIALS.die };
+    case "port":
+    case "ship":
+    case "dice-tray":
+      return { key: "wood", token: PROP_MATERIALS.wood };
+    default:
+      return { key: "cliff", token: PROP_MATERIALS.cliff };
+  }
+}
+
+function createNodeObject(node: SceneNode, caps: TierCaps, library: MaterialLibrary): Object3D {
+  const { key, token } = materialFor(node);
+  const mat = library.get(key, token);
   const applyPose = (mesh: Mesh) => {
     mesh.position.set(node.position[0], node.position[1], node.position[2]);
     if (node.rotationY !== undefined) mesh.rotation.y = node.rotationY;
@@ -114,56 +166,29 @@ function createNodeObject(node: SceneNode, caps: TierCaps): Object3D {
   };
 
   if (node.kind === "tile") {
-    const geom = new ExtrudeGeometry(hexShape(0.95), { depth: 0.28, bevelEnabled: false });
+    const geom = new ExtrudeGeometry(hexShape(TILE_RADIUS), { depth: 0.28, bevelEnabled: false });
     geom.rotateX(-Math.PI / 2);
-    const mat = new MeshStandardMaterial({
-      color: TERRAIN_HEX[node.tag ?? "desert"] ?? 0x888888,
-      roughness: 0.85,
-      metalness: 0.05,
-    });
     return applyPose(new Mesh(geom, mat));
   }
 
   if (node.kind === "number-token") {
-    const geom = new CylinderGeometry(0.22, 0.22, 0.06, 24);
-    const mat = new MeshStandardMaterial({
-      color: node.tag === "hot" ? 0xc0392b : 0xf5f0e1,
-      roughness: 0.7,
-    });
-    return applyPose(new Mesh(geom, mat));
+    return applyPose(new Mesh(new CylinderGeometry(0.22, 0.22, 0.06, 24), mat));
   }
 
   if (node.kind === "robber") {
-    const geom = new CylinderGeometry(0.12, 0.18, 0.7, 12);
-    const mat = new MeshStandardMaterial({ color: 0x2c3e50, emissive: 0x1a4a6a, emissiveIntensity: 0.35 });
-    return applyPose(new Mesh(geom, mat));
+    return applyPose(new Mesh(new CylinderGeometry(0.12, 0.18, 0.7, 12), mat));
   }
 
   if (node.kind === "settlement") {
-    const geom = new BoxGeometry(0.28, 0.28, 0.28);
-    const mat = new MeshStandardMaterial({
-      color: SEAT_HEX[node.seat ?? 0] ?? 0xffffff,
-      roughness: 0.55,
-    });
-    return applyPose(new Mesh(geom, mat));
+    return applyPose(new Mesh(new BoxGeometry(0.28, 0.28, 0.28), mat));
   }
 
   if (node.kind === "city") {
-    const geom = new BoxGeometry(0.36, 0.48, 0.36);
-    const mat = new MeshStandardMaterial({
-      color: SEAT_HEX[node.seat ?? 0] ?? 0xffffff,
-      roughness: 0.5,
-    });
-    return applyPose(new Mesh(geom, mat));
+    return applyPose(new Mesh(new BoxGeometry(0.36, 0.48, 0.36), mat));
   }
 
   if (node.kind === "road") {
-    const geom = new BoxGeometry(1, 1, 1);
-    const mat = new MeshStandardMaterial({
-      color: SEAT_HEX[node.seat ?? 0] ?? 0xffffff,
-      roughness: 0.75,
-    });
-    return applyPose(new Mesh(geom, mat));
+    return applyPose(new Mesh(new BoxGeometry(1, 1, 1), mat));
   }
 
   if (node.kind === "port" || node.kind === "ship" || node.kind === "die" || node.kind === "dice-tray" || node.kind === "decor") {
@@ -180,40 +205,25 @@ function createNodeObject(node: SceneNode, caps: TierCaps): Object3D {
           : node.kind === "decor"
             ? new SphereGeometry(0.18, 10, 10)
             : new BoxGeometry(0.4, 0.12, 0.4);
-    const mat = new MeshStandardMaterial({
-      color:
-        node.kind === "decor"
-          ? TERRAIN_HEX[node.tag ?? "wood"] ?? 0x666666
-          : node.kind === "die"
-            ? 0xf8f8f8
-            : 0x8b6914,
-      roughness: 0.7,
-    });
     return finish(new Mesh(geom, mat));
   }
 
   // cliff default
-  const geom = new CylinderGeometry(1, 1.05, 1, 6);
-  const mat = new MeshStandardMaterial({ color: 0x7a7368, roughness: 0.95 });
-  return applyPose(new Mesh(geom, mat));
+  return applyPose(new Mesh(new CylinderGeometry(1, 1.05, 1, 6), mat));
 }
 
-function updateNodeObject(object: Object3D, node: SceneNode): void {
+function updateNodeObject(object: Object3D, node: SceneNode, library: MaterialLibrary): void {
   object.position.set(node.position[0], node.position[1], node.position[2]);
   if (node.rotationY !== undefined) object.rotation.y = node.rotationY;
   if (node.scale) object.scale.set(node.scale[0], node.scale[1], node.scale[2]);
   else if (node.kind === "settlement" || node.kind === "city" || node.kind === "robber") object.scale.set(1, 1, 1);
   if (node.kind === "die") object.rotation.set(...dieFaceEuler(node.number));
   const mesh = object as Mesh;
-  if (mesh.isMesh && mesh.material && "color" in mesh.material) {
-    const material = mesh.material as MeshStandardMaterial;
-    if (node.kind === "tile" && node.tag) {
-      material.color.setHex(TERRAIN_HEX[node.tag] ?? 0x888888);
-    }
-    if ((node.kind === "settlement" || node.kind === "city" || node.kind === "road") && node.seat !== undefined) {
-      material.color.setHex(SEAT_HEX[node.seat] ?? 0xffffff);
-    }
-  }
+  if (!mesh.isMesh) return;
+  // 地形 / 座位变化：换成对应的共享材质（不改共享材质本身的颜色）。
+  const { key, token } = materialFor(node);
+  const next = library.get(key, token);
+  if (mesh.material !== next) mesh.material = next;
 }
 
 /**
@@ -226,6 +236,7 @@ export function SceneHost({
   interactive = false,
   legalActions = [],
   onPick,
+  lighting,
   activeSeat = null,
 }: SceneHostProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -255,6 +266,13 @@ export function SceneHost({
   const [perfMode] = useState(() => perfModeEnabled());
   const [activeTier, setActiveTier] = useState<RenderTierId>("high");
   const runtimeFloorRef = useRef<RenderTierId | null>(null);
+  const lightingRef = useRef<LightingSpec>(lighting ?? SCENE_TOKENS.lighting);
+  lightingRef.current = lighting ?? SCENE_TOKENS.lighting;
+  const rigRef = useRef<ReturnType<typeof createLightingRig> | null>(null);
+  const rendererRef = useRef<WebGLRenderer | null>(null);
+  /** 场景内容变化 → 阴影贴图在接下来 SHADOW_REFRESH_MS 内逐帧重绘。 */
+  const markShadowsDirtyRef = useRef<() => void>(() => {});
+  const [pbrState, setPbrState] = useState<"off" | "pending" | "512" | "256" | "error">("pending");
 
   function reframe(focus: readonly [number, number, number], id: string) {
     const motion = motionRef.current;
@@ -263,11 +281,11 @@ export function SceneHost({
     if (motion && camera && controls) motion.reframe(camera, controls, focus, id);
   }
 
-  function buildHost(root: Object3D, caps: TierCaps, motion: MotionController) {
+  function buildHost(root: Object3D, getCaps: () => TierCaps, library: MaterialLibrary, motion: MotionController) {
     return {
       root,
-      create: (node: SceneNode) => createNodeObject(node, caps),
-      update: updateNodeObject,
+      create: (node: SceneNode) => createNodeObject(node, getCaps(), library),
+      update: (object: Object3D, node: SceneNode) => updateNodeObject(object, node, library),
       disposeObject,
       motion: {
         added: (object: Object3D, node: SceneNode) => {
@@ -302,11 +320,12 @@ export function SceneHost({
     }
 
     const scene = new Scene();
-    scene.background = new Color(0x87b5d4);
+    scene.background = new Color(SCENE_TOKENS.sky.horizon);
 
     const camera = new PerspectiveCamera(45, 1, 0.1, 100);
     camera.position.set(0, 9, 12);
 
+    setPbrState("pending");
     const env = detectEnvFromBrowser();
     let resolution = resolveTier({ env, runtimeFloor: runtimeFloorRef.current });
     let caps = resolution.caps;
@@ -314,8 +333,12 @@ export function SceneHost({
     console.info(tierLogLine(resolution, "mount"));
 
     const renderer = new WebGLRenderer({ antialias: caps.antialias, alpha: false });
-    renderer.shadowMap.enabled = true;
-    renderer.setClearColor(0x87b5d4, 1);
+    // G3D-07：AgX 色调映射 + sRGB 输出 + PCF 软阴影（§3.7 / §4.3）。
+    configureRenderer(renderer, lightingRef.current);
+    // 静止场景复用阴影贴图；内容变化后 SHADOW_REFRESH_MS 内逐帧重绘（见 tick）。
+    renderer.shadowMap.autoUpdate = false;
+    renderer.setClearColor(new Color(SCENE_TOKENS.sky.horizon), 1);
+    rendererRef.current = renderer;
     // setSize(..., false) leaves the canvas CSS size unset, so on DPR > 1 the
     // canvas laid out at its backing-store width (e.g. 824 px on a 412 px
     // phone) and widened the page. Pin the CSS box to the container (G3D-05).
@@ -335,19 +358,33 @@ export function SceneHost({
     controls.target.set(0, 0, 0);
     controls.maxPolarAngle = Math.PI * 0.48;
 
-    const ambient = new AmbientLight(0xffffff, 0.55);
-    scene.add(ambient);
-    const sun = new DirectionalLight(0xfff2d6, 1.35);
-    sun.position.set(6, 12, 4);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(caps.shadowMapSize, caps.shadowMapSize);
-    sun.shadow.radius = caps.shadowRadius;
-    scene.add(sun);
+    const rig = createLightingRig(scene, lightingRef.current, caps);
+    rigRef.current = rig;
+    const sky = createSkyDome();
+    scene.add(sky);
+    const library = new MaterialLibrary({ clearcoat: caps.id === "high" });
+    // high 档：RoomEnvironment 环境反射（强度 0.35，只挂光泽材质）；medium / low 关闭（§4.7）。
+    let environment: ReturnType<typeof createRoomEnvironment> | null = null;
+    const applyEnvironment = (next: TierCaps) => {
+      if (next.envReflection && !environment) environment = createRoomEnvironment(renderer);
+      library.setEnvironment(next.envReflection && environment ? environment.texture : null, SCENE_TOKENS.environment.intensity);
+    };
+    applyEnvironment(caps);
+    container.dataset.toneMapping = "agx";
+    delete container.dataset.pbrReused;
+    container.dataset.shadowMapSize = String(caps.shadowMapSize);
+
+    let shadowDirtyUntil = Number.POSITIVE_INFINITY; // 首次挂载：直到第一次内容稳定
+    let shadowFrames = 0;
+    const markShadowsDirty = () => {
+      shadowDirtyUntil = performance.now() + SHADOW_REFRESH_MS;
+    };
+    markShadowsDirtyRef.current = markShadowsDirty;
 
     const contentRoot = new Scene();
     scene.add(contentRoot);
     contentRootRef.current = contentRoot;
-    reconcileHostRef.current = buildHost(contentRoot, caps, motion);
+    reconcileHostRef.current = buildHost(contentRoot, () => caps, library, motion);
     const hitRoot = new Scene();
     scene.add(hitRoot);
     hitRootRef.current = hitRoot;
@@ -381,19 +418,18 @@ export function SceneHost({
       renderer,
       scene,
       remount: () => setHostEpoch((epoch) => epoch + 1),
+      tier: () => caps.id,
     });
 
     // Fallback test cube when no hex state yet (G3D-02 smoke path).
     if (!hexSettlement) {
       const geom = new BoxGeometry(1, 1, 1);
-      const mat = new MeshStandardMaterial({ color: 0xc56b3a });
-      const cube = new Mesh(geom, mat);
+      const cube = new Mesh(geom, library.get("seat-0", seatMaterial(0)));
       cube.position.set(0, 0.5, 0);
       cube.castShadow = true;
       contentRoot.add(cube);
       const groundGeom = new BoxGeometry(12, 0.05, 12);
-      const groundMat = new MeshStandardMaterial({ color: 0xd7e6c8 });
-      const ground = new Mesh(groundGeom, groundMat);
+      const ground = new Mesh(groundGeom, library.get("ground", PROP_MATERIALS.ground));
       ground.position.y = -0.02;
       ground.receiveShadow = true;
       contentRoot.add(ground);
@@ -407,10 +443,11 @@ export function SceneHost({
     let lastRenderedAt = 0;
 
     const applyCapsToRenderer = (next: TierCaps) => {
-      sun.shadow.mapSize.set(next.shadowMapSize, next.shadowMapSize);
-      sun.shadow.radius = next.shadowRadius;
-      sun.shadow.map?.dispose();
-      sun.shadow.map = null;
+      rig.applyCaps(next);
+      applyEnvironment(next);
+      library.setClearcoat(next.id === "high");
+      markShadowsDirty();
+      container.dataset.shadowMapSize = String(next.shadowMapSize);
       // Tile castShadow: update existing meshes
       contentRoot.traverse((child) => {
         const mesh = child as Mesh;
@@ -437,6 +474,55 @@ export function SceneHost({
     observer?.observe(container);
     window.addEventListener("resize", onWindowResize);
     resize();
+
+    // G3D-07：可交互后按档位流式替换 G3D-22 KTX2 PBR 套件（high/medium 512，low 256）。
+    let pbrRequested = false;
+    let pbrTimer: number | null = null;
+    let streamer: { dispose(): void } | null = null;
+    const startPbrStreaming = () => {
+      pbrRequested = true;
+      const resolutionPx = pbrResolutionFor(caps.id);
+      if (new URLSearchParams(window.location.search).get("pbr") === "0") {
+        setPbrState("off");
+        return;
+      }
+      pbrTimer = window.setTimeout(() => {
+        pbrTimer = null;
+        void import("./assets/pbr-textures")
+          .then(async ({ createPbrStreamer }) => {
+            if (disposed) return;
+            const pbr = createPbrStreamer(renderer);
+            streamer = pbr;
+            const sets = library.pbrSetsInUse();
+            let reused = 0;
+            // 逐套加载：每套到达即替换，避免一次性大批量编译 / 上传。
+            for (const set of sets) {
+              if (disposed) return;
+              const loaded = await pbr.load(set, resolutionPx);
+              if (disposed) {
+                if (loaded) for (const texture of [loaded.maps.map, loaded.maps.normalMap, loaded.maps.ormMap] as Texture[]) texture.dispose();
+                return;
+              }
+              if (!loaded) continue;
+              library.applyPbrSet(set, loaded.maps);
+              if (loaded.resolution !== resolutionPx) reused += 1;
+            }
+            // 降档重建后复用了降档前已下载的 512 套件（不重复下载 256）。
+            if (reused > 0) container.dataset.pbrReused = String(reused);
+            pbr.dispose();
+            streamer = null;
+            if (!disposed) {
+              setPbrState(resolutionPx === 512 ? "512" : "256");
+              markShadowsDirty();
+            }
+          })
+          .catch((error: unknown) => {
+            if (disposed) return;
+            console.warn("[godesk.pbr] texture streaming failed", error);
+            setPbrState("error");
+          });
+      }, PBR_STREAM_DELAY_MS);
+    };
 
     const tick = (now: number) => {
       if (disposed) return;
@@ -477,9 +563,18 @@ export function SceneHost({
 
       motion.update(now);
       controls.update();
+      // 阴影：内容 / 档位变化后 SHADOW_REFRESH_MS 内逐帧重绘，之后复用（方向光阴影与机位无关）。
+      if (now < shadowDirtyUntil || shadowFrames < 2) {
+        renderer.shadowMap.needsUpdate = true;
+        shadowFrames += 1;
+      }
       renderer.render(scene, camera);
       const hasContent = contentRoot.children.length > 0;
-      if (hasContent && renderer.info.render.calls > 0) markInteractive();
+      if (hasContent && renderer.info.render.calls > 0) {
+        markInteractive();
+        if (shadowDirtyUntil === Number.POSITIVE_INFINITY) markShadowsDirty();
+        if (!pbrRequested) startPbrStreaming();
+      }
       perf?.frame(renderer, now, hasContent);
     };
     frameId = window.requestAnimationFrame(tick);
@@ -487,6 +582,8 @@ export function SceneHost({
     return () => {
       disposed = true;
       window.cancelAnimationFrame(frameId);
+      if (pbrTimer !== null) window.clearTimeout(pbrTimer);
+      streamer?.dispose();
       window.removeEventListener("resize", onWindowResize);
       renderer.domElement.removeEventListener("pointerup", onPointerUp);
       observer?.disconnect();
@@ -514,7 +611,14 @@ export function SceneHost({
           else material?.dispose();
         }
       });
-      sun.shadow.dispose();
+      scene.remove(sky);
+      sky.geometry.dispose();
+      (sky.material as { dispose(): void }).dispose();
+      library.setEnvironment(null, 0);
+      environment?.dispose();
+      rig.dispose();
+      rigRef.current = null;
+      library.dispose();
       perf?.beforeDispose(renderer);
       detachPerf?.();
       renderer.dispose();
@@ -527,6 +631,8 @@ export function SceneHost({
       hitRootRef.current = null;
       cameraRef.current = null;
       canvasRef.current = null;
+      rendererRef.current = null;
+      markShadowsDirtyRef.current = () => {};
       motionRef.current = null;
       controlsRef.current = null;
       lastSeatRef.current = null;
@@ -541,12 +647,22 @@ export function SceneHost({
   useEffect(() => {
     const host = reconcileHostRef.current;
     if (!host || !hexSettlement) return;
+    const prev = modelRef.current;
     const next = mapHexSettlementToScene(hexSettlement);
-    const hadModel = modelRef.current !== null;
+    const hadModel = prev !== null;
     const previousAction = lastActionRef.current;
     lastActionRef.current = hexSettlement.lastAction;
     diceAnimatedRef.current = false;
-    modelRef.current = reconcileScene(host, modelRef.current, next, registryRef.current);
+    modelRef.current = reconcileScene(host, prev, next, registryRef.current);
+    // 阴影相机只在布局（地块集合）变化时按包围球重算一次（§4.3）。
+    const tileKey = (model: SceneModel | null) =>
+      model ? model.nodes.filter((node) => node.kind === "tile").map((node) => node.id).join("|") : "";
+    if (tileKey(prev) !== tileKey(next)) {
+      const bounds = islandBounds(next.nodes);
+      rigRef.current?.fitToBounds(bounds.center, bounds.radius);
+    }
+    // 覆盖 G3D-09 放置 / 强盗 / 骰子动效时长（SHADOW_REFRESH_MS ≥ 900 ms）。
+    markShadowsDirtyRef.current();
     // Repeated faces (e.g. 1+1 after the [1,1] rest pose) produce no node diff;
     // a transition into roll_dice still tumbles both dice.
     const rolled =
@@ -576,6 +692,16 @@ export function SceneHost({
     reframe([0, 0, 0], `turn:${activeSeat}`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSeat, ready, hostEpoch]);
+
+  useEffect(() => {
+    const rig = rigRef.current;
+    const renderer = rendererRef.current;
+    if (!rig || !renderer || !ready) return;
+    const spec = lighting ?? SCENE_TOKENS.lighting;
+    rig.applyLighting(spec);
+    configureRenderer(renderer, spec);
+    markShadowsDirtyRef.current();
+  }, [lighting, ready, hostEpoch]);
 
   useEffect(() => {
     const hitRoot = hitRootRef.current;
@@ -613,6 +739,7 @@ export function SceneHost({
       className={className}
       data-testid="g3d-scene-host"
       data-tier={activeTier}
+      data-pbr={pbrState}
       ref={containerRef}
       role="img"
       style={{ width: "100%", height: "100%", minHeight: 280, touchAction: "none", position: perfMode ? "relative" : undefined }}

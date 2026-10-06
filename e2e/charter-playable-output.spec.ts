@@ -7,9 +7,10 @@ test.afterEach(async ({ page }, testInfo) => {
 async function expectLightPlaySurface(page: Page) {
   const header = page.locator(".room-shell-header");
   await expect(header).toBeVisible();
+  // G3D-07（SPEC §3.7）：房间头部用 `--surface-paper` 纸色 #fbf8f1，房间底色仍为白。
   await expect
     .poll(async () => header.evaluate((el) => getComputedStyle(el).backgroundColor))
-    .toBe("rgb(255, 255, 255)");
+    .toBe("rgb(251, 248, 241)");
   await expect
     .poll(async () =>
       page.locator(".room-view").evaluate((el) => getComputedStyle(el).backgroundColor),

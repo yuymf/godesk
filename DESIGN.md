@@ -18,15 +18,18 @@ players, legal moves, and original game artwork may use color.
 
 | Role | Value | Use |
 | --- | --- | --- |
-| Canvas / paper | `#ffffff` | Page and primary working surface |
+| Canvas / paper (`--canvas`, `--paper`) | `#ffffff` | Page and primary working surface |
 | Ink / action | `#171717` | Text and primary buttons |
 | Muted | `#666666` | Supporting prose |
-| Raised surface | `#f5f5f5` | Inputs, secondary surfaces, selected chips |
+| Sunken fill (`--surface-sunken`) | `#f5f5f5` | Inputs, secondary surfaces, selected chips |
 | Line | `#e5e5e5` | Boundaries that explain grouping |
-| Board surround | `#ededed` | Quiet frame around game content |
+| Game surfaces (`--surface-canvas` / `-paper` / `-raised` / `-board`) | `#f6f1e7` / `#fbf8f1` / `#ffffff` / `#e9e1d0` | Warm paper tones around 3D tables and game panels (G3D SPEC §3.7) |
+| Shadows (`--shadow-soft` / `-card` / `-float`) | warm ink `rgba(41,33,20,·)`, two layers each | Real shadows for the composer, gallery artwork, and game panels (G3D SPEC §3.7) |
+| HUD glass (`--hud-glass`) | `rgba(251,248,241,0.86)` + `blur(12px)` | Overlays above the 3D canvas |
 
 Use the accent tokens for interface actions; use game-specific colors for game
-objects. No green brand tint, gradients, accent rails, or floating card shadows.
+objects. No green brand tint, gradients, or accent rails. Shadows come only from
+the `--shadow-*` tokens; do not hand-write new `box-shadow` values.
 Corners: 8px controls, 16px game artwork, 24px composer, full-round primary
 actions. Space: 4 / 8 / 12 / 16 / 24 / 40 / 64 / 96px.
 

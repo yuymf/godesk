@@ -556,7 +556,7 @@
   padding: 1.5rem clamp(1.5rem, 5vw, 5rem);
   border-bottom: 1px solid rgb(23 23 23 / 12%);
   color: var(--ink);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   box-shadow: inset 0 -3px 0 var(--accent);
 }
 
@@ -979,7 +979,7 @@ summary:focus-visible {
   min-height: 44px;
   padding: 12px 13px;
   color: var(--ink);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border: 1px solid #30343d;
   border-radius: 9px;
   line-height: 1.5;
@@ -992,7 +992,7 @@ summary:focus-visible {
   min-height: 108px;
   padding: 12px 13px;
   color: var(--ink);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border: 1px solid #30343d;
   border-radius: 9px;
   line-height: 1.5;
@@ -2587,7 +2587,7 @@ summary:focus-visible {
   gap: 6px 8px;
   align-items: center;
   padding: 10px;
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--ink);
@@ -2669,7 +2669,7 @@ summary:focus-visible {
 .room-view:not(.room-view-voyage) .room-shell-header {
   padding: 1.1rem clamp(1.25rem, 4vw, 4rem);
   color: var(--ink);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border-bottom: 1px solid rgb(23 23 23 / 12%);
   box-shadow: inset 0 -3px 0 var(--accent);
 }
@@ -2811,7 +2811,7 @@ summary:focus-visible {
   min-width: 0;
   padding: 0.68rem 0.8rem;
   color: var(--ink);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border: 1px solid #d5c7ad;
   border-radius: 0.45rem;
   font-size: 0.78rem;
@@ -2906,7 +2906,7 @@ summary:focus-visible {
 }
 
 .room-game-table.is-conversation .surface-action-card {
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border-color: var(--line);
   box-shadow: none;
 }
@@ -2960,7 +2960,7 @@ summary:focus-visible {
   padding: 1rem;
   overflow: hidden;
   color: var(--ink);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border: 2px solid #d2b77a;
   border-radius: 0.75rem;
   box-shadow: none;
@@ -3166,7 +3166,7 @@ summary:focus-visible {
   padding: 0.85rem;
   color: var(--ink);
   text-align: left;
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border: 1px solid #d4c7ad;
   border-radius: 0.6rem;
   cursor: not-allowed;
@@ -3280,7 +3280,7 @@ summary:focus-visible {
   margin: 1rem 0;
   padding: 0.9rem 1rem;
   color: var(--muted);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border: 1px solid #d5c7ad;
   border-radius: 0.45rem;
   font-size: 0.78rem;
@@ -3344,7 +3344,7 @@ summary:focus-visible {
   min-height: 4.3rem;
   padding: 0.7rem 0.8rem;
   color: var(--ink);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border: 1px solid #d5c7ad;
   border-radius: 0.45rem;
   font: inherit;
@@ -3559,7 +3559,7 @@ summary:focus-visible {
 .room-view:not(.room-view-voyage) > .action-log {
   align-self: stretch;
   color: var(--ink);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border-left: 1px solid rgb(23 23 23 / 12%);
   box-shadow: inset 3px 0 0 var(--accent);
 }
@@ -3701,7 +3701,7 @@ summary:focus-visible {
   min-height: 40px;
   padding: 0 10px;
   color: var(--ink);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border: 1px solid var(--line);
   border-radius: 10px;
 }
@@ -3723,7 +3723,7 @@ summary:focus-visible {
 
 .room-view .room-shell-header {
   color: var(--ink);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border-bottom: 1px solid rgb(23 23 23 / 12%);
   box-shadow: inset 0 -3px 0 var(--accent);
 }
@@ -3754,7 +3754,7 @@ summary:focus-visible {
 .room-view > .action-log,
 .replay-view > .action-log {
   color: var(--ink);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border-left: 1px solid rgb(23 23 23 / 12%);
   box-shadow: inset 3px 0 0 var(--accent);
 }
@@ -3789,7 +3789,7 @@ summary:focus-visible {
   min-height: 14rem;
   padding: 1.15rem 1.25rem 1.35rem;
   background:
-    var(--surface-raised);
+    var(--surface-sunken);
   border: 1px solid var(--line);
   border-radius: 0.9rem;
   box-shadow: none;
@@ -4954,7 +4954,7 @@ summary:focus-visible {
 .generation-plan-facts { gap: var(--space-3); }
 .generation-plan-facts div {
   padding: var(--space-3);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border: 0;
   border-radius: var(--radius-sm);
 }
@@ -4963,7 +4963,7 @@ summary:focus-visible {
 .generation-plan-columns { gap: var(--space-3); }
 .generation-plan-columns section {
   padding: var(--space-4);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border: 0;
   border-radius: var(--radius-md);
 }
@@ -4973,7 +4973,7 @@ summary:focus-visible {
 .generation-plan-actions p { color: var(--muted); }
 .generation-plan-columns li b { color: var(--ink); }
 .generation-plan-actions { border-top-color: var(--line); }
-.studio-agent-activity { background: var(--surface-raised); border-color: var(--line); border-radius: var(--radius-md); }
+.studio-agent-activity { background: var(--surface-sunken); border-color: var(--line); border-radius: var(--radius-md); }
 .studio-agent-activity span { color: var(--muted); }
 
 .generation-plan-actions button,
@@ -5024,7 +5024,7 @@ summary:focus-visible {
   width: 100%;
   min-height: 42px;
   color: var(--ink);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border: 1px solid rgb(23 23 23 / 18%);
   border-radius: var(--radius-sm);
   font-size: var(--type-md);
@@ -5039,7 +5039,7 @@ summary:focus-visible {
 .room-command-bar,
 .room-game-table { border-color: rgb(23 23 23 / 10%); border-radius: var(--radius-lg); box-shadow: var(--shadow-soft); }
 .room-game-table { box-shadow: var(--shadow-card); }
-.room-view > .action-log { background: var(--surface-raised); border-color: rgb(23 23 23 / 10%); box-shadow: none; }
+.room-view > .action-log { background: var(--surface-sunken); border-color: rgb(23 23 23 / 10%); box-shadow: none; }
 .room-view > .action-log > code { display: none; }
 .room-view-voyage > .action-log,
 .room-view-voyage > .room-feedback-panel {
@@ -5072,7 +5072,7 @@ summary:focus-visible {
 .othello-hud-status,
 .catan-hud-status {
   padding: var(--space-4);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border-radius: var(--radius-md);
   box-shadow: inset 4px 0 0 var(--accent);
 }
@@ -5087,7 +5087,7 @@ summary:focus-visible {
 .catan-score,
 .catan-hud-resources li,
 .catan-hud-awards div {
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border: 0;
   border-radius: var(--radius-sm);
 }
@@ -5103,7 +5103,7 @@ summary:focus-visible {
 .catan-action:disabled { background: var(--surface-board); border-color: var(--surface-board); color: var(--muted); opacity: 1; cursor: not-allowed; box-shadow: none; }
 .othello-pass:focus-visible,
 .catan-action:focus-visible { outline-color: var(--accent); }
-.catan-hud-resources { padding: var(--space-3) var(--space-4); background: var(--surface-raised); border-radius: var(--radius-md); }
+.catan-hud-resources { padding: var(--space-3) var(--space-4); background: var(--surface-sunken); border-radius: var(--radius-md); }
 .catan-hud-resources { grid-column: 1; }
 .catan-hud-resources ul { margin-top: var(--space-2); }
 .catan-hud-resources li { background: var(--surface-paper); padding: var(--space-2) var(--space-3); }
@@ -5117,7 +5117,7 @@ summary:focus-visible {
 .catan-hit.is-legal:not(:disabled) { border-color: white; background: rgb(23 23 23 / 46%); box-shadow: 0 0 0 3px var(--accent-deep); }
 .catan-hit.is-legal:not(:disabled):hover,
 .catan-hit.is-legal:not(:disabled):focus-visible { background: rgb(23 23 23 / 70%); outline: 3px solid white; }
-.catan-action-row { justify-content: flex-start; padding: var(--space-3); background: var(--surface-raised); border-radius: var(--radius-md); }
+.catan-action-row { justify-content: flex-start; padding: var(--space-3); background: var(--surface-sunken); border-radius: var(--radius-md); }
 .catan-action { min-height: 42px; background: var(--accent); border-color: var(--accent); border-radius: var(--radius-sm); }
 .catan-action:hover:not(:disabled),
 .othello-pass:hover:not(:disabled) { background: var(--accent-deep); }
@@ -5134,19 +5134,19 @@ summary:focus-visible {
   gap: var(--space-4);
   align-items: center;
   padding: var(--space-4) var(--space-5);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border-radius: var(--radius-md);
   box-shadow: inset 4px 0 0 var(--accent);
 }
 .auction-status strong { font-size: var(--type-xl); }
 .auction-status p { margin: var(--space-1) 0; color: var(--muted); font-size: var(--type-md); }
 .auction-seats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
-.auction-seat { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-3); padding: var(--space-4); background: var(--surface-raised); border-radius: var(--radius-md); }
+.auction-seat { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-3); padding: var(--space-4); background: var(--surface-sunken); border-radius: var(--radius-md); }
 .auction-seat.is-active { box-shadow: inset 4px 0 0 var(--accent); }
 .auction-seat strong { flex: 1 0 100%; font-size: var(--type-lg); }
 .auction-seat span { color: var(--muted); font-size: var(--type-md); }
 .auction-seat b { color: var(--ink); font-size: var(--type-lg); }
-.auction-actions { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-3); padding: var(--space-4); background: var(--surface-raised); border-radius: var(--radius-md); }
+.auction-actions { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-3); padding: var(--space-4); background: var(--surface-sunken); border-radius: var(--radius-md); }
 .auction-actions label { display: grid; gap: var(--space-1); color: var(--muted); font-size: var(--type-sm); font-weight: 700; }
 .auction-actions input { box-sizing: border-box; width: 128px; min-height: 42px; padding: var(--space-2); color: var(--ink); background: var(--surface-paper); border: 1px solid var(--line); border-radius: var(--radius-sm); font-size: var(--type-lg); }
 .auction-actions input:disabled { color: var(--faint); background: var(--surface-board); cursor: not-allowed; }
@@ -5192,7 +5192,7 @@ summary:focus-visible {
   border: 1px solid rgb(23 23 23 / 10%);
   border-radius: var(--radius-xl);
   background:
-    linear-gradient(180deg, rgb(255 255 255 / 92%), var(--surface-paper) 42%, var(--surface-raised)),
+    linear-gradient(180deg, rgb(255 255 255 / 92%), var(--surface-paper) 42%, var(--surface-sunken)),
     var(--surface-paper);
   box-shadow: var(--shadow-card);
 }
@@ -5210,7 +5210,7 @@ summary:focus-visible {
 .catan-hud-status {
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border: 1px solid rgb(23 23 23 / 6%);
 }
 
@@ -5282,14 +5282,14 @@ summary:focus-visible {
 
 .catan-hud-awards div {
   border: 1px solid rgb(23 23 23 / 8%);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border-radius: var(--radius-md);
 }
 
 .catan-stage-frame {
   padding: var(--space-3);
   border-radius: var(--radius-lg);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border: 1px solid rgb(23 23 23 / 10%);
   box-shadow: var(--shadow-soft);
 }
@@ -5323,7 +5323,7 @@ summary:focus-visible {
 .auction-lot-card {
   padding: var(--space-4);
   border-radius: var(--radius-lg);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border: 1px solid rgb(23 23 23 / 10%);
   box-shadow: var(--shadow-soft);
 }
@@ -5334,13 +5334,13 @@ summary:focus-visible {
 
 .auction-status.is-complete {
   border-left: 4px solid var(--accent-deep);
-  background: linear-gradient(90deg, var(--accent-soft), var(--surface-raised));
+  background: linear-gradient(90deg, var(--accent-soft), var(--surface-sunken));
 }
 
 .auction-status {
   padding: var(--space-4);
   border-radius: var(--radius-md);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border: 1px solid rgb(23 23 23 / 8%);
 }
 
@@ -5429,7 +5429,7 @@ summary:focus-visible {
 .invitation-link-row input {
   min-height: 42px;
   color: var(--ink);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border: 1px solid rgb(23 23 23 / 12%);
   border-radius: var(--radius-sm);
   font-size: var(--type-md);
@@ -5487,7 +5487,7 @@ summary:focus-visible {
   min-width: 4.75rem;
   padding: var(--space-2) var(--space-3);
   color: var(--ink);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border: 1px solid rgb(23 23 23 / 10%);
   border-radius: var(--radius-md);
   text-align: left;
@@ -5591,7 +5591,7 @@ summary:focus-visible {
   width: 3.25rem;
   height: 3.25rem;
   color: var(--accent);
-  background: var(--surface-raised);
+  background: var(--surface-sunken);
   border-radius: var(--radius-md);
   font-size: 1.35rem;
   font-weight: 700;
