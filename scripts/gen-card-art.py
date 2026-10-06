@@ -27,6 +27,7 @@ from lib.parchment import (  # noqa: E402
     brick_wall,
     caption_band,
     hatch,
+    hatch_in_mask,
     ore_crystal,
     parchment_base,
     paste_render,
@@ -81,13 +82,15 @@ def draw_resource(kind: str, w=384, h=512) -> Image.Image:
         pine_tree(d, cx - 55, cy - 50, 150, WOOD)
         pine_tree(d, cx + 10, cy - 70, 175, WOOD)
         pine_tree(d, cx + 60, cy - 40, 140, WOOD)
-        # hatched undergrowth
-        hatch(d, (cx - 100, cy + 60, cx + 100, cy + 110), spacing=5, angle=25, fill=INK, width=1)
-        d.arc((cx - 90, cy + 70, cx + 90, cy + 120), 200, 340, fill=SEA_NEAR, width=2)
+        # soft ground shade only (no hatch overlay — prior hatch spilled past frame)
+        shade = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        ImageDraw.Draw(shade).ellipse((cx - 95, cy + 55, cx + 95, cy + 110), fill=(42, 36, 28, 35))
+        img = Image.alpha_composite(img.convert("RGBA"), shade).convert("RGB")
+        d = ImageDraw.Draw(img)
     elif kind == "brick":
         # kiln hinterland
-        d.polygon([(cx - 110, cy + 40), (cx - 40, cy - 80), (cx + 30, cy + 40)], fill=tuple(max(0, c - 40) for c in BRICK), outline=INK)
-        hatch(d, (cx - 100, cy - 40, cx + 20, cy + 40), spacing=6, angle=60, fill=INK, width=1)
+        kiln = [(cx - 110, cy + 40), (cx - 40, cy - 80), (cx + 30, cy + 40)]
+        d.polygon(kiln, fill=tuple(max(0, c - 40) for c in BRICK), outline=INK)
         brick_wall(d, cx + 20, cy + 10, cols=6, rows=5, bw=26, bh=15)
         # clay mound
         d.ellipse((cx - 120, cy + 70, cx - 40, cy + 120), fill=BRICK, outline=INK)
@@ -97,10 +100,9 @@ def draw_resource(kind: str, w=384, h=512) -> Image.Image:
         for i in range(18):
             x = 50 + i * 16
             d.line((x, cy + 90, x + (i % 3) - 1, cy + 40 - (i % 5) * 3), fill=SHEEP, width=2)
-        # bushes
+        # bushes — solid fill + outline only (no hatch slabs)
         for bx, by, br in ((cx - 90, cy + 50, 35), (cx + 85, cy + 55, 30), (cx - 20, cy + 70, 25)):
             d.ellipse((bx - br, by - br // 2, bx + br, by + br // 2), fill=SHEEP, outline=INK)
-            hatch(d, (bx - br, by - br // 2, bx + br, by + br // 2), spacing=4, angle=40, fill=INK, width=1)
         # composite Cycles sheep render
         sheep = tone_render(RENDERS / "sheep.png", 220, tint=SHEEP)
         if sheep:
@@ -123,8 +125,8 @@ def draw_resource(kind: str, w=384, h=512) -> Image.Image:
         d.rectangle((cx + 92, cy + 88, cx + 108, cy + 100), outline=INK, fill=PAPER_DEEP)
     elif kind == "ore":
         # reef ridge
-        d.polygon([(40, cy + 80), (100, cy - 20), (160, cy + 30), (220, cy - 60), (300, cy + 10), (350, cy + 90), (40, cy + 100)], fill=tuple(max(0, c - 30) for c in ORE), outline=INK)
-        hatch(d, (60, cy - 40, 320, cy + 80), spacing=7, angle=15, fill=INK, width=1)
+        ridge = [(40, cy + 80), (100, cy - 20), (160, cy + 30), (220, cy - 60), (300, cy + 10), (350, cy + 90), (40, cy + 100)]
+        d.polygon(ridge, fill=tuple(max(0, c - 30) for c in ORE), outline=INK)
         ore_crystal(d, cx - 40, cy, 55)
         ore_crystal(d, cx + 50, cy - 20, 70)
         ore_crystal(d, cx + 10, cy + 40, 40)
@@ -164,14 +166,13 @@ def draw_dev(kind: str, w=512, h=768) -> Image.Image:
             import math
             rad = math.radians(ang)
             d.line((cx, cy - 80, cx + math.sin(rad) * 140, cy - 80 - math.cos(rad) * 100), fill=FOAM, width=2)
-        seal_stamp(d, cx + 140, cy + 160, 36, ZHU)
+        # corner wax mark (copper, not floating Zhu seal)
+        seal_stamp(d, w - 90, h - 200, 28, COPPER)
     elif kind == "tide-plenty":
         # stacked tide arcs + moon
         for i in range(7):
             yy = cy - 60 + i * 28
             d.arc((80, yy, w - 80, yy + 70), 200, 340, fill=SEA if i % 2 == 0 else SEA_NEAR, width=3)
-            if i % 2 == 0:
-                hatch(d, (100, yy + 10, w - 100, yy + 50), spacing=10, angle=8, fill=INK, width=1)
         d.ellipse((cx - 28, cy - 140, cx + 28, cy - 84), outline=INK, fill=FOAM)
         d.ellipse((cx - 10, cy - 130, cx + 18, cy - 100), fill=PAPER_DEEP)  # crescent bite
         # fish silhouette school
