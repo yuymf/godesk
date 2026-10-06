@@ -57,6 +57,11 @@ export default defineConfig({
           if (facade.includes("/src/render3d/overlay/")) {
             return "assets/g3d-overlay-[hash].js";
           }
+          // G3D-JUDGE-PIECES：hex 盘专用（镜头导演 / 骰盘角标 / mapper / 点数贴花 / 命中区 / 程序化棋子入口），
+          // 与 GLB 并行懒加载，通用桌面不加载；单列 chunk + 独立预算（scripts/check-size-budgets.mjs）。
+          if (facade.includes("/src/render3d/hex-kit")) {
+            return "assets/g3d-hexkit-[hash].js";
+          }
           // `?judge=1` 评审机位（dev-only）懒加载，不进生产渲染核心。
           if (facade.includes("/src/render3d/judge-camera")) {
             return "assets/g3d-judge-[hash].js";

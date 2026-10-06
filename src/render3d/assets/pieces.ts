@@ -8,11 +8,17 @@
  * shared white `vertexColors` material serves every seat and the scene still
  * costs exactly one InstancedMesh draw call per (kind, seat).
  *
+ * Shading is painted into the vertex colours too (`bakeShading`): a contact
+ * darkening toward the base, darker eave / overhang undersides and a slight
+ * sky lift on up-facing faces — a cheap baked-AO look with no extra pass.
+ * Walls are a warm limewash tinted with the seat colour; roofs carry the full
+ * seat colour in alternating shingle rows, so the owner reads from above.
+ *
  * Local frames (base on y = 0, front = +Z):
- * - settlement: pitched-roof cottage, chimney, door + windows, ~0.39 wide × 0.43 tall
- * - city: hall + square tower with pyramid roof and pennant, ~0.53 wide, ~0.65 tall
- * - road: painted plank beam along +X with wooden end caps, 0.56 × 0.14 × 0.09
- * - robber: hooded cloaked figure holding a fog lantern, ~0.6 tall
+ * - settlement: half-timbered cottage, shingled seat-colour roof, chimney, ~0.41 wide × 0.45 tall
+ * - city: hall + square tower with pyramid roof and pennant, ~0.61 wide, ~0.84 tall
+ * - road: painted plank beam along +X with wooden end caps, 0.56 × 0.18 × 0.11
+ * - robber: hooded cloaked figure holding a fog lantern, pale rim outline, ~0.72 tall
  */
 import {
   BoxGeometry,
@@ -121,15 +127,53 @@ export const PIECE_PALETTE = {
   beamWood: "#7a4e2b",
   beamWoodDark: "#5a3820",
   window: "#f4dfa0",
-  cloak: "#263b36",
-  cloakDark: "#1a2826",
+  cloak: "#34504a",
+  cloakDark: "#22352f",
   hoodShadow: "#0f1413",
   belt: "#5b3b22",
   lanternFrame: "#2b2622",
   lanternGlow: "#ffd27a",
   eyes: "#ffe9a8",
   pennantPole: "#3d2a1a",
+  limewash: "#efe4cb",
+  timber: "#4b3020",
+  rim: "#efe2b4",
 } as const;
+
+/** Limewashed wall with a soft seat tint (sRGB mix). */
+export function wallTint(seat: string): string {
+  const c = new Color(PIECE_PALETTE.limewash).lerp(new Color(seat), 0.24);
+  return `#${c.getHexString()}`;
+}
+
+function smoothstep(a: number, b: number, x: number): number {
+  const t = Math.min(Math.max((x - a) / (b - a), 0), 1);
+  return t * t * (3 - 2 * t);
+}
+
+/**
+ * Baked-AO look in the vertex colours: base contact shadow over the lowest
+ * `contact` fraction of the height, darker down-facing faces (eaves, overhangs),
+ * a little extra light on up-facing faces. Mutates `geom`'s colour attribute.
+ */
+export function bakeShading(geom: BufferGeometry, contact = 0.3): BufferGeometry {
+  geom.computeBoundingBox();
+  const box = geom.boundingBox!;
+  const height = Math.max(box.max.y - box.min.y, 1e-6);
+  const pos = geom.getAttribute("position");
+  const normal = geom.getAttribute("normal");
+  const color = geom.getAttribute("color");
+  for (let i = 0; i < pos.count; i += 1) {
+    const h = (pos.getY(i) - box.min.y) / height;
+    const ny = normal.getY(i);
+    let ao = 0.6 + 0.4 * smoothstep(0, contact, h);
+    if (ny < -0.3) ao *= 0.66;
+    else if (ny > 0.6) ao *= 1.08;
+    color.setXYZ(i, Math.min(color.getX(i) * ao, 1), Math.min(color.getY(i) * ao, 1), Math.min(color.getZ(i) * ao, 1));
+  }
+  color.needsUpdate = true;
+  return geom;
+}
 
 export function seatColor(seat: number): string {
   return SEAT_COLORS[((seat % SEAT_COLORS.length) + SEAT_COLORS.length) % SEAT_COLORS.length] ?? "#ffffff";
@@ -165,20 +209,40 @@ function houseParts({ width, depth, wallHeight, ridgeHeight, base, wall, roof }:
   const overhang = depth * 0.16;
   const thickness = 0.016;
   const length = slant + overhang;
+  // Shingle rows: each slope is split into overlapping strips of alternating shade.
+  const rows = 3;
   for (const side of [1, -1] as const) {
     const theta = side * angle;
-    // Midpoint between ridge and eave, nudged outward by half the overhang along the slope.
-    const midZ = (side * half) / 2 + side * Math.cos(angle) * (overhang / 2);
-    const midY = wallHeight + ridgeHeight / 2 - Math.sin(angle) * (overhang / 2);
-    const nz = side * Math.sin(angle) * (thickness / 2);
-    const ny = Math.cos(angle) * (thickness / 2);
-    parts.push(
-      paintPart(new BoxGeometry(width + overhang * 0.9, thickness, length), roof, {
-        pos: [bx, by + midY + ny, bz + midZ + nz],
-        rot: [theta, 0, 0],
-      }),
-    );
+    for (let row = 0; row < rows; row += 1) {
+      // Strip centre along the slope, measured from the ridge (0) to the eave tip (length).
+      const along = ((row + 0.5) / rows) * length;
+      const lift = (rows - row) * 0.0035; // upper rows sit on the lower ones (overlap)
+      const midZ = side * Math.cos(angle) * along;
+      const midY = wallHeight + ridgeHeight - Math.sin(angle) * along;
+      const nz = side * Math.sin(angle) * (thickness / 2 + lift);
+      const ny = Math.cos(angle) * (thickness / 2 + lift);
+      parts.push(
+        paintPart(new BoxGeometry(width + overhang * 0.9, thickness, (length / rows) * 1.12), shade(roof, row % 2 === 0 ? 0.05 : -0.07), {
+          pos: [bx, by + midY + ny, bz + midZ + nz],
+          rot: [theta, 0, 0],
+        }),
+      );
+    }
   }
+  // Half-timber corner posts and a sill beam.
+  const post = Math.min(width, depth) * 0.09;
+  for (const sx of [1, -1]) {
+    for (const sz of [1, -1]) {
+      parts.push(
+        paintPart(new BoxGeometry(post, wallHeight, post), PIECE_PALETTE.timber, {
+          pos: [bx + sx * (width / 2 - post / 2 + 0.002), by + wallHeight / 2, bz + sz * (depth / 2 - post / 2 + 0.002)],
+        }),
+      );
+    }
+  }
+  parts.push(
+    paintPart(new BoxGeometry(width + 0.006, post * 0.8, depth + 0.006), PIECE_PALETTE.timber, { pos: [bx, by + wallHeight - post * 0.4, bz] }),
+  );
   // Ridge cap.
   parts.push(
     paintPart(new BoxGeometry(width + overhang * 0.9, thickness * 1.4, thickness * 1.8), shade(roof, -0.25), {
@@ -203,8 +267,8 @@ function sideDecal(w: number, h: number, x: number, y: number, z: number, side: 
  * so they read from the fitted overview camera (≈ a fifth of a hex width for a
  * cottage, settlecoast-like proportions).
  */
-export const SETTLEMENT_SCALE = 1.5;
-export const CITY_SCALE = 1.4;
+export const SETTLEMENT_SCALE = 1.72;
+export const CITY_SCALE = 1.6;
 
 function scaled(geom: BufferGeometry, s: number): BufferGeometry {
   geom.scale(s, s, s);
@@ -215,8 +279,8 @@ function scaled(geom: BufferGeometry, s: number): BufferGeometry {
 
 export function buildSettlementGeometry(seat: number): BufferGeometry {
   const main = seatColor(seat);
-  const wall = shade(main, 0.38);
-  const roof = shade(main, -0.08);
+  const wall = wallTint(main);
+  const roof = shade(main, -0.04);
   const parts: BufferGeometry[] = [];
   parts.push(paintPart(new BoxGeometry(0.24, 0.03, 0.2), PIECE_PALETTE.stone, { pos: [0, 0.015, 0] }));
   parts.push(
@@ -232,13 +296,13 @@ export function buildSettlementGeometry(seat: number): BufferGeometry {
   // Chimney through the back roof slope.
   parts.push(paintPart(new BoxGeometry(0.034, 0.1, 0.034), PIECE_PALETTE.stone, { pos: [0.055, 0.03 + 0.12 + 0.05, -0.035] }));
   parts.push(paintPart(new BoxGeometry(0.042, 0.014, 0.042), PIECE_PALETTE.stoneDark, { pos: [0.055, 0.03 + 0.12 + 0.105, -0.035] }));
-  return scaled(mergeParts(parts), SETTLEMENT_SCALE);
+  return scaled(bakeShading(mergeParts(parts)), SETTLEMENT_SCALE);
 }
 
 export function buildCityGeometry(seat: number): BufferGeometry {
   const main = seatColor(seat);
-  const wall = shade(main, 0.38);
-  const roof = shade(main, -0.08);
+  const wall = wallTint(main);
+  const roof = shade(main, -0.04);
   const parts: BufferGeometry[] = [];
   parts.push(paintPart(new BoxGeometry(0.38, 0.035, 0.24), PIECE_PALETTE.stone, { pos: [0, 0.0175, 0] }));
   const by = 0.035;
@@ -277,7 +341,7 @@ export function buildCityGeometry(seat: number): BufferGeometry {
       pos: [tx + 0.004, poleTop, tz - 0.003],
     }),
   );
-  return scaled(mergeParts(parts), CITY_SCALE);
+  return scaled(bakeShading(mergeParts(parts), 0.22), CITY_SCALE);
 }
 
 export const ROAD_LENGTH = 0.56;
@@ -286,22 +350,51 @@ export function buildRoadGeometry(seat: number): BufferGeometry {
   const main = seatColor(seat);
   const parts: BufferGeometry[] = [];
   const beamLen = ROAD_LENGTH - 0.06;
-  parts.push(paintPart(new BoxGeometry(beamLen, 0.066, 0.12), main, { pos: [0, 0.033 + 0.004, 0] }));
+  const beamH = 0.088;
+  const beamW = 0.16;
+  parts.push(paintPart(new BoxGeometry(beamLen, beamH, beamW), main, { pos: [0, beamH / 2 + 0.004, 0] }));
   // Plank seams on top.
-  for (const z of [-0.02, 0.02]) {
-    parts.push(paintPart(new BoxGeometry(beamLen - 0.02, 0.003, 0.005), shade(main, -0.35), { pos: [0, 0.07 + 0.0015, z] }));
+  for (const z of [-beamW / 6, beamW / 6]) {
+    parts.push(paintPart(new BoxGeometry(beamLen - 0.02, 0.003, 0.006), shade(main, -0.35), { pos: [0, beamH + 0.004 + 0.0015, z] }));
   }
   // Unpainted wooden end caps / sleepers.
   for (const x of [-(ROAD_LENGTH / 2 - 0.025), ROAD_LENGTH / 2 - 0.025]) {
-    parts.push(paintPart(new BoxGeometry(0.05, 0.082, 0.136), PIECE_PALETTE.beamWood, { pos: [x, 0.041, 0] }));
-    parts.push(paintPart(new BoxGeometry(0.014, 0.012, 0.014), PIECE_PALETTE.beamWoodDark, { pos: [x, 0.084, 0.036] }));
-    parts.push(paintPart(new BoxGeometry(0.014, 0.012, 0.014), PIECE_PALETTE.beamWoodDark, { pos: [x, 0.084, -0.036] }));
+    parts.push(paintPart(new BoxGeometry(0.05, beamH + 0.016, beamW + 0.018), PIECE_PALETTE.beamWood, { pos: [x, (beamH + 0.016) / 2, 0] }));
+    parts.push(paintPart(new BoxGeometry(0.016, 0.012, 0.016), PIECE_PALETTE.beamWoodDark, { pos: [x, beamH + 0.022, beamW * 0.3] }));
+    parts.push(paintPart(new BoxGeometry(0.016, 0.012, 0.016), PIECE_PALETTE.beamWoodDark, { pos: [x, beamH + 0.022, -beamW * 0.3] }));
   }
-  return mergeParts(parts);
+  return bakeShading(mergeParts(parts), 0.5);
 }
 
-/** Robber reads at ≈ 0.6 world units tall (≈ a third of a hex width). */
-export const ROBBER_SCALE = 1.35;
+/** Robber reads at ≈ 0.72 world units tall (≈ 40% of a hex width). */
+export const ROBBER_SCALE = 1.62;
+
+/**
+ * Reverse a non-indexed geometry's triangle winding (swap 2nd / 3rd vertex)
+ * and flip its normals: an inverted hull drawn with the normal front-face
+ * material shows only where it sticks out behind the figure → an outline.
+ */
+function invertHull(geom: BufferGeometry): BufferGeometry {
+  for (const name of ["position", "normal", "color"]) {
+    const attr = geom.getAttribute(name);
+    if (!attr) continue;
+    const a = attr.array as Float32Array;
+    const size = attr.itemSize;
+    for (let tri = 0; tri < attr.count; tri += 3) {
+      for (let k = 0; k < size; k += 1) {
+        const i1 = (tri + 1) * size + k;
+        const i2 = (tri + 2) * size + k;
+        const t = a[i1]!;
+        a[i1] = a[i2]!;
+        a[i2] = t;
+      }
+    }
+  }
+  // The visible (far, inner) faces would light as if facing away; point them up so the rim reads pale.
+  const normal = geom.getAttribute("normal");
+  for (let i = 0; i < normal.count; i += 1) normal.setXYZ(i, 0, 1, 0);
+  return geom;
+}
 
 export function buildRobberGeometry(): BufferGeometry {
   const parts: BufferGeometry[] = [];
@@ -315,6 +408,21 @@ export function buildRobberGeometry(): BufferGeometry {
     new Vector2(0.0, 0.31),
   ];
   parts.push(paintPart(new LatheGeometry(profile, 9), PIECE_PALETTE.cloak));
+  // Pale rim: inverted hull of the cloak + hood silhouette, so the dark figure
+  // reads against grey mountain tiles from the overview camera.
+  const rimProfile = [
+    new Vector2(0.0, -0.004),
+    new Vector2(0.152, -0.004),
+    new Vector2(0.156, 0.02),
+    new Vector2(0.134, 0.12),
+    new Vector2(0.113, 0.24),
+    new Vector2(0.102, 0.3),
+    new Vector2(0.098, 0.36),
+    new Vector2(0.077, 0.425),
+    new Vector2(0.032, 0.478),
+    new Vector2(0.0, 0.494),
+  ];
+  parts.push(invertHull(paintPart(new LatheGeometry(rimProfile, 12), PIECE_PALETTE.rim, { pos: [0, 0, -0.012] })));
   // Hem trim and belt.
   parts.push(paintPart(new CylinderGeometry(0.129, 0.131, 0.02, 9), PIECE_PALETTE.cloakDark, { pos: [0, 0.01, 0] }));
   parts.push(paintPart(new CylinderGeometry(0.1, 0.104, 0.018, 9), PIECE_PALETTE.belt, { pos: [0, 0.17, 0] }));
@@ -338,7 +446,7 @@ export function buildRobberGeometry(): BufferGeometry {
   parts.push(paintPart(new BoxGeometry(0.05, 0.012, 0.05), PIECE_PALETTE.lanternFrame, { pos: [0.12, 0.1, 0.07] }));
   parts.push(paintPart(new BoxGeometry(0.04, 0.05, 0.04), PIECE_PALETTE.lanternGlow, { pos: [0.12, 0.07, 0.07] }));
   parts.push(paintPart(new BoxGeometry(0.05, 0.01, 0.05), PIECE_PALETTE.lanternFrame, { pos: [0.12, 0.04, 0.07] }));
-  return scaled(mergeParts(parts), ROBBER_SCALE);
+  return scaled(bakeShading(mergeParts(parts), 0.18), ROBBER_SCALE);
 }
 
 const CACHE = new Map<string, BufferGeometry>();

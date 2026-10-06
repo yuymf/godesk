@@ -3,7 +3,7 @@
  *
  * Self-contained (inline styles + inline SVG, no CSS file) so Track B's HUD
  * rebuild can keep, move or replace it: everything goes through
- * `CameraRigApi` (zoomIn / zoomOut / setZoom / rotate / reset / subscribe).
+ * `CameraRigApi` (zoom / rotate / reset / pan mode / harbours / island tour / subscribe).
  */
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import type { CameraRigApi, CameraRigState } from "../camera-rig";
@@ -45,6 +45,10 @@ const buttonStyle: CSSProperties = {
   cursor: "pointer",
 };
 
+const pressedOverlay: CSSProperties = { background: "rgb(201 162 90 / 45%)", borderColor: BRASS };
+const pressedStyle: CSSProperties = { ...buttonStyle, ...pressedOverlay };
+const wideButtonStyle: CSSProperties = { ...buttonStyle, width: "auto", gap: 4, padding: "0 7px" };
+
 const dividerStyle: CSSProperties = { width: 1, height: 20, background: "rgb(201 162 90 / 45%)", margin: "0 2px" };
 
 function Icon({ children }: { children: ReactNode }) {
@@ -85,6 +89,23 @@ const ICONS = {
       <path d="M12 3 3 9.5V21h6v-6h6v6h6V9.5z" />
     </Icon>
   ),
+  pan: (
+    <Icon>
+      <path d="M12 2v20M2 12h20M12 2 9 5M12 2l3 3M12 22l-3-3M12 22l3-3M2 12l3-3M2 12l3 3M22 12l-3-3M22 12l-3 3" />
+    </Icon>
+  ),
+  harbors: (
+    <Icon>
+      <circle cx="12" cy="5" r="2" />
+      <path d="M12 7v14M8 11h8M5 14a7 7 0 0 0 14 0" />
+    </Icon>
+  ),
+  tour: (
+    <Icon>
+      <path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z" />
+      <circle cx="12" cy="11" r="2" />
+    </Icon>
+  ),
 };
 
 export type CameraToolbarCopy = {
@@ -95,11 +116,14 @@ export type CameraToolbarCopy = {
   rotateLeft: string;
   rotateRight: string;
   reset: string;
+  pan: string;
+  harbors: string;
+  tour: string;
 };
 
 export const CAMERA_TOOLBAR_COPY: Record<"zh" | "en", CameraToolbarCopy> = {
-  zh: { toolbar: "视角", zoomOut: "缩小", zoomIn: "放大", zoom: "缩放", rotateLeft: "向左旋转", rotateRight: "向右旋转", reset: "复位视角" },
-  en: { toolbar: "Camera", zoomOut: "Zoom out", zoomIn: "Zoom in", zoom: "Zoom", rotateLeft: "Rotate left", rotateRight: "Rotate right", reset: "Reset view" },
+  zh: { toolbar: "视角", zoomOut: "缩小", zoomIn: "放大", zoom: "缩放", rotateLeft: "向左旋转", rotateRight: "向右旋转", reset: "复位视角", pan: "平移", harbors: "港口", tour: "环岛游览" },
+  en: { toolbar: "Camera", zoomOut: "Zoom out", zoomIn: "Zoom in", zoom: "Zoom", rotateLeft: "Rotate left", rotateRight: "Rotate right", reset: "Reset view", pan: "Pan", harbors: "Harbors", tour: "Island tour" },
 };
 
 export function CameraToolbar({
@@ -143,6 +167,32 @@ export function CameraToolbar({
       </button>
       <button aria-label={copy.reset} onClick={() => api.reset()} style={buttonStyle} title={copy.reset} type="button">
         {ICONS.reset}
+      </button>
+      <span aria-hidden="true" style={dividerStyle} />
+      <button
+        aria-label={copy.pan}
+        aria-pressed={state.panMode}
+        onClick={() => api.setPanMode(!state.panMode)}
+        style={state.panMode ? pressedStyle : buttonStyle}
+        title={copy.pan}
+        type="button"
+      >
+        {ICONS.pan}
+      </button>
+      <button aria-label={copy.harbors} onClick={() => api.showHarbors()} style={compact ? buttonStyle : wideButtonStyle} title={copy.harbors} type="button">
+        {ICONS.harbors}
+        {!compact && <span>{copy.harbors}</span>}
+      </button>
+      <button
+        aria-label={copy.tour}
+        aria-pressed={state.touring}
+        onClick={() => api.tour()}
+        style={state.touring ? { ...(compact ? buttonStyle : wideButtonStyle), ...pressedOverlay } : compact ? buttonStyle : wideButtonStyle}
+        title={copy.tour}
+        type="button"
+      >
+        {ICONS.tour}
+        {!compact && <span>{copy.tour}</span>}
       </button>
     </div>
   );

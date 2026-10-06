@@ -1,7 +1,7 @@
 import type { Terrain } from "../../runtime/adapters/hex-settlement";
 import type { SceneModel, SceneNode, SceneVec3 } from "../scene-model";
-import { NUMBER_TOKEN_SCALE, TILE_RADIUS } from "../tokens";
-import { diceAnchorFor, diceLayout } from "../dice";
+import { NUMBER_TOKEN_SCALE } from "../tokens";
+import { diceLayout } from "../dice";
 
 /** Match topology-stub / hex-settlement flat-top pixel size, then scale to world units. */
 const HEX_PIXEL_SIZE = 100;
@@ -75,22 +75,7 @@ export const TILE_TOP_Y = 0.28;
 /** Robber stands beside the number token on numbered tiles (desert: centre). */
 export const ROBBER_TOKEN_OFFSET: readonly [number, number] = [0.42, -0.32];
 
-export type HexSceneOptions = {
-  /** Canvas orientation: the dice tray sits right of (landscape) or below (portrait) the island. */
-  layout?: "landscape" | "portrait";
-};
-
-/** Framed island radius: farthest tile centre + tile radius + harbour margin. */
-export function islandFrameRadius(tiles: HexSettlementSceneInput["tiles"]): number {
-  let far = 0;
-  for (const tile of tiles) {
-    const c = hexCenter(tile.q, tile.r);
-    far = Math.max(far, Math.hypot(c.x, c.y) * WORLD_SCALE);
-  }
-  return far + TILE_RADIUS + 0.4;
-}
-
-export function mapHexSettlementToScene(genre: HexSettlementSceneInput, options: HexSceneOptions = {}): SceneModel {
+export function mapHexSettlementToScene(genre: HexSettlementSceneInput): SceneModel {
   const nodes: SceneNode[] = [];
 
   for (const tile of genre.tiles) {
@@ -199,8 +184,8 @@ export function mapHexSettlementToScene(genre: HexSettlementSceneInput, options:
     }
   });
 
-  const radius = islandFrameRadius(genre.tiles);
-  const layout = diceLayout(diceAnchorFor(options.layout === "portrait" ? 0.6 : 1.6, radius));
+  // Dice tray + dice: local to the screen-corner dice overlay (dice-overlay.ts), not world space.
+  const layout = diceLayout();
   nodes.push({
     id: "dice-tray",
     kind: "dice-tray",

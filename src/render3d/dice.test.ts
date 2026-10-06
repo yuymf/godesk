@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { Color, Matrix4, Object3D, Vector3 } from "three";
 import { buildDiceTrayGeometry, buildDieGeometry } from "./assets/dice-geometry";
-import { DICE_PALETTE, diceAnchorFor, diceLayout, DIE_SIZE, FACE_AXIS, PIP_LAYOUT, TRAY } from "./dice";
+import { DICE_PALETTE, diceLayout, DIE_SIZE, FACE_AXIS, PIP_LAYOUT, TRAY } from "./dice";
+import { DICE_OVERLAY_ASPECT, diceOverlayRect } from "./dice-overlay";
 import { applyDieOrientation } from "./motion";
 
 describe("dice", () => {
@@ -66,12 +67,28 @@ describe("dice", () => {
     }
   });
 
-  it("tray anchor: right of the island on landscape, below it on portrait", () => {
-    const wide = diceAnchorFor(1.6, 5);
-    const tall = diceAnchorFor(0.5, 5);
-    expect(wide[0]).toBeGreaterThan(5);
-    expect(wide[1]).toBeLessThan(5);
-    expect(tall[1]).toBeGreaterThan(5);
-    expect(tall[0]).toBeLessThan(5);
+  it("tray inset: bottom-right corner, ~22% wide on desktop, ~36% on phones, inside the canvas", () => {
+    const desk = diceOverlayRect(910, 505);
+    expect(desk.width).toBe(Math.round(910 * 0.22));
+    expect(desk.x + desk.width).toBe(910 - 12);
+    expect(desk.y).toBe(12); // WebGL viewport origin is bottom-left → bottom edge
+    expect(desk.width / desk.height).toBeCloseTo(DICE_OVERLAY_ASPECT, 1);
+    const phone = diceOverlayRect(390, 450);
+    expect(phone.width).toBe(Math.round(390 * 0.36));
+    expect(phone.x + phone.width).toBe(390 - 8);
+    expect(phone.y).toBe(8);
+    // Never wider than 300 px, never taller than 45% of the canvas.
+    const huge = diceOverlayRect(2400, 1200);
+    expect(huge.width).toBe(300);
+    const flat = diceOverlayRect(1600, 200);
+    expect(flat.height).toBeLessThanOrEqual(90);
+    expect(flat.x + flat.width).toBeLessThanOrEqual(1600);
   });
+
+  it("overlay-local layout: tray centred on the origin", () => {
+    const layout = diceLayout();
+    expect(layout.tray.position[0]).toBe(0);
+    expect(layout.tray.position[2]).toBe(0);
+  });
+
 });

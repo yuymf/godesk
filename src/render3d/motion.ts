@@ -262,6 +262,7 @@ export class MotionController {
     easing: (amount: number) => number,
     step: (p: number) => void,
     done?: () => void,
+    durationOverrideMs?: number,
   ): number {
     this.running.get(key)?.end();
     const touch = step;
@@ -270,7 +271,7 @@ export class MotionController {
       this.dirty.add(key);
     };
     const reduced = this.reduced();
-    const durationMs = motionDurationMs(kind, reduced);
+    const durationMs = reduced ? 0 : durationOverrideMs ?? motionDurationMs(kind, reduced);
     recordMotion({ kind, id, durationMs, reduced, at: this.now() });
     if (durationMs === 0) {
       step(1);
@@ -379,7 +380,7 @@ export class MotionController {
   }
 
   /** Generic camera tween (logged as kind "camera", 600 ms; reduced motion → instant). */
-  camera(id: string, step: (p: number) => void): number {
-    return this.run(this.cameraKey, "camera", id, Easing.Sinusoidal.InOut, step);
+  camera(id: string, step: (p: number) => void, options: { ms?: number; done?: () => void } = {}): number {
+    return this.run(this.cameraKey, "camera", id, Easing.Sinusoidal.InOut, step, options.done, options.ms);
   }
 }

@@ -15,7 +15,6 @@ import {
   type BufferGeometry,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { buildLegalHitOverlays, disposeHitOverlay, disposeSharedHitResources } from "./hit-targets";
 import { createInstancePools, type InstancePools } from "./instance-pools";
 import {
   disposeTidewellGeometryCache,
@@ -23,7 +22,6 @@ import {
   geometryForNode,
   getTidewellGeometriesSync,
 } from "./model-templates";
-import { mapHexSettlementToScene } from "./mappers/hex-settlement";
 import {
   matchPickToLegalAction,
   pickFromPointerEvent,
@@ -31,21 +29,20 @@ import {
   type PickTarget,
 } from "./pick";
 import { reconcileScene } from "./reconcile";
-import { createNumberLabelLayer, projectLabels, type NumberLabelLayer } from "./number-labels";
+import type { NumberLabelLayer } from "./number-labels";
 import type { JudgePreset } from "./judge-camera";
 import type { SceneModel, SceneNode } from "./scene-model";
 import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
 import { markInteractive, perfModeEnabled, perfRecorder } from "./perf";
 import { applyDieOrientation, idleBob, MotionController } from "./motion";
-import { disposePieceGeometries, pieceGeometry } from "./assets/pieces";
-import { diceTrayGeometry, dieGeometry, disposeDiceGeometries } from "./assets/dice-geometry";
-import {
-  CameraDirector,
-  cameraModeFor,
-  framingPoints,
-  islandCenter,
-  type CameraRigApi,
-} from "./camera-rig";
+import type { CameraDirector, CameraRigApi } from "./camera-rig";
+import type { DiceOverlay } from "./dice-overlay";
+/**
+ * Hex-board-only code (camera director, dice overlay, mapper, number decals,
+ * hit targets, procedural pieces) loads lazily before the first hex reconcile.
+ */
+type HexKit = typeof import("./hex-kit");
+let hexKit: HexKit | null = null;
 /** Toolbar is UI chrome, not render core: its own lazy chunk (keeps render3d core ≤ 210 KB). */
 const CameraToolbar = lazy(async () => ({ default: (await import("./overlay/CameraToolbar")).CameraToolbar }));
 import { PerfOverlay } from "./PerfOverlay";
@@ -148,6 +145,9 @@ function proceduralFor(
   node: SceneNode,
   library: MaterialLibrary,
 ): { geometry: BufferGeometry; material: ReturnType<MaterialLibrary["get"]>; poolKey: string } | null {
+  const kit = hexKit;
+  if (!kit) return null;
+  const { pieceGeometry, dieGeometry, diceTrayGeometry } = kit;
   const seat = node.seat ?? 0;
   switch (node.kind) {
     case "settlement":
@@ -218,6 +218,12 @@ function sharedDecorGeom(): BufferGeometry {
 }
 
 function disposeObject(object: Object3D, pools?: InstancePools | null): void {
+  const overlay = object.userData.gdOverlay as DiceOverlay | undefined;
+  if (overlay) {
+    overlay.detach(object);
+    object.userData.gdOverlay = undefined;
+    return;
+  }
   const inst = object.userData.gdInstance as { poolKey: string; index: number } | undefined;
   if (inst && pools) {
     pools.release(inst.poolKey, inst.index);
@@ -315,7 +321,13 @@ function geomForBatch(node: SceneNode): BufferGeometry {
   return sharedDecorGeom();
 }
 
-function createNodeObject(node: SceneNode, caps: TierCaps, library: MaterialLibrary, pools?: InstancePools | null): Object3D {
+function createNodeObject(
+  node: SceneNode,
+  caps: TierCaps,
+  library: MaterialLibrary,
+  pools?: InstancePools | null,
+  overlay?: DiceOverlay | null,
+): Object3D {
   const { key, token } = materialFor(node);
   const mat = library.get(key, token);
   const applyPose = (mesh: Mesh) => {
@@ -332,6 +344,21 @@ function createNodeObject(node: SceneNode, caps: TierCaps, library: MaterialLibr
   };
 
   const procedural = proceduralFor(node, library);
+  // Dice + tray render in the screen-corner overlay; the world tree keeps an invisible handle.
+  if (procedural && overlay && (node.kind === "die" || node.kind === "dice-tray")) {
+    const handle = new Object3D();
+    handle.position.set(node.position[0], node.position[1], node.position[2]);
+    if (node.rotationY !== undefined) handle.rotation.y = node.rotationY;
+    if (node.kind === "die") applyDieOrientation(handle, node.number, node.rotationY ?? 0);
+    handle.userData.nodeId = node.id;
+    handle.userData.kind = node.kind;
+    handle.userData.baseY = node.position[1];
+    handle.userData.gdOverlay = overlay;
+    const mesh = new Mesh(procedural.geometry, procedural.material);
+    mesh.userData.gdSharedGeometry = true;
+    overlay.attach(handle, mesh);
+    return handle;
+  }
   if (procedural && pools && node.kind !== "dice-tray") {
     const { index } = pools.acquire(procedural.poolKey, procedural.geometry, procedural.material, true);
     const handle = new Object3D();
@@ -459,7 +486,7 @@ export function SceneHost({
   /** G3D-JUDGE-PIECES: auto-framing + turn modes + toolbar API (hex scenes only). */
   const directorRef = useRef<CameraDirector | null>(null);
   const [cameraApi, setCameraApi] = useState<CameraDirector | null>(null);
-  const [diceSide, setDiceSide] = useState<"landscape" | "portrait">("landscape");
+  const overlayRef = useRef<DiceOverlay | null>(null);
   const [compactToolbar, setCompactToolbar] = useState(false);
   const framingKeyRef = useRef<string | null>(null);
   const diceSeedRef = useRef(1);
@@ -510,7 +537,7 @@ export function SceneHost({
       pools,
       create: (node: SceneNode) => adapterRef.current
         ? adapterRef.current.create(node, { library, caps: getCaps() })
-        : createNodeObject(node, getCaps(), library, pools),
+        : createNodeObject(node, getCaps(), library, pools, overlayRef.current),
       update: (object: Object3D, node: SceneNode) => adapterRef.current
         ? adapterRef.current.update(object, node, { library, caps: getCaps() })
         : updateNodeObject(object, node, library, pools),
@@ -567,6 +594,8 @@ export function SceneHost({
     configureRenderer(renderer, lightingRef.current);
     // 静止场景复用阴影贴图；内容变化后 SHADOW_REFRESH_MS 内逐帧重绘（见 tick）。
     renderer.shadowMap.autoUpdate = false;
+    // Two passes per frame (board + dice overlay): count draw calls per frame, not per render().
+    renderer.info.autoReset = false;
     renderer.setClearColor(new Color(SCENE_TOKENS.sky.horizon), 1);
     rendererRef.current = renderer;
     // setSize(..., false) leaves the canvas CSS size unset, so on DPR > 1 the
@@ -712,7 +741,23 @@ export function SceneHost({
     let disposed = false;
     const reducedQuery = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
     // G3D-13: load Tidewell GLBs before hex reconcile (avoids remount that aborted water).
-    void ensureTidewellGeometries().finally(() => {
+    const createOverlay = (kit: HexKit) => {
+      if (disposed || overlayRef.current) return;
+      const overlay = new kit.DiceOverlay();
+      overlay.setCanvasSize(Math.max(container.clientWidth, 1), Math.max(container.clientHeight, 1));
+      overlayRef.current = overlay;
+    };
+    // Remount (perf remount / context-loss rebuild): the kit is already loaded and the hex effect of
+    // this same commit still sees the previous `ready`, so the overlay must exist synchronously or
+    // the dice would fall back into the world scene (and the first-frame memory would differ).
+    if (!adapterRef.current && hexKit) createOverlay(hexKit);
+    const kitReady = adapterRef.current
+      ? Promise.resolve()
+      : import("./hex-kit").then((kit) => {
+          hexKit = kit;
+          createOverlay(kit);
+        });
+    void Promise.allSettled([ensureTidewellGeometries(), kitReady]).then(() => {
       if (!disposed) setReady(true);
     });
     let lastFrameAt: number | null = null;
@@ -745,9 +790,14 @@ export function SceneHost({
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       fitCameraRef.current();
-      setDiceSide(camera.aspect >= 1.15 ? "landscape" : "portrait");
       setCompactToolbar(width < 480);
       directorRef.current?.onResize();
+      const overlay = overlayRef.current;
+      if (overlay) {
+        overlay.setCanvasSize(width, height);
+        const r = overlay.viewport;
+        container.dataset.diceOverlay = `${r.x},${r.y},${r.width},${r.height}`;
+      }
       renderer.setPixelRatio(dpr);
       renderer.setSize(width, height, false);
     };
@@ -872,7 +922,9 @@ export function SceneHost({
         renderer.shadowMap.needsUpdate = true;
         shadowFrames += 1;
       }
+      renderer.info.reset();
       renderer.render(scene, camera);
+      overlayRef.current?.render(renderer);
       const hasContent = contentRoot.children.length > 0;
       if (hasContent && renderer.info.render.calls > 0) {
         markInteractive();
@@ -914,8 +966,10 @@ export function SceneHost({
       while (hitRoot.children.length > 0) {
         const child = hitRoot.children[0]!;
         hitRoot.remove(child);
-        disposeHitOverlay(child);
+        hexKit?.disposeHitOverlay(child);
       }
+      overlayRef.current?.dispose();
+      overlayRef.current = null;
       contentRoot.traverse((child) => {
         const mesh = child as Mesh;
         if (!mesh.isMesh) return;
@@ -943,10 +997,10 @@ export function SceneHost({
       const hostPools = reconcileHostRef.current as { pools?: InstancePools } | null;
       hostPools?.pools?.dispose();
       disposeSharedSceneGeometries();
-      disposeSharedHitResources();
+      hexKit?.disposeSharedHitResources();
       disposeTidewellGeometryCache();
-      disposePieceGeometries();
-      disposeDiceGeometries();
+      hexKit?.disposePieceGeometries();
+      hexKit?.disposeDiceGeometries();
       perf?.beforeDispose(renderer);
       detachPerf?.();
       renderer.dispose();
@@ -978,7 +1032,9 @@ export function SceneHost({
   function syncNumberLabels(model: SceneModel, tiles: readonly { q: number; r: number; number: number | null }[]) {
     const root = contentRootRef.current;
     if (!root) return;
-    const layer = (numberLabelsRef.current ??= createNumberLabelLayer());
+    const kit = hexKit;
+    if (!kit) return;
+    const layer = (numberLabelsRef.current ??= kit.createNumberLabelLayer());
     if (layer.mesh.parent !== root) root.add(layer.mesh);
     layer.sync(model.nodes);
     const container = containerRef.current;
@@ -988,7 +1044,7 @@ export function SceneHost({
       const camera = cameraRef.current;
       const canvas = canvasRef.current;
       if (!camera || !canvas) return [];
-      return projectLabels(numberLabelsRef.current?.labels() ?? [], camera, canvas.clientWidth, canvas.clientHeight);
+      return kit.projectLabels(numberLabelsRef.current?.labels() ?? [], camera, canvas.clientWidth, canvas.clientHeight);
     };
     // e2e：渲染输入的棋盘点数（与贴花逐格对照，独立于 mapper）。
     (globalThis as { __g3dBoardNumbers?: unknown }).__g3dBoardNumbers = tiles
@@ -998,9 +1054,10 @@ export function SceneHost({
 
   useEffect(() => {
     const host = reconcileHostRef.current;
-    if (!host || !hexSettlement) return;
+    const kit = hexKit;
+    if (!host || !hexSettlement || !kit) return;
     const prev = modelRef.current;
-    const next = mapHexSettlementToScene(hexSettlement, { layout: diceSide });
+    const next = kit.mapHexSettlementToScene(hexSettlement);
     const hadModel = prev !== null;
     const previousAction = lastActionRef.current;
     lastActionRef.current = hexSettlement.lastAction;
@@ -1015,24 +1072,24 @@ export function SceneHost({
       const bounds = islandBounds(next.nodes);
       rigRef.current?.fitToBounds(bounds.center, bounds.radius);
     }
-    // G3D-JUDGE-PIECES: auto-framing (island + harbours + dice tray) for the hex scene.
+    // G3D-JUDGE-PIECES: auto-framing (island + harbours; the dice tray is a screen overlay) for the hex scene.
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     const motionForCamera = motionRef.current;
     if (camera && controls && motionForCamera) {
       let director = directorRef.current;
       if (!director) {
-        director = new CameraDirector(camera, controls, motionForCamera);
-        director.mode = cameraModeFor(localSeatRef.current, activeSeatRef.current);
+        director = new kit.CameraDirector(camera, controls, motionForCamera);
+        director.mode = kit.cameraModeFor(localSeatRef.current, activeSeatRef.current);
         directorRef.current = director;
         setCameraApi(director);
       }
-      const tray = next.nodes.find((node) => node.kind === "dice-tray");
-      const framingKey = `${tileKey(next)}|${tray?.position.join(",") ?? ""}`;
+      const framingKey = tileKey(next);
       if (framingKey !== framingKeyRef.current) {
         framingKeyRef.current = framingKey;
-        const island = islandCenter(next.nodes);
-        director.setFraming(framingPoints(next.nodes), island.center, island.radius, true);
+        const island = kit.islandCenter(next.nodes);
+        const tiles = next.nodes.filter((node) => node.kind === "tile");
+        director.setFraming(kit.framingPoints(next.nodes), island.center, island.radius, true, kit.framingPoints(tiles));
       }
     }
     // G3D-08: first hex model mounts water; later tile-layout changes rebuild the coast field.
@@ -1064,6 +1121,9 @@ export function SceneHost({
                 return;
               }
               waterRef.current = water;
+              // A water controller with a far-sea ring may report a larger sea for the camera's sky clamp.
+              const seaHalf = (water as { seaHalfExtent?: number }).seaHalfExtent;
+              if (typeof seaHalf === "number") directorRef.current?.setSeaExtent(seaHalf);
               // Warm custom water program on SwiftShader before the first user click
               // (cold compile can block the main thread long enough to flake mid-tween clicks).
               const cam = cameraRef.current;
@@ -1110,7 +1170,7 @@ export function SceneHost({
         rollDie(motion, object, node);
       }
     }
-  }, [hexSettlement, ready, hostEpoch, diceSide]);
+  }, [hexSettlement, ready, hostEpoch]);
 
   // G3D-14：通用桌面场景 reconcile + 按包围球适配阴影相机 / 机位。
   useEffect(() => {
@@ -1162,8 +1222,9 @@ export function SceneHost({
   // G3D-09 / G3D-JUDGE-PIECES turn camera: local turn → tilted "play", others → top-down "overview".
   useEffect(() => {
     const director = directorRef.current;
-    if (!ready || !director) return;
-    const mode = cameraModeFor(localSeat, activeSeat);
+    const kit = hexKit;
+    if (!ready || !director || !kit) return;
+    const mode = kit.cameraModeFor(localSeat, activeSeat);
     const key = `${activeSeat ?? "-"}|${localSeat ?? "-"}`;
     const previous = lastModeKeyRef.current;
     lastModeKeyRef.current = key;
@@ -1201,13 +1262,14 @@ export function SceneHost({
   useEffect(() => {
     const hitRoot = hitRootRef.current;
     if (!hitRoot || !ready) return;
+    const kit = hexKit;
     while (hitRoot.children.length > 0) {
       const child = hitRoot.children[0]!;
       hitRoot.remove(child);
-      disposeHitOverlay(child);
+      kit?.disposeHitOverlay(child);
     }
-    if (!interactive || legalActions.length === 0 || adapterRef.current) return;
-    for (const overlay of buildLegalHitOverlays(legalActions)) {
+    if (!interactive || legalActions.length === 0 || adapterRef.current || !kit) return;
+    for (const overlay of kit.buildLegalHitOverlays(legalActions)) {
       hitRoot.add(overlay);
     }
   }, [interactive, legalActions, ready, hostEpoch]);

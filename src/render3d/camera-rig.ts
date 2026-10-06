@@ -9,7 +9,7 @@
  * - "play": tilted 3/4 view while the local player acts
  * - "overview": near top-down while AI / opponents act
  */
-import type { PerspectiveCamera } from "three";
+import { MOUSE, TOUCH, type PerspectiveCamera } from "three";
 import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { MotionController } from "./motion";
 import { TILE_RADIUS } from "./tokens";
@@ -22,10 +22,20 @@ export const CAMERA_MODE_POLAR_DEG: Readonly<Record<CameraMode, number>> = { pla
 export const ZOOM_LIMITS = { min: 0.7, max: 3.2 } as const;
 export const ZOOM_STEP = 1.25;
 export const ROTATE_STEP_DEG = 45;
-export const POLAR_LIMITS_DEG = { min: 0, max: 68 } as const;
+export const POLAR_LIMITS_DEG = { min: 0, max: 64 } as const;
 /** Viewport fraction (NDC) the framed points may occupy. */
 export const FRAME_MARGIN = 0.93;
 const DEG = Math.PI / 180;
+/**
+ * Half extent of the square tide-water plane (`water/mesh.ts` WATER_HALF_EXTENT,
+ * unit-tested to stay in sync; not imported so the water chunk stays lazy).
+ * Beyond it the beige sky dome shows, so automatic framing keeps every frustum
+ * corner on the sea, `SEA_EDGE_PAD` inside the edge.
+ */
+export const SEA_HALF_EXTENT = 9;
+export const SEA_EDGE_PAD = 0.3;
+/** Play mode may flatten toward top-down to keep the sky out, but not below this. */
+export const PLAY_MIN_POLAR_DEG = 18;
 
 export function clampZoom(zoom: number): number {
   if (!Number.isFinite(zoom)) return 1;
@@ -77,18 +87,153 @@ export function fitDistance(
   return best;
 }
 
+/** Camera basis for an orbit pose: d = target → camera, r = right, u = up. */
+function orbitBasis(polar: number, azimuth: number): { d: V3; r: V3; u: V3 } {
+  const sp = Math.sin(polar);
+  const cp = Math.cos(polar);
+  const d: V3 = [sp * Math.sin(azimuth), cp, sp * Math.cos(azimuth)];
+  const r: V3 = [Math.cos(azimuth), 0, -Math.sin(azimuth)];
+  const u: V3 = [
+    r[1] * -d[2] - r[2] * -d[1],
+    r[2] * -d[0] - r[0] * -d[2],
+    r[0] * -d[1] - r[1] * -d[0],
+  ];
+  return { d, r, u };
+}
+
+/**
+ * Largest orbit distance at which all four frustum corners still land on the
+ * sea square (|x|, |z| ≤ half). The target sits on the sea plane, so the
+ * footprint scales linearly with distance: closed form per corner and axis.
+ * 0 when a corner ray never reaches the sea (horizon in view).
+ */
+export function maxSeaDistance(
+  target: V3,
+  polar: number,
+  azimuth: number,
+  fovDeg: number,
+  aspect: number,
+  half = SEA_HALF_EXTENT - SEA_EDGE_PAD,
+): number {
+  const { d, r, u } = orbitBasis(polar, azimuth);
+  const tanV = Math.tan((fovDeg * DEG) / 2);
+  const tanH = tanV * Math.max(aspect, 1e-3);
+  if (Math.abs(target[0]) >= half || Math.abs(target[2]) >= half) return 0;
+  let best = Number.POSITIVE_INFINITY;
+  for (const sx of [-1, 1]) {
+    for (const sy of [-1, 1]) {
+      const ray: V3 = [
+        -d[0] + sx * tanH * r[0] + sy * tanV * u[0],
+        -d[1] + sx * tanH * r[1] + sy * tanV * u[1],
+        -d[2] + sx * tanH * r[2] + sy * tanV * u[2],
+      ];
+      if (ray[1] >= -1e-6) return 0;
+      // Unit distance: camera at d, hit = d + t·ray with d.y + t·ray.y = 0.
+      const t = d[1] / -ray[1];
+      const hx = d[0] + t * ray[0];
+      const hz = d[2] + t * ray[2];
+      for (const [h, c] of [[hx, target[0]], [hz, target[2]]] as const) {
+        if (Math.abs(h) < 1e-9) continue;
+        best = Math.min(best, (half - Math.sign(h) * c) / Math.abs(h));
+      }
+    }
+  }
+  return best;
+}
+
+/** Steepest polar (≤ `from`) at which `distance` keeps the frame on the sea; `floor` if none. */
+export function maxSeaPolar(
+  target: V3,
+  distance: number,
+  azimuth: number,
+  fovDeg: number,
+  aspect: number,
+  from: number,
+  floor = 0,
+  half = SEA_HALF_EXTENT - SEA_EDGE_PAD,
+): number {
+  const max = (polar: number) => maxSeaDistance(target, polar, azimuth, fovDeg, aspect, half);
+  if (max(from) >= distance) return from;
+  let lo = floor;
+  let hi = from;
+  if (max(lo) < distance) return floor;
+  for (let i = 0; i < 18; i += 1) {
+    const mid = (lo + hi) / 2;
+    if (max(mid) >= distance) lo = mid;
+    else hi = mid;
+  }
+  return lo;
+}
+
+/** Keep-in-frame margin for the must-see points (tiles) when the sea forces a crop. */
+export const KEEP_MARGIN = 1;
+
+/**
+ * Zoom-1 pose that frames `points` (island + harbours) for a preferred polar
+ * while keeping the sky out: first flatten the tilt (down to `minPolar`), then
+ * move in, cropping the outer ring (harbours) but never `keepPoints` (tiles).
+ * If even that cannot hide the sea edge: `hard` (AI / top-down framing) stays
+ * sky-free and crops the island edge; otherwise (own turn) the whole island
+ * stays in frame and `safe` is false (very wide canvases until the sea grows).
+ */
+export function seaSafeFraming(
+  points: readonly V3[],
+  keepPoints: readonly V3[],
+  target: V3,
+  preferredPolar: number,
+  minPolar: number,
+  azimuth: number,
+  fovDeg: number,
+  aspect: number,
+  half = SEA_HALF_EXTENT - SEA_EDGE_PAD,
+  hard = false,
+): { polar: number; distance: number; fit: number; safe: boolean } {
+  let polar = preferredPolar;
+  for (;;) {
+    const fit = fitDistance(points, target, polar, azimuth, fovDeg, aspect);
+    const max = maxSeaDistance(target, polar, azimuth, fovDeg, aspect, half);
+    if (fit <= max) return { polar, distance: fit, fit, safe: true };
+    if (polar <= minPolar + 1e-6) {
+      const keep = keepPoints.length > 0 ? fitDistance(keepPoints, target, polar, azimuth, fovDeg, aspect, KEEP_MARGIN) : fit;
+      if (keep <= max) return { polar, distance: max, fit, safe: true };
+      if (hard && max > 0.5) return { polar, distance: max, fit, safe: true };
+      return { polar, distance: Math.min(fit, keep), fit, safe: false };
+    }
+    polar = Math.max(minPolar, polar - 2 * DEG);
+  }
+}
+
+/**
+ * Own-turn framing: keep the 3/4 tilt (≥ 18°) when the sea covers the frame; on canvases too wide
+ * for the sea at that tilt, flatten further (down to top-down) rather than show the sky dome, as
+ * long as every tile still fits. Only when even that fails is the ≥ 18° (sky-at-corners) pose used.
+ */
+export function playFraming(
+  points: readonly V3[],
+  keepPoints: readonly V3[],
+  target: V3,
+  preferredPolar: number,
+  azimuth: number,
+  fovDeg: number,
+  aspect: number,
+  half = SEA_HALF_EXTENT - SEA_EDGE_PAD,
+): { polar: number; distance: number; fit: number; safe: boolean } {
+  const tilted = seaSafeFraming(points, keepPoints, target, preferredPolar, PLAY_MIN_POLAR_DEG * DEG, azimuth, fovDeg, aspect, half);
+  if (tilted.safe) return tilted;
+  const flat = seaSafeFraming(points, keepPoints, target, tilted.polar, 0, azimuth, fovDeg, aspect, half);
+  return flat.safe ? flat : tilted;
+}
+
 type FramingNode = {
   kind: string;
   position: readonly [number, number, number];
   rotationY?: number;
 };
 
-/** Tray half-extents used for framing (matches dice.ts TRAY with a small pad). */
-const TRAY_HALF: readonly [number, number] = [0.86, 0.56];
-
 /**
- * Points that must stay in frame: every tile's hex corners at tile-top height,
- * harbour markers and the dice tray corners. Ships may bleed past the edge.
+ * Points that must stay in frame: every tile's hex corners at tile-top height
+ * and the harbour markers. Ships may bleed past the edge; the dice tray is a
+ * screen-corner overlay (dice-overlay.ts), not part of the world framing.
  */
 export function framingPoints(nodes: readonly FramingNode[]): V3[] {
   const out: V3[] = [];
@@ -101,18 +246,6 @@ export function framingPoints(nodes: readonly FramingNode[]): V3[] {
       }
     } else if (node.kind === "port") {
       out.push([x + 0.25, y + 0.1, z + 0.25], [x - 0.25, y + 0.1, z - 0.25]);
-    } else if (node.kind === "dice-tray") {
-      const yaw = node.rotationY ?? 0;
-      const c = Math.cos(yaw);
-      const s = Math.sin(yaw);
-      for (const [lx, lz] of [
-        [TRAY_HALF[0], TRAY_HALF[1]],
-        [-TRAY_HALF[0], TRAY_HALF[1]],
-        [TRAY_HALF[0], -TRAY_HALF[1]],
-        [-TRAY_HALF[0], -TRAY_HALF[1]],
-      ] as const) {
-        out.push([x + lx * c + lz * s, y + 0.18, z - lx * s + lz * c]);
-      }
     }
   }
   return out;
@@ -167,6 +300,10 @@ export type CameraRigState = {
   minZoom: number;
   maxZoom: number;
   azimuthDeg: number;
+  /** Left-drag / one-finger drag pans instead of orbiting. */
+  panMode: boolean;
+  /** An island tour is playing. */
+  touring: boolean;
 };
 
 /** Small API for the on-canvas toolbar (and Track B's HUD, if it wants its own controls). */
@@ -176,20 +313,41 @@ export type CameraRigApi = {
   setZoom(zoom: number): void;
   rotate(direction: 1 | -1): void;
   reset(): void;
+  /** Toggle drag-to-pan (mouse left button / one finger). */
+  setPanMode(on: boolean): void;
+  /** Near top-down framing of the whole coastline with every harbour. */
+  showHarbors(): void;
+  /** Slow orbit around the island; any user input or API call stops it. */
+  tour(): void;
   getState(): CameraRigState;
   subscribe(listener: (state: CameraRigState) => void): () => void;
 };
 
 type Pose = { target: V3; distance: number; polar: number; azimuth: number };
 
+/** Island tour: azimuth steps (deg), leg duration, tilt and zoom. */
+export const TOUR = { stepsDeg: [60, 120, 180, 240, 300, 360], legMs: 1100, polarDeg: 40, zoom: 1.3 } as const;
+
 export class CameraDirector implements CameraRigApi {
   mode: CameraMode = "play";
   private zoom = 1;
   private azimuth = 0;
   private points: V3[] = [];
+  /** Tile corners: never cropped by the sea clamp on the player's own turn. */
+  private keepPoints: V3[] = [];
   private center: V3 = [0, 0, 0];
   private radius = 4;
+  /** Fitted distance for the current mode polar (zoom-relative readout). */
   private fit = 12;
+  /** Zoom-1 distance after the sea clamp (≤ fit when the outer ring is cropped). */
+  private base = 12;
+  /** Polar for the current mode after the sea clamp. */
+  private polar = CAMERA_MODE_POLAR_DEG.play * DEG;
+  private seaHalf = SEA_HALF_EXTENT - SEA_EDGE_PAD;
+  private clampKey = "";
+  private panMode = false;
+  private tourToken = 0;
+  private touring = false;
   /** Judge presets pin the camera: no auto transitions, no clamps. */
   private pinned = false;
   private dragging = false;
@@ -211,6 +369,7 @@ export class CameraDirector implements CameraRigApi {
   }
 
   dispose(): void {
+    this.stopTour();
     this.controls.removeEventListener("start", this.onStart);
     this.controls.removeEventListener("end", this.onEnd);
     this.listeners.clear();
@@ -218,6 +377,7 @@ export class CameraDirector implements CameraRigApi {
 
   private readonly onStart = () => {
     // The user grabbed the camera: drop any automatic move where it is.
+    this.stopTour();
     this.motion.stopCamera();
     this.tweening = false;
     this.dragging = true;
@@ -233,19 +393,29 @@ export class CameraDirector implements CameraRigApi {
     return this.pinned;
   }
 
+  /** Sea square half extent (the water controller may extend it with a far-sea ring). */
+  setSeaExtent(half: number): void {
+    const next = Math.max(1, half - SEA_EDGE_PAD);
+    if (Math.abs(next - this.seaHalf) < 1e-6) return;
+    this.seaHalf = next;
+    this.refit();
+    if (!this.pinned && !this.tweening && !this.dragging && !this.touring) this.apply(this.goal(), true);
+  }
+
   /** Update what must stay in frame. `snap` jumps there immediately (first layout / resize). */
-  setFraming(points: V3[], center: V3, radius: number, snap: boolean): void {
+  setFraming(points: V3[], center: V3, radius: number, snap: boolean, keepPoints: V3[] = points): void {
     this.points = points;
+    this.keepPoints = keepPoints;
     this.center = center;
     this.radius = radius;
     this.refit();
-    if (snap && !this.pinned && !this.tweening) this.apply(this.goal(), true);
+    if (snap && !this.pinned && !this.tweening && !this.touring) this.apply(this.goal(), true);
   }
 
   /** Aspect changed: refit and keep the current zoom / azimuth. */
   onResize(): void {
     this.refit();
-    if (!this.pinned && !this.tweening && !this.dragging) this.apply(this.goal(), true);
+    if (!this.pinned && !this.tweening && !this.dragging && !this.touring) this.apply(this.goal(), true);
   }
 
   /** Turn-driven mode change; skipped while pinned (judge) or while the user is dragging. */
@@ -255,6 +425,7 @@ export class CameraDirector implements CameraRigApi {
       this.notify();
       return;
     }
+    this.stopTour();
     this.mode = mode;
     this.refit();
     this.transition(this.goal(), id, instant);
@@ -262,6 +433,7 @@ export class CameraDirector implements CameraRigApi {
 
   /** Judge: snap to a mode with default zoom / azimuth and pin. */
   pinToMode(mode: CameraMode): void {
+    this.stopTour();
     this.mode = mode;
     this.zoom = 1;
     this.azimuth = 0;
@@ -273,6 +445,7 @@ export class CameraDirector implements CameraRigApi {
 
   /** Judge: an explicit pose; clamps are lifted until the user touches the camera. */
   pinFree(): void {
+    this.stopTour();
     this.pinned = true;
     this.controls.minDistance = 0.1;
     this.controls.maxDistance = 200;
@@ -289,28 +462,94 @@ export class CameraDirector implements CameraRigApi {
   }
 
   setZoom(zoom: number, animate = false): void {
+    this.stopTour();
     this.syncFromCamera();
     this.zoom = clampZoom(zoom);
     this.pinned = false;
-    const pose = { ...this.current(), distance: this.fit / this.zoom };
+    const current = this.current();
+    const pose = { ...current, distance: this.seaCappedDistance(this.base / this.zoom, current) };
     if (animate) this.transition(pose, "zoom", false);
     else this.apply(pose, true);
   }
 
   rotate(direction: 1 | -1): void {
+    this.stopTour();
     this.syncFromCamera();
     this.pinned = false;
     this.azimuth += direction * ROTATE_STEP_DEG * DEG;
     this.refit();
-    this.transition({ ...this.current(), azimuth: this.azimuth, distance: this.fit / this.zoom }, `rotate:${direction}`, false);
+    const current = this.current();
+    const turned = { ...current, azimuth: this.azimuth };
+    this.transition({ ...turned, distance: this.seaCappedDistance(this.base / this.zoom, turned) }, `rotate:${direction}`, false);
   }
 
   reset(): void {
+    this.stopTour();
     this.pinned = false;
     this.zoom = 1;
     this.azimuth = 0;
     this.refit();
     this.transition(this.goal(), "reset", false);
+  }
+
+  setPanMode(on: boolean): void {
+    this.panMode = on;
+    this.controls.mouseButtons.LEFT = on ? MOUSE.PAN : MOUSE.ROTATE;
+    this.controls.mouseButtons.RIGHT = on ? MOUSE.ROTATE : MOUSE.PAN;
+    this.controls.touches.ONE = on ? TOUCH.PAN : TOUCH.ROTATE;
+    this.notify();
+  }
+
+  showHarbors(): void {
+    this.stopTour();
+    this.pinned = false;
+    this.zoom = 1;
+    const framing = this.framingFor("overview");
+    this.transition({ target: this.center, distance: framing.distance, polar: framing.polar, azimuth: this.azimuth }, "harbors", false);
+  }
+
+  tour(): void {
+    if (this.touring) {
+      this.stopTour();
+      this.reset();
+      return;
+    }
+    this.pinned = false;
+    this.syncFromCamera();
+    const token = ++this.tourToken;
+    this.touring = true;
+    this.notify();
+    const start = this.azimuth;
+    const polar = Math.min(TOUR.polarDeg * DEG, this.polar + 10 * DEG);
+    const leg = (index: number) => {
+      if (token !== this.tourToken) return;
+      if (index >= TOUR.stepsDeg.length) {
+        this.touring = false;
+        this.zoom = 1;
+        this.azimuth = start;
+        this.refit();
+        this.transition(this.goal(), "tour:end", false);
+        return;
+      }
+      const azimuth = start + TOUR.stepsDeg[index]! * DEG;
+      const at = { target: this.center, polar, azimuth, distance: this.base / TOUR.zoom };
+      const pose = { ...at, distance: this.seaCappedDistance(at.distance, at) };
+      const ms = this.transition(pose, `tour:${index}`, false, TOUR.legMs, () => leg(index + 1));
+      // Reduced motion: no tour, just end where we started.
+      if (ms === 0) {
+        this.tourToken += 1;
+        this.touring = false;
+        this.notify();
+      }
+    };
+    leg(0);
+  }
+
+  private stopTour(): void {
+    if (!this.touring) return;
+    this.tourToken += 1;
+    this.touring = false;
+    this.notify();
   }
 
   getState(): CameraRigState {
@@ -321,6 +560,8 @@ export class CameraDirector implements CameraRigApi {
       minZoom: ZOOM_LIMITS.min,
       maxZoom: ZOOM_LIMITS.max,
       azimuthDeg: Math.round((this.azimuth / DEG) * 10) / 10,
+      panMode: this.panMode,
+      touring: this.touring,
     };
   }
 
@@ -330,7 +571,7 @@ export class CameraDirector implements CameraRigApi {
     return () => this.listeners.delete(listener);
   }
 
-  /** Per frame, after controls.update(): pan clamp + zoom readout from wheel / pinch. */
+  /** Per frame, after controls.update(): pan clamp, sea clamp and zoom readout from wheel / pinch. */
   update(): void {
     if (this.pinned || this.tweening) return;
     const t = this.controls.target;
@@ -342,10 +583,11 @@ export class CameraDirector implements CameraRigApi {
       t.set(clamped[0], clamped[1], clamped[2]);
       this.camera.position.set(this.camera.position.x + dx, this.camera.position.y + dy, this.camera.position.z + dz);
     }
+    this.updateSeaClamp();
     if (this.dragging) this.syncFromCamera();
     else {
       const distance = this.camera.position.distanceTo(this.controls.target);
-      const zoom = clampZoom(this.fit / Math.max(distance, 1e-3));
+      const zoom = clampZoom(this.base / Math.max(distance, 1e-3));
       if (Math.abs(zoom - this.zoom) > 0.004) {
         this.zoom = zoom;
         this.notify();
@@ -353,33 +595,79 @@ export class CameraDirector implements CameraRigApi {
     }
   }
 
+  /**
+   * User orbit / zoom / pan: cap distance and tilt so the frame stays on the
+   * sea. Never forces the camera tighter than the automatic framing itself.
+   */
+  private updateSeaClamp(): void {
+    const pose = this.current();
+    const key = `${pose.target.map((v) => v.toFixed(2)).join()}|${pose.distance.toFixed(2)}|${pose.polar.toFixed(3)}|${pose.azimuth.toFixed(3)}|${this.camera.aspect.toFixed(3)}`;
+    if (key === this.clampKey) return;
+    this.clampKey = key;
+    const { fov, aspect } = this.camera;
+    const seaMax = maxSeaDistance(pose.target, pose.polar, pose.azimuth, fov, aspect, this.seaHalf);
+    this.controls.minDistance = this.base / ZOOM_LIMITS.max;
+    this.controls.maxDistance = Math.max(this.base, Math.min(this.base / ZOOM_LIMITS.min, seaMax));
+    const safePolar = maxSeaPolar(pose.target, pose.distance, pose.azimuth, fov, aspect, POLAR_LIMITS_DEG.max * DEG, 0, this.seaHalf);
+    this.controls.maxPolarAngle = Math.max(safePolar, this.polar);
+  }
+
+  /** Clamp a zoomed distance to the sea (never tighter than the zoom-1 framing). */
+  private seaCappedDistance(distance: number, pose: Pick<Pose, "target" | "polar" | "azimuth">): number {
+    const seaMax = maxSeaDistance(pose.target, pose.polar, pose.azimuth, this.camera.fov, this.camera.aspect, this.seaHalf);
+    return Math.min(distance, Math.max(this.base, seaMax));
+  }
+
   private syncFromCamera(): void {
     if (this.tweening) return;
     const pose = this.current();
     this.azimuth = pose.azimuth;
-    this.zoom = clampZoom(this.fit / Math.max(pose.distance, 1e-3));
+    this.zoom = clampZoom(this.base / Math.max(pose.distance, 1e-3));
     this.notify();
   }
 
+  private framingFor(mode: CameraMode): { polar: number; distance: number; fit: number; safe: boolean } {
+    const points = this.points.length > 0 ? this.points : ([[4, 0, 4], [-4, 0, -4]] as V3[]);
+    if (mode === "play") {
+      return playFraming(points, this.keepPoints, this.center, CAMERA_MODE_POLAR_DEG[mode] * DEG, this.azimuth, this.camera.fov, this.camera.aspect, this.seaHalf);
+    }
+    const minPolar = 0;
+    return seaSafeFraming(
+      points,
+      this.keepPoints,
+      this.center,
+      CAMERA_MODE_POLAR_DEG[mode] * DEG,
+      minPolar,
+      this.azimuth,
+      this.camera.fov,
+      this.camera.aspect,
+      this.seaHalf,
+      mode === "overview",
+    );
+  }
+
   private refit(): void {
-    const polar = CAMERA_MODE_POLAR_DEG[this.mode] * DEG;
-    const points = this.points.length > 0 ? this.points : [[4, 0, 4], [-4, 0, -4]] as V3[];
-    this.fit = fitDistance(points, this.center, polar, this.azimuth, this.camera.fov, this.camera.aspect);
+    const framing = this.framingFor(this.mode);
+    this.fit = framing.fit;
+    this.base = framing.distance;
+    this.polar = framing.polar;
+    this.clampKey = "";
     if (!this.pinned) {
-      this.controls.minDistance = this.fit / ZOOM_LIMITS.max;
-      this.controls.maxDistance = this.fit / ZOOM_LIMITS.min;
+      this.controls.minDistance = this.base / ZOOM_LIMITS.max;
+      this.controls.maxDistance = this.base / ZOOM_LIMITS.min;
       this.controls.minPolarAngle = POLAR_LIMITS_DEG.min * DEG;
       this.controls.maxPolarAngle = POLAR_LIMITS_DEG.max * DEG;
     }
   }
 
+  /** Readout for e2e / judge: framed polar (deg), zoom-1 distance, fitted distance. */
+  get framing(): { polarDeg: number; base: number; fit: number } {
+    return { polarDeg: this.polar / DEG, base: this.base, fit: this.fit };
+  }
+
   private goal(): Pose {
-    return {
-      target: this.center,
-      distance: this.fit / this.zoom,
-      polar: CAMERA_MODE_POLAR_DEG[this.mode] * DEG,
-      azimuth: this.azimuth,
-    };
+    const at = { target: this.center, polar: this.polar, azimuth: this.azimuth };
+    return { ...at, distance: this.seaCappedDistance(this.base / this.zoom, at) };
   }
 
   private current(): Pose {
@@ -404,41 +692,48 @@ export class CameraDirector implements CameraRigApi {
     }
   }
 
-  private transition(to: Pose, id: string, instant: boolean): void {
+  private transition(to: Pose, id: string, instant: boolean, ms?: number, done?: () => void): number {
     if (instant) {
       this.apply(to, true);
-      return;
+      done?.();
+      return 0;
     }
     const from = this.current();
     const dAz = angleDelta(from.azimuth, to.azimuth);
     // Let OrbitControls pass through both ends while tweening.
     this.controls.minDistance = Math.min(this.controls.minDistance, from.distance, to.distance);
     this.controls.maxDistance = Math.max(this.controls.maxDistance, from.distance, to.distance);
-    const ms = this.motion.camera(`camera:${id}`, (p) => {
-      const lerp = (a: number, b: number) => a + (b - a) * p;
-      this.apply(
-        {
-          target: [lerp(from.target[0], to.target[0]), lerp(from.target[1], to.target[1]), lerp(from.target[2], to.target[2])],
-          distance: lerp(from.distance, to.distance),
-          polar: lerp(from.polar, to.polar),
-          azimuth: from.azimuth + dAz * p,
-        },
-        p >= 1,
-      );
-      if (p >= 1) {
-        this.tweening = false;
-        this.azimuth = to.azimuth;
-        this.refit();
-      }
-    });
+    this.controls.maxPolarAngle = Math.max(this.controls.maxPolarAngle, from.polar, to.polar);
+    const duration = this.motion.camera(
+      `camera:${id}`,
+      (p) => {
+        const lerp = (a: number, b: number) => a + (b - a) * p;
+        this.apply(
+          {
+            target: [lerp(from.target[0], to.target[0]), lerp(from.target[1], to.target[1]), lerp(from.target[2], to.target[2])],
+            distance: lerp(from.distance, to.distance),
+            polar: lerp(from.polar, to.polar),
+            azimuth: from.azimuth + dAz * p,
+          },
+          p >= 1,
+        );
+        if (p >= 1) {
+          this.tweening = false;
+          this.azimuth = to.azimuth;
+          this.refit();
+        }
+      },
+      { ms, done },
+    );
     // A previous camera tween is `end()`ed inside motion.camera (its p = 1 clears the flag first).
-    this.tweening = ms > 0;
+    this.tweening = duration > 0;
+    return duration;
   }
 
   private notify(): void {
     if (this.listeners.size === 0) return;
     const state = this.getState();
-    const key = `${state.mode}|${state.zoomPercent}|${state.azimuthDeg}`;
+    const key = `${state.mode}|${state.zoomPercent}|${state.azimuthDeg}|${state.panMode}|${state.touring}`;
     if (key === this.lastNotified) return;
     this.lastNotified = key;
     for (const listener of this.listeners) listener(state);

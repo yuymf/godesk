@@ -52,16 +52,16 @@ export const FACE_AXIS: Readonly<Record<number, readonly [number, number, number
 };
 
 /**
- * Tray placement beside the island. Landscape canvases have spare width, so the
- * tray sits off the right/front edge; portrait canvases have spare height, so
- * it sits below (front of) the island. `islandRadius` is the framed island radius.
+ * Tray + dice rest poses in the dice overlay's local frame (tray centred on the
+ * origin). The tray is drawn as a fixed screen-corner inset (dice-overlay.ts),
+ * so it no longer needs a world anchor beside the island.
  */
 export type DiceLayout = {
   tray: { position: [number, number, number]; rotationY: number };
   dice: Array<{ position: [number, number, number]; rotationY: number }>;
 };
 
-export function diceLayout(anchor: readonly [number, number], rotationY = -0.12): DiceLayout {
+export function diceLayout(anchor: readonly [number, number] = [0, 0], rotationY = -0.08): DiceLayout {
   const [ax, az] = anchor;
   const trayY = -0.05;
   const dieY = trayY + TRAY.feltTop + DIE_SIZE / 2;
@@ -79,8 +79,3 @@ export function diceLayout(anchor: readonly [number, number], rotationY = -0.12)
   };
 }
 
-/** Anchor for the tray given canvas aspect (width / height) and island radius. */
-export function diceAnchorFor(aspect: number, islandRadius: number): [number, number] {
-  if (aspect >= 1.15) return [islandRadius + 1.3, islandRadius * 0.55];
-  return [islandRadius * 0.4, islandRadius + 1.15];
-}

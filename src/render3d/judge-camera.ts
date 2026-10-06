@@ -97,12 +97,9 @@ export function judgeCamera(preset: JudgePreset, nodes: readonly SceneNode[], as
       ];
       return { target, position };
     }
-    case "f-dice": {
-      const die = nodes.find((n) => n.id === "die:0");
-      const tray = nodes.find((n) => n.kind === "dice-tray");
-      const center: SceneVec3 = die ? [die.position[0] + 0.2, die.position[1], die.position[2]] : tray?.position ?? [4.2, 0.2, 3.2];
-      return { target: center, position: orbit(center, narrow ? 3.2 : 2.4, 48, -25) };
-    }
+    case "f-dice":
+      // The dice tray is a fixed screen-corner overlay: judge it in the default play framing.
+      return null;
     case "g-midgame":
       return { target: [0, 0, 0.4], position: orbit([0, 0, 0.4], narrow ? 13.5 : 10.5, 46, 22) };
   }
