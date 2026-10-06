@@ -28,7 +28,7 @@ export function fallbackTabletopRender(kernel: TabletopStageProps["kernel"]): Ta
   return {
     camera: { ...SCENE_TOKENS.camera, pan: false },
     lighting: SCENE_TOKENS.lighting,
-    water: { enabled: kernel === "harbor-voyage-v1", shallow: "#5fb3b3", deep: "#1f4e6b" },
+    water: { enabled: kernel === "harbor-voyage-v1", shallow: "#4aa8a8", deep: "#0e3a55" },
     materials: {
       ...Object.fromEntries(colors.map((base, index) => [`seat${index}`, seat(base)])),
       table: { base: "#8b5a2b", roughness: 0.82, metalness: 0, pattern: "grain" },

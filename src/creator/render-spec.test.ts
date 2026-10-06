@@ -43,8 +43,8 @@ describe("defaultRenderSpec", () => {
     expect(hex).toMatchObject({
       preset: "tabletop-day",
       camera: { mode: "orbit", fovDeg: 35, distance: 16, minPolarDeg: 25, maxPolarDeg: 70, pan: false },
-      lighting: { sun: { azimuthDeg: 135, elevationDeg: 52, intensity: 2.6, color: "#fff4e0" }, exposure: 1 },
-      water: { enabled: true, shallow: "#5fb3b3", deep: "#1f4e6b", waveHeight: 0.06, waveSpeed: 0.6, foam: 0.55 },
+      lighting: { sun: { azimuthDeg: 135, elevationDeg: 48, intensity: 2.85, color: "#ffe6c2" }, exposure: 1.05 },
+      water: { enabled: true, shallow: "#4aa8a8", deep: "#0e3a55", waveHeight: 0.06, waveSpeed: 0.6, foam: 0.85 },
       motion: { placeMs: 280, moveMs: 420, cameraMs: 600, diceMs: 900 },
     });
     expect(hex.materials.seat0.base).toBe("#c0392b");
@@ -62,7 +62,7 @@ describe("defaultRenderSpec", () => {
   it("returns a fresh object every call", () => {
     const first = render();
     first.water.shallow = "#000000";
-    expect(render().water.shallow).toBe("#5fb3b3");
+    expect(render().water.shallow).toBe("#4aa8a8");
   });
 
   it("recognises untouched defaults but not authored edits", () => {

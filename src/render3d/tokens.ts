@@ -55,10 +55,11 @@ export const SCENE_TOKENS = {
   toneMapping: "agx",
   outputColorSpace: "srgb",
   lighting: {
-    sun: { azimuthDeg: 135, elevationDeg: 52, intensity: 2.6, color: "#fff4e0" },
-    hemisphere: { sky: "#dfe9f5", ground: "#b59c74", intensity: 0.7 },
-    shadow: { enabled: true, softness: 0.5 },
-    exposure: 1,
+    // round-2d3：更暖的主光 + 略强填充，贴近参照 settlecoast 的暖色日光。
+    sun: { azimuthDeg: 135, elevationDeg: 48, intensity: 2.85, color: "#ffe6c2" },
+    hemisphere: { sky: "#e8f0fa", ground: "#c4a882", intensity: 0.95 },
+    shadow: { enabled: true, softness: 0.85 },
+    exposure: 1.05,
   } satisfies LightingSpec,
   shadow: {
     /** high / medium 的 PCF 半径；low 档用 TierCaps.shadowRadius（= 1）。 */

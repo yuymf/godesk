@@ -5,11 +5,7 @@ import {
   DataTexture,
   Mesh,
   NearestFilter,
-  Path,
   PlaneGeometry,
-  Shape,
-  ShapeGeometry,
-  type BufferGeometry,
   RGBAFormat,
   UnsignedByteType,
   type Object3D,
@@ -30,47 +26,23 @@ import {
 import { loadSeaTextures, type SeaTextures } from "./sea-textures";
 import { waterFeaturesFor } from "./tiers";
 
+/** 海岸距离场覆盖半宽（主水面材质采样用；世界坐标外被 clamp 成深水）。 */
 export const WATER_HALF_EXTENT = 9;
 /**
- * G3D-ISLAND：远海环外半径。主水面只有 ±9（海岸距离场覆盖范围），斜视 / 海岸机位会看到边缘；
- * 外圈用同一材质的平面方环补到 ±60（距离场在外圈被 clamp 成深水色），1 个额外 draw call。
+ * 可见海面半宽（Track C 取景用）。round-2d3：单张大平面到 ±80，去掉远海环，根除 ±9 接缝。
+ * 距离场仍按 WATER_HALF_EXTENT 采样，外圈 clamp 成深水。
  */
-export const WATER_FAR_HALF_EXTENT = 60;
+export const WATER_SEA_HALF_EXTENT = 80;
+/** @deprecated 用 WATER_SEA_HALF_EXTENT；保留别名以免旧引用挂掉。 */
+export const WATER_FAR_HALF_EXTENT = WATER_SEA_HALF_EXTENT;
 
-function farSeaRing(): BufferGeometry {
-  const outer = new Shape();
-  const o = WATER_FAR_HALF_EXTENT;
-  outer.moveTo(-o, -o);
-  outer.lineTo(o, -o);
-  outer.lineTo(o, o);
-  outer.lineTo(-o, o);
-  outer.closePath();
-  const hole = new Path();
-  const h = WATER_HALF_EXTENT;
-  hole.moveTo(-h, -h);
-  hole.lineTo(-h, h);
-  hole.lineTo(h, h);
-  hole.lineTo(h, -h);
-  hole.closePath();
-  outer.holes.push(hole);
-  const geom = new ShapeGeometry(outer, 1);
-  geom.rotateX(-Math.PI / 2);
-  // UV 与主水面（PlaneGeometry 2h×2h 旋到 XZ）同一映射：法线贴图切线空间与平铺频率一致，接缝不露。
-  const pos = geom.getAttribute("position");
-  const uv = geom.getAttribute("uv");
-  for (let i = 0; i < pos.count; i += 1) {
-    uv.setXY(i, pos.getX(i) / (2 * h) + 0.5, 0.5 - pos.getZ(i) / (2 * h));
-  }
-  uv.needsUpdate = true;
-  return geom;
-}
 
 const DEFAULT_SPEC: TideWaterSpec = {
-  shallow: "#5fb3b3",
-  deep: "#1f4e6b",
+  shallow: "#4aa8a8",
+  deep: "#0e3a55",
   waveHeight: 0.06,
   waveSpeed: 0.6,
-  foam: 0.55,
+  foam: 0.85,
 };
 
 function coastsFromModel(model: SceneModel | null): CoastSample[] {
@@ -100,6 +72,8 @@ function makeDistTexture(data: Float32Array, size: number): DataTexture {
 export type WaterController = {
   mesh: Mesh;
   lastDistanceMs: number;
+  /** 可见海面半宽（世界单位）；Track C 取景 / 相机适配用。 */
+  seaHalfExtent: number;
   update(nowMs: number): void;
   setTier(tier: RenderTierId): void;
   rebuildDistance(model: SceneModel | null): void;
@@ -122,22 +96,15 @@ export async function createWaterController(options: {
   const { material, uniforms, setOwnedTexture, releaseOwned, disposeOwnedTextures } =
     createTideWaterMaterial(spec, features);
   const geom = new PlaneGeometry(
-    WATER_HALF_EXTENT * 2,
-    WATER_HALF_EXTENT * 2,
+    WATER_SEA_HALF_EXTENT * 2,
+    WATER_SEA_HALF_EXTENT * 2,
     features.segments,
     features.segments,
   );
   geom.rotateX(-Math.PI / 2);
   const mesh = new Mesh(geom, material);
   mesh.position.set(0, -0.08, 0);
-  const farGeom = farSeaRing();
-  const far = new Mesh(farGeom, material);
-  far.name = "water-far";
-  far.receiveShadow = false;
-  far.userData.kind = "water";
-  far.userData.nodeId = "water-far";
-  mesh.add(far);
-  // round-2d2：水面不接收阴影 —— 阴影相机只罩住岛，罩外是亮的，会在海面上留一道直线接缝。
+  // round-2d2/2d3：水面不接收阴影 —— 阴影相机只罩住岛，罩外偏亮会留接缝。
   mesh.receiveShadow = false;
   mesh.castShadow = false;
   mesh.userData.kind = "water";
@@ -166,7 +133,6 @@ export async function createWaterController(options: {
     }
     disposeOwnedTextures();
     geom.dispose();
-    farGeom.dispose();
     material.dispose();
   };
 
@@ -225,6 +191,7 @@ export async function createWaterController(options: {
     get lastDistanceMs() {
       return lastDistanceMs;
     },
+    seaHalfExtent: WATER_SEA_HALF_EXTENT,
     update(nowMs: number) {
       if (disposed) return;
       const reduced = prefersReducedMotion();

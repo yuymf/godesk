@@ -19,8 +19,8 @@ describe("G3D-07 lighting rig", () => {
     const rig = createLightingRig(scene, SCENE_TOKENS.lighting, TIER_CAPS.high);
     expect(rig.sun).toBeInstanceOf(DirectionalLight);
     expect(rig.hemisphere).toBeInstanceOf(HemisphereLight);
-    expect(rig.sun.intensity).toBe(2.6);
-    expect(rig.sun.color.getHexString()).toBe(new DirectionalLight("#fff4e0").color.getHexString());
+    expect(rig.sun.intensity).toBe(2.85);
+    expect(rig.sun.color.getHexString()).toBe(new DirectionalLight("#ffe6c2").color.getHexString());
     expect(rig.hemisphere.intensity).toBe(0.7);
     expect(rig.sun.castShadow).toBe(true);
     expect(rig.sun.shadow.mapSize.x).toBe(2048);

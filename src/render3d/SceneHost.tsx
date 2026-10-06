@@ -389,6 +389,7 @@ export function SceneHost({
     rebuildDistance(model: SceneModel | null): void;
     dispose(): void;
     lastDistanceMs: number;
+    seaHalfExtent: number;
   } | null>(null);
   const waterAliveRef = useRef(false);
   const waterAbortRef = useRef<AbortController | null>(null);
@@ -1004,7 +1005,12 @@ export function SceneHost({
               if (el) {
                 el.dataset.water = "on";
                 el.dataset.waterDistMs = String(Math.round(water.lastDistanceMs));
+                el.dataset.seaHalfExtent = String(water.seaHalfExtent);
               }
+              // Track C 取景：可见海面半宽（与 water.seaHalfExtent / dataset 同值）。
+              (globalThis as { __g3dWater?: { seaHalfExtent: number } }).__g3dWater = {
+                seaHalfExtent: water.seaHalfExtent,
+              };
             } catch (error) {
               if (error instanceof DOMException && error.name === "AbortError") return;
               console.warn("[godesk.water] mount failed", error);

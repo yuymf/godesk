@@ -12,6 +12,7 @@ import {
   BoxGeometry,
   BufferAttribute,
   BufferGeometry,
+  CircleGeometry,
   Color,
   CylinderGeometry,
   DodecahedronGeometry,
@@ -31,12 +32,12 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import type { RenderTierId } from "./tiers";
 import { NUMBER_TOKEN_SCALE } from "./tokens";
 
-export type PropKind = "pine" | "sheep" | "trough" | "boulder" | "clay" | "bricks" | "sheaf" | "wheatrow" | "dune" | "pebble";
-export const PROP_KINDS: readonly PropKind[] = ["pine", "sheep", "trough", "boulder", "clay", "bricks", "sheaf", "wheatrow", "dune", "pebble"];
+export type PropKind = "pine" | "canopy" | "sheep" | "trough" | "boulder" | "clay" | "bricks" | "sheaf" | "wheatrow" | "dune" | "pebble" | "blobshadow";
+export const PROP_KINDS: readonly PropKind[] = ["pine", "canopy", "sheep", "trough", "boulder", "clay", "bricks", "sheaf", "wheatrow", "dune", "pebble", "blobshadow"];
 
 /** 地形 → 道具（先放大件）。Tidewell 地形键见 runtime/adapters/hex-settlement。 */
 export const TERRAIN_PROPS: Record<string, readonly PropKind[]> = {
-  wood: ["pine"],
+  wood: ["pine", "canopy"],
   sheep: ["trough", "sheep"],
   ore: ["boulder", "pebble"],
   brick: ["clay", "bricks"],
@@ -48,17 +49,17 @@ type Counts = Partial<Record<PropKind, number>>;
 /** 每格数量：terrain → kind → count。low 档全 0。 */
 export const PROP_COUNTS: Record<RenderTierId, Record<string, Counts>> = {
   high: {
-    wood: { pine: 56 },
-    sheep: { trough: 1, sheep: 14 },
-    ore: { boulder: 7, pebble: 10 },
+    wood: { pine: 56, canopy: 18, blobshadow: 56 },
+    sheep: { trough: 1, sheep: 14, blobshadow: 15 },
+    ore: { boulder: 7, pebble: 10, blobshadow: 7 },
     brick: { clay: 6, bricks: 3 },
     wheat: { wheatrow: 30, sheaf: 3 },
     desert: { dune: 4, pebble: 7 },
   },
   medium: {
-    wood: { pine: 30 },
-    sheep: { trough: 1, sheep: 8 },
-    ore: { boulder: 4, pebble: 5 },
+    wood: { pine: 30, canopy: 0, blobshadow: 30 },
+    sheep: { trough: 1, sheep: 8, blobshadow: 9 },
+    ore: { boulder: 4, pebble: 5, blobshadow: 4 },
     brick: { clay: 4, bricks: 2 },
     wheat: { wheatrow: 18, sheaf: 2 },
     desert: { dune: 3, pebble: 4 },
@@ -68,14 +69,18 @@ export const PROP_COUNTS: Record<RenderTierId, Record<string, Counts>> = {
 
 /** 道具间最小间距（相邻两件取均值）。 */
 const SPACING: Record<PropKind, number> = {
-  pine: 0.1, sheep: 0.16, trough: 0.22, boulder: 0.18, clay: 0.2, bricks: 0.17, sheaf: 0.12, wheatrow: 0.1, dune: 0.28, pebble: 0.07,
+  pine: 0.1, canopy: 0.2, sheep: 0.16, trough: 0.22, boulder: 0.18, clay: 0.2, bricks: 0.17, sheaf: 0.12, wheatrow: 0.1, dune: 0.28, pebble: 0.07, blobshadow: 0.08,
 };
 const CASTS: Record<PropKind, boolean> = {
-  pine: true, sheep: true, trough: true, boulder: true, clay: false, bricks: true, sheaf: true, wheatrow: true, dune: false, pebble: false,
+  pine: true, canopy: false, sheep: true, trough: true, boulder: true, clay: false, bricks: true, sheaf: true, wheatrow: true, dune: false, pebble: false, blobshadow: false,
 };
 /** 圆润有机体用平滑着色，岩石 / 砖保持平面着色。 */
 const SMOOTH: Record<PropKind, boolean> = {
-  pine: true, sheep: true, trough: false, boulder: false, clay: true, bricks: false, sheaf: true, wheatrow: true, dune: true, pebble: false,
+  pine: true, canopy: true, sheep: true, trough: false, boulder: false, clay: true, bricks: false, sheaf: true, wheatrow: true, dune: true, pebble: false, blobshadow: true,
+};
+/** 树冠 / 接触阴影用半透明材质（每类仍 1 个 InstancedMesh）。 */
+const TRANSLUCENT: Record<PropKind, boolean> = {
+  pine: false, canopy: true, sheep: false, trough: false, boulder: false, clay: false, bricks: false, sheaf: false, wheatrow: false, dune: false, pebble: false, blobshadow: true,
 };
 
 /** 地块顶面高度（SceneHost sharedTileGeom 拉伸深度）。 */
@@ -171,6 +176,16 @@ function pineGeometry(): BufferGeometry {
   ]);
 }
 
+/** 树冠云：压扁的半透明绿团，铺在松树上方，远看连成一片树冠（仅 high 档）。 */
+function canopyGeometry(): BufferGeometry {
+  return grad(at(new SphereGeometry(0.16, 10, 6), 0, 0, 0, 1.55, 0.42, 1.35), "#2f6b3a", "#6aa45a", -0.05, 0.08, 0.12);
+}
+
+/** 接触阴影：贴地半透明深色扁圆，给道具脚下一点落地感（便宜，+1 draw call）。 */
+function blobShadowGeometry(): BufferGeometry {
+  return grad(at(new CircleGeometry(0.1, 12), 0, 0.002, 0, 1, 1, 1).rotateX(-Math.PI / 2), "#1a1814", "#1a1814", 0, 1);
+}
+
 /** 羊：大而亮的圆润羊毛身体（主体 + 三团羊毛）+ 深色脸、耳、四腿，高约 0.17，朝 +X。 */
 function sheepGeometry(): BufferGeometry {
   const leg = (x: number, z: number) => grad(at(new CylinderGeometry(0.012, 0.011, 0.07, 4, 1, true), x, 0.035, z), "#2a2522", "#3a332e", 0, 0.07);
@@ -257,8 +272,8 @@ function pebbleGeometry(): BufferGeometry {
 }
 
 const BUILDERS: Record<PropKind, () => BufferGeometry> = {
-  pine: pineGeometry, sheep: sheepGeometry, trough: troughGeometry, boulder: boulderGeometry, clay: clayGeometry,
-  bricks: bricksGeometry, sheaf: sheafGeometry, wheatrow: wheatRowGeometry, dune: duneGeometry, pebble: pebbleGeometry,
+  pine: pineGeometry, canopy: canopyGeometry, sheep: sheepGeometry, trough: troughGeometry, boulder: boulderGeometry, clay: clayGeometry,
+  bricks: bricksGeometry, sheaf: sheafGeometry, wheatrow: wheatRowGeometry, dune: duneGeometry, pebble: pebbleGeometry, blobshadow: blobShadowGeometry,
 };
 
 export function buildPropGeometry(kind: PropKind): BufferGeometry {
@@ -354,15 +369,35 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
         kind,
         terrain: tile.terrain,
         x: tile.center[0] + dx,
-        y: TILE_TOP,
+        y: kind === "canopy" ? TILE_TOP + 0.34 + rand() * 0.1 : TILE_TOP,
         z: tile.center[2] + dz,
         yaw: kind === "wheatrow" ? -rowYaw + (rand() - 0.5) * 0.06 : rand() * Math.PI * 2,
-        scale: kind === "pine" ? 0.85 + rand() * 0.6 : kind === "sheep" ? 1.05 + rand() * 0.25 : 0.95 + rand() * 0.3,
-        stretch: kind === "pine" ? 0.85 + rand() * 0.35 : kind === "wheatrow" ? 1 : 0.92 + rand() * 0.16,
+        scale: kind === "pine" ? 0.85 + rand() * 0.6 : kind === "canopy" ? 1.15 + rand() * 0.55 : kind === "sheep" ? 1.05 + rand() * 0.25 : 0.95 + rand() * 0.3,
+        stretch: kind === "pine" ? 0.85 + rand() * 0.35 : kind === "canopy" ? 0.7 + rand() * 0.35 : kind === "wheatrow" ? 1 : 0.92 + rand() * 0.16,
         tone: rand(),
         hue: rand(),
       });
       placed += 1;
+    }
+  }
+  // 接触阴影：在会投影的道具脚下各放一枚（同一次摆放，确定性）。
+  if ((counts.blobshadow ?? 0) > 0) {
+    const bases = out.filter((p) => p.kind === "pine" || p.kind === "sheep" || p.kind === "boulder" || p.kind === "trough");
+    const want = Math.min(counts.blobshadow ?? 0, bases.length);
+    for (let i = 0; i < want; i += 1) {
+      const b = bases[i]!;
+      out.push({
+        kind: "blobshadow",
+        terrain: tile.terrain,
+        x: b.x,
+        y: TILE_TOP + 0.004,
+        z: b.z,
+        yaw: b.yaw,
+        scale: (b.kind === "pine" ? 1.1 : b.kind === "sheep" ? 0.85 : 1.0) * b.scale,
+        stretch: 1,
+        tone: 0.5,
+        hue: 0.5,
+      });
     }
   }
   return out;
@@ -415,6 +450,14 @@ export function createTerrainPropLayer(): TerrainPropLayer {
   group.name = "terrain-props";
   const material = new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85, metalness: 0 });
   const smoothMaterial = new MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.9, metalness: 0 });
+  const canopyMaterial = new MeshStandardMaterial({
+    vertexColors: true, flatShading: false, roughness: 1, metalness: 0,
+    transparent: true, opacity: 0.55, depthWrite: false, depthWrite: false,
+  });
+  const shadowMaterial = new MeshStandardMaterial({
+    color: "#1a1814", flatShading: true, roughness: 1, metalness: 0,
+    transparent: true, opacity: 0.28, depthWrite: false, depthWrite: false,
+  });
   const geometries = new Map<PropKind, BufferGeometry>();
   let key = "";
   let tier: RenderTierId | null = null;
@@ -446,7 +489,8 @@ export function createTerrainPropLayer(): TerrainPropLayer {
           geom = buildPropGeometry(kind);
           geometries.set(kind, geom);
         }
-        const mesh = new InstancedMesh(geom, SMOOTH[kind] ? smoothMaterial : material, list.length);
+        const mat = kind === "canopy" ? canopyMaterial : kind === "blobshadow" ? shadowMaterial : SMOOTH[kind] ? smoothMaterial : material;
+        const mesh = new InstancedMesh(geom, mat, list.length);
         mesh.name = `prop:${kind}`;
         mesh.castShadow = castShadow && CASTS[kind];
         mesh.receiveShadow = true;
@@ -475,6 +519,8 @@ export function createTerrainPropLayer(): TerrainPropLayer {
       geometries.clear();
       material.dispose();
       smoothMaterial.dispose();
+      canopyMaterial.dispose();
+      shadowMaterial.dispose();
       key = "";
     },
   };
