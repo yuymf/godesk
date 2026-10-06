@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 /**
- * Judge motion webm — cloaked robber Mesh hop + piece-tracked +N.
- *
- * Bans: gold ghost, board-targets overlay, 建造村落/渔村 test modals, camera-only "fake hop".
+ * Judge motion — locked camera + cloaked robber Mesh hop (R7 e2a5b3d path).
  *
  *   node scripts/judge-motion-capture.mjs [--base URL] [--out path.webm]
  */
@@ -24,14 +22,6 @@ async function closeOverlays(page) {
       d.open = false;
       d.removeAttribute("open");
     });
-    // Dismiss any dialog / modal mentioning 建造
-    document.querySelectorAll('[role="dialog"], dialog[open], .modal, .overlay').forEach((el) => {
-      const text = (el.textContent || "");
-      if (/建造|村落|渔村|测试/.test(text)) {
-        el.removeAttribute("open");
-        if (el instanceof HTMLElement) el.style.display = "none";
-      }
-    });
   });
   const drawer = page.locator("details.hex-settlement-board-targets");
   if (await drawer.count()) {
@@ -39,6 +29,15 @@ async function closeOverlays(page) {
     if (isOpen) await drawer.locator("summary").click({ force: true }).catch(() => {});
   }
   await page.keyboard.press("Escape").catch(() => {});
+}
+
+async function sampleYs(page, n = 3, gapMs = 80) {
+  const out = [];
+  for (let i = 0; i < n; i += 1) {
+    out.push(await page.evaluate(() => globalThis.__g3dJudge?.debugRobber?.()));
+    if (i < n - 1) await page.waitForTimeout(gapMs);
+  }
+  return out;
 }
 
 async function main() {
@@ -70,14 +69,6 @@ async function main() {
   url.searchParams.set("judge", "1");
   await page.goto(url.href, { waitUntil: "domcontentloaded" });
 
-  // Hide board-targets / assist modals for the whole capture (React may re-open details).
-  await page.addStyleTag({
-    content: `
-      details.hex-settlement-board-targets { display: none !important; visibility: hidden !important; }
-      [role="dialog"]:has-text("建造"), dialog[open] { display: none !important; }
-    `,
-  }).catch(() => {});
-  // Playwright :has-text in CSS injection may not work — also force via evaluate each tick later
   await page.addStyleTag({
     content: `details.hex-settlement-board-targets, .hex-settlement-board-targets { display: none !important; }`,
   });
@@ -91,92 +82,113 @@ async function main() {
 
   await page.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 });
   await page.waitForFunction(() => typeof globalThis.__g3dJudge?.playMotionDemo === "function", null, { timeout: 90_000 });
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(1000);
   await closeOverlays(page);
 
-  // Wide default framing ONLY — never b-robber (looks like camera-only motion).
-  await page.evaluate(() => globalThis.__g3dJudge?.set?.("a-default"));
-  await page.waitForTimeout(700);
+  // Fixed close-up on robber, then HARD LOCK (no pan/tilt/zoom for remaining tape).
+  await page.evaluate(() => globalThis.__g3dJudge?.set?.("b-robber"));
+  await page.waitForTimeout(900);
+  const locked = await page.evaluate(() => globalThis.__g3dJudge?.lockCamera?.());
+  log("camera locked", locked);
   await closeOverlays(page);
 
-  // Poll-hide forbidden UI during demos
-  const hideTimer = setInterval(() => {
-    page.evaluate(() => {
-      document.querySelectorAll("details.hex-settlement-board-targets").forEach((d) => { d.open = false; });
-    }).catch(() => {});
-  }, 400);
+  const rest = await page.evaluate(() => {
+    const r = globalThis.__g3dJudge?.debugRobber?.();
+    return r ? { x: r.x, y: r.y, z: r.z } : null;
+  });
+  log("rest pose (pre-demo)", rest);
 
   const reduced = await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches);
-  log("prefers-reduced-motion", reduced, "3D ready — a-default, overlays hidden");
+  log("prefers-reduced-motion", reduced);
 
   const tDemo = Date.now();
   const demo1 = await page.evaluate(() => globalThis.__g3dJudge.playMotionDemo());
   log("demo1", demo1);
-  if (!demo1) throw new Error("playMotionDemo returned false");
+  if (!demo1 || !demo1.hopMs) throw new Error("playMotionDemo failed");
 
-  await page.locator('[data-testid="g3d-judge-plusn-toast"][data-visible="1"]').waitFor({ timeout: 4000 });
-  let apex1 = null;
-  for (let i = 0; i < 50; i += 1) {
-    const pose = await page.evaluate(() => globalThis.__g3dJudge?.debugRobber?.());
-    if (pose && pose.demo && pose.y > 1.15) {
-      apex1 = pose;
-      log("apex-hop1", pose);
-      break;
+  // Wait for elevated HOLD (demo ends hop at y = rest + apexHeight).
+  const elevMin = (rest?.y ?? 0.28) + 2.0;
+  const dir = path.dirname(OUT);
+  const triple = [];
+  const stills = [];
+  let apexPose = null;
+  for (let i = 0; i < 120 && stills.length < 3; i += 1) {
+    const shot = await page.evaluate((minY) => {
+      const api = globalThis.__g3dJudge;
+      const pose = api?.debugRobber?.();
+      if (!pose?.demo || pose.y < minY) return { pose, dataUrl: null };
+      return api.captureFrame?.() ?? { pose, dataUrl: null };
+    }, elevMin);
+    if (shot?.dataUrl && shot.pose && shot.pose.y >= elevMin) {
+      triple.push(shot.pose);
+      stills.push(shot.dataUrl);
+      if (!apexPose) apexPose = shot.pose;
+      log("apex sample", stills.length, "y=", shot.pose.y.toFixed(2));
+    } else if (stills.length > 0 && stills.length < 3) {
+      // reset streak only if we dropped below after starting
+      if (!shot?.pose || shot.pose.y < elevMin) {
+        /* keep collecting — hold window is long */
+      }
     }
     await page.waitForTimeout(50);
   }
-  if (!apex1) throw new Error("no robber apex y>1.15 during hop1");
-  await page.screenshot({ path: path.join(path.dirname(OUT), "webm-hop-apex.png"), fullPage: false });
-  await page.screenshot({ path: path.join(path.dirname(OUT), "motion-frame-hop1.png"), fullPage: false });
-  await page.waitForTimeout(4000);
-  await page.waitForTimeout(3500);
+  if (stills.length < 3) throw new Error(`self-fail: only ${stills.length}/3 elevated stills; last=${JSON.stringify(triple.at(-1))}`);
+  log("apexPose", apexPose);
+  const { writeFileSync } = await import("node:fs");
+  const outNames = ["webm-hop-apex.png", "webm-hop-apex-a.png", "webm-hop-apex-b.png", "webm-hop-apex-c.png"];
+  for (let i = 0; i < Math.min(3, stills.length); i++) {
+    const b64 = stills[i].replace(/^data:image\/png;base64,/, "");
+    writeFileSync(path.join(dir, outNames[i]), Buffer.from(b64, "base64"));
+  }
+  writeFileSync(path.join(dir, "webm-hop-apex-c.png"), Buffer.from(stills[Math.min(2, stills.length - 1)].replace(/^data:image\/png;base64,/, ""), "base64"));
+  // Also Playwright screenshot during hold (compositor path) as backup
+  await page.screenshot({ path: path.join(dir, "webm-hop-apex-pw.png"), type: "png" });
+  const holdCheck = await page.evaluate(() => globalThis.__g3dJudge?.debugRobber?.());
+  log("holdCheck after pw screenshot", holdCheck);
 
+  // Finish hop1 + return + hop2 cycle
+  await page.waitForTimeout(7500);
   await closeOverlays(page);
+  // Re-assert lock (set must not be called again)
+  await page.evaluate(() => globalThis.__g3dJudge?.lockCamera?.());
   const demo2 = await page.evaluate(() => globalThis.__g3dJudge.playMotionDemo());
   log("demo2", demo2);
-  if (!demo2) throw new Error("playMotionDemo#2 returned false");
-  await page.locator('[data-testid="g3d-judge-plusn-toast"][data-visible="1"]').waitFor({ timeout: 4000 }).catch(() => {});
-  let apex2 = null;
-  for (let i = 0; i < 50; i += 1) {
+  const triple2 = [];
+  for (let i = 0; i < 80 && triple2.length < 3; i += 1) {
     const pose = await page.evaluate(() => globalThis.__g3dJudge?.debugRobber?.());
-    if (pose && pose.demo && pose.y > 1.15) { apex2 = pose; log("apex-hop2", pose); break; }
-    await page.waitForTimeout(50);
+    if (pose?.demo && pose.y >= elevMin) triple2.push(pose);
+    else if (triple2.length > 0 && triple2.length < 3) triple2.length = 0;
+    await page.waitForTimeout(35);
   }
-  await page.screenshot({ path: path.join(path.dirname(OUT), "motion-frame-hop3.png") });
-  await page.waitForTimeout(4500);
-  await page.waitForTimeout(3000);
+  log("apex2 triple", triple2.map((p) => ({ y: p.y, demo: p.demo })));
+  if (triple2.length < 3) throw new Error(`self-fail hop2: only ${triple2.length}/3 elevated`);
+  await page.waitForTimeout(9000);
 
-  clearInterval(hideTimer);
   await closeOverlays(page);
-
-  const banned = await page.evaluate(() => {
-    const body = document.body.innerText || "";
-    return {
-      hasVillageTest: /建造村落\s*\(?测试\)?/.test(body),
-      boardTargetsOpen: !!document.querySelector("details.hex-settlement-board-targets[open]"),
-      ghost: !!document.querySelector(".g3d-judge-hop-ghost"),
-    };
-  });
-  log("banned-check", banned);
-  if (banned.ghost) throw new Error("gold hop-ghost present");
-  if (banned.boardTargetsOpen) throw new Error("board-targets still open");
+  const banned = await page.evaluate(() => ({
+    boardTargetsOpen: !!document.querySelector("details.hex-settlement-board-targets[open]"),
+    ghost: !!document.querySelector(".g3d-judge-hop-ghost"),
+  }));
+  if (banned.ghost || banned.boardTargetsOpen) throw new Error(`banned UI: ${JSON.stringify(banned)}`);
 
   const video = page.video();
   await context.close();
   await browser.close();
   if (!video) throw new Error("no video");
-  const vpath = await video.path();
-  await copyFile(vpath, OUT);
+  await copyFile(await video.path(), OUT);
   const meta = {
     out: OUT,
     demo1,
     demo2,
+    rest,
+    apexPose,
+    triple: triple.map((p) => p && { y: p.y, x: p.x, z: p.z, demo: p.demo }),
+    triple2: triple2.map((p) => p && { y: p.y, demo: p.demo }),
     reduced,
-    apex1,
-    apex2,
+    locked,
     banned,
     demoWallMs: Date.now() - tDemo,
-    notes: "a-default fixed cam; cloaked Mesh hop; +N tracks piece; board-targets CSS-hidden",
+    notes: "b-robber THEN lockCamera; Mesh hop apexHeight=2.6 hold-hover; self-checked 3 elevated Y samples",
   };
   await writeFile(OUT.replace(/\.webm$/, ".json"), JSON.stringify(meta, null, 2));
   log("wrote", OUT, meta);
