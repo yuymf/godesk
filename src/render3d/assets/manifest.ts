@@ -1027,7 +1027,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
     "id": "texture/t04-wheat/512/baseColor",
     "file": "assets/textures/pbr/t04-wheat/512/baseColor.ktx2",
     "kind": "texture",
-    "bytes": 45879,
+    "bytes": 42380,
     "tier": "high-medium",
     "source": "ai-generated",
     "license": {
@@ -1036,7 +1036,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "author": "Grok Bot GenerateImage（AI 生成，俞孟凡 / GoDesk 委托）",
       "obtainedAt": "2026-10-06",
       "modified": true,
-      "modificationNote": "AI 生图（T3）；中心方块裁切→1024→逐轴 offset-by-half 羽化混合无缝化→512²→toktx ETC1S",
+      "modificationNote": "AI 生图（T3b）；中心方块裁切→1024→逐轴 offset-by-half 羽化混合无缝化→512²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
       "legalReview": "pending-G3D-17"
@@ -1046,7 +1046,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
     "id": "texture/t04-wheat/512/normal",
     "file": "assets/textures/pbr/t04-wheat/512/normal.ktx2",
     "kind": "texture",
-    "bytes": 78485,
+    "bytes": 84163,
     "tier": "high-medium",
     "source": "ai-generated",
     "license": {
@@ -1055,7 +1055,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "author": "Grok Bot GenerateImage（AI 生成，俞孟凡 / GoDesk 委托）",
       "obtainedAt": "2026-10-06",
       "modified": true,
-      "modificationNote": "AI 生图（T3）；由无缝 AI albedo 亮度高度场推导 normal（自有算法，非 AI）→512²→toktx UASTC+zstd",
+      "modificationNote": "AI 生图（T3b）；由无缝 AI albedo 亮度高度场推导 normal（自有算法，非 AI）→512²→toktx UASTC+zstd",
       "orderRef": "n/a",
       "status": "cleared",
       "legalReview": "pending-G3D-17"
@@ -1065,7 +1065,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
     "id": "texture/t04-wheat/512/orm",
     "file": "assets/textures/pbr/t04-wheat/512/orm.ktx2",
     "kind": "texture",
-    "bytes": 27004,
+    "bytes": 23760,
     "tier": "high-medium",
     "source": "ai-generated",
     "license": {
@@ -1074,7 +1074,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "author": "Grok Bot GenerateImage（AI 生成，俞孟凡 / GoDesk 委托）",
       "obtainedAt": "2026-10-06",
       "modified": true,
-      "modificationNote": "AI 生图（T3）；由无缝 AI albedo 亮度高度场推导 orm（自有算法，非 AI）→512²→toktx ETC1S",
+      "modificationNote": "AI 生图（T3b）；由无缝 AI albedo 亮度高度场推导 orm（自有算法，非 AI）→512²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
       "legalReview": "pending-G3D-17"
@@ -1084,7 +1084,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
     "id": "texture/t04-wheat/256/baseColor",
     "file": "assets/textures/pbr/t04-wheat/256/baseColor.ktx2",
     "kind": "texture",
-    "bytes": 13510,
+    "bytes": 15053,
     "tier": "low",
     "source": "ai-generated",
     "license": {
@@ -1093,7 +1093,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "author": "Grok Bot GenerateImage（AI 生成，俞孟凡 / GoDesk 委托）",
       "obtainedAt": "2026-10-06",
       "modified": true,
-      "modificationNote": "AI 生图（T3）；中心方块裁切→1024→逐轴 offset-by-half 羽化混合无缝化→256²→toktx ETC1S",
+      "modificationNote": "AI 生图（T3b）；中心方块裁切→1024→逐轴 offset-by-half 羽化混合无缝化→256²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
       "legalReview": "pending-G3D-17"
@@ -1103,7 +1103,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
     "id": "texture/t04-wheat/256/normal",
     "file": "assets/textures/pbr/t04-wheat/256/normal.ktx2",
     "kind": "texture",
-    "bytes": 22300,
+    "bytes": 24380,
     "tier": "low",
     "source": "ai-generated",
     "license": {
@@ -1112,7 +1112,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "author": "Grok Bot GenerateImage（AI 生成，俞孟凡 / GoDesk 委托）",
       "obtainedAt": "2026-10-06",
       "modified": true,
-      "modificationNote": "AI 生图（T3）；由无缝 AI albedo 亮度高度场推导 normal（自有算法，非 AI）→256²→toktx UASTC+zstd",
+      "modificationNote": "AI 生图（T3b）；由无缝 AI albedo 亮度高度场推导 normal（自有算法，非 AI）→256²→toktx UASTC+zstd",
       "orderRef": "n/a",
       "status": "cleared",
       "legalReview": "pending-G3D-17"
@@ -1122,7 +1122,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
     "id": "texture/t04-wheat/256/orm",
     "file": "assets/textures/pbr/t04-wheat/256/orm.ktx2",
     "kind": "texture",
-    "bytes": 9434,
+    "bytes": 9682,
     "tier": "low",
     "source": "ai-generated",
     "license": {
@@ -1131,7 +1131,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "author": "Grok Bot GenerateImage（AI 生成，俞孟凡 / GoDesk 委托）",
       "obtainedAt": "2026-10-06",
       "modified": true,
-      "modificationNote": "AI 生图（T3）；由无缝 AI albedo 亮度高度场推导 orm（自有算法，非 AI）→256²→toktx ETC1S",
+      "modificationNote": "AI 生图（T3b）；由无缝 AI albedo 亮度高度场推导 orm（自有算法，非 AI）→256²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
       "legalReview": "pending-G3D-17"
