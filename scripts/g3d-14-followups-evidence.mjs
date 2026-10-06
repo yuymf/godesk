@@ -51,7 +51,7 @@ async function playToEnd(browser, roomUrl, log) {
   }
   let idle = 0;
   let moves = 0;
-  for (let turn = 0; turn < 160 && idle < 4; turn += 1) {
+  for (let turn = 0; turn < 200 && idle < 12; turn += 1) {
     const status = (await seats[0].region.locator(".othello-hud-status").innerText().catch(() => "")) || "";
     if (/结束|胜|平局/.test(status)) break;
     const seat = Number(/座位\s*(\d)/.exec(status)?.[1] ?? "0");
@@ -69,7 +69,13 @@ async function playToEnd(browser, roomUrl, log) {
       idle += 1;
     } else {
       idle += 1;
-      await p.waitForTimeout(600);
+      // 席位页偶尔漏掉一次房间推送：连续空转时重载该席位页并重新选座。
+      if (idle % 3 === 0) {
+        await p.reload({ waitUntil: "domcontentloaded", timeout: 60_000 }).catch(() => {});
+        await region.waitFor({ timeout: 60_000 }).catch(() => {});
+        await p.getByLabel("你的席位").selectOption(String(seat)).catch(() => {});
+      }
+      await p.waitForTimeout(800);
       continue;
     }
     await seats[0].p.waitForFunction((prev) => {
@@ -114,7 +120,15 @@ async function capture(browser, url, name, { tier, perf = true, extra = "" }, lo
     await p.addStyleTag({ content: '[data-testid="g3d-perf-overlay"]{display:none!important}' });
     const base = `${name}-${vpId}`;
     await stage.scrollIntoViewIfNeeded();
-    await stage.screenshot({ path: path.join(OUT, `${base}-stage.png`) });
+    const box1 = await stage.boundingBox();
+    await p.waitForTimeout(500);
+    const box2 = await stage.boundingBox();
+    try {
+      await stage.screenshot({ path: path.join(OUT, `${base}-stage.png`), timeout: 15_000 });
+    } catch {
+      // 元素持续不“稳定”时退回整页裁剪（并记录两次包围盒，便于排查布局抖动）。
+      if (box2) await p.screenshot({ path: path.join(OUT, `${base}-stage.png`), clip: box2 });
+    }
     await p.getByRole("region", { name: "对局状态" }).first().screenshot({ path: path.join(OUT, `${base}-hud.png`) }).catch(() => {});
     await p.screenshot({ path: path.join(OUT, `${base}-page.png`) });
     const info = await p.evaluate(() => {
@@ -143,7 +157,7 @@ async function capture(browser, url, name, { tier, perf = true, extra = "" }, lo
         discs: { seat0: disc("is-black"), seat1: disc("is-white") },
       };
     });
-    results[vpId] = info;
+    results[vpId] = { ...info, stageBoxes: [box1, box2] };
     await p.goto("about:blank");
     await ctx.close();
   }
