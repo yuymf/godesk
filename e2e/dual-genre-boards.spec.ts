@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
 
 /** Frozen Sol max baseline prompts (GameSpec fixtures). */
 const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿六角岛资源建造游戏";
@@ -139,16 +140,18 @@ test.describe("dual-genre boards: Othello + hex-island generate → lobby → ac
     await capture(page, "room-hex-island");
     await expect(board.getByLabel("你的资源")).toBeVisible();
 
-    const settlement = board.getByRole("button", { name: /放置定居点/ });
+    const { openTidewellBoardTargets } = await import("./helpers/tidewell-actions");
+    await openTidewellBoardTargets(board);
+    const settlement = board.getByRole("button", { name: /建造渔村/ });
     await expect(settlement.first()).toBeVisible();
     await settlement.first().click();
 
     // Authority: last action + phase / resources region reflect the setup place.
-    await expect(hud).toContainText("place_settlement");
+    await expect(hud).toContainText("建造渔村");
     await expect(hud).toContainText("初始放置");
     await expect(board.getByLabel("你的资源")).toBeVisible();
     // After settlement, setup wants a road — legal road hits appear.
-    await expect(board.getByRole("button", { name: /放置道路/ }).first()).toBeVisible({
+    await expect(board.getByRole("button", { name: /铺设栈道/ }).first()).toBeVisible({
       timeout: 15_000,
     });
 

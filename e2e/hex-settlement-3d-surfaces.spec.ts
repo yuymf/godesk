@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
 
 /** G3D-18: preview and replay mount the read-only 3D SceneHost (no SVG board). */
 const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿六角岛资源建造游戏";
@@ -37,9 +38,10 @@ test("汐屿: preview + replay render 3D canvas, no SVG board", async ({ page })
   await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
   await page.getByLabel("你的席位").selectOption("0");
   const board = page.getByRole("region", { name: "汐屿六角岛" });
-  await board.getByRole("button", { name: /放置定居点/ }).first().click();
+  const { clickTidewellBoardAction } = await import("./helpers/tidewell-actions");
+  await clickTidewellBoardAction(board, /建造渔村/);
   await expect(board.getByRole("region", { name: "对局状态" })).toContainText(
-    "place_settlement",
+    "建造渔村",
   );
   await page.getByRole("link", { name: "只读回放" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/replay\//, { timeout: 30_000 });

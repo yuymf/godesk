@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
 
 /** G3D-04 EP-I: iPhone 12 Pro touch emulation can tap a legal action (no HUD/header overlap). */
 test("汐屿 room: iPhone 12 Pro touch taps a legal settlement", async ({ browser }) => {
@@ -27,10 +28,12 @@ test("汐屿 room: iPhone 12 Pro touch taps a legal settlement", async ({ browse
     await page.getByLabel("你的席位").selectOption("0");
     const board = page.getByRole("region", { name: "汐屿六角岛" });
     await expect(page.getByRole("img", { name: "汐屿六角岛" })).toBeVisible();
-    await board.getByRole("button", { name: /放置定居点/ }).first().tap({ timeout: 10_000 });
-    await expect(board.getByRole("region", { name: "对局状态" })).toContainText("place_settlement");
-    await board.getByRole("button", { name: /放置道路/ }).first().tap({ timeout: 10_000 });
-    await expect(board.getByRole("region", { name: "对局状态" })).toContainText("place_road");
+    const { openTidewellBoardTargets } = await import("./helpers/tidewell-actions");
+    await openTidewellBoardTargets(board);
+    await board.getByRole("button", { name: /建造渔村/ }).first().tap({ timeout: 10_000 });
+    await expect(board.getByRole("region", { name: "对局状态" })).toContainText("建造渔村");
+    await board.getByRole("button", { name: /铺设栈道/ }).first().tap({ timeout: 10_000 });
+    await expect(board.getByRole("region", { name: "对局状态" })).toContainText("铺设栈道");
   } finally {
     await ctx.close();
   }

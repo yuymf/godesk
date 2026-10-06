@@ -85,7 +85,7 @@ export function executableOthelloSpecFixture(): RuleSystem {
 }
 
 
-/** Executable hex-island / hex-settlement RuleSystem for PR6 thin bind tests. */
+/** Executable Tidewell / hex-settlement RuleSystem for PR6 thin bind tests. */
 export function executableHexIslandSpecFixture(): RuleSystem {
   const rule: RuleSystem = {
     id: "rule-system-hex-island-fixture", version: 1, name: "汐屿六角岛基础版", pitch: "Hex settlement",

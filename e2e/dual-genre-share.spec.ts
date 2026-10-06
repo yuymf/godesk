@@ -1,4 +1,5 @@
 import { expect, type Browser, type Page, test } from "@playwright/test";
+import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
 import {
   HEX_ISLAND_PROMPT,
   OTHELLO_PROMPT,
@@ -55,10 +56,10 @@ async function guestJoinClaimAndAct(
       await expect(board).toBeVisible();
       const hud = board.getByRole("region", { name: "对局状态" });
       await expect(hud).toContainText("轮到你行动");
-      await board.getByRole("button", { name: /放置定居点/ }).first().click();
-      await expect(hud).toContainText("place_settlement");
+      await clickTidewellBoardAction(board, /建造渔村/);
+      await expect(hud).toContainText("建造渔村");
       await expect(
-        board.getByRole("button", { name: /放置道路/ }).first(),
+        board.getByRole("button", { name: /铺设栈道/ }).first(),
       ).toBeVisible({ timeout: 15_000 });
     }
   } finally {

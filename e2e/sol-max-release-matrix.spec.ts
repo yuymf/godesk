@@ -33,7 +33,7 @@ test.describe("Sol max release matrix — automatable row index", () => {
     expect(boards).toMatch(/做一款可以与电脑对战的黑白棋/);
     expect(boards).toMatch(/data-lobby-mark="hexIsland"/);
     expect(boards).toMatch(/data-lobby-mark="othello"/);
-    expect(boards).toMatch(/放置定居点|可落子/);
+    expect(boards).toMatch(/建造渔村|可落子/);
 
     // share= guest handoff (othello/hexIsland + hand-play/network)
     expect(share).toMatch(/share=\s*交接|second context|guest/i);

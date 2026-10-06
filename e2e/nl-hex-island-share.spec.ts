@@ -1,5 +1,6 @@
 import { chromium, expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
+import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
 import {
   NORTH_STAR_HEX_ISLAND_PROMPT,
   openLobbyCard,
@@ -84,17 +85,17 @@ test("NL hex-island proposal → hex-settlement build → share= guest setup set
     await expect(hostHud).toContainText("等待对方 · 座位 0");
     await expect(guestHud).toContainText("座位 0 · 阶段 初始放置");
     await expect(guestHud).toContainText("轮到你行动");
-    await expect(hostBoard.getByRole("button", { name: /放置定居点/ })).toHaveCount(0);
+    await expect(hostBoard.getByRole("button", { name: /建造渔村/ })).toHaveCount(0);
     await expect(guestBoard.getByLabel("你的资源")).toBeVisible();
     await evidenceScreenshot(guestPage, "hex-island-guest-setup");
 
-    await guestBoard.getByRole("button", { name: /放置定居点/ }).first().click();
-    await expect(hostHud).toContainText("place_settlement");
-    await expect(guestHud).toContainText("place_settlement");
+    await clickTidewellBoardAction(guestBoard, /建造渔村/);
+    await expect(hostHud).toContainText("建造渔村");
+    await expect(guestHud).toContainText("建造渔村");
     await expect(hostHud.getByLabel("胜利点")).toContainText("座位 0 · 1 胜利点");
     await expect(guestHud.getByLabel("胜利点")).toContainText("座位 0 · 1 胜利点");
-    await expect(guestBoard.getByRole("button", { name: /放置道路/ }).first()).toBeVisible();
-    await expect(hostBoard.getByRole("button", { name: /放置道路/ })).toHaveCount(0);
+    await expect(guestBoard.getByRole("button", { name: /铺设栈道/ }).first()).toBeVisible();
+    await expect(hostBoard.getByRole("button", { name: /铺设栈道/ })).toHaveCount(0);
     await evidenceScreenshot(guestPage, "hex-island-guest-settlement");
   } finally {
     await guest.close();
