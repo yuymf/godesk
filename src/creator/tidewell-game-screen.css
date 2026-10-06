@@ -12,6 +12,21 @@
   --tw-sea: #2e7f86;
   --tw-tex-wood: none;
   --tw-tex-parchment: none;
+  /* ⑤ carved wooden box — gold lip + deep inset well */
+  --tw-gold-bright: #e8c85a;
+  --tw-gold-mid: #c9a227;
+  --tw-gold-deep: #8a6a14;
+  --tw-carve-outer: #1a0e08;
+  --tw-carve-gold:
+    0 0 0 1px var(--tw-carve-outer),
+    0 0 0 2px var(--tw-gold-deep),
+    0 0 0 3px var(--tw-gold-mid),
+    0 0 0 4px rgba(232, 200, 90, 0.55);
+  --tw-carve-inset:
+    inset 0 0 0 1px rgba(232, 200, 90, 0.35),
+    inset 0 0 0 2px rgba(138, 106, 20, 0.85),
+    inset 0 2px 6px rgba(0, 0, 0, 0.45),
+    inset 0 -1px 0 rgba(255, 220, 140, 0.12);
   --tw-side: 260px;
   --tw-dock: 196px;
   position: fixed !important;
@@ -123,6 +138,16 @@ body:has(.room-view-tidewell-immersive) {
   max-height: 100%;
   overflow: hidden;
   color: var(--tw-ink, #2a1c12);
+  /* ⑤ one continuous wooden crate — top/sides/dock share the same timber */
+  background:
+    linear-gradient(180deg, rgba(40, 22, 12, 0.35) 0%, rgba(12, 6, 4, 0.55) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #3e2616 0%, #1a100a 100%);
+  background-size: auto, 320px 320px, auto;
+  box-shadow:
+    var(--tw-carve-gold),
+    inset 0 0 0 6px #2a1810,
+    inset 0 0 28px rgba(0, 0, 0, 0.55);
 }
 
 .tidewell-topbar {
@@ -130,15 +155,20 @@ body:has(.room-view-tidewell-immersive) {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 4px 10px;
-  min-height: 44px;
+  padding: 6px 12px;
+  min-height: 48px;
   background:
-    linear-gradient(180deg, rgba(80, 48, 24, 0.55) 0%, rgba(30, 16, 8, 0.72) 100%),
+    linear-gradient(180deg, rgba(90, 56, 28, 0.42) 0%, rgba(28, 14, 8, 0.78) 100%),
     var(--tw-tex-wood),
     linear-gradient(180deg, #6b4428 0%, #3e2616 100%);
   background-size: auto, 256px 256px, auto;
-  border-bottom: 2px solid var(--tw-gold, #c9a227);
-  box-shadow: inset 0 1px 0 rgba(255, 220, 140, 0.18), 0 2px 8px rgba(0, 0, 0, 0.35);
+  /* ⑤ carved gold belt — joins left/right rail lips into one crate lid */
+  border-bottom: 3px solid var(--tw-gold-mid, #c9a227);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 140, 0.28),
+    inset 0 -1px 0 var(--tw-gold-deep, #8a6a14),
+    inset 0 -3px 0 rgba(26, 14, 8, 0.9),
+    0 4px 14px rgba(0, 0, 0, 0.45);
   color: var(--tw-parchment, #f3e7c9);
   z-index: 5;
 }
@@ -268,13 +298,11 @@ body:has(.room-view-tidewell-immersive) {
   min-height: 0;
   padding: 8px;
   border: none;
-  border-right: 2px solid #c9a22766;
   border-radius: 0;
   overflow: auto;
 }
 .tidewell-turn-column {
-  border-right: none;
-  border-left: 2px solid #c9a22766;
+  border: none;
 }
 
 .tidewell-player-list {
@@ -430,18 +458,26 @@ body:has(.room-view-tidewell-immersive) {
   padding: 4px 8px;
 }
 
-/* ③/④: wood-grain side rail (not flat brown) */
+/* ③/④/⑤: wood-grain side rail — deep carved well into the crate */
 .tidewell-players {
   background:
-    linear-gradient(180deg, rgba(55, 32, 16, 0.55) 0%, rgba(20, 10, 6, 0.7) 100%),
+    linear-gradient(90deg, rgba(18, 10, 6, 0.55) 0%, rgba(40, 22, 12, 0.2) 40%, rgba(18, 10, 6, 0.35) 100%),
+    linear-gradient(180deg, rgba(55, 32, 16, 0.45) 0%, rgba(20, 10, 6, 0.72) 100%),
     var(--tw-tex-wood),
     linear-gradient(180deg, #4a2f1c 0%, #2c1a10 100%) !important;
-  background-size: auto, 220px 220px, auto !important;
+  background-size: auto, auto, 220px 220px, auto !important;
   color: #f3e7c9;
-  border-right: 2px solid #c9a22788 !important;
+  border-right: none !important;
+  /* carved gold lip toward the stage + deep recess */
   box-shadow:
-    inset 0 0 0 1px rgba(201, 162, 39, 0.28),
-    inset 0 1px 0 rgba(255, 220, 140, 0.12);
+    inset -1px 0 0 var(--tw-carve-outer, #1a0e08),
+    inset -2px 0 0 var(--tw-gold-deep, #8a6a14),
+    inset -3px 0 0 var(--tw-gold-mid, #c9a227),
+    inset -4px 0 0 rgba(232, 200, 90, 0.45),
+    inset 0 0 18px rgba(0, 0, 0, 0.55),
+    inset 4px 0 10px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 220, 140, 0.1);
+  padding: 10px 12px 10px 10px !important;
 }
 .tidewell-players .tidewell-panel-title {
   color: #f0d060;
@@ -452,9 +488,15 @@ body:has(.room-view-tidewell-immersive) {
     var(--tw-tex-wood),
     linear-gradient(145deg, #5a3820 0%, #3a2416 55%, #2c1a10 100%) !important;
   background-size: auto, 180px 180px, auto !important;
-  border: 1px solid #c9a22799 !important;
+  border: 1px solid var(--tw-gold-mid, #c9a227) !important;
   color: #f3e7c9;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,220,140,0.14);
+  border-radius: 8px !important;
+  box-shadow:
+    0 0 0 1px var(--tw-carve-outer, #1a0e08),
+    0 0 0 2px rgba(138, 106, 20, 0.75),
+    0 4px 10px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 220, 140, 0.22),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.35);
 }
 .tidewell-player-card.is-active {
   background:
@@ -512,7 +554,10 @@ body:has(.room-view-tidewell-immersive) {
     linear-gradient(180deg, rgba(243, 231, 201, 0.14), rgba(232, 211, 162, 0.08)),
     var(--tw-tex-parchment);
   background-size: auto, 160px 160px;
-  border: 1px solid rgba(201, 162, 39, 0.28);
+  border: 1px solid var(--tw-gold-mid, #c9a227);
+  box-shadow:
+    0 0 0 1px var(--tw-carve-outer, #1a0e08),
+    inset 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 .tidewell-player-vp {
   display: block;
@@ -531,25 +576,44 @@ body:has(.room-view-tidewell-immersive) {
 .tidewell-hud-awards dt { color: #c9a227aa !important; }
 .tidewell-hud-awards dd { color: #f3e7c9; }
 
-/* ④: parchment-grain turn column + card */
+/* ④/⑤: right rail is wood crate wall; parchment lives as nested inset panels */
 .tidewell-turn-column {
   background:
-    linear-gradient(180deg, rgba(243, 231, 201, 0.82), rgba(232, 211, 162, 0.78)),
-    var(--tw-tex-parchment),
-    linear-gradient(180deg, #f3e7c9, #e8d3a2) !important;
-  background-size: auto, 240px 240px, auto !important;
-  box-shadow: inset 0 0 0 1px rgba(201, 162, 39, 0.28);
+    linear-gradient(270deg, rgba(18, 10, 6, 0.55) 0%, rgba(40, 22, 12, 0.2) 40%, rgba(18, 10, 6, 0.35) 100%),
+    linear-gradient(180deg, rgba(55, 32, 16, 0.45) 0%, rgba(20, 10, 6, 0.72) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #4a2f1c 0%, #2c1a10 100%) !important;
+  background-size: auto, auto, 220px 220px, auto !important;
+  border-left: none !important;
+  box-shadow:
+    inset 1px 0 0 var(--tw-carve-outer, #1a0e08),
+    inset 2px 0 0 var(--tw-gold-deep, #8a6a14),
+    inset 3px 0 0 var(--tw-gold-mid, #c9a227),
+    inset 4px 0 0 rgba(232, 200, 90, 0.45),
+    inset 0 0 18px rgba(0, 0, 0, 0.55),
+    inset -4px 0 10px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 220, 140, 0.1);
+  padding: 10px 10px 10px 12px !important;
+  color: #f3e7c9;
+}
+.tidewell-turn-column .tidewell-panel-title {
+  color: #f0d060;
 }
 .tidewell-turn-card {
   padding: 10px;
-  border-radius: 12px;
-  border: 1px solid #c9a22788;
+  border-radius: 8px;
+  border: 1px solid var(--tw-gold-mid, #c9a227);
   background:
     linear-gradient(180deg, rgba(255, 248, 232, 0.72), rgba(243, 231, 201, 0.55)),
     var(--tw-tex-parchment),
     linear-gradient(180deg, #fff8e8 0%, #f3e7c9 100%);
   background-size: auto, 200px 200px, auto;
-  box-shadow: 0 4px 12px rgba(74, 47, 28, 0.15), inset 0 0 0 1px rgba(255,255,255,0.4);
+  box-shadow:
+    0 0 0 1px var(--tw-carve-outer, #1a0e08),
+    0 0 0 2px rgba(138, 106, 20, 0.7),
+    0 3px 8px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+    inset 0 2px 6px rgba(74, 47, 28, 0.12);
 }
 .tidewell-turn-card-head {
   display: flex;
@@ -576,12 +640,16 @@ body:has(.room-view-tidewell-immersive) {
 .tidewell-log-panel {
   margin-top: 6px;
   padding: 8px;
-  border-radius: 10px;
+  border-radius: 8px;
   background:
     linear-gradient(180deg, rgba(255, 252, 245, 0.55), rgba(243, 231, 201, 0.4)),
     var(--tw-tex-parchment);
   background-size: auto, 180px 180px;
-  border: 1px solid rgba(74, 47, 28, 0.18);
+  border: 1px solid var(--tw-gold-mid, #c9a227);
+  box-shadow:
+    0 0 0 1px var(--tw-carve-outer, #1a0e08),
+    0 0 0 2px rgba(138, 106, 20, 0.55),
+    inset 0 2px 6px rgba(74, 47, 28, 0.15);
 }
 
 /* 2h3: larger parchment resource cards + wooden build tiles */
@@ -657,7 +725,14 @@ body:has(.room-view-tidewell-immersive) {
   border-radius: 0;
   overflow: hidden;
   border: none;
-  box-shadow: none;
+  /* ⑤ recessed board well — gold carved lip, sunk into the wooden crate */
+  box-shadow:
+    inset 0 0 0 1px var(--tw-carve-outer, #1a0e08),
+    inset 0 0 0 2px var(--tw-gold-deep, #8a6a14),
+    inset 0 0 0 3px var(--tw-gold-mid, #c9a227),
+    inset 0 0 0 4px rgba(232, 200, 90, 0.4),
+    inset 0 0 22px rgba(0, 0, 0, 0.55),
+    inset 0 8px 18px rgba(0, 0, 0, 0.35);
   background: radial-gradient(ellipse at 50% 30%, #3a9aaa 0%, var(--tw-sea, #2e7f86) 45%, #1a4f5a 100%);
 }
 .tidewell-game-screen .g3d-stage {
@@ -762,14 +837,18 @@ body:has(.room-view-tidewell-immersive) {
   height: var(--tw-dock, 196px);
   max-height: var(--tw-dock, 196px);
   box-sizing: border-box;
-  padding: 8px 12px;
+  padding: 10px 14px;
   background:
-    linear-gradient(180deg, rgba(70, 42, 22, 0.55) 0%, rgba(24, 12, 6, 0.72) 100%),
+    linear-gradient(180deg, rgba(70, 42, 22, 0.45) 0%, rgba(24, 12, 6, 0.78) 100%),
     var(--tw-tex-wood),
     linear-gradient(180deg, #5a3820 0%, #2c1a10 100%);
   background-size: auto, 280px 280px, auto;
-  border-top: 2px solid #c9a227;
-  box-shadow: inset 0 1px 0 rgba(255, 220, 140, 0.16);
+  border-top: 3px solid var(--tw-gold-mid, #c9a227);
+  box-shadow:
+    inset 0 1px 0 var(--tw-gold-deep, #8a6a14),
+    inset 0 3px 0 rgba(26, 14, 8, 0.9),
+    inset 0 1px 0 rgba(255, 220, 140, 0.2),
+    inset 0 10px 18px rgba(0, 0, 0, 0.35);
   color: #f3e7c9;
   z-index: 5;
 }
@@ -1114,8 +1193,16 @@ body:has(.room-view-tidewell-immersive) {
     align-items: center;
     gap: 8px;
     padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
-    background: linear-gradient(180deg, #5a3820 0%, #2c1a10 100%);
-    border-top: 2px solid #c9a227;
+    background:
+      linear-gradient(180deg, rgba(70, 42, 22, 0.45) 0%, rgba(24, 12, 6, 0.78) 100%),
+      var(--tw-tex-wood),
+      linear-gradient(180deg, #5a3820 0%, #2c1a10 100%);
+    background-size: auto, 220px 220px, auto;
+    border-top: 3px solid var(--tw-gold-mid, #c9a227);
+    box-shadow:
+      inset 0 1px 0 var(--tw-gold-deep, #8a6a14),
+      inset 0 3px 0 rgba(26, 14, 8, 0.9),
+      inset 0 1px 0 rgba(255, 220, 140, 0.18);
     z-index: 30;
   }
   .tidewell-table-toggle {
