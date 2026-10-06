@@ -74,7 +74,7 @@ export const SCENE_TOKENS = {
   sky: { top: "#9ab8cc", horizon: "#efe6d4", bottom: "#d4c4a4", exponent: 0.75, radius: 60 },
   camera: { fovDeg: 35, distance: 16, minPolarDeg: 25, maxPolarDeg: 70 },
   tile: { roughness: 0.92, metalness: 0 },
-  piece: { roughness: 0.58, metalness: 0, clearcoat: 0.12 },
+  piece: { roughness: 0.82, metalness: 0, clearcoat: 0 },
 } as const;
 
 /** 地块材质（颜色沿用现有地形色，pattern 按地形，贴图取 G3D-22 套件）。 */
@@ -108,8 +108,8 @@ export function seatMaterial(seat: number): MaterialToken {
     clearcoat: SCENE_TOKENS.piece.clearcoat,
     pattern: "none",
     pbrSet: "t09-paintwood",
-    pbrRepeat: 1,
-    pbrBaseColor: false,
+    pbrRepeat: 2.2,
+    pbrBaseColor: true,
   };
 }
 

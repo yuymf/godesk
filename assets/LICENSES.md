@@ -187,3 +187,22 @@
 - Kenney Nature Kit（CC0-1.0，kenney.nl/assets/nature-kit）：含树/灌/岩/帐篷/桥/作物等 glTF；无 cottage/manor/settlement 房屋。树/岩已由 model/decor 合入；帐篷不宜作渔村棋子。
 - Polyhaven island_tree_03：仅树，不替代棋子。
 - 结论：房屋/强盗继续用运行时程序化微缩几何（src/render3d/assets/pieces.ts，不产生文件、不入上表）；本轮放大体积 + 加宽强盗兜帽/描边剪影，未新增 glTF 资产行。
+
+
+## G3D-JUDGE round-6tex（刀序①）— CC0 重烘焙覆盖 AI 地块贴图
+
+2026-10-07：`assets/textures/pbr/t01–t11` 的 baseColor/normal/orm KTX2 **已用 CC0 源重烘焙**（`scripts/bake-pbr-r6-tex.py`），取代 G3D-ART 的 `LicenseRef-AI-Generated` 地块albedo（塑性玩具感）。下列为运行时生效来源；上表旧 AI 行视为历史，以本段为准。
+
+| 资产 id | 文件路径 | 名称 | 来源类型 | 来源 URL | 许可证 SPDX | 作者 | 获取日期 | 是否修改 | 修改说明 | 使用任务 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| texture/t01-pine | assets/textures/pbr/t01-pine/{512,256}/*.ktx2 | 松林地面 PBR | CC0 | https://polyhaven.com/a/forrest_ground_01 | CC0-1.0 | Poly Haven | 2026-10-07 | 是 | 轻度色调/锐化分级→512/256→toktx；脚本 bake-pbr-r6-tex.py | G3D-JUDGE-R6-TEX |
+| texture/t02-clay | assets/textures/pbr/t02-clay/{512,256}/*.ktx2 | 陶土丘 PBR | CC0 | https://ambientcg.com/a/Ground037 | CC0-1.0 | ambientCG | 2026-10-07 | 是 | 同上 | G3D-JUDGE-R6-TEX |
+| texture/t03-meadow | assets/textures/pbr/t03-meadow/{512,256}/*.ktx2 | 牧场地面 PBR | CC0 | https://ambientcg.com/a/Ground024 | CC0-1.0 | ambientCG | 2026-10-07 | 是 | 同上 | G3D-JUDGE-R6-TEX |
+| texture/t04-wheat | assets/textures/pbr/t04-wheat/{512,256}/*.ktx2 | 麦田地面 PBR | CC0 | https://ambientcg.com/a/Ground033 | CC0-1.0 | ambientCG | 2026-10-07 | 是 | 同上 | G3D-JUDGE-R6-TEX |
+| texture/t05-reef | assets/textures/pbr/t05-reef/{512,256}/*.ktx2 | 灰岩 PBR | CC0 | https://ambientcg.com/a/Rock056 | CC0-1.0 | ambientCG | 2026-10-07 | 是 | 同上 | G3D-JUDGE-R6-TEX |
+| texture/t06-sand | assets/textures/pbr/t06-sand/{512,256}/*.ktx2 | 沙地 PBR | CC0 | https://ambientcg.com/a/Ground054 | CC0-1.0 | ambientCG | 2026-10-07 | 是 | 同上 | G3D-JUDGE-R6-TEX |
+| texture/t07-cliff | assets/textures/pbr/t07-cliff/{512,256}/*.ktx2 | 崖壁 PBR | CC0 | https://ambientcg.com/a/Rock023 | CC0-1.0 | ambientCG | 2026-10-07 | 是 | 同上 | G3D-JUDGE-R6-TEX |
+| texture/t08-wood | assets/textures/pbr/t08-wood/{512,256}/*.ktx2 | 木板 PBR | CC0 | https://polyhaven.com/a/wood_planks | CC0-1.0 | Poly Haven | 2026-10-07 | 是 | 同上 | G3D-JUDGE-R6-TEX |
+| texture/t09-paintwood | assets/textures/pbr/t09-paintwood/{512,256}/*.ktx2 | 棋子木纹 PBR | CC0 | https://ambientcg.com/a/WoodFloor043 | CC0-1.0 | ambientCG | 2026-10-07 | 是 | 同上；棋子 vertexColors×albedo | G3D-JUDGE-R6-TEX |
+| texture/t10-canvas | assets/textures/pbr/t10-canvas/{512,256}/*.ktx2 | 帆布 PBR | CC0 | https://ambientcg.com/a/Fabric045 | CC0-1.0 | ambientCG | 2026-10-07 | 是 | 同上 | G3D-JUDGE-R6-TEX |
+| texture/t11-parchment | assets/textures/pbr/t11-parchment/{512,256}/*.ktx2 | 羊皮纸 PBR | CC0 | https://ambientcg.com/a/Paper001 | CC0-1.0 | ambientCG | 2026-10-07 | 是 | 同上 | G3D-JUDGE-R6-TEX |

@@ -26,7 +26,7 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
     expect(SCENE_TOKENS.shadow).toMatchObject({ radius: 4, bias: -0.0004, normalBias: 0.02, boundsPadding: 1.5 });
     expect(SCENE_TOKENS.environment.intensity).toBe(0.2);
     expect(SCENE_TOKENS.tile).toEqual({ roughness: 0.92, metalness: 0 });
-    expect(SCENE_TOKENS.piece).toEqual({ roughness: 0.58, metalness: 0, clearcoat: 0.12 });
+    expect(SCENE_TOKENS.piece).toEqual({ roughness: 0.82, metalness: 0, clearcoat: 0 });
     expect(SEAT_COLORS).toEqual(["#c0392b", "#2980b9", "#27ae60", "#f39c12"]);
   });
 
@@ -49,7 +49,7 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
 
   it("seat pieces keep their seat colour: clearcoat 0.12, normal + ORM only", () => {
     const token = seatMaterial(1);
-    expect(token).toMatchObject({ base: "#2980b9", roughness: 0.58, clearcoat: 0.12, pbrSet: "t09-paintwood", pbrBaseColor: false });
+    expect(token).toMatchObject({ base: "#2980b9", roughness: 0.82, clearcoat: 0, pbrSet: "t09-paintwood", pbrBaseColor: true });
     expect(seatMaterial(9).base).toBe("#ffffff");
   });
 

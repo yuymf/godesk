@@ -129,13 +129,14 @@ export type SceneHostProps = {
 /** Vertex-coloured procedural pieces share three white materials (seat colour is baked). */
 const PIECE_VC_TOKEN: MaterialToken = {
   base: "#ffffff",
-  roughness: 0.58,
+  roughness: 0.82,
   metalness: 0,
-  clearcoat: 0.12,
+  // Round-6tex: drop glossy clearcoat (plastic-toy). Wood albedo × vertexColors.
+  clearcoat: 0,
   pattern: "none",
   pbrSet: "t09-paintwood",
-  pbrRepeat: 1,
-  pbrBaseColor: false,
+  pbrRepeat: 2.2,
+  pbrBaseColor: true,
 };
 const FIGURE_VC_TOKEN: MaterialToken = { base: "#ffffff", roughness: 0.66, metalness: 0, pattern: "none" };
 const DICE_VC_TOKEN: MaterialToken = { base: "#ffffff", roughness: 0.34, metalness: 0, clearcoat: 0.5, pattern: "none" };

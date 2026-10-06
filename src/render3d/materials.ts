@@ -26,9 +26,9 @@ export const PATTERN_IDS: Record<MaterialPattern, number> = {
 };
 
 /** 贴图到达后 pattern 保留的强度（只做细节扰动）。 */
-export const PATTERN_STRENGTH_WITH_PBR = 0.2;
+export const PATTERN_STRENGTH_WITH_PBR = 0.08;
 /** 贴图到达后底色向白色混合的比例：保留地形色相，又不让贴图被压暗。 */
-export const PBR_TINT_TO_WHITE = 0.55;
+export const PBR_TINT_TO_WHITE = 0.35;
 
 const PATTERN_GLSL = /* glsl */ `
 varying vec3 vGdWorld;
@@ -265,7 +265,7 @@ function applyMaps(material: MeshStandardMaterial, token: MaterialToken, maps: P
   material.map = useBaseColor ? maps.map : null;
   material.normalMap = maps.normalMap;
   material.aoMap = maps.ormMap;
-  material.aoMapIntensity = 0.8;
+  material.aoMapIntensity = 1.0;
   material.roughnessMap = maps.ormMap;
   material.metalnessMap = maps.ormMap;
   material.color.set(token.base);

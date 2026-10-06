@@ -60,12 +60,12 @@ const _q = new Quaternion();
 const _e = new Euler();
 const _c = new Color();
 
-/** Transform + flatten + paint one primitive. Consumes `geom`. */
+/** Transform + flatten + paint one primitive. Consumes `geom`. Keeps UVs for wood PBR. */
 export function paintPart(geom: BufferGeometry, color: string, options: PartOptions = {}): BufferGeometry {
   const flat = geom.index ? geom.toNonIndexed() : geom;
   if (flat !== geom) geom.dispose();
   for (const name of Object.keys(flat.attributes)) {
-    if (name !== "position" && name !== "normal") flat.deleteAttribute(name);
+    if (name !== "position" && name !== "normal" && name !== "uv") flat.deleteAttribute(name);
   }
   flat.clearGroups();
   const [px, py, pz] = options.pos ?? [0, 0, 0];
@@ -75,6 +75,16 @@ export function paintPart(geom: BufferGeometry, color: string, options: PartOpti
   _m.compose(new Vector3(px, py, pz), _q, new Vector3(sx, sy, sz));
   flat.applyMatrix4(_m);
   if (!options.smooth || !flat.getAttribute("normal")) flat.computeVertexNormals();
+  // Box-project UVs when the primitive had none (extrude / lathe / merge leftovers).
+  if (!flat.getAttribute("uv")) {
+    const pos = flat.getAttribute("position");
+    const uvs = new Float32Array(pos.count * 2);
+    for (let i = 0; i < pos.count; i += 1) {
+      uvs[i * 2] = pos.getX(i) * 2.4 + pos.getZ(i) * 0.6;
+      uvs[i * 2 + 1] = pos.getY(i) * 2.4 + pos.getZ(i) * 0.4;
+    }
+    flat.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
+  }
   _c.set(color);
   const count = flat.getAttribute("position").count;
   const colors = new Float32Array(count * 3);
@@ -88,7 +98,7 @@ export function paintPart(geom: BufferGeometry, color: string, options: PartOpti
 }
 
 /**
- * Concatenate painted, non-indexed parts (position / normal / color only).
+ * Concatenate painted, non-indexed parts (position / normal / color / uv).
  * Hand-rolled instead of BufferGeometryUtils.mergeGeometries to keep the
  * render3d core chunk inside its size budget.
  */
@@ -110,6 +120,18 @@ export function mergeParts(parts: BufferGeometry[]): BufferGeometry {
     }
     merged.setAttribute(name, new Float32BufferAttribute(out, 3));
   }
+  const uvs = new Float32Array(count * 2);
+  let uOff = 0;
+  for (const part of parts) {
+    const uv = part.getAttribute("uv");
+    const n = part.getAttribute("position").count;
+    for (let i = 0; i < n; i += 1) {
+      uvs[uOff] = uv ? uv.getX(i) : 0;
+      uvs[uOff + 1] = uv ? uv.getY(i) : 0;
+      uOff += 2;
+    }
+  }
+  merged.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
   for (const part of parts) part.dispose();
   merged.computeBoundingBox();
   merged.computeBoundingSphere();
