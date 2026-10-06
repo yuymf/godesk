@@ -6,7 +6,7 @@
  * Usage: node scripts/g3d-14-followups-evidence.mjs <out-dir>   (G3D_ORIGIN, default http://127.0.0.1:8833)
  */
 import { chromium, devices } from "@playwright/test";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const OUT = process.argv[2] || "/workspace/g3d-evidence/G3D-14-followups/run";
@@ -124,10 +124,12 @@ async function capture(browser, url, name, { tier, perf = true, extra = "" }, lo
     await p.waitForTimeout(500);
     const box2 = await stage.boundingBox();
     try {
-      await stage.screenshot({ path: path.join(OUT, `${base}-stage.png`), timeout: 15_000 });
+      await stage.screenshot({ path: path.join(OUT, `${base}-stage.png`), timeout: 45_000, animations: "disabled" });
     } catch {
       // 元素持续不“稳定”时退回整页裁剪（并记录两次包围盒，便于排查布局抖动）。
-      if (box2) await p.screenshot({ path: path.join(OUT, `${base}-stage.png`), clip: box2 });
+      if (box2) await p.screenshot({ path: path.join(OUT, `${base}-stage.png`), clip: box2, timeout: 60_000 }).catch((error) => {
+        results[`${vpId}-stageError`] = String(error.message).split("\n")[0];
+      });
     }
     await p.getByRole("region", { name: "对局状态" }).first().screenshot({ path: path.join(OUT, `${base}-hud.png`) }).catch(() => {});
     await p.screenshot({ path: path.join(OUT, `${base}-page.png`), timeout: 60_000 }).catch((error) => {
@@ -171,6 +173,16 @@ async function main() {
   await mkdir(OUT, { recursive: true });
   const browser = await chromium.launch({ headless: true, args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
   const log = { origin: ORIGIN, captures: {} };
+  // FU_RECOLORED：只补拍重着色那一局（前面的满盘截图已在 capture-log.json 里）。
+  if (process.env.FU_RECOLORED) {
+    Object.assign(log, JSON.parse(await readFile(path.join(OUT, "capture-log.json"), "utf8")));
+    log.recoloredRoom = process.env.FU_RECOLORED;
+    await capture(browser, log.recoloredRoom, "recolored", { tier: "medium" }, log);
+    await capture(browser, log.recoloredRoom, "recolored-pbr-off", { tier: "medium", extra: "pbr=0" }, log);
+    await browser.close();
+    console.log(JSON.stringify(log, null, 2));
+    return;
+  }
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   // FU_PROJECT + FU_ROOM：复用已下满的一局（跳过生成与约 10 分钟的对局）。
   const { projectId, roomUrl } = process.env.FU_PROJECT && process.env.FU_ROOM
