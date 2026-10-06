@@ -73,6 +73,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | G3D-14 | 通用 3D 桌面 mapper（平台默认底座，Track C）：`mappers/tabletop.ts`（RenderSpec bindings / materials / camera + 公开状态 → SceneModel，回退内置图元）、`mappers/tabletop-kernels.ts`（翻转棋 / 线路 / 工人放置 / 港口）、`tabletop-objects.ts`；四个棋盘 Room / 预览 / 回放挂 3D 舞台（DOM 动作盘保留），LegalAction 经 3D 拾取发出；懒加载 `TabletopScene3D` 5.3 KB 不计入核心（206.88 / 210 KB）；轨迹 [`docs/prompt-trace/2026-10-06-G3D-14.md`](./prompt-trace/2026-10-06-G3D-14.md) | PR [#133](https://github.com/yuymf/godesk/pull/133) squash `28792e0` |
 | G3D-15 第二刀 | 生成默认集成验收（Track C）：e2e `nl-othello-render-rounds`——「做一款两人翻转棋」→ Studio 确认 → 3D Room，再经 MCP `apply_project_patch` 做 3 轮 `configure_render`（水面色 / 太阳高度角 / 棋子材质），每轮 compile-build + 新开一局，断言 3D 舞台 DOM 生效值与截图像素差；轨迹 [`docs/prompt-trace/2026-10-06-G3D-15-part2.md`](./prompt-trace/2026-10-06-G3D-15-part2.md) | PR [#134](https://github.com/yuymf/godesk/pull/134) squash `98f5de0` |
 | G3D-08 | 自研水体 shader + 海岸距离场（Track B）：`src/render3d/water/` Gerstner / DT / foam / sea KTX2；懒加载 `tide-water-*`；替换灰石板 surround；轨迹 [`docs/prompt-trace/2026-10-06-G3D-08.md`](./prompt-trace/2026-10-06-G3D-08.md) | PR [#131](https://github.com/yuymf/godesk/pull/131) squash `e8b59e8` |
+| G3D-ART | 美术 AI 生图（Track D；用户 2026-10-06 11:08 决定允许 AI 生图，**G3D-17 前法务审查**）：地形 PBR 7 套 + 筹码面 t11（512/256，albedo 无缝化，normal/ORM 由 albedo 推导）、资源/发展卡 6 张原位替换；新增资源图标×5（128/64）、HUD 面板框 / 卡框 9-slice、筹码面 UI（`assets/ui/ai/`，待 G3D-13 接线）；新 SPDX `LicenseRef-AI-Generated`（CI warning 列出待法务资产，不失败）；提示词全文 [`docs/art/ai-provenance.md`](./art/ai-provenance.md)；轨迹 [`docs/prompt-trace/2026-10-06-G3D-ART.md`](./prompt-trace/2026-10-06-G3D-ART.md)。已知：`t04-wheat` 平铺条纹过于规整（建议重生成）；3D 模型网格仍为 bpy 自制 | PR [#137](https://github.com/yuymf/godesk/pull/137) squash（合入后回填） |
 
 仓外已完成（不记入上表）：SPEC v0.2 起草与 §9 拍板修订；Notion 项目与任务卡建立。
 
@@ -80,14 +81,12 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
-| G3D-ART：美术质量回炉（2D） | Track B | [#125](https://github.com/yuymf/godesk/pull/125) + fix PR | **improved, still below settlecoast bar; real art quality needs a user decision on sourcing (commission an artist / buy a CC0-compatible commercial pack / allow AI-generated art with a legal review at G3D-17)** · **Blocked (user decision)**；artifact clip fix 本 PR；此后不再继续 art pass |
 
 ## 阻塞
 
 | 项 | 原因 | 解除条件 |
 | --- | --- | --- |
 | box Codex 用量上限 | 至 2026-11-05 02:04 Asia/Shanghai；Cloud Agent 兜底（本席无该工具时手写） | 用量恢复 |
-| **G3D-ART（user decision）** | improved but below settlecoast bar；需用户决定 sourcing（委托画师 / 购 CC0 兼容商用包 / 允许 AI 并在 G3D-17 做法务审） | 用户拍板 |
 | **G3D-13（Track B）** | 依赖 G3D-07/08/09/10 + 素材 19–25 已齐。**合入阻塞：G3D-04b（Track A，#132 Room AI 座位）** — Tidewell 示例 AI 座位依赖它；可先开分支开发，**须等 #132 合入后再合 G3D-13**。**HUD 备注（iPhone 12 Pro 模拟）**：Room 在棋盘下方露出合法动作的原始按钮列表，文案含坐标串（例：`放置道路 · -200:173|-250:87`）— HUD 重做须隐藏/替换此层 | 开工中；合入等 #132 |
 | GitHub Actions | 现 **operational**。deploy @ `41e352b` 生产 smoke 曾失败（ChatGPT Connector heading）；后续 deploy 通过 → 瞬时 | 禁无绿合入 |
 
@@ -105,7 +104,13 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 1. Track C：G3D-14 已合入 `28792e0`；G3D-15 第二刀合入后 Track C 队列清空（05 / 10 / 15 / 07 / 14 全部完成），待派。
 2. Track A：G3D-09 已合入 `d2f58ab`；Track A 队列清空（G3D-07 由 Track C）。
-3. Track B：G3D-08 已合入 `e8b59e8` → **G3D-13 Tidewell**（开发可开工；**合入等 #132 G3D-04b**）；G3D-ART 仍 Blocked(user decision)。
+3. Track B：G3D-08 已合入 `e8b59e8` → **G3D-13 Tidewell**（开发可开工；**合入等 #132 G3D-04b**）；G3D-ART 已由 Track D 用 AI 生图完成（#137），`assets/ui/ai/` 图标 / 9-slice 框 / 筹码面待 G3D-13 HUD 接线。
+
+## G3D-17 上线前清单（发布闸门）
+
+- [ ] **法务审查：`assets/LICENSES.md` 中每一行 `LicenseRef-AI-Generated`（当前 68 行，`pnpm verify:assets` 的 warning 会列出）必须由法务审查通过**，通过后把该行 `法务审查: 待 G3D-17` 改为 `法务审查: 已通过 <日期/审查人>`、manifest `legalReview` 改为 `"cleared"`；未通过的资产须替换（委托 / CC0 / 购买）。warning 清零前不得上线。
+- [ ] G3D-05 备注 ⑤：Lighthouse LCP / TBT 由 warn 改为 error（见上）。
+
 
 ## 开着的 PR / 分支
 
@@ -150,3 +155,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | G3D-08 #131 合入 `e8b59e8`；STATUS 回填；开 G3D-13（合入等 #132） | Track B |
 | 2026-10-06 | 更正：M1 没有 Room AI 座位，Done 撤回（脚本第二浏览器只是部分证明）；G3D-04b Room AI 座位 PR | Track A |
 | 2026-10-06 | G3D-04b #132 合入 `0c4ac5a`；M1 用真 AI 座位重跑通过，重新标 Done；Track B G3D-13 可解锁 | Track A |
+| 2026-10-06 | G3D-ART（Track D）AI 生图美术 PR #137：已完成加 G3D-ART；进行中 / 阻塞移除 G3D-ART；新增「G3D-17 上线前清单」法务审查项（LicenseRef-AI-Generated 全部清零） | Track D |

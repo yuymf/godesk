@@ -7,7 +7,9 @@
  * 2. 每个清单条目与 sprite 片段在 LICENSES.md 恰好 1 行且 11 列非空
  * 3. 许可证在白名单内
  * 4. status = "cleared"（来自 manifest；LICENSES 表无 status 列，以 manifest 为准）
- * 5. 来源 URL：http(s) 返回 2xx（可用 --skip-network）；程序化/自制检查路径存在
+ * 5. 来源 URL：http(s) 返回 2xx（可用 --skip-network）；程序化/自制/AI 生成检查路径存在
+ * 6. G3D-ART：LicenseRef-AI-Generated 行须记录工具、提示词、生成日期、后处理与「法务审查:」标记；
+ *    标记为「待 G3D-17」的资产输出 warning（不失败）—— G3D-17 上线前须由法务清零。
  *
  * 用法：
  *   node scripts/verify-assets.mjs
@@ -28,7 +30,12 @@ const LICENSE_WHITELIST = new Set([
   "OFL-1.1",
   "LicenseRef-GoDesk-Original",
   "LicenseRef-Purchased",
+  "LicenseRef-AI-Generated",
 ]);
+
+export const AI_LICENSE = "LicenseRef-AI-Generated";
+const AI_REQUIRED_MARKERS = ["工具：", "生成日期：", "提示词：", "后处理：", "法务审查:"];
+export const AI_LEGAL_PENDING = "法务审查: 待 G3D-17";
 
 const ASSET_EXTENSIONS = new Set([
   ".glb",
@@ -54,6 +61,7 @@ const SOURCE_TYPE_MAP = {
   cc0: "CC0",
   ofl: "OFL",
   purchased: "购买",
+  "ai-generated": "AI生成",
 };
 
 function parseArgs(argv) {
@@ -183,7 +191,7 @@ export async function loadManifest(options) {
 async function checkSourceUrl(entry, root, skipNetwork) {
   const { source, license } = entry;
   const url = license.sourceUrl;
-  if (source === "procedural" || source === "self-made") {
+  if (source === "procedural" || source === "self-made" || source === "ai-generated") {
     const local = url.startsWith("/") ? join(root, url.slice(1)) : join(root, url);
     if (!existsSync(local)) {
       return `来源路径不存在（${source}）：${url} → ${local}`;
@@ -286,6 +294,28 @@ export async function verifyAssets(options) {
     }
   }
 
+  // ⑥ AI 生成资产：记录完整性（error）+ 法务审查待办（warning）
+  const aiPending = [];
+  for (const [id, row] of licenseRows) {
+    if (row[5] !== AI_LICENSE) continue;
+    const note = row[9];
+    const missing = AI_REQUIRED_MARKERS.filter((m) => !note.includes(m));
+    if (missing.length) {
+      errors.push(`AI 资产 LICENSES 行缺少记录项（${missing.join("、")}）：${id}`);
+    }
+    if (note.includes(AI_LEGAL_PENDING)) aiPending.push(id);
+  }
+  for (const entry of manifest) {
+    if (entry.license.spdx === AI_LICENSE && entry.license.legalReview === "pending-G3D-17" && !aiPending.includes(entry.id)) {
+      aiPending.push(entry.id);
+    }
+  }
+  if (aiPending.length) {
+    warnings.push(
+      `AI 生成资产待法务审查（G3D-17 上线前须清零，共 ${aiPending.length} 项）：${aiPending.join(", ")}`,
+    );
+  }
+
   // ⑤ 来源
   for (const entry of manifest) {
     const err = await checkSourceUrl(entry, options.root, options.skipNetwork);
@@ -333,6 +363,7 @@ export async function verifyAssets(options) {
     expectedRows: manifestIds.size,
     distAssetFiles: distAssets.length,
     errorCount: errors.length,
+    aiPendingLegalReview: aiPending.length,
   };
 
   return { ok: errors.length === 0, errors, warnings, summary };
@@ -345,7 +376,13 @@ async function main() {
     console.log(JSON.stringify(result, null, 2));
   } else {
     console.log("verify-assets summary:", result.summary);
-    for (const w of result.warnings) console.warn("WARN:", w);
+    for (const w of result.warnings) {
+      console.warn("WARN:", w);
+      // GitHub Actions 注解：在 CI 摘要里显示为 warning（不影响退出码）
+      if (process.env.GITHUB_ACTIONS && w.startsWith("AI 生成资产待法务审查")) {
+        console.log(`::warning title=AI 资产待法务审查（G3D-17）::${w.slice(0, 900)}`);
+      }
+    }
     for (const e of result.errors) console.error("ERROR:", e);
     if (result.ok) {
       console.log("verify-assets: OK");

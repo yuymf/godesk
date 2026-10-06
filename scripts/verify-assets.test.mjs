@@ -161,4 +161,44 @@ describe("verifyAssets intentional failures", () => {
       true,
     );
   });
+  const aiEntry = () =>
+    clearedEntry({
+      source: "ai-generated",
+      license: {
+        ...clearedEntry().license,
+        spdx: "LicenseRef-AI-Generated",
+        sourceUrl: "scripts/gen-paper.mjs",
+        author: "Grok Bot GenerateImage",
+        modified: true,
+        legalReview: "pending-G3D-17",
+      },
+    });
+  const aiRow = (note) =>
+    `| ui/paper-noise | assets/ui/paper-noise.webp | 纸纹 | AI生成 | scripts/gen-paper.mjs | LicenseRef-AI-Generated | Grok Bot GenerateImage | 2026-10-06 | 是 | ${note} | G3D-ART |\n`;
+
+  it("accepts LicenseRef-AI-Generated with a legal-review warning (not a failure)", async () => {
+    writeFixture(root, {
+      manifest: [aiEntry()],
+      licenses:
+        `# t\n\n${HEADER}` +
+        aiRow("工具：Grok Bot GenerateImage；生成日期：2026-10-06；提示词：「a meadow」；后处理：裁切；法务审查: 待 G3D-17"),
+      distFiles: ["assets/ui/paper-noise.webp"],
+    });
+    const r = await runVerify(root);
+    expect(r.errors).toEqual([]);
+    expect(r.ok).toBe(true);
+    expect(r.summary.aiPendingLegalReview).toBe(1);
+    expect(r.warnings.some((w) => w.includes("待法务审查") && w.includes("ui/paper-noise"))).toBe(true);
+  });
+
+  it("fails an AI row missing prompt / legal-review markers", async () => {
+    writeFixture(root, {
+      manifest: [aiEntry()],
+      licenses: `# t\n\n${HEADER}` + aiRow("工具：Grok Bot GenerateImage；生成日期：2026-10-06"),
+      distFiles: ["assets/ui/paper-noise.webp"],
+    });
+    const r = await runVerify(root);
+    expect(r.ok).toBe(false);
+    expect(r.errors.some((e) => e.includes("AI 资产") && e.includes("提示词"))).toBe(true);
+  });
 });
