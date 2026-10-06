@@ -85,6 +85,12 @@ const COPY = {
     rules: "规则",
     settings: "设置",
     feedback: "反馈",
+    home: "返回",
+    replay: "只读回放",
+    menu: "菜单",
+    table: "桌面",
+    closeTable: "收起",
+    yourSeat: "你的席位",
     logDrawer: "对局日志",
     computer: "电脑",
     you: "你",
@@ -148,6 +154,12 @@ const COPY = {
     rules: "Rules",
     settings: "Settings",
     feedback: "Feedback",
+    home: "Home",
+    replay: "Read-only replay",
+    menu: "Menu",
+    table: "Table",
+    closeTable: "Close",
+    yourSeat: "Your seat",
     logDrawer: "Match log",
     computer: "Computer",
     you: "You",
@@ -279,6 +291,9 @@ export function HexSettlementBoard({
   busy = false,
   aiSeats = [],
   onAct,
+  onClaimSeat,
+  homeHref = "/chatgpt-plugin/games",
+  replayUrl,
 }: {
   hexSettlement: HexSettlementBoardState;
   activeSeat: number;
@@ -290,6 +305,9 @@ export function HexSettlementBoard({
   busy?: boolean;
   aiSeats?: number[];
   onAct?: (actionId: string, payload?: Record<string, unknown>) => void;
+  onClaimSeat?: (seat: number) => void;
+  homeHref?: string;
+  replayUrl?: string;
 }) {
   const [boardTargetsOpen, setBoardTargetsOpen] = useState(() => {
     if (typeof window === "undefined") return true;
@@ -297,6 +315,7 @@ export function HexSettlementBoard({
   });
   const [logTab, setLogTab] = useState<"chronicle" | "chat" | "coach">("chronicle");
   const [logOpenMobile, setLogOpenMobile] = useState(false);
+  const [tableOpen, setTableOpen] = useState(false);
   const [resourceGain, setResourceGain] = useState<Partial<Record<Resource, number>>>({});
   const prevResourcesRef = useRef<Record<Resource, number> | null>(null);
 
@@ -500,11 +519,79 @@ export function HexSettlementBoard({
     >
       <header className="tidewell-topbar">
         <div className="tidewell-topbar-brand">
+          <a
+            aria-label={copy.home}
+            className="tidewell-home-btn"
+            href={homeHref}
+            title={copy.home}
+          >
+            ←
+          </a>
           <span aria-hidden="true" className="tidewell-wax-dot" />
           <strong>{copy.board}</strong>
         </div>
         <p className="tidewell-topbar-status">{statusLine}</p>
         <div className="tidewell-topbar-actions">
+          {onClaimSeat ? (
+            <label
+              className="tidewell-seat-select"
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                borderBottom: "none",
+                margin: 0,
+                padding: 0,
+              }}
+            >
+              <span className="sr-only">{copy.yourSeat}</span>
+              <select
+                aria-label={copy.yourSeat}
+                onChange={(event) => {
+                  const next = Number(event.currentTarget.value);
+                  if (Number.isInteger(next)) onClaimSeat(next);
+                }}
+                value={viewerSeat ?? ""}
+              >
+                <option value="">
+                  {locale === "zh" ? "选择空席位" : "Pick a seat"}
+                </option>
+                {hexSettlement.players.map((_, seat) => (
+                  <option
+                    disabled={aiSeats.includes(seat) && seat !== viewerSeat}
+                    key={`seat-opt-${seat}`}
+                    value={seat}
+                  >
+                    {locale === "zh" ? `座位 ${seat}` : `Seat ${seat}`}
+                    {aiSeats.includes(seat)
+                      ? locale === "zh"
+                        ? " · 电脑"
+                        : " · AI"
+                      : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          {replayUrl ? (
+            <a className="tidewell-chip-btn tidewell-replay-link" href={replayUrl}>
+              {copy.replay}
+            </a>
+          ) : null}
+          <button
+            className="tidewell-chip-btn tidewell-sound-chip"
+            onClick={() => {
+              const trigger = document.querySelector<HTMLButtonElement>(
+                ".room-sound-settings-trigger",
+              );
+              trigger?.click();
+              const host = document.querySelector<HTMLElement>(".room-sound-settings");
+              if (host) host.dataset.open = "1";
+            }}
+            type="button"
+          >
+            {locale === "zh" ? "声音设置" : "Sound settings"}
+          </button>
           <button
             className="tidewell-chip-btn"
             onClick={() => setLogOpenMobile((v) => !v)}
@@ -512,19 +599,52 @@ export function HexSettlementBoard({
           >
             {copy.logDrawer}
           </button>
-          <a className="tidewell-chip-btn" href="#room-feedback-drawer">
-            {copy.feedback}
-          </a>
-          <button
-            className="tidewell-chip-btn"
-            onClick={() => setBoardTargetsOpen((v) => !v)}
-            type="button"
-          >
-            {copy.rules}
-          </button>
-          <a className="tidewell-chip-btn" href="/settings">
-            {copy.settings}
-          </a>
+          <details className="tidewell-menu">
+            <summary className="tidewell-chip-btn">{copy.menu}</summary>
+            <div className="tidewell-menu-panel">
+              <button
+                className="tidewell-chip-btn"
+                onClick={() => {
+                  const drawer = document.getElementById("room-feedback-drawer");
+                  if (drawer instanceof HTMLDetailsElement) drawer.open = true;
+                }}
+                type="button"
+              >
+                {copy.feedback}
+              </button>
+              <button
+                className="tidewell-chip-btn"
+                onClick={() => {
+                  const trigger = document.querySelector<HTMLButtonElement>(
+                    ".room-sound-settings-trigger",
+                  );
+                  trigger?.click();
+                  const host = document.querySelector<HTMLElement>(
+                    ".room-sound-settings",
+                  );
+                  if (host) host.dataset.open = host.dataset.open === "1" ? "0" : "1";
+                }}
+                type="button"
+              >
+                {copy.sound}
+              </button>
+              <button
+                className="tidewell-chip-btn"
+                onClick={() => setBoardTargetsOpen((v) => !v)}
+                type="button"
+              >
+                {copy.rules}
+              </button>
+              <a className="tidewell-chip-btn" href="/chatgpt-plugin/settings">
+                {copy.settings}
+              </a>
+              {replayUrl ? (
+                <a className="tidewell-chip-btn" href={replayUrl}>
+                  {copy.replay}
+                </a>
+              ) : null}
+            </div>
+          </details>
         </div>
       </header>
 
@@ -724,7 +844,7 @@ export function HexSettlementBoard({
       </div>
 
       <footer aria-label={copy.yourHand} className="tidewell-dock">
-        <div className="tidewell-hand">
+<div className="tidewell-hand">
           {(Object.keys(resourceLabel) as Resource[]).map((resource) => {
             const count = viewerResources?.[resource] ?? 0;
             const gain = resourceGain[resource];
@@ -798,6 +918,126 @@ export function HexSettlementBoard({
           })}
         </div>
       </footer>
+
+      <div className="tidewell-mobile-bar">
+        <button
+          className="tidewell-table-toggle"
+          onClick={() => setTableOpen((v) => !v)}
+          type="button"
+        >
+          {tableOpen ? copy.closeTable : copy.table}
+        </button>
+        {primaryCta ? (
+          <button
+            className="tidewell-primary-cta"
+            disabled={busy}
+            onClick={() =>
+              onAct?.(
+                primaryCta.type,
+                primaryCta.payload
+                  ? ({ ...primaryCta.payload } as Record<string, unknown>)
+                  : undefined,
+              )
+            }
+            type="button"
+          >
+            {shortLabelForAction(primaryCta, copy, resourceLabel)}
+          </button>
+        ) : (
+          <p className="tidewell-turn-idle" style={{ flex: 1, margin: 0 }}>
+            {copy.waiting}
+          </p>
+        )}
+      </div>
+
+      <div
+        aria-hidden={tableOpen ? undefined : true}
+        className={`tidewell-table-sheet${tableOpen ? " is-open" : ""}`}
+      >
+        <div className="tidewell-table-sheet-head">
+          <strong>{copy.table}</strong>
+          <button
+            className="tidewell-chip-btn"
+            onClick={() => setTableOpen(false)}
+            type="button"
+          >
+            {copy.closeTable}
+          </button>
+        </div>
+<div className="tidewell-hand">
+          {(Object.keys(resourceLabel) as Resource[]).map((resource) => {
+            const count = viewerResources?.[resource] ?? 0;
+            const gain = resourceGain[resource];
+            return (
+              <div className="tidewell-resource-tile" key={resource}>
+                {RESOURCE_CARD_URL[resource] ? (
+                  <img
+                    alt=""
+                    className="tidewell-resource-art"
+                    height={96}
+                    src={RESOURCE_CARD_URL[resource]}
+                    width={72}
+                  />
+                ) : (
+                  <div className="tidewell-resource-art is-fallback">
+                    <InkIcon id={RESOURCE_ICON_ID[resource] ?? "icon-res-wood"} />
+                  </div>
+                )}
+                <span className="tidewell-resource-name">{resourceLabel[resource]}</span>
+                <b className="tidewell-resource-count">{count}</b>
+                {gain ? (
+                  <span aria-live="polite" className="tidewell-resource-pop">
+                    +{gain}
+                  </span>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="tidewell-dev-slot">
+          <span className="tidewell-kicker">{copy.devCards}</span>
+          <strong>{viewer?.devCards.length ?? 0}</strong>
+        </div>
+
+        <div className="tidewell-build-row" role="group" aria-label={copy.primary}>
+          {BUILD_COSTS.map((build) => {
+            const can = hasLegal(build.type);
+            return (
+              <button
+                className={`tidewell-build-btn${can ? "" : " is-disabled"}`}
+                disabled={!can || busy}
+                key={build.id}
+                onClick={() => {
+                  if (build.type === "buy_dev") fireFirst("buy_dev");
+                  else {
+                    setBoardTargetsOpen(true);
+                    fireFirst(build.type);
+                  }
+                }}
+                type="button"
+              >
+                <span className="tidewell-build-label">{build.label}</span>
+                <span className="tidewell-build-cost" aria-label={copy.cost}>
+                  {build.cost.map((r, i) => (
+                    <img
+                      alt={resourceLabel[r]}
+                      height={16}
+                      key={`${build.id}-${r}-${i}`}
+                      src={
+                        RESOURCE_AI_ICON_URL[r] ??
+                        RESOURCE_CARD_URL[r] ??
+                        ""
+                      }
+                      width={16}
+                    />
+                  ))}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Legacy resource list (hidden) for older CSS/tests that query it */}
       {viewerResources && (

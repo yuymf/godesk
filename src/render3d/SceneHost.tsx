@@ -472,7 +472,9 @@ export function SceneHost({
     }
 
     const scene = new Scene();
-    scene.background = new Color(SCENE_TOKENS.sky.horizon);
+    // Tidewell: sea clear/horizon (avoids light letterbox band). Other genres keep parchment horizon.
+    const clearHex = hexSettlement ? "#2e7f86" : SCENE_TOKENS.sky.horizon;
+    scene.background = new Color(clearHex);
 
     const camera = new PerspectiveCamera(45, 1, 0.1, 100);
     camera.position.set(0, 9, 12);
@@ -489,7 +491,7 @@ export function SceneHost({
     configureRenderer(renderer, lightingRef.current);
     // 静止场景复用阴影贴图；内容变化后 SHADOW_REFRESH_MS 内逐帧重绘（见 tick）。
     renderer.shadowMap.autoUpdate = false;
-    renderer.setClearColor(new Color(SCENE_TOKENS.sky.horizon), 1);
+    renderer.setClearColor(new Color(clearHex), 1);
     rendererRef.current = renderer;
     // setSize(..., false) leaves the canvas CSS size unset, so on DPR > 1 the
     // canvas laid out at its backing-store width (e.g. 824 px on a 412 px
@@ -544,7 +546,11 @@ export function SceneHost({
 
     const rig = createLightingRig(scene, lightingRef.current, caps);
     rigRef.current = rig;
-    const sky = createSkyDome();
+    const sky = createSkyDome(
+      hexSettlement
+        ? { top: "#5a9eb8", horizon: "#2e7f86", bottom: "#1a4f5a", exponent: 0.85 }
+        : undefined,
+    );
     scene.add(sky);
     const library = new MaterialLibrary({ clearcoat: caps.id === "high" });
     // high 档：RoomEnvironment 环境反射（强度 0.35，只挂光泽材质）；medium / low 关闭（§4.7）。

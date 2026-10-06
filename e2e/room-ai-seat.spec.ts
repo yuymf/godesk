@@ -31,7 +31,7 @@ async function openAiRoom(page: Page) {
   const board = page.getByRole("region", { name: "汐屿" });
   await expect(page.getByRole("img", { name: "汐屿" })).toBeVisible({ timeout: 30_000 });
   await expect(page.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
-  await expect(page.locator(".seat-chip").filter({ hasText: "电脑" })).toHaveCount(1);
+  await expect(board.locator(".tidewell-player-card").filter({ hasText: "电脑" })).toHaveCount(1);
   return board;
 }
 

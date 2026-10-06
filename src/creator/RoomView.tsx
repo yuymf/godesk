@@ -464,7 +464,8 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         </div>
       </header>
 
-      <section aria-label={copy.invitation} className="room-invitation room-invitation-rich">
+{!hexSettlement ? (
+            <section aria-label={copy.invitation} className="room-invitation room-invitation-rich">
         <div className="invitation-heading">
           <span className="room-kicker">{copy.invitation}</span>
           <strong>{copy.invitationHint}</strong>
@@ -559,8 +560,10 @@ export function RoomView({ sessionId }: { sessionId: string }) {
           </label>
         </div>
       </section>
+      ) : null}
 
-      {room.state.status === "active" &&
+      {!hexSettlement &&
+        room.state.status === "active" &&
         room.seats.length + (room.aiSeats?.length ?? 0) < room.state.scores.length && (
         <section aria-live="polite" className="room-waiting-empty">
           <div aria-hidden="true" className="room-waiting-mark">◇</div>
@@ -571,7 +574,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         </section>
       )}
 
-      {room.experiment && (
+      {!hexSettlement && room.experiment && (
         <section
           aria-labelledby="experiment-brief-title"
           className="room-experiment-brief"
@@ -634,6 +637,10 @@ export function RoomView({ sessionId }: { sessionId: string }) {
             onAct={(actionId, payload) => {
               void act(actionId, -1, payload);
             }}
+            onClaimSeat={(next) => {
+              void claimSeat(next);
+            }}
+            replayUrl={room.replayUrl}
             status={room.state.status}
             viewerSeat={seat}
             winnerSeat={room.state.winnerSeat}
