@@ -42,6 +42,14 @@ jobs:
       # SPEC §4.6.1 CI gate: deterministic render budgets under SwiftShader
       # (bytes, requests, draw calls, triangles, GPU estimate, leaks, context loss).
       - run: pnpm perf:ci --out perf-results
+      # G3D-17 上线前清单：现为 warning 模式（只出注解与 Step Summary，不影响结果）。
+      # G3D-17 转阻断：把 GODESK_LAUNCH_GATE 改为 block（或用 GODESK_LAUNCH_GATE_BLOCK 逐项转正），见 docs/perf/launch-checklist.md。
+      - name: G3D-17 launch checklist
+        if: always()
+        env:
+          GODESK_LAUNCH_GATE: warn
+          GODESK_LAUNCH_GATE_BLOCK: ""
+        run: node scripts/launch-checklist.mjs --only asset-legal,size-budgets,draw-calls,hud-raw-action-ids --perf perf-results/ci-budgets.json --out perf-results/launch-checklist.json
       - name: Upload CI render budget report
         if: always()
         uses: actions/upload-artifact@v4

@@ -53,6 +53,15 @@ jobs:
       - name: Lighthouse CI autorun (home + Room)
         run: pnpm exec lhci autorun --collect.url="$LHCI_HOME_URL" --collect.url="$LHCI_ROOM_URL"
 
+      # G3D-17 上线前清单 · Lighthouse 项：列出 lighthouserc.json 里仍为 warn 级的断言并按 median-run 对照阈值。
+      # 现为 warning 模式；G3D-17 把断言改为 error 后，再把 GODESK_LAUNCH_GATE 改为 block（docs/perf/launch-checklist.md）。
+      - name: G3D-17 launch checklist (Lighthouse)
+        if: always()
+        env:
+          GODESK_LAUNCH_GATE: warn
+          GODESK_LAUNCH_GATE_BLOCK: ""
+        run: node scripts/launch-checklist.mjs --only lighthouse --lighthouse .lighthouseci --out .lighthouseci/launch-checklist.json
+
       - name: Upload Lighthouse reports
         if: always()
         uses: actions/upload-artifact@v4
