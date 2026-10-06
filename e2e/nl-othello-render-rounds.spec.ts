@@ -233,4 +233,31 @@ test("NL「做一款两人翻转棋」→ 3D Room：三轮 configure_render 逐�
     previous = shot;
     prior = stats;
   }
+
+  // G3D-14 follow-up：2D 计分色块 / 棋子跟随编译进 build 的座位材质（与 3D 一致）。
+  const board3 = page.getByRole("region", { name: "黑白棋盘" });
+  await expect(board3.locator(".othello-disc-swatch.is-black")).toHaveCSS("background-color", "rgb(122, 31, 43)");
+  await expect(board3.locator(".othello-disc-swatch.is-white")).toHaveCSS("background-color", "rgb(232, 195, 90)");
+  await expect(board3.locator(".othello-disc.is-black").first()).toHaveCSS("background-image", /rgb\(122, 31, 43\)/);
+  await expect(board3.locator(".othello-disc.is-white").first()).toHaveCSS("background-image", /rgb\(232, 195, 90\)/);
+
+  // G3D-14 follow-up：iPhone 12 Pro（390×844）翻转棋 Room 无横向溢出。
+  const mobileContext = await browser.newContext({ ...devices["iPhone 12 Pro"] });
+  try {
+    const mobile = await mobileContext.newPage();
+    await mobile.goto(page.url());
+    await expect(mobile.getByRole("region", { name: "黑白棋盘" }).locator(".othello-grid")).toBeVisible();
+    await expect(mobile.getByTestId("tabletop-stage").locator("canvas")).toHaveCount(1, { timeout: 60_000 });
+    const widths = await mobile.evaluate(() => ({
+      scroll: document.documentElement.scrollWidth,
+      client: document.documentElement.clientWidth,
+      grid: document.querySelector(".othello-grid")!.getBoundingClientRect().right,
+    }));
+    expect(widths.client).toBe(390);
+    expect(widths.scroll, JSON.stringify(widths)).toBeLessThanOrEqual(widths.client);
+    expect(widths.grid).toBeLessThanOrEqual(widths.client);
+    await mobile.goto("about:blank");
+  } finally {
+    await mobileContext.close();
+  }
 });
