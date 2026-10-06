@@ -13,7 +13,19 @@ const seatUrls = import.meta.glob("../../assets/illustrations/brand/seat-*.webp"
   import: "default",
 }) as Record<string, string>;
 
+const brandUrls = import.meta.glob("../../assets/illustrations/brand/*.webp", {
+  eager: true,
+  query: "?url",
+  import: "default",
+}) as Record<string, string>;
+
 const aiIconUrls = import.meta.glob("../../assets/ui/ai/icons/*-64.webp", {
+  eager: true,
+  query: "?url",
+  import: "default",
+}) as Record<string, string>;
+
+const buildIconUrls = import.meta.glob("../../assets/ui/ai/icons/build-*-96.webp", {
   eager: true,
   query: "?url",
   import: "default",
@@ -54,8 +66,16 @@ export const RESOURCE_ICON_ID: Record<string, string> = {
   ore: "icon-res-ore",
 };
 
+export const BUILD_ICON_URL: Record<string, string | undefined> = {
+  road: pick(buildIconUrls, "build-road"),
+  settlement: pick(buildIconUrls, "build-settlement"),
+  city: pick(buildIconUrls, "build-city"),
+  buy: pick(buildIconUrls, "build-card"),
+};
+
 export const PANEL_FRAME_URL = pick(uiAiUrls, "panel-frame");
 export const CARD_FRAME_URL = pick(uiAiUrls, "card-frame");
+export const ISLAND_FLOURISH_URL = pick(brandUrls, "island-flourish");
 
 export function seatMarkUrl(seat: number): string | undefined {
   return pick(seatUrls, `seat-${seat}`);

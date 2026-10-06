@@ -159,3 +159,8 @@
 ## G3D-ART 生成辅料（不入运行时清单）
 
 - `scripts/data/paper001-color-512.jpg`：ambientCG [Paper001](https://ambientcg.com/a/Paper001) **CC0-1.0** Color 裁 512，仅供 `gen-card-art.py` / `gen-brand-art.py` 合成羊皮纸底；不部署、不进 `ASSET_MANIFEST`。成品卡/品牌仍登记为 `LicenseRef-GoDesk-Original`（修改说明列已记 CC0 底纹）。
+
+| ui/ai/icons/build-road | assets/ui/ai/icons/build-road-{64,96}.webp | HUD 建造砖·栈道图标 | 自制 | assets/ui/ai/icons/build-road-96.webp | LicenseRef-GoDesk-Original | GoDesk Track B（程序化 PIL） | 2026-10-06 | 否 | 木纹底 + 几何栈道示意，非 settlecoast 复制 | G3D-JUDGE-HUD-2h3 |
+| ui/ai/icons/build-settlement | assets/ui/ai/icons/build-settlement-{64,96}.webp | HUD 建造砖·渔村图标 | 自制 | assets/ui/ai/icons/build-settlement-96.webp | LicenseRef-GoDesk-Original | GoDesk Track B（程序化 PIL） | 2026-10-06 | 否 | 木纹底 + 几何小屋示意，非 settlecoast 复制 | G3D-JUDGE-HUD-2h3 |
+| ui/ai/icons/build-city | assets/ui/ai/icons/build-city-{64,96}.webp | HUD 建造砖·港镇图标 | 自制 | assets/ui/ai/icons/build-city-96.webp | LicenseRef-GoDesk-Original | GoDesk Track B（程序化 PIL） | 2026-10-06 | 否 | 木纹底 + 几何双楼示意，非 settlecoast 复制 | G3D-JUDGE-HUD-2h3 |
+| ui/ai/icons/build-card | assets/ui/ai/icons/build-card-{64,96}.webp | HUD 建造砖·买卡图标 | 自制 | assets/ui/ai/icons/build-card-96.webp | LicenseRef-GoDesk-Original | GoDesk Track B（程序化 PIL） | 2026-10-06 | 否 | 木纹底 + 几何卷轴示意，非 settlecoast 复制 | G3D-JUDGE-HUD-2h3 |
