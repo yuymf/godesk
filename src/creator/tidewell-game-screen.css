@@ -1,0 +1,668 @@
+/* G3D-judge-HUD · full-viewport Tidewell game screen (lazy with HexSettlementBoard).
+   Own wood/parchment/wax look — no settlecoast assets. */
+
+.room-view-tidewell.room-view-tidewell-immersive {
+  --tw-wood: #4a2f1c;
+  --tw-wood-edge: #2c1a10;
+  --tw-parchment: #f3e7c9;
+  --tw-parchment-deep: #e8d3a2;
+  --tw-ink: #2a1c12;
+  --tw-gold: #c9a227;
+  --tw-sea: #2e7f86;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  background:
+    radial-gradient(ellipse at 50% 20%, #5a3a22 0%, transparent 55%),
+    linear-gradient(180deg, #1a120c 0%, #0f0b08 100%);
+  color: var(--tw-parchment);
+}
+
+.room-view-tidewell-immersive > .action-log {
+  display: none !important;
+}
+/* Slim shell header: keep 只读回放 etc. reachable for e2e */
+.room-view-tidewell-immersive > .room-shell-header {
+  order: -2;
+  margin: 0;
+  padding: 4px 10px;
+  border: none;
+  border-bottom: 1px solid #c9a22744;
+  border-radius: 0;
+  background: rgba(20, 12, 8, 0.95);
+  color: #f3e7c9;
+  box-shadow: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+.room-view-tidewell-immersive > .room-shell-header .room-title-block,
+.room-view-tidewell-immersive > .room-shell-header .room-title-block,
+.room-view-tidewell-immersive > .room-shell-header h1,
+.room-view-tidewell-immersive > .room-shell-header .room-kicker,
+.room-view-tidewell-immersive > .room-shell-header p {
+  display: none;
+}
+.room-view-tidewell-immersive > .room-shell-header .room-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.room-view-tidewell-immersive > .room-shell-header .room-header-actions a {
+  color: #f3e7c9;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+/* Compact invite/seat strip — keep 你的席位 select for e2e */
+.room-view-tidewell-immersive > .room-invitation {
+  order: -1;
+  margin: 0;
+  padding: 6px 10px;
+  border: none;
+  border-bottom: 1px solid #c9a22766;
+  border-radius: 0;
+  background: rgba(30, 18, 10, 0.92);
+  color: #f3e7c9;
+  box-shadow: none;
+}
+.room-view-tidewell-immersive > .room-invitation .invitation-heading,
+.room-view-tidewell-immersive > .room-invitation .invitation-link-row {
+  display: none;
+}
+.room-view-tidewell-immersive > .room-invitation .seat-rail {
+  margin: 0;
+}
+.room-view-tidewell-immersive {
+  display: flex;
+  flex-direction: column;
+}
+
+.room-view-tidewell-immersive > .tidewell-board {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tidewell-game-screen {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  color: var(--tw-ink, #2a1c12);
+}
+
+.tidewell-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  background:
+    linear-gradient(180deg, #6b4428 0%, #3e2616 100%);
+  border-bottom: 2px solid var(--tw-gold, #c9a227);
+  color: var(--tw-parchment, #f3e7c9);
+  z-index: 5;
+}
+.tidewell-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: Georgia, "Times New Roman", serif;
+  letter-spacing: 0.02em;
+}
+.tidewell-wax-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #e85d4c, #8b1e1e 70%);
+  box-shadow: 0 0 0 2px #c9a22755;
+}
+.tidewell-topbar-status {
+  flex: 1;
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tidewell-topbar-actions {
+  display: flex;
+  gap: 6px;
+}
+.tidewell-chip-btn {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid #c9a227aa;
+  background: linear-gradient(180deg, #5c3a22, #3a2416);
+  color: #f3e7c9;
+  font-size: 11px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.tidewell-game-body {
+  display: grid;
+  grid-template-columns: minmax(168px, 220px) minmax(0, 1fr) minmax(200px, 260px);
+  gap: 8px;
+  min-height: 0;
+  padding: 8px;
+}
+
+.tidewell-panel-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-family: Georgia, serif;
+  color: var(--tw-wood, #4a2f1c);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tidewell-players,
+.tidewell-turn-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  padding: 10px;
+  border: 3px solid transparent;
+  border-image: linear-gradient(160deg, #8b5a2b, #3e2616 40%, #c9a227 90%) 1;
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(243, 231, 201, 0.97), rgba(232, 211, 162, 0.95)),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(74, 47, 28, 0.03) 3px
+    );
+  box-shadow:
+    inset 0 0 0 1px rgba(201, 162, 39, 0.35),
+    0 8px 24px rgba(0, 0, 0, 0.35);
+  overflow: auto;
+}
+
+.tidewell-player-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tidewell-player-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(255, 252, 245, 0.65);
+  border: 1px solid rgba(74, 47, 28, 0.18);
+}
+.tidewell-player-card.is-active {
+  box-shadow: 0 0 0 2px var(--seat-color, #c9a227), 0 0 12px rgba(201, 162, 39, 0.55);
+  background: #fff8e8;
+}
+.tidewell-player-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--seat-color, #888);
+  background: #ddd;
+}
+.tidewell-player-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.tidewell-seat-swatch {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--seat-color, #888);
+}
+.tidewell-player-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.tidewell-player-meta b {
+  font-size: 13px;
+}
+.tidewell-player-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  color: #5a4634;
+}
+.tidewell-turn-badge {
+  position: absolute;
+  top: -8px;
+  right: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, #f0d060, #b8860b);
+  color: #2a1c12;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.tidewell-hud-awards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 8px 0 0;
+  font-size: 11px;
+}
+.tidewell-hud-awards dt {
+  margin: 0;
+  color: #6b543c;
+}
+.tidewell-hud-awards dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.tidewell-stage-wrap {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 3px solid #3e2616;
+  box-shadow:
+    inset 0 0 0 1px #c9a22766,
+    0 10px 28px rgba(0, 0, 0, 0.45);
+  background: #163d50;
+}
+.tidewell-game-screen .g3d-stage {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  aspect-ratio: auto !important;
+}
+.tidewell-game-screen .g3d-stage,
+.tidewell-game-screen [data-testid="g3d-scene-host"],
+.tidewell-game-screen .room-g3d-scene-host {
+  height: 100% !important;
+  min-height: 100% !important;
+}
+
+.tidewell-turn-panel {
+  flex: 0 0 auto;
+}
+.tidewell-turn-blurb,
+.tidewell-turn-idle {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #5a4634;
+  line-height: 1.45;
+}
+.tidewell-primary-cta {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  margin: 8px 0;
+  padding: 10px 14px;
+  border: 2px solid #c9a227;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 50% 0%, #6b4428, #3a2416 70%);
+  color: #f3e7c9;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 140, 0.25),
+    0 4px 10px rgba(0, 0, 0, 0.35);
+}
+.tidewell-primary-cta:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.tidewell-log-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid rgba(74, 47, 28, 0.2);
+  padding-top: 8px;
+}
+.tidewell-log-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.tidewell-log-tabs button {
+  flex: 1;
+  min-height: 32px;
+  border: 1px solid rgba(74, 47, 28, 0.25);
+  border-radius: 8px;
+  background: rgba(255, 252, 245, 0.5);
+  color: #4a2f1c;
+  font-size: 11px;
+  cursor: pointer;
+}
+.tidewell-log-tabs button.is-active {
+  background: linear-gradient(180deg, #f7ecd2, #e5d0a0);
+  border-color: #c9a227;
+  font-weight: 700;
+}
+.tidewell-log-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  font-size: 12px;
+}
+.tidewell-chronicle {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #3d2c1c;
+}
+.tidewell-log-empty {
+  margin: 0;
+  color: #7a6550;
+}
+
+.tidewell-dock {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: end;
+  padding: 8px 12px 10px;
+  background:
+    linear-gradient(180deg, #5a3820 0%, #2c1a10 100%);
+  border-top: 2px solid #c9a227;
+  color: #f3e7c9;
+  z-index: 5;
+}
+.tidewell-hand {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.tidewell-resource-tile {
+  position: relative;
+  flex: 0 0 auto;
+  width: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.tidewell-resource-art {
+  display: block;
+  width: 64px;
+  height: 86px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 2px solid #c9a227aa;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  background: #e8d3a2;
+}
+.tidewell-resource-art.is-fallback {
+  display: grid;
+  place-items: center;
+}
+.tidewell-resource-name {
+  font-size: 10px;
+  opacity: 0.9;
+}
+.tidewell-resource-count {
+  min-width: 22px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #f3e7c9;
+  color: #2a1c12;
+  font-size: 12px;
+  text-align: center;
+}
+.tidewell-resource-pop {
+  position: absolute;
+  top: -6px;
+  right: -2px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: #2f7d4a;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  animation: tidewell-pop 1.4s ease-out forwards;
+}
+@keyframes tidewell-pop {
+  0% { transform: translateY(6px); opacity: 0; }
+  20% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-10px); opacity: 0; }
+}
+
+.tidewell-dev-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  min-height: 86px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 2px dashed #c9a22788;
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 11px;
+}
+
+.tidewell-build-row {
+  display: flex;
+  gap: 8px;
+}
+.tidewell-build-btn {
+  width: 76px;
+  min-height: 86px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 2px solid #c9a227;
+  background:
+    radial-gradient(circle at 50% 20%, #6b4428, #2c1a10 75%);
+  color: #f3e7c9;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 220, 140, 0.2);
+}
+.tidewell-build-btn.is-disabled,
+.tidewell-build-btn:disabled {
+  opacity: 0.42;
+  filter: grayscale(0.35);
+  cursor: not-allowed;
+}
+.tidewell-build-label {
+  font-size: 11px;
+  font-weight: 700;
+}
+.tidewell-build-cost {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: center;
+}
+.tidewell-build-cost img {
+  border-radius: 2px;
+  background: #f3e7c9;
+}
+
+/* Keep board-target drawer reachable but compact under the dock */
+.tidewell-game-screen > .hex-settlement-actions {
+  padding: 0 12px 8px;
+  background: #2c1a10;
+}
+.tidewell-game-screen .hex-settlement-board-targets {
+  margin: 0;
+  color: #f3e7c9;
+}
+.tidewell-game-screen .hex-settlement-board-targets > summary {
+  color: #e8d3a2;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Feedback drawer (RoomView) */
+.room-feedback-drawer {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 60;
+  max-width: min(360px, calc(100vw - 24px));
+}
+.room-feedback-drawer > summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid #c9a227;
+  background: linear-gradient(180deg, #5c3a22, #3a2416);
+  color: #f3e7c9;
+  font-size: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+.room-feedback-drawer > summary::-webkit-details-marker { display: none; }
+.room-feedback-drawer[open] > .room-feedback-panel {
+  display: block;
+  margin-top: 8px;
+  max-height: min(50vh, 420px);
+  overflow: auto;
+  border-radius: 12px;
+  border: 2px solid #c9a22788;
+  background: #f3e7c9;
+  color: #2a1c12;
+  padding: 12px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+}
+
+/* —— Mobile: canvas ~55–60% top, strip + scroll hand —— */
+@media (max-width: 800px) {
+  .tidewell-game-screen {
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+    height: 100dvh;
+  }
+  .tidewell-game-body {
+    display: contents;
+  }
+  .tidewell-players {
+    order: 2;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 6px 8px;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  .tidewell-player-list {
+    flex-direction: row;
+  }
+  .tidewell-player-card {
+    min-width: 148px;
+  }
+  .tidewell-hud-awards {
+    display: none;
+  }
+  .tidewell-stage-wrap {
+    order: 1;
+    height: 56dvh;
+    min-height: 56dvh;
+    max-height: 60dvh;
+    margin: 0 8px;
+    border-radius: 10px;
+  }
+  .tidewell-turn-column {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 40;
+    max-height: 48dvh;
+    transform: translateY(110%);
+    transition: transform 0.22s ease;
+    border-radius: 16px 16px 0 0;
+  }
+  .tidewell-turn-column.is-open {
+    transform: translateY(0);
+  }
+  .tidewell-dock {
+    order: 3;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .tidewell-build-row {
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  .tidewell-topbar-status {
+    display: none;
+  }
+}
+
+
+/* Immersive: sound FAB sits above the hand dock, never over the canvas */
+.room-view-tidewell-immersive .room-sound-settings {
+  bottom: max(132px, calc(env(safe-area-inset-bottom) + 120px));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 55;
+}
+@media (max-width: 800px) {
+  .room-view-tidewell-immersive .room-sound-settings {
+    bottom: max(168px, calc(env(safe-area-inset-bottom) + 150px));
+  }
+  .tidewell-hand {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tidewell-resource-tile {
+    flex: 0 0 auto;
+  }
+  /* Keep seat strip compact so stage stays above the fold */
+  .room-view-tidewell-immersive > .room-invitation {
+    padding: 4px 8px;
+  }
+}

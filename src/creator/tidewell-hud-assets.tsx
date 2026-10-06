@@ -1,4 +1,4 @@
-/** G3D-13 · Tidewell HUD asset URLs (ink icons + card/seat illustrations). */
+/** G3D-13 / G3D-judge-HUD · Tidewell HUD asset URLs. */
 export const inkIconsUrl = new URL("../../assets/ui/ink-icons.svg", import.meta.url).href;
 
 const cardUrls = import.meta.glob("../../assets/illustrations/cards/*.webp", {
@@ -8,6 +8,18 @@ const cardUrls = import.meta.glob("../../assets/illustrations/cards/*.webp", {
 }) as Record<string, string>;
 
 const seatUrls = import.meta.glob("../../assets/illustrations/brand/seat-*.webp", {
+  eager: true,
+  query: "?url",
+  import: "default",
+}) as Record<string, string>;
+
+const aiIconUrls = import.meta.glob("../../assets/ui/ai/icons/*-64.webp", {
+  eager: true,
+  query: "?url",
+  import: "default",
+}) as Record<string, string>;
+
+const uiAiUrls = import.meta.glob("../../assets/ui/ai/*.webp", {
   eager: true,
   query: "?url",
   import: "default",
@@ -26,6 +38,14 @@ export const RESOURCE_CARD_URL: Record<string, string | undefined> = {
   ore: pick(cardUrls, "resource-ore"),
 };
 
+export const RESOURCE_AI_ICON_URL: Record<string, string | undefined> = {
+  wood: pick(aiIconUrls, "wood-64"),
+  brick: pick(aiIconUrls, "brick-64"),
+  sheep: pick(aiIconUrls, "sheep-64"),
+  wheat: pick(aiIconUrls, "wheat-64"),
+  ore: pick(aiIconUrls, "ore-64"),
+};
+
 export const RESOURCE_ICON_ID: Record<string, string> = {
   wood: "icon-res-wood",
   brick: "icon-res-brick",
@@ -33,6 +53,9 @@ export const RESOURCE_ICON_ID: Record<string, string> = {
   wheat: "icon-res-grain",
   ore: "icon-res-ore",
 };
+
+export const PANEL_FRAME_URL = pick(uiAiUrls, "panel-frame");
+export const CARD_FRAME_URL = pick(uiAiUrls, "card-frame");
 
 export function seatMarkUrl(seat: number): string | undefined {
   return pick(seatUrls, `seat-${seat}`);
