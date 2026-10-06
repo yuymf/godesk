@@ -24,6 +24,8 @@ async function openRoom(page: Page) {
   const board = page.getByRole("region", { name: "卡坦六角岛" });
   await expect(page.getByRole("img", { name: "卡坦六角岛" })).toBeVisible();
   await expect(page.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
+  // G3D-08: wait for tide-water mount+shader warm so cold compile does not eat the mid-tween click budget.
+  await expect(page.getByTestId("g3d-scene-host")).toHaveAttribute("data-water", "on", { timeout: 60_000 });
   return board;
 }
 

@@ -38,5 +38,12 @@ let ok = true;
 ok = check("homepage index JS", index, 170) && ok;
 ok = check("render3d core (excl. assets)", render3d, 210) && ok;
 ok = check("render3d-assets", assets, 60) && ok;
+const tideWater = files.filter((f) => /^tide-water-.*\.js$/.test(f));
+if (tideWater.length) {
+  // Lazy water chunk (G3D-08); soft budget — fail only if absurdly large.
+  ok = check("tide-water (lazy)", tideWater, 40) && ok;
+} else {
+  console.log("tide-water: (not in this build — ok if SceneHost never imported water)");
+}
 ok = check("tabletop mapper (lazy)", files.filter((f) => /^TabletopScene3D-.*\.js$/.test(f)), 12) && ok;
 process.exit(ok ? 0 : 1);
