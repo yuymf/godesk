@@ -30,7 +30,22 @@
 
 ## outcomes
 
-（见 PR 证据评论）
+- 代码：
+  - `worker/room-ai.ts`（新增）
+  - `worker/runtime.ts`：新增 `pickBotIntent` / `runtimeSupportsBotSeat`；`runBotSimulation` 的六角分支改为调用它
+  - `worker/creator-projects-do.ts`：`persistAcceptedAction`、`rescheduleAlarm`、`requestJobRecoveryAlarm`、`ensureAiTurnScheduled`、`runAiTurn`；alarm 合并
+  - `worker/job-runner.ts`：可选的 `requestJobRecoveryAlarm`
+  - 前端：`GameLobby`「和电脑对战」、`RoomView` 席位「电脑」、`HexSettlementBoard`「电脑思考中」、`project-api` / `project-contract` 的 `aiSeats` / `aiThinkMs`
+  - `playwright.config.ts`：`@slow` 只在设置 `GODESK_E2E_SLOW=1` 时运行
+- 测试：
+  - `worker/room-ai-seat.test.ts` 4 例：参数校验；AI 席认领 / 意图被拒；setup 两回合在 DO 驱逐后经 alarm 只走一次，重复或过期 alarm 不重复落子；真实 alarm 全局到终局，日志与 `runBotSimulation(seed 7)` 完全相同
+  - `e2e/room-ai-seat.spec.ts`：默认 CI 跑 1 例（AI 完成 setup 两回合，intentId 为 `ai_<seq>`）；`@slow` 2 例（单浏览器整局，桌面和 iPhone 12 Pro）
+- 真 AI 整局（分支，单浏览器，seed 42）：
+  - EP-D 1440×900 鼠标：8.9m，共 683 手（人 342 / AI 341）
+  - EP-I 390×844 触摸：8.4m，同样 683 手
+  - 两局都由座位 0 获胜（10:9）
+  - AI 动作覆盖 roll / build / bank_trade / player_trade / buy_dev / play_knight / move_robber / discard / end_turn
+  - 证据在 `/workspace/g3d-evidence/M1-ai/pr-branch/`；合入后在 main 上重跑的证据在 `/workspace/g3d-evidence/M1-ai/`
 
 ## links
 
