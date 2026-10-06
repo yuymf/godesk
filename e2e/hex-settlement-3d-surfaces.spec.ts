@@ -41,7 +41,7 @@ test("汐屿: preview + replay render 3D canvas, no SVG board", async ({ page })
   const { clickTidewellBoardAction } = await import("./helpers/tidewell-actions");
   await clickTidewellBoardAction(board, /建造渔村/);
   await expect(board.getByRole("region", { name: "对局状态" })).toContainText(
-    "place_settlement",
+    "建造渔村",
   );
   await page.getByRole("link", { name: "只读回放" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/replay\//, { timeout: 30_000 });
