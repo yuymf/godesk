@@ -11,7 +11,7 @@
   --tw-gold: #c9a227;
   --tw-sea: #2e7f86;
   --tw-side: 260px;
-  --tw-dock: 160px;
+  --tw-dock: 176px;
   position: fixed !important;
   inset: 0 !important;
   z-index: 80;
@@ -115,7 +115,7 @@ body:has(.room-view-tidewell-immersive) {
 /* —— Game screen grid —— */
 .tidewell-game-screen {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) var(--tw-dock, 160px);
+  grid-template-rows: auto minmax(0, 1fr) var(--tw-dock, 176px);
   width: 100%;
   height: 100%;
   max-height: 100%;
@@ -355,6 +355,221 @@ body:has(.room-view-tidewell-immersive) {
 .tidewell-hud-awards dt { margin: 0; color: #6b543c; }
 .tidewell-hud-awards dd { margin: 0; font-weight: 600; }
 
+
+/* 2h3: round wooden icon buttons + centred island name */
+.tidewell-topbar-center {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  text-align: center;
+  gap: 2px;
+}
+.tidewell-island-name {
+  font-family: Georgia, "Noto Serif CJK SC", serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #f0d060;
+  text-shadow: 0 1px 0 #2a1c12;
+}
+.tidewell-topbar-center .tidewell-topbar-status {
+  margin: 0;
+  font-size: 11px;
+  opacity: 0.85;
+  max-width: 28vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tidewell-brand-name {
+  font-family: Georgia, serif;
+  font-size: 14px;
+}
+.tidewell-wood-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid #c9a227;
+  background:
+    radial-gradient(circle at 35% 30%, #7a5230, #3e2616 70%),
+    linear-gradient(180deg, #5c3a22, #2c1a10);
+  color: #f3e7c9;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,220,140,0.25);
+  list-style: none;
+}
+.tidewell-wood-icon::-webkit-details-marker { display: none; }
+.tidewell-menu > summary.tidewell-wood-icon { list-style: none; }
+.tidewell-menu-panel .tidewell-seat-select {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #f3e7c9;
+}
+.tidewell-menu-panel .tidewell-seat-select select {
+  min-height: 36px;
+  border-radius: 8px;
+  border: 1px solid #c9a22788;
+  background: #2c1a10;
+  color: #f3e7c9;
+  padding: 4px 8px;
+}
+
+/* 2h3: dark-wood player cards + medallions */
+.tidewell-players {
+  background:
+    linear-gradient(180deg, #4a2f1c 0%, #2c1a10 100%) !important;
+  color: #f3e7c9;
+  border-right: 2px solid #c9a22788 !important;
+  box-shadow: inset 0 0 0 1px rgba(201, 162, 39, 0.2);
+}
+.tidewell-players .tidewell-panel-title {
+  color: #f0d060;
+}
+.tidewell-player-card {
+  background:
+    linear-gradient(145deg, #5a3820 0%, #3a2416 55%, #2c1a10 100%) !important;
+  border: 1px solid #c9a22788 !important;
+  color: #f3e7c9;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,220,140,0.12);
+}
+.tidewell-player-card.is-active {
+  background: linear-gradient(145deg, #6b4428, #3e2616) !important;
+  box-shadow: 0 0 0 2px var(--seat-color, #c9a227), 0 0 14px rgba(201, 162, 39, 0.55);
+}
+.tidewell-player-meta b { color: #f3e7c9; }
+.tidewell-house-name {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #d4b56a;
+  opacity: 0.9;
+}
+.tidewell-player-stats { color: #d8c9a8 !important; }
+.tidewell-medallion {
+  width: 44px !important;
+  height: 44px !important;
+  border-width: 3px !important;
+  box-shadow: 0 0 0 1px #c9a22788, 0 2px 6px rgba(0,0,0,0.4);
+}
+.tidewell-hud-awards { color: #d8c9a8; }
+.tidewell-hud-awards dt { color: #c9a227aa !important; }
+.tidewell-hud-awards dd { color: #f3e7c9; }
+
+/* 2h3: cream turn card + flourish */
+.tidewell-turn-column {
+  background:
+    linear-gradient(180deg, rgba(243, 231, 201, 0.98), rgba(232, 211, 162, 0.96)) !important;
+}
+.tidewell-turn-card {
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid #c9a22788;
+  background:
+    linear-gradient(180deg, #fff8e8 0%, #f3e7c9 100%);
+  box-shadow: 0 4px 12px rgba(74, 47, 28, 0.15), inset 0 0 0 1px rgba(255,255,255,0.4);
+}
+.tidewell-turn-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tidewell-turn-flourish {
+  flex: 0 0 auto;
+  width: 72px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #c9a22766;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.tidewell-primary-cta {
+  border-radius: 12px !important;
+  border: 2px solid #c9a227 !important;
+  background:
+    linear-gradient(180deg, #6b4428 0%, #3e2616 55%, #2c1a10 100%) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,220,140,0.3) !important;
+}
+.tidewell-log-panel {
+  margin-top: 6px;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(255, 252, 245, 0.55);
+  border: 1px solid rgba(74, 47, 28, 0.15);
+}
+
+/* 2h3: larger parchment resource cards + wooden build tiles */
+.tidewell-dock {
+  --tw-dock: 176px;
+  height: var(--tw-dock, 176px);
+  max-height: var(--tw-dock, 176px);
+}
+.room-view-tidewell-immersive {
+  --tw-dock: 176px;
+}
+.tidewell-resource-tile {
+  width: 78px !important;
+}
+.tidewell-resource-art {
+  width: 72px !important;
+  height: 96px !important;
+  border-radius: 6px !important;
+  border: 2px solid #c9a227 !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.15) !important;
+}
+.tidewell-resource-count {
+  min-width: 24px !important;
+  padding: 2px 7px !important;
+  background: #f3e7c9 !important;
+  border: 1px solid #c9a227aa;
+  font-size: 13px !important;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+.tidewell-build-btn {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  min-width: 84px !important;
+  min-height: 108px !important;
+  padding: 6px 6px 8px !important;
+  border-radius: 10px !important;
+  border: 2px solid #c9a227 !important;
+  background:
+    linear-gradient(160deg, #6b4428 0%, #3e2616 55%, #2a1810 100%) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,220,140,0.2) !important;
+}
+.tidewell-build-art {
+  display: block;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+.tidewell-build-label {
+  font-size: 11px !important;
+  color: #f3e7c9 !important;
+}
+.tidewell-build-cost img {
+  width: 14px !important;
+  height: 14px !important;
+}
+
 /* Canvas dominates — sea fill, no letterbox.
    Track C (#151) pins the dice tray as a WebGL corner overlay inside the canvas —
    keep bottom-right of .tidewell-stage-wrap free of DOM (no FAB / chip / drawer there).
@@ -470,8 +685,8 @@ body:has(.room-view-tidewell-immersive) {
   grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr);
   gap: 10px;
   align-items: center;
-  height: var(--tw-dock, 160px);
-  max-height: var(--tw-dock, 160px);
+  height: var(--tw-dock, 176px);
+  max-height: var(--tw-dock, 176px);
   box-sizing: border-box;
   padding: 8px 12px;
   background: linear-gradient(180deg, #5a3820 0%, #2c1a10 100%);
@@ -666,12 +881,12 @@ body:has(.room-view-tidewell-immersive) {
     --tw-dock: 0px;
   }
   .tidewell-topbar-status { display: none; }
-  /* Hide only the log-drawer chip; keep replay / sound / menu */
-  .tidewell-topbar-actions > button.tidewell-chip-btn:not(.tidewell-sound-chip) {
+  /* Log opens from menu on phone; keep sound / replay / menu wood icons */
+  .tidewell-topbar-actions > button.tidewell-log-chip {
     display: none;
   }
   .tidewell-topbar-actions > .tidewell-menu > summary {
-    display: inline-flex;
+    display: inline-grid;
   }
   .tidewell-menu-panel .tidewell-chip-btn {
     display: block;
@@ -688,12 +903,12 @@ body:has(.room-view-tidewell-immersive) {
     flex-direction: row;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 4px 6px;
+    padding: 6px 8px;
     border: none;
     border-bottom: 1px solid #c9a22755;
-    background: rgba(30, 18, 10, 0.92);
+    background: rgba(30, 18, 10, 0.94) !important;
     color: #f3e7c9;
-    max-height: 56px;
+    max-height: 72px;
     -webkit-overflow-scrolling: touch;
   }
   .tidewell-players .tidewell-panel-title,
@@ -708,19 +923,66 @@ body:has(.room-view-tidewell-immersive) {
     gap: 6px;
     width: max-content;
   }
-  .tidewell-player-card {
-    min-width: 118px;
-    max-width: 140px;
-    grid-template-columns: 28px 1fr;
-    padding: 4px 6px;
-    background: rgba(243, 231, 201, 0.12);
-    border-color: #c9a22755;
-    color: #f3e7c9;
+  /* Compact portrait medallions with VP (ref style) */
+  .tidewell-player-list {
+    gap: 10px;
+    padding: 0 4px;
   }
-  .tidewell-player-avatar { width: 28px; height: 28px; }
-  .tidewell-player-meta b { font-size: 11px; color: #f3e7c9; }
-  .tidewell-player-stats { font-size: 10px; color: #d8c9a8; gap: 4px; }
-  .tidewell-turn-badge { font-size: 8px; top: -6px; }
+  .tidewell-player-card {
+    min-width: 56px;
+    max-width: 64px;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+    padding: 4px 4px 6px;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #f3e7c9;
+    gap: 2px;
+  }
+  .tidewell-player-card.is-active {
+    background: transparent !important;
+  }
+  .tidewell-player-avatar,
+  .tidewell-medallion {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .tidewell-player-meta {
+    align-items: center;
+  }
+  .tidewell-player-meta b {
+    font-size: 10px;
+    color: #f3e7c9;
+    max-width: 56px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tidewell-house-name { display: none; }
+  .tidewell-player-stats {
+    font-size: 10px;
+    color: #f0d060;
+    gap: 0;
+    justify-content: center;
+  }
+  .tidewell-player-stats span:not([title="胜利点"]):not([title="Victory points"]) {
+    display: none;
+  }
+  /* Keep VP span; hide card/dev counts on compact medallions via nth */
+  .tidewell-player-stats span:nth-child(2),
+  .tidewell-player-stats span:nth-child(3) {
+    display: none;
+  }
+  .tidewell-turn-badge {
+    font-size: 7px;
+    top: -4px;
+    right: 0;
+    padding: 1px 5px;
+  }
+  .tidewell-topbar-center .tidewell-topbar-status { display: none; }
+  .tidewell-island-name { font-size: 13px; }
 
   .tidewell-stage-wrap {
     order: 3;
@@ -765,15 +1027,17 @@ body:has(.room-view-tidewell-immersive) {
     z-index: 30;
   }
   .tidewell-table-toggle {
-    min-height: 48px;
+    min-height: 52px;
+    min-width: 72px;
     padding: 0 14px;
     border-radius: 12px;
-    border: 1px solid #c9a227aa;
-    background: linear-gradient(180deg, #5c3a22, #3a2416);
+    border: 2px solid #c9a227;
+    background: linear-gradient(180deg, #6b4428, #3a2416);
     color: #f3e7c9;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,220,140,0.2);
   }
   .tidewell-mobile-bar .tidewell-primary-cta {
     flex: 1;
@@ -860,6 +1124,6 @@ body:has(.room-view-tidewell-immersive) {
 @media (min-width: 801px) and (max-width: 1100px) {
   .room-view-tidewell-immersive {
     --tw-side: 220px;
-    --tw-dock: 150px;
+    --tw-dock: 168px;
   }
 }

@@ -7,12 +7,19 @@ import {
 } from "./hex-settlement-session";
 import type { RoomLocale } from "./room-presentation";
 import {
+  BUILD_ICON_URL,
   InkIcon,
+  ISLAND_FLOURISH_URL,
   RESOURCE_AI_ICON_URL,
   RESOURCE_CARD_URL,
   RESOURCE_ICON_ID,
   seatMarkUrl,
 } from "./tidewell-hud-assets";
+import {
+  DEFAULT_DESKTOP_FRAME,
+  DEFAULT_NARROW_FRAME,
+  type ViewportFrame,
+} from "../render3d/viewport-frame";
 import "./tidewell-game-screen.css";
 
 export type { HexSettlementBoardState } from "./hex-settlement-session";
@@ -23,6 +30,10 @@ const LazySceneHost = lazy(async () => {
 });
 
 const SEAT_COLORS = ["#c0392b", "#2980b9", "#27ae60", "#f39c12"] as const;
+const HOUSE_NAMES = {
+  zh: ["赤席", "蓝席", "翠席", "金席"],
+  en: ["Red house", "Blue house", "Green house", "Gold house"],
+} as const;
 
 const RESOURCE_LABEL = {
   zh: { wood: "木", brick: "砖", sheep: "羊", wheat: "麦", ore: "矿" },
@@ -32,6 +43,7 @@ const RESOURCE_LABEL = {
 const COPY = {
   zh: {
     board: "汐屿",
+    island: "汐屿群岛",
     hud: "对局状态",
     active: "当前行动",
     seat: "座位",
@@ -101,6 +113,7 @@ const COPY = {
   },
   en: {
     board: "Tidewell Isles",
+    island: "Tidewell Isles",
     hud: "Match status",
     active: "Active seat",
     seat: "Seat",
@@ -316,6 +329,19 @@ export function HexSettlementBoard({
   const [logTab, setLogTab] = useState<"chronicle" | "chat" | "coach">("chronicle");
   const [logOpenMobile, setLogOpenMobile] = useState(false);
   const [tableOpen, setTableOpen] = useState(false);
+  const [viewportFrame, setViewportFrame] = useState<ViewportFrame>(() =>
+    typeof window !== "undefined" && window.matchMedia("(max-width: 800px)").matches
+      ? DEFAULT_NARROW_FRAME
+      : DEFAULT_DESKTOP_FRAME,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 800px)");
+    const apply = () =>
+      setViewportFrame(mq.matches ? DEFAULT_NARROW_FRAME : DEFAULT_DESKTOP_FRAME);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
   const [resourceGain, setResourceGain] = useState<Partial<Record<Resource, number>>>({});
   const prevResourcesRef = useRef<Record<Resource, number> | null>(null);
 
@@ -521,65 +547,31 @@ export function HexSettlementBoard({
         <div className="tidewell-topbar-brand">
           <a
             aria-label={copy.home}
-            className="tidewell-home-btn"
+            className="tidewell-home-btn tidewell-wood-icon"
             href={homeHref}
             title={copy.home}
           >
             ←
           </a>
           <span aria-hidden="true" className="tidewell-wax-dot" />
-          <strong>{copy.board}</strong>
+          <strong className="tidewell-brand-name">{copy.board}</strong>
         </div>
-        <p className="tidewell-topbar-status">{statusLine}</p>
+        <div className="tidewell-topbar-center">
+          <span className="tidewell-island-name">{copy.island}</span>
+          <p className="tidewell-topbar-status">{statusLine}</p>
+        </div>
         <div className="tidewell-topbar-actions">
-          {onClaimSeat ? (
-            <label
-              className="tidewell-seat-select"
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 6,
-                borderBottom: "none",
-                margin: 0,
-                padding: 0,
-              }}
-            >
-              <span className="sr-only">{copy.yourSeat}</span>
-              <select
-                aria-label={copy.yourSeat}
-                onChange={(event) => {
-                  const next = Number(event.currentTarget.value);
-                  if (Number.isInteger(next)) onClaimSeat(next);
-                }}
-                value={viewerSeat ?? ""}
-              >
-                <option value="">
-                  {locale === "zh" ? "选择空席位" : "Pick a seat"}
-                </option>
-                {hexSettlement.players.map((_, seat) => (
-                  <option
-                    disabled={aiSeats.includes(seat) && seat !== viewerSeat}
-                    key={`seat-opt-${seat}`}
-                    value={seat}
-                  >
-                    {locale === "zh" ? `座位 ${seat}` : `Seat ${seat}`}
-                    {aiSeats.includes(seat)
-                      ? locale === "zh"
-                        ? " · 电脑"
-                        : " · AI"
-                      : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
           {replayUrl ? (
-            <a className="tidewell-chip-btn tidewell-replay-link" href={replayUrl}>
-              {copy.replay}
+            <a
+              className="tidewell-wood-icon tidewell-replay-link"
+              href={replayUrl}
+              title={copy.replay}
+            >
+              ▷
             </a>
           ) : null}
           <button
-            className="tidewell-chip-btn tidewell-sound-chip"
+            className="tidewell-wood-icon tidewell-sound-chip"
             onClick={() => {
               const trigger = document.querySelector<HTMLButtonElement>(
                 ".room-sound-settings-trigger",
@@ -588,20 +580,62 @@ export function HexSettlementBoard({
               const host = document.querySelector<HTMLElement>(".room-sound-settings");
               if (host) host.dataset.open = "1";
             }}
+            title={locale === "zh" ? "声音设置" : "Sound settings"}
             type="button"
           >
-            {locale === "zh" ? "声音设置" : "Sound settings"}
+            ♪
           </button>
           <button
-            className="tidewell-chip-btn"
+            className="tidewell-wood-icon tidewell-log-chip"
             onClick={() => setLogOpenMobile((v) => !v)}
+            title={copy.logDrawer}
             type="button"
           >
-            {copy.logDrawer}
+            ≡
           </button>
           <details className="tidewell-menu">
-            <summary className="tidewell-chip-btn">{copy.menu}</summary>
+            <summary className="tidewell-wood-icon" title={copy.menu}>
+              ⚙
+            </summary>
             <div className="tidewell-menu-panel">
+              {onClaimSeat ? (
+                <label className="tidewell-seat-select">
+                  <span>{copy.yourSeat}</span>
+                  <select
+                    aria-label={copy.yourSeat}
+                    onChange={(event) => {
+                      const next = Number(event.currentTarget.value);
+                      if (Number.isInteger(next)) onClaimSeat(next);
+                    }}
+                    value={viewerSeat ?? ""}
+                  >
+                    <option value="">
+                      {locale === "zh" ? "选择空席位" : "Pick a seat"}
+                    </option>
+                    {hexSettlement.players.map((_, seat) => (
+                      <option
+                        disabled={aiSeats.includes(seat) && seat !== viewerSeat}
+                        key={`seat-opt-${seat}`}
+                        value={seat}
+                      >
+                        {locale === "zh" ? `座位 ${seat}` : `Seat ${seat}`}
+                        {aiSeats.includes(seat)
+                          ? locale === "zh"
+                            ? " · 电脑"
+                            : " · AI"
+                          : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              <button
+                className="tidewell-chip-btn"
+                onClick={() => setLogOpenMobile((v) => !v)}
+                type="button"
+              >
+                {copy.logDrawer}
+              </button>
               <button
                 className="tidewell-chip-btn"
                 onClick={() => {
@@ -628,16 +662,6 @@ export function HexSettlementBoard({
               >
                 {copy.sound}
               </button>
-              <button
-                className="tidewell-chip-btn"
-                onClick={() => setBoardTargetsOpen((v) => !v)}
-                type="button"
-              >
-                {copy.rules}
-              </button>
-              <a className="tidewell-chip-btn" href="/chatgpt-plugin/settings">
-                {copy.settings}
-              </a>
               {replayUrl ? (
                 <a className="tidewell-chip-btn" href={replayUrl}>
                   {copy.replay}
@@ -670,7 +694,7 @@ export function HexSettlementBoard({
                     } as CSSProperties
                   }
                 >
-                  <div className="tidewell-player-avatar">
+                  <div className="tidewell-player-avatar tidewell-medallion">
                     {seatMarkUrl(seat) ? (
                       <img alt="" height={40} src={seatMarkUrl(seat)} width={40} />
                     ) : (
@@ -681,6 +705,9 @@ export function HexSettlementBoard({
                     <b>
                       {isYou ? copy.you : isAi ? copy.computer : `${copy.seat} ${seat}`}
                     </b>
+                    <span className="tidewell-house-name">
+                      {HOUSE_NAMES[locale][seat % HOUSE_NAMES[locale].length]}
+                    </span>
                     <span className="tidewell-player-stats">
                       <span title={copy.vp}>
                         ♛ {vpScores[seat]}/{hexSettlement.victoryPointsToWin ?? 10}
@@ -763,6 +790,7 @@ export function HexSettlementBoard({
                 interactive={showLegal}
                 legalActions={pickableActions}
                 onPick={handlePick}
+                viewportFrame={viewportFrame}
               />
             </Suspense>
           </div>
@@ -772,8 +800,19 @@ export function HexSettlementBoard({
           className={`tidewell-turn-column${logOpenMobile ? " is-open" : ""}`}
           data-log-open={logOpenMobile ? "1" : "0"}
         >
-          <section aria-label={copy.turnPanel} className="tidewell-turn-panel">
-            <h2 className="tidewell-panel-title">{copy.turnPanel}</h2>
+          <section aria-label={copy.turnPanel} className="tidewell-turn-panel tidewell-turn-card">
+            <div className="tidewell-turn-card-head">
+              <h2 className="tidewell-panel-title">{copy.turnPanel}</h2>
+              {ISLAND_FLOURISH_URL ? (
+                <img
+                  alt=""
+                  className="tidewell-turn-flourish"
+                  height={56}
+                  src={ISLAND_FLOURISH_URL}
+                  width={72}
+                />
+              ) : null}
+            </div>
             <p className="tidewell-turn-blurb">{statusLine}</p>
             <p className="tidewell-hud-dice">{diceLine}</p>
             {primaryCta ? (
@@ -854,9 +893,9 @@ export function HexSettlementBoard({
                   <img
                     alt=""
                     className="tidewell-resource-art"
-                    height={96}
+                    height={120}
                     src={RESOURCE_CARD_URL[resource]}
-                    width={72}
+                    width={90}
                   />
                 ) : (
                   <div className="tidewell-resource-art is-fallback">
@@ -897,6 +936,15 @@ export function HexSettlementBoard({
                 }}
                 type="button"
               >
+                {BUILD_ICON_URL[build.id] ? (
+                  <img
+                    alt=""
+                    className="tidewell-build-art"
+                    height={48}
+                    src={BUILD_ICON_URL[build.id]}
+                    width={48}
+                  />
+                ) : null}
                 <span className="tidewell-build-label">{build.label}</span>
                 <span className="tidewell-build-cost" aria-label={copy.cost}>
                   {build.cost.map((r, i) => (
@@ -974,9 +1022,9 @@ export function HexSettlementBoard({
                   <img
                     alt=""
                     className="tidewell-resource-art"
-                    height={96}
+                    height={120}
                     src={RESOURCE_CARD_URL[resource]}
-                    width={72}
+                    width={90}
                   />
                 ) : (
                   <div className="tidewell-resource-art is-fallback">
@@ -1017,6 +1065,15 @@ export function HexSettlementBoard({
                 }}
                 type="button"
               >
+                {BUILD_ICON_URL[build.id] ? (
+                  <img
+                    alt=""
+                    className="tidewell-build-art"
+                    height={48}
+                    src={BUILD_ICON_URL[build.id]}
+                    width={48}
+                  />
+                ) : null}
                 <span className="tidewell-build-label">{build.label}</span>
                 <span className="tidewell-build-cost" aria-label={copy.cost}>
                   {build.cost.map((r, i) => (
