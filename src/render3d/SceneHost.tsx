@@ -23,6 +23,7 @@ import {
   type PickTarget,
 } from "./pick";
 import { reconcileScene } from "./reconcile";
+import { createNumberLabelLayer, projectLabels, type NumberLabelLayer } from "./number-labels";
 import type { SceneModel, SceneNode } from "./scene-model";
 import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
 import { markInteractive, perfModeEnabled, perfRecorder } from "./perf";
@@ -265,6 +266,8 @@ export function SceneHost({
   const [unsupported, setUnsupported] = useState(false);
   const [ready, setReady] = useState(false);
   const modelRef = useRef<SceneModel | null>(null);
+  /** G3D-ART-2：点数筹码数字贴花（1 draw call，不进实例池）。 */
+  const numberLabelsRef = useRef<NumberLabelLayer | null>(null);
   const registryRef = useRef(new Map<string, Object3D>());
   const contentRootRef = useRef<Object3D | null>(null);
   const reconcileHostRef = useRef<ReturnType<typeof buildHost> | null>(null);
@@ -705,6 +708,8 @@ export function SceneHost({
       lastSeatRef.current = null;
       lastActionRef.current = undefined;
       modelRef.current = null;
+      numberLabelsRef.current?.dispose();
+      numberLabelsRef.current = null;
       layoutKeyRef.current = null;
       cameraKeyRef.current = null;
       fitCameraRef.current = () => {};
@@ -713,6 +718,23 @@ export function SceneHost({
     // hexSettlement applied in separate effect against stable host
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hostEpoch]);
+
+  function syncNumberLabels(model: SceneModel) {
+    const root = contentRootRef.current;
+    if (!root) return;
+    const layer = (numberLabelsRef.current ??= createNumberLabelLayer());
+    if (layer.mesh.parent !== root) root.add(layer.mesh);
+    layer.sync(model.nodes);
+    const container = containerRef.current;
+    if (container) container.dataset.numberLabels = String(layer.labels().length);
+    // e2e：贴花屏幕包围盒（像素探针用）。
+    (globalThis as { __g3dNumberLabels?: () => unknown }).__g3dNumberLabels = () => {
+      const camera = cameraRef.current;
+      const canvas = canvasRef.current;
+      if (!camera || !canvas) return [];
+      return projectLabels(numberLabelsRef.current?.labels() ?? [], camera, canvas.clientWidth, canvas.clientHeight);
+    };
+  }
 
   useEffect(() => {
     const host = reconcileHostRef.current;
@@ -724,6 +746,7 @@ export function SceneHost({
     lastActionRef.current = hexSettlement.lastAction;
     diceAnimatedRef.current = false;
     modelRef.current = reconcileScene(host, prev, next, registryRef.current);
+    syncNumberLabels(next);
     // 阴影相机只在布局（地块集合）变化时按包围球重算一次（§4.3）。
     const tileKey = (model: SceneModel | null) =>
       model ? model.nodes.filter((node) => node.kind === "tile").map((node) => node.id).join("|") : "";
