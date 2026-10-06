@@ -10,9 +10,11 @@ import {
   BUILD_ICON_URL,
   InkIcon,
   ISLAND_FLOURISH_URL,
+  PARCHMENT_GRAIN_URL,
   RESOURCE_AI_ICON_URL,
   RESOURCE_CARD_URL,
   RESOURCE_ICON_ID,
+  WOOD_GRAIN_URL,
   seatMarkUrl,
 } from "./tidewell-hud-assets";
 import {
@@ -542,6 +544,14 @@ export function HexSettlementBoard({
       className="tidewell-board hex-settlement-board tidewell-game-screen"
       data-status={status}
       role="region"
+      style={
+        {
+          ["--tw-tex-wood" as string]: WOOD_GRAIN_URL ? `url("${WOOD_GRAIN_URL}")` : "none",
+          ["--tw-tex-parchment" as string]: PARCHMENT_GRAIN_URL
+            ? `url("${PARCHMENT_GRAIN_URL}")`
+            : "none",
+        } as CSSProperties
+      }
     >
       <header className="tidewell-topbar">
         <div className="tidewell-topbar-brand">

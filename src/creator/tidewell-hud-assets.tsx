@@ -86,6 +86,13 @@ export const BUILD_ICON_URL: Record<string, string | undefined> = {
 
 export const PANEL_FRAME_URL = pick(uiAiUrls, "panel-frame");
 export const CARD_FRAME_URL = pick(uiAiUrls, "card-frame");
+/** Tileable HUD wood / parchment (round-3h / ④). Prefer 512 over -256. */
+export const WOOD_GRAIN_URL =
+  Object.entries(uiAiUrls).find(([k]) => k.endsWith("/wood-grain.webp"))?.[1] ??
+  pick(uiAiUrls, "wood-grain");
+export const PARCHMENT_GRAIN_URL =
+  Object.entries(uiAiUrls).find(([k]) => k.endsWith("/parchment-grain.webp"))?.[1] ??
+  pick(uiAiUrls, "parchment-grain");
 export const ISLAND_FLOURISH_URL = pick(brandUrls, "island-flourish");
 
 /** Character-portrait medallion (2h4); falls back to seat brand mark. */
