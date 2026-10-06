@@ -4472,7 +4472,7 @@ summary:focus-visible {
   color: var(--ink, #2a2118);
   border-color: rgb(120 90 50 / 35%);
 }
-/* Mobile: board-target chips stay available (e2e / keyboard) but compact under the stage. */
+/* Mobile: hide coordinate action clutter under the board; expand via summary (keyboard / e2e). */
 @media (max-width: 767px) {
   .tidewell-board .g3d-stage {
     min-height: 52vh;
@@ -4483,8 +4483,20 @@ summary:focus-visible {
   .tidewell-board .hex-settlement-board-targets {
     order: 3;
   }
+  .tidewell-board .hex-settlement-board-targets:not([open]) .hex-settlement-action-list {
+    /* Keep in a11y tree when details polyfills fail; otherwise details hides children when closed. */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
   .tidewell-board .hex-settlement-action-list {
-    max-height: 5.5rem;
+    max-height: 9rem;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
   }

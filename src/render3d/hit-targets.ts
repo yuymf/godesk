@@ -10,6 +10,40 @@ import type { PickableLegalAction } from "./pick";
 
 const WORLD_SCALE = 0.01;
 
+/** Shared highlight materials/geoms — one draw call family instead of per-action alloc. */
+const RING_GEOM_CITY = new TorusGeometry(0.26, 0.035, 8, 24);
+RING_GEOM_CITY.rotateX(Math.PI / 2);
+const RING_GEOM_SETTLE = new TorusGeometry(0.2, 0.035, 8, 24);
+RING_GEOM_SETTLE.rotateX(Math.PI / 2);
+const ROAD_HIT_GEOM = new BoxGeometry(0.55, 0.08, 0.18);
+const ROBBER_HIT_GEOM = new CylinderGeometry(0.85, 0.85, 0.08, 6);
+
+const RING_MAT = new MeshStandardMaterial({
+  color: 0xffe066,
+  emissive: 0xffc107,
+  emissiveIntensity: 0.85,
+  transparent: true,
+  opacity: 0.95,
+  roughness: 0.4,
+});
+RING_MAT.userData.gdShared = true;
+const ROAD_HIT_MAT = new MeshStandardMaterial({
+  color: 0xffe066,
+  emissive: 0xffc107,
+  emissiveIntensity: 0.7,
+  transparent: true,
+  opacity: 0.85,
+});
+ROAD_HIT_MAT.userData.gdShared = true;
+const ROBBER_HIT_MAT = new MeshStandardMaterial({
+  color: 0xff6b6b,
+  emissive: 0xc0392b,
+  emissiveIntensity: 0.55,
+  transparent: true,
+  opacity: 0.45,
+});
+ROBBER_HIT_MAT.userData.gdShared = true;
+
 function parseVertex(id: string): { x: number; y: number } | null {
   const [xs, ys] = id.split(":");
   const x = Number(xs);
@@ -44,23 +78,14 @@ function ringMesh(
   id: string,
   kind: string,
   position: [number, number, number],
-  radius = 0.22,
+  geom: TorusGeometry,
 ): Mesh {
-  const geom = new TorusGeometry(radius, 0.035, 8, 24);
-  geom.rotateX(Math.PI / 2);
-  const mat = new MeshStandardMaterial({
-    color: 0xffe066,
-    emissive: 0xffc107,
-    emissiveIntensity: 0.85,
-    transparent: true,
-    opacity: 0.95,
-    roughness: 0.4,
-  });
-  const mesh = new Mesh(geom, mat);
+  const mesh = new Mesh(geom, RING_MAT);
   mesh.position.set(position[0], position[1], position[2]);
   mesh.userData.nodeId = id;
   mesh.userData.kind = kind;
   mesh.userData.hitOverlay = true;
+  mesh.userData.gdShared = true;
   return mesh;
 }
 
@@ -81,7 +106,7 @@ export function buildLegalHitOverlays(
           `hit:place_settlement:${vertexId}`,
           "hit",
           toWorld(point.x, point.y, 0.55),
-          0.2,
+          RING_GEOM_SETTLE,
         ),
       );
     } else if (action.type === "place_city") {
@@ -93,7 +118,7 @@ export function buildLegalHitOverlays(
           `hit:place_city:${vertexId}`,
           "hit",
           toWorld(point.x, point.y, 0.65),
-          0.26,
+          RING_GEOM_CITY,
         ),
       );
     } else if (action.type === "place_road") {
@@ -103,21 +128,14 @@ export function buildLegalHitOverlays(
       const [a, b] = ends;
       const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
       const angle = Math.atan2(b.y - a.y, b.x - a.x);
-      const geom = new BoxGeometry(0.55, 0.08, 0.18);
-      const mat = new MeshStandardMaterial({
-        color: 0xffe066,
-        emissive: 0xffc107,
-        emissiveIntensity: 0.7,
-        transparent: true,
-        opacity: 0.85,
-      });
-      const mesh = new Mesh(geom, mat);
+      const mesh = new Mesh(ROAD_HIT_GEOM, ROAD_HIT_MAT);
       const pos = toWorld(mid.x, mid.y, 0.28);
       mesh.position.set(pos[0], pos[1], pos[2]);
       mesh.rotation.y = -angle;
       mesh.userData.nodeId = `hit:place_road:${edgeId}`;
       mesh.userData.kind = "hit";
       mesh.userData.hitOverlay = true;
+      mesh.userData.gdShared = true;
       out.push(mesh);
     } else if (action.type === "move_robber") {
       const hex = String(action.payload?.hex ?? "");
@@ -126,20 +144,13 @@ export function buildLegalHitOverlays(
       const r = Number(rs);
       if (!Number.isFinite(q) || !Number.isFinite(r)) continue;
       const center = hexCenter(q, r);
-      const geom = new CylinderGeometry(0.85, 0.85, 0.08, 6);
-      const mat = new MeshStandardMaterial({
-        color: 0xff6b6b,
-        emissive: 0xc0392b,
-        emissiveIntensity: 0.55,
-        transparent: true,
-        opacity: 0.45,
-      });
-      const mesh = new Mesh(geom, mat);
+      const mesh = new Mesh(ROBBER_HIT_GEOM, ROBBER_HIT_MAT);
       const pos = toWorld(center.x, center.y, 0.32);
       mesh.position.set(pos[0], pos[1], pos[2]);
       mesh.userData.nodeId = `hit:move_robber:${hex}`;
       mesh.userData.kind = "hit";
       mesh.userData.hitOverlay = true;
+      mesh.userData.gdShared = true;
       out.push(mesh);
     }
   }
@@ -150,6 +161,8 @@ export function disposeHitOverlay(object: Object3D): void {
   object.traverse((child) => {
     const mesh = child as Mesh;
     if (!mesh.isMesh) return;
+    // Shared templates live for the session.
+    if (mesh.userData.gdShared) return;
     mesh.geometry?.dispose();
     const material = mesh.material;
     if (Array.isArray(material)) {

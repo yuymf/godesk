@@ -140,6 +140,8 @@ test.describe("dual-genre boards: Othello + Catan generate → lobby → act", (
     await capture(page, "room-catan");
     await expect(board.getByLabel("你的资源")).toBeVisible();
 
+    const { openTidewellBoardTargets } = await import("./helpers/tidewell-actions");
+    await openTidewellBoardTargets(board);
     const settlement = board.getByRole("button", { name: /建造渔村/ });
     await expect(settlement.first()).toBeVisible();
     await settlement.first().click();

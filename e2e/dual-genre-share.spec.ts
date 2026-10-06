@@ -56,7 +56,8 @@ async function guestJoinClaimAndAct(
       await expect(board).toBeVisible();
       const hud = board.getByRole("region", { name: "对局状态" });
       await expect(hud).toContainText("轮到你行动");
-      await board.getByRole("button", { name: /建造渔村/ }).first().click();
+      const { clickTidewellBoardAction } = await import("./helpers/tidewell-actions");
+      await clickTidewellBoardAction(board, /建造渔村/);
       await expect(hud).toContainText("place_settlement");
       await expect(
         board.getByRole("button", { name: /铺设栈道/ }).first(),

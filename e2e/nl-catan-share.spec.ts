@@ -89,7 +89,8 @@ test("NL Catan proposal → hex-settlement build → share= guest setup settleme
     await expect(guestBoard.getByLabel("你的资源")).toBeVisible();
     await evidenceScreenshot(guestPage, "catan-guest-setup");
 
-    await guestBoard.getByRole("button", { name: /建造渔村/ }).first().click();
+    const { clickTidewellBoardAction } = await import("./helpers/tidewell-actions");
+    await clickTidewellBoardAction(guestBoard, /建造渔村/);
     await expect(hostHud).toContainText("place_settlement");
     await expect(guestHud).toContainText("place_settlement");
     await expect(hostHud.getByLabel("胜利点")).toContainText("座位 0 · 1 胜利点");

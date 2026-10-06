@@ -25,7 +25,6 @@ async function openRoom(page: Page) {
   const board = page.getByRole("region", { name: "汐屿" });
   await expect(page.getByRole("img", { name: "汐屿" })).toBeVisible();
   await expect(page.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
-  // G3D-08: wait for tide-water mount+shader warm so cold compile does not eat the mid-tween click budget.
   await expect(page.getByTestId("g3d-scene-host")).toHaveAttribute("data-water", "on", { timeout: 60_000 });
   return board;
 }
@@ -59,12 +58,6 @@ for (const mode of ["no-preference", "reduce"] as const) {
     const hud = board.getByRole("region", { name: "对局状态" });
     const reduced = mode === "reduce";
 
-    // Input during animation: settlement place starts a 280 ms tween; the road
-    // click must land while that tween is in flight and still be applied.
-    // Click from inside the page the moment the road button renders (same task
-    // as the reconcile that started the tween): Playwright's own actionability
-    // waits take 0.7–2 s under SwiftShader + G3D-07 shadows, which made the old
-    // wall-clock bound measure the runner, not the product.
     await openTidewellBoardTargets(board);
     await board.getByRole("button", { name: /建造渔村/ }).first().click();
     const clickedDuringTween = await page.evaluate(() => new Promise<{ placeAt: number | null; placeMs: number; busyAtClick: boolean }>((resolve, reject) => {
@@ -88,10 +81,6 @@ for (const mode of ["no-preference", "reduce"] as const) {
       setTimeout(() => { observer.disconnect(); reject(new Error("road button never enabled")); }, 15_000);
     }));
     await expect(hud).toContainText("place_road");
-    // The place tween had started when the road click was dispatched and (with
-    // motion on) was still in flight in the tween Group — i.e. input during
-    // animation. Wall-clock can't prove this on SwiftShader, where one frame
-    // can exceed the whole 280 ms tween.
     expect(clickedDuringTween.placeAt).not.toBeNull();
     if (!reduced) {
       expect(clickedDuringTween.placeMs).toBe(280);
@@ -99,7 +88,6 @@ for (const mode of ["no-preference", "reduce"] as const) {
     }
 
     const opp = await joinSeat1(browser, page.url(), mode);
-    // Setup snake order for 2 seats: 0, 1, 1, 0.
     await setupTurn(opp.board);
     await setupTurn(opp.board);
     await expect(hud).toContainText("轮到你行动", { timeout: 20_000 });
@@ -122,7 +110,6 @@ for (const mode of ["no-preference", "reduce"] as const) {
     } else {
       for (const entry of byKind("place")) expect(entry.durationMs).toBe(280);
       for (const entry of byKind("dice")) expect(entry.durationMs).toBe(900);
-      // Camera may be skipped by the 3 s drag grace only when the user dragged; here it runs.
       for (const entry of byKind("camera")) expect(entry.durationMs).toBe(600);
     }
     console.log(`[G3D-09 ${mode}] motion log`, JSON.stringify(log.map((e) => `${e.kind}:${e.durationMs}`)));

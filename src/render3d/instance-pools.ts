@@ -149,5 +149,5 @@ export function createInstancePools(parent: Object3D): InstancePools {
 }
 
 export function isBatchableKind(kind: string): boolean {
-  return kind === "tile" || kind === "road" || kind === "decor";
+  return kind === "tile" || kind === "road" || kind === "decor" || kind === "settlement" || kind === "city" || kind === "robber";
 }

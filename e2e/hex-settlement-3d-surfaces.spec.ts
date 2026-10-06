@@ -38,7 +38,8 @@ test("卡坦: preview + replay render 3D canvas, no SVG board", async ({ page })
   await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
   await page.getByLabel("你的席位").selectOption("0");
   const board = page.getByRole("region", { name: "汐屿" });
-  await board.getByRole("button", { name: /建造渔村/ }).first().click();
+  const { clickTidewellBoardAction } = await import("./helpers/tidewell-actions");
+  await clickTidewellBoardAction(board, /建造渔村/);
   await expect(board.getByRole("region", { name: "对局状态" })).toContainText(
     "place_settlement",
   );

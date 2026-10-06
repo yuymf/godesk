@@ -52,7 +52,7 @@ function numberId(tile: { q: number; r: number }): string {
 
 /**
  * Pure mapper: hex-settlement Kernel public state → SceneModel (§3.4).
- * Uses procedural placeholder geometry ids; GLB swap is G3D-13.
+ * Tidewell scene mapping; G3D-13 loads GLB templates in SceneHost.
  */
 /** Structural subset accepted from Room session JSON / HexSettlementBoardState. */
 export type HexSettlementSceneInput = {
@@ -191,8 +191,14 @@ export function mapHexSettlementToScene(genre: HexSettlementSceneInput): SceneMo
     position: [4.4, 0.25, 3.2],
     number: dice[1],
   });
-  // G3D-08: grey stone surround slab removed — SceneHost mounts tide water plane instead.
-  // G3D-13 will add ExtrudeGeometry cliff walls for the island base.
+  // G3D-08: water plane in SceneHost. G3D-13: island cliff base ring.
+  nodes.push({
+    id: "cliff",
+    kind: "cliff",
+    position: [0, -0.35, 0],
+    scale: [5.2, 0.7, 5.2],
+    tag: "stone",
+  });
 
   return { nodes };
 }

@@ -28,6 +28,8 @@ test("卡坦 room: iPhone 12 Pro touch taps a legal settlement", async ({ browse
     await page.getByLabel("你的席位").selectOption("0");
     const board = page.getByRole("region", { name: "汐屿" });
     await expect(page.getByRole("img", { name: "汐屿" })).toBeVisible();
+    const { openTidewellBoardTargets } = await import("./helpers/tidewell-actions");
+    await openTidewellBoardTargets(board);
     await board.getByRole("button", { name: /建造渔村/ }).first().tap({ timeout: 10_000 });
     await expect(board.getByRole("region", { name: "对局状态" })).toContainText("place_settlement");
     await board.getByRole("button", { name: /铺设栈道/ }).first().tap({ timeout: 10_000 });

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useMemo } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import type { Resource } from "../runtime/adapters/catan";
 import type { LegalAction } from "../runtime/play-kernel";
 import {
@@ -207,6 +207,17 @@ export function HexSettlementBoard({
   aiSeats?: number[];
   onAct?: (actionId: string, payload?: Record<string, unknown>) => void;
 }) {
+  const [boardTargetsOpen, setBoardTargetsOpen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.matchMedia("(min-width: 768px)").matches;
+  });
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const sync = () => setBoardTargetsOpen(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
   const copy = COPY[locale];
   const resourceLabel = RESOURCE_LABEL[locale];
   const interactive =
@@ -404,7 +415,13 @@ export function HexSettlementBoard({
               </ul>
             )}
             {targets.length > 0 && (
-              <details className="hex-settlement-board-targets" open>
+              <details
+                className="hex-settlement-board-targets"
+                open={boardTargetsOpen}
+                onToggle={(event) =>
+                  setBoardTargetsOpen((event.currentTarget as HTMLDetailsElement).open)
+                }
+              >
                 <summary>
                   {copy.boardTargets} · {targets.length}
                 </summary>

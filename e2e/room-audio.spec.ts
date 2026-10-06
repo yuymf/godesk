@@ -76,6 +76,8 @@ test("hex-settlement room audio: cues from play events, touch unlock, settings p
     const hostBoard = page.getByRole("region", { name: "汐屿" });
     // 手机视口下 main 上 2D 盘面的热点被 3D canvas 盖住（DPR > 1 时 canvas 溢出，G3D-05 #110 已修，
     // 2D 盘面由 G3D-18 删除），所以这里直接派发 click。
+    const { openTidewellBoardTargets } = await import("./helpers/tidewell-actions");
+    await openTidewellBoardTargets(guestBoard);
     await guestBoard.getByRole("button", { name: /建造渔村/ }).first().dispatchEvent("click");
     await expect(guestBoard.getByRole("button", { name: /铺设栈道/ }).first()).toBeVisible();
     await guestBoard.getByRole("button", { name: /铺设栈道/ }).first().dispatchEvent("click");
@@ -91,6 +93,7 @@ test("hex-settlement room audio: cues from play events, touch unlock, settings p
     expect((await cueLog(guestPage)).map((e) => e.cue)).toContain("select");
 
     // 桌面端 hover / select：轮到座位 1。
+    await openTidewellBoardTargets(hostBoard);
     const hostSettle = hostBoard.getByRole("button", { name: /建造渔村/ }).first();
     await expect(hostSettle).toBeVisible();
     await hostSettle.hover();
