@@ -29,7 +29,7 @@ TEXTURES = {
     "t01-pine": ("T1-forest.jpg", 0.95, 2.2),
     "t02-clay": ("T4-hills-clay.jpg", 0.95, 1.6),
     "t03-meadow": ("T2-pasture.jpg", 0.97, 1.4),
-    "t04-wheat": ("T3-fields.jpg", 0.95, 1.8),
+    "t04-wheat": ("T3b-fields-clumps.jpg", 0.95, 1.8),  # G3D-ART-2：T3 平行麦垄太规整 → T3b 不规则麦丛
     "t05-reef": ("T5-mountain-ore.jpg", 0.90, 2.4),
     "t06-sand": ("T6-desert.jpg", 0.98, 1.2),
     "t08-wood": ("T8-harbor-planks.jpg", 0.85, 1.8),
