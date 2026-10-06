@@ -228,14 +228,14 @@ function baseDefault(kernelType: string | null | undefined): RenderSpec {
     },
     lighting: {
       sun: {
-        azimuthDeg: 135,
-        elevationDeg: 48,
-        intensity: 2.95,
-        color: "#ffd9a8",
+        azimuthDeg: 128,
+        elevationDeg: 46,
+        intensity: 3.05,
+        color: "#ffc890",
       },
-      hemisphere: { sky: "#efe6d4", ground: "#c4a882", intensity: 1.0 },
-      shadow: { enabled: true, softness: 0.85 },
-      exposure: 1.08,
+      hemisphere: { sky: "#f2e6d2", ground: "#c9a878", intensity: 1.05 },
+      shadow: { enabled: true, softness: 0.92 },
+      exposure: 1.12,
     },
     water: {
       enabled: kernelType === "hex-settlement-v1" || kernelType === "harbor-voyage-v1",
@@ -246,11 +246,11 @@ function baseDefault(kernelType: string | null | undefined): RenderSpec {
       foam: 1.0,
     },
     materials: {
-      seat0: material("#c0392b", "none", 0.45, 0, 0.3),
-      seat1: material("#2980b9", "none", 0.45, 0, 0.3),
-      seat2: material("#27ae60", "none", 0.45, 0, 0.3),
-      seat3: material("#f39c12", "none", 0.45, 0, 0.3),
-      table: material("#8b5a2b", "grain", 0.82),
+      seat0: material("#c0392b", "none", 0.58, 0, 0.12),
+      seat1: material("#2980b9", "none", 0.58, 0, 0.12),
+      seat2: material("#27ae60", "none", 0.58, 0, 0.12),
+      seat3: material("#f39c12", "none", 0.58, 0, 0.12),
+      table: material("#8b5a2b", "grain", 0.9),
     },
     bindings: [],
     motion: {
@@ -298,11 +298,11 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       "terrain-brick": material("#b86b38", "stone", 0.78),
       "terrain-sheep": material("#8fcf74", "grass", 0.68),
       "terrain-wheat": material("#d8b348", "grass", 0.72),
-      "terrain-ore": material("#6f7680", "stone", 0.82),
+      "terrain-ore": material("#6f7680", "stone", 0.9),
       "terrain-desert": material("#d9bd7a", "sand", 0.86),
       cliff: material("#77716a", "stone", 0.9),
       "number-token": material("#efe3c8", "none", 0.58),
-      piece: material("#f4efe6", "none", 0.45),
+      piece: material("#f4efe6", "none", 0.58),
       "fog-lantern": material("#f6c85f", "none", 0.38, 0, 0.25),
     });
     render.bindings = [
@@ -328,7 +328,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       seat0: material("#1d1d1f", "none", 0.42, 0, 0.3),
       seat1: material("#f4efe6", "none", 0.42, 0, 0.3),
       board: material("#1f6b4a", "cloth", 0.78),
-      piece: material("#f4efe6", "none", 0.45),
+      piece: material("#f4efe6", "none", 0.58),
     });
     render.bindings = [
       binding("cell", "tile-square", "board"),
@@ -339,7 +339,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
   if (kernelType === "harbor-voyage-v1") {
     Object.assign(render.materials, {
       berth: material("#b9a77d", "grain", 0.8),
-      piece: material("#f4efe6", "none", 0.45),
+      piece: material("#f4efe6", "none", 0.58),
       cargo: material("#c08a3d", "none", 0.55),
     });
     render.bindings = [
@@ -353,7 +353,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
   if (kernelType === "worker-placement-v1") {
     Object.assign(render.materials, {
       board: material("#766a5a", "grain", 0.82),
-      piece: material("#f4efe6", "none", 0.45),
+      piece: material("#f4efe6", "none", 0.58),
       resource: material("#d6a94b", "none", 0.55),
     });
     render.bindings = [
@@ -378,7 +378,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
   }
   Object.assign(render.materials, {
     board: material("#6f7f6b", "cloth", 0.8),
-    piece: material("#f4efe6", "none", 0.45),
+    piece: material("#f4efe6", "none", 0.58),
   });
   // Generic tabletop (G3D-14 default base): every GameEntity kind that can
   // appear in GameSpec.objects[].kind gets a primitive, plus region cells and dice.

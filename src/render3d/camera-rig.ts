@@ -17,7 +17,7 @@ import { TILE_RADIUS } from "./tokens";
 export type V3 = readonly [number, number, number];
 export type CameraMode = "play" | "overview";
 
-export const CAMERA_MODE_POLAR_DEG: Readonly<Record<CameraMode, number>> = { play: 38, overview: 9 };
+export const CAMERA_MODE_POLAR_DEG: Readonly<Record<CameraMode, number>> = { play: 34, overview: 8 };
 /** Zoom is relative to the fitted distance: 1 = whole island (+ tray) in view. */
 export const ZOOM_LIMITS = { min: 0.7, max: 3.2 } as const;
 export const ZOOM_STEP = 1.25;

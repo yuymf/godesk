@@ -17,16 +17,17 @@ export type ViewportFrame = {
 
 /** Desktop a/d: island ~78–85% of canvas height, sea margins OK left/right. */
 export const DEFAULT_DESKTOP_FRAME: Required<ViewportFrame> = {
-  fill: 0.82,
-  polarDeg: 42,
-  azimuthDeg: 16,
+  // round-5d：岛更高占比，减弱「窗框」留白（更近机位 + 略顶视）。
+  fill: 0.9,
+  polarDeg: 38,
+  azimuthDeg: 14,
   fovDeg: 40,
 };
 
 /** iPhone: top-down-ish, fill width. */
 export const DEFAULT_NARROW_FRAME: Required<ViewportFrame> = {
-  fill: 0.9,
-  polarDeg: 14,
+  fill: 0.94,
+  polarDeg: 12,
   azimuthDeg: 6,
   fovDeg: 40,
 };
@@ -46,10 +47,10 @@ export function distanceForIslandFill(
   const fov = (Math.max(20, Math.min(75, fovDeg)) * Math.PI) / 180;
   const halfV = fov / 2;
   const halfH = Math.atan(mathTanSafe(halfV) * Math.max(aspect, 0.2));
-  const f = Math.max(0.55, Math.min(0.92, fill));
+  const f = Math.max(0.55, Math.min(0.95, fill));
   const polar = (polarDeg * Math.PI) / 180;
   // Empirical foreshorten so landscape a-default lands ~80% height (not ~70%).
-  const foreshorten = Math.max(0.4, 0.22 + Math.cos(polar) * 0.42);
+  const foreshorten = Math.max(0.38, 0.18 + Math.cos(polar) * 0.38);
   const projectedHalf = radius * foreshorten;
   const byHeight = projectedHalf / (f * Math.tan(halfV));
   if (aspect >= 1) {
@@ -76,7 +77,7 @@ export function framePose(
   const azimuthDeg = frame.azimuthDeg ?? DEFAULT_DESKTOP_FRAME.azimuthDeg;
   const fovDeg = frame.fovDeg ?? DEFAULT_DESKTOP_FRAME.fovDeg;
   const distance = distanceForIslandFill(radius, aspect, fill, fovDeg, polarDeg);
-  const target: SceneVec3 = [center[0], center[1] + radius * 0.04, center[2]];
+  const target: SceneVec3 = [center[0], center[1] + radius * 0.02, center[2]];
   return {
     position: orbit(target, distance, polarDeg, azimuthDeg),
     target,

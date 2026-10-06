@@ -42,10 +42,10 @@ describe("G3D-07 materials", () => {
   it("uses MeshPhysicalMaterial clearcoat only when the tier allows it", () => {
     const high = createMaterial(seatMaterial(0), { clearcoat: true });
     expect(high).toBeInstanceOf(MeshPhysicalMaterial);
-    expect((high as MeshPhysicalMaterial).clearcoat).toBeCloseTo(0.3);
+    expect((high as MeshPhysicalMaterial).clearcoat).toBeCloseTo(0.12);
     const medium = createMaterial(seatMaterial(0), { clearcoat: false });
     expect(medium).not.toBeInstanceOf(MeshPhysicalMaterial);
-    expect(medium.roughness).toBeCloseTo(0.45);
+    expect(medium.roughness).toBeCloseTo(0.58);
     expect(createMaterial(TERRAIN_MATERIALS.wood!, { clearcoat: true })).not.toBeInstanceOf(MeshPhysicalMaterial);
   });
 
@@ -108,7 +108,7 @@ describe("G3D-07 materials", () => {
   it("drops clearcoat when a runtime downgrade leaves high", () => {
     const library = new MaterialLibrary({ clearcoat: true });
     const seat = library.get("seat-0", seatMaterial(0)) as MeshPhysicalMaterial;
-    expect(seat.clearcoat).toBeCloseTo(0.3);
+    expect(seat.clearcoat).toBeCloseTo(0.12);
     library.setClearcoat(false);
     expect(seat.clearcoat).toBe(0);
   });
@@ -120,12 +120,12 @@ describe("G3D-07 environment reflections", () => {
     const tile = library.get("terrain-wood", TERRAIN_MATERIALS.wood!);
     const seat = library.get("seat-0", seatMaterial(0));
     const env = new Texture();
-    library.setEnvironment(env, 0.35);
+    library.setEnvironment(env, 0.2);
     expect(seat.envMap).toBe(env);
-    expect(seat.envMapIntensity).toBe(0.35);
+    expect(seat.envMapIntensity).toBe(0.2);
     expect(tile.envMap).toBeNull();
     const robber = library.get("robber", PROP_MATERIALS.robber);
-    expect(robber.envMap).toBe(env);
+    expect(robber.envMap).toBeNull();
     library.setEnvironment(null, 0);
     expect(seat.envMap).toBeNull();
   });

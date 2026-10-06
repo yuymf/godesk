@@ -18,15 +18,15 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
   it("matches the §3.7 tabletop-day table", () => {
     expect(SCENE_TOKENS.toneMapping).toBe("agx");
     expect(SCENE_TOKENS.lighting).toEqual({
-      sun: { azimuthDeg: 135, elevationDeg: 48, intensity: 2.95, color: "#ffd9a8" },
-      hemisphere: { sky: "#efe6d4", ground: "#c4a882", intensity: 1.0 },
-      shadow: { enabled: true, softness: 0.85 },
-      exposure: 1.08,
+      sun: { azimuthDeg: 128, elevationDeg: 46, intensity: 3.05, color: "#ffc890" },
+      hemisphere: { sky: "#f2e6d2", ground: "#c9a878", intensity: 1.05 },
+      shadow: { enabled: true, softness: 0.92 },
+      exposure: 1.12,
     });
     expect(SCENE_TOKENS.shadow).toMatchObject({ radius: 4, bias: -0.0004, normalBias: 0.02, boundsPadding: 1.5 });
-    expect(SCENE_TOKENS.environment.intensity).toBe(0.35);
-    expect(SCENE_TOKENS.tile).toEqual({ roughness: 0.82, metalness: 0 });
-    expect(SCENE_TOKENS.piece).toEqual({ roughness: 0.45, metalness: 0, clearcoat: 0.3 });
+    expect(SCENE_TOKENS.environment.intensity).toBe(0.2);
+    expect(SCENE_TOKENS.tile).toEqual({ roughness: 0.92, metalness: 0 });
+    expect(SCENE_TOKENS.piece).toEqual({ roughness: 0.58, metalness: 0, clearcoat: 0.12 });
     expect(SEAT_COLORS).toEqual(["#c0392b", "#2980b9", "#27ae60", "#f39c12"]);
   });
 
@@ -36,20 +36,20 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
     }
   });
 
-  it("gives every terrain a pattern and a G3D-22 PBR set, tiles use roughness 0.82", () => {
+  it("gives every terrain a pattern and a G3D-22 PBR set, tiles use matte roughness ≥ 0.9", () => {
     for (const terrain of ["wood", "brick", "sheep", "wheat", "ore", "desert"]) {
       const token = TERRAIN_MATERIALS[terrain]!;
       expect(token.pattern).not.toBe("none");
       expect(token.pbrSet).toMatch(/^t0[1-6]-/);
-      expect(token.roughness).toBe(0.82);
+      expect(token.roughness).toBeGreaterThanOrEqual(0.9);
       expect(token.metalness).toBe(0);
     }
     expect(PROP_MATERIALS.cliff.pbrSet).toBe("t07-cliff");
   });
 
-  it("seat pieces keep their seat colour: clearcoat 0.3, normal + ORM only", () => {
+  it("seat pieces keep their seat colour: clearcoat 0.12, normal + ORM only", () => {
     const token = seatMaterial(1);
-    expect(token).toMatchObject({ base: "#2980b9", roughness: 0.45, clearcoat: 0.3, pbrSet: "t09-paintwood", pbrBaseColor: false });
+    expect(token).toMatchObject({ base: "#2980b9", roughness: 0.58, clearcoat: 0.12, pbrSet: "t09-paintwood", pbrBaseColor: false });
     expect(seatMaterial(9).base).toBe("#ffffff");
   });
 

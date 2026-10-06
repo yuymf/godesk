@@ -55,11 +55,11 @@ export const SCENE_TOKENS = {
   toneMapping: "agx",
   outputColorSpace: "srgb",
   lighting: {
-    // round-2d3：更暖的主光 + 略强填充，贴近参照 settlecoast 的暖色日光。
-    sun: { azimuthDeg: 135, elevationDeg: 48, intensity: 2.95, color: "#ffd9a8" },
-    hemisphere: { sky: "#efe6d4", ground: "#c4a882", intensity: 1.0 },
-    shadow: { enabled: true, softness: 0.85 },
-    exposure: 1.08,
+    // round-5d：再暖一点主光 + 更软投影，压塑料感。
+    sun: { azimuthDeg: 128, elevationDeg: 46, intensity: 3.05, color: "#ffc890" },
+    hemisphere: { sky: "#f2e6d2", ground: "#c9a878", intensity: 1.05 },
+    shadow: { enabled: true, softness: 0.92 },
+    exposure: 1.12,
   } satisfies LightingSpec,
   shadow: {
     /** high / medium 的 PCF 半径；low 档用 TierCaps.shadowRadius（= 1）。 */
@@ -69,22 +69,22 @@ export const SCENE_TOKENS = {
     /** 阴影相机正交范围 = 岛屿包围半径 + 1.5 单位（§4.3）。 */
     boundsPadding: 1.5,
   },
-  environment: { intensity: 0.35, pmremSigma: 0.04 },
+  environment: { intensity: 0.2, pmremSigma: 0.05 },
   /** §5.5 S-01 程序化渐变天空穹顶。 */
-  sky: { top: "#8fb8d8", horizon: "#e9eef0", bottom: "#d8ccb2", exponent: 0.8, radius: 60 },
+  sky: { top: "#9ab8cc", horizon: "#efe6d4", bottom: "#d4c4a4", exponent: 0.75, radius: 60 },
   camera: { fovDeg: 35, distance: 16, minPolarDeg: 25, maxPolarDeg: 70 },
-  tile: { roughness: 0.82, metalness: 0 },
-  piece: { roughness: 0.45, metalness: 0, clearcoat: 0.3 },
+  tile: { roughness: 0.92, metalness: 0 },
+  piece: { roughness: 0.58, metalness: 0, clearcoat: 0.12 },
 } as const;
 
 /** 地块材质（颜色沿用现有地形色，pattern 按地形，贴图取 G3D-22 套件）。 */
 export const TERRAIN_MATERIALS: Record<string, MaterialToken> = {
-  wood: { base: "#2f6b3a", roughness: 0.82, metalness: 0, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 0.6 },
-  brick: { base: "#b85a3a", roughness: 0.82, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 0.6 },
-  sheep: { base: "#8fbf6a", roughness: 0.82, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 0.6 },
-  wheat: { base: "#d4b84a", roughness: 0.82, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 0.6 },
-  ore: { base: "#6a6f78", roughness: 0.82, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 0.6 },
-  desert: { base: "#c9b896", roughness: 0.82, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 0.6 },
+  wood: { base: "#2f6b3a", roughness: 0.92, metalness: 0, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 0.6 },
+  brick: { base: "#b85a3a", roughness: 0.92, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 0.6 },
+  sheep: { base: "#8fbf6a", roughness: 0.92, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 0.6 },
+  wheat: { base: "#d4b84a", roughness: 0.92, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 0.6 },
+  ore: { base: "#6a6f78", roughness: 0.9, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 0.6 },
+  desert: { base: "#c9b896", roughness: 0.94, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 0.6 },
 };
 
 /** 其余物件材质。 */
@@ -93,13 +93,13 @@ export const PROP_MATERIALS = {
   "number-token": { base: "#f5f0e1", roughness: 0.7, metalness: 0, pattern: "none", pbrSet: "t11-parchment", pbrRepeat: 1 },
   // G3D-ART-2：6/8 不再整块涂红（与座位 0 红色混淆、且盖住数字）；同用 N1 筹码面，数字用赤陶色高亮（number-labels.ts）。
   "number-token-hot": { base: "#f7e6d2", roughness: 0.7, metalness: 0, pattern: "none", pbrSet: "t11-parchment", pbrRepeat: 1 },
-  robber: { base: "#2c3e50", roughness: 0.55, metalness: 0, pattern: "none" },
+  robber: { base: "#2c3e50", roughness: 0.7, metalness: 0, pattern: "none" },
   wood: { base: "#8b6914", roughness: 0.7, metalness: 0, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 1 },
   die: { base: "#f8f8f8", roughness: 0.5, metalness: 0, pattern: "none" },
   ground: { base: "#d7e6c8", roughness: 0.9, metalness: 0, pattern: "cloth" },
 } satisfies Record<string, MaterialToken>;
 
-/** 座位棋子：roughness 0.45、clearcoat 0.3（仅 high 档），pattern none，贴图彩漆木。 */
+/** 座位棋子：roughness 0.58、clearcoat 0.12（仅 high 档），pattern none，贴图彩漆木。 */
 export function seatMaterial(seat: number): MaterialToken {
   return {
     base: SEAT_COLORS[seat] ?? "#ffffff",

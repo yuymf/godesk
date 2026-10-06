@@ -233,7 +233,7 @@ export function createMaterial(token: MaterialToken, features: MaterialFeatures)
   };
   const material =
     features.clearcoat && token.clearcoat !== undefined && token.clearcoat > 0
-      ? new MeshPhysicalMaterial({ ...params, clearcoat: token.clearcoat, clearcoatRoughness: 0.35 })
+      ? new MeshPhysicalMaterial({ ...params, clearcoat: token.clearcoat, clearcoatRoughness: 0.55 })
       : new MeshStandardMaterial(params);
   installPattern(material, token.pattern);
   return material;

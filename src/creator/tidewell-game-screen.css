@@ -12,7 +12,7 @@
   --tw-sea: #2e7f86;
   --tw-tex-wood: none;
   --tw-tex-parchment: none;
-  --tw-side: 260px;
+  --tw-side: 236px;
   --tw-dock: 196px;
   position: fixed !important;
   inset: 0 !important;
@@ -244,7 +244,7 @@ body:has(.room-view-tidewell-immersive) {
 
 .tidewell-game-body {
   display: grid;
-  grid-template-columns: var(--tw-side, 260px) minmax(0, 1fr) var(--tw-side, 260px);
+  grid-template-columns: var(--tw-side, 236px) minmax(0, 1fr) var(--tw-side, 236px);
   gap: 0;
   min-height: 0;
   padding: 0;
@@ -656,8 +656,8 @@ body:has(.room-view-tidewell-immersive) {
   height: 100%;
   border-radius: 0;
   overflow: hidden;
-  border: none;
-  box-shadow: none;
+  border: 2px solid #c9a22766;
+  box-shadow: inset 0 0 0 1px rgba(201, 162, 39, 0.25);
   background: radial-gradient(ellipse at 50% 30%, #3a9aaa 0%, var(--tw-sea, #2e7f86) 45%, #1a4f5a 100%);
 }
 .tidewell-game-screen .g3d-stage {

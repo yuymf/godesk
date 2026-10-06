@@ -129,9 +129,9 @@ export type SceneHostProps = {
 /** Vertex-coloured procedural pieces share three white materials (seat colour is baked). */
 const PIECE_VC_TOKEN: MaterialToken = {
   base: "#ffffff",
-  roughness: 0.5,
+  roughness: 0.58,
   metalness: 0,
-  clearcoat: 0.3,
+  clearcoat: 0.12,
   pattern: "none",
   pbrSet: "t09-paintwood",
   pbrRepeat: 1,
