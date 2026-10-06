@@ -168,8 +168,8 @@ export function pbrResolutionFor(tier: "high" | "medium" | "low"): 512 | 256 {
 /** 地块外接半径（与 SceneHost 六棱柱一致）。 */
 export const TILE_RADIUS = 0.95;
 
-/** G3D-ART-2：点数筹码水平放大倍数（0.22 半径只占六角宽 23%，远看读不出数字；放大到 ≈37%）。 */
-export const NUMBER_TOKEN_SCALE = 1.6;
+/** G3D-ART-2：点数筹码水平放大倍数（0.22 半径只占六角宽 23%，远看读不出数字；放大到 ≈42%，G3D-ART-3 由 1.6 调到 1.8 保证 iPhone 低档远处筹码可读）。 */
+export const NUMBER_TOKEN_SCALE = 1.8;
 
 /**
  * 由场景节点求岛屿包围球（XZ 平面）：中心 = 地块中心均值，半径 = 最远地块中心距离 + 地块外接半径。

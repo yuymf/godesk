@@ -830,7 +830,7 @@ export function SceneHost({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hostEpoch]);
 
-  function syncNumberLabels(model: SceneModel) {
+  function syncNumberLabels(model: SceneModel, tiles: readonly { q: number; r: number; number: number | null }[]) {
     const root = contentRootRef.current;
     if (!root) return;
     const layer = (numberLabelsRef.current ??= createNumberLabelLayer());
@@ -845,6 +845,10 @@ export function SceneHost({
       if (!camera || !canvas) return [];
       return projectLabels(numberLabelsRef.current?.labels() ?? [], camera, canvas.clientWidth, canvas.clientHeight);
     };
+    // e2e：渲染输入的棋盘点数（与贴花逐格对照，独立于 mapper）。
+    (globalThis as { __g3dBoardNumbers?: unknown }).__g3dBoardNumbers = tiles
+      .filter((tile) => tile.number !== null)
+      .map((tile) => ({ q: tile.q, r: tile.r, number: tile.number }));
   }
 
   useEffect(() => {
@@ -857,7 +861,7 @@ export function SceneHost({
     lastActionRef.current = hexSettlement.lastAction;
     diceAnimatedRef.current = false;
     modelRef.current = reconcileScene(host, prev, next, registryRef.current);
-    syncNumberLabels(next);
+    syncNumberLabels(next, hexSettlement.tiles);
     // 阴影相机只在布局（地块集合）变化时按包围球重算一次（§4.3）。
     const tileKey = (model: SceneModel | null) =>
       model ? model.nodes.filter((node) => node.kind === "tile").map((node) => node.id).join("|") : "";
