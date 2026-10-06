@@ -141,6 +141,21 @@ describe("MotionController", () => {
     expect(reduced.reframe(camera, controls, [1, 0, 1], "turn:0")).toBe(-1);
   });
 
+  it("G3D-06 low tier (maxFps 30): durations are wall-clock, not frame-count", () => {
+    const c = clock();
+    const motion = new MotionController({ reduced: () => false, now: c.now });
+    const obj = new Object3D();
+    motion.place(obj, "settle:low");
+    let frames = 0;
+    while (motion.busy && frames < 100) {
+      motion.update(c.advance(1000 / 30));
+      frames += 1;
+    }
+    // 280 ms at 30 fps → 9 frames (33.3 ms each); never stretched by the cap.
+    expect(frames).toBe(9);
+    expect(obj.scale.x).toBeCloseTo(1);
+  });
+
   it("finishAll completes pending removals", () => {
     const c = clock();
     const motion = new MotionController({ reduced: () => false, now: c.now });
