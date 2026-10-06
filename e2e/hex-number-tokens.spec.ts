@@ -6,7 +6,7 @@ import { expect, test, type Page } from "@playwright/test";
  * ② 从默认机位看，每个贴花都在视锥内、朝向相机；③ 像素探针：贴花包围盒里有墨色（普通）
  *   或赤陶色（6 / 8）像素 —— 真的画出来了，而不仅是挂在场景里。
  */
-const PROMPT = "做一款可以与电脑对战的卡坦岛基础版";
+const PROMPT = "做一款可以与电脑对战的汐屿六角岛资源建造游戏";
 
 type ScreenLabel = { id: string; number: number; hot: boolean; box: [number, number, number, number]; inView: boolean; facing: boolean };
 

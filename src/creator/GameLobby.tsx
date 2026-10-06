@@ -117,8 +117,8 @@ export function GameLobby() {
                   ) : game.build && isHexSettlement(game.build.ruleSystem) ? (
                     <div
                       aria-hidden="true"
-                      className="lobby-card-mark lobby-card-mark-catan"
-                      data-lobby-mark="catan"
+                      className="lobby-card-mark lobby-card-mark-hex-island"
+                      data-lobby-mark="hexIsland"
                     >
                       <img alt="" src="/lobby/hex-settlement-thumb.webp" width="128" height="128" />
                     </div>

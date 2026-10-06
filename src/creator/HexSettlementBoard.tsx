@@ -1,8 +1,8 @@
 import { lazy, Suspense, useCallback, useMemo } from "react";
-import type { Resource } from "../runtime/adapters/catan";
+import type { Resource } from "../runtime/adapters/hex-island";
 import type { LegalAction } from "../runtime/play-kernel";
 import {
-  listCatanLegalActionsForSession,
+  listHexIslandLegalActionsForSession,
   type HexSettlementBoardState,
 } from "./hex-settlement-session";
 import type { RoomLocale } from "./room-presentation";
@@ -23,7 +23,7 @@ const RESOURCE_LABEL = {
 
 const COPY = {
   zh: {
-    board: "卡坦六角岛",
+    board: "汐屿六角岛",
     hud: "对局状态",
     active: "当前行动",
     seat: "座位",
@@ -58,7 +58,7 @@ const COPY = {
     actions: "可用行动",
   },
   en: {
-    board: "Catan hex island",
+    board: "hex-island hex island",
     hud: "Match status",
     active: "Active seat",
     seat: "Seat",
@@ -160,7 +160,7 @@ function labelForBoardAction(
  * No SVG board, no 2D fallback.
  */
 export function HexSettlementBoard({
-  catan,
+  hexIsland,
   activeSeat,
   viewerSeat,
   status,
@@ -171,7 +171,7 @@ export function HexSettlementBoard({
   aiSeats = [],
   onAct,
 }: {
-  catan: HexSettlementBoardState;
+  hexIsland: HexSettlementBoardState;
   activeSeat: number;
   viewerSeat: number | null;
   status: "active" | "complete";
@@ -192,32 +192,32 @@ export function HexSettlementBoard({
   const legalActions = useMemo(
     () =>
       status === "active"
-        ? listCatanLegalActionsForSession({
-            catan,
+        ? listHexIslandLegalActionsForSession({
+            hexIsland,
             activeSeat,
             status,
             playerId: legalPlayer,
           })
         : [],
-    [catan, activeSeat, status, legalPlayer],
+    [hexIsland, activeSeat, status, legalPlayer],
   );
   const showLegal =
     interactive && viewerSeat !== null && viewerSeat === activeSeat;
 
   const vpScores = useMemo(
     () =>
-      catan.players.map((player, seat) => {
+      hexIsland.players.map((player, seat) => {
         let points =
           player.settlements.length + player.cities.length * 2 + player.vpCards;
-        if (catan.longestRoadOwner === seat) points += 2;
-        if (catan.largestArmyOwner === seat) points += 2;
+        if (hexIsland.longestRoadOwner === seat) points += 2;
+        if (hexIsland.largestArmyOwner === seat) points += 2;
         return points;
       }),
-    [catan],
+    [hexIsland],
   );
 
   const viewerResources =
-    viewerSeat !== null ? catan.players[viewerSeat]?.resources : null;
+    viewerSeat !== null ? hexIsland.players[viewerSeat]?.resources : null;
 
   const statusLine =
     status === "complete"
@@ -228,9 +228,9 @@ export function HexSettlementBoard({
           ? `${copy.aiThinking} · ${copy.seat} ${activeSeat}`
           : `${copy.waiting} · ${copy.seat} ${activeSeat}`;
   const diceLine =
-    catan.lastDice === null
+    hexIsland.lastDice === null
       ? copy.noDice
-      : `${copy.dice} ${catan.lastDice[0]} + ${catan.lastDice[1]} = ${catan.lastDice[0] + catan.lastDice[1]}`;
+      : `${copy.dice} ${hexIsland.lastDice[0]} + ${hexIsland.lastDice[1]} = ${hexIsland.lastDice[0] + hexIsland.lastDice[1]}`;
 
   const accessibleActions = showLegal ? legalActions : [];
 
@@ -257,28 +257,28 @@ export function HexSettlementBoard({
   return (
     <div
       aria-label={copy.board}
-      className="catan-board hex-settlement-board"
+      className="hex-island-board hex-settlement-board"
       data-status={status}
       role="region"
     >
-      <section aria-label={copy.hud} className="catan-hud">
-        <div className="catan-hud-status">
-          <span className="catan-kicker">{copy.active}</span>
+      <section aria-label={copy.hud} className="hex-island-hud">
+        <div className="hex-island-hud-status">
+          <span className="hex-island-kicker">{copy.active}</span>
           <strong>
-            {copy.seat} {activeSeat} · {copy.phase} {phaseLabel(catan.phase, locale)}
+            {copy.seat} {activeSeat} · {copy.phase} {phaseLabel(hexIsland.phase, locale)}
           </strong>
           <p>{statusLine}</p>
-          <p className="catan-hud-dice">{diceLine}</p>
+          <p className="hex-island-hud-dice">{diceLine}</p>
         </div>
-        <div className="catan-hud-scores" aria-label={copy.vp}>
+        <div className="hex-island-hud-scores" aria-label={copy.vp}>
           {vpScores.map((vp, seat) => (
             <div
-              className={`catan-score${seat === activeSeat ? " is-active" : ""}`}
+              className={`hex-island-score${seat === activeSeat ? " is-active" : ""}`}
               key={`vp-${seat}`}
             >
               <span
                 aria-hidden="true"
-                className="catan-seat-swatch"
+                className="hex-island-seat-swatch"
                 style={{ background: SEAT_COLORS[seat % SEAT_COLORS.length] }}
               />
               <b>
@@ -288,8 +288,8 @@ export function HexSettlementBoard({
           ))}
         </div>
         {viewerResources && (
-          <div aria-label={copy.resources} className="catan-hud-resources">
-            <span className="catan-kicker">{copy.resources}</span>
+          <div aria-label={copy.resources} className="hex-island-hud-resources">
+            <span className="hex-island-kicker">{copy.resources}</span>
             <ul>
               {(Object.keys(resourceLabel) as Resource[]).map((resource) => (
                 <li key={resource}>
@@ -300,30 +300,30 @@ export function HexSettlementBoard({
             </ul>
           </div>
         )}
-        <dl className="catan-hud-awards">
+        <dl className="hex-island-hud-awards">
           <div>
             <dt>{copy.robber}</dt>
-            <dd>{catan.robberHex}</dd>
+            <dd>{hexIsland.robberHex}</dd>
           </div>
           <div>
             <dt>{copy.longestRoad}</dt>
             <dd>
-              {catan.longestRoadOwner === null
+              {hexIsland.longestRoadOwner === null
                 ? copy.none
-                : `${copy.seat} ${catan.longestRoadOwner}`}
+                : `${copy.seat} ${hexIsland.longestRoadOwner}`}
             </dd>
           </div>
           <div>
             <dt>{copy.largestArmy}</dt>
             <dd>
-              {catan.largestArmyOwner === null
+              {hexIsland.largestArmyOwner === null
                 ? copy.none
-                : `${copy.seat} ${catan.largestArmyOwner}`}
+                : `${copy.seat} ${hexIsland.largestArmyOwner}`}
             </dd>
           </div>
           <div>
             <dt>{copy.lastAction}</dt>
-            <dd>{catan.lastAction ?? copy.noLast}</dd>
+            <dd>{hexIsland.lastAction ?? copy.noLast}</dd>
           </div>
         </dl>
       </section>
@@ -333,7 +333,7 @@ export function HexSettlementBoard({
           <LazySceneHost
             ariaLabel={copy.board}
             className="room-g3d-scene-host"
-            hexSettlement={catan}
+            hexSettlement={hexIsland}
             activeSeat={activeSeat}
             interactive={showLegal}
             legalActions={pickableActions}
@@ -343,12 +343,12 @@ export function HexSettlementBoard({
       </div>
 
       {accessibleActions.length > 0 && (
-        <ul aria-label={copy.actions} className="catan-action-row hex-settlement-action-list">
+        <ul aria-label={copy.actions} className="hex-island-action-row hex-settlement-action-list">
           {accessibleActions.map((action) => (
             <li key={actionKey(action)}>
               <button
                 aria-label={labelForBoardAction(action, copy, resourceLabel)}
-                className="catan-action"
+                className="hex-island-action"
                 disabled={busy}
                 onClick={() =>
                   onAct?.(

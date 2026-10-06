@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-// PR5/PR6 closed Othello + Catan baseline capability gaps. Remaining e2e below
+// PR5/PR6 closed Othello + hex-island baseline capability gaps. Remaining e2e below
 // covers playable save/reopen and declared-mechanic mismatch refusal.
 
 test("saved validated source reopens, shares and accepts a real action", async ({ page, browser }) => {

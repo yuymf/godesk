@@ -1,5 +1,5 @@
 /**
- * Catan / hex-settlement adapter on the public play-kernel (PR6).
+ * hex-island / hex-settlement adapter on the public play-kernel (PR6).
  *
  * Genre/topology/resources/dice/roads live under `genre` only — the public
  * envelope still has no hex/resources/dice required fields. AI and humans
@@ -29,7 +29,7 @@ import {
 
 export const HEX_SETTLEMENT_KERNEL_TYPE = "hex-settlement-v1" as const;
 
-const CATAN_PHASES = [
+const HEX_ISLAND_PHASES = [
   { id: "setup", name: "Initial placement" },
   { id: "roll", name: "Roll dice" },
   { id: "discard", name: "Discard on 7" },
@@ -52,12 +52,12 @@ const RESOURCES: readonly Resource[] = [
 
 export type ResourceBank = Record<Resource, number>;
 
-type CatanConfig = {
+type HexIslandConfig = {
   playerCount: number;
   victoryPointsToWin: number;
 };
 
-export type CatanPlayer = {
+export type HexIslandPlayer = {
   resources: ResourceBank;
   settlements: string[];
   cities: string[];
@@ -71,7 +71,7 @@ export type CatanPlayer = {
   newDevCards: DevCardKind[];
 };
 
-export type CatanTile = {
+export type HexIslandTile = {
   q: number;
   r: number;
   terrain: Terrain;
@@ -80,20 +80,20 @@ export type CatanTile = {
 
 export type PortKind = "any3" | Resource;
 
-export type CatanPort = {
+export type HexIslandPort = {
   /** Coastal vertices that grant this port. */
   vertices: string[];
   kind: PortKind;
 };
 
-export type CatanGenre = {
+export type HexIslandGenre = {
   playerCount: number;
   victoryPointsToWin: number;
-  tiles: CatanTile[];
+  tiles: HexIslandTile[];
   /** Robber occupies this hex key "q,r". */
   robberHex: string;
-  ports: CatanPort[];
-  players: CatanPlayer[];
+  ports: HexIslandPort[];
+  players: HexIslandPlayer[];
   /** Setup: 0 .. 4*playerCount - 1 (settle/road interleaved). */
   setupStep: number;
   /** Vertex of settlement just placed (road must touch it). */
@@ -187,13 +187,13 @@ const BEGINNER_NUMBERS: Array<number | null> = [
 
 let CACHED_GRAPH: HexBoardGraph | null = null;
 
-export function catanBoardGraph(): HexBoardGraph {
+export function hexIslandBoardGraph(): HexBoardGraph {
   if (!CACHED_GRAPH) CACHED_GRAPH = createHexBoardGraph(2);
   return CACHED_GRAPH;
 }
 
-export function createBeginnerTiles(): CatanTile[] {
-  const graph = catanBoardGraph();
+export function createBeginnerTiles(): HexIslandTile[] {
+  const graph = hexIslandBoardGraph();
   return graph.cells.map((cell, index) => ({
     q: cell.q,
     r: cell.r,
@@ -202,13 +202,13 @@ export function createBeginnerTiles(): CatanTile[] {
   }));
 }
 
-function desertHexKey(tiles: CatanTile[]): string {
+function desertHexKey(tiles: HexIslandTile[]): string {
   const desert = tiles.find((tile) => tile.terrain === "desert");
   return desert ? hexKey(desert.q, desert.r) : "0,0";
 }
 
 /** Coastal vertices sorted; assign ports in stable rings for bank/port trade. */
-function createBeginnerPorts(graph: HexBoardGraph): CatanPort[] {
+function createBeginnerPorts(graph: HexBoardGraph): HexIslandPort[] {
   const coastal = graph.vertexIds.filter(
     (vertex) => (graph.vertexHexes[vertex] ?? []).length <= 2,
   );
@@ -223,7 +223,7 @@ function createBeginnerPorts(graph: HexBoardGraph): CatanPort[] {
     "wheat",
     "ore",
   ];
-  const ports: CatanPort[] = [];
+  const ports: HexIslandPort[] = [];
   for (let index = 0; index < kinds.length; index += 1) {
     const a = coastal[(index * 2) % coastal.length];
     const b = coastal[(index * 2 + 1) % coastal.length];
@@ -232,7 +232,7 @@ function createBeginnerPorts(graph: HexBoardGraph): CatanPort[] {
   return ports;
 }
 
-function emptyPlayer(): CatanPlayer {
+function emptyPlayer(): HexIslandPlayer {
   return {
     resources: EMPTY_BANK(),
     settlements: [],
@@ -261,9 +261,9 @@ function shuffleDevDeck(seed: number): DevCardKind[] {
   return deck;
 }
 
-export function parseCatanConfig(
+export function parseHexIslandConfig(
   raw: Record<string, unknown>,
-): CatanConfig | null {
+): HexIslandConfig | null {
   const playerCount = raw.playerCount ?? 2;
   const victoryPointsToWin = raw.victoryPointsToWin ?? 10;
   if (
@@ -286,14 +286,14 @@ export function parseCatanConfig(
   };
 }
 
-export function createCatanKernelConfig(input?: {
+export function createHexIslandKernelConfig(input?: {
   playerCount?: number;
   victoryPointsToWin?: number;
 }): PlayKernelConfig {
   return {
     kernelType: HEX_SETTLEMENT_KERNEL_TYPE,
     playerCount: input?.playerCount ?? 2,
-    phases: CATAN_PHASES.map((phase) => ({ ...phase })),
+    phases: HEX_ISLAND_PHASES.map((phase) => ({ ...phase })),
     adapter: {
       playerCount: input?.playerCount ?? 2,
       victoryPointsToWin: input?.victoryPointsToWin ?? 10,
@@ -302,7 +302,7 @@ export function createCatanKernelConfig(input?: {
 }
 
 export function publicVictoryPoints(
-  genre: CatanGenre,
+  genre: HexIslandGenre,
   playerId: PlayerId,
 ): number {
   const player = genre.players[playerId];
@@ -312,7 +312,7 @@ export function publicVictoryPoints(
   return points;
 }
 
-function occupiedVertices(genre: CatanGenre): Set<string> {
+function occupiedVertices(genre: HexIslandGenre): Set<string> {
   const set = new Set<string>();
   for (const player of genre.players) {
     for (const vertex of player.settlements) set.add(vertex);
@@ -329,7 +329,7 @@ function isTooClose(graph: HexBoardGraph, vertex: string, occupied: Set<string>)
   return false;
 }
 
-function playerNetworkVertices(player: CatanPlayer, graph: HexBoardGraph): Set<string> {
+function playerNetworkVertices(player: HexIslandPlayer, graph: HexBoardGraph): Set<string> {
   const set = new Set<string>();
   for (const vertex of player.settlements) set.add(vertex);
   for (const vertex of player.cities) set.add(vertex);
@@ -343,13 +343,13 @@ function playerNetworkVertices(player: CatanPlayer, graph: HexBoardGraph): Set<s
   return set;
 }
 
-function legalSetupSettlements(genre: CatanGenre, graph: HexBoardGraph): string[] {
+function legalSetupSettlements(genre: HexIslandGenre, graph: HexBoardGraph): string[] {
   const occupied = occupiedVertices(genre);
   return graph.vertexIds.filter((vertex) => !isTooClose(graph, vertex, occupied));
 }
 
 function legalSetupRoads(
-  genre: CatanGenre,
+  genre: HexIslandGenre,
   playerId: PlayerId,
   graph: HexBoardGraph,
 ): string[] {
@@ -366,7 +366,7 @@ function legalSetupRoads(
 }
 
 function legalMainRoads(
-  genre: CatanGenre,
+  genre: HexIslandGenre,
   playerId: PlayerId,
   graph: HexBoardGraph,
 ): string[] {
@@ -383,7 +383,7 @@ function legalMainRoads(
 }
 
 function legalMainSettlements(
-  genre: CatanGenre,
+  genre: HexIslandGenre,
   playerId: PlayerId,
   graph: HexBoardGraph,
 ): string[] {
@@ -395,7 +395,7 @@ function legalMainSettlements(
   );
 }
 
-function roadPathLength(player: CatanPlayer, graph: HexBoardGraph): number {
+function roadPathLength(player: HexIslandPlayer, graph: HexBoardGraph): number {
   if (!player.roads.length) return 0;
   const adj = new Map<string, Array<{ to: string; edge: string }>>();
   for (const road of player.roads) {
@@ -421,7 +421,7 @@ function roadPathLength(player: CatanPlayer, graph: HexBoardGraph): number {
   return best;
 }
 
-function updateAwards(genre: CatanGenre, graph: HexBoardGraph): void {
+function updateAwards(genre: HexIslandGenre, graph: HexBoardGraph): void {
   let longestOwner: PlayerId | null = null;
   let longestLen = 4; // need ≥5 roads worth of path
   for (let seat = 0; seat < genre.playerCount; seat += 1) {
@@ -456,7 +456,7 @@ function updateAwards(genre: CatanGenre, graph: HexBoardGraph): void {
   genre.largestArmyOwner = armyOwner;
 }
 
-function clonePlayers(players: CatanPlayer[]): CatanPlayer[] {
+function clonePlayers(players: HexIslandPlayer[]): HexIslandPlayer[] {
   return players.map((player) => ({
     resources: cloneBank(player.resources),
     settlements: [...player.settlements],
@@ -469,7 +469,7 @@ function clonePlayers(players: CatanPlayer[]): CatanPlayer[] {
   }));
 }
 
-function cloneGenre(genre: CatanGenre): CatanGenre {
+function cloneGenre(genre: HexIslandGenre): HexIslandGenre {
   return {
     ...genre,
     tiles: genre.tiles.map((tile) => ({ ...tile })),
@@ -483,7 +483,7 @@ function cloneGenre(genre: CatanGenre): CatanGenre {
   };
 }
 
-function setupActiveSeat(genre: CatanGenre): PlayerId {
+function setupActiveSeat(genre: HexIslandGenre): PlayerId {
   const n = genre.playerCount;
   const pair = Math.floor(genre.setupStep / 2);
   // Round 1 pairs 0..n-1, round 2 pairs n..2n-1 reversed
@@ -492,7 +492,7 @@ function setupActiveSeat(genre: CatanGenre): PlayerId {
 }
 
 function collectStartingResources(
-  genre: CatanGenre,
+  genre: HexIslandGenre,
   playerId: PlayerId,
   vertex: string,
   graph: HexBoardGraph,
@@ -505,7 +505,7 @@ function collectStartingResources(
   }
 }
 
-function produceResources(genre: CatanGenre, roll: number, graph: HexBoardGraph): void {
+function produceResources(genre: HexIslandGenre, roll: number, graph: HexBoardGraph): void {
   for (const tile of genre.tiles) {
     if (tile.number !== roll) continue;
     if (hexKey(tile.q, tile.r) === genre.robberHex) continue;
@@ -521,7 +521,7 @@ function produceResources(genre: CatanGenre, roll: number, graph: HexBoardGraph)
   }
 }
 
-function portRatio(genre: CatanGenre, playerId: PlayerId, resource: Resource): number {
+function portRatio(genre: HexIslandGenre, playerId: PlayerId, resource: Resource): number {
   const player = genre.players[playerId];
   const owned = new Set([...player.settlements, ...player.cities]);
   let best = 4;
@@ -534,12 +534,12 @@ function portRatio(genre: CatanGenre, playerId: PlayerId, resource: Resource): n
 }
 
 function maybeEnd(
-  genre: CatanGenre,
+  genre: HexIslandGenre,
   playerId: PlayerId,
   activePlayerId: PlayerId,
   phase: PlayPhaseId,
 ): {
-  genre: CatanGenre;
+  genre: HexIslandGenre;
   phase: PlayPhaseId;
   activePlayerId: PlayerId;
   status: "active" | "complete";
@@ -570,19 +570,19 @@ function payloadNumber(action: PlayAction, key: string): number | null {
 }
 
 
-function playableDevCount(player: CatanPlayer, kind: DevCardKind): number {
+function playableDevCount(player: HexIslandPlayer, kind: DevCardKind): number {
   const held = player.devCards.filter((card) => card === kind).length;
   const fresh = player.newDevCards.filter((card) => card === kind).length;
   return Math.max(0, held - fresh);
 }
 
-export const catanAdapter: PlayKernelAdapter<CatanGenre, CatanConfig> = {
+export const hexIslandAdapter: PlayKernelAdapter<HexIslandGenre, HexIslandConfig> = {
   kernelType: HEX_SETTLEMENT_KERNEL_TYPE,
 
-  parseConfig: parseCatanConfig,
+  parseConfig: parseHexIslandConfig,
 
   createGenreState(config, seed, playerCount) {
-    const graph = catanBoardGraph();
+    const graph = hexIslandBoardGraph();
     const tiles = createBeginnerTiles();
     return {
       playerCount,
@@ -612,7 +612,7 @@ export const catanAdapter: PlayKernelAdapter<CatanGenre, CatanConfig> = {
   listLegalActions(state, playerId) {
     if (state.status !== "active" || playerId !== state.activePlayerId) return [];
     const genre = state.genre;
-    const graph = catanBoardGraph();
+    const graph = hexIslandBoardGraph();
     const phase = state.phase;
     const actions: LegalAction[] = [];
 
@@ -819,7 +819,7 @@ export const catanAdapter: PlayKernelAdapter<CatanGenre, CatanConfig> = {
     if (state.status !== "active" || action.playerId !== state.activePlayerId) {
       return null;
     }
-    const graph = catanBoardGraph();
+    const graph = hexIslandBoardGraph();
     const genre = cloneGenre(state.genre);
     const playerId = action.playerId;
     const player = genre.players[playerId];
@@ -1096,14 +1096,14 @@ export const catanAdapter: PlayKernelAdapter<CatanGenre, CatanConfig> = {
 };
 
 function applyKnight(
-  genre: CatanGenre,
+  genre: HexIslandGenre,
   playerId: PlayerId,
   finish: (
     nextPhase: PlayPhaseId,
     nextActive: PlayerId,
     extras?: { passed?: boolean; endReason?: string },
   ) => {
-    genre: CatanGenre;
+    genre: HexIslandGenre;
     phase: PlayPhaseId;
     activePlayerId: PlayerId;
     status: "active" | "complete";
@@ -1123,7 +1123,7 @@ function applyKnight(
 }
 
 function stealCandidates(
-  genre: CatanGenre,
+  genre: HexIslandGenre,
   thief: PlayerId,
   hex: string,
   graph: HexBoardGraph,
@@ -1146,7 +1146,7 @@ function stealCandidates(
 }
 
 function stealOne(
-  genre: CatanGenre,
+  genre: HexIslandGenre,
   thief: PlayerId,
   victim: PlayerId,
   seed: number,
@@ -1164,20 +1164,20 @@ function stealOne(
   genre.players[thief].resources[pick] += 1;
 }
 
-export function catanToSessionFields(state: PlayState<CatanGenre>): {
+export function hexIslandToSessionFields(state: PlayState<HexIslandGenre>): {
   turn: number;
   activeSeat: number;
   scores: number[];
   status: "active" | "complete";
   winnerSeat: number | null;
-  catan: {
+  hexIsland: {
     phase: string;
     playerCount: number;
     victoryPointsToWin: number;
-    tiles: CatanTile[];
+    tiles: HexIslandTile[];
     robberHex: string;
-    ports: CatanPort[];
-    players: CatanPlayer[];
+    ports: HexIslandPort[];
+    players: HexIslandPlayer[];
     setupStep: number;
     pendingRoadVertex: string | null;
     lastDice: [number, number] | null;
@@ -1200,7 +1200,7 @@ export function catanToSessionFields(state: PlayState<CatanGenre>): {
     scores,
     status: state.status,
     winnerSeat: state.winnerId,
-    catan: {
+    hexIsland: {
       phase: state.phase,
       playerCount: state.genre.playerCount,
       victoryPointsToWin: state.genre.victoryPointsToWin,
@@ -1228,21 +1228,21 @@ export function catanToSessionFields(state: PlayState<CatanGenre>): {
   };
 }
 
-export function bindCatanFromRuntimeKernel(input: {
+export function bindHexIslandFromRuntimeKernel(input: {
   playerCount?: number;
   victoryPointsToWin?: number;
 }): PlayKernelConfig {
   const playerCount = input.playerCount ?? 2;
   if (playerCount < 2 || playerCount > 4) {
-    throw new Error("catan_requires_2_to_4_players");
+    throw new Error("hex_island_requires_2_to_4_players");
   }
-  return createCatanKernelConfig({
+  return createHexIslandKernelConfig({
     playerCount,
     victoryPointsToWin: input.victoryPointsToWin ?? 10,
   });
 }
 
-export function playActionFromCatanIntent(
+export function playActionFromHexIslandIntent(
   seat: number,
   actionId: string,
   payload?: Record<string, unknown>,
@@ -1284,15 +1284,15 @@ function botActionWeight(action: LegalAction): number {
   }
 }
 
-export function pickCatanBotAction(
-  state: PlayState<CatanGenre>,
+export function pickHexIslandBotAction(
+  state: PlayState<HexIslandGenre>,
   config: PlayKernelConfig,
   seed: number,
   sequence: number,
 ): PlayAction | null {
-  const parsed = parseCatanConfig(config.adapter);
+  const parsed = parseHexIslandConfig(config.adapter);
   if (!parsed) return null;
-  const legal = catanAdapter.listLegalActions(state, state.activePlayerId, parsed);
+  const legal = hexIslandAdapter.listLegalActions(state, state.activePlayerId, parsed);
   if (!legal.length) return null;
   const weights = legal.map(botActionWeight);
   const total = weights.reduce((sum, value) => sum + value, 0);
@@ -1313,25 +1313,25 @@ export function pickCatanBotAction(
   };
 }
 
-export function autoPlayCatanGame(
+export function autoPlayHexIslandGame(
   seed: number,
-  config: PlayKernelConfig = createCatanKernelConfig(),
+  config: PlayKernelConfig = createHexIslandKernelConfig(),
 ): {
-  state: PlayState<CatanGenre>;
+  state: PlayState<HexIslandGenre>;
   actions: PlayAction[];
 } {
-  let state = createInitialState(catanAdapter, config, seed);
+  let state = createInitialState(hexIslandAdapter, config, seed);
   const actions: PlayAction[] = [];
   const maxPlies = 12000;
   let guard = 0;
 
   while (state.status === "active" && guard < maxPlies) {
     guard += 1;
-    const bot = pickCatanBotAction(state, config, seed, state.sequence + 1);
+    const bot = pickHexIslandBotAction(state, config, seed, state.sequence + 1);
     if (!bot) break;
-    const result = applyAction(catanAdapter, state, bot, config);
+    const result = applyAction(hexIslandAdapter, state, bot, config);
     if (!result.ok) {
-      throw new Error(`catan_auto_play_illegal:${result.reason}:${bot.type}`);
+      throw new Error(`hex_island_auto_play_illegal:${result.reason}:${bot.type}`);
     }
     actions.push(bot);
     state = result.state;
