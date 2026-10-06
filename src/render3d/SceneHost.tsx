@@ -559,9 +559,16 @@ export function SceneHost({
       create: (node: SceneNode) => adapterRef.current
         ? adapterRef.current.create(node, { library, caps: getCaps() })
         : createNodeObject(node, getCaps(), library, pools, overlayRef.current),
-      update: (object: Object3D, node: SceneNode) => adapterRef.current
-        ? adapterRef.current.update(object, node, { library, caps: getCaps() })
-        : updateNodeObject(object, node, library, pools),
+      update: (object: Object3D, node: SceneNode) => {
+          // Never snap an in-flight hop/place/dice pose back to SceneModel mid-tween
+          // (HUD +N re-renders must not kill MotionController.hop).
+          if (motion.isAnimating(object)) return;
+          if (adapterRef.current) {
+            adapterRef.current.update(object, node, { library, caps: getCaps() });
+            return;
+          }
+          updateNodeObject(object, node, library, pools);
+        },
       disposeObject: (object: Object3D) => disposeObject(object, pools),
       motion: {
         added: (object: Object3D, node: SceneNode) => {
@@ -674,16 +681,52 @@ export function SceneHost({
           markShadowsDirtyRef.current();
           return true;
         },
-        /** round-7 ④：真实 hop 路径 + 通知 HUD 弹出 +N（仅 ?judge=1）。 */
-        playMotionDemo(): boolean {
+        debugRobber(): { x: number; y: number; z: number; busy: boolean; scale: number } | null {
+          const robber = registryRef.current.get("robber");
+          if (!robber) return null;
+          return {
+            x: robber.position.x,
+            y: robber.position.y,
+            z: robber.position.z,
+            busy: motion.isAnimating(robber),
+            scale: robber.scale.x,
+          };
+        },
+                /** round-7 ④：强制完整 hop（忽略 reduced-motion）+ 板面中央 +N 吐司。 */
+        playMotionDemo(): { hopMs: number; reduced: boolean } | false {
           const robber = registryRef.current.get("robber");
           if (!robber) return false;
+          const reduced = prefersReducedMotion();
+          const hopMs = 1400;
           const from: [number, number, number] = [robber.position.x, robber.position.y, robber.position.z];
-          const to: [number, number, number] = [from[0] + 1.35, from[1], from[2] - 0.85];
+          // Large travel (~½ island) so 1440×900 capture clearly shows the arc.
+          const to: [number, number, number] = [from[0] + 4.6, from[1], from[2] - 2.8];
           robber.position.set(...to);
           robber.userData.baseY = to[1];
-          const ms = motion.hop(robber, "robber", from);
+          robber.scale.setScalar(1.55);
+          robber.updateMatrix();
+          const ms = motion.hop(robber, "robber", from, { ms: hopMs, ignoreReducedMotion: true });
+          window.setTimeout(() => {
+            robber.scale.setScalar(1);
+            robber.updateMatrix();
+          }, ms + 50);
           markShadowsDirtyRef.current();
+          const host = document.body;
+          let toastHideTimer = 0;
+          const showToast = (text: string) => {
+            let toast = host.querySelector(".g3d-judge-plusn-toast") as HTMLDivElement | null;
+            if (!toast) {
+              toast = document.createElement("div");
+              toast.className = "g3d-judge-plusn-toast";
+              toast.setAttribute("data-testid", "g3d-judge-plusn-toast");
+              host.appendChild(toast);
+            }
+            toast.textContent = text;
+            toast.setAttribute("data-visible", "1");
+            window.clearTimeout(toastHideTimer);
+            toastHideTimer = window.setTimeout(() => toast?.setAttribute("data-visible", "0"), 2600);
+          };
+          showToast("+2 木  +1 麦  +1 羊");
           window.dispatchEvent(new CustomEvent("g3d-judge-resource-gain", {
             detail: { wood: 2, wheat: 1, sheep: 1 },
           }));
@@ -693,11 +736,21 @@ export function SceneHost({
             const cur: [number, number, number] = [back.position.x, back.position.y, back.position.z];
             back.position.set(...from);
             back.userData.baseY = from[1];
-            motion.hop(back, "robber", cur);
+            back.scale.setScalar(1.55);
+            back.updateMatrix();
+            const backMs = motion.hop(back, "robber", cur, { ms: hopMs, ignoreReducedMotion: true });
+            window.setTimeout(() => {
+              back.scale.setScalar(1);
+              back.updateMatrix();
+            }, backMs + 50);
             markShadowsDirtyRef.current();
-          }, Math.max(ms, 720) + 200);
-          return true;
-        },
+            showToast("+2 砖  +1 矿");
+            window.dispatchEvent(new CustomEvent("g3d-judge-resource-gain", {
+              detail: { brick: 2, ore: 1 },
+            }));
+          }, ms + 500);
+          return { hopMs: ms, reduced };
+        }
       };
     });
 

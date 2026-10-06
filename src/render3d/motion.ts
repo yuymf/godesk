@@ -271,7 +271,10 @@ export class MotionController {
       this.dirty.add(key);
     };
     const reduced = this.reduced();
-    const durationMs = reduced ? 0 : durationOverrideMs ?? motionDurationMs(kind, reduced);
+    // Explicit duration override (judge motion demo) wins even under prefers-reduced-motion.
+    const durationMs = durationOverrideMs !== undefined
+      ? durationOverrideMs
+      : (reduced ? 0 : motionDurationMs(kind, reduced));
     recordMotion({ kind, id, durationMs, reduced, at: this.now() });
     if (durationMs === 0) {
       step(1);
@@ -340,14 +343,23 @@ export class MotionController {
   }
 
   /** Hop-walk along a bowed arc to the object's current (final) position, facing travel. */
-  hop(object: Object3D, id: string, from: SceneVec3): number {
+  hop(object: Object3D, id: string, from: SceneVec3, options?: { ms?: number; ignoreReducedMotion?: boolean }): number {
     const to: SceneVec3 = [object.position.x, object.position.y, object.position.z];
     const finalYaw = object.rotation.y;
+    const forceMs = options?.ignoreReducedMotion ? (options.ms ?? MOTION_MS.robber) : options?.ms;
+    // When ignoreReducedMotion, temporarily pretend reduced is false via duration override.
+    if (options?.ignoreReducedMotion) {
+      return this.run(object, "robber", id, Easing.Sinusoidal.InOut, (p) => {
+        const { position, facing } = hopPath(from, to, p);
+        object.position.set(position[0], position[1], position[2]);
+        object.rotation.set(0, p >= 1 ? (Math.hypot(to[0] - from[0], to[2] - from[2]) > 1e-6 ? facing : finalYaw) : facing, 0);
+      }, undefined, forceMs ?? MOTION_MS.robber);
+    }
     return this.run(object, "robber", id, Easing.Sinusoidal.InOut, (p) => {
       const { position, facing } = hopPath(from, to, p);
       object.position.set(position[0], position[1], position[2]);
       object.rotation.set(0, p >= 1 ? (Math.hypot(to[0] - from[0], to[2] - from[2]) > 1e-6 ? facing : finalYaw) : facing, 0);
-    });
+    }, undefined, forceMs);
   }
 
   /**

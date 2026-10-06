@@ -1342,3 +1342,32 @@ body:has(.room-view-tidewell-immersive) {
     --tw-dock: 188px;
   }
 }
+
+/* round-7 ④：板面中央 +N 吐司（motion webm 必见） */
+.tidewell-stage-wrap,
+.tidewell-game-screen .g3d-stage,
+[data-testid="g3d-scene-host"] {
+  position: relative;
+}
+.g3d-judge-plusn-toast {
+  position: fixed;
+  left: 50%;
+  top: 38%;
+  transform: translate(-50%, -50%) scale(0.6);
+  z-index: 200;
+  padding: 14px 22px;
+  border-radius: 999px;
+  border: 3px solid #f3e7c9;
+  background: #1f9a4a;
+  color: #fff;
+  font: 800 28px/1.1 system-ui, "PingFang SC", sans-serif;
+  letter-spacing: 0.04em;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease, transform 180ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.g3d-judge-plusn-toast[data-visible="1"] {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.05);
+}
