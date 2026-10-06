@@ -18,13 +18,13 @@ const LEGAL = "法务审查: 待 G3D-17";
 const provText = readFileSync(join(ROOT, PROV), "utf8");
 const PROMPTS = {};
 for (const line of provText.split("\n")) {
-  const m = line.match(/^\| (\w\d) \| `[^`]+` \| (.+) \|$/);
+  const m = line.match(/^\| (\w\d\w?) \| `[^`]+` \| (.+) \|$/);
   if (m) PROMPTS[m[1]] = m[2].trim();
 }
 
 const TEX = {
   "t01-pine": ["T1", "松林"], "t02-clay": ["T4", "赭土"], "t03-meadow": ["T2", "草甸"],
-  "t04-wheat": ["T3", "麦田"], "t05-reef": ["T5", "礁岩"], "t06-sand": ["T6", "沙洲"],
+  "t04-wheat": ["T3b", "麦田"], "t05-reef": ["T5", "礁岩"], "t06-sand": ["T6", "沙洲"],
   "t08-wood": ["T8", "码头木板"], "t11-parchment": ["N1", "点数筹码面"],
 };
 const CARDS = {
