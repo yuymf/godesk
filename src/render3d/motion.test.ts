@@ -18,8 +18,8 @@ function clock(start = 1000) {
 }
 
 describe("G3D-09 motion durations", () => {
-  it("matches SPEC §4.5: place 280, robber 420, dice 900, camera 600, remove 160", () => {
-    expect(MOTION_MS).toEqual({ place: 280, remove: 160, robber: 420, dice: 900, camera: 600 });
+  it("matches SPEC §4.5: place 280, robber 720, dice 900, camera 600, remove 160", () => {
+    expect(MOTION_MS).toEqual({ place: 280, remove: 160, robber: 720, dice: 900, camera: 600 });
   });
   it("reduced motion zeroes every duration", () => {
     for (const kind of Object.keys(MOTION_MS) as (keyof typeof MOTION_MS)[]) {
@@ -91,18 +91,18 @@ describe("MotionController", () => {
     expect(motion.busy).toBe(false);
   });
 
-  it("robber arcs for 420 ms; a new tween on the same object finishes the old one", () => {
+  it("robber arcs for 720 ms; a new tween on the same object finishes the old one", () => {
     const c = clock();
     const motion = new MotionController({ reduced: () => false, now: c.now });
     const robber = new Object3D();
     robber.position.set(2, 0.85, 0);
-    expect(motion.moveArc(robber, "robber", [0, 0.85, 0])).toBe(420);
+    expect(motion.moveArc(robber, "robber", [0, 0.85, 0])).toBe(720);
     motion.update(c.advance(210));
     expect(robber.position.y).toBeGreaterThan(1.2);
     // state moves again mid-flight: final pose must converge to the new target
     robber.position.set(-2, 0.85, 0);
     motion.moveArc(robber, "robber", [1, 0.85, 0]);
-    motion.update(c.advance(421));
+    motion.update(c.advance(721));
     expect(robber.position.x).toBeCloseTo(-2);
     expect(robber.position.y).toBeCloseTo(0.85);
     expect(motion.busy).toBe(false);
@@ -207,8 +207,8 @@ describe("G3D-JUDGE-PIECES motion additions", () => {
     for (const t of [0, 300, 900, 4000]) {
       const bob = idleBob(t, false);
       expect(bob.y).toBeGreaterThanOrEqual(0);
-      expect(bob.y).toBeLessThan(0.03);
-      expect(Math.abs(bob.tilt)).toBeLessThan(0.05);
+      expect(bob.y).toBeLessThan(0.06);
+      expect(Math.abs(bob.tilt)).toBeLessThan(0.08);
     }
   });
 

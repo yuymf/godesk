@@ -103,10 +103,10 @@ describe("miniature pieces (readable buildings / cloaked robber, vertex-coloured
     const geom = buildSettlementGeometry(1);
     const s = size(geom);
     expect(s.minY).toBeCloseTo(0, 5);
-    expect(s.x).toBeGreaterThan(0.28);
-    expect(s.x).toBeLessThan(0.6);
-    expect(s.y).toBeGreaterThan(0.32);
-    expect(s.y).toBeLessThan(0.65);
+    expect(s.x).toBeGreaterThan(0.35);
+    expect(s.x).toBeLessThan(0.75);
+    expect(s.y).toBeGreaterThan(0.4);
+    expect(s.y).toBeLessThan(0.85);
     expect(geom.getAttribute("color")).toBeDefined();
     expect(geom.index).toBeNull();
     expect(hasColor(geom, wallTint(SEAT_COLORS[1]!))).toBe(true);
@@ -114,11 +114,11 @@ describe("miniature pieces (readable buildings / cloaked robber, vertex-coloured
     expect(hasColor(geom, "#4a2f1d")).toBe(true);
   });
 
-  it("house reads 28–34 px tall at the default desktop play framing (910×505 canvas)", () => {
+  it("house reads 34–48 px tall at the default desktop play framing (910×505 canvas) — top-down readable", () => {
     // A vertex one ring out from the centre (pieces stand on the tile top, y = 0.27).
     const px = projectedHeightPx(buildSettlementGeometry(0), [0.5, 0.27, 0.866], 910, 505);
-    expect(px).toBeGreaterThanOrEqual(28);
-    expect(px).toBeLessThanOrEqual(34);
+    expect(px).toBeGreaterThanOrEqual(34);
+    expect(px).toBeLessThanOrEqual(48);
   });
 
   it("baked AO: walls darken toward the ground; eave undersides darker than roof tops", () => {
@@ -150,8 +150,8 @@ describe("miniature pieces (readable buildings / cloaked robber, vertex-coloured
     const geom = buildRobberGeometry();
     const s = size(geom);
     expect(Math.abs(s.minY)).toBeLessThan(0.02);
-    expect(s.y).toBeGreaterThan(0.85);
-    expect(s.y).toBeLessThan(1.2);
+    expect(s.y).toBeGreaterThan(1.0);
+    expect(s.y).toBeLessThan(1.5);
     expect(hasColor(geom, PIECE_PALETTE.rim)).toBe(true);
     expect(hasColor(geom, PIECE_PALETTE.cloak)).toBe(true);
     expect(hasColor(geom, PIECE_PALETTE.cloakDark)).toBe(true);

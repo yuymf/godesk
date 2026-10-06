@@ -180,3 +180,10 @@
 
 | ui/ai/wood-grain | assets/ui/ai/wood-grain{,-256}.webp | HUD 木纹平铺（顶栏/侧栏/底栏） | 自制 | assets/ui/ai/wood-grain.webp | LicenseRef-GoDesk-Original | GoDesk Track B（程序化 PIL 无缝木纹） | 2026-10-07 | 否 | round-3/4 刀序④；非 settlecoast 复制 | G3D-JUDGE-R3-HUD |
 | ui/ai/parchment-grain | assets/ui/ai/parchment-grain{,-256}.webp | HUD 羊皮纸纤维平铺（回合栏/纪事） | 自制 | assets/ui/ai/parchment-grain.webp | LicenseRef-GoDesk-Original | GoDesk Track B（程序化 PIL 无缝羊皮） | 2026-10-07 | 否 | round-3/4 刀序④；非 settlecoast 复制 | G3D-JUDGE-R3-HUD |
+
+## G3D-JUDGE round-5p 棋子素材调研（不入运行时、未采用）
+
+- 调研路径：g3d-evidence/asset-server/downloads/（2026-10-07）。
+- Kenney Nature Kit（CC0-1.0，kenney.nl/assets/nature-kit）：含树/灌/岩/帐篷/桥/作物等 glTF；无 cottage/manor/settlement 房屋。树/岩已由 model/decor 合入；帐篷不宜作渔村棋子。
+- Polyhaven island_tree_03：仅树，不替代棋子。
+- 结论：房屋/强盗继续用运行时程序化微缩几何（src/render3d/assets/pieces.ts，不产生文件、不入上表）；本轮放大体积 + 加宽强盗兜帽/描边剪影，未新增 glTF 资产行。
