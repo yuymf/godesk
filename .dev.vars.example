@@ -10,3 +10,7 @@ GODESK_WEB_CLIENT_SECRET=godesk-local-web-client-secret
 
 # Optional: MCP Code Mode（渐进披露）。设为 1 时 listTools 仅 search+execute。默认不要开。
 # GODESK_MCP_CODE_MODE=1
+
+# Optional: 3d-asset-server sidecar for Creator 「资产搜索」(Tidewell).
+# Default matches wrangler.jsonc: http://127.0.0.1:8787
+# ASSET_SERVER_URL=http://127.0.0.1:8787

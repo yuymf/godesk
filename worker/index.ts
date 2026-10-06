@@ -19,6 +19,7 @@ import {
   verifyShareToken,
 } from "./share-capability";
 import { projectApi, isPublicShareApi, isPublicSharePage } from "./project-routes";
+import { assetServerApi, isAssetServerApi } from "./asset-server";
 import { error, type StoredPlaytestLink } from "./project-operations";
 
 const READ_ONLY_MCP_TOOLS = new Set([
@@ -145,6 +146,10 @@ export default {
         if (issued.cookie) cookies.push(issued.cookie);
       }
       if (creator instanceof Response) return creator;
+      const apiUrl = new URL(routed.url);
+      if (isAssetServerApi(apiUrl)) {
+        return withCookies(await assetServerApi(routed, env), cookies);
+      }
       return withCookies(
         await projectApi(
           routed,

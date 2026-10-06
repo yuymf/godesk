@@ -1,5 +1,6 @@
 import { generationMetadataSchema, migrateRuleSystemToV2 } from "../src/creator/game-spec";
 import { defaultRenderSpec, isSpatialPresentationKind, patchRenderSpec, renderSpecIssues, renderSpecSchema } from "../src/creator/render-spec";
+import type { ImportedProjectAsset } from "../src/creator/asset-search/types";
 import {
   acceptIntent,
   executableRuntime,
@@ -64,6 +65,8 @@ export interface ProjectRecord {
   jobs: CreatorJob[];
   hypotheses: DesignHypothesis[];
   findings: ValidationFinding[];
+  importedAssets?: ImportedProjectAsset[];
+  importedLicensesMarkdown?: string;
 }
 
 export interface SessionSocketAttachment {
@@ -263,6 +266,10 @@ export function normalizedProjectRecord(record: ProjectRecord) {
     jobs: record.jobs,
     hypotheses: record.hypotheses,
     findings: record.findings,
+    importedAssets: Array.isArray(record.importedAssets) ? record.importedAssets : [],
+    importedLicensesMarkdown: typeof record.importedLicensesMarkdown === "string"
+      ? record.importedLicensesMarkdown
+      : "",
   };
 }
 

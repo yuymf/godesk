@@ -89,6 +89,7 @@ const PROJECT_API_ROUTES: ApiRoute[] = [
     publicize: "project-view",
   },
   pattern("POST", /^\/api\/projects\/([^/]+)\/changes$/, (m) => `${PROJECT_PREFIX}${m[1]}/changes`, "mutation"),
+  pattern("POST", /^\/api\/projects\/([^/]+)\/imported-assets$/, (m) => `${PROJECT_PREFIX}${m[1]}/imported-assets`, "mutation"),
   pattern("POST", /^\/api\/projects\/([^/]+)\/jobs$/, (m) => `/projects/${m[1]}/jobs`, "job"),
   pattern("GET", /^\/api\/jobs\/([^/]+)\/artifact$/, (m) => `/jobs/${m[1]}/artifact`, "none"),
   pattern("GET", /^\/api\/jobs\/([^/]+)$/, (m) => `/jobs/${m[1]}`, "job"),

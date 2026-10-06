@@ -88,6 +88,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
 | G3D-17 预备：上线前清单自动化 | Track C | `feat/g3d-17-launch-checklist` · [#144](https://github.com/yuymf/godesk/pull/144) | `scripts/launch-checklist.mjs`：法务待审条数 / 包体 / Lighthouse warn 级断言 / 分档 draw call / HUD 原始动作 id，现为 warning，转阻断开关见 [`docs/perf/launch-checklist.md`](./perf/launch-checklist.md)；G3D-16 等 G3D-13（#138） |
+| Tidewell 资产搜索（3d-asset-server sidecar） | Cloud Agent | `cursor/tidewell-asset-search-14b1` | Creator Studio「资产搜索」面板；默认 `http://127.0.0.1:8787`；不 vendoring sidecar；见 [`docs/asset-server.md`](./asset-server.md) |
 
 ## 阻塞
 
@@ -132,6 +133,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | `feat/g3d-13-tidewell` | — | G3D-13 Tidewell 集成（Track B） | 开工 · 合入等 #132 |
 | `chore/pre-public-cleanup` | 见 PR | 仓库公开前清理：品牌中性化、LICENSE、第三方参考站点引用清零（Track A） | open · 不合入（等用户确认） |
 | `feat/g3d-04c-incremental-room-state` | [#141](https://github.com/yuymf/godesk/pull/141) | G3D-04c Room 内核状态增量化（Track A） | open · 本机门禁全过；合入 main（#138 后）重跑 CI 后 squash 合入 |
+| `cursor/tidewell-asset-search-14b1` | draft PR | Tidewell 资产搜索：Studio 面板 + 3d-asset-server sidecar（默认 `http://127.0.0.1:8787`），不 vendoring | open · draft |
 
 ## 修订记录
 
@@ -179,3 +181,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-06 | GitHub Actions 因账户付费被阻塞（约 12:54 起）；#141 本机门禁全过，等 CI 恢复后合入 | Track A |
 | 2026-10-06 | G3D-17 预备（Track C）上线前清单自动化 PR：回填 #139 合入 SHA `2c56f22`；进行中加 G3D-17 预备；G3D-17 上线前清单加「自动化清单转阻断」项与基线；开着的 PR #139 → 本 PR；代码基线 → `45a5a1c` | Track C |
 | 2026-10-06 | G3D-ART-2 #142 合入 `45a5a1c`；STATUS 回填 SHA；Notion G3D-ART 追加跟进记录 | Track D |
+| 2026-10-06 | Tidewell 资产搜索：Creator Studio 面板调用仓外 3d-asset-server（默认 `http://127.0.0.1:8787`）；「加入项目」写入 Game Project `assets/imported/` + `assets/LICENSES.md`；文档 [`docs/asset-server.md`](./asset-server.md) | Cloud Agent |

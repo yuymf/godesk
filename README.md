@@ -32,6 +32,8 @@ pnpm dev:worker
 
 `pnpm dev:worker` builds the client and starts the full local Worker + Assets + Durable Objects flow at `http://127.0.0.1:8799`. `pnpm dev` is a static Vite-only UI server; it does not proxy `/api`, `/mcp`, or OAuth and is not a valid end-to-end creator flow.
 
+Tidewell asset search talks to a separate [3d-asset-server](https://github.com/arielshad/3d-asset-server) sidecar at `http://127.0.0.1:8787` (override with `ASSET_SERVER_URL`). See [`docs/asset-server.md`](docs/asset-server.md). It is not a monorepo dependency.
+
 Localhost uses an explicit development identity. It is not live OAuth evidence. Copy `.dev.vars.example` → `.dev.vars` for local OAuth placeholders.
 
 ### Codex Plugin
