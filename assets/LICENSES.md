@@ -210,3 +210,7 @@
 | texture/r7-painterly-albedo/t01–t11 | assets/textures/pbr/t0*/{512,256}/baseColor.ktx2（仅 albedo） | round-7 绘本地块 albedo | 自制 | scripts + PIL | LicenseRef-GoDesk-Original | GoDesk Track R7（程序化绘本树冠/羊群/麦垄等；保留原 normal/ORM；非 settlecoast 复制） | 2026-10-07 | 否 | 预览见 assets/ai-textures/*-painterly-albedo.webp；证据 /workspace/g3d-evidence/judge/round-7/ai-albedo/ | G3D-JUDGE-R7 |
 | ui/ai/icons/build-*-r7 | assets/ui/ai/icons/build-{road,settlement,city,card}-{64,96,128}.webp | HUD 木砖建造钮 | 自制 | PIL wood-brick | LicenseRef-GoDesk-Original | GoDesk Track R7 | 2026-10-07 | 是 | 木框羊皮纸插画砖 | G3D-JUDGE-R7 |
 
+## Round-8 HUD (PIL generated · 2026-10-07)
+
+- `assets/illustrations/brand/portrait-{0..3}.webp` (+ `-128`): half-body painterly settler busts (cloak + face), 256×320. Model: local Pillow script `scripts/gen-r8-hud-art.py` (procedural illustration, no external AI API). Prompt/theme: "半身手绘开拓者插画，羊皮纸色背景，彩色斗篷与徽章".
+- `assets/ui/ai/icons/build-{road,settlement,city,card}-{64,96,128}.webp`: wood-brick relief tiles with Chinese labels (栈道/渔村/海镇/买卡) and carved gold lip. Same Pillow script. Prompt/theme: "settlecoast-style wooden brick build buttons with embossed icon + label".

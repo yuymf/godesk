@@ -723,7 +723,7 @@ export function HexSettlementBoard({
                         alt=""
                         className="tidewell-portrait-img"
                         decoding="async"
-                        height={64}
+                        height={80}
                         src={seatMarkUrl(seat)}
                         width={64}
                       />

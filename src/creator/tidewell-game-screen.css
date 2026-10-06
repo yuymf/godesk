@@ -1372,3 +1372,179 @@ body:has(.room-view-tidewell-immersive) {
   transform: translate(-50%, -50%) scale(1.05);
 }
 
+/* ==== R8 整桌一体感：羊皮嵌板 + 木砖建造钮 + 半身肖像 ==== */
+
+/* Top bar: parchment strip on wood, not dark glass */
+.tidewell-topbar {
+  background:
+    linear-gradient(180deg, rgba(255, 248, 232, 0.88) 0%, rgba(232, 211, 162, 0.78) 100%),
+    var(--tw-tex-parchment),
+    linear-gradient(180deg, #fff8e8 0%, #e8d3a2 100%) !important;
+  background-size: auto, 220px 220px, auto !important;
+  border-bottom: 2px solid var(--tw-gold-mid, #c9a227) !important;
+  box-shadow:
+    0 1px 0 var(--tw-gold-deep, #8a6a14),
+    0 3px 8px rgba(42, 24, 12, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45) !important;
+  color: #2a1c12 !important;
+}
+.tidewell-topbar-brand,
+.tidewell-topbar-status,
+.tidewell-topbar-center {
+  color: #2a1c12 !important;
+}
+.tidewell-topbar-brand {
+  font-family: Georgia, "Songti SC", serif !important;
+  letter-spacing: 0.06em;
+}
+
+/* Side rails: wood table showing through; nested parchment plaques */
+.tidewell-players,
+.tidewell-turn-column {
+  background:
+    linear-gradient(180deg, rgba(90, 58, 32, 0.35) 0%, rgba(55, 34, 18, 0.45) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #6b4428 0%, #3e2616 100%) !important;
+  background-size: auto, 200px 200px, auto !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(26, 14, 8, 0.55),
+    inset 0 0 0 2px rgba(201, 162, 39, 0.35),
+    inset 0 0 12px rgba(0, 0, 0, 0.18) !important;
+  color: #2a1c12 !important;
+}
+.tidewell-players .tidewell-panel-title,
+.tidewell-turn-column .tidewell-panel-title {
+  color: #4a2f1c !important;
+  background: rgba(243, 231, 201, 0.75);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(201, 162, 39, 0.55);
+  display: inline-block;
+}
+
+/* Player cards = parchment plaques inset on wood */
+.tidewell-player-card {
+  background:
+    linear-gradient(165deg, rgba(255, 252, 245, 0.95) 0%, rgba(243, 231, 201, 0.88) 100%),
+    var(--tw-tex-parchment),
+    #f3e7c9 !important;
+  background-size: auto, 160px 160px, auto !important;
+  border: 1px solid #c9a227 !important;
+  border-radius: 10px !important;
+  color: #2a1c12 !important;
+  box-shadow:
+    0 0 0 1px rgba(26, 14, 8, 0.45),
+    0 2px 6px rgba(42, 24, 12, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55) !important;
+  grid-template-columns: 72px 1fr !important;
+  padding: 8px !important;
+}
+.tidewell-player-card.is-active {
+  box-shadow:
+    0 0 0 2px var(--seat-color, #c9a227),
+    0 0 12px rgba(201, 162, 39, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+  background:
+    linear-gradient(165deg, #fffef8 0%, #f8ecd0 100%),
+    var(--tw-tex-parchment) !important;
+}
+.tidewell-player-meta b,
+.tidewell-player-vp,
+.tidewell-player-stats,
+.tidewell-house-name {
+  color: #2a1c12 !important;
+}
+.tidewell-player-vp { color: #8a6a14 !important; }
+.tidewell-house-name { color: #6b4428 !important; opacity: 0.9; }
+
+/* Half-body portrait (not circle medallion) */
+.tidewell-player-avatar,
+.tidewell-medallion {
+  width: 64px !important;
+  height: 80px !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  border: 2px solid var(--seat-color, #c9a227) !important;
+  box-shadow:
+    0 0 0 1px rgba(26, 14, 8, 0.5),
+    0 2px 5px rgba(0, 0, 0, 0.25) !important;
+  background: #e8d3a2 !important;
+}
+.tidewell-player-avatar img,
+.tidewell-portrait-img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center top !important;
+}
+
+/* Right parchment panels already ok — lighten log/turn further */
+.tidewell-turn-card,
+.tidewell-log-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.92), rgba(243, 231, 201, 0.82)),
+    var(--tw-tex-parchment) !important;
+  background-size: auto, 180px 180px !important;
+  color: #2a1c12 !important;
+  box-shadow:
+    0 0 0 1px rgba(26, 14, 8, 0.4),
+    0 2px 6px rgba(42, 24, 12, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+}
+.tidewell-turn-column .tidewell-turn-blurb,
+.tidewell-turn-column .tidewell-hud-dice,
+.tidewell-log-body {
+  color: #3d2c1c !important;
+}
+
+/* Dock: wood table lip; build buttons = wood-brick illustration tiles */
+.tidewell-dock {
+  background:
+    linear-gradient(180deg, rgba(255, 248, 232, 0.12) 0%, rgba(42, 24, 12, 0.15) 18%, rgba(42, 24, 12, 0.55) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #6b4428 0%, #2c1a10 100%) !important;
+  background-size: auto, 260px 260px, auto !important;
+  border-top: 3px solid var(--tw-gold-mid, #c9a227) !important;
+}
+.tidewell-build-btn {
+  position: relative !important;
+  min-width: 84px !important;
+  min-height: 112px !important;
+  width: 84px !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  border: none !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(26, 14, 8, 0.65) !important;
+  overflow: hidden !important;
+}
+.tidewell-build-btn .tidewell-build-art {
+  display: block !important;
+  width: 84px !important;
+  height: 112px !important;
+  object-fit: fill !important;
+  border-radius: 10px !important;
+  border: none !important;
+}
+/* Label + cost baked into / clutter wood brick — hide DOM duplicates */
+.tidewell-build-btn .tidewell-build-label,
+.tidewell-build-btn .tidewell-build-cost {
+  display: none !important;
+}
+.tidewell-build-btn.is-disabled .tidewell-build-art,
+.tidewell-build-btn:disabled .tidewell-build-art {
+  filter: grayscale(0.4) brightness(0.85);
+}
+
+/* Awards plaque on parchment */
+.tidewell-hud-awards {
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.9), rgba(243, 231, 201, 0.8)),
+    var(--tw-tex-parchment) !important;
+  color: #2a1c12 !important;
+}
+.tidewell-hud-awards dt { color: #8a6a14 !important; }
+.tidewell-hud-awards dd { color: #2a1c12 !important; }
