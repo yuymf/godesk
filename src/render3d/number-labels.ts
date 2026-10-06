@@ -25,8 +25,8 @@ export const NUMBER_TOKEN_RADIUS = 0.22;
 export const NUMBER_TOKEN_HALF_HEIGHT = 0.03;
 /** 贴花离筹码顶面的高度（避免 z-fighting；配合 polygonOffset）。 */
 export const LABEL_LIFT = 0.004;
-/** 贴花边长 = 筹码半径 × 1.6 × 节点缩放：略小于筹码直径，留出 N1 筹码面的赤陶边。 */
-export const LABEL_SIZE_PER_RADIUS = 1.6;
+/** 贴花边长 = 筹码半径 × 1.85 × 节点缩放：略小于筹码直径（G3D-ART-3 由 1.6 放大，字形更大）。 */
+export const LABEL_SIZE_PER_RADIUS = 1.85;
 export { NUMBER_TOKEN_SCALE } from "./tokens";
 
 export const LABEL_INK = "#2f2a24";
@@ -52,8 +52,18 @@ export function atlasCell(n: number): { col: number; row: number } {
   return { col: index % GRID, row: Math.floor(index / GRID) };
 }
 
+/**
+ * 数字字体：粗无衬线、等高数字（lining figures）。G3D-ART-3：原先的 Georgia 在无该字体的机器上
+ * 落到 Gelasio 等衬线体，远处筹码只有 ~5px 高时，「2」的细底横消失、斜笔读成「7」→「12」看成「17」。
+ */
+export const LABEL_FONT = `"Helvetica Neue", Helvetica, Arial, "Noto Sans", "DejaVu Sans", "Liberation Sans", sans-serif`;
+/** 默认机位俯视角会把筹码顶面纵向压缩约一半；图集里预先纵向拉伸字形，抵消透视压缩。 */
+export const GLYPH_STRETCH_Y = 1.5;
+/** 两位数的字距（相对格宽，负值收紧），让「11」「12」成为一个整体而不是两个分离的笔画。 */
+export const GLYPH_TRACKING = -0.03;
+
 /** 浏览器里画数字图集；node 测试环境传入 stub。 */
-export function drawNumberAtlas(size = 512): Texture {
+export function drawNumberAtlas(size = 1024): Texture {
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -61,32 +71,46 @@ export function drawNumberAtlas(size = 512): Texture {
   if (!ctx) throw new Error("2d canvas unavailable");
   const cell = size / GRID;
   ctx.clearRect(0, 0, size, size);
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
   for (const n of NUMBERS) {
     const { col, row } = atlasCell(n);
     const cx = col * cell + cell / 2;
     const cy = row * cell + cell / 2;
     const color = isHotNumber(n) ? LABEL_HOT : LABEL_INK;
     ctx.fillStyle = color;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = cell * 0.035;
-    ctx.lineJoin = "round";
-    ctx.font = `700 ${Math.round(cell * (n >= 10 ? 0.54 : 0.64))}px Georgia, "Times New Roman", serif`;
-    ctx.fillText(String(n), cx, cy - cell * 0.08);
-    ctx.strokeText(String(n), cx, cy - cell * 0.08);
+    const text = String(n);
+    const fontPx = Math.round(cell * (text.length > 1 ? 0.56 : 0.6));
+    ctx.font = `900 ${fontPx}px ${LABEL_FONT}`;
+    // 逐字排版：实测字宽 + 收紧字距；两位数若超宽则整体横向压缩。
+    const widths = [...text].map((ch) => ctx.measureText(ch).width);
+    const track = GLYPH_TRACKING * cell;
+    const natural = widths.reduce((a, w) => a + w, 0) + track * (widths.length - 1);
+    const maxWidth = cell * 0.92;
+    const squeeze = Math.min(1, maxWidth / natural);
+    const capHeight = fontPx * 0.72 * GLYPH_STRETCH_Y;
+    const baseline = cy - cell * 0.08 + capHeight / 2;
+    ctx.save();
+    ctx.translate(cx - (natural * squeeze) / 2, baseline);
+    ctx.scale(squeeze, GLYPH_STRETCH_Y);
+    let x = 0;
+    [...text].forEach((ch, i) => {
+      ctx.fillText(ch, x, 0);
+      x += widths[i]! + track;
+    });
+    ctx.restore();
     const pips = pipCount(n);
-    const r = cell * 0.042;
-    const gap = r * 2.5;
+    const r = cell * 0.03;
+    const gap = r * 2.7;
     for (let i = 0; i < pips; i += 1) {
       ctx.beginPath();
-      ctx.arc(cx + (i - (pips - 1) / 2) * gap, cy + cell * 0.3, r, 0, Math.PI * 2);
+      ctx.ellipse(cx + (i - (pips - 1) / 2) * gap, cy + cell * 0.4, r, r * GLYPH_STRETCH_Y, 0, 0, Math.PI * 2);
       ctx.fill();
     }
   }
   const texture = new CanvasTexture(canvas);
   texture.colorSpace = SRGBColorSpace;
-  texture.anisotropy = 4;
+  texture.anisotropy = 8;
   return texture;
 }
 

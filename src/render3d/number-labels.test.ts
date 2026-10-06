@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { DataTexture, PerspectiveCamera, Vector3 } from "three";
 import { mapHexSettlementToScene } from "./mappers/hex-settlement";
 import {
+  GLYPH_STRETCH_Y,
+  LABEL_FONT,
   LABEL_HOT,
   LABEL_INK,
   LABEL_LIFT,
@@ -111,5 +113,22 @@ describe("number token decals (G3D-ART-2)", () => {
     expect(layer.labels()).toHaveLength(0);
     expect(layer.mesh.visible).toBe(false);
     layer.dispose();
+  });
+
+  it("every decal value is a legal Catan number (2..12, no 7) and matches its tile (G3D-ART-3)", () => {
+    const labels = labelsFromNodes(mapHexSettlementToScene(HEX_FIXTURE).nodes);
+    const byId = Object.fromEntries(labels.map((l) => [l.id, l.number]));
+    for (const tile of HEX_FIXTURE.tiles) {
+      if (tile.number === null) continue;
+      expect(byId[`num:${tile.q},${tile.r}`]).toBe(tile.number);
+    }
+    for (const l of labels) expect(l.number >= 2 && l.number <= 12 && l.number !== 7).toBe(true);
+    expect(() => atlasCell(17)).toThrow(/out of range/);
+  });
+
+  it("uses a heavy sans-serif lining-figure font with vertical pre-stretch (12 must not read as 17)", () => {
+    expect(LABEL_FONT).not.toMatch(/Georgia|Times/);
+    expect(LABEL_FONT).toMatch(/sans-serif$/);
+    expect(GLYPH_STRETCH_Y).toBeGreaterThan(1.2);
   });
 });
