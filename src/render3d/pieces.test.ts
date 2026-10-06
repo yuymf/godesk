@@ -72,7 +72,7 @@ function projectedHeightPx(geom: ReturnType<typeof buildSettlementGeometry>, at:
   const { center } = islandCenter(tiles);
   const aspect = width / height;
   // Same own-turn framing the director uses (flattens on wide canvases instead of showing sky).
-  const f = playFraming(framingPoints([...tiles, ...ports]), framingPoints(tiles), center, MathUtils.degToRad(50), 0, 45, aspect);
+  const f = playFraming(framingPoints([...tiles, ...ports]), framingPoints(tiles), center, MathUtils.degToRad(38), 0, 45, aspect);
   const camera = new PerspectiveCamera(45, aspect, 0.1, 200);
   const [ox, oy, oz] = orbitOffset(f.distance, f.polar, 0);
   camera.position.set(center[0] + ox, center[1] + oy, center[2] + oz);
@@ -98,15 +98,15 @@ function projectedHeightPx(geom: ReturnType<typeof buildSettlementGeometry>, at:
   return bottom - top;
 }
 
-describe("procedural pieces (own-modelled, vertex-coloured)", () => {
-  it("settlement: cottage stands on y=0, ~a quarter of a hex wide, seat-tinted walls, dark timber", () => {
+describe("miniature pieces (readable buildings / cloaked robber, vertex-coloured)", () => {
+  it("settlement: cottage stands on y=0, seat-tinted walls, dark timber, door + windows", () => {
     const geom = buildSettlementGeometry(1);
     const s = size(geom);
     expect(s.minY).toBeCloseTo(0, 5);
     expect(s.x).toBeGreaterThan(0.28);
-    expect(s.x).toBeLessThan(0.55);
+    expect(s.x).toBeLessThan(0.6);
     expect(s.y).toBeGreaterThan(0.32);
-    expect(s.y).toBeLessThan(0.55);
+    expect(s.y).toBeLessThan(0.65);
     expect(geom.getAttribute("color")).toBeDefined();
     expect(geom.index).toBeNull();
     expect(hasColor(geom, wallTint(SEAT_COLORS[1]!))).toBe(true);
@@ -140,20 +140,23 @@ describe("procedural pieces (own-modelled, vertex-coloured)", () => {
     const s = size(geom);
     expect(s.x).toBeGreaterThan(ROAD_LENGTH - 0.02);
     expect(s.x).toBeLessThan(ROAD_LENGTH + 0.04);
-    expect(s.z).toBeGreaterThan(0.18);
-    expect(s.z).toBeLessThan(0.28);
-    expect(s.y).toBeLessThan(0.18);
+    expect(s.z).toBeGreaterThan(0.16);
+    expect(s.z).toBeLessThan(0.3);
+    expect(s.y).toBeLessThan(0.2);
     expect(hasColor(geom, SEAT_COLORS[2]!)).toBe(true);
   });
 
-  it("robber: taller hooded figure with a pale rim outline (inverted hull)", () => {
+  it("robber: cloaked hooded figure (not a cylinder) with pale rim outline", () => {
     const geom = buildRobberGeometry();
     const s = size(geom);
     expect(Math.abs(s.minY)).toBeLessThan(0.02);
-    expect(s.y).toBeGreaterThan(0.8);
-    expect(s.y).toBeLessThan(1.1);
+    expect(s.y).toBeGreaterThan(0.85);
+    expect(s.y).toBeLessThan(1.2);
     expect(hasColor(geom, PIECE_PALETTE.rim)).toBe(true);
     expect(hasColor(geom, PIECE_PALETTE.cloak)).toBe(true);
+    expect(hasColor(geom, PIECE_PALETTE.cloakDark)).toBe(true);
+    // Figure mesh is multi-part (limbs/cloak panels), not a single lathe: plenty of verts.
+    expect(geom.getAttribute("position").count).toBeGreaterThan(800);
     // Rim vertices face up (lit pale from any camera).
     const col = geom.getAttribute("color");
     const nrm = geom.getAttribute("normal");
