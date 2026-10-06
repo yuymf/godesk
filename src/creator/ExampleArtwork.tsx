@@ -1,17 +1,34 @@
 import type { DefaultExampleId } from "./default-examples";
 
-/** Hero / card artwork. Tidewell uses a static WebP poster (G3D-16) — never mount SceneHost here. */
+/** Hero / card artwork. Tidewell uses static posters (G3D-16) — never mount SceneHost here. */
 export function ExampleArtwork({ exampleId }: { exampleId: DefaultExampleId }) {
   if (exampleId === "tidewell-isles") {
     return (
       <div aria-hidden="true" className="example-artwork example-artwork-tidewell-isles">
-        <img
-          alt=""
-          decoding="async"
-          height={540}
-          src="/lobby/tidewell-hero.webp"
-          width={960}
-        />
+        <picture>
+          <source
+            media="(max-width: 680px)"
+            srcSet="/lobby/tidewell-hero-720.avif"
+            type="image/avif"
+          />
+          <source
+            media="(max-width: 680px)"
+            srcSet="/lobby/tidewell-hero-720.webp"
+            type="image/webp"
+          />
+          <source srcSet="/lobby/tidewell-hero-1200.avif" type="image/avif" />
+          <source srcSet="/lobby/tidewell-hero-1200.webp" type="image/webp" />
+          <img
+            alt=""
+            decoding="async"
+            fetchPriority="high"
+            height={675}
+            src="/lobby/tidewell-hero-1200.webp"
+            srcSet="/lobby/tidewell-hero-720.webp 720w, /lobby/tidewell-hero-1200.webp 1200w"
+            sizes="(max-width: 680px) 100vw, 720px"
+            width={1200}
+          />
+        </picture>
       </div>
     );
   }

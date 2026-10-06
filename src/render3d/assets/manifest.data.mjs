@@ -57,25 +57,6 @@ export const ASSET_MANIFEST = Object.freeze([
     }
   },
 {
-    "id": "lobby/tidewell-hero",
-    "file": "public/lobby/tidewell-hero.webp",
-    "kind": "ui",
-    "bytes": 13924,
-    "tier": "all",
-    "source": "procedural",
-    "license": {
-      "spdx": "LicenseRef-GoDesk-Original",
-      "sourceUrl": "scripts/render-poster.mjs",
-      "author": "GoDesk Track B",
-      "obtainedAt": "2026-10-06",
-      "modified": false,
-      "modificationNote": "无",
-      "orderRef": "n/a",
-      "status": "cleared"
-    }
-  },
-
-{
     "id": "ui/paper-noise",
     "file": "assets/ui/paper-noise.webp",
     "kind": "ui",
@@ -93,6 +74,106 @@ export const ASSET_MANIFEST = Object.freeze([
       "status": "cleared"
     }
   },
+{
+    "id": "lobby/tidewell-hero-1200-webp",
+    "file": "public/lobby/tidewell-hero-1200.webp",
+    "kind": "ui",
+    "bytes": 63756,
+    "tier": "all",
+    "source": "ai-generated",
+    "license": {
+      "spdx": "LicenseRef-AI-Generated",
+      "sourceUrl": "scripts/render-tidewell-hero.mjs",
+      "author": "GoDesk Track B（离线自渲，场景含 G3D-ART AI 贴图）",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "Room canvas 截取（无 HUD/?perf）；含 AI 地形贴图；ffmpeg WebP/AVIF；法务审查: 待 G3D-17",
+      "orderRef": "n/a",
+      "status": "cleared",
+      "legalReview": "pending-G3D-17"
+    }
+  },
+
+{
+    "id": "lobby/tidewell-hero-1200-avif",
+    "file": "public/lobby/tidewell-hero-1200.avif",
+    "kind": "ui",
+    "bytes": 41719,
+    "tier": "all",
+    "source": "ai-generated",
+    "license": {
+      "spdx": "LicenseRef-AI-Generated",
+      "sourceUrl": "scripts/render-tidewell-hero.mjs",
+      "author": "GoDesk Track B（离线自渲，场景含 G3D-ART AI 贴图）",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "Room canvas 截取（无 HUD/?perf）；含 AI 地形贴图；ffmpeg WebP/AVIF；法务审查: 待 G3D-17",
+      "orderRef": "n/a",
+      "status": "cleared",
+      "legalReview": "pending-G3D-17"
+    }
+  },
+
+{
+    "id": "lobby/tidewell-hero-720-webp",
+    "file": "public/lobby/tidewell-hero-720.webp",
+    "kind": "ui",
+    "bytes": 23788,
+    "tier": "all",
+    "source": "ai-generated",
+    "license": {
+      "spdx": "LicenseRef-AI-Generated",
+      "sourceUrl": "scripts/render-tidewell-hero.mjs",
+      "author": "GoDesk Track B（离线自渲，场景含 G3D-ART AI 贴图）",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "Room canvas 截取（无 HUD/?perf）；含 AI 地形贴图；ffmpeg WebP/AVIF；法务审查: 待 G3D-17",
+      "orderRef": "n/a",
+      "status": "cleared",
+      "legalReview": "pending-G3D-17"
+    }
+  },
+
+{
+    "id": "lobby/tidewell-hero-720-avif",
+    "file": "public/lobby/tidewell-hero-720.avif",
+    "kind": "ui",
+    "bytes": 15869,
+    "tier": "all",
+    "source": "ai-generated",
+    "license": {
+      "spdx": "LicenseRef-AI-Generated",
+      "sourceUrl": "scripts/render-tidewell-hero.mjs",
+      "author": "GoDesk Track B（离线自渲，场景含 G3D-ART AI 贴图）",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "Room canvas 截取（无 HUD/?perf）；含 AI 地形贴图；ffmpeg WebP/AVIF；法务审查: 待 G3D-17",
+      "orderRef": "n/a",
+      "status": "cleared",
+      "legalReview": "pending-G3D-17"
+    }
+  },
+
+{
+    "id": "lobby/tidewell-hero",
+    "file": "public/lobby/tidewell-hero.webp",
+    "kind": "ui",
+    "bytes": 63756,
+    "tier": "all",
+    "source": "ai-generated",
+    "license": {
+      "spdx": "LicenseRef-AI-Generated",
+      "sourceUrl": "scripts/render-tidewell-hero.mjs",
+      "author": "GoDesk Track B（离线自渲，场景含 G3D-ART AI 贴图）",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "Room canvas 截取（无 HUD/?perf）；含 AI 地形贴图；ffmpeg WebP/AVIF；法务审查: 待 G3D-17",
+      "orderRef": "n/a",
+      "status": "cleared",
+      "legalReview": "pending-G3D-17"
+    }
+  },
+
 {
     "id": "ui/paper-edge-panel",
     "file": "assets/ui/paper-edge-panel.svg",

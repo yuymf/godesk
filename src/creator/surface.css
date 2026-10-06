@@ -5836,3 +5836,29 @@ summary:focus-visible {
   align-items: center;
   gap: 0.35rem;
 }
+
+/* G3D-16: ?poster=1 — hide Room chrome for offline hero capture (canvas only). */
+html[data-g3d-poster="1"] .room-shell-header,
+html[data-g3d-poster="1"] .hex-settlement-hud,
+html[data-g3d-poster="1"] .hex-settlement-actions,
+html[data-g3d-poster="1"] .tidewell-action-row,
+html[data-g3d-poster="1"] .room-sound-settings,
+html[data-g3d-poster="1"] .room-audio-settings,
+html[data-g3d-poster="1"] .room-invite,
+html[data-g3d-poster="1"] .room-awards,
+html[data-g3d-poster="1"] .shell-header,
+html[data-g3d-poster="1"] [data-testid="g3d-perf-overlay"] {
+  display: none !important;
+}
+html[data-g3d-poster="1"] .tidewell-board,
+html[data-g3d-poster="1"] .g3d-stage,
+html[data-g3d-poster="1"] .room-g3d-scene-host,
+html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  z-index: 20;
+}

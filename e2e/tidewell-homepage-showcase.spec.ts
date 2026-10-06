@@ -24,10 +24,13 @@ test.describe("G3D-16 Tidewell homepage showcase", () => {
     await expect(gallery.getByRole("heading", { name: "汐屿", exact: true })).toBeVisible();
     await expect(gallery.getByRole("heading", { name: "港口十三号", exact: true })).toHaveCount(0);
     await expect(gallery.locator("[data-homepage-showcase='tidewell']")).toHaveCount(1);
-    const poster = gallery.locator("img[src='/lobby/tidewell-hero.webp']");
+    const poster = gallery.locator("img[src='/lobby/tidewell-hero-1200.webp'], img[srcset*='tidewell-hero']").first();
     await expect(poster).toBeVisible();
     // Homepage must not mount a WebGL canvas for the showcase (LCP / budget).
     await expect(gallery.locator("canvas")).toHaveCount(0);
+    // Poster must be the clean hero asset, not a Room page capture.
+    const src = await poster.getAttribute("src");
+    expect(src).toMatch(/tidewell-hero-\d+\.webp$/);
   });
 
   test("flag-on desktop + iPhone evidence screenshots", async ({ page }, testInfo) => {
