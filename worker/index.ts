@@ -166,3 +166,4 @@ export default {
     return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;
+// ci probe 2026-10-07T01:15:04+08:00
