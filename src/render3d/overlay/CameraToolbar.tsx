@@ -8,8 +8,6 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import type { CameraRigApi, CameraRigState } from "../camera-rig";
 
-const WOOD = "linear-gradient(180deg, #6b4428 0%, #4e301b 55%, #3f2615 100%)";
-const PARCHMENT = "#f3e4c1";
 const BRASS = "#c9a25a";
 
 /** round-6 ②：默认半透明、小尺寸，悬停/焦点才醒目，不抢岛。 */
