@@ -16,17 +16,17 @@ export type ViewportFrame = {
 };
 
 export const DEFAULT_DESKTOP_FRAME: Required<ViewportFrame> = {
-  fill: 0.8,
-  polarDeg: 48,
+  fill: 0.82,
+  polarDeg: 46,
   azimuthDeg: 18,
-  fovDeg: 45,
+  fovDeg: 42,
 };
 
 export const DEFAULT_NARROW_FRAME: Required<ViewportFrame> = {
-  fill: 0.88,
-  polarDeg: 26,
-  azimuthDeg: 12,
-  fovDeg: 45,
+  fill: 0.9,
+  polarDeg: 18,
+  azimuthDeg: 8,
+  fovDeg: 42,
 };
 
 /** Distance so a ground-plane disk of `radius` fills `fill` of the shorter view axis. */
@@ -42,12 +42,13 @@ export function distanceForIslandFill(
   const halfH = Math.atan(Math.tan(halfV) * Math.max(aspect, 0.2));
   const f = Math.max(0.45, Math.min(0.95, fill));
   const polar = (polarDeg * Math.PI) / 180;
-  // Oblique view foreshortens the ground disk on the vertical axis.
-  const foreshorten = Math.max(0.5, Math.cos(polar) * 0.55 + Math.sin(polar) * 0.85);
+  // Oblique view: ground disk projects smaller on the vertical axis → must move closer.
+  // cos(polar)≈1 top-down, ≈0.67 at 48°. Keep a floor so we never over-zoom into one hex.
+  const foreshorten = Math.max(0.42, 0.28 + Math.cos(polar) * 0.55);
   const effective = radius * foreshorten;
   const byHeight = effective / (f * Math.tan(halfV));
   const byWidth = effective / (f * Math.tan(halfH));
-  return Math.max(byHeight, byWidth, radius * 1.2);
+  return Math.max(byHeight, byWidth, radius * 1.35);
 }
 
 export function framePose(
