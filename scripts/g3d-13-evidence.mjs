@@ -147,6 +147,54 @@ async function main() {
     await context.close();
   }
 
+
+  // One-browser vs real Room AI (G3D-04b lobby「和电脑对战」)
+  {
+    const context = await browser.newContext(viewportDefs.desktop.context);
+    const page = await context.newPage();
+    await page.goto(`${BASE}/new`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+    await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(PROMPT);
+    await page.getByRole("button", { name: "生成可玩版本" }).click();
+    await page.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 120_000 });
+    await page.getByRole("button", { name: "确认玩法并开始试玩" }).click();
+    await page.getByRole("heading", { name: "现在就开玩" }).waitFor({ timeout: 120_000 });
+    const projectId = new URL(page.url()).pathname.split("/").at(-1);
+    await page.goto(`${BASE}/game`);
+    const card = page.locator(".lobby-card").filter({ has: page.locator(`a[href$="/studio/${projectId}"]`) });
+    await card.getByRole("button", { name: "和电脑对战" }).click();
+    await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 60_000 });
+    const board = page.getByRole("region", { name: "汐屿" });
+    await board.waitFor({ timeout: 60_000 });
+    await waitHost(page);
+    // Play human setup turns; AI seat responds server-side
+    for (let i = 0; i < 40; i += 1) {
+      const status = await board.getByRole("region", { name: "对局状态" }).innerText().catch(() => "");
+      if (/对局结束|获胜/.test(status)) break;
+      await openBoardTargets(board);
+      const settle = board.getByRole("button", { name: /建造渔村/ }).first();
+      const road = board.getByRole("button", { name: /铺设栈道/ }).first();
+      const roll = board.getByRole("button", { name: /掷骰/ }).first();
+      const end = board.getByRole("button", { name: /结束回合/ }).first();
+      if (await settle.isVisible().catch(() => false) && await settle.isEnabled().catch(() => false)) {
+        await settle.dispatchEvent("click");
+      } else if (await road.isVisible().catch(() => false) && await road.isEnabled().catch(() => false)) {
+        await road.dispatchEvent("click");
+      } else if (await roll.isVisible().catch(() => false) && await roll.isEnabled().catch(() => false)) {
+        await roll.dispatchEvent("click");
+      } else if (await end.isVisible().catch(() => false) && await end.isEnabled().catch(() => false)) {
+        await end.dispatchEvent("click");
+      }
+      await page.waitForTimeout(900);
+    }
+    const aiShot = path.join(OUT, "desktop-vs-room-ai-midgame.png");
+    await page.screenshot({ path: aiShot, fullPage: false });
+    const host = page.getByTestId("g3d-scene-host");
+    const aiCanvas = path.join(OUT, "desktop-vs-room-ai-canvas.png");
+    await host.screenshot({ path: aiCanvas }).catch(() => null);
+    log.roomAi = { files: [aiShot, aiCanvas], url: page.url() };
+    await context.close();
+  }
+
   await writeFile(path.join(OUT, "captures.json"), JSON.stringify(log, null, 2));
   console.log("wrote", path.join(OUT, "captures.json"));
   await browser.close();
