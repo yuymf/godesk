@@ -127,6 +127,8 @@ async function mobileEvidence(browser: Browser, url: string, name: string) {
     const shot = await stageShot(mobile);
     await writeFile(`${evidenceDir}/${name}-iphone12pro-390x844.png`, shot);
     await mobile.screenshot({ path: `${evidenceDir}/${name}-iphone12pro-390x844-page.png` });
+    // 先离开 Room 让会话 WebSocket 正常关闭，再关 context（本地 wrangler dev 对突断连接不稳）。
+    await mobile.goto("about:blank");
   } finally {
     await context.close();
   }
