@@ -1,5 +1,5 @@
 /**
- * Track B framing helper (G3D-judge-hud 2h3).
+ * Track B framing helper (G3D-judge-hud 2h4).
  * Track C (#151) owns the full camera-rig; this only exposes a fill/polar
  * viewport param so the HUD can ask for “island fills ~80% of canvas height”.
  */
@@ -7,29 +7,35 @@ import type { SceneVec3 } from "./scene-model";
 import { orbit } from "./judge-camera";
 
 export type ViewportFrame = {
-  /** Island diameter as a fraction of the viewport’s shorter axis (0.5–0.95). */
+  /** Island diameter as a fraction of the viewport height (0.5–0.95). */
   fill?: number;
-  /** Degrees from vertical (0 = top-down). Desktop ~48, phone ~26. */
+  /** Degrees from vertical (0 = top-down). Desktop ~42, phone ~14. */
   polarDeg?: number;
   azimuthDeg?: number;
   fovDeg?: number;
 };
 
+/** Desktop a/d: island ~78–85% of canvas height, sea margins OK left/right. */
 export const DEFAULT_DESKTOP_FRAME: Required<ViewportFrame> = {
   fill: 0.82,
-  polarDeg: 46,
-  azimuthDeg: 18,
-  fovDeg: 42,
+  polarDeg: 42,
+  azimuthDeg: 16,
+  fovDeg: 40,
 };
 
+/** iPhone: top-down-ish, fill width. */
 export const DEFAULT_NARROW_FRAME: Required<ViewportFrame> = {
   fill: 0.9,
-  polarDeg: 18,
-  azimuthDeg: 8,
-  fovDeg: 42,
+  polarDeg: 14,
+  azimuthDeg: 6,
+  fovDeg: 40,
 };
 
-/** Distance so a ground-plane disk of `radius` fills `fill` of the shorter view axis. */
+/**
+ * Distance so a ground-plane disk of `radius` fills `fill` of viewport height.
+ * Calibrated vs round-2h3 desktop-a canvas (~70.7% measured at ~9.5 dist):
+ * target ~82% → ~8.2. Height-driven on landscape; width only gates portrait.
+ */
 export function distanceForIslandFill(
   radius: number,
   aspect: number,
@@ -39,16 +45,24 @@ export function distanceForIslandFill(
 ): number {
   const fov = (Math.max(20, Math.min(75, fovDeg)) * Math.PI) / 180;
   const halfV = fov / 2;
-  const halfH = Math.atan(Math.tan(halfV) * Math.max(aspect, 0.2));
-  const f = Math.max(0.45, Math.min(0.95, fill));
+  const halfH = Math.atan(mathTanSafe(halfV) * Math.max(aspect, 0.2));
+  const f = Math.max(0.55, Math.min(0.92, fill));
   const polar = (polarDeg * Math.PI) / 180;
-  // Oblique view: ground disk projects smaller on the vertical axis → must move closer.
-  // cos(polar)≈1 top-down, ≈0.67 at 48°. Keep a floor so we never over-zoom into one hex.
-  const foreshorten = Math.max(0.42, 0.28 + Math.cos(polar) * 0.55);
-  const effective = radius * foreshorten;
-  const byHeight = effective / (f * Math.tan(halfV));
-  const byWidth = effective / (f * Math.tan(halfH));
-  return Math.max(byHeight, byWidth, radius * 1.35);
+  // Empirical foreshorten so landscape a-default lands ~80% height (not ~70%).
+  const foreshorten = Math.max(0.4, 0.22 + Math.cos(polar) * 0.42);
+  const projectedHalf = radius * foreshorten;
+  const byHeight = projectedHalf / (f * Math.tan(halfV));
+  if (aspect >= 1) {
+    // Desktop / landscape: prefer height fill; sea left/right is fine.
+    return Math.max(byHeight, radius * 1.1);
+  }
+  // Portrait: also keep island inside width.
+  const byWidth = (radius * 0.95) / (f * Math.tan(halfH));
+  return Math.max(byHeight, byWidth * 0.9, radius * 1.1);
+}
+
+function mathTanSafe(halfV: number): number {
+  return Math.tan(halfV);
 }
 
 export function framePose(
@@ -62,9 +76,10 @@ export function framePose(
   const azimuthDeg = frame.azimuthDeg ?? DEFAULT_DESKTOP_FRAME.azimuthDeg;
   const fovDeg = frame.fovDeg ?? DEFAULT_DESKTOP_FRAME.fovDeg;
   const distance = distanceForIslandFill(radius, aspect, fill, fovDeg, polarDeg);
+  const target: SceneVec3 = [center[0], center[1] + radius * 0.04, center[2]];
   return {
-    position: orbit(center, distance, polarDeg, azimuthDeg),
-    target: [center[0], center[1], center[2]],
+    position: orbit(target, distance, polarDeg, azimuthDeg),
+    target,
     fov: fovDeg,
     distance,
   };
