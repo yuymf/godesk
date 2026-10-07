@@ -88,6 +88,15 @@ describe("G3D-PROPS terrain props", () => {
     tall.dispose(); round.dispose(); small.dispose(); sheep.dispose(); wheat.dispose();
   });
 
+
+  it("R16 canopy: brush-card feather geometry denser than R15 sphere cloud", () => {
+    const canopy = buildPropGeometry("canopy");
+    canopy.computeBoundingBox();
+    expect(canopy.getAttribute("position").count).toBeGreaterThan(250);
+    const h = canopy.boundingBox!.max.y - canopy.boundingBox!.min.y;
+    expect(h).toBeLessThan(0.35); // flat brush stack, not tall umbrella
+    canopy.dispose();
+  });
   it("R15 silhouettes: mountain mass + brick mound hierarchy readable in bounds", () => {
     const boulder = buildPropGeometry("boulder");
     const clay = buildPropGeometry("clay");
