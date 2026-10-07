@@ -111,19 +111,19 @@ const FRAG_COLOR = [
   "  float strokeGap = 0.5 + 0.5 * sin(ang * 7.0 + foamN3 * 5.5 + vTideWorld.x * 0.55);",
   "  float strokeRaw = strokeFine * strokeMid;",
   "  strokeRaw *= mix(0.55, 1.0, smoothstep(0.22, 0.62, strokeGap));",
-  "  float strokeGate = smoothstep(0.36, 0.62, strokeRaw);",
-  "  strokeGate *= smoothstep(0.22, 0.65, foamN2);",
+  "  float strokeGate = smoothstep(0.32, 0.58, strokeRaw);",
+  "  strokeGate *= smoothstep(0.18, 0.6, foamN2);",
   // 极弱底 + 更多窄浪脊带（默认机位可读密度，非软晕宽带）。
-  "  float foamSoft = (1.0 - smoothstep(0.0, 0.085, d)) * uTideFoam * 0.08;",
-  "  float r1 = exp(-pow((d - 0.010) / 0.0065, 2.0));",
-  "  float r2 = exp(-pow((d - 0.028) / 0.0085, 2.0));",
-  "  float r3 = exp(-pow((d - 0.052) / 0.010, 2.0));",
-  "  float r4 = exp(-pow((d - 0.082) / 0.012, 2.0));",
-  "  float rLace = exp(-pow((d - 0.118) / 0.015, 2.0));",
-  "  float rSpray = exp(-pow((d - 0.155) / 0.020, 2.0));",
-  "  float ridges = (r1 * 1.35 + r2 * 1.05 + r3 * 0.82 + r4 * 0.55) * uTideFoam * mix(0.12, 1.0, strokeGate);",
-  "  float lace = (rLace * 0.7 + rSpray * 0.4) * uTideFoam * strokeGate * (0.3 + 0.7 * foamN);",
-  "  float crest = r1 * mix(0.1, 1.15, strokeGate) * uTideFoam * (0.65 + 0.35 * foamN3);",
+  "  float foamSoft = (1.0 - smoothstep(0.0, 0.08, d)) * uTideFoam * 0.07;",
+  "  float r1 = exp(-pow((d - 0.008) / 0.0058, 2.0));",
+  "  float r2 = exp(-pow((d - 0.024) / 0.0075, 2.0));",
+  "  float r3 = exp(-pow((d - 0.046) / 0.009, 2.0));",
+  "  float r4 = exp(-pow((d - 0.074) / 0.011, 2.0));",
+  "  float rLace = exp(-pow((d - 0.108) / 0.014, 2.0));",
+  "  float rSpray = exp(-pow((d - 0.145) / 0.018, 2.0));",
+  "  float ridges = (r1 * 1.55 + r2 * 1.25 + r3 * 0.95 + r4 * 0.65) * uTideFoam * mix(0.1, 1.0, strokeGate);",
+  "  float lace = (rLace * 0.85 + rSpray * 0.5) * uTideFoam * strokeGate * (0.28 + 0.72 * foamN);",
+  "  float crest = r1 * mix(0.08, 1.35, strokeGate) * uTideFoam * (0.6 + 0.4 * foamN3);",
   "  waterCol = mix(waterCol, vec3(0.84, 0.9, 0.89), foamSoft);",
   "  waterCol = mix(waterCol, vec3(0.95, 0.98, 0.97), ridges * (0.5 + 0.5 * foamN));",
   "  waterCol = mix(waterCol, vec3(1.0, 1.0, 0.995), crest);",
@@ -189,7 +189,7 @@ export function createTideWaterMaterial(
       .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>\n${FRAG_NORMAL}`);
   };
   material.customProgramCacheKey = () =>
-    `tide-r14-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
+    `tide-r14b-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
 
   return {
     material,

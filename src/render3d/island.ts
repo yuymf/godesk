@@ -357,7 +357,7 @@ export function coastWallGeometry(tiles: readonly IslandTile[]): BufferGeometry 
       sAcc += segs[sgi]!;
       const s1 = sAcc;
       // 偶发巨块：约 1/5 面板更深外凸，形成体块群剪影。
-      const mass = hash01(panel * 17.3 + edgeIdx) > 0.78 ? 1 : hash01(panel * 9.9) > 0.55 ? 0.45 : 0;
+      const mass = hash01(panel * 17.3 + edgeIdx) > 0.68 ? 1 : hash01(panel * 9.9) > 0.42 ? 0.55 : 0;
       const ax = a[0] + (b[0] - a[0]) * s0, az = a[2] + (b[2] - a[2]) * s0;
       const bx = a[0] + (b[0] - a[0]) * s1, bz = a[2] + (b[2] - a[2]) * s1;
       const breaks = rowBreaks(panel);
