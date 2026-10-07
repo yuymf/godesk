@@ -92,22 +92,22 @@ const FRAG_COLOR = [
   // round-3d：场外直接深水，抹掉 ±half 方形 UV 环接缝。
   "  float fieldEdge = smoothstep(uTideHalf * 0.82, uTideHalf * 1.02, max(abs(vTideWorld.x), abs(vTideWorld.z)));",
   "  float d = mix(dTex, 1.0, fieldEdge);",
-  // 崖脚白沫 + 近岸青绿 → 中带 → 远海深蓝（梯度拉开）。
-  "  vec3 tideNear = mix(uTideShallow, uTideDeep, 0.22);",
-  "  vec3 tideMid = mix(uTideShallow, uTideDeep, 0.58);",
-  "  vec3 tideFar = mix(uTideShallow, uTideDeep, 0.96);",
-  "  vec3 waterCol = mix(uTideShallow, tideNear, smoothstep(0.0, 0.05, d));",
-  "  waterCol = mix(waterCol, tideMid, smoothstep(0.06, 0.38, d));",
-  "  waterCol = mix(waterCol, tideFar, smoothstep(0.38, 1.0, d));",
-  // round-5d：岸沫加宽，远景浅沫带（d≈0.2–0.45）再亮一点。
-  "  float foamBand = (1.0 - smoothstep(0.0, 0.16, d)) * uTideFoam;",
-  "  float foamCrest = (1.0 - smoothstep(0.0, 0.04, d)) * uTideFoam;",
-  "  float foamFar = (1.0 - smoothstep(0.18, 0.48, d)) * smoothstep(0.06, 0.2, d) * uTideFoam * 0.35;",
+  // R12：绘本感 — 近岸青绿更快沉入中/远深蓝，崖脚白沫加宽可读。
+  "  vec3 tideNear = mix(uTideShallow, uTideDeep, 0.32);",
+  "  vec3 tideMid = mix(uTideShallow, uTideDeep, 0.72);",
+  "  vec3 tideFar = mix(uTideShallow, uTideDeep, 0.98);",
+  "  vec3 waterCol = mix(uTideShallow, tideNear, smoothstep(0.0, 0.04, d));",
+  "  waterCol = mix(waterCol, tideMid, smoothstep(0.04, 0.28, d));",
+  "  waterCol = mix(waterCol, tideFar, smoothstep(0.28, 0.85, d));",
+  // R12：岸沫加宽 + 浪花冠更亮；远景浅沫带更密（绘本非塑料）。
+  "  float foamBand = (1.0 - smoothstep(0.0, 0.22, d)) * uTideFoam;",
+  "  float foamCrest = (1.0 - smoothstep(0.0, 0.055, d)) * uTideFoam;",
+  "  float foamFar = (1.0 - smoothstep(0.14, 0.52, d)) * smoothstep(0.04, 0.18, d) * uTideFoam * 0.55;",
   "  vec2 fuv = vTideWorld.xz * 0.42 + vec2(uTideTime * 0.04 * uTideWaveS, uTideTime * -0.028 * uTideWaveS);",
   "  float foamN = texture2D(uTideFoamMap, fuv).r;",
-  "  waterCol = mix(waterCol, vec3(0.9, 0.96, 0.95), foamBand * (0.45 + 0.5 * foamN));",
-  "  waterCol = mix(waterCol, vec3(1.0, 1.0, 0.99), foamCrest * (0.7 + 0.3 * foamN));",
-  "  waterCol = mix(waterCol, vec3(0.88, 0.94, 0.93), foamFar * (0.35 + 0.4 * foamN));",
+  "  waterCol = mix(waterCol, vec3(0.93, 0.97, 0.96), foamBand * (0.55 + 0.45 * foamN));",
+  "  waterCol = mix(waterCol, vec3(1.0, 1.0, 0.99), foamCrest * (0.82 + 0.18 * foamN));",
+  "  waterCol = mix(waterCol, vec3(0.9, 0.95, 0.94), foamFar * (0.42 + 0.45 * foamN));",
   "  diffuseColor.rgb = waterCol;",
   "}",
 ].join("\n");
@@ -150,9 +150,10 @@ export function createTideWaterMaterial(
 
   const material = new MeshStandardMaterial({
     color: spec.shallow,
-    roughness: 0.28,
-    metalness: 0.05,
-    envMapIntensity: 0.45,
+    // R12：略哑光，绘本感非镜面塑料。
+    roughness: 0.42,
+    metalness: 0.03,
+    envMapIntensity: 0.38,
   });
   material.userData.gdShared = false;
   material.userData.tideUniforms = uniforms;

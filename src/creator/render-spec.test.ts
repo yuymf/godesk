@@ -44,7 +44,7 @@ describe("defaultRenderSpec", () => {
       preset: "tabletop-day",
       camera: { mode: "orbit", fovDeg: 35, distance: 16, minPolarDeg: 25, maxPolarDeg: 70, pan: false },
       lighting: { sun: { azimuthDeg: 128, elevationDeg: 46, intensity: 3.05, color: "#ffc890" }, exposure: 1.12 },
-      water: { enabled: true, shallow: "#3f9e9a", deep: "#072a42", waveHeight: 0.055, waveSpeed: 0.55, foam: 1.0 },
+      water: { enabled: true, shallow: "#216f6c", deep: "#031828", waveHeight: 0.065, waveSpeed: 0.55, foam: 1.0 },
       motion: { placeMs: 280, moveMs: 420, cameraMs: 600, diceMs: 900 },
     });
     expect(hex.materials.seat0.base).toBe("#c0392b");
@@ -62,7 +62,7 @@ describe("defaultRenderSpec", () => {
   it("returns a fresh object every call", () => {
     const first = render();
     first.water.shallow = "#000000";
-    expect(render().water.shallow).toBe("#3f9e9a");
+    expect(render().water.shallow).toBe("#216f6c");
   });
 
   it("recognises untouched defaults but not authored edits", () => {

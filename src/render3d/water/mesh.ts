@@ -38,9 +38,10 @@ export const WATER_FAR_HALF_EXTENT = WATER_SEA_HALF_EXTENT;
 
 
 const DEFAULT_SPEC: TideWaterSpec = {
-  shallow: "#3f9e9a",
-  deep: "#072a42",
-  waveHeight: 0.055,
+  // R12：更深青绿→海军蓝过渡；浪略高便于岸线读感。
+  shallow: "#216f6c",
+  deep: "#031828",
+  waveHeight: 0.065,
   waveSpeed: 0.55,
   foam: 1.0,
 };

@@ -39,7 +39,8 @@ export const TILE_TOP_Y = 0.28;
 export const WATER_Y = -0.08;
 /** 岩壁顶面低于地块顶 4cm：地块间的缝里露出岩石，外圈形成岛的岩壁。 */
 export const SKIRT_TOP_Y = 0.24;
-export const SKIRT_BOTTOM_Y = -0.62;
+/** R12：更深岸崖，穿过水面，嵌进桌面读感（非托盘窗框）。 */
+export const SKIRT_BOTTOM_Y = -0.84;
 
 export type IslandTile = { q: number; r: number; terrain: string; center: SceneVec3 };
 export type IslandPort = { kind: string; vertices: SceneVec3[] };
@@ -155,8 +156,14 @@ function rockTexture(): Texture | null {
   const x = c.getContext("2d");
   if (!x) return null;
   const rand = mulberry32(1337);
-  x.fillStyle = "#5a5149";
+  // R12：略冷深底；底部再压暗模拟湿崖脚。
+  x.fillStyle = "#4a4540";
   x.fillRect(0, 0, 512, 256);
+  const wet = x.createLinearGradient(0, 160, 0, 256);
+  wet.addColorStop(0, "rgba(28, 32, 36, 0)");
+  wet.addColorStop(1, "rgba(18, 24, 30, 0.55)");
+  x.fillStyle = wet;
+  x.fillRect(0, 160, 512, 96);
   for (let i = 0; i < 26; i += 1) {
     const y = rand() * 256;
     const h = 4 + rand() * 18;
@@ -281,8 +288,9 @@ export function coastWallGeometry(tiles: readonly IslandTile[]): BufferGeometry 
     const rl = Math.hypot(x, z) || 1;
     const nx = x / rl;
     const nz = z / rl;
-    const noise = t === 0 ? 0 : (Math.sin(x * 7.1 + y * 9.3) * 0.03 + Math.sin(z * 8.7 - y * 13.1) * 0.022 + Math.sin((x + z) * 15.3 + y * 21) * 0.012);
-    const out = 0.015 + t * t * 0.14 + noise;
+    const noise = t === 0 ? 0 : (Math.sin(x * 7.1 + y * 9.3) * 0.034 + Math.sin(z * 8.7 - y * 13.1) * 0.026 + Math.sin((x + z) * 15.3 + y * 21) * 0.014);
+    // R12：水线外扩更大，崖脚坐进浪花带，少「竖直托盘壁」。
+    const out = 0.02 + t * t * 0.22 + t * t * t * 0.08 + noise;
     const wx = x + nx * out;
     const wz = z + nz * out;
     const u = (Math.atan2(z, x) / (Math.PI * 2) + 0.5) * 26;
@@ -489,10 +497,11 @@ export function createIslandLayer(): IslandLayer {
           const ox = ex - c[0];
           const oz = ez - c[2];
           const ol = Math.hypot(ox, oz) || 1;
-          const out = 0.1 + rand() * 0.07;
-          const size = 0.7 + rand() * 0.8;
+          // R12：岸石略大、更外推入浪花带，强化物理岸崖脚。
+          const out = 0.14 + rand() * 0.1;
+          const size = 0.85 + rand() * 0.95;
           q.setFromAxisAngle(up, rand() * Math.PI * 2);
-          m.compose(p.set(ex + (ox / ol) * out, WATER_Y + 0.01, ez + (oz / ol) * out), q, s.set(size * 1.25, size * 0.75, size));
+          m.compose(p.set(ex + (ox / ol) * out, WATER_Y + 0.015, ez + (oz / ol) * out), q, s.set(size * 1.3, size * 0.78, size));
           stones.setMatrixAt(n++, m);
         }
       }

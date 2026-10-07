@@ -239,9 +239,10 @@ function baseDefault(kernelType: string | null | undefined): RenderSpec {
     },
     water: {
       enabled: kernelType === "hex-settlement-v1" || kernelType === "harbor-voyage-v1",
-      shallow: "#3f9e9a",
-      deep: "#072a42",
-      waveHeight: 0.055,
+      // R12：与 water/mesh DEFAULT_SPEC 同步 — 绘本深蓝过渡。
+      shallow: "#216f6c",
+      deep: "#031828",
+      waveHeight: 0.065,
       waveSpeed: 0.55,
       foam: 1.0,
     },
