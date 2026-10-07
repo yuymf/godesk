@@ -1780,3 +1780,37 @@ body:has(.room-view-tidewell-immersive) {
     inset 0 0 0 3px #2a1810,
     inset 0 0 22px rgba(0, 0, 0, 0.4) !important;
 }
+
+/* R10c: desktop-only dock/grid — do not break ≤800 mobile board-above-fold */
+@media (max-width: 800px) {
+  .room-view-tidewell-immersive,
+  .tidewell-game-screen {
+    --tw-dock: 0px !important;
+  }
+  .tidewell-game-screen {
+    grid-template-rows: auto auto minmax(0, 1fr) auto !important;
+  }
+  .tidewell-dock {
+    display: none !important;
+    height: 0 !important;
+    max-height: 0 !important;
+  }
+  /* Compact mobile player strip — R8 half-body portraits stay desktop */
+  .tidewell-players {
+    max-height: 72px !important;
+    padding: 4px 6px !important;
+  }
+  .tidewell-player-avatar,
+  .tidewell-medallion {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 50% !important;
+  }
+  .tidewell-player-card {
+    grid-template-columns: 1fr !important;
+    padding: 2px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
