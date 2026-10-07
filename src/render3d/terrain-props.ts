@@ -3,6 +3,7 @@
  *
  * round-3d：森林 = 三树种（高瘦冷杉 / 圆冠 / 矮灌）+ 树冠团；牧场羊有可读头腿；麦田有垄沟与穗高。
  * R11：再抬 high/medium 林/羊/麦密度，收紧间距，拉近左屏绘本读感。
+ * R15：林/羊/麦/山/砖剪影层次 — 减玩具低模塑料，默认机位一眼可读（非仅 shader）。
  * - 每种道具 **一个 InstancedMesh**（≤1 draw call / 类型，阴影 pass 另计），共享一份顶点色材质，
  *   instanceColor 做色调变化。**low 档零道具**（不建任何网格）。
  * - 摆放：按格子 (q,r) 播种的确定性拒绝采样，只落在六角内缩区域里，避开中心数字筹码 / 强盗、
@@ -169,45 +170,67 @@ function jag(geom: BufferGeometry, amount: number, seed: number): BufferGeometry
   return geom;
 }
 
-/** 高瘦冷杉：尖顶长锥，偏冷深绿，高约 0.58。 */
+/** R15 树冠叶团：偏出主干的不规则绿团，打破光滑车削锥「玩具塑料」剪影。 */
+function foliageLobe(x: number, y: number, z: number, rx: number, ry: number, rz: number, bottom: string, top: string): BufferGeometry {
+  return grad(at(new SphereGeometry(1, 8, 5), x, y, z, rx, ry, rz), bottom, top, y - ry, y + ry, 0.14);
+}
+
+/** 高瘦冷杉：尖顶长锥 + 分层叶团/枝杈侧翼，偏冷深绿，高约 0.62。 */
 function pineTallGeometry(): BufferGeometry {
   const profile = [
     [0, 0.06], [0.09, 0.08], [0.078, 0.14], [0.055, 0.2], [0.07, 0.24], [0.048, 0.3],
-    [0.035, 0.36], [0.045, 0.4], [0.028, 0.46], [0.016, 0.52], [0.006, 0.56], [0, 0.585],
+    [0.035, 0.36], [0.045, 0.4], [0.028, 0.46], [0.016, 0.52], [0.006, 0.56], [0, 0.62],
   ].map(([x, y]) => new Vector2(x!, y!));
   return merged([
     grad(at(new CylinderGeometry(0.014, 0.022, 0.09, 5, 1, true), 0, 0.045, 0), "#3a2a1a", "#5a4028", 0, 0.09),
-    grad(new LatheGeometry(profile, 8), "#163828", "#3d7a52", 0.06, 0.58, 0.1),
+    grad(new LatheGeometry(profile, 8), "#163828", "#3d7a52", 0.06, 0.62, 0.12),
+    // 侧翼叶团：打破旋转对称
+    foliageLobe(0.055, 0.22, 0.02, 0.055, 0.04, 0.045, "#1a3e2a", "#3a6a48"),
+    foliageLobe(-0.05, 0.34, -0.025, 0.048, 0.038, 0.04, "#143828", "#356848"),
+    foliageLobe(0.035, 0.46, 0.03, 0.038, 0.032, 0.035, "#183c2c", "#3d7450"),
+    // 短枝杈
+    grad(at(new CylinderGeometry(0.008, 0.01, 0.07, 4, 1, true), 0.04, 0.28, 0, 1, 1, 1, 0.9), "#3a2a1a", "#4a3824", 0.24, 0.32),
+    grad(at(new CylinderGeometry(0.007, 0.009, 0.055, 4, 1, true), -0.035, 0.4, 0.015, 1, 1, 1, -0.7), "#3a2a1a", "#4a3824", 0.37, 0.43),
   ]);
 }
 
-/** 圆冠阔叶松：胖裙摆 + 钝顶，偏暖黄绿，高约 0.4。 */
+/** 圆冠阔叶：胖裙 + 多团叶云，偏暖黄绿，高约 0.42。 */
 function pineRoundGeometry(): BufferGeometry {
   const profile = [
     [0, 0.04], [0.15, 0.06], [0.155, 0.1], [0.12, 0.14], [0.145, 0.17], [0.11, 0.21],
-    [0.095, 0.25], [0.11, 0.28], [0.07, 0.32], [0.04, 0.36], [0.015, 0.385], [0, 0.4],
+    [0.095, 0.25], [0.11, 0.28], [0.07, 0.32], [0.04, 0.36], [0.015, 0.4], [0, 0.42],
   ].map(([x, y]) => new Vector2(x!, y!));
   return merged([
     grad(at(new CylinderGeometry(0.02, 0.03, 0.06, 5, 1, true), 0, 0.03, 0), "#4a3220", "#6b4a2c", 0, 0.06),
-    grad(new LatheGeometry(profile, 8), "#2a5a28", "#7ab05a", 0.04, 0.4, 0.1),
+    grad(new LatheGeometry(profile, 8), "#2a5a28", "#7ab05a", 0.04, 0.42, 0.12),
+    foliageLobe(0.09, 0.16, 0.04, 0.07, 0.05, 0.06, "#2a5828", "#6aa850"),
+    foliageLobe(-0.085, 0.2, -0.05, 0.065, 0.048, 0.055, "#245424", "#68a048"),
+    foliageLobe(0.05, 0.3, -0.06, 0.055, 0.042, 0.05, "#2c5c2a", "#72b058"),
+    foliageLobe(-0.04, 0.12, 0.08, 0.06, 0.04, 0.055, "#286028", "#6eac52"),
   ]);
 }
 
-/** 矮灌丛松：短胖两层冠，偏橄榄绿，高约 0.28。 */
+/** 矮灌：短胖两层 + 侧叶团，偏橄榄绿，高约 0.3。 */
 function pineSmallGeometry(): BufferGeometry {
   const profile = [
     [0, 0.03], [0.11, 0.045], [0.1, 0.08], [0.07, 0.11], [0.095, 0.135], [0.065, 0.17],
-    [0.04, 0.21], [0.022, 0.245], [0.008, 0.268], [0, 0.28],
+    [0.04, 0.21], [0.022, 0.25], [0.008, 0.28], [0, 0.3],
   ].map(([x, y]) => new Vector2(x!, y!));
   return merged([
     grad(at(new CylinderGeometry(0.016, 0.022, 0.05, 5, 1, true), 0, 0.025, 0), "#3e2c1c", "#5c4028", 0, 0.05),
-    grad(new LatheGeometry(profile, 7), "#2a4820", "#6a8a3a", 0.03, 0.28, 0.1),
+    grad(new LatheGeometry(profile, 7), "#2a4820", "#6a8a3a", 0.03, 0.3, 0.12),
+    foliageLobe(0.07, 0.1, 0.03, 0.05, 0.035, 0.045, "#2a4820", "#628838"),
+    foliageLobe(-0.06, 0.14, -0.04, 0.045, 0.032, 0.04, "#264420", "#5e8434"),
   ]);
 }
 
-/** 树冠云：压扁的半透明绿团，铺在松树上方，远看连成一片树冠（仅 high 档）。 */
+/** 树冠云：多团压扁绿云，远看连成一片油画树冠（仅 high 档）。 */
 function canopyGeometry(): BufferGeometry {
-  return grad(at(new SphereGeometry(0.16, 10, 6), 0, 0, 0, 1.55, 0.42, 1.35), "#2f6b3a", "#6aa45a", -0.05, 0.08, 0.12);
+  return merged([
+    grad(at(new SphereGeometry(0.14, 9, 5), 0, 0, 0, 1.4, 0.4, 1.2), "#2f6b3a", "#6aa45a", -0.05, 0.07, 0.14),
+    grad(at(new SphereGeometry(0.1, 8, 5), 0.12, 0.01, 0.06, 1.1, 0.35, 1.0), "#2a6034", "#62a052", -0.03, 0.06, 0.12),
+    grad(at(new SphereGeometry(0.09, 8, 5), -0.11, -0.005, -0.05, 1.15, 0.32, 0.95), "#286032", "#5e9850", -0.04, 0.05, 0.12),
+  ]);
 }
 
 /** 接触阴影：贴地半透明深色扁圆，给道具脚下一点落地感（便宜，+1 draw call）。 */
@@ -215,23 +238,30 @@ function blobShadowGeometry(): BufferGeometry {
   return grad(at(new CircleGeometry(0.1, 12), 0, 0.002, 0, 1, 1, 1).rotateX(-Math.PI / 2), "#1a1814", "#1a1814", 0, 1);
 }
 
-/** 羊：圆润羊毛身体 + 明显深色头/耳/四腿（远景可读），朝 +X，高约 0.2。 */
+/** R15 羊：更密羊毛团簇 + 清晰头颈/耳/腿剪影（减棉花糖球感），朝 +X，高约 0.19。 */
 function sheepGeometry(): BufferGeometry {
   const leg = (x: number, z: number) =>
-    grad(at(new CylinderGeometry(0.016, 0.014, 0.095, 5, 1, true), x, 0.047, z), "#1e1a18", "#3a332e", 0, 0.095);
-  const wool = (x: number, y: number, z: number, r: number) =>
-    grad(at(new SphereGeometry(r, 7, 4), x, y, z), "#ece6dc", "#ffffff", y - r, y + r);
+    grad(at(new CylinderGeometry(0.013, 0.011, 0.08, 5, 1, true), x, 0.04, z), "#1e1a18", "#3a332e", 0, 0.08);
+  const wool = (x: number, y: number, z: number, r: number, sx = 1, sy = 1, sz = 1) =>
+    grad(at(new SphereGeometry(r, 7, 4), x, y, z, sx, sy, sz), "#ece6dc", "#ffffff", y - r * sy, y + r * sy, 0.08);
   return merged([
-    grad(at(new SphereGeometry(0.09, 10, 6), 0, 0.13, 0, 1.35, 0.95, 1.05), "#e3ddd2", "#ffffff", 0.05, 0.22),
-    wool(-0.035, 0.185, 0.03, 0.048), wool(0.04, 0.19, -0.025, 0.045), wool(-0.065, 0.165, -0.035, 0.042),
-    // 头：更大更深，鼻口朝 +X
-    grad(at(new SphereGeometry(0.048, 7, 5), 0.14, 0.155, 0, 1.35, 1.0, 0.9), "#2a221c", "#4a3a32", 0.11, 0.2),
-    // 双耳
-    grad(at(new SphereGeometry(0.018, 5, 3), 0.12, 0.195, 0.045, 0.7, 1.2, 0.55), "#2a221c", "#3a3028", 0.18, 0.22),
-    grad(at(new SphereGeometry(0.018, 5, 3), 0.12, 0.195, -0.045, 0.7, 1.2, 0.55), "#2a221c", "#3a3028", 0.18, 0.22),
-    // 鼻梁横条增强剪影
-    grad(at(new BoxGeometry(0.022, 0.016, 0.08), 0.155, 0.15, 0), "#1a1614", "#2e2824", 0, 1),
-    leg(0.06, 0.04), leg(0.06, -0.04), leg(-0.06, 0.04), leg(-0.06, -0.04),
+    // 略扁身体 + 多团羊毛（剪影呈簇而非单球）
+    grad(at(new SphereGeometry(0.075, 9, 6), 0, 0.115, 0, 1.45, 0.88, 1.05), "#e3ddd2", "#f8f4ec", 0.04, 0.19, 0.1),
+    wool(-0.04, 0.155, 0.035, 0.04, 1.1, 0.95, 1.05),
+    wool(0.035, 0.16, -0.03, 0.038, 1.05, 1.0, 1.0),
+    wool(-0.055, 0.13, -0.04, 0.036, 1.0, 0.9, 1.1),
+    wool(0.055, 0.135, 0.04, 0.034, 1.05, 0.95, 1.0),
+    wool(0.0, 0.175, 0.0, 0.032, 1.2, 0.85, 1.1),
+    wool(-0.02, 0.1, 0.055, 0.03, 1.0, 0.8, 1.15),
+    // 头颈：更深、略前伸
+    grad(at(new SphereGeometry(0.038, 7, 5), 0.125, 0.14, 0, 1.4, 1.05, 0.95), "#2a221c", "#4a3a32", 0.1, 0.18),
+    grad(at(new CylinderGeometry(0.022, 0.028, 0.04, 5, 1, true), 0.09, 0.125, 0, 1, 1, 1, Math.PI / 2), "#2a221c", "#3a3028", 0.1, 0.15),
+    // 双耳外展
+    grad(at(new SphereGeometry(0.016, 5, 3), 0.11, 0.175, 0.048, 0.65, 1.35, 0.5), "#2a221c", "#3a3028", 0.16, 0.2),
+    grad(at(new SphereGeometry(0.016, 5, 3), 0.11, 0.175, -0.048, 0.65, 1.35, 0.5), "#2a221c", "#3a3028", 0.16, 0.2),
+    // 鼻口
+    grad(at(new BoxGeometry(0.02, 0.014, 0.055), 0.155, 0.132, 0), "#1a1614", "#2e2824", 0, 1),
+    leg(0.05, 0.035), leg(0.05, -0.035), leg(-0.05, 0.035), leg(-0.05, -0.035),
   ]);
 }
 
@@ -245,30 +275,42 @@ function troughGeometry(): BufferGeometry {
   ]);
 }
 
-/** 山地巨石：两块凹凸十二面体，冷灰，无雪。 */
+/** R15 山地：三阶错层岩块 + 浅顶高光，竖向剪影更重（减散落碎石堆感）。 */
 function boulderGeometry(): BufferGeometry {
   return merged([
-    paint(jag(at(new DodecahedronGeometry(0.1, 1), 0, 0.07, 0, 1.2, 0.85, 1), 0.12, 1), "#8b8e93", 0.3),
-    paint(jag(at(new DodecahedronGeometry(0.06, 0), 0.1, 0.04, 0.05, 1, 0.8, 1.1, 0.7), 0.1, 2), "#6f7379", 0.3),
+    paint(jag(at(new DodecahedronGeometry(0.11, 1), 0, 0.09, 0, 1.35, 1.05, 1.15), 0.14, 1), "#7a7e86", 0.32),
+    paint(jag(at(new DodecahedronGeometry(0.075, 1), 0.08, 0.16, -0.04, 1.1, 1.2, 0.95, 0.5), 0.12, 3), "#6a6e76", 0.3),
+    paint(jag(at(new DodecahedronGeometry(0.055, 0), -0.06, 0.22, 0.05, 1.0, 1.15, 0.9, -0.4), 0.1, 5), "#8a8e96", 0.28),
+    // 浅顶高光（绘本山脊读感，非雪帽商标）
+    paint(jag(at(new DodecahedronGeometry(0.035, 0), 0.02, 0.28, 0.0, 1.1, 0.7, 1.0), 0.08, 7), "#c4c8d0", 0.2),
+    paint(jag(at(new DodecahedronGeometry(0.05, 0), -0.1, 0.05, 0.08, 1.2, 0.7, 1.0, 1.1), 0.1, 2), "#5e6268", 0.3),
   ]);
 }
 
-/** 丘陵陶土堆：两个半球 + 顶部浅色，平铺于地。 */
+/** R15 陶土丘：三阶错层土丘 + 顶浅色，竖向可读赭土坡剪影。 */
 function clayGeometry(): BufferGeometry {
   const mound = (r: number) => new SphereGeometry(r, 9, 4, 0, Math.PI * 2, 0, Math.PI / 2);
   return merged([
-    paint(jag(at(mound(0.11), 0, 0, 0, 1, 0.7, 1), 0.08, 4), "#b4613d", 0.22),
-    paint(jag(at(mound(0.07), 0.1, 0, 0.07, 1, 0.8, 1), 0.08, 5), "#c97a52", 0.22),
+    paint(jag(at(mound(0.13), 0, 0, 0, 1.15, 0.85, 1.1), 0.1, 4), "#a85432", 0.24),
+    paint(jag(at(mound(0.09), 0.08, 0.02, 0.06, 1.05, 0.9, 1), 0.09, 5), "#b4613d", 0.22),
+    paint(jag(at(mound(0.065), -0.07, 0.04, -0.05, 1, 0.95, 1.05), 0.08, 6), "#c97a52", 0.2),
+    paint(jag(at(mound(0.045), 0.02, 0.09, 0.02, 1, 0.7, 1), 0.06, 8), "#d4926a", 0.18),
   ]);
 }
 
-/** 砖垛：两层错缝 6 块砖。 */
+/** R15 砖垛：三层错缝坡垛，棱角剪影更像窑砖丘而非六块玩具方块。 */
 function bricksGeometry(): BufferGeometry {
   const parts: BufferGeometry[] = [];
-  const b = (x: number, y: number, z: number, rot: number, shade: string) =>
-    parts.push(paint(at(new BoxGeometry(0.07, 0.03, 0.035), x, y, z, 1, 1, 1, rot), shade, 0.1));
-  b(-0.04, 0.015, -0.02, 0, "#a84a2b"); b(0.035, 0.015, -0.02, 0, "#b9573a"); b(-0.04, 0.015, 0.02, 0, "#b9573a");
-  b(0.035, 0.015, 0.02, 0, "#a84a2b"); b(0, 0.045, 0, Math.PI / 2, "#c4643f"); b(-0.04, 0.045, 0, Math.PI / 2, "#a84a2b");
+  const b = (x: number, y: number, z: number, rot: number, shade: string, sx = 1, sy = 1, sz = 1) =>
+    parts.push(paint(at(new BoxGeometry(0.065, 0.028, 0.032), x, y, z, sx, sy, sz, rot), shade, 0.12));
+  // 底层 4
+  b(-0.05, 0.014, -0.025, 0.05, "#9a4028"); b(0.02, 0.014, -0.028, -0.08, "#a84a2b");
+  b(-0.045, 0.014, 0.022, 0.1, "#b9573a"); b(0.03, 0.014, 0.02, -0.05, "#a84a2b");
+  // 中层 3 错缝
+  b(-0.025, 0.042, -0.01, Math.PI / 2 + 0.1, "#c4643f"); b(0.035, 0.042, 0.01, Math.PI / 2 - 0.05, "#a84a2b");
+  b(-0.01, 0.042, 0.03, 0.2, "#b9573a", 0.9, 1, 0.95);
+  // 顶层 2
+  b(0.0, 0.07, 0.0, 0.15, "#d07048"); b(-0.035, 0.07, -0.015, Math.PI / 2, "#b05030", 0.85, 1, 0.9);
   return merged(parts);
 }
 
@@ -282,29 +324,26 @@ function sheafGeometry(): BufferGeometry {
   ]);
 }
 
-/** 麦垄：深色垄沟底 + 双排竖立麦穗（有高度，非平黄面），长约 0.28，沿 X。 */
+/** R15 麦垄：三排高低错落穗头，竖向剪影更像金麦田带（非平黄面/单束）。 */
 function wheatRowGeometry(): BufferGeometry {
   const parts: BufferGeometry[] = [
-    // 垄底土埂
-    grad(at(new BoxGeometry(0.3, 0.035, 0.1), 0, 0.017, 0), "#6a4a14", "#8f6a1c", 0, 0.035),
-    // 中间浅沟（加深垄感）
-    grad(at(new BoxGeometry(0.28, 0.012, 0.028), 0, 0.01, 0), "#5a3e10", "#6a4a14", 0, 0.012),
+    grad(at(new BoxGeometry(0.32, 0.038, 0.12), 0, 0.019, 0), "#6a4a14", "#8f6a1c", 0, 0.038),
+    grad(at(new BoxGeometry(0.3, 0.012, 0.03), 0, 0.01, 0), "#5a3e10", "#6a4a14", 0, 0.012),
   ];
-  for (let i = 0; i < 8; i += 1) {
-    const x = -0.13 + i * 0.037;
-    for (const side of [-1, 1] as const) {
-      const z = side * 0.028;
-      const stalkH = 0.11 + ((i * 17 + side + 3) % 5) * 0.018;
-      // 竖茎
+  const sides = [-0.04, 0, 0.04] as const;
+  for (let i = 0; i < 9; i += 1) {
+    const x = -0.14 + i * 0.035;
+    for (let si = 0; si < sides.length; si += 1) {
+      const z = sides[si]!;
+      const stalkH = 0.12 + ((i * 17 + si * 7 + 3) % 5) * 0.022;
       parts.push(grad(
-        at(new CylinderGeometry(0.008, 0.011, stalkH, 4, 1, true), x, 0.035 + stalkH / 2, z),
-        "#8a6a1a", "#c9a030", 0.035, 0.035 + stalkH,
+        at(new CylinderGeometry(0.007, 0.01, stalkH, 4, 1, true), x, 0.038 + stalkH / 2, z),
+        "#8a6a1a", "#c9a030", 0.038, 0.038 + stalkH,
       ));
-      // 穗头
-      const headR = 0.022 + ((i * 11) % 3) * 0.004;
+      const headR = 0.02 + ((i * 11 + si) % 3) * 0.005;
       parts.push(grad(
-        at(new SphereGeometry(headR, 5, 4), x, 0.035 + stalkH + headR * 0.6, z, 0.85, 1.35, 0.85),
-        "#c9a030", "#f5d060", 0.035 + stalkH - 0.02, 0.035 + stalkH + headR,
+        at(new SphereGeometry(headR, 5, 4), x, 0.038 + stalkH + headR * 0.7, z, 0.75, 1.55, 0.75),
+        "#c9a030", "#f5d060", 0.038 + stalkH - 0.02, 0.038 + stalkH + headR * 1.2,
       ));
     }
   }
@@ -429,13 +468,17 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
         yaw: kind === "wheatrow" ? -rowYaw + (rand() - 0.5) * 0.06 : rand() * Math.PI * 2,
         scale: isPine(kind)
           ? (kind === "pineTall" ? 0.95 + rand() * 0.45 : kind === "pineRound" ? 0.9 + rand() * 0.4 : 0.85 + rand() * 0.35)
-          : kind === "canopy" ? 1.15 + rand() * 0.55
-          : kind === "sheep" ? 1.05 + rand() * 0.25
+          : kind === "canopy" ? 1.2 + rand() * 0.55
+          : kind === "sheep" ? 0.88 + rand() * 0.22
+          : kind === "boulder" ? 1.05 + rand() * 0.35
+          : kind === "clay" || kind === "bricks" ? 1.0 + rand() * 0.28
           : 0.95 + rand() * 0.3,
         stretch: isPine(kind)
           ? (kind === "pineTall" ? 1.05 + rand() * 0.25 : kind === "pineRound" ? 0.85 + rand() * 0.25 : 0.9 + rand() * 0.2)
           : kind === "canopy" ? 0.7 + rand() * 0.35
-          : kind === "wheatrow" ? 1
+          : kind === "wheatrow" ? 1.05 + rand() * 0.12
+          : kind === "boulder" ? 1.1 + rand() * 0.25
+          : kind === "clay" ? 1.05 + rand() * 0.2
           : 0.92 + rand() * 0.16,
         tone: rand(),
         hue: rand(),
@@ -520,11 +563,12 @@ export type TerrainPropLayer = {
 export function createTerrainPropLayer(): TerrainPropLayer {
   const group = new Group();
   group.name = "terrain-props";
-  const material = new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95, metalness: 0 });
-  const smoothMaterial = new MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.96, metalness: 0 });
+  // R15: matte painterly props — kill plastic specular read on close-up a/b.
+  const material = new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.98, metalness: 0 });
+  const smoothMaterial = new MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.99, metalness: 0 });
   const canopyMaterial = new MeshStandardMaterial({
     vertexColors: true, flatShading: false, roughness: 1, metalness: 0,
-    transparent: true, opacity: 0.55,
+    transparent: true, opacity: 0.62,
   });
   canopyMaterial.depthWrite = false;
   const shadowMaterial = new MeshStandardMaterial({

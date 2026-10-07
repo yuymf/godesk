@@ -26,9 +26,10 @@ export const PATTERN_IDS: Record<MaterialPattern, number> = {
 };
 
 /** 贴图到达后 pattern 保留的强度（只做细节扰动）。 */
-export const PATTERN_STRENGTH_WITH_PBR = 0.08;
+/** R15: keep more brush variation under PBR so hex faces read painterly, not flat plastic. */
+export const PATTERN_STRENGTH_WITH_PBR = 0.22;
 /** 贴图到达后底色向白色混合的比例：保留地形色相，又不让贴图被压暗。 */
-export const PBR_TINT_TO_WHITE = 0.35;
+export const PBR_TINT_TO_WHITE = 0.28;
 
 const PATTERN_GLSL = /* glsl */ `
 varying vec3 vGdWorld;
@@ -56,9 +57,13 @@ float gdPattern(vec3 w) {
   float weave = abs(step(0.5, g.x) - step(0.5, g.y));
   return mix(0.35, 0.65, weave) + (gdNoise(w.xz * 8.0) - 0.5) * 0.3;
 #elif GD_PATTERN == 3
-  return gdFbm(w.xz * 3.2 + w.y);
+  float rock = gdFbm(w.xz * 3.6 + w.y * 1.4);
+  float seam = gdNoise(w.xz * 9.0 + w.y);
+  return mix(rock, seam, 0.28);
 #elif GD_PATTERN == 4
-  return gdFbm(w.xz * 7.0);
+  float blade = gdFbm(w.xz * 8.5);
+  float clump = gdNoise(w.xz * 3.2);
+  return mix(blade, clump, 0.35);
 #elif GD_PATTERN == 5
   return gdNoise(w.xz * 34.0) * 0.55 + gdFbm(w.xz * 2.2) * 0.45;
 #else
@@ -101,14 +106,14 @@ export function installPattern(material: MeshStandardMaterial, pattern: Material
         [
           "#include <color_fragment>",
           "float gdP = gdPattern(vGdWorld);",
-          "diffuseColor.rgb *= mix(1.0, 0.8 + 0.4 * gdP, uGdPattern);",
+          "diffuseColor.rgb *= mix(1.0, 0.72 + 0.56 * gdP, uGdPattern);",
         ].join("\n"),
       )
       .replace(
         "#include <roughnessmap_fragment>",
         [
           "#include <roughnessmap_fragment>",
-          "roughnessFactor = clamp(roughnessFactor + (gdP - 0.5) * 0.12 * uGdPattern, 0.04, 1.0);",
+          "roughnessFactor = clamp(roughnessFactor + (gdP - 0.5) * 0.22 * uGdPattern, 0.04, 1.0);",
         ].join("\n"),
       );
   };
@@ -264,8 +269,10 @@ function applyMaps(material: MeshStandardMaterial, token: MaterialToken, maps: P
   const useBaseColor = token.pbrBaseColor !== false;
   material.map = useBaseColor ? maps.map : null;
   material.normalMap = maps.normalMap;
+  // R15: stronger normal relief on hex faces → oil-paint micro-relief at a/b.
+  material.normalScale.set(1.35, 1.35);
   material.aoMap = maps.ormMap;
-  material.aoMapIntensity = 1.0;
+  material.aoMapIntensity = 1.15;
   material.roughnessMap = maps.ormMap;
   material.metalnessMap = maps.ormMap;
   material.color.set(token.base);

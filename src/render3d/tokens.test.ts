@@ -25,7 +25,7 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
     });
     expect(SCENE_TOKENS.shadow).toMatchObject({ radius: 4, bias: -0.0004, normalBias: 0.02, boundsPadding: 1.5 });
     expect(SCENE_TOKENS.environment.intensity).toBe(0.2);
-    expect(SCENE_TOKENS.tile).toEqual({ roughness: 0.92, metalness: 0 });
+    expect(SCENE_TOKENS.tile).toEqual({ roughness: 0.96, metalness: 0 });
     expect(SCENE_TOKENS.piece).toEqual({ roughness: 0.82, metalness: 0, clearcoat: 0 });
     expect(SEAT_COLORS).toEqual(["#c0392b", "#2980b9", "#27ae60", "#f39c12"]);
   });

@@ -79,10 +79,28 @@ describe("G3D-PROPS terrain props", () => {
     expect(h(tall)).toBeGreaterThan(h(round) + 0.08);
     expect(h(round)).toBeGreaterThan(h(small) + 0.05);
     expect(w(round)).toBeGreaterThan(w(tall));
+    // R15: lobed crowns add verts beyond smooth lathe cones.
+    expect(tall.getAttribute("position").count).toBeGreaterThan(180);
     const sheep = buildPropGeometry("sheep");
-    expect(sheep.getAttribute("position").count).toBeGreaterThan(80);
+    expect(sheep.getAttribute("position").count).toBeGreaterThan(120);
     const wheat = buildPropGeometry("wheatrow");
-    expect(wheat.getAttribute("position").count).toBeGreaterThan(120);
+    expect(wheat.getAttribute("position").count).toBeGreaterThan(200);
     tall.dispose(); round.dispose(); small.dispose(); sheep.dispose(); wheat.dispose();
+  });
+
+  it("R15 silhouettes: mountain mass + brick mound hierarchy readable in bounds", () => {
+    const boulder = buildPropGeometry("boulder");
+    const clay = buildPropGeometry("clay");
+    const bricks = buildPropGeometry("bricks");
+    boulder.computeBoundingBox();
+    clay.computeBoundingBox();
+    bricks.computeBoundingBox();
+    const h = (g: ReturnType<typeof buildPropGeometry>) => g.boundingBox!.max.y - g.boundingBox!.min.y;
+    expect(h(boulder)).toBeGreaterThan(0.28);
+    expect(boulder.getAttribute("position").count).toBeGreaterThan(200);
+    expect(h(clay)).toBeGreaterThan(0.1);
+    expect(bricks.getAttribute("position").count).toBeGreaterThan(80);
+    expect(h(bricks)).toBeGreaterThan(0.07);
+    boulder.dispose(); clay.dispose(); bricks.dispose();
   });
 });

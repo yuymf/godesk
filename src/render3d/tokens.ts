@@ -73,18 +73,19 @@ export const SCENE_TOKENS = {
   /** §5.5 S-01 程序化渐变天空穹顶。 */
   sky: { top: "#9ab8cc", horizon: "#efe6d4", bottom: "#d4c4a4", exponent: 0.75, radius: 60 },
   camera: { fovDeg: 35, distance: 16, minPolarDeg: 25, maxPolarDeg: 70 },
-  tile: { roughness: 0.92, metalness: 0 },
+  tile: { roughness: 0.96, metalness: 0 },
   piece: { roughness: 0.82, metalness: 0, clearcoat: 0 },
 } as const;
 
 /** 地块材质（颜色沿用现有地形色，pattern 按地形，贴图取 G3D-22 套件）。 */
+/** R15: matte hex faces + slightly denser PBR repeat for painterly grain (not plastic tiles). */
 export const TERRAIN_MATERIALS: Record<string, MaterialToken> = {
-  wood: { base: "#2f6b3a", roughness: 0.92, metalness: 0, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 1.05 },
-  brick: { base: "#b85a3a", roughness: 0.92, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 1.05 },
-  sheep: { base: "#8fbf6a", roughness: 0.92, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 1.05 },
-  wheat: { base: "#d4b84a", roughness: 0.92, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 1.05 },
-  ore: { base: "#6a6f78", roughness: 0.9, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 1.05 },
-  desert: { base: "#c9b896", roughness: 0.94, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 1.05 },
+  wood: { base: "#2f6b3a", roughness: 0.96, metalness: 0, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 1.35 },
+  brick: { base: "#b85a3a", roughness: 0.96, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 1.35 },
+  sheep: { base: "#8fbf6a", roughness: 0.96, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 1.35 },
+  wheat: { base: "#d4b84a", roughness: 0.95, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 1.4 },
+  ore: { base: "#6a6f78", roughness: 0.94, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 1.3 },
+  desert: { base: "#c9b896", roughness: 0.97, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 1.3 },
 };
 
 /** 其余物件材质。 */
