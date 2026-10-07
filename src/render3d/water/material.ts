@@ -99,27 +99,34 @@ const FRAG_COLOR = [
   "  vec3 waterCol = mix(uTideShallow, tideNear, smoothstep(0.0, 0.04, d));",
   "  waterCol = mix(waterCol, tideMid, smoothstep(0.04, 0.28, d));",
   "  waterCol = mix(waterCol, tideFar, smoothstep(0.28, 0.85, d));",
-  // R13：崖脚沫从软晕宽带 → 可读浪脊/笔触分段（自有算法，非抄素材）。
-  "  vec2 fuv = vTideWorld.xz * 0.62 + vec2(uTideTime * 0.03 * uTideWaveS, uTideTime * -0.022 * uTideWaveS);",
+  // R14：在 R13 切向笔触上提高默认机位浪脊密度与节奏分段（自有算法，非抄 settlecoast）。
+  "  vec2 fuv = vTideWorld.xz * 0.78 + vec2(uTideTime * 0.028 * uTideWaveS, uTideTime * -0.02 * uTideWaveS);",
   "  float foamN = texture2D(uTideFoamMap, fuv).r;",
-  "  float foamN2 = texture2D(uTideFoamMap, fuv * 1.9 + vec2(0.31, -0.17)).r;",
+  "  float foamN2 = texture2D(uTideFoamMap, fuv * 2.15 + vec2(0.31, -0.17)).r;",
+  "  float foamN3 = texture2D(uTideFoamMap, fuv * 3.4 + vec2(-0.19, 0.41)).r;",
   "  float ang = atan(vTideWorld.z, vTideWorld.x);",
-  // 沿岸切向硬分段：笔触块开/关，底晕压到很弱。
-  "  float strokeRaw = 0.5 + 0.5 * sin(ang * 24.0 + foamN * 10.0 + vTideWorld.x * 1.6);",
-  "  strokeRaw *= 0.5 + 0.5 * sin(ang * 11.0 - foamN2 * 7.0 + vTideWorld.z * 1.1);",
-  "  float strokeGate = smoothstep(0.42, 0.68, strokeRaw);",
-  "  strokeGate *= smoothstep(0.28, 0.7, foamN2);",
-  // 极弱底 + 多层窄浪脊（可读笔触，非软晕带）。
-  "  float foamSoft = (1.0 - smoothstep(0.0, 0.1, d)) * uTideFoam * 0.1;",
-  "  float r1 = exp(-pow((d - 0.014) / 0.008, 2.0));",
-  "  float r2 = exp(-pow((d - 0.042) / 0.011, 2.0));",
-  "  float r3 = exp(-pow((d - 0.082) / 0.014, 2.0));",
-  "  float rLace = exp(-pow((d - 0.135) / 0.018, 2.0));",
-  "  float ridges = (r1 * 1.25 + r2 * 0.95 + r3 * 0.62) * uTideFoam * mix(0.15, 1.0, strokeGate);",
-  "  float lace = rLace * uTideFoam * 0.55 * strokeGate * (0.35 + 0.65 * foamN);",
+  // 三层切向节奏：密笔触 + 中段团块 + 稀疏空隙，破匀密锯齿。
+  "  float strokeFine = 0.5 + 0.5 * sin(ang * 38.0 + foamN * 12.0 + vTideWorld.x * 2.1);",
+  "  float strokeMid = 0.5 + 0.5 * sin(ang * 17.0 - foamN2 * 8.0 + vTideWorld.z * 1.4);",
+  "  float strokeGap = 0.5 + 0.5 * sin(ang * 7.0 + foamN3 * 5.5 + vTideWorld.x * 0.55);",
+  "  float strokeRaw = strokeFine * strokeMid;",
+  "  strokeRaw *= mix(0.55, 1.0, smoothstep(0.22, 0.62, strokeGap));",
+  "  float strokeGate = smoothstep(0.36, 0.62, strokeRaw);",
+  "  strokeGate *= smoothstep(0.22, 0.65, foamN2);",
+  // 极弱底 + 更多窄浪脊带（默认机位可读密度，非软晕宽带）。
+  "  float foamSoft = (1.0 - smoothstep(0.0, 0.085, d)) * uTideFoam * 0.08;",
+  "  float r1 = exp(-pow((d - 0.010) / 0.0065, 2.0));",
+  "  float r2 = exp(-pow((d - 0.028) / 0.0085, 2.0));",
+  "  float r3 = exp(-pow((d - 0.052) / 0.010, 2.0));",
+  "  float r4 = exp(-pow((d - 0.082) / 0.012, 2.0));",
+  "  float rLace = exp(-pow((d - 0.118) / 0.015, 2.0));",
+  "  float rSpray = exp(-pow((d - 0.155) / 0.020, 2.0));",
+  "  float ridges = (r1 * 1.35 + r2 * 1.05 + r3 * 0.82 + r4 * 0.55) * uTideFoam * mix(0.12, 1.0, strokeGate);",
+  "  float lace = (rLace * 0.7 + rSpray * 0.4) * uTideFoam * strokeGate * (0.3 + 0.7 * foamN);",
+  "  float crest = r1 * mix(0.1, 1.15, strokeGate) * uTideFoam * (0.65 + 0.35 * foamN3);",
   "  waterCol = mix(waterCol, vec3(0.84, 0.9, 0.89), foamSoft);",
-  "  waterCol = mix(waterCol, vec3(0.95, 0.98, 0.97), ridges * (0.55 + 0.45 * foamN));",
-  "  waterCol = mix(waterCol, vec3(1.0, 1.0, 0.995), r1 * mix(0.12, 1.0, strokeGate) * uTideFoam);",
+  "  waterCol = mix(waterCol, vec3(0.95, 0.98, 0.97), ridges * (0.5 + 0.5 * foamN));",
+  "  waterCol = mix(waterCol, vec3(1.0, 1.0, 0.995), crest);",
   "  waterCol = mix(waterCol, vec3(0.91, 0.96, 0.95), lace);",
   "  diffuseColor.rgb = waterCol;",
   "}",
@@ -182,7 +189,7 @@ export function createTideWaterMaterial(
       .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>\n${FRAG_NORMAL}`);
   };
   material.customProgramCacheKey = () =>
-    `tide-r13b-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
+    `tide-r14-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
 
   return {
     material,

@@ -156,7 +156,7 @@ function rockTexture(): Texture | null {
   const x = c.getContext("2d");
   if (!x) return null;
   const rand = mulberry32(1337);
-  // R13：手绘岸崖体块 — 清晰岩层带 + 湿暗分层 + 竖向块缝，少「光滑岩环」。
+  // R14：手绘岸崖体块群 — 不规则岩层带宽 + 湿暗分层 + 疏密竖缝，少同心环读感。
   x.fillStyle = "#433e39";
   x.fillRect(0, 0, 512, 256);
   // 大块水平岩层（体块读感）。
@@ -190,19 +190,21 @@ function rockTexture(): Texture | null {
     x.fillStyle = col;
     x.fillRect(0, y0, 512, h);
   }
-  // 竖向块缝：把岩环切成岸崖体块外轮廓。
-  x.strokeStyle = "rgba(18, 16, 14, 0.7)";
-  for (let i = 0; i < 28; i += 1) {
-    const ux = (i + 0.3 + rand() * 0.4) * (512 / 28);
-    x.lineWidth = 1.4 + rand() * 2.2;
+  // 竖向块缝：疏密不均，把程序环切成岸崖体块群。
+  x.strokeStyle = "rgba(18, 16, 14, 0.72)";
+  let ux = 4 + rand() * 18;
+  while (ux < 508) {
+    x.lineWidth = 1.2 + rand() * 3.4;
     x.beginPath();
-    x.moveTo(ux, 8 + rand() * 20);
-    let py = 20;
-    for (let k = 0; k < 7; k += 1) {
-      py += 28 + rand() * 10;
-      x.lineTo(ux + (rand() - 0.5) * 10, Math.min(250, py));
+    x.moveTo(ux, 6 + rand() * 24);
+    let py = 18;
+    const steps = 5 + Math.floor(rand() * 4);
+    for (let k = 0; k < steps; k += 1) {
+      py += 22 + rand() * 28;
+      x.lineTo(ux + (rand() - 0.5) * 14, Math.min(250, py));
     }
     x.stroke();
+    ux += 10 + rand() * 28; // 疏密跳变，非等距
   }
   for (let i = 0; i < 1400; i += 1) {
     const v = Math.floor(rand() * 70);
@@ -291,46 +293,79 @@ function signAtlas(): Texture | null {
  * （y = SKIRT_TOP_Y，半径 1.0）填满格子之间的缝。u 沿岛周角度连续，v 自上而下。
  */
 export function coastWallGeometry(tiles: readonly IslandTile[]): BufferGeometry {
-  // R13：少环槽、强分面体外扩 → 手绘岸崖体块（破「同心岩环凹槽」）。
+  // R14：不规则岸崖体块群外轮廓——变宽分面 + 错层高度 + 偶发巨块，压掉整圈程序分面/同心环。
   const ROWS = 4;
-  const SEGS = 5;
   const positions: number[] = [];
   const uvs: number[] = [];
   const colors: number[] = [];
-  const vert = (x: number, z: number, t: number, panel: number): [number, number, number, number, number, number] => {
+  const hash01 = (n: number) => ((Math.sin(n * 12.9898 + 78.233) * 43758.5453) % 1 + 1) % 1;
+  /** 每边不规则分段宽度（和≈1），破等宽 SEGS 环感。 */
+  const irregularSegs = (edgeIdx: number): number[] => {
+    const n = 4 + Math.floor(hash01(edgeIdx * 3.17 + 1.1) * 3); // 4–6
+    const raw: number[] = [];
+    let sum = 0;
+    for (let i = 0; i < n; i += 1) {
+      const w = 0.55 + hash01(edgeIdx * 9.1 + i * 2.7) * 1.55; // 宽窄跳变
+      raw.push(w);
+      sum += w;
+    }
+    return raw.map((w) => w / sum);
+  };
+  /** 体块垂直错层：每 panel 独立 row 切分，非全岛统一水平环。 */
+  const rowBreaks = (panel: number): number[] => {
+    const r0 = 0;
+    const r1 = 0.18 + hash01(panel * 4.1 + 0.3) * 0.14;
+    const r2 = 0.42 + hash01(panel * 5.7 + 1.2) * 0.16;
+    const r3 = 0.68 + hash01(panel * 6.3 + 2.1) * 0.14;
+    return [r0, r1, r2, r3, 1];
+  };
+  const vert = (x: number, z: number, t: number, panel: number, mass: number): [number, number, number, number, number, number] => {
     const y = SKIRT_TOP_Y + (SKIRT_BOTTOM_Y - SKIRT_TOP_Y) * t;
     const rl = Math.hypot(x, z) || 1;
     const nx = x / rl;
     const nz = z / rl;
-    // 每面独立体块深度（破环）：同 panel 内外一致，邻面跳变。
-    const h1 = ((Math.sin(panel * 12.9898 + 78.23) * 43758.5453) % 1 + 1) % 1;
-    const h2 = ((Math.sin(panel * 78.233 + 19.1) * 24634.123) % 1 + 1) % 1;
-    const blockDepth = 0.04 + h1 * 0.16; // 面外凸量
-    const undercut = 0.02 + h2 * 0.08;   // 面下缘再外推
-    // 平滑下扩 + 体块外凸（非全岛统一台阶环）。
-    const flare = t * t * 0.2 + t * t * t * 0.08;
-    const face = t * blockDepth + (t > 0.55 ? (t - 0.55) * undercut * 2.2 : 0);
-    const noise = t === 0 ? 0 : Math.sin(x * 4.7 + panel) * 0.012 + Math.sin(z * 5.3 - panel * 0.7) * 0.01;
-    const out = 0.02 + flare + face + noise;
-    const wx = x + nx * out;
-    const wz = z + nz * out;
+    const h1 = hash01(panel * 12.9898 + 78.23);
+    const h2 = hash01(panel * 78.233 + 19.1);
+    const h3 = hash01(panel * 41.17 + 3.9);
+    // 体块深度大跨度跳变：有的几乎贴边，有的深外凸巨块。
+    const blockDepth = 0.02 + h1 * 0.22 + mass * 0.14;
+    const undercut = 0.01 + h2 * 0.11 + mass * 0.06;
+    // 每面独立 flare 曲线（非全岛同一台阶环）。
+    const flarePow = 1.4 + h3 * 1.4;
+    const flare = Math.pow(t, flarePow) * (0.12 + h1 * 0.16) + t * t * t * (0.04 + h2 * 0.08);
+    const face = t * blockDepth + (t > 0.48 ? (t - 0.48) * undercut * (1.8 + mass) : 0);
+    // 切向噪声破径向同心；顶部小凹口打破平整环唇。
+    const tangX = -nz, tangZ = nx;
+    const notch = t < 0.08 ? (hash01(panel * 2.3 + x * 0.1) - 0.5) * 0.035 : 0;
+    const sidePush = (hash01(panel * 11.1 + t * 7.0) - 0.5) * (0.02 + mass * 0.03);
+    const noise = t === 0 ? notch : Math.sin(x * 3.9 + panel * 1.7) * 0.018 + Math.sin(z * 4.6 - panel) * 0.014;
+    const out = 0.015 + flare + face + noise;
+    const wx = x + nx * out + tangX * sidePush;
+    const wz = z + nz * out + tangZ * sidePush;
     const u = (Math.atan2(z, x) / (Math.PI * 2) + 0.5) * 26;
-    // 湿暗分层：下半崖脚顶点色压暗（材质层理靠贴图，不靠几何环槽）。
-    const wet = t < 0.4 ? 1 : Math.max(0.38, 1 - (t - 0.4) * 1.25);
+    const wet = t < 0.35 ? 1 : Math.max(0.36, 1 - (t - 0.35) * 1.3);
     return [wx, y, wz, u, t, wet];
   };
   let edgeIdx = 0;
+  let panelGlobal = 0;
   for (const [a, b] of coastEdges(tiles)) {
-    for (let sgi = 0; sgi < SEGS; sgi += 1) {
-      const panel = edgeIdx * SEGS + sgi;
-      const s0 = sgi / SEGS;
-      const s1 = (sgi + 1) / SEGS;
+    const segs = irregularSegs(edgeIdx);
+    let sAcc = 0;
+    for (let sgi = 0; sgi < segs.length; sgi += 1) {
+      const panel = panelGlobal++;
+      const s0 = sAcc;
+      sAcc += segs[sgi]!;
+      const s1 = sAcc;
+      // 偶发巨块：约 1/5 面板更深外凸，形成体块群剪影。
+      const mass = hash01(panel * 17.3 + edgeIdx) > 0.78 ? 1 : hash01(panel * 9.9) > 0.55 ? 0.45 : 0;
       const ax = a[0] + (b[0] - a[0]) * s0, az = a[2] + (b[2] - a[2]) * s0;
       const bx = a[0] + (b[0] - a[0]) * s1, bz = a[2] + (b[2] - a[2]) * s1;
+      const breaks = rowBreaks(panel);
       for (let k = 0; k < ROWS; k += 1) {
-        const t0 = k / ROWS;
-        const t1 = (k + 1) / ROWS;
-        const p00 = vert(ax, az, t0, panel), p10 = vert(bx, bz, t0, panel), p01 = vert(ax, az, t1, panel), p11 = vert(bx, bz, t1, panel);
+        const t0 = breaks[k]!;
+        const t1 = breaks[k + 1]!;
+        const p00 = vert(ax, az, t0, panel, mass), p10 = vert(bx, bz, t0, panel, mass);
+        const p01 = vert(ax, az, t1, panel, mass), p11 = vert(bx, bz, t1, panel, mass);
         let u0 = p00[3], u1 = p10[3];
         if (Math.abs(u1 - u0) > 13) { if (u1 < u0) u1 += 26; else u0 += 26; }
         const quad: Array<[typeof p00, number]> = [[p00, u0], [p01, u0], [p10, u1], [p10, u1], [p01, u0], [p11, u1]];
@@ -338,7 +373,6 @@ export function coastWallGeometry(tiles: readonly IslandTile[]): BufferGeometry 
           positions.push(pt[0], pt[1], pt[2]);
           uvs.push(u, 1 - pt[4]);
           const w = pt[5];
-          // 下层更冷湿；上层略暖岩。
           colors.push(0.92 * w, 0.9 * w, 0.86 * w * (0.92 + 0.08 * (1 - t0)));
         }
       }

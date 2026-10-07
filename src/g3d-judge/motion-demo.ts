@@ -277,32 +277,9 @@ export function createJudgeMotion(c: JudgeMotionCtx) {
             markShadowsDirtyRef.current();
             // Same +N line stays up through the descent; drop it once the robber has landed.
             window.setTimeout(hideToast, msDown + 250);
-
-            // Settlement hop while robber lands.
-            settle.visible = true;
-            motion.place(settle, "judge-demo-settle");
-            window.setTimeout(() => {
-              const sFrom: [number, number, number] = [settle.position.x, settle.position.y, settle.position.z];
-              const sHover: [number, number, number] = [sFrom[0] + 0.7, sFrom[1] + 2.2, sFrom[2] - 0.45];
-              settle.position.set(...sHover);
-              motion.hop(settle, "judge-demo-settle", sFrom, {
-                ms: 2000,
-                ignoreReducedMotion: true,
-                apexHeight: 0.7,
-                hops: 1,
-              });
-              window.setTimeout(() => {
-                const sCur: [number, number, number] = [settle.position.x, settle.position.y, settle.position.z];
-                settle.position.set(...sFrom);
-                const sDown = motion.hop(settle, "judge-demo-settle", sCur, {
-                  ms: 1800,
-                  ignoreReducedMotion: true,
-                  apexHeight: 0.6,
-                  hops: 1,
-                });
-                window.setTimeout(cleanupDemo, sDown + 400);
-              }, 2000 + 900);
-            }, 450);
+            // R14：取消落地红屋 place/hop scale 闪（demo settle 保持不可见，仅 robber +N）。
+            settle.visible = false;
+            window.setTimeout(cleanupDemo, msDown + 500);
 
             // Keep hopMs as full up+hold+down for capture waits.
           }, msUp + holdMs);

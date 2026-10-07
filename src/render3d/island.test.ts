@@ -25,10 +25,13 @@ describe("G3D-ISLAND island + coast", () => {
     expect(coastEdges(tiles)).toHaveLength(30);
   });
 
-  it("builds one continuous coast wall (30 edges × 5 segs × 4 rows) plus a cap per tile", () => {
+  it("builds one continuous coast wall (irregular segs × 4 rows) plus a cap per tile", () => {
     const geom = coastWallGeometry(tiles);
     const pos = geom.getAttribute("position");
-    expect(pos.count).toBe(30 * 5 * 4 * 6 + tiles.length * 18);
+    // R14：每边 4–6 不规则分段；30 边 ×[4,6] ×4 rows ×6 verts + caps
+    expect(pos.count).toBeGreaterThanOrEqual(30 * 4 * 4 * 6 + tiles.length * 18);
+    expect(pos.count).toBeLessThanOrEqual(30 * 6 * 4 * 6 + tiles.length * 18);
+    expect((pos.count - tiles.length * 18) % 6).toBe(0);
     let minY = Infinity, maxY = -Infinity;
     for (let i = 0; i < pos.count; i += 1) { minY = Math.min(minY, pos.getY(i)); maxY = Math.max(maxY, pos.getY(i)); }
     expect(maxY).toBeCloseTo(SKIRT_TOP_Y, 5);
