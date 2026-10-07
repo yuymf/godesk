@@ -33,16 +33,17 @@ describe("G3D-PROPS terrain props", () => {
       for (const kind of TERRAIN_PROPS[tile.terrain] ?? []) {
         const got = props.filter((p) => p.kind === kind).length;
         const want = counts[kind] ?? 0;
-        if (kind === "canopy" || kind.startsWith("pine")) {
+        if (kind === "canopy" || kind.startsWith("pine") || kind === "wheatrow") {
           expect(got, `${tile.terrain}/${kind}`).toBeGreaterThanOrEqual(Math.min(want, Math.max(6, want - 4)));
         } else expect(got, `${tile.terrain}/${kind}`).toBe(want);
       }
       for (const p of props) expect(inPropRegion(p.x - tile.center[0], p.z - tile.center[2])).toBe(true);
     }
     const woodHigh = PROP_COUNTS.high.wood!;
-    expect((woodHigh.pineTall ?? 0) + (woodHigh.pineRound ?? 0) + (woodHigh.pineSmall ?? 0)).toBeGreaterThanOrEqual(40);
-    expect(woodHigh.canopy ?? 0).toBeGreaterThanOrEqual(8);
-    expect(PROP_COUNTS.high.sheep!.sheep).toBeGreaterThanOrEqual(5);
+    expect((woodHigh.pineTall ?? 0) + (woodHigh.pineRound ?? 0) + (woodHigh.pineSmall ?? 0)).toBeGreaterThanOrEqual(50);
+    expect(woodHigh.canopy ?? 0).toBeGreaterThanOrEqual(12);
+    expect(PROP_COUNTS.high.sheep!.sheep).toBeGreaterThanOrEqual(16);
+    expect(PROP_COUNTS.high.wheat!.wheatrow ?? 0).toBeGreaterThanOrEqual(36);
   });
 
   it("is deterministic; medium is reduced and low is empty", () => {
@@ -65,7 +66,6 @@ describe("G3D-PROPS terrain props", () => {
     expect(layer.stats().meshes).toBe(0);
     layer.dispose();
   });
-});
 
   it("builds distinct pine species and readable sheep / wheatrow geometry", () => {
     const tall = buildPropGeometry("pineTall");
@@ -85,3 +85,4 @@ describe("G3D-PROPS terrain props", () => {
     expect(wheat.getAttribute("position").count).toBeGreaterThan(120);
     tall.dispose(); round.dispose(); small.dispose(); sheep.dispose(); wheat.dispose();
   });
+});

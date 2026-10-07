@@ -79,12 +79,12 @@ export const SCENE_TOKENS = {
 
 /** 地块材质（颜色沿用现有地形色，pattern 按地形，贴图取 G3D-22 套件）。 */
 export const TERRAIN_MATERIALS: Record<string, MaterialToken> = {
-  wood: { base: "#2f6b3a", roughness: 0.92, metalness: 0, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 0.6 },
-  brick: { base: "#b85a3a", roughness: 0.92, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 0.6 },
-  sheep: { base: "#8fbf6a", roughness: 0.92, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 0.6 },
-  wheat: { base: "#d4b84a", roughness: 0.92, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 0.6 },
-  ore: { base: "#6a6f78", roughness: 0.9, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 0.6 },
-  desert: { base: "#c9b896", roughness: 0.94, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 0.6 },
+  wood: { base: "#2f6b3a", roughness: 0.92, metalness: 0, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 1.05 },
+  brick: { base: "#b85a3a", roughness: 0.92, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 1.05 },
+  sheep: { base: "#8fbf6a", roughness: 0.92, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 1.05 },
+  wheat: { base: "#d4b84a", roughness: 0.92, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 1.05 },
+  ore: { base: "#6a6f78", roughness: 0.9, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 1.05 },
+  desert: { base: "#c9b896", roughness: 0.94, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 1.05 },
 };
 
 /** 其余物件材质。 */

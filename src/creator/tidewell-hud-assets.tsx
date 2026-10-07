@@ -31,6 +31,12 @@ const aiIconUrls = import.meta.glob("../../assets/ui/ai/icons/*-64.webp", {
   import: "default",
 }) as Record<string, string>;
 
+const resourceHandUrls = import.meta.glob("../../assets/ui/ai/icons/resource-*-hand.webp", {
+  eager: true,
+  query: "?url",
+  import: "default",
+}) as Record<string, string>;
+
 const buildWideUrls = import.meta.glob("../../assets/ui/ai/icons/build-*-wide.webp", {
   eager: true,
   query: "?url",
@@ -60,11 +66,12 @@ function pick(map: Record<string, string>, fragment: string): string | undefined
 }
 
 export const RESOURCE_CARD_URL: Record<string, string | undefined> = {
-  wood: pick(cardUrls, "resource-wood"),
-  brick: pick(cardUrls, "resource-brick"),
-  sheep: pick(cardUrls, "resource-sheep"),
-  wheat: pick(cardUrls, "resource-wheat"),
-  ore: pick(cardUrls, "resource-ore"),
+  // R11: landscape hand plaques (金框横牌) preferred over portrait card art.
+  wood: pick(resourceHandUrls, "resource-wood-hand") ?? pick(cardUrls, "resource-wood"),
+  brick: pick(resourceHandUrls, "resource-brick-hand") ?? pick(cardUrls, "resource-brick"),
+  sheep: pick(resourceHandUrls, "resource-sheep-hand") ?? pick(cardUrls, "resource-sheep"),
+  wheat: pick(resourceHandUrls, "resource-wheat-hand") ?? pick(cardUrls, "resource-wheat"),
+  ore: pick(resourceHandUrls, "resource-ore-hand") ?? pick(cardUrls, "resource-ore"),
 };
 
 export const RESOURCE_AI_ICON_URL: Record<string, string | undefined> = {

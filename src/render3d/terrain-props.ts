@@ -2,6 +2,7 @@
  * G3D-PROPS：按地形实例化的低多边形小道具（自制程序化几何，LicenseRef-GoDesk-Original）。
  *
  * round-3d：森林 = 三树种（高瘦冷杉 / 圆冠 / 矮灌）+ 树冠团；牧场羊有可读头腿；麦田有垄沟与穗高。
+ * R11：再抬 high/medium 林/羊/麦密度，收紧间距，拉近左屏绘本读感。
  * - 每种道具 **一个 InstancedMesh**（≤1 draw call / 类型，阴影 pass 另计），共享一份顶点色材质，
  *   instanceColor 做色调变化。**low 档零道具**（不建任何网格）。
  * - 摆放：按格子 (q,r) 播种的确定性拒绝采样，只落在六角内缩区域里，避开中心数字筹码 / 强盗、
@@ -56,27 +57,29 @@ type Counts = Partial<Record<PropKind, number>>;
 /** 每格数量：terrain → kind → count。low 档全 0。 */
 export const PROP_COUNTS: Record<RenderTierId, Record<string, Counts>> = {
   high: {
-    wood: { pineTall: 18, pineRound: 20, pineSmall: 14, canopy: 12, blobshadow: 52 },
-    sheep: { trough: 1, sheep: 14, blobshadow: 15 },
-    ore: { boulder: 7, pebble: 10, blobshadow: 7 },
-    brick: { clay: 6, bricks: 3 },
-    wheat: { wheatrow: 30, sheaf: 3 },
-    desert: { dune: 4, pebble: 7 },
+    // R11: denser forest / flock / wheat rows toward left-screen painterly read.
+    wood: { pineTall: 24, pineRound: 26, pineSmall: 18, canopy: 18, blobshadow: 68 },
+    sheep: { trough: 1, sheep: 22, blobshadow: 23 },
+    ore: { boulder: 9, pebble: 13, blobshadow: 9 },
+    brick: { clay: 8, bricks: 4 },
+    wheat: { wheatrow: 38, sheaf: 5 },
+    desert: { dune: 5, pebble: 9 },
   },
   medium: {
-    wood: { pineTall: 10, pineRound: 12, pineSmall: 8, canopy: 0, blobshadow: 30 },
-    sheep: { trough: 1, sheep: 8, blobshadow: 9 },
-    ore: { boulder: 4, pebble: 5, blobshadow: 4 },
-    brick: { clay: 4, bricks: 2 },
-    wheat: { wheatrow: 18, sheaf: 2 },
-    desert: { dune: 3, pebble: 4 },
+    wood: { pineTall: 14, pineRound: 16, pineSmall: 10, canopy: 8, blobshadow: 40 },
+    sheep: { trough: 1, sheep: 12, blobshadow: 13 },
+    ore: { boulder: 5, pebble: 7, blobshadow: 5 },
+    brick: { clay: 5, bricks: 3 },
+    wheat: { wheatrow: 24, sheaf: 3 },
+    desert: { dune: 3, pebble: 5 },
   },
   low: {},
 };
 
 /** 道具间最小间距（相邻两件取均值）。 */
 const SPACING: Record<PropKind, number> = {
-  pineTall: 0.11, pineRound: 0.13, pineSmall: 0.09, canopy: 0.12, sheep: 0.16, trough: 0.22, boulder: 0.18, clay: 0.2, bricks: 0.17, sheaf: 0.12, wheatrow: 0.1, dune: 0.28, pebble: 0.07, blobshadow: 0.08,
+  // R11: ~12% tighter pack so higher counts still land inside the hex.
+  pineTall: 0.095, pineRound: 0.11, pineSmall: 0.078, canopy: 0.105, sheep: 0.14, trough: 0.2, boulder: 0.16, clay: 0.18, bricks: 0.15, sheaf: 0.105, wheatrow: 0.088, dune: 0.26, pebble: 0.065, blobshadow: 0.07,
 };
 const CASTS: Record<PropKind, boolean> = {
   pineTall: true, pineRound: true, pineSmall: true, canopy: false, sheep: true, trough: true, boulder: true, clay: false, bricks: true, sheaf: true, wheatrow: true, dune: false, pebble: false, blobshadow: false,
@@ -383,18 +386,18 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
     let candidates: Array<[number, number]> = [];
     let rowYaw = 0;
     if (kind === "wheatrow") {
-      // 麦垄：行距 0.105、垄长 0.34，整片随格子转 0° / 60° / 120°；两端都要在可摆放区内。
+      // R11 麦垄：更密候选网格，整片随格子转 0° / 60° / 120°；两端都要在可摆放区内。
       rowYaw = Math.floor(rand() * 3) * (Math.PI / 3);
       const cr = Math.cos(rowYaw);
       const sr = Math.sin(rowYaw);
       const rot = (lx: number, lz: number): [number, number] => [lx * cr - lz * sr, lx * sr + lz * cr];
-      for (let row = -7; row <= 7; row += 1) {
-        for (let col = -4; col <= 4; col += 1) {
-          const lx = col * 0.275 + (row % 2 ? 0.1375 : 0);
-          const lz = row * 0.1;
+      for (let row = -9; row <= 9; row += 1) {
+        for (let col = -5; col <= 5; col += 1) {
+          const lx = col * 0.22 + (row % 2 ? 0.11 : 0);
+          const lz = row * 0.085;
           const c = rot(lx, lz);
-          const e1 = rot(lx - 0.12, lz);
-          const e2 = rot(lx + 0.12, lz);
+          const e1 = rot(lx - 0.1, lz);
+          const e2 = rot(lx + 0.1, lz);
           if (inPropRegion(...c) && inPropRegion(...e1) && inPropRegion(...e2)) candidates.push(c);
         }
       }
