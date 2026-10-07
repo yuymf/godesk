@@ -97,6 +97,17 @@ describe("G3D-PROPS terrain props", () => {
     expect(h).toBeLessThan(0.35); // flat brush stack, not tall umbrella
     canopy.dispose();
   });
+
+  it("R17 sheep: meadow-tinted blotch silhouette denser than white toy ball", () => {
+    const sheep = buildPropGeometry("sheep");
+    sheep.computeBoundingBox();
+    // brush cards + dual bleed discs + blotches → more verts than R16 cream wool
+    expect(sheep.getAttribute("position").count).toBeGreaterThan(200);
+    const h = sheep.boundingBox!.max.y - sheep.boundingBox!.min.y;
+    expect(h).toBeLessThan(0.28); // flattened color-blotch silhouette, not tall toy
+    expect(h).toBeGreaterThan(0.12);
+    sheep.dispose();
+  });
   it("R15 silhouettes: mountain mass + brick mound hierarchy readable in bounds", () => {
     const boulder = buildPropGeometry("boulder");
     const clay = buildPropGeometry("clay");

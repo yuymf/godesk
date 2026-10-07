@@ -26,8 +26,8 @@ export const PATTERN_IDS: Record<MaterialPattern, number> = {
 };
 
 /** 贴图到达后 pattern 保留的强度（只做细节扰动）。 */
-/** R16: slightly stronger brush under PBR so hex faces + props read as painted color fields. */
-export const PATTERN_STRENGTH_WITH_PBR = 0.28;
+/** R17: oil-paint continuous brush under PBR — hex faces read as painted color fields, not flat plastic. */
+export const PATTERN_STRENGTH_WITH_PBR = 0.42;
 /** 贴图到达后底色向白色混合的比例：保留地形色相，又不让贴图被压暗。 */
 export const PBR_TINT_TO_WHITE = 0.28;
 
@@ -57,15 +57,18 @@ float gdPattern(vec3 w) {
   float weave = abs(step(0.5, g.x) - step(0.5, g.y));
   return mix(0.35, 0.65, weave) + (gdNoise(w.xz * 8.0) - 0.5) * 0.3;
 #elif GD_PATTERN == 3
-  float rock = gdFbm(w.xz * 3.6 + w.y * 1.4);
-  float seam = gdNoise(w.xz * 9.0 + w.y);
-  return mix(rock, seam, 0.28);
+  float rock = gdFbm(w.xz * 2.8 + w.y * 1.2);
+  float seam = gdNoise(w.xz * 7.0 + w.y);
+  float stroke = gdFbm(w.xz * 1.2 + w.y * 0.5);
+  return mix(mix(rock, seam, 0.26), stroke, 0.32);
 #elif GD_PATTERN == 4
-  float blade = gdFbm(w.xz * 8.5);
-  float clump = gdNoise(w.xz * 3.2);
-  return mix(blade, clump, 0.35);
+  float blade = gdFbm(w.xz * 7.2);
+  float clump = gdNoise(w.xz * 2.4);
+  float stroke = gdFbm(w.xz * 1.35 + vec2(w.z * 0.4, -w.x * 0.25));
+  float paint = mix(blade, clump, 0.32);
+  return mix(paint, stroke, 0.38);
 #elif GD_PATTERN == 5
-  return gdNoise(w.xz * 34.0) * 0.55 + gdFbm(w.xz * 2.2) * 0.45;
+  return gdNoise(w.xz * 28.0) * 0.4 + gdFbm(w.xz * 1.8) * 0.35 + gdFbm(w.xz * 0.9) * 0.25;
 #else
   return 0.5;
 #endif
@@ -106,14 +109,14 @@ export function installPattern(material: MeshStandardMaterial, pattern: Material
         [
           "#include <color_fragment>",
           "float gdP = gdPattern(vGdWorld);",
-          "diffuseColor.rgb *= mix(1.0, 0.68 + 0.64 * gdP, uGdPattern);",
+          "diffuseColor.rgb *= mix(1.0, 0.52 + 0.96 * gdP, uGdPattern);",
         ].join("\n"),
       )
       .replace(
         "#include <roughnessmap_fragment>",
         [
           "#include <roughnessmap_fragment>",
-          "roughnessFactor = clamp(roughnessFactor + (gdP - 0.5) * 0.22 * uGdPattern, 0.04, 1.0);",
+          "roughnessFactor = clamp(roughnessFactor + (gdP - 0.5) * 0.32 * uGdPattern, 0.04, 1.0);",
         ].join("\n"),
       );
   };
@@ -269,10 +272,10 @@ function applyMaps(material: MeshStandardMaterial, token: MaterialToken, maps: P
   const useBaseColor = token.pbrBaseColor !== false;
   material.map = useBaseColor ? maps.map : null;
   material.normalMap = maps.normalMap;
-  // R16: keep oil-paint micro-relief; AO a touch higher so props nest into face shade.
-  material.normalScale.set(1.4, 1.4);
+  // R17: stronger oil-paint micro-relief + AO so hex faces read continuous painted fields.
+  material.normalScale.set(1.65, 1.65);
   material.aoMap = maps.ormMap;
-  material.aoMapIntensity = 1.22;
+  material.aoMapIntensity = 1.32;
   material.roughnessMap = maps.ormMap;
   material.metalnessMap = maps.ormMap;
   material.color.set(token.base);

@@ -5,6 +5,7 @@
  * R11：再抬 high/medium 林/羊/麦密度，收紧间距，拉近左屏绘本读感。
  * R15：林/羊/麦/山/砖剪影层次 — 减玩具低模塑料，默认机位一眼可读（非仅 shader）。
  * R16：prop 溶入 hex 面色块 — 色相/明度贴 tile albedo、林冠羽化笔触片、减「浮在格子上的 3D 玩具」。
+ * R17：羊→牧场色斑溶合 + hex 面油彩连片；林冠远景几何伞继续压、近景 brushCard 不回退。
  * - 每种道具 **一个 InstancedMesh**（≤1 draw call / 类型，阴影 pass 另计），共享一份顶点色材质，
  *   instanceColor 做色调变化。**low 档零道具**（不建任何网格）。
  * - 摆放：按格子 (q,r) 播种的确定性拒绝采样，只落在六角内缩区域里，避开中心数字筹码 / 强盗、
@@ -240,17 +241,18 @@ function pineSmallGeometry(): BufferGeometry {
   ]);
 }
 
-/** R16 树冠云：扁笔触片叠团 + 轻体量，羽化溶入林冠（少光滑几何伞）。 */
+/** R17 树冠云：远景几何伞再压；近景 brushCard 羽化保持（不回退 R16）。 */
 function canopyGeometry(): BufferGeometry {
   return merged([
-    // thin volume mass (kept low so alpha material reads soft)
-    grad(at(new SphereGeometry(0.12, 8, 4), 0, 0, 0, 1.5, 0.28, 1.25), "#2a5a34", "#3a7a48", -0.04, 0.05, 0.16),
-    brushCard(0.0, 0.01, 0.0, 0.18, 0.14, 0.15, "#2f6b3a", "#4a8a52"),
-    brushCard(0.1, 0.015, 0.05, 0.12, 0.1, 0.9, "#2a6034", "#46884e"),
-    brushCard(-0.09, 0.008, -0.04, 0.13, 0.1, -0.7, "#286032", "#42804a"),
-    brushCard(0.04, -0.005, -0.08, 0.1, 0.08, 1.4, "#2c6436", "#4a8550"),
-    brushCard(-0.05, 0.02, 0.07, 0.11, 0.09, -1.1, "#2a5e32", "#46864c"),
-    brushCard(0.08, -0.01, -0.02, 0.09, 0.07, 0.35, "#315f38", "#4a7e4c"),
+    // thinner residual volume — far umbrella pressed further
+    grad(at(new SphereGeometry(0.09, 7, 3), 0, 0, 0, 1.35, 0.18, 1.15), "#2a5a34", "#3a7a48", -0.03, 0.035, 0.14),
+    brushCard(0.0, 0.01, 0.0, 0.19, 0.145, 0.15, "#2f6b3a", "#4a8a52"),
+    brushCard(0.1, 0.015, 0.05, 0.125, 0.1, 0.9, "#2a6034", "#46884e"),
+    brushCard(-0.09, 0.008, -0.04, 0.135, 0.1, -0.7, "#286032", "#42804a"),
+    brushCard(0.04, -0.005, -0.08, 0.105, 0.085, 1.4, "#2c6436", "#4a8550"),
+    brushCard(-0.05, 0.02, 0.07, 0.115, 0.09, -1.1, "#2a5e32", "#46864c"),
+    brushCard(0.08, -0.01, -0.02, 0.095, 0.075, 0.35, "#315f38", "#4a7e4c"),
+    brushCard(-0.02, 0.005, 0.03, 0.1, 0.08, 0.55, "#2c6436", "#468850"),
   ]);
 }
 
@@ -259,29 +261,36 @@ function blobShadowGeometry(): BufferGeometry {
   return grad(at(new CircleGeometry(0.1, 12), 0, 0.002, 0, 1, 1, 1).rotateX(-Math.PI / 2), "#1a1814", "#1a1814", 0, 1);
 }
 
-/** R15/R16 羊：剪影保持；羊毛色相溶入牧场 tile #8fbf6a（减纯白浮玩具）。 */
+/** R17 羊：剪影可读，但读成绘本牧场色斑（非桌上白团玩具）；腹下/面噪声与 #8fbf6a 同色系连片。 */
 function sheepGeometry(): BufferGeometry {
+  // legs: soft earth-green, not black toy sticks
   const leg = (x: number, z: number) =>
-    grad(at(new CylinderGeometry(0.013, 0.011, 0.08, 5, 1, true), x, 0.04, z), "#1e1a18", "#3a332e", 0, 0.08);
-  // cream + meadow tint (not pure white)
-  const wool = (x: number, y: number, z: number, r: number, sx = 1, sy = 1, sz = 1) =>
-    grad(at(new SphereGeometry(r, 7, 4), x, y, z, sx, sy, sz), "#d8e0c8", "#eef2e0", y - r * sy, y + r * sy, 0.1);
+    grad(at(new CylinderGeometry(0.012, 0.01, 0.055, 5, 1, true), x, 0.028, z), "#4a5a38", "#6a7a48", 0, 0.055);
+  // meadow blotch "wool" — same family as pasture tile, not cream/white
+  const blotch = (x: number, y: number, z: number, r: number, sx = 1, sy = 1, sz = 1, lo = "#7aab58", hi = "#a8c878") =>
+    grad(at(new SphereGeometry(r, 7, 4), x, y, z, sx, sy, sz), lo, hi, y - r * sy, y + r * sy, 0.12);
   return merged([
-    grad(at(new SphereGeometry(0.075, 9, 6), 0, 0.115, 0, 1.45, 0.88, 1.05), "#d0d8c0", "#e8eed8", 0.04, 0.19, 0.12),
-    wool(-0.04, 0.155, 0.035, 0.04, 1.1, 0.95, 1.05),
-    wool(0.035, 0.16, -0.03, 0.038, 1.05, 1.0, 1.0),
-    wool(-0.055, 0.13, -0.04, 0.036, 1.0, 0.9, 1.1),
-    wool(0.055, 0.135, 0.04, 0.034, 1.05, 0.95, 1.0),
-    wool(0.0, 0.175, 0.0, 0.032, 1.2, 0.85, 1.1),
-    wool(-0.02, 0.1, 0.055, 0.03, 1.0, 0.8, 1.15),
-    // soft ground puddle under belly — meadow albedo bleed
-    grad(at(new CircleGeometry(0.09, 10), 0, 0.004, 0, 1.15, 1, 0.95).rotateX(-Math.PI / 2), "#7aab58", "#8fbf6a", 0, 0.01, 0.08),
-    grad(at(new SphereGeometry(0.038, 7, 5), 0.125, 0.14, 0, 1.4, 1.05, 0.95), "#2a221c", "#4a3a32", 0.1, 0.18),
-    grad(at(new CylinderGeometry(0.022, 0.028, 0.04, 5, 1, true), 0.09, 0.125, 0, 1, 1, 1, Math.PI / 2), "#2a221c", "#3a3028", 0.1, 0.15),
-    grad(at(new SphereGeometry(0.016, 5, 3), 0.11, 0.175, 0.048, 0.65, 1.35, 0.5), "#2a221c", "#3a3028", 0.16, 0.2),
-    grad(at(new SphereGeometry(0.016, 5, 3), 0.11, 0.175, -0.048, 0.65, 1.35, 0.5), "#2a221c", "#3a3028", 0.16, 0.2),
-    grad(at(new BoxGeometry(0.02, 0.014, 0.055), 0.155, 0.132, 0), "#1a1614", "#2e2824", 0, 1),
-    leg(0.05, 0.035), leg(0.05, -0.035), leg(-0.05, 0.035), leg(-0.05, -0.035),
+    // body mass: meadow green field, slightly flattened (color blotch silhouette)
+    grad(at(new SphereGeometry(0.078, 9, 6), 0, 0.095, 0, 1.5, 0.72, 1.1), "#6a9a48", "#9ec86e", 0.03, 0.16, 0.14),
+    blotch(-0.045, 0.12, 0.04, 0.042, 1.15, 0.85, 1.1, "#7aab58", "#b0d080"),
+    blotch(0.04, 0.125, -0.035, 0.04, 1.1, 0.9, 1.05, "#88b860", "#a8c878"),
+    blotch(-0.06, 0.1, -0.045, 0.038, 1.05, 0.8, 1.15, "#6a9a48", "#98c068"),
+    blotch(0.055, 0.105, 0.045, 0.036, 1.1, 0.85, 1.0, "#82b458", "#b4d488"),
+    blotch(0.0, 0.14, 0.0, 0.034, 1.25, 0.7, 1.15, "#8fbf6a", "#c0d898"),
+    blotch(-0.02, 0.08, 0.06, 0.032, 1.05, 0.7, 1.2, "#78a850", "#a0c870"),
+    // soft brush cards on flanks — continuous with hex meadow face
+    brushCard(0.02, 0.11, 0.02, 0.08, 0.055, 0.35, "#7aab58", "#8fbf6a"),
+    brushCard(-0.03, 0.095, -0.02, 0.07, 0.05, -0.7, "#6a9a48", "#98c068"),
+    // wide meadow bleed puddle under belly — same hue as sheep hex face
+    grad(at(new CircleGeometry(0.12, 12), 0, 0.003, 0, 1.35, 1, 1.1).rotateX(-Math.PI / 2), "#6a9a48", "#8fbf6a", 0, 0.01, 0.1),
+    grad(at(new CircleGeometry(0.08, 10), 0, 0.005, 0, 1.1, 1, 0.95).rotateX(-Math.PI / 2), "#8fbf6a", "#a8c878", 0, 0.01, 0.08),
+    // head: soft olive-brown, not black toy (silhouette still readable)
+    grad(at(new SphereGeometry(0.036, 7, 5), 0.12, 0.115, 0, 1.35, 0.95, 0.9), "#5a6a40", "#7a8a58", 0.08, 0.15),
+    grad(at(new CylinderGeometry(0.02, 0.026, 0.035, 5, 1, true), 0.085, 0.1, 0, 1, 1, 1, Math.PI / 2), "#5a6a40", "#6a7a48", 0.08, 0.13),
+    grad(at(new SphereGeometry(0.014, 5, 3), 0.105, 0.145, 0.042, 0.65, 1.2, 0.5), "#5a6a40", "#6a7a48", 0.13, 0.16),
+    grad(at(new SphereGeometry(0.014, 5, 3), 0.105, 0.145, -0.042, 0.65, 1.2, 0.5), "#5a6a40", "#6a7a48", 0.13, 0.16),
+    grad(at(new BoxGeometry(0.018, 0.012, 0.048), 0.148, 0.108, 0), "#4a5a38", "#5a6a40", 0, 1),
+    leg(0.048, 0.032), leg(0.048, -0.032), leg(-0.048, 0.032), leg(-0.048, -0.032),
   ]);
 }
 
@@ -487,7 +496,8 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
         x: tile.center[0] + dx,
         // R16: slight sink into hex face so props read rooted / painted-in (not floating toys).
         y: kind === "canopy" ? TILE_TOP + 0.3 + rand() * 0.08
-          : isPine(kind) || kind === "sheep" || kind === "boulder" || kind === "clay" || kind === "bricks" || kind === "wheatrow" || kind === "sheaf"
+          : kind === "sheep" ? TILE_TOP - 0.02
+          : isPine(kind) || kind === "boulder" || kind === "clay" || kind === "bricks" || kind === "wheatrow" || kind === "sheaf"
             ? TILE_TOP - 0.012
             : TILE_TOP,
         z: tile.center[2] + dz,
@@ -556,7 +566,7 @@ const PINE_SPECIES_TONE: Record<"pineTall" | "pineRound" | "pineSmall", Color> =
   pineSmall: new Color(0.88, 0.95, 0.75),
 };
 const PEBBLE_TINT: Record<string, Color> = { desert: new Color("#e6d2a6"), ore: new Color("#9a9ea4") };
-/** R16: instance multiply biased toward TERRAIN_MATERIALS.base so props dissolve into hex face. */
+/** R17: instance multiply biased toward TERRAIN_MATERIALS.base — sheep/meadow continuous dissolve. */
 const TERRAIN_ALBEDO: Record<string, Color> = {
   wood: new Color("#2f6b3a"),
   sheep: new Color("#8fbf6a"),
@@ -579,10 +589,12 @@ function toneFor(p: PropPlacement, out: Color): Color {
   // Pull toward tile albedo (painterly dissolve, not grey plastic multiply).
   const albedo = TERRAIN_ALBEDO[p.terrain];
   if (albedo && p.kind !== "blobshadow" && p.kind !== "trough") {
-    const blend = isPine(p.kind) || p.kind === "canopy" ? 0.28
-      : p.kind === "sheep" || p.kind === "wheatrow" || p.kind === "sheaf" ? 0.22
-      : p.kind === "boulder" || p.kind === "clay" || p.kind === "bricks" ? 0.3
-      : 0.12;
+    // R17: sheep strongly → meadow tile; pines/canopy keep dissolve; hex-face continuous with props
+    const blend = p.kind === "sheep" ? 0.52
+      : isPine(p.kind) || p.kind === "canopy" ? 0.34
+      : p.kind === "wheatrow" || p.kind === "sheaf" ? 0.32
+      : p.kind === "boulder" || p.kind === "clay" || p.kind === "bricks" ? 0.36
+      : 0.16;
     out.r = out.r * (1 - blend) + albedo.r * blend;
     out.g = out.g * (1 - blend) + albedo.g * blend;
     out.b = out.b * (1 - blend) + albedo.b * blend;
@@ -617,7 +629,7 @@ export function createTerrainPropLayer(): TerrainPropLayer {
   });
   const canopyMaterial = new MeshStandardMaterial({
     vertexColors: true, flatShading: false, roughness: 1, metalness: 0, envMapIntensity: 0,
-    transparent: true, opacity: 0.42,
+    transparent: true, opacity: 0.38,
   });
   canopyMaterial.depthWrite = false;
   const shadowMaterial = new MeshStandardMaterial({
