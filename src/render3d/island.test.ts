@@ -25,10 +25,10 @@ describe("G3D-ISLAND island + coast", () => {
     expect(coastEdges(tiles)).toHaveLength(30);
   });
 
-  it("builds one continuous coast wall (30 edges × 4 segs × 6 rows) plus a cap per tile", () => {
+  it("builds one continuous coast wall (30 edges × 5 segs × 4 rows) plus a cap per tile", () => {
     const geom = coastWallGeometry(tiles);
     const pos = geom.getAttribute("position");
-    expect(pos.count).toBe(30 * 4 * 6 * 6 + tiles.length * 18);
+    expect(pos.count).toBe(30 * 5 * 4 * 6 + tiles.length * 18);
     let minY = Infinity, maxY = -Infinity;
     for (let i = 0; i < pos.count; i += 1) { minY = Math.min(minY, pos.getY(i)); maxY = Math.max(maxY, pos.getY(i)); }
     expect(maxY).toBeCloseTo(SKIRT_TOP_Y, 5);

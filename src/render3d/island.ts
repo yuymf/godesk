@@ -291,9 +291,9 @@ function signAtlas(): Texture | null {
  * （y = SKIRT_TOP_Y，半径 1.0）填满格子之间的缝。u 沿岛周角度连续，v 自上而下。
  */
 export function coastWallGeometry(tiles: readonly IslandTile[]): BufferGeometry {
-  // R13：更多层带 + 每边分面 → 手绘岸崖体块（非光滑岩环凹槽）。
-  const ROWS = 6;
-  const SEGS = 4;
+  // R13：少环槽、强分面体外扩 → 手绘岸崖体块（破「同心岩环凹槽」）。
+  const ROWS = 4;
+  const SEGS = 5;
   const positions: number[] = [];
   const uvs: number[] = [];
   const colors: number[] = [];
@@ -302,19 +302,21 @@ export function coastWallGeometry(tiles: readonly IslandTile[]): BufferGeometry 
     const rl = Math.hypot(x, z) || 1;
     const nx = x / rl;
     const nz = z / rl;
-    // 阶梯岩层：每层几乎同半径，层间才外扩（体块台阶）。
-    const ledge = Math.floor(t * 4 + 1e-6) / 4;
-    const ledgeMix = ledge + (t - ledge) * 0.18;
-    const block = ((Math.sin(panel * 12.9898 + x * 3.1) * 43758.5453) % 1 + 1) % 1;
-    const blockOut = (block - 0.5) * 0.09 * ledgeMix;
-    const noise = t === 0 ? 0 : (Math.sin(x * 5.3 + ledge * 11.0) * 0.02 + Math.sin(z * 6.1 - ledge * 9.0) * 0.016);
-    // 保留 R12 水线外扩深度，但以阶梯+分面表达体块。
-    const out = 0.018 + ledgeMix * ledgeMix * 0.26 + ledgeMix * ledgeMix * ledgeMix * 0.1 + blockOut + noise;
+    // 每面独立体块深度（破环）：同 panel 内外一致，邻面跳变。
+    const h1 = ((Math.sin(panel * 12.9898 + 78.23) * 43758.5453) % 1 + 1) % 1;
+    const h2 = ((Math.sin(panel * 78.233 + 19.1) * 24634.123) % 1 + 1) % 1;
+    const blockDepth = 0.04 + h1 * 0.16; // 面外凸量
+    const undercut = 0.02 + h2 * 0.08;   // 面下缘再外推
+    // 平滑下扩 + 体块外凸（非全岛统一台阶环）。
+    const flare = t * t * 0.2 + t * t * t * 0.08;
+    const face = t * blockDepth + (t > 0.55 ? (t - 0.55) * undercut * 2.2 : 0);
+    const noise = t === 0 ? 0 : Math.sin(x * 4.7 + panel) * 0.012 + Math.sin(z * 5.3 - panel * 0.7) * 0.01;
+    const out = 0.02 + flare + face + noise;
     const wx = x + nx * out;
     const wz = z + nz * out;
     const u = (Math.atan2(z, x) / (Math.PI * 2) + 0.5) * 26;
-    // 湿暗分层：下半崖脚顶点色压暗。
-    const wet = t < 0.45 ? 1 : Math.max(0.42, 1 - (t - 0.45) * 1.15);
+    // 湿暗分层：下半崖脚顶点色压暗（材质层理靠贴图，不靠几何环槽）。
+    const wet = t < 0.4 ? 1 : Math.max(0.38, 1 - (t - 0.4) * 1.25);
     return [wx, y, wz, u, t, wet];
   };
   let edgeIdx = 0;
