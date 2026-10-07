@@ -99,15 +99,27 @@ const FRAG_COLOR = [
   "  vec3 waterCol = mix(uTideShallow, tideNear, smoothstep(0.0, 0.04, d));",
   "  waterCol = mix(waterCol, tideMid, smoothstep(0.04, 0.28, d));",
   "  waterCol = mix(waterCol, tideFar, smoothstep(0.28, 0.85, d));",
-  // R12：岸沫加宽 + 浪花冠更亮；远景浅沫带更密（绘本非塑料）。
-  "  float foamBand = (1.0 - smoothstep(0.0, 0.22, d)) * uTideFoam;",
-  "  float foamCrest = (1.0 - smoothstep(0.0, 0.055, d)) * uTideFoam;",
-  "  float foamFar = (1.0 - smoothstep(0.14, 0.52, d)) * smoothstep(0.04, 0.18, d) * uTideFoam * 0.55;",
-  "  vec2 fuv = vTideWorld.xz * 0.42 + vec2(uTideTime * 0.04 * uTideWaveS, uTideTime * -0.028 * uTideWaveS);",
+  // R13：崖脚沫从软晕宽带 → 可读浪脊/笔触分段（自有算法，非抄素材）。
+  "  vec2 fuv = vTideWorld.xz * 0.55 + vec2(uTideTime * 0.035 * uTideWaveS, uTideTime * -0.026 * uTideWaveS);",
   "  float foamN = texture2D(uTideFoamMap, fuv).r;",
-  "  waterCol = mix(waterCol, vec3(0.93, 0.97, 0.96), foamBand * (0.55 + 0.45 * foamN));",
-  "  waterCol = mix(waterCol, vec3(1.0, 1.0, 0.99), foamCrest * (0.82 + 0.18 * foamN));",
-  "  waterCol = mix(waterCol, vec3(0.9, 0.95, 0.94), foamFar * (0.42 + 0.45 * foamN));",
+  "  float foamN2 = texture2D(uTideFoamMap, fuv * 1.73 + vec2(0.31, -0.17)).r;",
+  "  float ang = atan(vTideWorld.z, vTideWorld.x);",
+  // 沿岸切向分段门：把沫带拆成笔触块，而非均匀软晕。
+  "  float strokeGate = smoothstep(0.22, 0.78, 0.5 + 0.5 * sin(ang * 20.0 + foamN * 8.5 + vTideWorld.x * 1.35));",
+  "  strokeGate *= smoothstep(0.18, 0.72, foamN2);",
+  "  strokeGate = mix(0.35, 1.0, strokeGate);",
+  // 弱底晕（保留近岸可读）+ 多层细浪脊（高斯条带）。
+  "  float foamSoft = (1.0 - smoothstep(0.0, 0.16, d)) * uTideFoam * 0.22;",
+  "  float r1 = exp(-pow((d - 0.016) / 0.011, 2.0));",
+  "  float r2 = exp(-pow((d - 0.052) / 0.016, 2.0));",
+  "  float r3 = exp(-pow((d - 0.105) / 0.020, 2.0));",
+  "  float rLace = exp(-pow((d - 0.165) / 0.028, 2.0));",
+  "  float ridges = (r1 * 1.05 + r2 * 0.78 + r3 * 0.48) * uTideFoam * strokeGate;",
+  "  float lace = rLace * uTideFoam * 0.38 * strokeGate * (0.45 + 0.55 * foamN);",
+  "  waterCol = mix(waterCol, vec3(0.86, 0.92, 0.91), foamSoft);",
+  "  waterCol = mix(waterCol, vec3(0.94, 0.98, 0.97), ridges * (0.62 + 0.38 * foamN));",
+  "  waterCol = mix(waterCol, vec3(1.0, 1.0, 0.99), r1 * strokeGate * uTideFoam * (0.78 + 0.22 * foamN));",
+  "  waterCol = mix(waterCol, vec3(0.9, 0.95, 0.94), lace);",
   "  diffuseColor.rgb = waterCol;",
   "}",
 ].join("\n");
@@ -169,7 +181,7 @@ export function createTideWaterMaterial(
       .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>\n${FRAG_NORMAL}`);
   };
   material.customProgramCacheKey = () =>
-    `tide-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
+    `tide-r13-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
 
   return {
     material,

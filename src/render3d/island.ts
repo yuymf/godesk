@@ -156,51 +156,64 @@ function rockTexture(): Texture | null {
   const x = c.getContext("2d");
   if (!x) return null;
   const rand = mulberry32(1337);
-  // R12：略冷深底；底部再压暗模拟湿崖脚。
-  x.fillStyle = "#4a4540";
+  // R13：手绘岸崖体块 — 清晰岩层带 + 湿暗分层 + 竖向块缝，少「光滑岩环」。
+  x.fillStyle = "#433e39";
   x.fillRect(0, 0, 512, 256);
-  const wet = x.createLinearGradient(0, 160, 0, 256);
-  wet.addColorStop(0, "rgba(28, 32, 36, 0)");
-  wet.addColorStop(1, "rgba(18, 24, 30, 0.55)");
-  x.fillStyle = wet;
-  x.fillRect(0, 160, 512, 96);
-  for (let i = 0; i < 26; i += 1) {
-    const y = rand() * 256;
-    const h = 4 + rand() * 18;
-    const shade = 60 + Math.floor(rand() * 50);
-    x.fillStyle = `rgba(${shade + 18},${shade + 10},${shade},${0.35 + rand() * 0.35})`;
+  // 大块水平岩层（体块读感）。
+  for (let i = 0; i < 9; i += 1) {
+    const y = 18 + i * 26 + (rand() - 0.5) * 6;
+    const h = 14 + rand() * 16;
+    const shade = 48 + Math.floor(rand() * 42);
+    x.fillStyle = `rgba(${shade + 22},${shade + 14},${shade + 4},${0.42 + rand() * 0.32})`;
     x.beginPath();
     x.moveTo(0, y);
-    for (let u = 0; u <= 512; u += 32) x.lineTo(u, y + Math.sin(u * 0.03 + i) * 4 + (rand() - 0.5) * 5);
+    for (let u = 0; u <= 512; u += 28) x.lineTo(u, y + Math.sin(u * 0.02 + i) * 3.5 + (rand() - 0.5) * 4);
     x.lineTo(512, y + h);
-    for (let u = 512; u >= 0; u -= 32) x.lineTo(u, y + h + Math.sin(u * 0.025 + i) * 3);
+    for (let u = 512; u >= 0; u -= 28) x.lineTo(u, y + h + Math.sin(u * 0.018 + i * 1.3) * 2.5);
     x.closePath();
     x.fill();
-  }
-  for (let i = 0; i < 1800; i += 1) {
-    const v = Math.floor(rand() * 80);
-    x.fillStyle = `rgba(${v},${v - 4 < 0 ? 0 : v - 4},${v - 8 < 0 ? 0 : v - 8},0.35)`;
-    x.fillRect(rand() * 512, rand() * 256, 1 + rand() * 3, 1 + rand() * 3);
-  }
-  x.strokeStyle = "rgba(25,22,20,0.55)";
-  for (let i = 0; i < 40; i += 1) {
-    x.lineWidth = 0.8 + rand() * 1.6;
+    // 层顶高光笔触
+    x.strokeStyle = `rgba(${shade + 55},${shade + 45},${shade + 30},${0.18 + rand() * 0.2})`;
+    x.lineWidth = 1.2;
     x.beginPath();
-    let px = rand() * 512;
-    let py = rand() * 256;
-    x.moveTo(px, py);
-    for (let k = 0; k < 5; k += 1) {
-      px += (rand() - 0.5) * 30;
-      py += rand() * 22;
-      x.lineTo(px, py);
+    x.moveTo(0, y + 1);
+    for (let u = 0; u <= 512; u += 40) x.lineTo(u, y + Math.sin(u * 0.025 + i) * 2);
+    x.stroke();
+  }
+  // 湿暗分层：三道更清晰的崖脚带（非匀渐）。
+  const wetBands = [
+    [150, 28, "rgba(30, 34, 38, 0.28)"],
+    [178, 34, "rgba(22, 28, 34, 0.42)"],
+    [210, 46, "rgba(14, 20, 26, 0.62)"],
+  ] as const;
+  for (const [y0, h, col] of wetBands) {
+    x.fillStyle = col;
+    x.fillRect(0, y0, 512, h);
+  }
+  // 竖向块缝：把岩环切成岸崖体块外轮廓。
+  x.strokeStyle = "rgba(18, 16, 14, 0.7)";
+  for (let i = 0; i < 28; i += 1) {
+    const ux = (i + 0.3 + rand() * 0.4) * (512 / 28);
+    x.lineWidth = 1.4 + rand() * 2.2;
+    x.beginPath();
+    x.moveTo(ux, 8 + rand() * 20);
+    let py = 20;
+    for (let k = 0; k < 7; k += 1) {
+      py += 28 + rand() * 10;
+      x.lineTo(ux + (rand() - 0.5) * 10, Math.min(250, py));
     }
     x.stroke();
   }
+  for (let i = 0; i < 1400; i += 1) {
+    const v = Math.floor(rand() * 70);
+    x.fillStyle = `rgba(${v},${v - 4 < 0 ? 0 : v - 4},${v - 8 < 0 ? 0 : v - 8},0.32)`;
+    x.fillRect(rand() * 512, rand() * 256, 1 + rand() * 3, 1 + rand() * 3);
+  }
   // 顶部苔斑（接地块边缘）。
-  for (let i = 0; i < 260; i += 1) {
+  for (let i = 0; i < 280; i += 1) {
     x.fillStyle = `rgba(${70 + rand() * 30},${95 + rand() * 30},${55 + rand() * 20},${0.35 + rand() * 0.4})`;
     x.beginPath();
-    x.arc(rand() * 512, rand() * 22, 2 + rand() * 6, 0, Math.PI * 2);
+    x.arc(rand() * 512, rand() * 24, 2 + rand() * 6, 0, Math.PI * 2);
     x.fill();
   }
   const tex = new CanvasTexture(c);
@@ -278,26 +291,36 @@ function signAtlas(): Texture | null {
  * （y = SKIRT_TOP_Y，半径 1.0）填满格子之间的缝。u 沿岛周角度连续，v 自上而下。
  */
 export function coastWallGeometry(tiles: readonly IslandTile[]): BufferGeometry {
-  const ROWS = 5;
-  const SEGS = 3;
+  // R13：更多层带 + 每边分面 → 手绘岸崖体块（非光滑岩环凹槽）。
+  const ROWS = 6;
+  const SEGS = 4;
   const positions: number[] = [];
   const uvs: number[] = [];
   const colors: number[] = [];
-  const vert = (x: number, z: number, t: number): [number, number, number, number, number] => {
+  const vert = (x: number, z: number, t: number, panel: number): [number, number, number, number, number, number] => {
     const y = SKIRT_TOP_Y + (SKIRT_BOTTOM_Y - SKIRT_TOP_Y) * t;
     const rl = Math.hypot(x, z) || 1;
     const nx = x / rl;
     const nz = z / rl;
-    const noise = t === 0 ? 0 : (Math.sin(x * 7.1 + y * 9.3) * 0.034 + Math.sin(z * 8.7 - y * 13.1) * 0.026 + Math.sin((x + z) * 15.3 + y * 21) * 0.014);
-    // R12：水线外扩更大，崖脚坐进浪花带，少「竖直托盘壁」。
-    const out = 0.02 + t * t * 0.22 + t * t * t * 0.08 + noise;
+    // 阶梯岩层：每层几乎同半径，层间才外扩（体块台阶）。
+    const ledge = Math.floor(t * 4 + 1e-6) / 4;
+    const ledgeMix = ledge + (t - ledge) * 0.18;
+    const block = ((Math.sin(panel * 12.9898 + x * 3.1) * 43758.5453) % 1 + 1) % 1;
+    const blockOut = (block - 0.5) * 0.09 * ledgeMix;
+    const noise = t === 0 ? 0 : (Math.sin(x * 5.3 + ledge * 11.0) * 0.02 + Math.sin(z * 6.1 - ledge * 9.0) * 0.016);
+    // 保留 R12 水线外扩深度，但以阶梯+分面表达体块。
+    const out = 0.018 + ledgeMix * ledgeMix * 0.26 + ledgeMix * ledgeMix * ledgeMix * 0.1 + blockOut + noise;
     const wx = x + nx * out;
     const wz = z + nz * out;
     const u = (Math.atan2(z, x) / (Math.PI * 2) + 0.5) * 26;
-    return [wx, y, wz, u, t];
+    // 湿暗分层：下半崖脚顶点色压暗。
+    const wet = t < 0.45 ? 1 : Math.max(0.42, 1 - (t - 0.45) * 1.15);
+    return [wx, y, wz, u, t, wet];
   };
+  let edgeIdx = 0;
   for (const [a, b] of coastEdges(tiles)) {
     for (let sgi = 0; sgi < SEGS; sgi += 1) {
+      const panel = edgeIdx * SEGS + sgi;
       const s0 = sgi / SEGS;
       const s1 = (sgi + 1) / SEGS;
       const ax = a[0] + (b[0] - a[0]) * s0, az = a[2] + (b[2] - a[2]) * s0;
@@ -305,17 +328,20 @@ export function coastWallGeometry(tiles: readonly IslandTile[]): BufferGeometry 
       for (let k = 0; k < ROWS; k += 1) {
         const t0 = k / ROWS;
         const t1 = (k + 1) / ROWS;
-        const p00 = vert(ax, az, t0), p10 = vert(bx, bz, t0), p01 = vert(ax, az, t1), p11 = vert(bx, bz, t1);
+        const p00 = vert(ax, az, t0, panel), p10 = vert(bx, bz, t0, panel), p01 = vert(ax, az, t1, panel), p11 = vert(bx, bz, t1, panel);
         let u0 = p00[3], u1 = p10[3];
         if (Math.abs(u1 - u0) > 13) { if (u1 < u0) u1 += 26; else u0 += 26; }
         const quad: Array<[typeof p00, number]> = [[p00, u0], [p01, u0], [p10, u1], [p10, u1], [p01, u0], [p11, u1]];
         for (const [pt, u] of quad) {
           positions.push(pt[0], pt[1], pt[2]);
           uvs.push(u, 1 - pt[4]);
-          colors.push(1, 1, 1);
+          const w = pt[5];
+          // 下层更冷湿；上层略暖岩。
+          colors.push(0.92 * w, 0.9 * w, 0.86 * w * (0.92 + 0.08 * (1 - t0)));
         }
       }
     }
+    edgeIdx += 1;
   }
   // 顶盖：每格一块平顶六边形（角朝 0° / 60° …），法线朝上。
   for (const t of tiles) {
@@ -341,7 +367,8 @@ export function coastWallGeometry(tiles: readonly IslandTile[]): BufferGeometry 
 }
 
 function shoreStoneGeometry(): BufferGeometry {
-  return paint(new IcosahedronGeometry(0.1, 0), "#4b4a45", 0.3);
+  // R13：低模多面体岸石，强化崖脚体块剪影（非光滑鹅卵）。
+  return paint(new IcosahedronGeometry(0.11, 0), "#45423e", 0.38);
 }
 
 /** 码头：木栈板 + 横梁 + 4 根桩 + 牌柱（沿 +Z 伸出，原点在岸边）。 */
@@ -415,7 +442,7 @@ export function createIslandLayer(): IslandLayer {
   group.name = "island";
   const vertexMat = new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85 });
   const rockMap = rockTexture();
-  const rockMat = new MeshStandardMaterial({ color: "#ffffff", map: rockMap, vertexColors: true, roughness: 0.95, metalness: 0 });
+  const rockMat = new MeshStandardMaterial({ color: "#ffffff", map: rockMap, vertexColors: true, roughness: 0.97, metalness: 0, flatShading: true });
   if (!rockMap) rockMat.color.set("#5a5149");
   const signMap = signAtlas();
   const signMat = new MeshStandardMaterial({ map: signMap, transparent: true, alphaTest: 0.4, roughness: 0.8 });
