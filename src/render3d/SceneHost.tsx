@@ -61,7 +61,7 @@ import {
   HEX_ISLAND_LIGHTING,
   SCENE_TOKENS,
   TERRAIN_MATERIALS,
-  TILE_RADIUS,
+  TILE_FACE_RADIUS,
   islandBounds,
   pbrResolutionFor,
   seatMaterial,
@@ -223,7 +223,8 @@ let SHARED_DECOR_GEOM: BufferGeometry | null = null;
 
 function sharedTileGeom(): BufferGeometry {
   if (!SHARED_TILE_GEOM) {
-    const geom = new ExtrudeGeometry(hexShape(TILE_RADIUS), { depth: 0.28, bevelEnabled: false });
+    // R21: face radius 0.99 (was TILE_RADIUS − 0.04 = 0.91) → hairline light seams instead of a dark grid.
+    const geom = new ExtrudeGeometry(hexShape(TILE_FACE_RADIUS, 0), { depth: 0.28, bevelEnabled: false });
     geom.rotateX(-Math.PI / 2);
     SHARED_TILE_GEOM = geom;
   }

@@ -45,16 +45,18 @@ describe("G3D-PROPS terrain props", () => {
       for (const p of props) expect(inPropRegion(p.x - tile.center[0], p.z - tile.center[2])).toBe(true);
     }
     const woodHigh = PROP_COUNTS.high.wood!;
-    // R20: sparse ground-hugging forest (hex face reads first) — still a forest, far below R19's 68.
+    // R21: low, dense small-conifer clusters (more trees, none taller — see "R20 forest + ore" height test).
     const trees = (woodHigh.pineTall ?? 0) + (woodHigh.pineRound ?? 0) + (woodHigh.pineSmall ?? 0);
-    expect(trees).toBeGreaterThanOrEqual(20);
-    expect(trees).toBeLessThanOrEqual(36);
+    expect(trees).toBeGreaterThanOrEqual(44);
+    expect(trees).toBeLessThanOrEqual(64);
     expect(woodHigh.canopy ?? 0).toBeLessThanOrEqual(8);
     expect(PROP_COUNTS.high.ore!.boulder ?? 0).toBeLessThanOrEqual(5);
     // R19: a small readable flock (settlecoast-like), not a shrub carpet.
     expect(PROP_COUNTS.high.sheep!.sheep).toBeGreaterThanOrEqual(5);
     expect(PROP_COUNTS.high.sheep!.sheep).toBeLessThanOrEqual(9);
-    expect(PROP_COUNTS.high.wheat!.wheatrow ?? 0).toBeGreaterThanOrEqual(36);
+    // R21: sparser low rows so the golden field reads first (R20 ≥ 36 rows).
+    expect(PROP_COUNTS.high.wheat!.wheatrow ?? 0).toBeGreaterThanOrEqual(12);
+    expect(PROP_COUNTS.high.wheat!.wheatrow ?? 0).toBeLessThanOrEqual(20);
   });
 
   it("is deterministic; medium is reduced and low keeps only short forest trees", () => {
@@ -105,6 +107,9 @@ describe("G3D-PROPS terrain props", () => {
     expect(sheep.getAttribute("position").count).toBeGreaterThan(120);
     const wheat = buildPropGeometry("wheatrow");
     expect(wheat.getAttribute("position").count).toBeGreaterThan(200);
+    // R21: low stubble rows (R20 rows were ≈0.31 tall)
+    wheat.computeBoundingBox();
+    expect(wheat.boundingBox!.max.y - wheat.boundingBox!.min.y).toBeLessThan(0.18);
     tall.dispose(); round.dispose(); small.dispose(); sheep.dispose(); wheat.dispose();
   });
 
@@ -243,6 +248,9 @@ describe("G3D-PROPS terrain props", () => {
     const tallH = tall.boundingBox!.max.y - tall.boundingBox!.min.y;
     for (const p of pines.filter((q) => q.kind === "pineTall")) expect(tallH * p.scale * p.stretch).toBeLessThan(0.5);
     for (const p of pines) expect(p.scale).toBeLessThanOrEqual(0.86);
+    // R21: denser forest must not grow taller — every pine stays within R20's max scale per species
+    const r20Max = { pineTall: 0.78, pineRound: 0.8, pineSmall: 0.86 } as Record<string, number>;
+    for (const p of pines) expect(p.scale, p.kind).toBeLessThanOrEqual(r20Max[p.kind]!);
     tall.dispose();
     const ore = tiles.find((t) => t.terrain === "ore")!;
     for (const p of placeTileProps(ore, PROP_COUNTS.high.ore!).filter((q) => q.kind === "boulder")) {
@@ -270,6 +278,12 @@ describe("G3D-PROPS terrain props", () => {
           expect(n, `${tier} ${tile.q},${tile.r}`).toBeLessThanOrEqual(5);
         }
         if (tier === "high") expect(sizes.size).toBe(2);
+        // R21: in-clump spread — no two sheep closer than ~0.2 (one wool cloud otherwise)
+        for (let i = 0; i < sheep.length; i += 1) {
+          for (let j = i + 1; j < sheep.length; j += 1) {
+            expect(Math.hypot(sheep[i]!.x - sheep[j]!.x, sheep[i]!.z - sheep[j]!.z)).toBeGreaterThanOrEqual(0.195);
+          }
+        }
       }
     }
     expect(SHEEP_CLUMP_GAP).toBeGreaterThan(SHEEP_CLUMP_RADIUS * 2);

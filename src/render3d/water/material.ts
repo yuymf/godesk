@@ -116,20 +116,22 @@ const FRAG_COLOR = [
   "  float strokeGate = smoothstep(0.32, 0.58, strokeRaw);",
   "  strokeGate *= smoothstep(0.18, 0.6, foamN2);",
   // 极弱底 + 更多窄浪脊带（默认机位可读密度，非软晕宽带）。
-  "  float foamSoft = (1.0 - smoothstep(0.0, 0.08, d)) * uTideFoam * 0.07;",
+  // R21: less cliff-foot sparkle — a soft light surf band carries the shoreline; ridges/crest/lace are
+  // dimmer, lower-contrast and off-white instead of pure-white flecks gated by the fine stroke noise.
+  "  float foamSoft = (1.0 - smoothstep(0.0, 0.1, d)) * uTideFoam * 0.2;",
   "  float r1 = exp(-pow((d - 0.008) / 0.0058, 2.0));",
   "  float r2 = exp(-pow((d - 0.024) / 0.0075, 2.0));",
   "  float r3 = exp(-pow((d - 0.046) / 0.009, 2.0));",
   "  float r4 = exp(-pow((d - 0.074) / 0.011, 2.0));",
   "  float rLace = exp(-pow((d - 0.108) / 0.014, 2.0));",
   "  float rSpray = exp(-pow((d - 0.145) / 0.018, 2.0));",
-  "  float ridges = (r1 * 1.55 + r2 * 1.25 + r3 * 0.95 + r4 * 0.65) * uTideFoam * mix(0.1, 1.0, strokeGate);",
-  "  float lace = (rLace * 0.85 + rSpray * 0.5) * uTideFoam * strokeGate * (0.28 + 0.72 * foamN);",
-  "  float crest = r1 * mix(0.08, 1.35, strokeGate) * uTideFoam * (0.6 + 0.4 * foamN3);",
-  "  waterCol = mix(waterCol, vec3(0.84, 0.9, 0.89), foamSoft);",
-  "  waterCol = mix(waterCol, vec3(0.95, 0.98, 0.97), ridges * (0.5 + 0.5 * foamN));",
-  "  waterCol = mix(waterCol, vec3(1.0, 1.0, 0.995), crest);",
-  "  waterCol = mix(waterCol, vec3(0.91, 0.96, 0.95), lace);",
+  "  float ridges = (r1 * 0.95 + r2 * 0.8 + r3 * 0.6 + r4 * 0.4) * uTideFoam * mix(0.35, 0.8, strokeGate);",
+  "  float lace = (rLace * 0.5 + rSpray * 0.3) * uTideFoam * strokeGate * (0.4 + 0.6 * foamN);",
+  "  float crest = r1 * mix(0.06, 0.5, strokeGate) * uTideFoam * (0.7 + 0.3 * foamN3);",
+  "  waterCol = mix(waterCol, vec3(0.8, 0.9, 0.88), foamSoft);",
+  "  waterCol = mix(waterCol, vec3(0.88, 0.95, 0.93), clamp(ridges, 0.0, 0.85) * (0.6 + 0.4 * foamN));",
+  "  waterCol = mix(waterCol, vec3(0.93, 0.97, 0.96), clamp(crest, 0.0, 0.7));",
+  "  waterCol = mix(waterCol, vec3(0.86, 0.94, 0.92), lace);",
   "  diffuseColor.rgb = waterCol;",
   "}",
 ].join("\n");
@@ -191,7 +193,7 @@ export function createTideWaterMaterial(
       .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>\n${FRAG_NORMAL}`);
   };
   material.customProgramCacheKey = () =>
-    `tide-r20-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
+    `tide-r21-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
 
   return {
     material,

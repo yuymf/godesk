@@ -1141,7 +1141,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
     "id": "texture/t05-reef/512/baseColor",
     "file": "assets/textures/pbr/t05-reef/512/baseColor.ktx2",
     "kind": "texture",
-    "bytes": 29462,
+    "bytes": 27847,
     "tier": "high-medium",
     "source": "ai-generated",
     "license": {
@@ -1150,7 +1150,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "author": "Grok Bot GenerateImage（AI 生成，俞孟凡 / GoDesk 委托）",
       "obtainedAt": "2026-10-08",
       "modified": true,
-      "modificationNote": "AI 生图（R19 虹夏 scree）；源图 assets/ai-textures/r19/scree.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=9 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
+      "modificationNote": "AI 生图（R19 虹夏 scree）；源图 assets/ai-textures/r19/scree.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R21 浅灰岩化（scripts/bake-ai-r20.py light_rock：去饱和 80%、略冷调、gamma 0.62 提亮，灰褐→浅灰岩）→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=9 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
       "orderRef": "n/a",
       "status": "cleared",
       "legalReview": "pending-G3D-17"
@@ -1198,7 +1198,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
     "id": "texture/t05-reef/256/baseColor",
     "file": "assets/textures/pbr/t05-reef/256/baseColor.ktx2",
     "kind": "texture",
-    "bytes": 9361,
+    "bytes": 8975,
     "tier": "low",
     "source": "ai-generated",
     "license": {
@@ -1207,7 +1207,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "author": "Grok Bot GenerateImage（AI 生成，俞孟凡 / GoDesk 委托）",
       "obtainedAt": "2026-10-08",
       "modified": true,
-      "modificationNote": "AI 生图（R19 虹夏 scree）；源图 assets/ai-textures/r19/scree.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=9 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→回卷填充 Lanczos 缩至 256²→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
+      "modificationNote": "AI 生图（R19 虹夏 scree）；源图 assets/ai-textures/r19/scree.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R21 浅灰岩化（scripts/bake-ai-r20.py light_rock：去饱和 80%、略冷调、gamma 0.62 提亮，灰褐→浅灰岩）→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=9 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→回卷填充 Lanczos 缩至 256²→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
       "orderRef": "n/a",
       "status": "cleared",
       "legalReview": "pending-G3D-17"
@@ -2826,7 +2826,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
     "id": "texture/ai-r19/harbor-sign",
     "file": "assets/textures/ai-r19/harbor-sign-256.webp",
     "kind": "texture",
-    "bytes": 7674,
+    "bytes": 9174,
     "tier": "all",
     "source": "ai-generated",
     "license": {
@@ -2835,7 +2835,7 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "author": "Grok Bot GenerateImage（AI 生成，俞孟凡 / GoDesk 委托）",
       "obtainedAt": "2026-10-08",
       "modified": true,
-      "modificationNote": "AI 生图（R19 虹夏）派生；源图 assets/ai-textures/r19/harbor-sign.webp→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=12 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，仅 RGB，alpha 原样保留）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→Lanczos 256²→WebP q85 RGBA；运行时 island.ts 在其上绘「2:1/3:1 + 资源字」（canvas）",
+      "modificationNote": "AI 生图（R19 虹夏）派生；源图 assets/ai-textures/r19/harbor-sign.webp→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=12 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，仅 RGB，alpha 原样保留）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→R21 复原外圈木框（源图外圈 ~34 px 按 0.8× 明度回贴 + 5 px 深色描边，Kuwahara 后保留深色外框）→Lanczos 256²→WebP q85 RGBA；运行时 island.ts 在其上绘「2:1/3:1 + 资源字」（canvas）",
       "orderRef": "n/a",
       "status": "cleared",
       "legalReview": "pending-G3D-17"

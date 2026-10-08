@@ -98,7 +98,8 @@ export const TERRAIN_MATERIALS: Record<string, MaterialToken> = {
   brick: { base: "#bc6646", roughness: 0.98, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 1.65, pbrTint: 0.6, brush: 0.85 },
   sheep: { base: "#a3c67e", roughness: 0.98, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 1.7, pbrTint: 0.6, brush: 0.85 },
   wheat: { base: "#d8c070", roughness: 0.97, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 1.7, pbrTint: 0.6, brush: 0.85 },
-  ore: { base: "#7a7f86", roughness: 0.96, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 1.55, pbrTint: 0.6, brush: 0.85 },
+  // R21: light grey rock (was #7a7f86 grey-brown); scree texture is also desaturated + lifted in the bake.
+  ore: { base: "#a4abb3", roughness: 0.96, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 1.55, pbrTint: 0.62, brush: 0.85 },
   desert: { base: "#d2c29e", roughness: 0.98, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 1.45, pbrTint: 0.65, brush: 0.85 },
 };
 
@@ -183,6 +184,14 @@ export function pbrResolutionFor(tier: "high" | "medium" | "low"): 512 | 256 {
 
 /** 地块外接半径（与 SceneHost 六棱柱一致）。 */
 export const TILE_RADIUS = 0.95;
+/**
+ * R21 · 地块顶面实际外接半径。R20 前为 TILE_RADIUS − 0.04 = 0.91（相邻格缝 ≈ √3·0.09 ≈ 0.16，
+ * 露出深褐顶盖 → 像格子棋盘）；R21 放大到 0.99（缝 ≈ 0.017，近乎相接），并在地块笔触 shader 里做边缘软过渡。
+ * TILE_RADIUS 仍用于相机/水岸距离场/islandBounds，不随之改动。
+ */
+export const TILE_FACE_RADIUS = 0.99;
+/** R21 · 顶面内切半径（边心距）= TILE_FACE_RADIUS·√3/2，供 shader 软边带使用。 */
+export const TILE_FACE_APOTHEM = TILE_FACE_RADIUS * (Math.sqrt(3) / 2);
 
 /** G3D-ART-2：点数筹码水平放大倍数（0.22 半径只占六角宽 23%，远看读不出数字；放大到 ≈42%，G3D-ART-3 由 1.6 调到 1.8 保证 iPhone 低档远处筹码可读）。 */
 export const NUMBER_TOKEN_SCALE = 1.45;

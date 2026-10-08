@@ -66,26 +66,28 @@ type Counts = Partial<Record<PropKind, number>>;
 export const PROP_COUNTS: Record<RenderTierId, Record<string, Counts>> = {
   high: {
     // R20: sparse, low, ground-hugging forest / ore so the hex colour face reads first at camera a.
-    wood: { pineTall: 8, pineRound: 10, pineSmall: 12, canopy: 5, blobshadow: 30 },
+    // R21: low dense conifer clusters — more, smaller trees (none taller than R20), dark-green field first.
+    wood: { pineTall: 22, pineRound: 10, pineSmall: 24, canopy: 4, blobshadow: 44 },
     // R20: 8 sheep in 2 clumps (3–5 each) — see SHEEP_CLUMPS.
     sheep: { trough: 1, sheep: 8, blobshadow: 1 },
     ore: { boulder: 4, pebble: 8, blobshadow: 4 },
     brick: { clay: 8, bricks: 4 },
-    wheat: { wheatrow: 38, sheaf: 5 },
+    // R21: lower, sparser rows — the golden wheat-field texture reads as a colour field between them.
+    wheat: { wheatrow: 16, sheaf: 2 },
     desert: { dune: 5, pebble: 9 },
   },
   medium: {
-    wood: { pineTall: 5, pineRound: 7, pineSmall: 9, canopy: 3, blobshadow: 21 },
+    wood: { pineTall: 14, pineRound: 7, pineSmall: 16, canopy: 3, blobshadow: 30 },
     sheep: { trough: 1, sheep: 6, blobshadow: 1 },
     ore: { boulder: 3, pebble: 5, blobshadow: 3 },
     brick: { clay: 5, bricks: 3 },
-    wheat: { wheatrow: 24, sheaf: 3 },
+    wheat: { wheatrow: 10, sheaf: 1 },
     desert: { dune: 3, pebble: 5 },
   },
   // R20: phone power-save keeps a few short trees on forest hexes (2 instanced meshes, no shadows)
   // so wood never reads as bare brown ground; every other terrain stays prop-free.
   low: {
-    wood: { pineRound: 5, pineSmall: 8 },
+    wood: { pineRound: 5, pineSmall: 12 },
   },
 };
 
@@ -98,14 +100,15 @@ export const SHEEP_CLUMPS: Record<number, ReadonlyArray<readonly number[]>> = {
   3: [[3]],
 };
 /** 簇内羊间距 / 簇半径 / 簇心最小间距（簇间留空）。 */
-export const SHEEP_CLUMP_SPACING = 0.18;
-export const SHEEP_CLUMP_RADIUS = 0.24;
-export const SHEEP_CLUMP_GAP = 0.8;
+// R21: clumps spread a little (0.18/0.24/0.8 → 0.2/0.27/0.86) so a 5-clump reads as 5 sheep, not one wool cloud.
+export const SHEEP_CLUMP_SPACING = 0.2;
+export const SHEEP_CLUMP_RADIUS = 0.27;
+export const SHEEP_CLUMP_GAP = 0.86;
 
 /** 道具间最小间距（相邻两件取均值）。 */
 const SPACING: Record<PropKind, number> = {
   // R11: ~12% tighter pack so higher counts still land inside the hex.
-  pineTall: 0.12, pineRound: 0.13, pineSmall: 0.1, canopy: 0.14, sheep: SHEEP_CLUMP_SPACING, trough: 0.2, boulder: 0.16, clay: 0.18, bricks: 0.15, sheaf: 0.105, wheatrow: 0.088, dune: 0.26, pebble: 0.065, blobshadow: 0.07,
+  pineTall: 0.095, pineRound: 0.105, pineSmall: 0.08, canopy: 0.14, sheep: SHEEP_CLUMP_SPACING, trough: 0.2, boulder: 0.16, clay: 0.18, bricks: 0.15, sheaf: 0.105, wheatrow: 0.088, dune: 0.26, pebble: 0.065, blobshadow: 0.07,
 };
 const CASTS: Record<PropKind, boolean> = {
   pineTall: true, pineRound: true, pineSmall: true, canopy: false, sheep: false, trough: true, boulder: true, clay: false, bricks: true, sheaf: true, wheatrow: true, dune: false, pebble: false, blobshadow: false,
@@ -368,12 +371,12 @@ function troughGeometry(): BufferGeometry {
 /** R20 山地：低矮贴地的岩块群（≈R19 一半高、体量 ~0.7×），岩色贴 ore tile，根脚溶入灰石面。 */
 function boulderGeometry(): BufferGeometry {
   return merged([
-    paint(jag(at(new DodecahedronGeometry(0.085, 1), 0, 0.035, 0, 1.4, 0.62, 1.15), 0.14, 1), "#747a82", 0.26),
+    paint(jag(at(new DodecahedronGeometry(0.085, 1), 0, 0.035, 0, 1.4, 0.62, 1.15), 0.14, 1), "#a7adb4", 0.26),
     paint(jag(at(new DodecahedronGeometry(0.06, 1), 0.075, 0.06, -0.035, 1.1, 0.78, 0.95, 0.5), 0.12, 3), "#6a7078", 0.24),
     paint(jag(at(new DodecahedronGeometry(0.045, 0), -0.06, 0.075, 0.04, 1.0, 0.8, 0.9, -0.4), 0.1, 5), "#848b93", 0.22),
     paint(jag(at(new DodecahedronGeometry(0.04, 0), -0.09, 0.02, 0.07, 1.2, 0.6, 1.0, 1.1), 0.1, 2), "#62676e", 0.24),
     // ground-bleed skirt
-    grad(at(new CircleGeometry(0.12, 10), 0, 0.003, 0, 1.2, 1, 1.1).rotateX(-Math.PI / 2), "#6a7078", "#7a7f86", 0, 0.01, 0.1),
+    grad(at(new CircleGeometry(0.12, 10), 0, 0.003, 0, 1.2, 1, 1.1).rotateX(-Math.PI / 2), "#9ca2a9", "#b0b6bc", 0, 0.01, 0.1),
   ]);
 }
 
@@ -417,7 +420,7 @@ function sheafGeometry(): BufferGeometry {
 function wheatRowGeometry(): BufferGeometry {
   const parts: BufferGeometry[] = [
     // base band closer to tile albedo (less dark toy soil strip)
-    grad(at(new BoxGeometry(0.32, 0.038, 0.12), 0, 0.019, 0), "#b09838", "#d4b84a", 0, 0.038),
+    grad(at(new BoxGeometry(0.32, 0.024, 0.12), 0, 0.012, 0), "#c0a440", "#d8bc50", 0, 0.024),
     grad(at(new BoxGeometry(0.3, 0.012, 0.03), 0, 0.01, 0), "#9a8430", "#b09838", 0, 0.012),
     grad(at(new CircleGeometry(0.16, 10), 0, 0.003, 0, 1.15, 1, 0.85).rotateX(-Math.PI / 2), "#c4a840", "#d4b84a", 0, 0.01, 0.08),
   ];
@@ -426,15 +429,17 @@ function wheatRowGeometry(): BufferGeometry {
     const x = -0.14 + i * 0.035;
     for (let si = 0; si < sides.length; si += 1) {
       const z = sides[si]!;
-      const stalkH = 0.12 + ((i * 17 + si * 7 + 3) % 5) * 0.022;
+      // R21: low stubble (0.055–0.103, was 0.12–0.208) — rows sit in the golden field, not a hedge.
+      const stalkH = 0.055 + ((i * 17 + si * 7 + 3) % 5) * 0.012;
+      const b = 0.024;
       parts.push(grad(
-        at(new CylinderGeometry(0.007, 0.01, stalkH, 4, 1, true), x, 0.038 + stalkH / 2, z),
-        "#a89030", "#d4b84a", 0.038, 0.038 + stalkH,
+        at(new CylinderGeometry(0.006, 0.009, stalkH, 4, 1, true), x, b + stalkH / 2, z),
+        "#b89c38", "#d8bc50", b, b + stalkH,
       ));
-      const headR = 0.02 + ((i * 11 + si) % 3) * 0.005;
+      const headR = 0.016 + ((i * 11 + si) % 3) * 0.004;
       parts.push(grad(
-        at(new SphereGeometry(headR, 5, 4), x, 0.038 + stalkH + headR * 0.7, z, 0.75, 1.55, 0.75),
-        "#c8ac40", "#e8d068", 0.038 + stalkH - 0.02, 0.038 + stalkH + headR * 1.2,
+        at(new SphereGeometry(headR, 5, 4), x, b + stalkH + headR * 0.7, z, 0.75, 1.3, 0.75),
+        "#d0b448", "#ecd474", b + stalkH - 0.016, b + stalkH + headR * 1.1,
       ));
     }
   }
@@ -509,6 +514,7 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
   const out: PropPlacement[] = [];
   const taken: Array<{ x: number; z: number; s: number }> = [];
   const free = (x: number, z: number, s: number) => taken.every((t) => Math.hypot(t.x - x, t.z - z) >= (t.s + s) / 2);
+  const clusterCentres: Array<[number, number]> = [];
   for (const kind of kinds) {
     const want = counts[kind] ?? 0;
     if (want <= 0) continue;
@@ -540,14 +546,28 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
       placeSheepClumps(tile, want, rand, taken, free, out);
       continue;
     }
+    // R21: wood trees grow in a few dense conifer clusters (70% of candidates near a cluster centre).
+    if (tile.terrain === "wood" && clusterCentres.length === 0) {
+      for (let k = 0; k < 400 && clusterCentres.length < 5; k += 1) {
+        const cx = (rand() * 2 - 1) * 0.62;
+        const cz = (rand() * 2 - 1) * 0.62;
+        if (inPropRegion(cx, cz) && clusterCentres.every(([x, z]) => Math.hypot(x - cx, z - cz) > 0.42)) clusterCentres.push([cx, cz]);
+      }
+    }
     let placed = 0;
-    for (let attempt = 0; placed < want && attempt < 1200; attempt += 1) {
+    for (let attempt = 0; placed < want && attempt < 1600; attempt += 1) {
       let dx: number;
       let dz: number;
       if (kind === "wheatrow") {
         const c = candidates[attempt];
         if (!c) break;
         [dx, dz] = c;
+      } else if (isPine(kind) && clusterCentres.length > 0 && rand() < 0.7) {
+        const [cx, cz] = clusterCentres[Math.floor(rand() * clusterCentres.length)]!;
+        const a = rand() * Math.PI * 2;
+        const r = Math.sqrt(rand()) * 0.3;
+        dx = cx + Math.cos(a) * r;
+        dz = cz + Math.sin(a) * r;
       } else {
         dx = (rand() * 2 - 1) * 0.8;
         dz = (rand() * 2 - 1) * 0.8;
@@ -567,7 +587,7 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
         yaw: kind === "wheatrow" ? -rowYaw + (rand() - 0.5) * 0.06 : rand() * Math.PI * 2,
         // R20: smaller / lower trees + boulders (ground-hugging, hex face reads first).
         scale: isPine(kind)
-          ? (kind === "pineTall" ? 0.6 + rand() * 0.18 : kind === "pineRound" ? 0.62 + rand() * 0.18 : 0.66 + rand() * 0.2)
+          ? (kind === "pineTall" ? 0.52 + rand() * 0.18 : kind === "pineRound" ? 0.54 + rand() * 0.16 : 0.58 + rand() * 0.2)
           : kind === "canopy" ? 0.62 + rand() * 0.18
           : kind === "boulder" ? 0.8 + rand() * 0.25
           : kind === "clay" || kind === "bricks" ? 1.0 + rand() * 0.28
@@ -575,7 +595,7 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
         stretch: isPine(kind)
           ? (kind === "pineTall" ? 0.82 + rand() * 0.14 : kind === "pineRound" ? 0.78 + rand() * 0.14 : 0.8 + rand() * 0.14)
           : kind === "canopy" ? 0.6 + rand() * 0.2
-          : kind === "wheatrow" ? 1.05 + rand() * 0.12
+          : kind === "wheatrow" ? 0.92 + rand() * 0.1
           : kind === "boulder" ? 0.85 + rand() * 0.2
           : kind === "clay" ? 1.05 + rand() * 0.2
           : 0.92 + rand() * 0.16,
@@ -697,16 +717,17 @@ export function layoutProps(tiles: readonly PropTile[], tier: RenderTierId): Map
 
 /** 树种底调：贴近 wood tile；再叠 instance 抖动。 */
 const PINE_SPECIES_TONE: Record<"pineTall" | "pineRound" | "pineSmall", Color> = {
-  pineTall: new Color(0.78, 0.92, 0.78),
-  pineRound: new Color(0.95, 1.0, 0.82),
-  pineSmall: new Color(0.88, 0.95, 0.75),
+  // R21: ~35% darker / cooler so the dense low stand reads as a dark-green field at camera a.
+  pineTall: new Color(0.5, 0.64, 0.53),
+  pineRound: new Color(0.58, 0.68, 0.53),
+  pineSmall: new Color(0.54, 0.65, 0.5),
 };
-const PEBBLE_TINT: Record<string, Color> = { desert: new Color("#e6d2a6"), ore: new Color("#9a9ea4") };
+const PEBBLE_TINT: Record<string, Color> = { desert: new Color("#e6d2a6"), ore: new Color("#c6cacf") };
 /** R17: instance multiply biased toward TERRAIN_MATERIALS.base — sheep/meadow continuous dissolve. */
 const TERRAIN_ALBEDO: Record<string, Color> = {
   wood: new Color("#2f6b3a"),
   sheep: new Color("#8fbf6a"),
-  ore: new Color("#6a6f78"),
+  ore: new Color("#a9afb7"),
   brick: new Color("#b85a3a"),
   wheat: new Color("#d4b84a"),
   desert: new Color("#c9b896"),
@@ -727,7 +748,8 @@ function toneFor(p: PropPlacement, out: Color): Color {
   // R19: sheep stay white (no meadow blend) — the flock must read as sheep, not shrubs.
   if (albedo && p.kind !== "blobshadow" && p.kind !== "trough" && p.kind !== "sheep") {
     // R17: sheep strongly → meadow tile; pines/canopy keep dissolve; hex-face continuous with props
-    const blend = isPine(p.kind) || p.kind === "canopy" ? 0.34
+    // R21: pines 0.34 → 0.42 toward the dark wood albedo (dark-green field at camera a)
+    const blend = isPine(p.kind) || p.kind === "canopy" ? 0.42
       : p.kind === "wheatrow" || p.kind === "sheaf" ? 0.32
       : p.kind === "boulder" || p.kind === "clay" || p.kind === "bricks" ? 0.36
       : 0.16;

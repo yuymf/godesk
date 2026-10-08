@@ -444,8 +444,8 @@ export function coastWallGeometry(tiles: readonly IslandTile[]): BufferGeometry 
       const pb = [c[0]! + Math.cos(a1) * HEX_LAYOUT_RADIUS, c[1]!, c[2]! + Math.sin(a1) * HEX_LAYOUT_RADIUS];
       positions.push(...c as number[], ...pb as number[], ...pa as number[]);
       uvs.push(0.5, 0.05, 0.5, 0.05, 0.5, 0.05);
-      // 顶盖压暗：格子之间只露一道深色细缝（参照的地块接缝）。
-      for (let k = 0; k < 3; k += 1) colors.push(0.3, 0.26, 0.22);
+      // R21：顶盖改浅暖土色——格缝只剩一道浅色发丝缝（R20 前 0.3/0.26/0.22 深褐 → 像棋盘格）。
+      for (let k = 0; k < 3; k += 1) colors.push(0.8, 0.72, 0.56);
     }
   }
   const geom = new BufferGeometry();

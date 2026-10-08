@@ -15,6 +15,7 @@ import {
   type Texture,
 } from "three";
 import type { MaterialPattern, MaterialToken, PbrSetId } from "./tokens";
+import { TILE_FACE_APOTHEM } from "./tokens";
 
 export const PATTERN_IDS: Record<MaterialPattern, number> = {
   none: 0,
@@ -138,11 +139,12 @@ export function installPattern(material: MeshStandardMaterial, pattern: Material
     shader.uniforms.uGdPattern = strength;
     if (brush > 0) shader.uniforms.uGdBrush = brushUniform;
     shader.vertexShader = shader.vertexShader
-      .replace("#include <common>", "#include <common>\nvarying vec3 vGdWorld;")
+      .replace("#include <common>", `#include <common>\nvarying vec3 vGdWorld;${brush > 0 ? "\nvarying vec2 vGdLocal;\nvarying float vGdUp;" : ""}`)
       .replace(
         "#include <project_vertex>",
         [
           "#include <project_vertex>",
+          ...(brush > 0 ? ["vGdLocal = position.xz;", "vGdUp = normal.y;"] : []),
           "vec4 gdWorld = vec4(transformed, 1.0);",
           "#ifdef USE_INSTANCING",
           "  gdWorld = instanceMatrix * gdWorld;",
@@ -151,7 +153,10 @@ export function installPattern(material: MeshStandardMaterial, pattern: Material
         ].join("\n"),
       );
     shader.fragmentShader = shader.fragmentShader
-      .replace("#include <common>", `#include <common>\n${PATTERN_GLSL}${brush > 0 ? BRUSH_GLSL : ""}`)
+      .replace(
+        "#include <common>",
+        `#include <common>\n${PATTERN_GLSL}${brush > 0 ? `varying vec2 vGdLocal;\nvarying float vGdUp;\n${BRUSH_GLSL}` : ""}`,
+      )
       .replace(
         "#include <color_fragment>",
         [
@@ -166,6 +171,13 @@ export function installPattern(material: MeshStandardMaterial, pattern: Material
                 "diffuseColor.rgb *= mix(vec3(1.0), mix(vec3(0.9, 0.99, 1.1), vec3(1.1, 1.0, 0.86), gdB.y), uGdBrush * gdB.z);",
                 // R19: picture-book tone — pull terrain albedo ~14% toward its luminance (less saturated).
                 "diffuseColor.rgb = mix(vec3(dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722))), diffuseColor.rgb, 0.86);",
+                // R21 soft hex edge: within ~0.2 of the face edge, albedo eases toward one shared light warm
+                // earth tone (same for every terrain) so neighbouring tiles melt into each other — no grid lines.
+                "float gdHexM = max(abs(vGdLocal.y), max(abs(0.8660254 * vGdLocal.x + 0.5 * vGdLocal.y), abs(0.8660254 * vGdLocal.x - 0.5 * vGdLocal.y)));",
+                `float gdEdge = smoothstep(${(TILE_FACE_APOTHEM - 0.2).toFixed(4)}, ${TILE_FACE_APOTHEM.toFixed(4)}, gdHexM);`,
+                // top face only — tile sides keep their own darker material so cliffs / shoreline stay readable
+                "gdEdge = gdEdge * gdEdge * (0.7 + 0.6 * gdB.x) * smoothstep(0.5, 0.9, vGdUp);",
+                "diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.72, 0.65, 0.5), clamp(gdEdge, 0.0, 1.0) * 0.45 * uGdBrush);",
               ]
             : []),
         ].join("\n"),

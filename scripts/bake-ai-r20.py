@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""R20 · painterly re-bake of 虹夏's 8 AI textures (sources unchanged: assets/ai-textures/r19/*.webp).
+"""R20/R21 · painterly re-bake of 虹夏's 8 AI textures (sources unchanged: assets/ai-textures/r19/*.webp).
 
 R19 baked the AI sources straight to KTX2, so close-ups read as photo-detailed ground under the
 oil-dab shader. R20 first pushes every source into the same low-frequency painterly language as
@@ -8,6 +8,8 @@ the dabs, then bakes exactly like R19 (same toktx ETC1S flags, same output paths
   0. moss recolour — forest-floor only: russet leaf litter → mossy needle-floor greens (HSV hue
                      remap into 0.20–0.34, sat ×0.55, value ×0.85) so sparse R20 forests never read as
                      brown ground (low tier included)
+  0b. light rock   — R21, scree (ore hex) only: grey-brown → light grey rock (desaturate 80%, cool
+                     tint, gamma 0.62 lift) before colour-blocking
   1. colour-block  — median-cut palette quantise (no dither) to K flat colours (posterise)
   2. kuwahara      — large-radius soft Kuwahara (r=9 @512, inverse-variance quadrant weights,
                      wrap-padded so tiles stay seamless), then a second r=5 pass
@@ -15,7 +17,9 @@ the dabs, then bakes exactly like R19 (same toktx ETC1S flags, same output paths
 
   terrain (6) → assets/textures/pbr/t0{1..6}-*/{512,256}/baseColor.ktx2
   cliff-rock  → assets/textures/ai-r19/cliff-rock-512x256.webp (horizontal wrap only)
-  harbor-sign → assets/textures/ai-r19/harbor-sign-256.webp (RGB processed, alpha kept)
+  harbor-sign → assets/textures/ai-r19/harbor-sign-256.webp (RGB processed, alpha kept; R21: the
+                outer ~34 px wooden rim is restored from the source at 0.8× value + a dark 5 px
+                outline, so the sign keeps its dark frame after Kuwahara)
 
 Usage: TOKTX=/home/box/.local/ktx/usr/bin/toktx python3 scripts/bake-ai-r20.py [--preview DIR]
 """
@@ -55,6 +59,39 @@ def moss_recolour(rgb: np.ndarray) -> np.ndarray:
     h2 = np.clip(h2, 0.2, 0.34)
     out = np.dstack([h2, np.clip(s * 0.55, 0, 1), np.clip(v * 0.85, 0, 1)]) * 255.0
     return np.asarray(Image.fromarray(out.astype(np.uint8), "HSV").convert("RGB"), dtype=np.float64)
+
+
+def light_rock(rgb: np.ndarray) -> np.ndarray:
+    lum = rgb @ np.array([0.2126, 0.7152, 0.0722])
+    grey = rgb * 0.2 + lum[..., None] * 0.8
+    grey = grey * np.array([0.97, 1.0, 1.04])
+    return np.clip(255.0 * np.power(np.clip(grey, 0, 255) / 255.0, 0.62), 0, 255)
+
+
+def edge_distance(alpha: np.ndarray, max_d: int) -> np.ndarray:
+    """Chessboard-ish distance (px) from the transparent edge, capped at max_d (iterative erosion)."""
+    mask = alpha > 127
+    dist = np.where(mask, max_d, 0).astype(np.float64)
+    cur = mask.copy()
+    for d in range(max_d):
+        er = cur.copy()
+        er[1:, :] &= cur[:-1, :]
+        er[:-1, :] &= cur[1:, :]
+        er[:, 1:] &= cur[:, :-1]
+        er[:, :-1] &= cur[:, 1:]
+        dist[cur & ~er] = d
+        cur = er
+    return dist
+
+
+def restore_rim(painted: np.ndarray, source_rgba: np.ndarray, rim: int = 34) -> np.ndarray:
+    d = edge_distance(source_rgba[..., 3], rim + 2)
+    src = source_rgba[..., :3]
+    t = np.clip((d - (rim - 6)) / 6.0, 0, 1)[..., None]  # 0 = rim (source), 1 = painted interior
+    out = (src * 0.8) * (1 - t) + painted * t
+    outline = np.clip(1 - d / 5.0, 0, 1)[..., None] * (source_rgba[..., 3:4] > 127)
+    out = out * (1 - 0.45 * outline)
+    return np.clip(out, 0, 255).astype(np.uint8)
 
 
 def colour_block(rgb: np.ndarray, k: int) -> np.ndarray:
@@ -139,6 +176,8 @@ def main() -> None:
             assert src.shape[:2] == (512, 512), (name, src.shape)
             if name == "forest-floor":
                 src = moss_recolour(src)
+            if name == "scree":
+                src = light_rock(src)
             im = Image.fromarray(painterly(src, LEVELS[name]), "RGB")
             if PREVIEW:
                 im.save(PREVIEW / f"{name}.png")
@@ -152,7 +191,7 @@ def main() -> None:
     cliff_im = Image.fromarray(painterly(cliff, LEVELS["cliff-rock"], wrap_y=False), "RGB")
     sign = Image.open(SRC / "harbor-sign.webp").convert("RGBA")
     sign_arr = np.asarray(sign, dtype=np.float64)
-    sign_rgb = painterly(sign_arr[..., :3], LEVELS["harbor-sign"], wrap_y=False)
+    sign_rgb = restore_rim(painterly(sign_arr[..., :3], LEVELS["harbor-sign"], wrap_y=False).astype(np.float64), sign_arr)
     sign_im = Image.fromarray(np.dstack([sign_rgb, sign_arr[..., 3].astype(np.uint8)]), "RGBA")
     if PREVIEW:
         cliff_im.save(PREVIEW / "cliff-rock.png")
