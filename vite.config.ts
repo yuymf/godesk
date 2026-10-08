@@ -48,6 +48,10 @@ export default defineConfig({
           if (/\/src\/render3d\/(hex-dressing|island|terrain-props)\.ts$/.test(normalized)) {
             return "board-dressing";
           }
+          // R25: CameraDirector + ortho framing is hex/Tidewell-only; keep out of render3d core 210KB.
+          if (normalized.endsWith("/src/render3d/camera-rig.ts")) {
+            return "g3d-hexkit";
+          }
           if (normalized.includes("/node_modules/three/")) {
             return "render3d";
           }
@@ -74,7 +78,7 @@ export default defineConfig({
           }
           // G3D-JUDGE-PIECES：hex 盘专用（镜头导演 / 骰盘角标 / mapper / 点数贴花 / 命中区 / 程序化棋子入口），
           // 与 GLB 并行懒加载，通用桌面不加载；单列 chunk + 独立预算（scripts/check-size-budgets.mjs）。
-          if (facade.includes("/src/render3d/hex-kit")) {
+          if (chunkInfo.name === "g3d-hexkit" || facade.includes("/src/render3d/hex-kit")) {
             return "assets/g3d-hexkit-[hash].js";
           }
           // `?judge=1` 评审机位（dev-only）懒加载，不进生产渲染核心。

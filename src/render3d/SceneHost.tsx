@@ -6,6 +6,7 @@ import {
   ExtrudeGeometry,
   Mesh,
   Object3D,
+  OrthographicCamera,
   PerspectiveCamera,
   Scene,
   Shape,
@@ -38,7 +39,11 @@ import type { SceneModel, SceneNode } from "./scene-model";
 import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
 import { markInteractive, perfModeEnabled, perfRecorder } from "./perf";
 import { applyDieOrientation, idleBob, MotionController, prefersReducedMotion } from "./motion";
-import type { CameraDirector, CameraRigApi } from "./camera-rig";
+import type { CameraDirector, CameraRigApi, PlayCamera } from "./camera-rig";
+
+function isOrthographicCamera(camera: PlayCamera): camera is OrthographicCamera {
+  return (camera as OrthographicCamera).isOrthographicCamera === true;
+}
 import type { DiceOverlay } from "./dice-overlay";
 /**
  * Hex-board-only code (camera director, dice overlay, mapper, number decals,
@@ -498,7 +503,7 @@ export function SceneHost({
   const registryRef = useRef(new Map<string, Object3D>());
   const contentRootRef = useRef<Object3D | null>(null);
   const reconcileHostRef = useRef<ReturnType<typeof buildHost> | null>(null);
-  const cameraRef = useRef<PerspectiveCamera | null>(null);
+  const cameraRef = useRef<PlayCamera | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const hitRootRef = useRef<Object3D | null>(null);
   const motionRef = useRef<MotionController | null>(null);
@@ -632,7 +637,11 @@ export function SceneHost({
     sceneRef.current = scene;
     scene.background = new Color(SCENE_TOKENS.sky.horizon);
 
-    const camera = new PerspectiveCamera(40, 1, 0.1, 100);
+    // R25: Tidewell / hex harbor play uses OrthographicCamera (settlecoast-like).
+    // Tabletop adapter path (othello etc.) keeps PerspectiveCamera + RenderSpec FOV.
+    const camera: PlayCamera = bootHexRef.current
+      ? new OrthographicCamera(-7, 7, 5.7, -5.7, 0.1, 120)
+      : new PerspectiveCamera(40, 1, 0.1, 100);
     camera.position.set(0, 9, 12);
 
     setPbrState("pending");
@@ -709,13 +718,46 @@ export function SceneHost({
       });
       (globalThis as { __g3dJudge?: unknown }).__g3dJudge = {
         presets: JUDGE_PRESETS,
-        /** R24+: polar/base/fit + live FOV for judge φ acceptance. */
-        framing(): { polarDeg: number; base: number; fit: number; fov: number; azimuthDeg: number } | null {
+        /** R25: polar/base/fit + camera type / ortho frustum for judge φ acceptance. */
+        framing(): {
+          polarDeg: number;
+          base: number;
+          fit: number;
+          fov: number | null;
+          azimuthDeg: number;
+          cameraType: "orthographic" | "perspective";
+          left?: number;
+          right?: number;
+          top?: number;
+          bottom?: number;
+          zoom?: number;
+          orthoHalfH?: number;
+        } | null {
           const director = directorRef.current;
           const cam = cameraRef.current;
           if (!director || !cam) return null;
           const f = director.framing;
-          return { ...f, fov: cam.fov, azimuthDeg: director.getState().azimuthDeg };
+          const ortho = director.orthoFrustum;
+          if (ortho) {
+            return {
+              ...f,
+              fov: null,
+              azimuthDeg: director.getState().azimuthDeg,
+              cameraType: "orthographic",
+              left: ortho.left,
+              right: ortho.right,
+              top: ortho.top,
+              bottom: ortho.bottom,
+              zoom: ortho.zoom,
+              orthoHalfH: ortho.halfH,
+            };
+          }
+          return {
+            ...f,
+            fov: (cam as PerspectiveCamera).fov,
+            azimuthDeg: director.getState().azimuthDeg,
+            cameraType: "perspective",
+          };
         },
         set(preset: JudgePreset): boolean {
           const cam = cameraRef.current;
@@ -724,14 +766,20 @@ export function SceneHost({
           if (!cam || !ctl) return false;
           motion.finishAll();
           const director = directorRef.current;
-          const pose = judgeCamera(preset, [...(model?.nodes ?? []), ...(dressingRef.current?.portNodes() ?? [])], cam.aspect);
-          // Lock FOV before pin/refit so play framing uses 40° (no boot 45° / spec 35° drift).
-          if (pose?.fov) cam.fov = pose.fov;
-          else {
-            const fr = viewportFrameRef.current;
-            cam.fov = fr?.fovDeg ?? 40;
+          const el = containerRef.current;
+          const aspect = isOrthographicCamera(cam)
+            ? Math.max((el?.clientWidth ?? 1) / Math.max(el?.clientHeight ?? 1, 1), 1e-3)
+            : cam.aspect;
+          const pose = judgeCamera(preset, [...(model?.nodes ?? []), ...(dressingRef.current?.portNodes() ?? [])], aspect);
+          // Perspective only: lock FOV before pin/refit. Ortho framing ignores FOV.
+          if (!isOrthographicCamera(cam)) {
+            if (pose?.fov) cam.fov = pose.fov;
+            else {
+              const fr = viewportFrameRef.current;
+              cam.fov = fr?.fovDeg ?? 40;
+            }
+            cam.updateProjectionMatrix();
           }
-          cam.updateProjectionMatrix();
           if (!pose && director) {
             director.pinToMode(preset === "a-topdown" ? "overview" : "play");
           } else if (pose) {
@@ -887,11 +935,26 @@ export function SceneHost({
       const width = Math.max(container.clientWidth, 1);
       const height = Math.max(container.clientHeight, 1);
       const dpr = Math.min(window.devicePixelRatio || 1, caps.dprCap);
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
+      const aspect = width / height;
+      if (isOrthographicCamera(camera)) {
+        directorRef.current?.onResize(aspect);
+        if (!directorRef.current) {
+          // Before CameraDirector exists, keep settlecoast-ish CR frustum.
+          const halfTop = Math.max(3.6, 5.65 / Math.max(aspect, 1e-3));
+          const halfW = halfTop * aspect;
+          camera.left = -halfW;
+          camera.right = halfW;
+          camera.top = halfTop;
+          camera.bottom = -halfTop;
+          camera.updateProjectionMatrix();
+        }
+      } else {
+        camera.aspect = aspect;
+        camera.updateProjectionMatrix();
+        directorRef.current?.onResize(aspect);
+      }
       fitCameraRef.current();
       setCompactToolbar(width < 480);
-      directorRef.current?.onResize();
       const overlay = overlayRef.current;
       if (overlay) {
         overlay.setCanvasSize(width, height);
@@ -1240,11 +1303,19 @@ export function SceneHost({
     if (camera && controls && motionForCamera) {
       let director = directorRef.current;
       if (!director) {
-        // Hex play FOV lock 40° before first framing (viewportFrame or desktop default).
-        const fr = viewportFrameRef.current;
-        camera.fov = fr?.fovDeg ?? 40;
-        camera.updateProjectionMatrix();
+        if (!isOrthographicCamera(camera)) {
+          // Perspective hex path (legacy): FOV lock 40° before first framing.
+          const fr = viewportFrameRef.current;
+          camera.fov = fr?.fovDeg ?? 40;
+          camera.updateProjectionMatrix();
+        }
         director = new kit.CameraDirector(camera, controls, motionForCamera);
+        const el = containerRef.current;
+        if (el) {
+          const w = Math.max(el.clientWidth, 1);
+          const h = Math.max(el.clientHeight, 1);
+          director.onResize(w / h);
+        }
         director.mode = kit.cameraModeFor(localSeatRef.current, activeSeatRef.current);
         directorRef.current = director;
         setCameraApi(director);
@@ -1373,10 +1444,12 @@ export function SceneHost({
             const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
             const cz = (Math.min(...zs) + Math.max(...zs)) / 2;
             const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs), 8);
-            const pose = framePose([cx, 0, cz], span * 0.55, cameraRef.current.aspect, fr);
-            cameraRef.current.position.set(...pose.position);
-            cameraRef.current.fov = pose.fov;
-            cameraRef.current.updateProjectionMatrix();
+            const cam = cameraRef.current;
+            if (isOrthographicCamera(cam)) return;
+            const pose = framePose([cx, 0, cz], span * 0.55, cam.aspect, fr);
+            cam.position.set(...pose.position);
+            cam.fov = pose.fov;
+            cam.updateProjectionMatrix();
             controlsRef.current.target.set(...pose.target);
             controlsRef.current.update();
             return;
@@ -1385,6 +1458,7 @@ export function SceneHost({
 
         // RenderSpec 距离按约 7.5 单位半径的场景标定；桌面更大 / 更小时等比缩放，
         // 窄屏（水平视角小于垂直视角）时再拉远到包围半径能水平放下。
+        if (isOrthographicCamera(camera)) return;
         const halfH = Math.atan(Math.tan((spec.fovDeg * Math.PI) / 360) * camera.aspect);
         const distance = Math.max(
           spec.distance * Math.min(Math.max(radius / 7.5, 0.5), 1.6),

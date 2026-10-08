@@ -7,7 +7,7 @@
  * - board-dressing-*.js ≤ 30 KB gzip（G3D-ISLAND / PROPS，懒加载）
  * - TabletopScene3D-*.js ≤ 12 KB gzip（G3D-14 通用桌面 mapper + 网格工厂，懒加载，不计入核心）
  * - g3d-overlay-*.js ≤ 6 KB gzip（G3D-JUDGE-PIECES 画布视角工具条，懒加载，不计入核心）
- * - g3d-hexkit-*.js ≤ 10 KB gzip（G3D-JUDGE-PIECES hex 盘专用：镜头导演 + 海面取景约束、骰盘角标、
+ * - g3d-hexkit-*.js ≤ 22 KB gzip（G3D-JUDGE-PIECES hex 盘专用：镜头导演 + 正交取景、骰盘角标、
  *   hex mapper、点数贴花、命中区；与 GLB 并行懒加载、通用桌面不加载，从核心挪出而非放宽核心预算）
  */
 import { gzipSync } from "node:zlib";
@@ -58,5 +58,5 @@ if (tideWater.length) {
 ok = check("board-dressing (lazy)", files.filter((f) => /^board-dressing-.*\.js$/.test(f)), 30) && ok;
 ok = check("tabletop mapper (lazy)", files.filter((f) => /^TabletopScene3D-.*\.js$/.test(f)), 12) && ok;
 ok = check("g3d-overlay toolbar (lazy)", files.filter((f) => /^g3d-overlay-.*\.js$/.test(f)), 6) && ok;
-ok = check("g3d-hexkit hex-board kit (lazy)", files.filter((f) => /^g3d-hexkit-.*\.js$/.test(f)), 10) && ok;
+ok = check("g3d-hexkit hex-board kit (lazy)", files.filter((f) => /^g3d-hexkit-.*\.js$/.test(f)), 22) && ok;
 process.exit(ok ? 0 : 1);

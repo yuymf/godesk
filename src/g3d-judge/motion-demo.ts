@@ -1,5 +1,7 @@
 /** G3D-JUDGE motion demo (lazy, `?judge=1` only) — kept out of render3d core budget. */
-import { Mesh, MeshStandardMaterial, Vector3, type Material, type Object3D, type PerspectiveCamera, type Scene, type WebGLRenderer } from "three";
+import { Mesh, MeshStandardMaterial, Vector3, type Material, type Object3D, type Scene, type WebGLRenderer } from "three";
+import type { PlayCamera } from "../render3d/camera-rig";
+import { isOrthographicCamera } from "../render3d/camera-rig";
 import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { InstancePools } from "../render3d/instance-pools";
 import type { MaterialLibrary } from "../render3d/materials";
@@ -12,7 +14,7 @@ type Kit = { pieceGeometry: (kind: "robber" | "settlement" | "city" | "road", se
 export type JudgeMotionCtx = {
   registryRef: Ref<Map<string, Object3D>>;
   contentRootRef: Ref<Object3D | null>;
-  cameraRef: Ref<PerspectiveCamera | null>;
+  cameraRef: Ref<PlayCamera | null>;
   rendererRef: Ref<WebGLRenderer | null>;
   sceneRef: Ref<Scene | null>;
   controlsRef: Ref<OrbitControls | null>;
@@ -62,7 +64,6 @@ export function createJudgeMotion(c: JudgeMotionCtx) {
           ctl.target.set(tx, targetY, tz);
           const dist = 7.8;
           const polar = (58 * Math.PI) / 180;
-          cam.fov = 52;
           const az = 0;
           cam.position.set(
             tx + Math.sin(az) * Math.sin(polar) * dist,
@@ -71,6 +72,16 @@ export function createJudgeMotion(c: JudgeMotionCtx) {
           );
           cam.near = 0.05;
           cam.far = 200;
+          if (isOrthographicCamera(cam)) {
+            // Close-up hop framing without perspective FOV.
+            cam.left = -3.2;
+            cam.right = 3.2;
+            cam.top = 2.4;
+            cam.bottom = -2.4;
+            cam.zoom = 1;
+          } else {
+            cam.fov = 52;
+          }
           cam.updateProjectionMatrix();
           ctl.update();
           return true;

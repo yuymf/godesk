@@ -2,17 +2,24 @@
  * G3D-JUDGE-PIECES · camera auto-framing, turn modes, zoom / orbit clamps.
  *
  * Pure helpers (unit-tested) + `CameraDirector`, the imperative glue that
- * drives the PerspectiveCamera / OrbitControls through MotionController so
+ * drives PerspectiveCamera or OrthographicCamera / OrbitControls through MotionController so
  * every automatic move is a logged 600 ms "camera" tween (reduced motion → 0).
  *
  * Modes (settlecoast-like table feel, own implementation):
  * - "play": tilted 3/4 view while the local player acts
  * - "overview": near top-down while AI / opponents act
  */
-import { MOUSE, TOUCH, type PerspectiveCamera } from "three";
+import { MOUSE, TOUCH, OrthographicCamera, PerspectiveCamera } from "three";
 import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { MotionController } from "./motion";
 import { TILE_RADIUS } from "./tokens";
+
+/** Hex/Tidewell play camera: ortho for harbor; perspective kept for helpers / legacy. */
+export type PlayCamera = PerspectiveCamera | OrthographicCamera;
+
+export function isOrthographicCamera(camera: PlayCamera): camera is OrthographicCamera {
+  return (camera as OrthographicCamera).isOrthographicCamera === true;
+}
 
 export type V3 = readonly [number, number, number];
 export type CameraMode = "play" | "overview";
@@ -39,6 +46,16 @@ export const SEA_EDGE_PAD = 0.3;
 export const PLAY_MIN_POLAR_DEG = 45;
 /** Default play azimuth (deg): settlecoast ≈11.5°; keep within 11–14°. */
 export const PLAY_AZIMUTH_DEG = 12;
+/**
+ * R25 ortho: fixed orbit radius (settlecoast ‖_o−So‖ ≈ 21.72). Framing is frustum/zoom,
+ * not dolly distance — avoids perspective foreshortening.
+ */
+export const ORTHO_ORBIT_DISTANCE = 22;
+/** settlecoast CR half-top floor / numerator (wide ≤ ~1.57 aspect uses 3.6). */
+export const ORTHO_CR_HALF_TOP_FLOOR = 3.6;
+export const ORTHO_CR_HALF_TOP_NUM = 5.65;
+/** settlecoast jg board-fit pad. */
+export const ORTHO_FRAME_PAD = 1.04;
 
 export function clampZoom(zoom: number): number {
   if (!Number.isFinite(zoom)) return 1;
@@ -227,6 +244,164 @@ export function playFraming(
   return seaSafeFraming(points, keepPoints, target, preferredPolar, PLAY_MIN_POLAR_DEG * DEG, azimuth, fovDeg, aspect, half);
 }
 
+/** settlecoast-style CR baseline half-top before board-fit. */
+export function orthoCrHalfTop(aspect: number): number {
+  const a = Math.max(aspect, 1e-3);
+  return Math.max(ORTHO_CR_HALF_TOP_FLOOR, ORTHO_CR_HALF_TOP_NUM / a);
+}
+
+/**
+ * Smallest ortho half-height (world units at zoom=1) that frames every point
+ * inside `margin` of the viewport. True orthographic: project onto camera r/u.
+ */
+export function fitOrthoHalfHeight(
+  points: readonly V3[],
+  target: V3,
+  polar: number,
+  azimuth: number,
+  aspect: number,
+  margin = FRAME_MARGIN,
+): number {
+  const { r, u } = orbitBasis(polar, azimuth);
+  const a = Math.max(aspect, 1e-3);
+  let halfH = 0.5;
+  for (const p of points) {
+    const q: V3 = [p[0] - target[0], p[1] - target[1], p[2] - target[2]];
+    const qr = q[0] * r[0] + q[1] * r[1] + q[2] * r[2];
+    const qu = q[0] * u[0] + q[1] * u[1] + q[2] * u[2];
+    halfH = Math.max(halfH, Math.abs(qu) / margin, Math.abs(qr) / (margin * a));
+  }
+  return halfH * ORTHO_FRAME_PAD;
+}
+
+/**
+ * Largest ortho half-height at fixed orbit distance whose four frustum corners
+ * still land on the sea square. 0 when the view direction itself misses the sea plane.
+ */
+export function maxSeaOrthoHalfHeight(
+  target: V3,
+  polar: number,
+  azimuth: number,
+  aspect: number,
+  distance = ORTHO_ORBIT_DISTANCE,
+  half = SEA_HALF_EXTENT - SEA_EDGE_PAD,
+): number {
+  const { d, r, u } = orbitBasis(polar, azimuth);
+  if (d[1] <= 1e-6) return 0;
+  if (Math.abs(target[0]) >= half || Math.abs(target[2]) >= half) return 0;
+  const a = Math.max(aspect, 1e-3);
+  // Binary search halfH: corners O = C + sx*(halfH*a)*r + sy*halfH*u, ray −d → y=0.
+  const ok = (halfH: number) => {
+    const halfW = halfH * a;
+    const Cx = target[0] + distance * d[0];
+    const Cy = target[1] + distance * d[1];
+    const Cz = target[2] + distance * d[2];
+    for (const sx of [-1, 1] as const) {
+      for (const sy of [-1, 1] as const) {
+        const Ox = Cx + sx * halfW * r[0] + sy * halfH * u[0];
+        const Oy = Cy + sx * halfW * r[1] + sy * halfH * u[1];
+        const Oz = Cz + sx * halfW * r[2] + sy * halfH * u[2];
+        const t = Oy / d[1];
+        const hx = Ox - t * d[0];
+        const hz = Oz - t * d[2];
+        if (Math.abs(hx) > half || Math.abs(hz) > half) return false;
+      }
+    }
+    return true;
+  };
+  if (!ok(1e-3)) return 0;
+  let lo = 1e-3;
+  let hi = 80;
+  if (ok(hi)) return hi;
+  for (let i = 0; i < 24; i += 1) {
+    const mid = (lo + hi) / 2;
+    if (ok(mid)) lo = mid;
+    else hi = mid;
+  }
+  return lo;
+}
+
+/** Steepest polar (≤ from) at which `halfH` keeps ortho corners on the sea. */
+export function maxSeaOrthoPolar(
+  target: V3,
+  halfH: number,
+  azimuth: number,
+  aspect: number,
+  from: number,
+  floor = 0,
+  distance = ORTHO_ORBIT_DISTANCE,
+  half = SEA_HALF_EXTENT - SEA_EDGE_PAD,
+): number {
+  const max = (polar: number) => maxSeaOrthoHalfHeight(target, polar, azimuth, aspect, distance, half);
+  if (max(from) >= halfH) return from;
+  let lo = floor;
+  let hi = from;
+  if (max(lo) < halfH) return floor;
+  for (let i = 0; i < 18; i += 1) {
+    const mid = (lo + hi) / 2;
+    if (max(mid) >= halfH) lo = mid;
+    else hi = mid;
+  }
+  return lo;
+}
+
+export type OrthoFraming = { polar: number; distance: number; fit: number; halfH: number; safe: boolean };
+
+/**
+ * Ortho twin of seaSafeFraming: fit via half-height, flatten tilt then shrink frustum.
+ * `hard` (overview): may crop keepPoints; play uses PLAY_MIN_POLAR floor.
+ */
+export function seaSafeOrthoFraming(
+  points: readonly V3[],
+  keepPoints: readonly V3[],
+  target: V3,
+  preferredPolar: number,
+  minPolar: number,
+  azimuth: number,
+  aspect: number,
+  half = SEA_HALF_EXTENT - SEA_EDGE_PAD,
+  hard = false,
+  distance = ORTHO_ORBIT_DISTANCE,
+): OrthoFraming {
+  let polar = preferredPolar;
+  for (;;) {
+    const fit = fitOrthoHalfHeight(points, target, polar, azimuth, aspect);
+    const max = maxSeaOrthoHalfHeight(target, polar, azimuth, aspect, distance, half);
+    if (fit <= max) return { polar, distance, fit, halfH: fit, safe: true };
+    if (polar <= minPolar + 1e-6) {
+      const keep =
+        keepPoints.length > 0 ? fitOrthoHalfHeight(keepPoints, target, polar, azimuth, aspect, KEEP_MARGIN) : fit;
+      if (keep <= max) return { polar, distance, fit, halfH: max, safe: true };
+      if (hard && max > 0.5) return { polar, distance, fit, halfH: max, safe: true };
+      return { polar, distance, fit, halfH: Math.min(fit, keep), safe: false };
+    }
+    polar = Math.max(minPolar, polar - 2 * DEG);
+  }
+}
+
+/** Own-turn ortho framing: lock ≥ PLAY_MIN_POLAR; prefer ≈54°. */
+export function playOrthoFraming(
+  points: readonly V3[],
+  keepPoints: readonly V3[],
+  target: V3,
+  preferredPolar: number,
+  azimuth: number,
+  aspect: number,
+  half = SEA_HALF_EXTENT - SEA_EDGE_PAD,
+): OrthoFraming {
+  return seaSafeOrthoFraming(
+    points,
+    keepPoints,
+    target,
+    preferredPolar,
+    PLAY_MIN_POLAR_DEG * DEG,
+    azimuth,
+    aspect,
+    half,
+    false,
+  );
+}
+
 type FramingNode = {
   kind: string;
   position: readonly [number, number, number];
@@ -347,6 +522,8 @@ export class CameraDirector implements CameraRigApi {
   /** Polar for the current mode after the sea clamp. */
   private polar = CAMERA_MODE_POLAR_DEG.play * DEG;
   private seaHalf = SEA_HALF_EXTENT - SEA_EDGE_PAD;
+  /** Canvas aspect (ortho has no camera.aspect). */
+  private aspect = 1;
   private clampKey = "";
   private panMode = false;
   private tourToken = 0;
@@ -357,18 +534,31 @@ export class CameraDirector implements CameraRigApi {
   private tweening = false;
   private readonly listeners = new Set<(state: CameraRigState) => void>();
   private lastNotified = "";
+  private readonly ortho: boolean;
 
   constructor(
-    private readonly camera: PerspectiveCamera,
+    private readonly camera: PlayCamera,
     private readonly controls: OrbitControls,
     private readonly motion: MotionController,
   ) {
+    this.ortho = isOrthographicCamera(camera);
     controls.minPolarAngle = POLAR_LIMITS_DEG.min * DEG;
     controls.maxPolarAngle = POLAR_LIMITS_DEG.max * DEG;
     // Pan slides across the table plane (target stays on y = 0).
     controls.screenSpacePanning = false;
+    if (this.ortho) {
+      // Ortho zoom is camera.zoom (OrbitControls dolly); keep a stable orbit radius.
+      controls.minZoom = ZOOM_LIMITS.min;
+      controls.maxZoom = ZOOM_LIMITS.max;
+      controls.minDistance = ORTHO_ORBIT_DISTANCE * 0.98;
+      controls.maxDistance = ORTHO_ORBIT_DISTANCE * 1.02;
+    }
     controls.addEventListener("start", this.onStart);
     controls.addEventListener("end", this.onEnd);
+  }
+
+  get isOrtho(): boolean {
+    return this.ortho;
   }
 
   dispose(): void {
@@ -416,7 +606,9 @@ export class CameraDirector implements CameraRigApi {
   }
 
   /** Aspect changed: refit and keep the current zoom / azimuth. */
-  onResize(): void {
+  onResize(aspect?: number): void {
+    if (typeof aspect === "number" && aspect > 1e-3) this.aspect = aspect;
+    else if (!this.ortho && "aspect" in this.camera) this.aspect = this.camera.aspect;
     this.refit();
     if (!this.pinned && !this.tweening && !this.dragging && !this.touring) this.apply(this.goal(), true);
   }
@@ -450,10 +642,17 @@ export class CameraDirector implements CameraRigApi {
   pinFree(): void {
     this.stopTour();
     this.pinned = true;
-    this.controls.minDistance = 0.1;
-    this.controls.maxDistance = 200;
     this.controls.minPolarAngle = 0;
     this.controls.maxPolarAngle = Math.PI * 0.48;
+    if (this.ortho) {
+      this.controls.minZoom = 0.2;
+      this.controls.maxZoom = 8;
+      this.controls.minDistance = 0.1;
+      this.controls.maxDistance = 200;
+    } else {
+      this.controls.minDistance = 0.1;
+      this.controls.maxDistance = 200;
+    }
   }
 
   zoomIn(): void {
@@ -470,6 +669,12 @@ export class CameraDirector implements CameraRigApi {
     this.zoom = clampZoom(zoom);
     this.pinned = false;
     const current = this.current();
+    if (this.ortho) {
+      const pose = { ...current, distance: ORTHO_ORBIT_DISTANCE };
+      if (animate) this.transition(pose, "zoom", false);
+      else this.apply(pose, true);
+      return;
+    }
     const pose = { ...current, distance: this.seaCappedDistance(this.base / this.zoom, current) };
     if (animate) this.transition(pose, "zoom", false);
     else this.apply(pose, true);
@@ -483,7 +688,8 @@ export class CameraDirector implements CameraRigApi {
     this.refit();
     const current = this.current();
     const turned = { ...current, azimuth: this.azimuth };
-    this.transition({ ...turned, distance: this.seaCappedDistance(this.base / this.zoom, turned) }, `rotate:${direction}`, false);
+    const distance = this.ortho ? ORTHO_ORBIT_DISTANCE : this.seaCappedDistance(this.base / this.zoom, turned);
+    this.transition({ ...turned, distance }, `rotate:${direction}`, false);
   }
 
   reset(): void {
@@ -535,8 +741,14 @@ export class CameraDirector implements CameraRigApi {
         return;
       }
       const azimuth = start + TOUR.stepsDeg[index]! * DEG;
-      const at = { target: this.center, polar, azimuth, distance: this.base / TOUR.zoom };
-      const pose = { ...at, distance: this.seaCappedDistance(at.distance, at) };
+      const at = {
+        target: this.center,
+        polar,
+        azimuth,
+        distance: this.ortho ? ORTHO_ORBIT_DISTANCE : this.base / TOUR.zoom,
+      };
+      const pose = this.ortho ? at : { ...at, distance: this.seaCappedDistance(at.distance, at) };
+      if (this.ortho) this.zoom = clampZoom(TOUR.zoom);
       const ms = this.transition(pose, `tour:${index}`, false, TOUR.legMs, () => leg(index + 1));
       // Reduced motion: no tour, just end where we started.
       if (ms === 0) {
@@ -588,7 +800,13 @@ export class CameraDirector implements CameraRigApi {
     }
     this.updateSeaClamp();
     if (this.dragging) this.syncFromCamera();
-    else {
+    else if (this.ortho) {
+      const z = clampZoom(this.camera.zoom);
+      if (Math.abs(z - this.zoom) > 0.004) {
+        this.zoom = z;
+        this.notify();
+      }
+    } else {
       const distance = this.camera.position.distanceTo(this.controls.target);
       const zoom = clampZoom(this.base / Math.max(distance, 1e-3));
       if (Math.abs(zoom - this.zoom) > 0.004) {
@@ -604,10 +822,34 @@ export class CameraDirector implements CameraRigApi {
    */
   private updateSeaClamp(): void {
     const pose = this.current();
-    const key = `${pose.target.map((v) => v.toFixed(2)).join()}|${pose.distance.toFixed(2)}|${pose.polar.toFixed(3)}|${pose.azimuth.toFixed(3)}|${this.camera.aspect.toFixed(3)}`;
+    const key = `${pose.target.map((v) => v.toFixed(2)).join()}|${pose.distance.toFixed(2)}|${pose.polar.toFixed(3)}|${pose.azimuth.toFixed(3)}|${this.aspect.toFixed(3)}|${this.zoom.toFixed(3)}`;
     if (key === this.clampKey) return;
     this.clampKey = key;
-    const { fov, aspect } = this.camera;
+    if (this.ortho) {
+      const halfH = this.base / Math.max(this.zoom, 1e-3);
+      const seaMax = maxSeaOrthoHalfHeight(pose.target, pose.polar, pose.azimuth, this.aspect, ORTHO_ORBIT_DISTANCE, this.seaHalf);
+      // Zoom-in always OK; zoom-out capped so frustum stays on sea (and ≥ zoom-1 base).
+      const maxZoomOutHalf = Math.max(this.base, seaMax);
+      const minZoom = Math.max(ZOOM_LIMITS.min, this.base / Math.max(maxZoomOutHalf, 1e-3));
+      this.controls.minZoom = minZoom;
+      this.controls.maxZoom = ZOOM_LIMITS.max;
+      this.controls.minDistance = ORTHO_ORBIT_DISTANCE * 0.98;
+      this.controls.maxDistance = ORTHO_ORBIT_DISTANCE * 1.02;
+      const safePolar = maxSeaOrthoPolar(
+        pose.target,
+        halfH,
+        pose.azimuth,
+        this.aspect,
+        POLAR_LIMITS_DEG.max * DEG,
+        0,
+        ORTHO_ORBIT_DISTANCE,
+        this.seaHalf,
+      );
+      this.controls.maxPolarAngle = Math.max(safePolar, this.polar);
+      return;
+    }
+    const fov = (this.camera as PerspectiveCamera).fov;
+    const aspect = (this.camera as PerspectiveCamera).aspect;
     const seaMax = maxSeaDistance(pose.target, pose.polar, pose.azimuth, fov, aspect, this.seaHalf);
     this.controls.minDistance = this.base / ZOOM_LIMITS.max;
     this.controls.maxDistance = Math.max(this.base, Math.min(this.base / ZOOM_LIMITS.min, seaMax));
@@ -617,7 +859,9 @@ export class CameraDirector implements CameraRigApi {
 
   /** Clamp a zoomed distance to the sea (never tighter than the zoom-1 framing). */
   private seaCappedDistance(distance: number, pose: Pick<Pose, "target" | "polar" | "azimuth">): number {
-    const seaMax = maxSeaDistance(pose.target, pose.polar, pose.azimuth, this.camera.fov, this.camera.aspect, this.seaHalf);
+    if (this.ortho) return ORTHO_ORBIT_DISTANCE;
+    const cam = this.camera as PerspectiveCamera;
+    const seaMax = maxSeaDistance(pose.target, pose.polar, pose.azimuth, cam.fov, cam.aspect, this.seaHalf);
     return Math.min(distance, Math.max(this.base, seaMax));
   }
 
@@ -625,51 +869,102 @@ export class CameraDirector implements CameraRigApi {
     if (this.tweening) return;
     const pose = this.current();
     this.azimuth = pose.azimuth;
-    this.zoom = clampZoom(this.base / Math.max(pose.distance, 1e-3));
+    if (this.ortho) this.zoom = clampZoom(this.camera.zoom);
+    else this.zoom = clampZoom(this.base / Math.max(pose.distance, 1e-3));
     this.notify();
   }
 
   private framingFor(mode: CameraMode): { polar: number; distance: number; fit: number; safe: boolean } {
     const points = this.points.length > 0 ? this.points : ([[4, 0, 4], [-4, 0, -4]] as V3[]);
-    if (mode === "play") {
-      return playFraming(points, this.keepPoints, this.center, CAMERA_MODE_POLAR_DEG[mode] * DEG, this.azimuth, this.camera.fov, this.camera.aspect, this.seaHalf);
+    if (this.ortho) {
+      if (mode === "play") {
+        const f = playOrthoFraming(
+          points,
+          this.keepPoints,
+          this.center,
+          CAMERA_MODE_POLAR_DEG[mode] * DEG,
+          this.azimuth,
+          this.aspect,
+          this.seaHalf,
+        );
+        return { polar: f.polar, distance: f.distance, fit: f.halfH, safe: f.safe };
+      }
+      const f = seaSafeOrthoFraming(
+        points,
+        this.keepPoints,
+        this.center,
+        CAMERA_MODE_POLAR_DEG[mode] * DEG,
+        0,
+        this.azimuth,
+        this.aspect,
+        this.seaHalf,
+        mode === "overview",
+      );
+      return { polar: f.polar, distance: f.distance, fit: f.halfH, safe: f.safe };
     }
-    const minPolar = 0;
+    const fov = (this.camera as PerspectiveCamera).fov;
+    const aspect = (this.camera as PerspectiveCamera).aspect || this.aspect;
+    if (mode === "play") {
+      return playFraming(points, this.keepPoints, this.center, CAMERA_MODE_POLAR_DEG[mode] * DEG, this.azimuth, fov, aspect, this.seaHalf);
+    }
     return seaSafeFraming(
       points,
       this.keepPoints,
       this.center,
       CAMERA_MODE_POLAR_DEG[mode] * DEG,
-      minPolar,
+      0,
       this.azimuth,
-      this.camera.fov,
-      this.camera.aspect,
+      fov,
+      aspect,
       this.seaHalf,
       mode === "overview",
     );
   }
 
   private refit(): void {
+    if (!this.ortho && "aspect" in this.camera) this.aspect = (this.camera as PerspectiveCamera).aspect || this.aspect;
     const framing = this.framingFor(this.mode);
     this.fit = framing.fit;
-    this.base = framing.distance;
+    // Ortho: base/fit are half-height (zoom-1). Perspective: base is orbit distance.
+    this.base = this.ortho ? framing.fit : framing.distance;
     this.polar = framing.polar;
     this.clampKey = "";
     if (!this.pinned) {
-      this.controls.minDistance = this.base / ZOOM_LIMITS.max;
-      this.controls.maxDistance = this.base / ZOOM_LIMITS.min;
       this.controls.minPolarAngle = POLAR_LIMITS_DEG.min * DEG;
       this.controls.maxPolarAngle = POLAR_LIMITS_DEG.max * DEG;
+      if (this.ortho) {
+        this.controls.minZoom = ZOOM_LIMITS.min;
+        this.controls.maxZoom = ZOOM_LIMITS.max;
+        this.controls.minDistance = ORTHO_ORBIT_DISTANCE * 0.98;
+        this.controls.maxDistance = ORTHO_ORBIT_DISTANCE * 1.02;
+      } else {
+        this.controls.minDistance = this.base / ZOOM_LIMITS.max;
+        this.controls.maxDistance = this.base / ZOOM_LIMITS.min;
+      }
     }
   }
 
-  /** Readout for e2e / judge: framed polar (deg), zoom-1 distance, fitted distance. */
+  /** Readout for e2e / judge: framed polar (deg), zoom-1 base, fitted size. */
   get framing(): { polarDeg: number; base: number; fit: number } {
     return { polarDeg: this.polar / DEG, base: this.base, fit: this.fit };
   }
 
+  /** Ortho frustum at current zoom (null when perspective). */
+  get orthoFrustum(): { left: number; right: number; top: number; bottom: number; zoom: number; halfH: number } | null {
+    if (!this.ortho || !isOrthographicCamera(this.camera)) return null;
+    return {
+      left: this.camera.left,
+      right: this.camera.right,
+      top: this.camera.top,
+      bottom: this.camera.bottom,
+      zoom: this.camera.zoom,
+      halfH: this.base / Math.max(this.zoom, 1e-3),
+    };
+  }
+
   private goal(): Pose {
     const at = { target: this.center, polar: this.polar, azimuth: this.azimuth };
+    if (this.ortho) return { ...at, distance: ORTHO_ORBIT_DISTANCE };
     return { ...at, distance: this.seaCappedDistance(this.base / this.zoom, at) };
   }
 
@@ -685,10 +980,24 @@ export class CameraDirector implements CameraRigApi {
   }
 
   private apply(pose: Pose, final: boolean): void {
-    const [ox, oy, oz] = orbitOffset(pose.distance, pose.polar, pose.azimuth);
+    const distance = this.ortho ? ORTHO_ORBIT_DISTANCE : pose.distance;
+    const [ox, oy, oz] = orbitOffset(distance, pose.polar, pose.azimuth);
     this.controls.target.set(pose.target[0], pose.target[1], pose.target[2]);
     this.camera.position.set(pose.target[0] + ox, pose.target[1] + oy, pose.target[2] + oz);
     this.camera.lookAt(pose.target[0], pose.target[1], pose.target[2]);
+    if (this.ortho && isOrthographicCamera(this.camera)) {
+      // Zoom=1 frustum = fitted half-height; OrbitControls scales via camera.zoom.
+      const fitH = Math.max(this.base, 0.5);
+      const fitW = fitH * Math.max(this.aspect, 1e-3);
+      this.camera.left = -fitW;
+      this.camera.right = fitW;
+      this.camera.top = fitH;
+      this.camera.bottom = -fitH;
+      this.camera.near = 0.1;
+      this.camera.far = 120;
+      this.camera.zoom = this.zoom;
+      this.camera.updateProjectionMatrix();
+    }
     if (final) {
       this.azimuth = pose.azimuth;
       this.notify();

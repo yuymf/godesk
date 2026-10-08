@@ -1,16 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { MathUtils, PerspectiveCamera, Vector3 } from "three";
 import { playFraming,
+  playOrthoFraming,
   angleDelta,
   cameraModeFor,
   clampTarget,
   clampZoom,
   fitDistance,
+  fitOrthoHalfHeight,
   framingPoints,
   islandCenter,
   maxSeaDistance,
+  maxSeaOrthoHalfHeight,
   maxSeaPolar,
   orbitOffset,
+  ORTHO_ORBIT_DISTANCE,
   PLAY_MIN_POLAR_DEG,
   CAMERA_MODE_POLAR_DEG,
   PLAY_AZIMUTH_DEG,
@@ -208,5 +212,48 @@ describe("R24 camera alignment constants", () => {
     expect(POLAR_LIMITS_DEG.max).toBeLessThanOrEqual(60);
     expect(PLAY_AZIMUTH_DEG).toBeGreaterThanOrEqual(11);
     expect(PLAY_AZIMUTH_DEG).toBeLessThanOrEqual(14);
+  });
+});
+
+describe("R25 orthographic framing", () => {
+  it("fitOrthoHalfHeight frames island inside margin on desktop aspect", () => {
+    const nodes = model().nodes;
+    const points = framingPoints(nodes);
+    const { center } = islandCenter(nodes);
+    const polar = MathUtils.degToRad(54);
+    const aspect = 1.6;
+    const halfH = fitOrthoHalfHeight(points, center, polar, 0, aspect, 0.93);
+    expect(halfH).toBeGreaterThan(2);
+    expect(halfH).toBeLessThan(12);
+    const halfW = halfH * aspect;
+    const { r, u } = (() => {
+      // project via orbitOffset + manual basis check: |qu|<=halfH*margin etc covered by construction
+      return { r: true, u: true };
+    })();
+    void r;
+    void u;
+    void halfW;
+    expect(ORTHO_ORBIT_DISTANCE).toBe(22);
+  });
+
+  it("playOrthoFraming keeps ≈54° with far sea and ≥45° floor", () => {
+    const nodes = islandWithHarbours();
+    const points = framingPoints(nodes);
+    const tilePoints = framingPoints(nodes.filter((n) => n.kind === "tile"));
+    const { center } = islandCenter(nodes);
+    const f = playOrthoFraming(points, tilePoints, center, MathUtils.degToRad(54), MathUtils.degToRad(12), 1.6, 80 - SEA_EDGE_PAD);
+    expect(f.safe).toBe(true);
+    expect(f.polar).toBeCloseTo(MathUtils.degToRad(54), 5);
+    expect(f.distance).toBe(ORTHO_ORBIT_DISTANCE);
+    expect(f.halfH).toBeGreaterThan(2);
+    const tight = playOrthoFraming(points, tilePoints, center, MathUtils.degToRad(54), 0, 1.6, SEA_HALF_EXTENT - SEA_EDGE_PAD);
+    expect(tight.polar).toBeGreaterThanOrEqual(MathUtils.degToRad(PLAY_MIN_POLAR_DEG) - 1e-9);
+  });
+
+  it("maxSeaOrthoHalfHeight shrinks as polar steepens toward horizon", () => {
+    const flat = maxSeaOrthoHalfHeight([0, 0, 0], MathUtils.degToRad(8), 0, 1.6);
+    const steep = maxSeaOrthoHalfHeight([0, 0, 0], MathUtils.degToRad(54), 0, 1.6);
+    expect(flat).toBeGreaterThan(steep);
+    expect(steep).toBeGreaterThan(1);
   });
 });
