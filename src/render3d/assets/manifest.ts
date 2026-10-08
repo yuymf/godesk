@@ -2236,6 +2236,420 @@ export const ASSET_MANIFEST: readonly AssetManifestEntry[] = Object.freeze(
       "status": "cleared",
       "legalReview": "pending-G3D-17"
     }
+  },
+{
+    "id": "ui/ai/icons/build-road",
+    "file": "assets/ui/ai/icons/build-road-96.webp",
+    "kind": "ui",
+    "bytes": 1018,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "assets/ui/ai/icons/build-road-96.webp",
+      "author": "GoDesk Track B（程序化 PIL）",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "2h3 几何图标；R8/R9 由 scripts/gen-r8-hud-art.py / gen-r9-hud-art.py 重绘为木砖插画预览（64/96 两档）",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "ui/ai/icons/build-settlement",
+    "file": "assets/ui/ai/icons/build-settlement-96.webp",
+    "kind": "ui",
+    "bytes": 1132,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "assets/ui/ai/icons/build-settlement-96.webp",
+      "author": "GoDesk Track B（程序化 PIL）",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "2h3 几何图标；R8/R9 由 scripts/gen-r8-hud-art.py / gen-r9-hud-art.py 重绘为木砖插画预览（64/96 两档）",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "ui/ai/icons/build-city",
+    "file": "assets/ui/ai/icons/build-city-96.webp",
+    "kind": "ui",
+    "bytes": 1214,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "assets/ui/ai/icons/build-city-96.webp",
+      "author": "GoDesk Track B（程序化 PIL）",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "2h3 几何图标；R8/R9 由 scripts/gen-r8-hud-art.py / gen-r9-hud-art.py 重绘为木砖插画预览（64/96 两档）",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "ui/ai/icons/build-card",
+    "file": "assets/ui/ai/icons/build-card-96.webp",
+    "kind": "ui",
+    "bytes": 1060,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "assets/ui/ai/icons/build-card-96.webp",
+      "author": "GoDesk Track B（程序化 PIL）",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "2h3 几何图标；R8/R9 由 scripts/gen-r8-hud-art.py / gen-r9-hud-art.py 重绘为木砖插画预览（64/96 两档）",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "ui/ai/icons/build-road-128",
+    "file": "assets/ui/ai/icons/build-road-128.webp",
+    "kind": "ui",
+    "bytes": 1306,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "assets/ui/ai/icons/build-road-128.webp",
+      "author": "GoDesk Track B（程序化 PIL）",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "2h4 木框插画；R8/R9 重绘为木砖浮雕（scripts/gen-r9-hud-art.py）",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "ui/ai/icons/build-settlement-128",
+    "file": "assets/ui/ai/icons/build-settlement-128.webp",
+    "kind": "ui",
+    "bytes": 1492,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "assets/ui/ai/icons/build-settlement-128.webp",
+      "author": "GoDesk Track B（程序化 PIL）",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "2h4 木框插画；R8/R9 重绘为木砖浮雕（scripts/gen-r9-hud-art.py）",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "ui/ai/icons/build-city-128",
+    "file": "assets/ui/ai/icons/build-city-128.webp",
+    "kind": "ui",
+    "bytes": 1572,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "assets/ui/ai/icons/build-city-128.webp",
+      "author": "GoDesk Track B（程序化 PIL）",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "2h4 木框插画；R8/R9 重绘为木砖浮雕（scripts/gen-r9-hud-art.py）",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "ui/ai/icons/build-card-128",
+    "file": "assets/ui/ai/icons/build-card-128.webp",
+    "kind": "ui",
+    "bytes": 1326,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "assets/ui/ai/icons/build-card-128.webp",
+      "author": "GoDesk Track B（程序化 PIL）",
+      "obtainedAt": "2026-10-06",
+      "modified": true,
+      "modificationNote": "2h4 木框插画；R8/R9 重绘为木砖浮雕（scripts/gen-r9-hud-art.py）",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "ui/ai/icons/build-road-wide",
+    "file": "assets/ui/ai/icons/build-road-wide.webp",
+    "kind": "ui",
+    "bytes": 4666,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-r9-hud-art.py",
+      "author": "GoDesk Track R9（程序化 PIL）",
+      "obtainedAt": "2026-10-07",
+      "modified": true,
+      "modificationNote": "R9 横向木砖建造牌 280×96（栈道 字 + 浮雕图标 + 费用浮雕）；非 settlecoast 复制",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "ui/ai/icons/build-settlement-wide",
+    "file": "assets/ui/ai/icons/build-settlement-wide.webp",
+    "kind": "ui",
+    "bytes": 4982,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-r9-hud-art.py",
+      "author": "GoDesk Track R9（程序化 PIL）",
+      "obtainedAt": "2026-10-07",
+      "modified": true,
+      "modificationNote": "R9 横向木砖建造牌 280×96（渔村 字 + 浮雕图标 + 费用浮雕）；非 settlecoast 复制",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "ui/ai/icons/build-city-wide",
+    "file": "assets/ui/ai/icons/build-city-wide.webp",
+    "kind": "ui",
+    "bytes": 5588,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-r9-hud-art.py",
+      "author": "GoDesk Track R9（程序化 PIL）",
+      "obtainedAt": "2026-10-07",
+      "modified": true,
+      "modificationNote": "R9 横向木砖建造牌 280×96（港镇 字 + 浮雕图标 + 费用浮雕）；非 settlecoast 复制",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "ui/ai/icons/build-card-wide",
+    "file": "assets/ui/ai/icons/build-card-wide.webp",
+    "kind": "ui",
+    "bytes": 4432,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-r9-hud-art.py",
+      "author": "GoDesk Track R9（程序化 PIL）",
+      "obtainedAt": "2026-10-07",
+      "modified": true,
+      "modificationNote": "R9 横向木砖建造牌 280×96（买卡 字 + 浮雕图标 + 费用浮雕）；非 settlecoast 复制",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/portrait-0",
+    "file": "assets/illustrations/brand/portrait-0.webp",
+    "kind": "illustration",
+    "bytes": 4500,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "assets/illustrations/brand/portrait-0.webp",
+      "author": "GoDesk Track HUD（PIL）",
+      "obtainedAt": "2026-10-07",
+      "modified": true,
+      "modificationNote": "round-6 ③ 圆形羊皮纸底 + 席位色兜帽半身像；R8 由 scripts/gen-r8-hud-art.py 重绘为 256×320 半身开拓者（另有 -128 档）",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/portrait-1",
+    "file": "assets/illustrations/brand/portrait-1.webp",
+    "kind": "illustration",
+    "bytes": 5414,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "assets/illustrations/brand/portrait-1.webp",
+      "author": "GoDesk Track HUD（PIL）",
+      "obtainedAt": "2026-10-07",
+      "modified": true,
+      "modificationNote": "round-6 ③ 圆形羊皮纸底 + 席位色兜帽半身像；R8 由 scripts/gen-r8-hud-art.py 重绘为 256×320 半身开拓者（另有 -128 档）",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/portrait-2",
+    "file": "assets/illustrations/brand/portrait-2.webp",
+    "kind": "illustration",
+    "bytes": 3616,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "assets/illustrations/brand/portrait-2.webp",
+      "author": "GoDesk Track HUD（PIL）",
+      "obtainedAt": "2026-10-07",
+      "modified": true,
+      "modificationNote": "round-6 ③ 圆形羊皮纸底 + 席位色兜帽半身像；R8 由 scripts/gen-r8-hud-art.py 重绘为 256×320 半身开拓者（另有 -128 档）",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "illustration/portrait-3",
+    "file": "assets/illustrations/brand/portrait-3.webp",
+    "kind": "illustration",
+    "bytes": 4332,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "assets/illustrations/brand/portrait-3.webp",
+      "author": "GoDesk Track HUD（PIL）",
+      "obtainedAt": "2026-10-07",
+      "modified": true,
+      "modificationNote": "round-6 ③ 圆形羊皮纸底 + 席位色兜帽半身像；R8 由 scripts/gen-r8-hud-art.py 重绘为 256×320 半身开拓者（另有 -128 档）",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "ui/ai/wood-grain",
+    "file": "assets/ui/ai/wood-grain.webp",
+    "kind": "ui",
+    "bytes": 19414,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "assets/ui/ai/wood-grain.webp",
+      "author": "GoDesk Track B（程序化 PIL）",
+      "obtainedAt": "2026-10-07",
+      "modified": true,
+      "modificationNote": "round-3/4 刀序④ 无缝平铺（另有 -256 档）；非 settlecoast 复制",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "ui/ai/parchment-grain",
+    "file": "assets/ui/ai/parchment-grain.webp",
+    "kind": "ui",
+    "bytes": 6170,
+    "tier": "all",
+    "source": "self-made",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "assets/ui/ai/parchment-grain.webp",
+      "author": "GoDesk Track B（程序化 PIL）",
+      "obtainedAt": "2026-10-07",
+      "modified": true,
+      "modificationNote": "round-3/4 刀序④ 无缝平铺（另有 -256 档）；非 settlecoast 复制",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "ui/resource-wood-hand",
+    "file": "assets/ui/ai/icons/resource-wood-hand.webp",
+    "kind": "ui",
+    "bytes": 2696,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-r11-resource-hand.py",
+      "author": "GoDesk Track R11",
+      "obtainedAt": "2026-10-07",
+      "modified": true,
+      "modificationNote": "R11：羊皮底+金框+角饰，复合既有 assets/ui/ai/icons/wood-128.webp（已登记 AI）；无新 AI 生图",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "ui/resource-brick-hand",
+    "file": "assets/ui/ai/icons/resource-brick-hand.webp",
+    "kind": "ui",
+    "bytes": 2420,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-r11-resource-hand.py",
+      "author": "GoDesk Track R11",
+      "obtainedAt": "2026-10-07",
+      "modified": true,
+      "modificationNote": "R11：羊皮底+金框+角饰，复合既有 assets/ui/ai/icons/brick-128.webp（已登记 AI）；无新 AI 生图",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "ui/resource-sheep-hand",
+    "file": "assets/ui/ai/icons/resource-sheep-hand.webp",
+    "kind": "ui",
+    "bytes": 2680,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-r11-resource-hand.py",
+      "author": "GoDesk Track R11",
+      "obtainedAt": "2026-10-07",
+      "modified": true,
+      "modificationNote": "R11：羊皮底+金框+角饰，复合既有 assets/ui/ai/icons/sheep-128.webp（已登记 AI）；无新 AI 生图",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "ui/resource-wheat-hand",
+    "file": "assets/ui/ai/icons/resource-wheat-hand.webp",
+    "kind": "ui",
+    "bytes": 2392,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-r11-resource-hand.py",
+      "author": "GoDesk Track R11",
+      "obtainedAt": "2026-10-07",
+      "modified": true,
+      "modificationNote": "R11：羊皮底+金框+角饰，复合既有 assets/ui/ai/icons/wheat-128.webp（已登记 AI）；无新 AI 生图",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
+  },
+{
+    "id": "ui/resource-ore-hand",
+    "file": "assets/ui/ai/icons/resource-ore-hand.webp",
+    "kind": "ui",
+    "bytes": 2420,
+    "tier": "all",
+    "source": "procedural",
+    "license": {
+      "spdx": "LicenseRef-GoDesk-Original",
+      "sourceUrl": "scripts/gen-r11-resource-hand.py",
+      "author": "GoDesk Track R11",
+      "obtainedAt": "2026-10-07",
+      "modified": true,
+      "modificationNote": "R11：羊皮底+金框+角饰，复合既有 assets/ui/ai/icons/ore-128.webp（已登记 AI）；无新 AI 生图",
+      "orderRef": "n/a",
+      "status": "cleared"
+    }
   }
 ]
 );
