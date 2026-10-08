@@ -1,9 +1,9 @@
 /** 测试夹具：初学者棋盘 + 按 createBeginnerPorts 规则取的海岸港口顶点（仅测试使用）。 */
-import { createBeginnerTiles, hexSettlementBoardGraph } from "../runtime/adapters/hex-settlement";
+import { createBeginnerTiles, hexIslandBoardGraph } from "../runtime/adapters/hex-island";
 import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
 
 export function beginnerSceneInput(): HexSettlementSceneInput {
-  const graph = hexSettlementBoardGraph();
+  const graph = hexIslandBoardGraph();
   const coastal = graph.vertexIds.filter((v) => (graph.vertexHexes[v] ?? []).length <= 2);
   const kinds = ["any3", "wood", "any3", "brick", "any3", "sheep", "any3", "wheat", "ore"];
   const tiles = createBeginnerTiles();

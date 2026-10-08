@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 192" fill="none" stroke="#2a241c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
   <title>Tidewell Isles ink-line icon sprite (original · GoDesk G3D-ART / G3D-23)</title>
-  <desc>20 icons with layered linework: resources×5, build×4, development×3, HUD×8. Hand-authored SVG; not derived from settlecoast. No AI.</desc>
+  <desc>20 icons with layered linework: resources×5, build×4, development×3, HUD×8. Hand-authored original SVG. No AI.</desc>
   <defs>
     <symbol id="icon-res-wood" viewBox="0 0 24 24">
       <path d="M12 21V11"/>

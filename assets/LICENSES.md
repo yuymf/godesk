@@ -16,7 +16,7 @@
 | ui/paper-noise | assets/ui/paper-noise.webp | 羊皮纸纹底图 | 程序化 | scripts/gen-paper-noise.py | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | 无 | G3D-23 |
 | ui/paper-edge-panel | assets/ui/paper-edge-panel.svg | 面板纸边撕口 mask | 自制 | assets/ui/paper-edge-panel.svg | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | 无 | G3D-23 |
 | ui/paper-edge-card | assets/ui/paper-edge-card.svg | 卡片纸边撕口 mask | 自制 | assets/ui/paper-edge-card.svg | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 否 | 无 | G3D-23 |
-| ui/ink-icons | assets/ui/ink-icons.svg | 墨线图标 sprite（20） | 自制 | assets/ui/ink-icons.svg | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | G3D-ART：加层线稿（仍 stroke 为主）；非 AI、非 settlecoast | G3D-23/G3D-ART |
+| ui/ink-icons | assets/ui/ink-icons.svg | 墨线图标 sprite（20） | 自制 | assets/ui/ink-icons.svg | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | G3D-ART：加层线稿（仍 stroke 为主）；非 AI、原创 | G3D-23/G3D-ART |
 | font/fraunces-display | assets/fonts/fraunces-latin-display.woff2 | Fraunces Display 拉丁子集 | OFL | https://github.com/google/fonts/tree/main/ofl/fraunces | OFL-1.1 | Underscore Type / Google Fonts (Fraunces) | 2026-10-06 | 是 | 实例化 Soft=50 opsz=36 wght=600 并 pyftsubset 拉丁子集为 woff2 | G3D-23 |
 | audio/sfx-core | assets/audio/sfx-core.mp3 | 核心 SFX sprite（15） | 自制 | scripts/build-sfx-sprites.mjs | LicenseRef-GoDesk-Original | GoDesk Track B | 2026-10-06 | 是 | Kenney CC0 + 程序化片段组装 | G3D-26 |
 | sfx/hover | assets/audio/sfx-core.mp3 (sprite fragment) | sfx/hover SFX 片段 | CC0 | https://opengameart.org/content/51-ui-sound-effects-buttons-switches-and-clicks | CC0-1.0 | Kenney | 2026-10-06 | 是 | 响度归一化并入 sprite | G3D-26 |

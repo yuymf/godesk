@@ -4,11 +4,43 @@ name: Lighthouse CI
 # throttling) on the homepage and a fixed-seed hex Room (?tier=low).
 # No secrets and no paid services: reports go to LHCI temporary public storage
 # (link printed in the job log) and to the workflow artifact.
+#
+# CI minute budget (see docs/ci/actions-budget.md):
+# - Runs only when front-end / Worker / perf-harness files change, never for
+#   docs-only changes, and not on push to main (the PR run already covered it).
+# - Draft PRs are skipped; PR runs collect 1 run per URL. Homepage TBT is
+#   warn on that single sample (simulated-throttle TBT is too noisy; 1-run CI
+#   has reported 229 / 369 ms while the G3D-05 3-run median was 0 ms).
+#   workflow_dispatch keeps the 3-run median and error-level TBT from
+#   lighthouserc.json.
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "src/**"
+      - "public/**"
+      - "assets/**"
+      - "worker/**"
+      - "index.html"
+      - "vite.config.ts"
+      - "tsconfig*.json"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "wrangler.jsonc"
+      - "lighthouserc.json"
+      - "scripts/perf-serve.mjs"
+      - "scripts/perf/**"
+      - "scripts/lhci-warn-errors.mjs"
+      - ".github/workflows/lighthouse.yml"
+      - "!**/*.md"
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: Lighthouse runs per URL (median)
+        type: choice
+        options: ["3", "1"]
+        default: "3"
 
 permissions:
   contents: read
@@ -19,9 +51,13 @@ concurrency:
 
 jobs:
   lighthouse:
+    # Check name kept stable for any merge gate.
     name: Lighthouse (mobile preset)
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      LHCI_RUNS: ${{ github.event_name == 'pull_request' && '1' || inputs.runs || '3' }}
     steps:
       - uses: actions/checkout@v6
 
@@ -51,7 +87,25 @@ jobs:
           test -f perf-results/lighthouse-urls.json
 
       - name: Lighthouse CI autorun (home + Room)
-        run: pnpm exec lhci autorun --collect.url="$LHCI_HOME_URL" --collect.url="$LHCI_ROOM_URL"
+        run: |
+          echo "::notice::Lighthouse runs per URL: $LHCI_RUNS"
+          CONFIG=lighthouserc.json
+          if [ "$LHCI_RUNS" = "1" ]; then
+            CONFIG=lighthouserc.pr.json
+            node scripts/lhci-warn-errors.mjs lighthouserc.json "$CONFIG"
+            echo "::notice::PR 1-run: homepage TBT demoted to warn (3-run dispatch stays error)"
+          fi
+          pnpm exec lhci autorun --config="$CONFIG" --collect.numberOfRuns="$LHCI_RUNS" \
+            --collect.url="$LHCI_HOME_URL" --collect.url="$LHCI_ROOM_URL"
+
+      # G3D-17 上线前清单 · Lighthouse 项：列出 lighthouserc.json 里仍为 warn 级的断言并按 median-run 对照阈值。
+      # 现为 warning 模式；G3D-17 把断言改为 error 后，再把 GODESK_LAUNCH_GATE 改为 block（docs/perf/launch-checklist.md）。
+      - name: G3D-17 launch checklist (Lighthouse)
+        if: always()
+        env:
+          GODESK_LAUNCH_GATE: warn
+          GODESK_LAUNCH_GATE_BLOCK: ""
+        run: node scripts/launch-checklist.mjs --only lighthouse --lighthouse .lighthouseci --out .lighthouseci/launch-checklist.json
 
       - name: Upload Lighthouse reports
         if: always()

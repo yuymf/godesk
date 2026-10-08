@@ -100,9 +100,9 @@ export function ReplayView({ replayId }: { replayId: string }) {
             viewerSeat={null}
             winnerSeat={replay.finalState.winnerSeat}
           />
-        ) : replay.finalState.hexSettlement ? (
+        ) : replay.finalState.hexIsland ? (
           <HexSettlementScenePreview
-            hexSettlement={replay.finalState.hexSettlement as HexSettlementBoardState}
+            hexIsland={replay.finalState.hexIsland as HexSettlementBoardState}
           />
         ) : replay.finalState.networkRoute ? (
           <NetworkRouteBoard render={build?.ruleSystem.presentation.render}

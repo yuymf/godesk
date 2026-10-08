@@ -83,7 +83,7 @@ async function openAiRoom(page, projectId) {
   if ((await seat.inputValue().catch(() => "")) !== "0") await seat.selectOption("0");
   // close menu so it does not cover the canvas in shots
   await menu.locator("summary").click().catch(() => null);
-  const board = page.getByRole("region", { name: "汐屿" });
+  const board = page.getByRole("region", { name: "汐屿六角岛" });
   await board.waitFor({ timeout: 60_000 });
   await page.waitForFunction(() => {
     const el = document.querySelector('[data-testid="g3d-scene-host"]');

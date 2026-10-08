@@ -44,7 +44,7 @@ describe("network-route-v1 adapter", () => {
     );
   });
 
-  it("creates fixed graph without Tidewell/Othello fields on the public envelope", () => {
+  it("creates fixed graph without hex-island/Othello fields on the public envelope", () => {
     const state = createInitialState(networkRouteAdapter, config, 42);
     expect(state.seed).toBe(42);
     expect(state.phase).toBe("play");

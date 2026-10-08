@@ -2,7 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { clickTidewellBoardAction, openTidewellBoardTargets, claimTidewellSeat } from "./helpers/tidewell-actions";
 
 /** Frozen Sol max baseline prompts (GameSpec fixtures). */
-const TIDEWELL_PROMPT = "做一款可以与电脑对战的汐屿基础版";
+const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿六角岛资源建造游戏";
 const OTHELLO_PROMPT = "做一款可以与电脑对战的黑白棋";
 const visualEvidence = process.env.GODESK_VISUAL_EVIDENCE;
 
@@ -56,7 +56,7 @@ async function assertBoardHudNotClipped(page: Page, boardName: string) {
   expect(box!.y).toBeLessThan(viewport!.height);
 }
 
-test.describe("dual-genre boards: Othello + Tidewell generate → lobby → act", () => {
+test.describe("dual-genre boards: Othello + hex-island generate → lobby → act", () => {
   test("黑白棋: studio playable, lobby mark, legal place, HUD authority", async ({
     page,
   }) => {
@@ -68,7 +68,7 @@ test.describe("dual-genre boards: Othello + Tidewell generate → lobby → act"
     const card = await openLobbyCard(page, projectId);
     await capture(page, "lobby");
     await expect(card.locator('[data-lobby-mark="othello"]')).toBeVisible();
-    await expect(card.locator('[data-lobby-mark="tidewell"]')).toHaveCount(0);
+    await expect(card.locator('[data-lobby-mark="hexIsland"]')).toHaveCount(0);
     await expect(card.locator('[data-lobby-mark="othello"] img')).toHaveAttribute("alt", "");
     await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
     await card.getByRole("button", { name: "复制邀请链接" }).click();
@@ -117,27 +117,27 @@ test.describe("dual-genre boards: Othello + Tidewell generate → lobby → act"
     test.setTimeout(180_000);
     await page.setViewportSize({ width: 1440, height: 900 });
 
-    const projectId = await generateApproveAndPlayable(page, TIDEWELL_PROMPT);
+    const projectId = await generateApproveAndPlayable(page, HEX_ISLAND_PROMPT);
 
     const card = await openLobbyCard(page, projectId);
-    await expect(card.locator('[data-lobby-mark="tidewell"]')).toBeVisible();
+    await expect(card.locator('[data-lobby-mark="hexIsland"]')).toBeVisible();
     await expect(card.locator('[data-lobby-mark="othello"]')).toHaveCount(0);
-    await expect(card.locator('[data-lobby-mark="tidewell"] img')).toHaveAttribute("alt", "");
+    await expect(card.locator('[data-lobby-mark="hexIsland"] img')).toHaveAttribute("alt", "");
 
     await card.getByRole("link", { name: "继续这一局" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
     expect(new URL(page.url()).searchParams.get("share")).toBeTruthy();
 
-    const board = page.getByRole("region", { name: "汐屿" });
+    const board = page.getByRole("region", { name: "汐屿六角岛" });
     await expect(board).toBeVisible();
     const hud = board.getByRole("region", { name: "对局状态" });
     await expect(hud).toBeVisible();
     await expect(hud).toContainText("初始放置");
-    await expect(page.getByRole("img", { name: "汐屿" })).toBeVisible();
+    await expect(page.getByRole("img", { name: "汐屿六角岛" })).toBeVisible();
 
     await claimTidewellSeat(page, 0);
     await expect(hud).toContainText("轮到你行动");
-    await capture(page, "room-tidewell");
+    await capture(page, "room-hex-island");
     await expect(board.getByLabel("你的资源")).toBeVisible();
 
     const { openTidewellBoardTargets } = await import("./helpers/tidewell-actions");
@@ -155,6 +155,6 @@ test.describe("dual-genre boards: Othello + Tidewell generate → lobby → act"
       timeout: 15_000,
     });
 
-    await assertBoardHudNotClipped(page, "汐屿");
+    await assertBoardHudNotClipped(page, "汐屿六角岛");
   });
 });

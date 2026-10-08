@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { gameSpecSchema, validateGameSpec, gameSpecCapabilityGap, ruleSystemSpecIssues, refreshGameSpec } from "./game-spec";
-import { BASELINE_PROMPTS, structuredSpecFixture, executableSpecFixture, executableOthelloSpecFixture, executableTidewellSpecFixture, executableAuctionBiddingSpecFixture } from "./fixtures/game-spec";
+import { BASELINE_PROMPTS, structuredSpecFixture, executableSpecFixture, executableOthelloSpecFixture, executableHexIslandSpecFixture, executableAuctionBiddingSpecFixture } from "./fixtures/game-spec";
 import type { RuleSystem } from "./project-contract";
 
 describe("GameSpec v1", () => {
@@ -31,7 +31,7 @@ describe("GameSpec v1", () => {
     expect(result.valid).toBe(false);
     expect(result.issues.map((issue) => issue.path)).toEqual(expect.arrayContaining(["players", "actions", "objects", "relationships", "scoring"]));
   });
-  it("closes the Tidewell baseline capability gap once hex-settlement-v1 is registered", () => {
+  it("closes the hex-island baseline capability gap once hex-settlement-v1 is registered", () => {
     expect(gameSpecCapabilityGap(BASELINE_PROMPTS[0])).toBeNull();
     expect(gameSpecCapabilityGap(BASELINE_PROMPTS[0], ["hex-settlement"], "hex-settlement-v1")).toBeNull();
     expect(gameSpecCapabilityGap(BASELINE_PROMPTS[0], ["hex-settlement"], "conversation-relay-v1")).toContain("能力缺口");
@@ -98,8 +98,8 @@ describe("GameSpec disc-flipping-v1 executable fixture", () => {
 });
 
 describe("GameSpec hex-settlement-v1 executable fixture", () => {
-  it("validates a Tidewell-shaped RuleSystem without capability gap", () => {
-    const rule = executableTidewellSpecFixture();
+  it("validates a hex-island-shaped RuleSystem without capability gap", () => {
+    const rule = executableHexIslandSpecFixture();
     expect(ruleSystemSpecIssues(rule)).toEqual([]);
     expect(rule.gameSpec?.execution.kernelType).toBe("hex-settlement-v1");
     expect(rule.gameSpec?.generation.requestedMechanics).toEqual(["hex-settlement"]);

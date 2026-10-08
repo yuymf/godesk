@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { applyAction, createInitialState } from "../../runtime/play-kernel";
-import { autoPlayHexSettlementGame, hexSettlementAdapter, hexSettlementToSessionFields, createHexSettlementKernelConfig } from "../../runtime/adapters/hex-settlement";
+import { autoPlayHexIslandGame, hexIslandAdapter, hexIslandToSessionFields, createHexIslandKernelConfig } from "../../runtime/adapters/hex-island";
 import { CUE_IDS, cuesForRoomDelta, type AudioRoomSnapshot, type AudioSessionState, type CueId } from "./cues";
 
 /**
@@ -11,17 +11,17 @@ import { CUE_IDS, cuesForRoomDelta, type AudioRoomSnapshot, type AudioSessionSta
 const UI_CUES: ReadonlySet<CueId> = new Set<CueId>(["hover", "select", "illegal", "toggle"]);
 
 function playGame(seed: number) {
-  const config = createHexSettlementKernelConfig();
-  const { actions } = autoPlayHexSettlementGame(seed, config);
-  let state = createInitialState(hexSettlementAdapter, config, seed);
+  const config = createHexIslandKernelConfig();
+  const { actions } = autoPlayHexIslandGame(seed, config);
+  let state = createInitialState(hexIslandAdapter, config, seed);
   const toSession = (s: typeof state): AudioSessionState => {
-    const fields = hexSettlementToSessionFields(s);
-    return { status: fields.status, winnerSeat: fields.winnerSeat, hexSettlement: { players: fields.hexSettlement.players } };
+    const fields = hexIslandToSessionFields(s);
+    return { status: fields.status, winnerSeat: fields.winnerSeat, hexIsland: { players: fields.hexIsland.players } };
   };
   const snapshots: AudioRoomSnapshot[] = [{ state: toSession(state), acceptedActions: [] }];
   const accepted: AudioRoomSnapshot["acceptedActions"][number][] = [];
   actions.forEach((action, index) => {
-    const result = applyAction(hexSettlementAdapter, state, action, config);
+    const result = applyAction(hexIslandAdapter, state, action, config);
     if (!result.ok) throw new Error(`replay rejected ${action.type}`);
     state = result.state;
     const session = toSession(state);

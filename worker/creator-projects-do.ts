@@ -23,6 +23,14 @@ import {
 import { playabilityFloor } from "../src/runtime/playability-floor";
 import { presentationFloor } from "../src/runtime/presentation-floor";
 import { buildMeetsShareGate, shareGateRefusal } from "../src/runtime/share-gate";
+import type { AssetServerAsset, ImportedAssetFile } from "../src/creator/asset-search/types";
+import { importTooLargeMessage } from "../src/creator/asset-search/config";
+import { isValidAssetServerId } from "./asset-server";
+import {
+  applyImportedAsset,
+  decodeImportFiles,
+  importedBlobKey,
+} from "./imported-assets";
 import type {
   AcceptedAction,
   ApplyProjectChangesInput,
@@ -69,6 +77,11 @@ import {
   reconstructSession,
   reconstructReplay,
   slimAcceptedActionsForStorage,
+  roomLogAction,
+  buildUsesSessionSnapshots,
+  sessionSnapshotFor,
+  sessionSnapshotKey,
+  type SessionStateSnapshot,
   type ProjectRecord,
   type StoredPlayableBuild,
   type StoredPlaytest,
@@ -125,6 +138,53 @@ export class CreatorProjects extends DurableObject<Env> {
   }
 
   /**
+   * G3D-04c: reconstructed Rooms kept in memory (validated against storage by
+   * log length + last intentId, so a rolled-back transaction or another write
+   * path can never serve a stale state). A move applies only the new action.
+   * Only snapshot kernels are cached: their logs are slim (one state per
+   * room), while other kernels keep a full state per action and would blow
+   * the isolate memory limit across many rooms.
+   */
+  private readonly roomCache = new Map<string, StoredSharedSession>();
+
+  private rememberRoom(room: StoredSharedSession, build: StoredPlayableBuild) {
+    if (!buildUsesSessionSnapshots(build)) return;
+    this.roomCache.delete(room.id);
+    this.roomCache.set(room.id, room);
+    while (this.roomCache.size > 16) {
+      const oldest = this.roomCache.keys().next().value;
+      if (oldest === undefined) break;
+      this.roomCache.delete(oldest);
+    }
+  }
+
+  /** Authoritative Room: memory cache → latest snapshot + tail → full replay. */
+  private async loadRoom(
+    stored: StoredSharedSession,
+    build: StoredPlayableBuild,
+    transaction?: DurableObjectTransaction,
+  ): Promise<StoredSharedSession> {
+    const cached = this.roomCache.get(stored.id);
+    const length = stored.acceptedActions.length;
+    if (
+      cached &&
+      cached.buildId === stored.buildId &&
+      cached.seed === stored.seed &&
+      cached.acceptedActions.length === length &&
+      cached.acceptedActions[length - 1]?.intentId ===
+        stored.acceptedActions[length - 1]?.intentId
+    ) {
+      return { ...stored, state: cached.state, acceptedActions: cached.acceptedActions };
+    }
+    const snapshot = await (transaction ?? this.ctx.storage).get<SessionStateSnapshot>(
+      sessionSnapshotKey(stored.id),
+    );
+    const room = reconstructSession(stored, build, snapshot ?? null);
+    this.rememberRoom(room, build);
+    return room;
+  }
+
+  /**
    * Persist one kernel-accepted action (room + replay + project record) inside
    * the caller's transaction, and atomically (re)write the Room AI pending turn
    * so a DO restart can never lose or duplicate an AI move.
@@ -133,6 +193,7 @@ export class CreatorProjects extends DurableObject<Env> {
     transaction: DurableObjectTransaction,
     room: StoredSharedSession,
     accepted: AcceptedAction,
+    build: StoredPlayableBuild,
   ): Promise<
     | { room: StoredSharedSession; aiPending: AiPendingTurn | null }
     | { error: { status: number; value: { error: string } } }
@@ -141,8 +202,9 @@ export class CreatorProjects extends DurableObject<Env> {
     const updatedRoom: StoredSharedSession = {
       ...room,
       state: accepted.state,
-      acceptedActions: [...room.acceptedActions, accepted],
+      acceptedActions: [...room.acceptedActions, roomLogAction(build, accepted)],
     };
+    const snapshot = sessionSnapshotFor(build, updatedRoom);
     const persistedRoom: StoredSharedSession = {
       ...updatedRoom,
       acceptedActions: slimAcceptedActionsForStorage(updatedRoom.acceptedActions),
@@ -174,10 +236,14 @@ export class CreatorProjects extends DurableObject<Env> {
       [`replay:${room.replayId}`]: updatedReplay,
       [projectKey]: record,
       ...(aiPending ? { [aiTurnKey(room.id)]: aiPending } : {}),
+      ...(snapshot ? { [sessionSnapshotKey(room.id)]: snapshot } : {}),
     });
     if (!aiPending && room.aiSeats?.length) {
       await transaction.delete(aiTurnKey(room.id));
     }
+    // Validated on next read (length + last intentId), so a later rollback
+    // of this transaction just falls back to snapshot + tail.
+    this.rememberRoom(updatedRoom, build);
     return { room: updatedRoom, aiPending };
   }
 
@@ -244,7 +310,7 @@ export class CreatorProjects extends DurableObject<Env> {
         await transaction.delete(aiTurnKey(turn.sessionId));
         return { kind: "dropped" as const };
       }
-      const room = reconstructSession(storedRoom, build);
+      const room = await this.loadRoom(storedRoom, build, transaction);
       const seat = room.state.activeSeat;
       if (
         room.state.status !== "active" ||
@@ -290,7 +356,7 @@ export class CreatorProjects extends DurableObject<Env> {
         console.warn("room_ai_no_legal_action", room.id, seat, sequence);
         return { kind: "dropped" as const };
       }
-      const persisted = await this.persistAcceptedAction(transaction, room, accepted);
+      const persisted = await this.persistAcceptedAction(transaction, room, accepted, build);
       if ("error" in persisted) {
         await transaction.delete(aiTurnKey(room.id));
         return { kind: "dropped" as const };
@@ -600,6 +666,112 @@ export class CreatorProjects extends DurableObject<Env> {
         }
         throw reason;
       }
+  }
+
+  async importExternalAsset(projectId: string, input: unknown) {
+    const body = input as {
+      expectedVersion?: unknown;
+      idempotencyKey?: unknown;
+      asset?: unknown;
+      files?: unknown;
+    };
+    if (
+      !Number.isInteger(body.expectedVersion) ||
+      typeof body.idempotencyKey !== "string" ||
+      !body.idempotencyKey ||
+      !body.asset ||
+      typeof body.asset !== "object"
+    ) {
+      return error("导入请求无效。", 400);
+    }
+    const asset = body.asset as AssetServerAsset;
+    if (typeof asset.id !== "string" || !isValidAssetServerId(asset.id)) {
+      return error("资产 id 无效。", 400);
+    }
+    let files: ReturnType<typeof decodeImportFiles>;
+    try {
+      files = decodeImportFiles(Array.isArray(body.files) ? body.files as ImportedAssetFile[] : []);
+    } catch (reason) {
+      const code = reason instanceof Error ? reason.message : "invalid_import_file";
+      if (code === "import_too_large") return error(importTooLargeMessage(), 413);
+      return error("导入文件无效。", 400);
+    }
+    const projectKey = `${PROJECT_PREFIX}${projectId}`;
+    const idempotencyKey = `idempotency:${projectId}:${body.idempotencyKey}`;
+    try {
+      const outcome = await this.ctx.storage.transaction(async (transaction) => {
+        const existing = await transaction.get<{
+          studioPath: string;
+          project: ProjectRecord["project"];
+          sources: ProjectRecord["sources"];
+          importedAssets: ProjectRecord["importedAssets"];
+          licensesMarkdown: string;
+          changeset: { id: string };
+        }>(idempotencyKey);
+        if (existing) return { status: 200, value: existing };
+        const stored = await transaction.get<ProjectRecord>(projectKey);
+        if (!stored) return { status: 404, value: { error: "project_not_found" } };
+        const record = normalizedProjectRecord(stored);
+        if (record.project.version !== body.expectedVersion) {
+          return {
+            status: 409,
+            value: {
+              error: "version_conflict",
+              currentVersion: record.project.version,
+            },
+          };
+        }
+        const imported = applyImportedAsset(record, asset, files);
+        const now = new Date().toISOString();
+        const previousVersion = record.project.version;
+        record.project = {
+          ...record.project,
+          version: previousVersion + 1,
+          updatedAt: now,
+        };
+        const changeset = {
+          id: `changeset_${crypto.randomUUID()}`,
+          previousVersion,
+          newVersion: record.project.version,
+          affectedEntities: [`imported-asset:${imported.id}`, "source:assets/LICENSES.md"],
+          createdAt: now,
+        };
+        record.changesets.push(changeset);
+        const value = {
+          project: record.project,
+          ruleSystem: record.ruleSystem,
+          generationPlan: null,
+          sources: record.sources,
+          hypotheses: record.hypotheses,
+          findings: record.findings,
+          changeset,
+          warnings: [],
+          studioPath: `/studio/${record.project.id}`,
+          importedAssets: record.importedAssets ?? [],
+          licensesMarkdown: record.importedLicensesMarkdown ?? "",
+        };
+        await transaction.put({
+          [projectKey]: record,
+          [idempotencyKey]: value,
+          [importedBlobKey(record.project.id, imported.id)]: {
+            path: imported.path,
+            mimeType: imported.mimeType,
+            bytes: files[0]!.bytes,
+          },
+        });
+        return { status: 200, value };
+      });
+      return json(outcome.value, outcome.status);
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : "import_failed";
+      if (/SQLITE_TOOBIG|string or blob too big/i.test(message)) {
+        return error(importTooLargeMessage(), 413);
+      }
+      if (message === "import_files_required" || message === "invalid_import_file" || message === "invalid_import_path") {
+        return error("导入文件无效。", 400);
+      }
+      return error(message, 400);
+    }
   }
 
   async compileProjectBuild(
@@ -1104,6 +1276,8 @@ export class CreatorProjects extends DurableObject<Env> {
         jobs: [],
         hypotheses: [],
         findings: [],
+        importedAssets: [],
+        importedLicensesMarkdown: "",
       };
       await this.ctx.storage.put(`${PROJECT_PREFIX}${project.id}`, record);
       return json(project, 201);
@@ -1505,6 +1679,9 @@ export class CreatorProjects extends DurableObject<Env> {
             `job-input:${job.id}`,
             `job-idempotency:${job.projectId}:${job.idempotencyKey}`,
           ]),
+          ...(record.importedAssets ?? []).map((asset) =>
+            importedBlobKey(record.project.id, asset.id),
+          ),
           ...idempotencyLists.flatMap((entries) => [...entries.keys()]),
         ]);
         const value = { deletedProjectId: record.project.id };
@@ -1522,6 +1699,12 @@ export class CreatorProjects extends DurableObject<Env> {
       }
       return this.applyProjectChanges(changeMatch[1], input);
 
+    }
+
+    const importMatch = url.pathname.match(/^\/projects\/([^/]+)\/imported-assets$/);
+    if (request.method === "POST" && importMatch) {
+      const input = await request.json().catch(() => undefined);
+      return this.importExternalAsset(importMatch[1], input);
     }
 
     const submitJobMatch = url.pathname.match(/^\/projects\/([^/]+)\/jobs$/);
@@ -1980,7 +2163,7 @@ export class CreatorProjects extends DurableObject<Env> {
             value: { error: "runtime_not_executable" },
           };
         }
-        const room = reconstructSession(storedRoom, build);
+        const room = await this.loadRoom(storedRoom, build, transaction);
         if (isAiSeat(room, Number(input.seat))) {
           return {
             status: 409,
@@ -2026,7 +2209,7 @@ export class CreatorProjects extends DurableObject<Env> {
             value: { error: "intent_rejected", state: room.state },
           };
         }
-        const persisted = await this.persistAcceptedAction(transaction, room, accepted);
+        const persisted = await this.persistAcceptedAction(transaction, room, accepted, build);
         if ("error" in persisted) return persisted.error;
         const updatedRoom = persisted.room;
         // Response/broadcast keep full in-memory actions; DO stores slim logs.
@@ -2170,7 +2353,7 @@ export class CreatorProjects extends DurableObject<Env> {
       );
       const build = storedBuild ? normalizedBuild(storedBuild) : undefined;
       if (!build) return error("Shared Session 引用的 Build 不存在。", 500);
-      return json(visibleSession(reconstructSession(room, build)));
+      return json(visibleSession(await this.loadRoom(room, build)));
     }
 
     const replayMatch = url.pathname.match(/^\/replays\/([^/]+)$/);
@@ -2208,12 +2391,12 @@ export class CreatorProjects extends DurableObject<Env> {
       const view = url.searchParams.get("view");
       if (view === "rule-system") return json(record.ruleSystem);
       if (view === "activity") {
-        const sessions = record.sessions.slice(-50).map((room) => {
+        const sessions = await Promise.all(record.sessions.slice(-50).map((room) => {
           const build = record.builds.find(
             (candidate) => candidate.id === room.buildId,
           );
-          return build ? reconstructSession(room, build) : room;
-        });
+          return build ? this.loadRoom(room, normalizedBuild(build)) : room;
+        }));
         return json({
           project: record.project,
           jobs: record.jobs.slice(0, 50),
@@ -2291,6 +2474,12 @@ export class CreatorProjects extends DurableObject<Env> {
       if (view === "sources") {
         return json(paginated(record.sources, url, "sources"));
       }
+      if (view === "imported-assets") {
+        return json({
+          assets: record.importedAssets ?? [],
+          licensesMarkdown: record.importedLicensesMarkdown ?? "",
+        });
+      }
       if (view === "changesets") {
         return json(paginated(record.changesets, url, "changesets"));
       }
@@ -2301,12 +2490,12 @@ export class CreatorProjects extends DurableObject<Env> {
         return json(paginated(record.playtests, url, "playtests"));
       }
       if (view === "sessions") {
-        const sessions = record.sessions.map((room) => {
+        const sessions = await Promise.all(record.sessions.map((room) => {
           const build = record.builds.find(
             (candidate) => candidate.id === room.buildId,
           );
-          return build ? reconstructSession(room, build) : room;
-        });
+          return build ? this.loadRoom(room, normalizedBuild(build)) : room;
+        }));
         return json(paginated(sessions, url, "sessions"));
       }
       if (view === "jobs") {
@@ -2400,7 +2589,7 @@ export class CreatorProjects extends DurableObject<Env> {
         } satisfies SessionSocketAttachment);
       }
     }
-    const reconstructed = reconstructSession(room, build);
+    const reconstructed = await this.loadRoom(room, build);
     socket.send(JSON.stringify({
       type: "session.snapshot",
       session: visibleSession(reconstructed, viewerSeat),

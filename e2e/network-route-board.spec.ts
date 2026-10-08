@@ -16,7 +16,7 @@ test.describe("PR14 network-route HUD + lobby thumb", () => {
 
     const card = await openLobbyCard(page, projectId);
     await expect(card.locator('[data-lobby-mark="network"]')).toBeVisible();
-    await expect(card.locator('[data-lobby-mark="tidewell"]')).toHaveCount(0);
+    await expect(card.locator('[data-lobby-mark="hexIsland"]')).toHaveCount(0);
     await expect(card.locator('[data-lobby-mark="othello"]')).toHaveCount(0);
     await expect(card.locator('[data-lobby-mark="network"] img')).toHaveAttribute(
       "alt",

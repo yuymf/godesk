@@ -10,11 +10,11 @@ import { mkdirSync } from "node:fs";
  * - `@slow` (GODESK_E2E_SLOW=1): full game to game over vs the AI seat on
  *   desktop 1440×900 (mouse) and iPhone 12 Pro 390×844 (touch).
  */
-const TIDEWELL_PROMPT = "做一款可以与电脑对战的汐屿基础版";
+const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿六角岛资源建造游戏";
 
 async function openAiRoom(page: Page) {
   await page.goto("/chatgpt-plugin/new");
-  await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(TIDEWELL_PROMPT);
+  await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(HEX_ISLAND_PROMPT);
   await page.getByRole("button", { name: "生成可玩版本" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 90_000 });
   await page.getByRole("button", { name: "确认玩法并开始试玩" }).click();
@@ -32,8 +32,8 @@ async function openAiRoom(page: Page) {
   await expect(seatSelect.locator("option[value='1']")).toHaveText(/电脑/);
   await expect(seatSelect.locator("option[value='1']")).toHaveAttribute("disabled", "");
   await seatSelect.selectOption("0");
-  const board = page.getByRole("region", { name: "汐屿" });
-  await expect(page.getByRole("img", { name: "汐屿" })).toBeVisible({ timeout: 30_000 });
+  const board = page.getByRole("region", { name: "汐屿六角岛" });
+  await expect(page.getByRole("img", { name: "汐屿六角岛" })).toBeVisible({ timeout: 30_000 });
   await expect(page.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
   await expect(board.locator(".tidewell-player-card").filter({ hasText: "电脑" })).toHaveCount(1);
   return board;
@@ -119,7 +119,7 @@ for (const mobile of [false, true]) {
     const page = await ctx.newPage();
     const board = await openAiRoom(page);
     const hud = board.getByRole("region", { name: "对局状态" });
-    const img = page.getByRole("img", { name: "汐屿" });
+    const img = page.getByRole("img", { name: "汐屿六角岛" });
     await expect(page.locator("svg polygon")).toHaveCount(0);
     await page.screenshot({ path: `${out}/${tag}-start.png` });
     let mine = 0;

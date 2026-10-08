@@ -15,7 +15,7 @@
 // CI gate (--ci): the same Room under SwiftShader, asserting only deterministic
 // budgets (bytes, requests, draw calls, triangles, GPU estimate, leaks,
 // context-loss rebuild). Exit code 1 on any budget failure.
-import { chromium } from "@playwright/test";
+import { chromium, devices } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
@@ -24,6 +24,7 @@ import {
   LONG_RUN_BUDGET, MB, PROFILE_BUDGETS, RESILIENCE_BUDGETS, TIER_BUDGETS, TRANSFER_BUDGETS, check,
 } from "./perf/budgets.mjs";
 import { createHexRoom, startWorker, withQuery } from "./perf/room.mjs";
+import { collectRoomTexts, findRawActionIds } from "./perf/hud-raw-ids.mjs";
 
 const { values: args } = parseArgs({
   options: {
@@ -227,7 +228,7 @@ async function claimSeat(page, seat) {
 /** One seeded legal action on whichever page currently has enabled board buttons. */
 async function autoMove(pages, random) {
   for (const page of pages) {
-    const board = page.getByRole("region", { name: "汐屿" });
+    const board = page.getByRole("region", { name: "汐屿六角岛" });
     const buttons = board.locator("button:not([disabled])");
     const count = await buttons.count().catch(() => 0);
     if (!count) continue;
@@ -402,8 +403,22 @@ async function runProfile({ browser, profileId, roomUrl, outDir, durationMs, lon
   }
 }
 
+/** G3D-17 上线前清单用：一次 draw call 采样（不进 CI 门，只记录）。 */
+function tierProbe(requestedTier, snap, pbr) {
+  return {
+    requestedTier,
+    actualTier: snap?.tier ?? null,
+    calls: snap?.renderer?.calls ?? null,
+    peak: snap?.rendererPeak?.calls ?? null,
+    triangles: snap?.renderer?.triangles ?? null,
+    pbr: pbr ?? null,
+  };
+}
+
 async function runCi({ browser, roomUrl, outDir }) {
   const results = [];
+  const tierDrawCalls = [];
+  const hudScans = [];
   const tier = TIER_BUDGETS.high;
   // 1. Cold load at the default tier: transfer, requests, draw calls, triangles, GPU estimate.
   {
@@ -425,6 +440,7 @@ async function runCi({ browser, roomUrl, outDir }) {
     }, undefined, { timeout: 20_000 }).then((handle) => handle.jsonValue()).catch(() => "timeout");
     await page.waitForTimeout(500);
     const snap = await snapshot(page);
+    tierDrawCalls.push(tierProbe("high", snap, pbrState));
     const wait = TRANSFER_BUDGETS.firstGameWindowMs - (Date.now() - started);
     if (wait > 0) await delay(wait);
     const firstGame = network.within(TRANSFER_BUDGETS.firstGameWindowMs);
@@ -508,6 +524,64 @@ async function runCi({ browser, roomUrl, outDir }) {
     results.push(check("firstGameBytes(low)", firstGame.bytes, TIER_BUDGETS.low.firstGameBytes));
     await context.close();
   }
+  // 5. G3D-17 上线前清单（只记录，不进 CI 门）：medium / low 档 draw call（强制 ?tier=），
+  //    与第 1 段的 high 一起由 scripts/launch-checklist.mjs 对照 §4.6.3 分档预算。
+  for (const tierName of ["medium", "low"]) {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await context.newPage();
+    try {
+      await page.goto(withQuery(roomUrl, { perf: 1, tier: tierName }), { waitUntil: "commit" });
+      await waitForInteractive(page, 120_000);
+      const pbrState = await page.waitForFunction(() => {
+        const value = document.querySelector('[data-testid="g3d-scene-host"]')?.getAttribute("data-pbr");
+        return value && value !== "pending" ? value : null;
+      }, undefined, { timeout: 20_000 }).then((handle) => handle.jsonValue()).catch(() => "timeout");
+      // 阴影贴图在场景 / 档位变化后 1.5 s 内逐帧重绘：等过这段再取稳态，峰值另记。
+      await page.waitForTimeout(2_500);
+      tierDrawCalls.push(tierProbe(tierName, await snapshot(page), pbrState));
+    } catch (error) {
+      tierDrawCalls.push({ requestedTier: tierName, error: String(error?.message ?? error).split("\n")[0] });
+    } finally {
+      await context.close();
+    }
+  }
+  // 6. G3D-17 上线前清单（只记录）：Room 可见文本 / aria-label 里不得出现原始动作 id（坐标串、内部 id、动作类型）。
+  //    桌面 1440×900 与 iPhone 12 Pro 各扫一次，都以同一身份入座 0（旁观者看不到合法动作；入座失败时 seat=null 按旁观记）；
+  //    不带 ?perf=1，免得 perf 浮层的数字混进来。这是最后一段：入座会改房间状态。
+  const { defaultBrowserType: _ignored, ...iphone12Pro } = devices["iPhone 12 Pro"];
+  let seatClaims = {};
+  for (const [viewport, contextOptions] of [["desktop-1440x900", { viewport: { width: 1440, height: 900 } }], ["iphone12pro-390x844", iphone12Pro]]) {
+    const context = await browser.newContext(contextOptions);
+    // 席位凭证存在 sessionStorage：把上一个视口的凭证带过来，第二个视口以同一身份入座 0（否则 409 seat_claimed）。
+    await context.addInitScript((entries) => {
+      for (const [key, value] of Object.entries(entries)) window.sessionStorage.setItem(key, value);
+    }, seatClaims);
+    const page = await context.newPage();
+    try {
+      await page.goto(roomUrl, { waitUntil: "commit" });
+      await page.waitForFunction(() => Boolean(document.querySelector('[data-testid="g3d-scene-host"]')), undefined, { timeout: 120_000 });
+      await page.waitForTimeout(2_000);
+      // 旁观者看不到合法动作；先入座 0（开局放置阶段，合法动作最多），再扫。
+      const seatSelect = page.getByLabel("你的席位");
+      let seat = null;
+      if (await seatSelect.count() && (await seatSelect.inputValue().catch(() => "")) === "0") {
+        seat = 0; // 已用带过来的凭证恢复入座
+      } else if (await seatSelect.count()) {
+        const claim = page.waitForResponse((response) => /\/seats$/.test(new URL(response.url()).pathname), { timeout: 15_000 }).catch(() => null);
+        await seatSelect.selectOption("0").catch(() => {});
+        const response = await claim;
+        seat = response?.ok() ? 0 : null;
+        await page.waitForTimeout(2_500);
+      }
+      hudScans.push({ viewport, seat, ...findRawActionIds(await collectRoomTexts(page)) });
+      seatClaims = await page.evaluate(() => Object.fromEntries(Object.entries(window.sessionStorage))).catch(() => seatClaims);
+    } catch (error) {
+      hudScans.push({ viewport, error: String(error?.message ?? error).split("\n")[0] });
+    } finally {
+      await page.goto("about:blank").catch(() => {});
+      await context.close();
+    }
+  }
   const env = await (async () => {
     const page = await browser.newPage();
     try { return await environment(page); } finally { await page.close(); }
@@ -518,6 +592,8 @@ async function runCi({ browser, roomUrl, outDir }) {
     unmaskedRenderer: env.unmaskedRenderer,
     budgets: results,
     pass: results.every((entry) => entry.pass !== false),
+    // G3D-17 上线前清单的原始数据（不影响 pass）；由 scripts/launch-checklist.mjs 评估。
+    launchChecklist: { tierDrawCalls, hudRawActionIds: hudScans },
     note: "CI 门只断言确定性预算；SwiftShader 为 CPU 软件渲染，帧率无参考意义，不断言（SPEC §4.6.1）。",
     capturedAt: new Date().toISOString(),
   };

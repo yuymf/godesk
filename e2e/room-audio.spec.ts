@@ -1,5 +1,5 @@
 import { devices, expect, test, type Locator, type Page } from "@playwright/test";
-import { NORTH_STAR_TIDEWELL_PROMPT, shareHrefFromStudio } from "./helpers/sol-max-baseline";
+import { NORTH_STAR_HEX_ISLAND_PROMPT, shareHrefFromStudio } from "./helpers/sol-max-baseline";
 import { clickTidewellBoardAction, openTidewellBoardTargets, claimTidewellSeat } from "./helpers/tidewell-actions";
 
 /**
@@ -41,7 +41,7 @@ test("hex-settlement room audio: cues from play events, touch unlock, settings p
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/chatgpt-plugin/new");
-  await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(NORTH_STAR_TIDEWELL_PROMPT);
+  await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(NORTH_STAR_HEX_ISLAND_PROMPT);
   await page.getByRole("button", { name: "生成可玩版本" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 90_000 });
   await page.getByRole("button", { name: "确认玩法并开始试玩" }).click();
@@ -63,7 +63,7 @@ test("hex-settlement room audio: cues from play events, touch unlock, settings p
     await guestPage.waitForTimeout(2_000);
     const audioRoot = guestPage.locator("[data-sound-settings]");
     await expect(audioRoot).toHaveAttribute("data-audio-context", "suspended", { timeout: 30_000 });
-    await guestPage.getByRole("region", { name: "汐屿" }).click();
+    await guestPage.getByRole("region", { name: "汐屿六角岛" }).click();
     await expect(audioRoot).toHaveAttribute("data-audio-context", "running");
     await waitForAudio(guestPage);
 
@@ -73,8 +73,8 @@ test("hex-settlement room audio: cues from play events, touch unlock, settings p
     await claimTidewellSeat(guestPage, 0);
     await expect(guestPage.getByLabel("你的席位")).toHaveValue("0");
 
-    const guestBoard = guestPage.getByRole("region", { name: "汐屿" });
-    const hostBoard = page.getByRole("region", { name: "汐屿" });
+    const guestBoard = guestPage.getByRole("region", { name: "汐屿六角岛" });
+    const hostBoard = page.getByRole("region", { name: "汐屿六角岛" });
     // 手机视口下盘面目标抽屉默认收起；打开后再点（clipped 列表对 getByRole 不可见）。
     await clickTidewellBoardAction(guestBoard, /建造渔村/);
     await openTidewellBoardTargets(guestBoard);
@@ -135,7 +135,7 @@ test("hex-settlement room audio: cues from play events, touch unlock, settings p
     expect((await cueLog(page)).find((e) => e.cue === "illegal")?.source).toBe("ui:error");
 
     // 声音设置（桌面端）：panel / toggle cue、静音、音量、曲目切换，刷新后保持。
-    await page.getByRole("region", { name: "汐屿" }).click();
+    await page.getByRole("region", { name: "汐屿六角岛" }).click();
     await expect(page.locator("[data-sound-settings]")).toHaveAttribute("data-audio-context", "running");
     await expect.poll(async () => (await audioSnapshot(page))?.currentTrack, { timeout: 15_000 }).toBe("theme");
     await page.locator(".tidewell-sound-chip").click();

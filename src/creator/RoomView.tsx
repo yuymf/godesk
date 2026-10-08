@@ -367,9 +367,9 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   const othelloState = room.state.othello;
   const discFlipping =
     isDiscFlipping(build.ruleSystem) && Boolean(othelloState);
-  const hexSettlementState = room.state.hexSettlement;
+  const hexIslandState = room.state.hexIsland;
   const hexSettlement =
-    isHexSettlement(build.ruleSystem) && Boolean(hexSettlementState);
+    isHexSettlement(build.ruleSystem) && Boolean(hexIslandState);
   const networkRouteState = room.state.networkRoute;
   const networkRoute =
     isNetworkRoute(build.ruleSystem) && Boolean(networkRouteState);
@@ -436,7 +436,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       : copy.points;
 
   return (
-    <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute || auction ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-tidewell room-view-tidewell-immersive" : ""} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
+    <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute || auction ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-hex-island room-view-tidewell-immersive" : ""} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
       <header className="room-shell-header">
         <div className="room-title-block">
           <span className="room-brand-mark" aria-hidden="true"><GameMark /></span>
@@ -614,13 +614,13 @@ export function RoomView({ sessionId }: { sessionId: string }) {
           viewerSeat={seat}
           winnerSeat={room.state.winnerSeat}
         />
-      ) : hexSettlement && hexSettlementState ? (
+      ) : hexSettlement && hexIslandState ? (
         <Suspense
           fallback={
             // Same outer box as HexSettlementBoard (HUD + fixed-height .g3d-stage) so the
             // feedback panel below does not jump when the lazy chunk lands (Room CLS, G3D-05).
-            <div aria-busy="true" className="tidewell-board hex-settlement-board hex-settlement-board-loading">
-              <div aria-hidden="true" className="tidewell-hud hex-settlement-hud-placeholder" />
+            <div aria-busy="true" className="hex-island-board hex-settlement-board hex-settlement-board-loading">
+              <div aria-hidden="true" className="hex-island-hud hex-settlement-hud-placeholder" />
               <div className="g3d-stage">
                 <span className="sr-only">加载 3D 盘面…</span>
               </div>
@@ -631,7 +631,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
             activeSeat={activeSeat}
             aiSeats={room.aiSeats}
             busy={busy}
-            hexSettlement={hexSettlementState as HexSettlementBoardState}
+            hexIsland={hexIslandState as HexSettlementBoardState}
             enabled={isMyTurn}
             locale={locale}
             onAct={(actionId, payload) => {

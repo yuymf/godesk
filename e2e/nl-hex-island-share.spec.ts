@@ -2,7 +2,7 @@ import { chromium, expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { clickTidewellBoardAction, openTidewellBoardTargets, claimTidewellSeat } from "./helpers/tidewell-actions";
 import {
-  NORTH_STAR_TIDEWELL_PROMPT,
+  NORTH_STAR_HEX_ISLAND_PROMPT,
   openLobbyCard,
   shareHrefFromStudio,
 } from "./helpers/sol-max-baseline";
@@ -12,16 +12,16 @@ const evidenceDir = process.env.GODESK_E2E_EVIDENCE_DIR;
 async function evidenceScreenshot(page: Page, name: string) {
   if (!evidenceDir) return;
   await mkdir(evidenceDir, { recursive: true });
-  await page.getByRole("region", { name: "汐屿" }).screenshot({
+  await page.getByRole("region", { name: "汐屿六角岛" }).screenshot({
     path: `${evidenceDir}/${name}.png`,
   });
 }
 
-test("NL Tidewell proposal → hex-settlement build → share= guest setup settlement", async ({ page, browser }) => {
+test("NL hex-island proposal → hex-settlement build → share= guest setup settlement", async ({ page, browser }) => {
   test.setTimeout(180_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/chatgpt-plugin/new");
-  await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(NORTH_STAR_TIDEWELL_PROMPT);
+  await page.getByRole("textbox", { name: "描述你的游戏想法" }).fill(NORTH_STAR_HEX_ISLAND_PROMPT);
   await page.getByRole("button", { name: "生成可玩版本" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/studio\//, { timeout: 90_000 });
   await expect(page.getByRole("heading", { name: "先看这一局怎么玩" })).toBeVisible({ timeout: 30_000 });
@@ -29,7 +29,7 @@ test("NL Tidewell proposal → hex-settlement build → share= guest setup settl
   const projectId = new URL(page.url()).pathname.split("/").at(-1)!;
   const ruleBefore = await (await page.request.get(`/api/projects/${projectId}?view=rule-system`)).json();
   const plan = await (await page.request.get(`/api/projects/${projectId}?view=generation-plan`)).json();
-  expect(ruleBefore.generation?.sourcePrompt).toBe(NORTH_STAR_TIDEWELL_PROMPT);
+  expect(ruleBefore.generation?.sourcePrompt).toBe(NORTH_STAR_HEX_ISLAND_PROMPT);
   expect(ruleBefore.generation?.requestedMechanics).toEqual(["hex-settlement"]);
   expect(plan.generationPlan?.proposedRuntime).toMatchObject({
     op: "configure_hex_settlement",
@@ -52,7 +52,7 @@ test("NL Tidewell proposal → hex-settlement build → share= guest setup settl
   );
 
   const card = await openLobbyCard(page, projectId);
-  await expect(card.locator('[data-lobby-mark="tidewell"]')).toBeVisible();
+  await expect(card.locator('[data-lobby-mark="hexIsland"]')).toBeVisible();
   for (const mark of ["auction", "othello", "network", "card"]) {
     await expect(card.locator(`[data-lobby-mark="${mark}"]`)).toHaveCount(0);
   }
@@ -73,11 +73,11 @@ test("NL Tidewell proposal → hex-settlement build → share= guest setup settl
     expect(new URL(guestPage.url()).searchParams.get("share")).toBeTruthy();
     await claimTidewellSeat(page, 1);
     await claimTidewellSeat(guestPage, 0);
-    const hostBoard = page.getByRole("region", { name: "汐屿" });
-    const guestBoard = guestPage.getByRole("region", { name: "汐屿" });
+    const hostBoard = page.getByRole("region", { name: "汐屿六角岛" });
+    const guestBoard = guestPage.getByRole("region", { name: "汐屿六角岛" });
     await expect(hostBoard).toBeVisible();
     await expect(guestBoard).toBeVisible();
-    await expect(guestBoard.getByRole("img", { name: "汐屿" })).toBeVisible();
+    await expect(guestBoard.getByRole("img", { name: "汐屿六角岛" })).toBeVisible();
     const hostHud = hostBoard.getByRole("region", { name: "对局状态" });
     const guestHud = guestBoard.getByRole("region", { name: "对局状态" });
     await expect(hostHud).toContainText("座位 0 · 阶段 初始放置");
@@ -86,7 +86,7 @@ test("NL Tidewell proposal → hex-settlement build → share= guest setup settl
     await expect(guestHud).toContainText("轮到你行动");
     await expect(hostBoard.getByRole("button", { name: /建造渔村/ })).toHaveCount(0);
     await expect(guestBoard.getByLabel("你的资源")).toBeVisible();
-    await evidenceScreenshot(guestPage, "tidewell-guest-setup");
+    await evidenceScreenshot(guestPage, "hex-island-guest-setup");
 
     await clickTidewellBoardAction(guestBoard, /建造渔村/);
     await expect(hostHud).toContainText("建造渔村");
@@ -95,7 +95,7 @@ test("NL Tidewell proposal → hex-settlement build → share= guest setup settl
     await expect(guestHud.getByLabel("胜利点")).toContainText("座位 0 · 1 胜利点");
     await expect(guestBoard.getByRole("button", { name: /铺设栈道/ }).first()).toBeVisible();
     await expect(hostBoard.getByRole("button", { name: /铺设栈道/ })).toHaveCount(0);
-    await evidenceScreenshot(guestPage, "tidewell-guest-settlement");
+    await evidenceScreenshot(guestPage, "hex-island-guest-settlement");
   } finally {
     await guest.close();
   }

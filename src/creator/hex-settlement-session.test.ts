@@ -1,23 +1,23 @@
 import { describe, expect, it } from "vitest";
 import {
-  createInitialHexSettlementSessionSlice,
-  listHexSettlementLegalActionsForSession,
+  createInitialHexIslandSessionSlice,
+  listHexIslandLegalActionsForSession,
 } from "./hex-settlement-session";
 
-describe("createInitialHexSettlementSessionSlice", () => {
+describe("createInitialHexIslandSessionSlice", () => {
   it("returns beginner tiles and setup phase for 2 players", () => {
-    const hexSettlement = createInitialHexSettlementSessionSlice(2);
-    expect(hexSettlement.playerCount).toBe(2);
-    expect(hexSettlement.tiles).toHaveLength(19);
-    expect(hexSettlement.phase).toBe("setup");
+    const hexIsland = createInitialHexIslandSessionSlice(2);
+    expect(hexIsland.playerCount).toBe(2);
+    expect(hexIsland.tiles).toHaveLength(19);
+    expect(hexIsland.phase).toBe("setup");
   });
 });
 
-describe("listHexSettlementLegalActionsForSession", () => {
+describe("listHexIslandLegalActionsForSession", () => {
   it("lists place_settlement during setup for active seat", () => {
-    const hexSettlement = createInitialHexSettlementSessionSlice(2);
-    const legal = listHexSettlementLegalActionsForSession({
-      hexSettlement,
+    const hexIsland = createInitialHexIslandSessionSlice(2);
+    const legal = listHexIslandLegalActionsForSession({
+      hexIsland,
       activeSeat: 0,
       status: "active",
       playerId: 0,
@@ -26,10 +26,10 @@ describe("listHexSettlementLegalActionsForSession", () => {
   });
 
   it("returns empty when status is complete", () => {
-    const hexSettlement = createInitialHexSettlementSessionSlice(2);
+    const hexIsland = createInitialHexIslandSessionSlice(2);
     expect(
-      listHexSettlementLegalActionsForSession({
-        hexSettlement,
+      listHexIslandLegalActionsForSession({
+        hexIsland,
         activeSeat: 0,
         status: "complete",
         playerId: 0,

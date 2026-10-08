@@ -11,7 +11,7 @@
 ## 资产与许可（SPEC §5.3）
 
 - [ ] 本 PR 新增资产均已登记清单（`src/render3d/assets/manifest.ts` / `manifest.data.mjs`）与 `assets/LICENSES.md`，许可证为 cleared
-- [ ] 未参考 settlecoast 源码 / 模型 / 音频 / 插画 / 文案
+- [ ] 未参考任何第三方产品的源码 / 模型 / 音频 / 插画 / 文案
 - [ ] `pnpm verify:assets` 本地通过
 
 ## 验证

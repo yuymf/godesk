@@ -1,8 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import type { Resource } from "../runtime/adapters/hex-settlement";
+import type { Resource } from "../runtime/adapters/hex-island";
 import type { LegalAction } from "../runtime/play-kernel";
 import {
-  listHexSettlementLegalActionsForSession,
+  listHexIslandLegalActionsForSession,
   type HexSettlementBoardState,
 } from "./hex-settlement-session";
 import type { RoomLocale } from "./room-presentation";
@@ -44,7 +44,7 @@ const RESOURCE_LABEL = {
 
 const COPY = {
   zh: {
-    board: "汐屿",
+    board: "汐屿六角岛",
     island: "汐屿群岛",
     hud: "对局状态",
     active: "当前行动",
@@ -296,7 +296,7 @@ function labelForBoardAction(
  * No SVG board, no 2D fallback.
  */
 export function HexSettlementBoard({
-  hexSettlement,
+  hexIsland,
   activeSeat,
   viewerSeat,
   status,
@@ -310,7 +310,7 @@ export function HexSettlementBoard({
   homeHref = "/chatgpt-plugin/games",
   replayUrl,
 }: {
-  hexSettlement: HexSettlementBoardState;
+  hexIsland: HexSettlementBoardState;
   activeSeat: number;
   viewerSeat: number | null;
   status: "active" | "complete";
@@ -364,31 +364,31 @@ export function HexSettlementBoard({
   const legalActions = useMemo(
     () =>
       status === "active"
-        ? listHexSettlementLegalActionsForSession({
-            hexSettlement,
+        ? listHexIslandLegalActionsForSession({
+            hexIsland,
             activeSeat,
             status,
             playerId: legalPlayer,
           })
         : [],
-    [hexSettlement, activeSeat, status, legalPlayer],
+    [hexIsland, activeSeat, status, legalPlayer],
   );
   const showLegal =
     interactive && viewerSeat !== null && viewerSeat === activeSeat;
 
   const vpScores = useMemo(
     () =>
-      hexSettlement.players.map((player, seat) => {
+      hexIsland.players.map((player, seat) => {
         let points =
           player.settlements.length + player.cities.length * 2 + player.vpCards;
-        if (hexSettlement.longestRoadOwner === seat) points += 2;
-        if (hexSettlement.largestArmyOwner === seat) points += 2;
+        if (hexIsland.longestRoadOwner === seat) points += 2;
+        if (hexIsland.largestArmyOwner === seat) points += 2;
         return points;
       }),
-    [hexSettlement],
+    [hexIsland],
   );
 
-  const viewer = viewerSeat !== null ? hexSettlement.players[viewerSeat] : null;
+  const viewer = viewerSeat !== null ? hexIsland.players[viewerSeat] : null;
   const viewerResources = viewer?.resources ?? null;
 
   useEffect(() => {
@@ -423,9 +423,9 @@ export function HexSettlementBoard({
           ? `${copy.aiThinking} · ${copy.seat} ${activeSeat}`
           : `${copy.waiting} · ${copy.seat} ${activeSeat}`;
   const diceLine =
-    hexSettlement.lastDice === null
+    hexIsland.lastDice === null
       ? copy.noDice
-      : `${copy.dice} ${hexSettlement.lastDice[0]} + ${hexSettlement.lastDice[1]} = ${hexSettlement.lastDice[0] + hexSettlement.lastDice[1]}`;
+      : `${copy.dice} ${hexIsland.lastDice[0]} + ${hexIsland.lastDice[1]} = ${hexIsland.lastDice[0] + hexIsland.lastDice[1]}`;
 
   const accessibleActions = showLegal ? legalActions : [];
   const boardTargetTypes = new Set([
@@ -506,17 +506,17 @@ export function HexSettlementBoard({
   const chronicleLines = [
     statusLine,
     diceLine,
-    `${copy.lastAction}: ${formatLastAction(hexSettlement.lastAction, locale)}`,
-    `${copy.phase}: ${phaseLabel(hexSettlement.phase, locale)}`,
+    `${copy.lastAction}: ${formatLastAction(hexIsland.lastAction, locale)}`,
+    `${copy.phase}: ${phaseLabel(hexIsland.phase, locale)}`,
     `${copy.longestRoad}: ${
-      hexSettlement.longestRoadOwner === null
+      hexIsland.longestRoadOwner === null
         ? copy.none
-        : `${copy.seat} ${hexSettlement.longestRoadOwner}`
+        : `${copy.seat} ${hexIsland.longestRoadOwner}`
     }`,
     `${copy.largestArmy}: ${
-      hexSettlement.largestArmyOwner === null
+      hexIsland.largestArmyOwner === null
         ? copy.none
-        : `${copy.seat} ${hexSettlement.largestArmyOwner}`
+        : `${copy.seat} ${hexIsland.largestArmyOwner}`
     }`,
   ];
 
@@ -524,7 +524,7 @@ export function HexSettlementBoard({
     <li key={actionKey(action)}>
       <button
         aria-label={labelForBoardAction(action, copy, resourceLabel)}
-        className={`tidewell-action${compact ? " is-board-target" : ""}`}
+        className={`hex-island-action${compact ? " is-board-target" : ""}`}
         disabled={busy}
         onClick={() =>
           onAct?.(
@@ -544,7 +544,7 @@ export function HexSettlementBoard({
   return (
     <div
       aria-label={copy.board}
-      className="tidewell-board hex-settlement-board tidewell-game-screen"
+      className="hex-island-board hex-settlement-board tidewell-game-screen"
       data-status={status}
       role="region"
       style={
@@ -627,7 +627,7 @@ export function HexSettlementBoard({
                     <option value="">
                       {locale === "zh" ? "选择空席位" : "Pick a seat"}
                     </option>
-                    {hexSettlement.players.map((_, seat) => (
+                    {hexIsland.players.map((_, seat) => (
                       <option
                         disabled={aiSeats.includes(seat) && seat !== viewerSeat}
                         key={`seat-opt-${seat}`}
@@ -688,10 +688,10 @@ export function HexSettlementBoard({
       </header>
 
       <div className="tidewell-game-body">
-        <aside aria-label={copy.hud} className="tidewell-players tidewell-hud" role="region">
+        <aside aria-label={copy.hud} className="tidewell-players hex-island-hud" role="region">
           <h2 className="tidewell-panel-title">{copy.settlers}</h2>
           <ul className="tidewell-player-list">
-            {hexSettlement.players.map((player, seat) => {
+            {hexIsland.players.map((player, seat) => {
               const isActive = seat === activeSeat;
               const isYou = seat === viewerSeat;
               const isAi = aiSeats.includes(seat);
@@ -720,7 +720,7 @@ export function HexSettlementBoard({
                         width={64}
                       />
                     ) : (
-                      <span aria-hidden="true" className="tidewell-seat-swatch" />
+                      <span aria-hidden="true" className="hex-island-seat-swatch" />
                     )}
                   </div>
                   <div className="tidewell-player-meta">
@@ -731,7 +731,7 @@ export function HexSettlementBoard({
                       {HOUSE_NAMES[locale][seat % HOUSE_NAMES[locale].length]}
                     </span>
                     <span className="tidewell-player-vp" title={copy.vp}>
-                      ♛ {vpScores[seat]} / {hexSettlement.victoryPointsToWin ?? 10}
+                      ♛ {vpScores[seat]} / {hexIsland.victoryPointsToWin ?? 10}
                     </span>
                     <span className="tidewell-player-stats">
                       <span title={copy.resources}>
@@ -751,46 +751,46 @@ export function HexSettlementBoard({
               );
             })}
           </ul>
-          <dl className="tidewell-hud-awards">
+          <dl className="hex-island-hud-awards">
             <div>
               <dt>{copy.longestRoad}</dt>
               <dd>
-                {hexSettlement.longestRoadOwner === null
+                {hexIsland.longestRoadOwner === null
                   ? copy.none
-                  : `${copy.seat} ${hexSettlement.longestRoadOwner}`}
+                  : `${copy.seat} ${hexIsland.longestRoadOwner}`}
               </dd>
             </div>
             <div>
               <dt>{copy.largestArmy}</dt>
               <dd>
-                {hexSettlement.largestArmyOwner === null
+                {hexIsland.largestArmyOwner === null
                   ? copy.none
-                  : `${copy.seat} ${hexSettlement.largestArmyOwner}`}
+                  : `${copy.seat} ${hexIsland.largestArmyOwner}`}
               </dd>
             </div>
             <div>
               <dt>{copy.robber}</dt>
-              <dd>{hexSettlement.robberHex}</dd>
+              <dd>{hexIsland.robberHex}</dd>
             </div>
           </dl>
           {/* Keep compact legacy status for screen readers / older asserts */}
-          <div className="tidewell-hud-status sr-only">
-            <span className="tidewell-kicker">{copy.active}</span>
+          <div className="hex-island-hud-status sr-only">
+            <span className="hex-island-kicker">{copy.active}</span>
             <strong>
               {copy.seat} {activeSeat} · {copy.phase}{" "}
-              {phaseLabel(hexSettlement.phase, locale)}
+              {phaseLabel(hexIsland.phase, locale)}
             </strong>
             <p>{statusLine}</p>
-            <p className="tidewell-hud-dice">{diceLine}</p>
+            <p className="hex-island-hud-dice">{diceLine}</p>
             <p>
               {copy.lastAction}:{" "}
-              {formatLastAction(hexSettlement.lastAction, locale)}
+              {formatLastAction(hexIsland.lastAction, locale)}
             </p>
           </div>
-          <div className="tidewell-hud-scores sr-only" aria-label={copy.vp}>
+          <div className="hex-island-hud-scores sr-only" aria-label={copy.vp}>
             {vpScores.map((vp, seat) => (
               <div
-                className={`tidewell-score${seat === activeSeat ? " is-active" : ""}`}
+                className={`hex-island-score${seat === activeSeat ? " is-active" : ""}`}
                 key={`vp-${seat}`}
               >
                 <b>
@@ -807,7 +807,7 @@ export function HexSettlementBoard({
               <LazySceneHost
                 ariaLabel={copy.board}
                 className="room-g3d-scene-host"
-                hexSettlement={hexSettlement}
+                hexSettlement={hexIsland}
                 activeSeat={activeSeat}
                 localSeat={viewerSeat}
                 interactive={showLegal}
@@ -837,7 +837,7 @@ export function HexSettlementBoard({
               ) : null}
             </div>
             <p className="tidewell-turn-blurb">{statusLine}</p>
-            <p className="tidewell-hud-dice">{diceLine}</p>
+            <p className="hex-island-hud-dice">{diceLine}</p>
             {primaryCta ? (
               <button
                 className="tidewell-primary-cta"
@@ -860,7 +860,7 @@ export function HexSettlementBoard({
             {primaryActions.length > 1 && (
               <ul
                 aria-label={copy.primary}
-                className="tidewell-action-row hex-settlement-primary-actions"
+                className="hex-island-action-row hex-settlement-primary-actions"
               >
                 {primaryActions.map((a) => renderActionButton(a, false))}
               </ul>
@@ -938,7 +938,7 @@ export function HexSettlementBoard({
         </div>
 
         <div className="tidewell-dev-slot">
-          <span className="tidewell-kicker">{copy.devCards}</span>
+          <span className="hex-island-kicker">{copy.devCards}</span>
           <strong>{viewer?.devCards.length ?? 0}</strong>
         </div>
 
@@ -1067,7 +1067,7 @@ export function HexSettlementBoard({
         </div>
 
         <div className="tidewell-dev-slot">
-          <span className="tidewell-kicker">{copy.devCards}</span>
+          <span className="hex-island-kicker">{copy.devCards}</span>
           <strong>{viewer?.devCards.length ?? 0}</strong>
         </div>
 
@@ -1121,13 +1121,13 @@ export function HexSettlementBoard({
 
       {/* Legacy resource list (hidden) for older CSS/tests that query it */}
       {viewerResources && (
-        <div aria-label={copy.resources} className="tidewell-hud-resources sr-only">
-          <span className="tidewell-kicker">{copy.resources}</span>
+        <div aria-label={copy.resources} className="hex-island-hud-resources sr-only">
+          <span className="hex-island-kicker">{copy.resources}</span>
           <ul>
             {(Object.keys(resourceLabel) as Resource[]).map((resource) => (
               <li key={resource}>
                 <InkIcon
-                  className="tidewell-ink-icon"
+                  className="hex-island-ink-icon"
                   id={RESOURCE_ICON_ID[resource] ?? "icon-res-wood"}
                 />
                 <span>{resourceLabel[resource]}</span>

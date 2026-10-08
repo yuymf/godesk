@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """G3D-ART / G3D-24: illustrated parchment card art (self-authored + CC0 Paper001 + Cycles mesh renders).
 
-No AI images. No settlecoast copy. Latin-only bitmap captions (CJK in UI).
+No AI images. No third-party copy. Latin-only bitmap captions (CJK in UI).
 """
 from __future__ import annotations
 

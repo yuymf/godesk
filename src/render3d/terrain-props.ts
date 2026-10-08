@@ -49,7 +49,7 @@ function isPine(kind: PropKind): boolean {
   return kind === "pineTall" || kind === "pineRound" || kind === "pineSmall";
 }
 
-/** 地形 → 道具（先放大件）。Tidewell 地形键见 runtime/adapters/hex-settlement。 */
+/** 地形 → 道具（先放大件）。Tidewell 地形键见 runtime/adapters/hex-island。 */
 export const TERRAIN_PROPS: Record<string, readonly PropKind[]> = {
   wood: ["pineTall", "pineRound", "pineSmall", "canopy"],
   sheep: ["trough", "sheep"],

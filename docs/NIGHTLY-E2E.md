@@ -1,8 +1,9 @@
 # Nightly / cloud-computer Playwright e2e
 
 Secret-free local e2e for this box (and any machine without real Cloudflare
-Worker secrets). CI (`verify.yml` / `deploy.yml`) already runs the same suite
-on Node 22.
+Worker secrets). CI (`verify.yml`, ready PRs and the `full-e2e` label) runs the
+same suite on Node 22; `deploy.yml` on `main` skips e2e unless dispatched with
+`full_e2e=true` (see `docs/ci/actions-budget.md`).
 
 ## Prerequisites
 

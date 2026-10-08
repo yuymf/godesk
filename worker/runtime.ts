@@ -54,15 +54,15 @@ import {
   type OthelloGenre,
 } from "../src/runtime/adapters/othello";
 import {
-  bindHexSettlementFromRuntimeKernel,
-  hexSettlementAdapter,
-  hexSettlementToSessionFields,
-  pickHexSettlementBotAction,
-  playActionFromHexSettlementIntent,
-  type HexSettlementGenre,
-  type HexSettlementPlayer,
+  bindHexIslandFromRuntimeKernel,
+  hexIslandAdapter,
+  hexIslandToSessionFields,
+  pickHexIslandBotAction,
+  playActionFromHexIslandIntent,
+  type HexIslandGenre,
+  type HexIslandPlayer,
   type DevCardKind
-} from "../src/runtime/adapters/hex-settlement";
+} from "../src/runtime/adapters/hex-island";
 import {
   bindNetworkRouteFromRuntimeKernel,
   networkRouteAdapter,
@@ -314,21 +314,21 @@ export function initialSessionState(
   }
   if (runtime?.kernel.type === "hex-settlement-v1") {
     const play = createInitialState(
-      hexSettlementAdapter,
-      bindHexSettlementFromRuntimeKernel({
+      hexIslandAdapter,
+      bindHexIslandFromRuntimeKernel({
         playerCount: runtime.kernel.playerCount,
         victoryPointsToWin: runtime.kernel.victoryPointsToWin,
       }),
       _seed,
     );
-    const fields = hexSettlementToSessionFields(play);
+    const fields = hexIslandToSessionFields(play);
     return {
       turn: fields.turn,
       activeSeat: fields.activeSeat,
       scores: fields.scores,
       status: fields.status,
       winnerSeat: fields.winnerSeat,
-      hexSettlement: fields.hexSettlement,
+      hexIsland: fields.hexIsland,
     };
   }
   if (runtime?.kernel.type === "network-route-v1") {
@@ -886,32 +886,32 @@ export function acceptIntent(
   }
 
   if (runtime.kernel.type === "hex-settlement-v1") {
-    if (state.status !== "active" || !state.hexSettlement || intent.seat !== state.activeSeat) {
+    if (state.status !== "active" || !state.hexIsland || intent.seat !== state.activeSeat) {
       return null;
     }
-    const kernelConfig = bindHexSettlementFromRuntimeKernel({
+    const kernelConfig = bindHexIslandFromRuntimeKernel({
       playerCount: runtime.kernel.playerCount,
       victoryPointsToWin: runtime.kernel.victoryPointsToWin,
     });
     const playState = {
       seed,
       sequence: state.turn,
-      phase: state.hexSettlement.phase,
+      phase: state.hexIsland.phase,
       activePlayerId: state.activeSeat,
       playerCount: runtime.kernel.playerCount,
       status: state.status,
       winnerId: state.winnerSeat,
       events: [] as const,
-      genre: sessionHexSettlementToGenre(state.hexSettlement),
+      genre: sessionHexIslandToGenre(state.hexIsland),
     };
     const result = applyAction(
-      hexSettlementAdapter,
+      hexIslandAdapter,
       playState,
-      playActionFromHexSettlementIntent(intent.seat, intent.actionId, intent.payload),
+      playActionFromHexIslandIntent(intent.seat, intent.actionId, intent.payload),
       kernelConfig,
     );
     if (!result.ok) return null;
-    const fields = hexSettlementToSessionFields(result.state);
+    const fields = hexIslandToSessionFields(result.state);
     return {
       sequence,
       intentId: intent.intentId,
@@ -925,7 +925,7 @@ export function acceptIntent(
         scores: fields.scores,
         status: fields.status,
         winnerSeat: fields.winnerSeat,
-        hexSettlement: fields.hexSettlement,
+        hexIsland: fields.hexIsland,
       },
     };
   }
@@ -1115,23 +1115,23 @@ export function pickBotIntent(
 ): BotIntent | null {
   if (state.status !== "active") return null;
   if (runtime.kernel.type === "hex-settlement-v1") {
-    if (!state.hexSettlement) return null;
-    const kernelConfig = bindHexSettlementFromRuntimeKernel({
+    if (!state.hexIsland) return null;
+    const kernelConfig = bindHexIslandFromRuntimeKernel({
       playerCount: runtime.kernel.playerCount,
       victoryPointsToWin: runtime.kernel.victoryPointsToWin,
     });
     const playState = {
       seed,
       sequence: state.turn,
-      phase: state.hexSettlement.phase,
+      phase: state.hexIsland.phase,
       activePlayerId: state.activeSeat,
       playerCount: runtime.kernel.playerCount,
       status: state.status,
       winnerId: state.winnerSeat,
       events: [] as const,
-      genre: sessionHexSettlementToGenre(state.hexSettlement),
+      genre: sessionHexIslandToGenre(state.hexIsland),
     };
-    const bot = pickHexSettlementBotAction(playState, kernelConfig, seed, state.turn + 1);
+    const bot = pickHexIslandBotAction(playState, kernelConfig, seed, state.turn + 1);
     if (!bot) return null;
     return {
       seat: state.activeSeat,
@@ -1625,7 +1625,7 @@ export function runBotSimulation(
 
   if (runtime.kernel.type === "hex-settlement-v1") {
     let guard = 0;
-    while (state.status === "active" && state.hexSettlement && guard < 8000) {
+    while (state.status === "active" && state.hexIsland && guard < 8000) {
       guard += 1;
       const bot = pickBotIntent(state, runtime, seed);
       if (!bot) throw new Error("bot_action_unavailable");
@@ -1710,23 +1710,23 @@ export function scopeSessionState(
   };
 }
 
-function sessionHexSettlementToGenre(hexSettlement: NonNullable<import("../src/creator/project-contract").SessionState["hexSettlement"]>): HexSettlementGenre {
+function sessionHexIslandToGenre(hexIsland: NonNullable<import("../src/creator/project-contract").SessionState["hexIsland"]>): HexIslandGenre {
   return {
-    playerCount: hexSettlement.playerCount,
-    victoryPointsToWin: hexSettlement.victoryPointsToWin,
-    tiles: hexSettlement.tiles.map((tile) => ({
+    playerCount: hexIsland.playerCount,
+    victoryPointsToWin: hexIsland.victoryPointsToWin,
+    tiles: hexIsland.tiles.map((tile) => ({
       q: tile.q,
       r: tile.r,
-      terrain: tile.terrain as HexSettlementGenre["tiles"][number]["terrain"],
+      terrain: tile.terrain as HexIslandGenre["tiles"][number]["terrain"],
       number: tile.number,
     })),
-    robberHex: hexSettlement.robberHex,
-    ports: hexSettlement.ports.map((port) => ({
+    robberHex: hexIsland.robberHex,
+    ports: hexIsland.ports.map((port) => ({
       vertices: [...port.vertices],
-      kind: port.kind as HexSettlementGenre["ports"][number]["kind"],
+      kind: port.kind as HexIslandGenre["ports"][number]["kind"],
     })),
-    players: hexSettlement.players.map((player) => ({
-      resources: { ...(player.resources as HexSettlementPlayer["resources"]) },
+    players: hexIsland.players.map((player) => ({
+      resources: { ...(player.resources as HexIslandPlayer["resources"]) },
       settlements: [...player.settlements],
       cities: [...player.cities],
       roads: [...player.roads],
@@ -1735,18 +1735,18 @@ function sessionHexSettlementToGenre(hexSettlement: NonNullable<import("../src/c
       vpCards: player.vpCards,
       newDevCards: [...player.newDevCards] as DevCardKind[],
     })),
-    setupStep: hexSettlement.setupStep,
-    pendingRoadVertex: hexSettlement.pendingRoadVertex,
-    lastDice: hexSettlement.lastDice
-      ? ([...hexSettlement.lastDice] as [number, number])
+    setupStep: hexIsland.setupStep,
+    pendingRoadVertex: hexIsland.pendingRoadVertex,
+    lastDice: hexIsland.lastDice
+      ? ([...hexIsland.lastDice] as [number, number])
       : null,
-    discardQueue: [...hexSettlement.discardQueue],
-    discardRemaining: hexSettlement.discardRemaining,
-    devDeck: [...hexSettlement.devDeck] as DevCardKind[],
-    longestRoadOwner: hexSettlement.longestRoadOwner,
-    largestArmyOwner: hexSettlement.largestArmyOwner,
-    freeRoadsRemaining: hexSettlement.freeRoadsRemaining,
-    lastAction: hexSettlement.lastAction,
-    turnPlayer: hexSettlement.turnPlayer,
+    discardQueue: [...hexIsland.discardQueue],
+    discardRemaining: hexIsland.discardRemaining,
+    devDeck: [...hexIsland.devDeck] as DevCardKind[],
+    longestRoadOwner: hexIsland.longestRoadOwner,
+    largestArmyOwner: hexIsland.largestArmyOwner,
+    freeRoadsRemaining: hexIsland.freeRoadsRemaining,
+    lastAction: hexIsland.lastAction,
+    turnPlayer: hexIsland.turnPlayer,
   };
 }

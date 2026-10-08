@@ -1,7 +1,7 @@
 import { expect, type Browser, type Page, test } from "@playwright/test";
 import { clickTidewellBoardAction, openTidewellBoardTargets, claimTidewellSeat } from "./helpers/tidewell-actions";
 import {
-  TIDEWELL_PROMPT,
+  HEX_ISLAND_PROMPT,
   OTHELLO_PROMPT,
   generateApproveAndPlayable,
   shareHrefFromStudio,
@@ -16,7 +16,7 @@ import {
 async function guestJoinClaimAndAct(
   browser: Browser,
   shareUrl: string,
-  genre: "othello" | "tidewell",
+  genre: "othello" | "hexIsland",
 ) {
   const guest = await browser.newContext();
   try {
@@ -51,7 +51,7 @@ async function guestJoinClaimAndAct(
         await expect(board.getByLabel("子数")).toContainText(/黑\s*[3-9]/);
       }
     } else {
-      const board = page.getByRole("region", { name: "汐屿" });
+      const board = page.getByRole("region", { name: "汐屿六角岛" });
       await expect(board).toBeVisible();
       const hud = board.getByRole("region", { name: "对局状态" });
       await expect(hud).toContainText("轮到你行动");
@@ -103,13 +103,13 @@ test.describe("PR10 share= dual-genre guest join", () => {
 
     let shareUrl = "";
     await test.step("一句话生成 + approve → playable share link", async () => {
-      await generateApproveAndPlayable(page, TIDEWELL_PROMPT);
+      await generateApproveAndPlayable(page, HEX_ISLAND_PROMPT);
       shareUrl = await shareHrefFromStudio(page);
       expect(new URL(shareUrl).searchParams.get("share")).toBeTruthy();
     });
 
     await test.step("share= 交接: second context claims seat and acts", async () => {
-      await guestJoinClaimAndAct(browser, shareUrl, "tidewell");
+      await guestJoinClaimAndAct(browser, shareUrl, "hexIsland");
     });
   });
 

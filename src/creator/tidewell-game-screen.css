@@ -2,7 +2,7 @@
    Own wood/parchment/wax look — no settlecoast assets. Round 2h2: true 100vw×100dvh. */
 
 /* —— Immersive room shell: game IS the viewport —— */
-.room-view-tidewell.room-view-tidewell-immersive {
+.room-view-hex-island.room-view-tidewell-immersive {
   --tw-wood: #4a2f1c;
   --tw-wood-edge: #2c1a10;
   --tw-parchment: #f3e7c9;
@@ -62,7 +62,7 @@ body:has(.room-view-tidewell-immersive) {
   display: none !important;
 }
 
-.room-view-tidewell-immersive > .tidewell-board {
+.room-view-tidewell-immersive > .hex-island-board {
   flex: 1 1 auto !important;
   width: 100% !important;
   max-width: none !important;
@@ -347,7 +347,7 @@ body:has(.room-view-tidewell-immersive) {
   object-fit: cover;
   background: #e8d3a2;
 }
-.tidewell-seat-swatch {
+.hex-island-seat-swatch {
   display: block;
   width: 100%;
   height: 100%;
@@ -381,15 +381,15 @@ body:has(.room-view-tidewell-immersive) {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
 }
 
-.tidewell-hud-awards {
+.hex-island-hud-awards {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
   margin: 8px 0 0;
   font-size: 11px;
 }
-.tidewell-hud-awards dt { margin: 0; color: #6b543c; }
-.tidewell-hud-awards dd { margin: 0; font-weight: 600; }
+.hex-island-hud-awards dt { margin: 0; color: #6b543c; }
+.hex-island-hud-awards dd { margin: 0; font-weight: 600; }
 
 
 /* 2h3: round wooden icon buttons + centred island name */
@@ -550,7 +550,7 @@ body:has(.room-view-tidewell-immersive) {
   gap: 8px !important;
   font-size: 10px !important;
 }
-.tidewell-hud-awards {
+.hex-island-hud-awards {
   gap: 4px !important;
   margin-top: 6px !important;
   padding: 6px 8px;
@@ -577,9 +577,9 @@ body:has(.room-view-tidewell-immersive) {
   text-transform: uppercase;
   color: #d4b56a;
 }
-.tidewell-hud-awards { color: #d8c9a8; }
-.tidewell-hud-awards dt { color: #c9a227aa !important; }
-.tidewell-hud-awards dd { color: #f3e7c9; }
+.hex-island-hud-awards { color: #d8c9a8; }
+.hex-island-hud-awards dt { color: #c9a227aa !important; }
+.hex-island-hud-awards dd { color: #f3e7c9; }
 
 /* ④/⑤: right rail is wood crate wall; parchment lives as nested inset panels */
 .tidewell-turn-column {
@@ -791,7 +791,7 @@ body:has(.room-view-tidewell-immersive) {
 
 .tidewell-turn-panel { display: flex; flex-direction: column; gap: 8px; }
 .tidewell-turn-blurb { margin: 0; font-size: 13px; color: #3d2c1c; }
-.tidewell-hud-dice { margin: 0; font-size: 12px; color: #5a4634; }
+.hex-island-hud-dice { margin: 0; font-size: 12px; color: #5a4634; }
 .tidewell-primary-cta {
   min-height: 48px;
   border-radius: 999px;
@@ -808,7 +808,7 @@ body:has(.room-view-tidewell-immersive) {
 }
 .tidewell-primary-cta:disabled { opacity: 0.5; cursor: not-allowed; }
 .tidewell-turn-idle { margin: 0; font-size: 12px; color: #7a6550; }
-.tidewell-action-row {
+.hex-island-action-row {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -965,7 +965,7 @@ body:has(.room-view-tidewell-immersive) {
   font-size: 11px;
   box-sizing: border-box;
 }
-.tidewell-dev-slot .tidewell-kicker { opacity: 0.75; }
+.tidewell-dev-slot .hex-island-kicker { opacity: 0.75; }
 .tidewell-dev-slot strong { font-size: 18px; }
 
 .tidewell-build-row {
@@ -1106,9 +1106,9 @@ body:has(.room-view-tidewell-immersive) {
     -webkit-overflow-scrolling: touch;
   }
   .tidewell-players .tidewell-panel-title,
-  .tidewell-players .tidewell-hud-awards,
-  .tidewell-players .tidewell-hud-status,
-  .tidewell-players .tidewell-hud-scores {
+  .tidewell-players .hex-island-hud-awards,
+  .tidewell-players .hex-island-hud-status,
+  .tidewell-players .hex-island-hud-scores {
     display: none !important;
   }
   .tidewell-player-list {
@@ -1486,7 +1486,7 @@ body:has(.room-view-tidewell-immersive) {
     inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
 }
 .tidewell-turn-column .tidewell-turn-blurb,
-.tidewell-turn-column .tidewell-hud-dice,
+.tidewell-turn-column .hex-island-hud-dice,
 .tidewell-log-body {
   color: #3d2c1c !important;
 }
@@ -1571,14 +1571,14 @@ body:has(.room-view-tidewell-immersive) {
 }
 
 /* Awards plaque on parchment */
-.tidewell-hud-awards {
+.hex-island-hud-awards {
   background:
     linear-gradient(180deg, rgba(255, 252, 245, 0.9), rgba(243, 231, 201, 0.8)),
     var(--tw-tex-parchment) !important;
   color: #2a1c12 !important;
 }
-.tidewell-hud-awards dt { color: #8a6a14 !important; }
-.tidewell-hud-awards dd { color: #2a1c12 !important; }
+.hex-island-hud-awards dt { color: #8a6a14 !important; }
+.hex-island-hud-awards dd { color: #2a1c12 !important; }
 
 /* ==== R10 整桌一体 + 建造四钮始终同屏 ====
    Goal: left/right/top + dock = one continuous wood desk with parchment inlays;
