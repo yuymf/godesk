@@ -2025,3 +2025,290 @@ body:has(.room-view-tidewell-immersive) {
   border-radius: 6px;
   padding: 4px 8px;
 }
+
+/* ==== R28 加厚木框 bezel · 弱化羊皮大板（settlecoast 雕框一体）====
+   Thicken warm-wood stage rim; gold stays a hairline carve (not a nested second frame).
+   Side rails stay continuous --tw-wood timber; parchment only for small chips / text wells.
+   Locks untouched: fill 0.945 · ortho φ54/az12 · deep #0a6c74/0.96 · HUD insets · cream off. */
+
+/* Stage bezel: thicker timber stack (~18px wood) + single gold hairline (not nested rings) */
+.tidewell-stage-wrap {
+  border: none !important;
+  border-radius: 0 !important;
+  background: var(--tw-sea, #5a8a88) !important;
+  box-shadow:
+    /* outer dark recess into continuous desk */
+    inset 0 0 0 2px #140a06,
+    inset 0 0 0 6px #2a1810,
+    inset 0 0 0 11px #3e2616,
+    inset 0 0 0 16px #5a3820,
+    inset 0 0 0 18px #4a3018,
+    /* single carved gold hairline — weight without nested-frame read */
+    inset 0 0 0 19px rgba(201, 162, 39, 0.55),
+    inset 0 0 0 20px rgba(26, 14, 8, 0.85),
+    /* wood→sea falloff (海带托 chrome) */
+    inset 0 0 28px 12px rgba(26, 16, 8, 0.42) !important;
+}
+.tidewell-stage-wrap::after {
+  box-shadow:
+    inset 0 0 40px 16px rgba(32, 18, 10, 0.48),
+    inset 0 0 12px 4px rgba(74, 48, 24, 0.32) !important;
+}
+
+/* Outer crate lip slightly heavier so stage bezel + shell read as one carved frame */
+.tidewell-game-screen {
+  box-shadow:
+    inset 0 0 0 5px #1a1008,
+    inset 0 0 0 6px rgba(201, 162, 39, 0.28),
+    inset 0 0 0 8px #2a1810,
+    inset 0 0 30px rgba(0, 0, 0, 0.48) !important;
+}
+
+/* Side rails: deepen continuous timber face (less cream bleed from nested plates) */
+.tidewell-players,
+.tidewell-turn-column {
+  background:
+    linear-gradient(180deg, rgba(55, 32, 16, 0.35) 0%, rgba(22, 12, 6, 0.5) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #4a3018 0%, #24140c 100%) !important;
+  background-size: auto, 280px 280px, auto !important;
+  color: #f3e7c9 !important;
+}
+
+/* Player cards → warm wood plaques (not floating parchment plates); cream for text only */
+.tidewell-player-card {
+  background:
+    linear-gradient(145deg, rgba(90, 56, 32, 0.55) 0%, rgba(40, 22, 12, 0.78) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(145deg, #5a3820 0%, #3a2416 55%, #2c1a10 100%) !important;
+  background-size: auto, 180px 180px, auto !important;
+  border: 1px solid rgba(201, 162, 39, 0.7) !important;
+  color: #f3e7c9 !important;
+  box-shadow:
+    0 0 0 1px rgba(26, 14, 8, 0.75),
+    0 0 0 2px rgba(138, 106, 20, 0.45),
+    0 3px 8px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 220, 140, 0.18),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.35) !important;
+}
+.tidewell-player-card.is-active {
+  background:
+    linear-gradient(145deg, rgba(120, 72, 36, 0.5) 0%, rgba(50, 28, 14, 0.72) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(145deg, #6b4428, #3e2616) !important;
+  background-size: auto, 180px 180px, auto !important;
+  box-shadow:
+    0 0 0 2px var(--seat-color, #c9a227),
+    0 0 12px rgba(201, 162, 39, 0.45),
+    inset 0 1px 0 rgba(255, 220, 140, 0.22) !important;
+}
+.tidewell-player-meta b,
+.tidewell-player-stats {
+  color: #f3e7c9 !important;
+}
+.tidewell-player-vp {
+  color: #f0d060 !important;
+}
+.tidewell-house-name {
+  color: #d4b56a !important;
+  opacity: 0.9;
+}
+
+/* Awards: small recessed parchment chip on wood (not a large plate) */
+.hex-island-hud-awards {
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.78), rgba(243, 231, 201, 0.62)),
+    var(--tw-tex-parchment) !important;
+  background-size: auto, 140px 140px !important;
+  border: 1px solid rgba(201, 162, 39, 0.55) !important;
+  box-shadow:
+    0 0 0 1px rgba(26, 14, 8, 0.55),
+    inset 0 2px 6px rgba(0, 0, 0, 0.28) !important;
+  color: #2a1c12 !important;
+  padding: 5px 7px !important;
+  margin-top: 6px !important;
+}
+.hex-island-hud-awards dt { color: #8a6a14 !important; }
+.hex-island-hud-awards dd { color: #2a1c12 !important; }
+
+/* Turn card: wood tray with parchment text well inset (shrink floating cream face) */
+.tidewell-turn-card {
+  background:
+    linear-gradient(180deg, rgba(70, 42, 22, 0.55) 0%, rgba(36, 20, 10, 0.72) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #5a3820 0%, #2c1a10 100%) !important;
+  background-size: auto, 200px 200px, auto !important;
+  border: 1px solid rgba(201, 162, 39, 0.65) !important;
+  color: #f3e7c9 !important;
+  box-shadow:
+    0 0 0 1px rgba(26, 14, 8, 0.7),
+    0 0 0 2px rgba(138, 106, 20, 0.4),
+    0 3px 8px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 220, 140, 0.14) !important;
+  padding: 8px !important;
+}
+/* Parchment text well inside turn card — small nested plate, not full-rail face */
+.tidewell-turn-card .tidewell-turn-card-head,
+.tidewell-turn-card .tidewell-turn-blurb,
+.tidewell-turn-card .hex-island-hud-dice {
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.88), rgba(243, 231, 201, 0.72)),
+    var(--tw-tex-parchment);
+  background-size: auto, 160px 160px;
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: #2a1c12 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.tidewell-turn-card .tidewell-turn-card-head {
+  margin-bottom: 6px;
+}
+.tidewell-turn-card .tidewell-turn-blurb,
+.tidewell-turn-card .hex-island-hud-dice {
+  margin: 4px 0 0;
+}
+.tidewell-turn-column .tidewell-turn-blurb,
+.tidewell-turn-column .hex-island-hud-dice {
+  color: #2a1c12 !important;
+}
+
+/* Log panel: wood shell + parchment body well (recessed, not full cream plate) */
+.tidewell-log-panel {
+  background:
+    linear-gradient(180deg, rgba(70, 42, 22, 0.5) 0%, rgba(36, 20, 10, 0.7) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #5a3820 0%, #2c1a10 100%) !important;
+  background-size: auto, 180px 180px, auto !important;
+  border: 1px solid rgba(201, 162, 39, 0.55) !important;
+  box-shadow:
+    0 0 0 1px rgba(26, 14, 8, 0.65),
+    0 2px 6px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 220, 140, 0.1) !important;
+  color: #f3e7c9 !important;
+  padding: 6px !important;
+}
+.tidewell-log-panel .tidewell-log-body,
+.tidewell-log-panel .hex-island-hud-log,
+.tidewell-log-body {
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.82), rgba(243, 231, 201, 0.68)),
+    var(--tw-tex-parchment) !important;
+  background-size: auto, 160px 160px !important;
+  border-radius: 5px;
+  padding: 6px 8px !important;
+  color: #3d2c1c !important;
+  box-shadow: inset 0 1px 3px rgba(74, 47, 28, 0.12);
+}
+
+/* Title chips stay small parchment inlays on wood rails */
+.tidewell-players .tidewell-panel-title,
+.tidewell-turn-column .tidewell-panel-title {
+  color: #4a2f1c !important;
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.9), rgba(243, 231, 201, 0.8)),
+    var(--tw-tex-parchment) !important;
+  background-size: auto, 140px 140px !important;
+  border-radius: 6px;
+  padding: 3px 8px;
+  border: 1px solid rgba(201, 162, 39, 0.5);
+  display: inline-block;
+}
+
+/* Top + dock: reinforce continuous timber (match thickened stage crate) */
+.tidewell-topbar {
+  background:
+    linear-gradient(180deg, rgba(90, 56, 28, 0.52) 0%, rgba(28, 14, 8, 0.9) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #5a3820 0%, #2a1810 100%) !important;
+  background-size: auto, 280px 280px, auto !important;
+  border-bottom: 2px solid rgba(201, 162, 39, 0.6) !important;
+}
+.tidewell-dock {
+  background:
+    linear-gradient(180deg, rgba(90, 56, 28, 0.35) 0%, rgba(22, 10, 6, 0.85) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #5a3820 0%, #2a1810 100%) !important;
+  background-size: auto, 280px 280px, auto !important;
+  border-top: 2px solid rgba(201, 162, 39, 0.6) !important;
+}
+
+/* R28 refine: title inside parchment well stays ink-on-clear (no double parchment chip) */
+.tidewell-turn-card .tidewell-panel-title {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  color: #4a2f1c !important;
+  display: inline !important;
+}
+/* Log tabs sit on wood shell — not cream strip */
+.tidewell-log-panel .tidewell-log-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.tidewell-log-panel .tidewell-log-tabs button {
+  flex: 1 1 0;
+  min-height: 28px;
+  border-radius: 6px;
+  border: 1px solid rgba(201, 162, 39, 0.45);
+  background:
+    linear-gradient(180deg, rgba(90, 56, 32, 0.55), rgba(42, 24, 12, 0.75)),
+    linear-gradient(180deg, #5a3820, #2c1a10);
+  color: #f3e7c9 !important;
+  font-size: 11px;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 220, 140, 0.12);
+}
+.tidewell-log-panel .tidewell-log-tabs button.is-active,
+.tidewell-log-panel .tidewell-log-tabs button[aria-selected="true"] {
+  border-color: rgba(201, 162, 39, 0.85);
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.88), rgba(243, 231, 201, 0.75)),
+    var(--tw-tex-parchment);
+  color: #2a1c12 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.tidewell-turn-card .tidewell-turn-idle {
+  color: #d8c9a8 !important;
+}
+
+/* ==== R28b: bezel must paint ABOVE canvas (::after z-index:1); solid rings on parent sit under opaque WebGL ==== */
+.tidewell-stage-wrap::after {
+  /* thickened carved timber rim + single gold hairline, then soft wood→sea falloff */
+  box-shadow:
+    inset 0 0 0 2px #140a06,
+    inset 0 0 0 6px #2a1810,
+    inset 0 0 0 12px #3e2616,
+    inset 0 0 0 17px #5a3820,
+    inset 0 0 0 19px #4a3018,
+    inset 0 0 0 20px rgba(201, 162, 39, 0.62),
+    inset 0 0 0 21px rgba(26, 14, 8, 0.9),
+    inset 0 0 36px 14px rgba(32, 18, 10, 0.5),
+    inset 0 0 14px 4px rgba(74, 48, 24, 0.35) !important;
+}
+
+/* Log body: wood-tinted parchment wash (not a full cream plate filling the rail) */
+.tidewell-log-panel .tidewell-log-body,
+.tidewell-log-body {
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.55), rgba(232, 211, 162, 0.38)),
+    linear-gradient(180deg, rgba(74, 48, 24, 0.35), rgba(42, 24, 12, 0.45)),
+    var(--tw-tex-parchment) !important;
+  background-size: auto, auto, 160px 160px !important;
+  color: #f3e7c9 !important;
+  border: 1px solid rgba(201, 162, 39, 0.35);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+}
+.tidewell-log-body .tidewell-chronicle,
+.tidewell-chronicle,
+.tidewell-log-empty {
+  color: #f3e7c9 !important;
+}
+.tidewell-chronicle li {
+  color: #e8d3a2 !important;
+}
+
+/* Awards stay small parchment chip — already OK; ensure not oversized */
+.hex-island-hud-awards {
+  max-width: 100%;
+}
