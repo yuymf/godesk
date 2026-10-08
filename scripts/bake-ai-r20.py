@@ -8,10 +8,11 @@ the dabs, then bakes exactly like R19 (same toktx ETC1S flags, same output paths
   0. moss recolour — forest-floor only: russet leaf litter → mossy needle-floor greens (HSV hue
                      remap into 0.20–0.34, sat ×0.55, value ×0.85) so sparse R20 forests never read as
                      brown ground (low tier included)
-  0b. light rock   — R21, scree (ore hex) only: grey-brown → light grey rock (desaturate 80%, cool
-                     tint, gamma 0.62 lift) before colour-blocking
+  0b. light rock   — R21/R23, scree (ore hex) only: grey-brown → cool light-grey rock (R23: desat
+                     92%, cooler tint 0.93/1.0/1.1, gamma 0.50 lift) before colour-blocking
   0c. golden wheat — R22, wheat-field only: amber → bright golden yellow (HSV hue +6°, sat ×0.8,
-                     value gamma 0.74) so wheat never reads orange-brown next to brick / desert
+                     value gamma 0.74); R23 adds low-freq undulating luminance/colour wave so the
+                     hex reads as a continuous golden ground field (no prop rows)
   0d. pale sand    — R22, sand (desert) only: hue +4°, sat ×0.72, value gamma 0.78 (paler, less orange)
   0e. fresh meadow — R22, grass (pasture) only: hue +5°, sat ×0.95, value gamma 0.8 (light green, not olive)
   1. colour-block  — median-cut palette quantise (no dither) to K flat colours (posterise)
@@ -66,10 +67,11 @@ def moss_recolour(rgb: np.ndarray) -> np.ndarray:
 
 
 def light_rock(rgb: np.ndarray) -> np.ndarray:
+    """R21 light grey; R23 cooler + brighter (less warm brown → cool light-grey rock)."""
     lum = rgb @ np.array([0.2126, 0.7152, 0.0722])
-    grey = rgb * 0.2 + lum[..., None] * 0.8
-    grey = grey * np.array([0.97, 1.0, 1.04])
-    return np.clip(255.0 * np.power(np.clip(grey, 0, 255) / 255.0, 0.62), 0, 255)
+    grey = rgb * 0.05 + lum[..., None] * 0.95
+    grey = grey * np.array([0.90, 1.0, 1.14])
+    return np.clip(255.0 * np.power(np.clip(grey, 0, 255) / 255.0, 0.46), 0, 255)
 
 
 def edge_distance(alpha: np.ndarray, max_d: int) -> np.ndarray:
@@ -110,8 +112,36 @@ def hsv_shift(rgb: np.ndarray, dh_deg: float, sat: float, gamma: float) -> np.nd
 
 
 def golden_wheat(rgb: np.ndarray) -> np.ndarray:
-    """R22 wheat-field: amber (hue ≈41°, sat 0.9) → bright golden yellow (hue +6°, sat ×0.8, value gamma 0.74)."""
-    return hsv_shift(rgb, 6.0, 0.8, 0.74)
+    """R22 amber→gold; R23: destroy readable vertical rows, keep continuous undulating golden field."""
+    out = hsv_shift(rgb, 6.0, 0.8, 0.74)
+    h, w = out.shape[:2]
+    yy, xx = np.mgrid[0:h, 0:w]
+    # 1) warp X so parallel ridges become wavy, then average with unwarped (breaks stripe coherence)
+    warp = (10 * np.sin(2 * np.pi * yy / 64.0) + 7 * np.sin(2 * np.pi * (xx + 2 * yy) / 96.0)).astype(np.int32)
+    xs = (xx + warp) % w
+    warped = out[yy, xs]
+    # 2) smear across columns (horizontal box) to kill leftover vertical ridges
+    smear = out.copy()
+    for dx in (-18, -9, 9, 18, -27, 27):
+        smear = smear + np.roll(out, dx, axis=1) + np.roll(warped, dx, axis=1)
+    smear = smear / 13.0
+    # 3) blend smear + mild warped detail (not rows)
+    base = 0.72 * smear + 0.28 * warped
+    # 4) isotropic low-freq colour/value waves (periods | 512) — continuous field, not ridges
+    yf, xf = yy.astype(np.float64), xx.astype(np.float64)
+    wave = (
+        0.4 * np.sin(2 * np.pi * xf / 128.0 + 0.8 * np.sin(2 * np.pi * yf / 96.0))
+        + 0.35 * np.sin(2 * np.pi * (xf + yf) / 160.0)
+        + 0.25 * np.sin(2 * np.pi * (xf - 0.6 * yf) / 112.0)
+    )
+    wave = (wave + 1.0) * 0.5
+    factor = 0.9 + 0.2 * wave
+    tint = np.stack([
+        1.0 + 0.04 * (wave - 0.5),
+        1.0 + 0.015 * (wave - 0.5),
+        1.0 - 0.03 * (wave - 0.5),
+    ], axis=-1)
+    return np.clip(base * factor[..., None] * tint, 0, 255)
 
 
 def pale_sand(rgb: np.ndarray) -> np.ndarray:

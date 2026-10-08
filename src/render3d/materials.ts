@@ -21,8 +21,8 @@ import { TILE_FACE_APOTHEM } from "./tokens";
 export const SOFT_EDGE_STRENGTH = 0.25;
 /** R22: terrain albedo saturation (1 = texture as-is; R19–R21 used 0.86, a 14% pull toward grey). */
 export const TERRAIN_SATURATION = 1.12;
-/** R22: painted light hairline seam half-width on each tile top face (world units). */
-export const SEAM_HALF_WIDTH = 0.006;
+/** R22 hairline seam; R23: 0.006 → 0.002 (whole-board a no longer chessboard). */
+export const SEAM_HALF_WIDTH = 0.0015;
 
 export const PATTERN_IDS: Record<MaterialPattern, number> = {
   none: 0,
@@ -188,11 +188,11 @@ export function installPattern(material: MeshStandardMaterial, pattern: Material
                 "gdEdge = gdEdge * gdEdge * (0.7 + 0.6 * gdB.x) * gdTop;",
                 // R22: band strength 0.45 → 0.25 (faded halo gone; tiles keep their own colour up to the edge).
                 `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.72, 0.65, 0.5), clamp(gdEdge, 0.0, 1.0) * ${SOFT_EDGE_STRENGTH.toFixed(2)} * uGdBrush);`,
-                // R22: faces now touch (TILE_FACE_RADIUS 1.0, no open slot → no dark side / shadow line); the light
-                // hairline seam is painted on the top face instead (≈0.006 per side, AA'd with fwidth).
+                // R22: faces touch (TILE_FACE_RADIUS 1.0). R23: seam narrower (0.002) + ground-coloured
+                // (slight self-darken, not bright sandy paths) so camera a no longer reads as a chessboard.
                 "float gdSeamFw = max(fwidth(gdHexM), 1e-4);",
                 `float gdSeam = smoothstep(${(TILE_FACE_APOTHEM - SEAM_HALF_WIDTH).toFixed(4)} - gdSeamFw, ${(TILE_FACE_APOTHEM - SEAM_HALF_WIDTH).toFixed(4)} + gdSeamFw * 0.5, gdHexM) * gdTop;`,
-                "diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.8, 0.73, 0.58), gdSeam * 0.6);",
+                "diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.9, gdSeam * 0.25);",
               ]
             : []),
         ].join("\n"),

@@ -73,8 +73,8 @@ export const PROP_COUNTS: Record<RenderTierId, Record<string, Counts>> = {
     sheep: { trough: 1, sheep: 8, blobshadow: 1 },
     ore: { boulder: 4, pebble: 8, blobshadow: 4 },
     brick: { clay: 8, bricks: 4 },
-    // R21: lower, sparser rows — the golden wheat-field texture reads as a colour field between them.
-    wheat: { wheatrow: 16, sheaf: 2 },
+    // R23: continuous golden ground field — no readable wheatrow props (texture + undulating colour noise carries the wave).
+    wheat: {},
     desert: { dune: 5, pebble: 9 },
   },
   medium: {
@@ -82,7 +82,7 @@ export const PROP_COUNTS: Record<RenderTierId, Record<string, Counts>> = {
     sheep: { trough: 1, sheep: 6, blobshadow: 1 },
     ore: { boulder: 3, pebble: 5, blobshadow: 3 },
     brick: { clay: 5, bricks: 3 },
-    wheat: { wheatrow: 10, sheaf: 1 },
+    wheat: {},
     desert: { dune: 3, pebble: 5 },
   },
   // R20: phone power-save keeps a few short trees on forest hexes (2 instanced meshes, no shadows)
@@ -761,12 +761,12 @@ const PINE_SPECIES_TONE: Record<"pineTall" | "pineRound" | "pineSmall", Color> =
   pineRound: new Color(0.58, 0.68, 0.53),
   pineSmall: new Color(0.54, 0.65, 0.5),
 };
-const PEBBLE_TINT: Record<string, Color> = { desert: new Color("#e6d2a6"), ore: new Color("#c6cacf") };
+const PEBBLE_TINT: Record<string, Color> = { desert: new Color("#e6d2a6"), ore: new Color("#d8dee4") };
 /** R17: instance multiply biased toward TERRAIN_MATERIALS.base — sheep/meadow continuous dissolve. */
 const TERRAIN_ALBEDO: Record<string, Color> = {
   wood: new Color("#2f6b3a"),
   sheep: new Color("#8fbf6a"),
-  ore: new Color("#a9afb7"),
+  ore: new Color("#c2ced6"),
   brick: new Color("#b85a3a"),
   wheat: new Color("#e4c440"),
   desert: new Color("#ddd2b2"),

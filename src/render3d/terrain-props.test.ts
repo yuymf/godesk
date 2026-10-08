@@ -17,7 +17,6 @@ import {
   TILE_TOP,
   SHEEP_CLUMP_GAP,
   SHEEP_CLUMP_RADIUS,
-  WHEAT_STRETCH_MIN,
 } from "./terrain-props";
 
 const tiles = dressingInputs(beginnerSceneInput()).tiles;
@@ -55,9 +54,10 @@ describe("G3D-PROPS terrain props", () => {
     // R19: a small readable flock (settlecoast-like), not a shrub carpet.
     expect(PROP_COUNTS.high.sheep!.sheep).toBeGreaterThanOrEqual(5);
     expect(PROP_COUNTS.high.sheep!.sheep).toBeLessThanOrEqual(9);
-    // R21: sparser low rows so the golden field reads first (R20 ≥ 36 rows).
-    expect(PROP_COUNTS.high.wheat!.wheatrow ?? 0).toBeGreaterThanOrEqual(12);
-    expect(PROP_COUNTS.high.wheat!.wheatrow ?? 0).toBeLessThanOrEqual(20);
+    // R23: continuous golden ground field — no wheatrow / sheaf props (readable rows gone).
+    expect(PROP_COUNTS.high.wheat!.wheatrow ?? 0).toBe(0);
+    expect(PROP_COUNTS.high.wheat!.sheaf ?? 0).toBe(0);
+    expect(PROP_COUNTS.medium.wheat!.wheatrow ?? 0).toBe(0);
   });
 
   it("is deterministic; medium is reduced and low keeps only short forest trees", () => {
@@ -291,7 +291,7 @@ describe("G3D-PROPS terrain props", () => {
   });
 });
 
-describe("R22 wheat wave + forest haze", () => {
+describe("R22 forest haze + R23 continuous wheat field", () => {
   it("wood hexes carry no translucent canopy cards (light-green haze in close view)", () => {
     for (const tier of ["high", "medium", "low"] as const) {
       expect(PROP_COUNTS[tier].wood?.canopy ?? 0, tier).toBe(0);
@@ -299,26 +299,21 @@ describe("R22 wheat wave + forest haze", () => {
     }
   });
 
-  it("wheat rows undulate in direction and height but stay low (rendered < 0.18)", () => {
+  it("wheat hexes place no wheatrow / sheaf props (continuous golden ground field)", () => {
+    for (const tier of ["high", "medium", "low"] as const) {
+      expect(PROP_COUNTS[tier].wheat?.wheatrow ?? 0, tier).toBe(0);
+      expect(PROP_COUNTS[tier].wheat?.sheaf ?? 0, tier).toBe(0);
+      for (const tile of tiles.filter((t) => t.terrain === "wheat")) {
+        const placed = placeTileProps(tile, PROP_COUNTS[tier].wheat ?? {});
+        expect(placed.filter((p) => p.kind === "wheatrow" || p.kind === "sheaf"), `${tier} ${tile.q},${tile.r}`).toHaveLength(0);
+      }
+      expect(layoutProps(tiles, tier).get("wheatrow") ?? []).toHaveLength(0);
+      expect(layoutProps(tiles, tier).get("sheaf") ?? []).toHaveLength(0);
+    }
+    // geometry kept for potential sparse accents; still low if ever re-enabled
     const geom = buildPropGeometry("wheatrow");
     geom.computeBoundingBox();
-    const h = geom.boundingBox!.max.y - geom.boundingBox!.min.y;
+    expect(geom.boundingBox!.max.y - geom.boundingBox!.min.y).toBeLessThan(0.18);
     geom.dispose();
-    for (const tier of ["high", "medium"] as const) {
-      for (const tile of tiles.filter((t) => t.terrain === "wheat")) {
-        const rows = placeTileProps(tile, PROP_COUNTS[tier].wheat!).filter((p) => p.kind === "wheatrow");
-        expect(rows.length).toBeGreaterThanOrEqual(6);
-        for (const r of rows) {
-          expect(h * r.scale * r.stretch, `${tile.q},${tile.r}`).toBeLessThan(0.18);
-          expect(r.stretch).toBeGreaterThanOrEqual(WHEAT_STRETCH_MIN - 1e-9);
-        }
-        const stretches = rows.map((r) => r.stretch);
-        // height wave: rows clearly differ in height (not one flat hedge)
-        expect(Math.max(...stretches) - Math.min(...stretches), `${tile.q},${tile.r}`).toBeGreaterThan(0.15);
-        // direction wave: row yaws spread more than the R21 ±0.03 jitter
-        const yaws = rows.map((r) => r.yaw);
-        expect(Math.max(...yaws) - Math.min(...yaws), `${tile.q},${tile.r}`).toBeGreaterThan(0.2);
-      }
-    }
   });
 });

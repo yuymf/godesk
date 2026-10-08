@@ -101,9 +101,10 @@ export const TERRAIN_MATERIALS: Record<string, MaterialToken> = {
   // R22: fresher light-green pasture tint (was #a3c67e).
   sheep: { base: "#a6d27e", roughness: 0.98, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 1.7, pbrTint: 0.6, brush: 0.85 },
   // R22: wheat-field texture re-baked golden (bake-ai-r20.py golden_wheat) + a near-neutral light-gold tint (was #d8c070).
-  wheat: { base: "#e8e090", roughness: 0.97, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 1.7, pbrTint: 0.55, brush: 0.85 },
-  // R21: light grey rock (was #7a7f86 grey-brown); scree texture is also desaturated + lifted in the bake.
-  ore: { base: "#a4abb3", roughness: 0.96, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 1.55, pbrTint: 0.62, brush: 0.85 },
+  // R23: continuous golden field (no wheatrow props); texture gets low-freq undulating wave in bake; brush slightly up for colour noise.
+  wheat: { base: "#e8e090", roughness: 0.97, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 1.7, pbrTint: 0.5, brush: 0.92 },
+  // R21: light grey rock; R23: cooler + brighter (#a4abb3 → #b8c4cc), scree re-baked cooler_light_rock.
+  ore: { base: "#c2ced6", roughness: 0.96, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 1.55, pbrTint: 0.5, brush: 0.85 },
   // R22: paler sand (texture re-baked pale_sand; tint #d2c29e → #e4dec8, less orange) — reads apart from golden wheat.
   desert: { base: "#e4dec8", roughness: 0.98, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 1.45, pbrTint: 0.6, brush: 0.85 },
 };

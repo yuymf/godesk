@@ -964,7 +964,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "texture/t04-wheat/512/baseColor",
     "file": "assets/textures/pbr/t04-wheat/512/baseColor.ktx2",
     "kind": "texture",
-    "bytes": 21855,
+    "bytes": 13925,
     "tier": "high-medium",
     "source": "ai-generated",
     "license": {
@@ -1021,7 +1021,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "texture/t04-wheat/256/baseColor",
     "file": "assets/textures/pbr/t04-wheat/256/baseColor.ktx2",
     "kind": "texture",
-    "bytes": 7538,
+    "bytes": 6237,
     "tier": "low",
     "source": "ai-generated",
     "license": {
@@ -1078,7 +1078,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "texture/t05-reef/512/baseColor",
     "file": "assets/textures/pbr/t05-reef/512/baseColor.ktx2",
     "kind": "texture",
-    "bytes": 27847,
+    "bytes": 26486,
     "tier": "high-medium",
     "source": "ai-generated",
     "license": {
@@ -1135,7 +1135,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "texture/t05-reef/256/baseColor",
     "file": "assets/textures/pbr/t05-reef/256/baseColor.ktx2",
     "kind": "texture",
-    "bytes": 8975,
+    "bytes": 8542,
     "tier": "low",
     "source": "ai-generated",
     "license": {

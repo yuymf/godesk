@@ -162,7 +162,8 @@ describe("R22 resource colour + seams", () => {
     const atWallTop = TILE_FACE_RADIUS * (TILE_BASE_SCALE + (1 - TILE_BASE_SCALE) * (0.24 / 0.28));
     expect(HEX_LAYOUT_RADIUS - atWallTop).toBeGreaterThan(0.008);
     expect(SEAM_HALF_WIDTH).toBeGreaterThan(0);
-    expect(SEAM_HALF_WIDTH).toBeLessThan(0.012);
+    // R23: hairline ≤ 0.0025 (was 0.006) so camera a loses the chessboard look
+    expect(SEAM_HALF_WIDTH).toBeLessThanOrEqual(0.002);
   });
 
   it("hex key light is no longer orange (G/R ≥ 0.9, B/R ≥ 0.75) so wheat / desert / ore keep their hue", () => {
@@ -176,5 +177,17 @@ describe("R22 resource colour + seams", () => {
     expect(wg / wr).toBeGreaterThan(0.93);
     const lum = (hex: string) => { const [r, g, b] = rgb(hex); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
     expect(lum(TERRAIN_MATERIALS.desert!.base)).toBeGreaterThan(lum("#d2c29e"));
+  });
+
+  it("R23 ore tint is cooler + brighter light-grey rock than R21/R22 warm grey", () => {
+    const [r, g, b] = rgb(TERRAIN_MATERIALS.ore!.base);
+    // cooler: blue channel ≥ red (cold grey, not warm brown)
+    expect(b).toBeGreaterThanOrEqual(r);
+    expect(g).toBeGreaterThanOrEqual(r);
+    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    // brighter than R22 #a4abb3
+    const r22 = rgb("#a4abb3");
+    const lum22 = 0.2126 * r22[0] + 0.7152 * r22[1] + 0.0722 * r22[2];
+    expect(lum).toBeGreaterThan(lum22);
   });
 });
