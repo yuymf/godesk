@@ -33,6 +33,8 @@ export type MaterialToken = {
    * 座位棋子用：彩漆木的木纹底色会把座位色压成棕色，座位色必须可辨认。
    */
   pbrBaseColor?: boolean;
+  /** R18：油彩笔触层强度（仅地块；0 / 缺省 = 无笔触层，崖壁 / 棋子 / 桌面不受影响）。 */
+  brush?: number;
 };
 
 export type PbrSetId =
@@ -80,12 +82,12 @@ export const SCENE_TOKENS = {
 /** 地块材质（颜色沿用现有地形色，pattern 按地形，贴图取 G3D-22 套件）。 */
 /** R17: matte hex faces + denser PBR repeat — continuous oil-paint brush, not flat plastic. */
 export const TERRAIN_MATERIALS: Record<string, MaterialToken> = {
-  wood: { base: "#2f6b3a", roughness: 0.98, metalness: 0, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 1.65 },
-  brick: { base: "#b85a3a", roughness: 0.98, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 1.65 },
-  sheep: { base: "#8fbf6a", roughness: 0.98, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 1.7 },
-  wheat: { base: "#d4b84a", roughness: 0.97, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 1.7 },
-  ore: { base: "#6a6f78", roughness: 0.96, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 1.55 },
-  desert: { base: "#c9b896", roughness: 0.98, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 1.45 },
+  wood: { base: "#2f6b3a", roughness: 0.98, metalness: 0, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 1.65, brush: 0.6 },
+  brick: { base: "#b85a3a", roughness: 0.98, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 1.65, brush: 0.6 },
+  sheep: { base: "#8fbf6a", roughness: 0.98, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 1.7, brush: 0.6 },
+  wheat: { base: "#d4b84a", roughness: 0.97, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 1.7, brush: 0.6 },
+  ore: { base: "#6a6f78", roughness: 0.96, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 1.55, brush: 0.6 },
+  desert: { base: "#c9b896", roughness: 0.98, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 1.45, brush: 0.6 },
 };
 
 /** 其余物件材质。 */

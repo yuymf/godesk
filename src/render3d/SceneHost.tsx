@@ -186,6 +186,10 @@ const DICE_THROW_SLIDE: readonly [number, number] = [-0.32, -0.22];
 const SHADOW_REFRESH_MS = 1_500;
 /** 可交互后延迟多久开始流式加载 PBR 贴图（避开首屏主线程窗口）。 */
 const PBR_STREAM_DELAY_MS = 1_200;
+/** R18 boot reveal: canvas fade-in length, cap (ms after first content frame) and pre-sea clear colour. */
+export const BOOT_FADE_MS = 520;
+export const BOOT_REVEAL_CAP_MS = 6_000;
+export const BOOT_SEA_COLOR = "#1f5f66";
 
 
 function supportsWebGL2(): boolean {
@@ -266,7 +270,7 @@ export function materialFor(node: SceneNode): { key: string; token: MaterialToke
       const tag = node.tag && TERRAIN_MATERIALS[node.tag] ? node.tag : "wood";
       const terrain = TERRAIN_MATERIALS[tag]!;
       // 装饰物不走地块贴图（尺寸太小），只保留地形色 + pattern。
-      return { key: `decor-${tag}`, token: { ...terrain, pbrSet: undefined, roughness: 0.7 } };
+      return { key: `decor-${tag}`, token: { ...terrain, pbrSet: undefined, roughness: 0.7, brush: undefined } };
     }
     case "number-token":
       return node.tag === "hot"
@@ -468,6 +472,10 @@ export function SceneHost({
   onCameraApi,
 }: SceneHostProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  /** R18 boot reveal：首挂载 canvas 先隐身，装扮好的 3D 场景再淡入（无平面 2D 盘闪现）；重挂载不再遮。 */
+  const bootRevealedRef = useRef(false);
+  const bootHexRef = useRef(false);
+  bootHexRef.current = Boolean(hexSettlement);
   const [unsupported, setUnsupported] = useState(false);
   const [ready, setReady] = useState(false);
   const modelRef = useRef<SceneModel | null>(null);
@@ -634,6 +642,31 @@ export function SceneHost({
     renderer.domElement.style.width = "100%";
     renderer.domElement.style.height = "100%";
     container.appendChild(renderer.domElement);
+    // R18 boot reveal: no flat-board / cream-sky flash on session open. The canvas stays transparent
+    // over the teal stage until the dressed scene (props + water) is up, then fades in once.
+    // Hex (Tidewell) scenes only — othello / tabletop boards have no lazy dressing or sea to wait for.
+    const bootVeil = !bootRevealedRef.current && bootHexRef.current;
+    let bootFirstContentAt = 0;
+    const bootSea = new Color(BOOT_SEA_COLOR);
+    const bootHorizon = new Color(SCENE_TOKENS.sky.horizon);
+    if (bootVeil) {
+      container.dataset.boot = "pending";
+      renderer.domElement.style.opacity = "0";
+      const reduceBoot = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      renderer.domElement.style.transition = reduceBoot ? "none" : `opacity ${BOOT_FADE_MS}ms ease-out`;
+      // Until the sea mounts, clear to deep water instead of the cream horizon.
+      scene.background = bootSea;
+      renderer.setClearColor(bootSea, 1);
+      // Start the lazy dressing + water chunks now (parallel with the kit / GLBs).
+      void import("./hex-dressing");
+      void import("./water");
+    } else container.dataset.boot = "ready";
+    const revealBoot = (reason: string) => {
+      bootRevealedRef.current = true;
+      container.dataset.boot = "ready";
+      container.dataset.bootReason = reason;
+      renderer.domElement.style.opacity = "1";
+    };
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -694,6 +727,8 @@ export function SceneHost({
     rigRef.current = rig;
     const sky = createSkyDome();
     scene.add(sky);
+    // R18 boot: the cream sky dome stays off until the sea is mounted (no cream flash behind the board).
+    if (scene.background === bootSea) sky.visible = false;
     const library = new MaterialLibrary({ clearcoat: caps.id === "high" });
     // high 档：RoomEnvironment 环境反射（强度 0.35，只挂光泽材质）；medium / low 关闭（§4.7）。
     let environment: ReturnType<typeof createRoomEnvironment> | null = null;
@@ -962,7 +997,18 @@ export function SceneHost({
       renderer.render(scene, camera);
       overlayRef.current?.render(renderer);
       const hasContent = contentRoot.children.length > 0;
+      if (container.dataset.water === "on" && scene.background === bootSea) {
+        scene.background = bootHorizon;
+        renderer.setClearColor(bootHorizon, 1);
+        sky.visible = true;
+      }
       if (hasContent && renderer.info.render.calls > 0) {
+        if (container.dataset.boot === "pending") {
+          if (!bootFirstContentAt) bootFirstContentAt = now;
+          const dressed = container.dataset.terrainProps !== undefined && container.dataset.water === "on";
+          if (dressed) revealBoot("dressed");
+          else if (now - bootFirstContentAt > BOOT_REVEAL_CAP_MS) revealBoot("cap");
+        }
         markInteractive();
         if (shadowDirtyUntil === Number.POSITIVE_INFINITY) markShadowsDirty();
         if (!pbrRequested) startPbrStreaming();

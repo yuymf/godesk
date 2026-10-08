@@ -12,6 +12,7 @@ import {
   shadowFrustumForBounds,
   shadowRadiusFor,
   sunDirection,
+  type MaterialToken,
 } from "./tokens";
 
 describe("G3D-07 3D tokens (SPEC §3.7)", () => {
@@ -45,6 +46,11 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
       expect(token.metalness).toBe(0);
     }
     expect(PROP_MATERIALS.cliff.pbrSet).toBe("t07-cliff");
+    // R18: oil brush layer on every terrain tile; cliff / pieces untouched (coast camera guard).
+    for (const terrain of ["wood", "brick", "sheep", "wheat", "ore", "desert"]) {
+      expect(TERRAIN_MATERIALS[terrain]!.brush ?? 0).toBeGreaterThan(0.4);
+    }
+    expect((PROP_MATERIALS.cliff as MaterialToken).brush).toBeUndefined();
   });
 
   it("seat pieces keep their seat colour: clearcoat 0.12, normal + ORM only", () => {

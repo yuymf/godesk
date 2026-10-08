@@ -138,4 +138,19 @@ describe("G3D-07 environment reflections", () => {
     library.setEnvironment(null, 0);
     expect(glossy.envMap).toBeNull();
   });
+
+  it("R18 oil brush layer only on terrain tiles (brush > 0): own program, AA-faded dabs", () => {
+    const tile = createMaterial(TERRAIN_MATERIALS.sheep!, { clearcoat: false });
+    expect(tile.defines?.GD_BRUSH).toBe(1);
+    expect(tile.customProgramCacheKey()).toBe("gd-pattern-4-brush");
+    const shader = compile(tile);
+    expect(shader.uniforms.uGdBrush).toEqual({ value: TERRAIN_MATERIALS.sheep!.brush });
+    expect(shader.fragmentShader).toContain("vec3 gdB = gdBrushStroke(vGdWorld);");
+    expect(shader.fragmentShader).toContain("fwidth(g)");
+    const cliff = createMaterial(PROP_MATERIALS.cliff, { clearcoat: false });
+    expect(cliff.defines?.GD_BRUSH).toBeUndefined();
+    expect(cliff.customProgramCacheKey()).toBe("gd-pattern-3");
+    expect(compile(cliff).fragmentShader).not.toContain("gdBrushStroke");
+    expect(PATTERN_STRENGTH_WITH_PBR).toBeGreaterThanOrEqual(0.5);
+  });
 });

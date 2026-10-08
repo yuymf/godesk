@@ -6,6 +6,8 @@
  * R15：林/羊/麦/山/砖剪影层次 — 减玩具低模塑料，默认机位一眼可读（非仅 shader）。
  * R16：prop 溶入 hex 面色块 — 色相/明度贴 tile albedo、林冠羽化笔触片、减「浮在格子上的 3D 玩具」。
  * R17：羊→牧场色斑溶合 + hex 面油彩连片；林冠远景几何伞继续压、近景 brushCard 不回退。
+ * R18：画面色块完全溶进地表 — 羊/牧场色斑压暗贴地 + 底部 alpha 溶入 hex 底色（真地表透出）；
+ *      林冠由车削几何伞改为手绘团簇（jag 块面 + 逐面明度笔触），近景 brushCard 羽化保留。
  * - 每种道具 **一个 InstancedMesh**（≤1 draw call / 类型，阴影 pass 另计），共享一份顶点色材质，
  *   instanceColor 做色调变化。**low 档零道具**（不建任何网格）。
  * - 摆放：按格子 (q,r) 播种的确定性拒绝采样，只落在六角内缩区域里，避开中心数字筹码 / 强盗、
@@ -33,6 +35,7 @@ import {
 } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { RenderTierId } from "./tiers";
+import { installPattern } from "./materials";
 import { NUMBER_TOKEN_SCALE } from "./tokens";
 
 export type PropKind =
@@ -85,7 +88,7 @@ const SPACING: Record<PropKind, number> = {
   pineTall: 0.095, pineRound: 0.11, pineSmall: 0.078, canopy: 0.105, sheep: 0.14, trough: 0.2, boulder: 0.16, clay: 0.18, bricks: 0.15, sheaf: 0.105, wheatrow: 0.088, dune: 0.26, pebble: 0.065, blobshadow: 0.07,
 };
 const CASTS: Record<PropKind, boolean> = {
-  pineTall: true, pineRound: true, pineSmall: true, canopy: false, sheep: true, trough: true, boulder: true, clay: false, bricks: true, sheaf: true, wheatrow: true, dune: false, pebble: false, blobshadow: false,
+  pineTall: true, pineRound: true, pineSmall: true, canopy: false, sheep: false, trough: true, boulder: true, clay: false, bricks: true, sheaf: true, wheatrow: true, dune: false, pebble: false, blobshadow: false,
 };
 /** 圆润有机体用平滑着色，岩石 / 砖保持平面着色。 */
 const SMOOTH: Record<PropKind, boolean> = {
@@ -172,33 +175,78 @@ function jag(geom: BufferGeometry, amount: number, seed: number): BufferGeometry
   return geom;
 }
 
-/** R15/R16 树冠叶团：偏出主干的不规则绿团；色相贴 wood tile albedo（#2f6b3a）。 */
-function foliageLobe(x: number, y: number, z: number, rx: number, ry: number, rz: number, bottom: string, top: string): BufferGeometry {
-  return grad(at(new SphereGeometry(1, 8, 5), x, y, z, rx, ry, rz), bottom, top, y - ry, y + ry, 0.16);
-}
-
 /** R16 笔触片：先躺平到 XZ，再微倾 + 平移，叠成羽化林冠（非光滑几何伞）。 */
-function brushCard(x: number, y: number, z: number, rx: number, rz: number, yaw: number, bottom: string, top: string): BufferGeometry {
+function brushCard(x: number, y: number, z: number, rx: number, rz: number, yaw: number, bottom: string, top: string, tilt = 0.12): BufferGeometry {
   const disc = new CircleGeometry(1, 10);
   disc.rotateX(-Math.PI / 2);
-  disc.rotateX(0.12); // slight tip toward camera/light for brush read
+  disc.rotateX(tilt); // slight tip toward camera/light for brush read
   const g = at(disc, x, y, z, rx, 1, rz, yaw);
   return grad(g, bottom, top, y - 0.03, y + 0.04, 0.18);
 }
 
+/** R18 手绘叶团：单位球先 jag 出不规则块面再缩放；逐面明度抖动 = 笔触 dab（非光滑几何伞）。 */
+function clump(x: number, y: number, z: number, r: number, sy: number, bottom: string, top: string, seed: number, jagAmt = 0.2): BufferGeometry {
+  const g = jag(new IcosahedronGeometry(1, 1), jagAmt, seed);
+  at(g, x, y, z, r, r * sy, r, seed * 0.7);
+  return grad(g, bottom, top, y - r * sy, y + r * sy, 0.4);
+}
+
+/** R18 径向溶边圆片：中心色 → 外缘色，外缘 alpha → 0（RGBA 顶点色；需 vertexAlphas 材质）。 */
+function radialDisc(r: number, center: string, rim: string, sx: number, sz: number, y: number, alphaCenter: number): BufferGeometry {
+  const g = new CircleGeometry(r, 18).toNonIndexed();
+  g.rotateX(-Math.PI / 2);
+  at(g, 0, y, 0, sx, 1, sz);
+  const pos = g.getAttribute("position");
+  const colors = new Float32Array(pos.count * 4);
+  const a = new Color(center);
+  const b = new Color(rim);
+  const c = new Color();
+  for (let i = 0; i < pos.count; i += 1) {
+    const d = Math.min(1, Math.hypot(pos.getX(i) / sx, pos.getZ(i) / sz) / r);
+    c.copy(a).lerp(b, d);
+    colors[i * 4] = c.r;
+    colors[i * 4 + 1] = c.g;
+    colors[i * 4 + 2] = c.b;
+    colors[i * 4 + 3] = alphaCenter * (1 - d * d);
+  }
+  g.setAttribute("color", new BufferAttribute(colors, 4));
+  if (g.getAttribute("uv")) g.deleteAttribute("uv");
+  return g;
+}
+
+/** RGB 顶点色 → RGBA（alpha = 1），使整只羊可与径向溶边片合并。 */
+function rgba(g: BufferGeometry): BufferGeometry {
+  const col = g.getAttribute("color");
+  if (!col || col.itemSize === 4) return g;
+  const out = new Float32Array(col.count * 4);
+  for (let i = 0; i < col.count; i += 1) {
+    out[i * 4] = col.getX(i);
+    out[i * 4 + 1] = col.getY(i);
+    out[i * 4 + 2] = col.getZ(i);
+    out[i * 4 + 3] = 1;
+  }
+  g.setAttribute("color", new BufferAttribute(out, 4));
+  return g;
+}
+
 /** 高瘦冷杉：尖顶长锥 + 分层叶团/枝杈侧翼，偏冷深绿，高约 0.62。 */
 function pineTallGeometry(): BufferGeometry {
-  const profile = [
-    [0, 0.06], [0.09, 0.08], [0.078, 0.14], [0.055, 0.2], [0.07, 0.24], [0.048, 0.3],
-    [0.035, 0.36], [0.045, 0.4], [0.028, 0.46], [0.016, 0.52], [0.006, 0.56], [0, 0.62],
-  ].map(([x, y]) => new Vector2(x!, y!));
+  // R18: tiered hand-painted clumps (no smooth lathe umbrella); dark cool base → lit top.
+  const tiers: Array<[number, number]> = [[0.16, 0.1], [0.26, 0.086], [0.355, 0.07], [0.44, 0.054], [0.515, 0.038]];
+  const crown: BufferGeometry[] = [];
+  tiers.forEach(([y, r], ti) => {
+    const a0 = ti * 1.9;
+    const n = ti < 3 ? 3 : 2;
+    for (let k = 0; k < n; k += 1) {
+      const a = a0 + k * ((Math.PI * 2) / n);
+      const dy = ((ti * 7 + k * 5) % 5 - 2) * 0.006;
+      crown.push(clump(Math.cos(a) * r * 0.5, y + dy, Math.sin(a) * r * 0.5, r * 0.66, 0.72, ti % 2 ? "#183e2a" : "#1d4834", ti % 2 ? "#3f7c4c" : "#4c8a54", 11 + ti * 3 + k, 0.3));
+    }
+  });
+  crown.push(clump(0, 0.575, 0, 0.026, 1.5, "#2a5a3a", "#4a8a56", 41, 0.12));
   return merged([
     grad(at(new CylinderGeometry(0.014, 0.022, 0.09, 5, 1, true), 0, 0.045, 0), "#3a2a1a", "#5a4028", 0, 0.09),
-    // R16: lathe + lobes hue-matched to wood tile #2f6b3a (less saturated toy green)
-    grad(new LatheGeometry(profile, 8), "#1e4a2e", "#3a7a48", 0.06, 0.62, 0.14),
-    foliageLobe(0.055, 0.22, 0.02, 0.055, 0.04, 0.045, "#244e32", "#3a6e44"),
-    foliageLobe(-0.05, 0.34, -0.025, 0.048, 0.038, 0.04, "#1e4a2e", "#356840"),
-    foliageLobe(0.035, 0.46, 0.03, 0.038, 0.032, 0.035, "#285234", "#3d7448"),
+    ...crown,
     // R16 soft brush cards near crown — feathered silhouette vs hard umbrella
     brushCard(0.02, 0.5, 0.01, 0.07, 0.05, 0.4, "#2a5a36", "#4a8050"),
     brushCard(-0.03, 0.42, -0.02, 0.06, 0.045, -0.6, "#265232", "#46784c"),
@@ -209,18 +257,18 @@ function pineTallGeometry(): BufferGeometry {
 
 /** 圆冠阔叶：胖裙 + 多团叶云，偏暖黄绿，高约 0.42。 */
 function pineRoundGeometry(): BufferGeometry {
-  const profile = [
-    [0, 0.04], [0.15, 0.06], [0.155, 0.1], [0.12, 0.14], [0.145, 0.17], [0.11, 0.21],
-    [0.095, 0.25], [0.11, 0.28], [0.07, 0.32], [0.04, 0.36], [0.015, 0.4], [0, 0.42],
-  ].map(([x, y]) => new Vector2(x!, y!));
+  // R18: cauliflower crown of painted clumps (warm yellow-green tops, cool undersides).
+  const ring: BufferGeometry[] = [];
+  for (let k = 0; k < 5; k += 1) {
+    const a = k * ((Math.PI * 2) / 5) + 0.3;
+    const rr = 0.088 + (k % 2) * 0.012;
+    ring.push(clump(Math.cos(a) * 0.09, 0.17 + (k % 3) * 0.035, Math.sin(a) * 0.09, rr, 0.8, "#24502c", k % 2 ? "#5e9a54" : "#6aa65a", 5 + k * 7));
+  }
   return merged([
-    grad(at(new CylinderGeometry(0.02, 0.03, 0.06, 5, 1, true), 0, 0.03, 0), "#4a3220", "#6b4a2c", 0, 0.06),
-    // R16: warmer toward wood tile, less neon lime toy
-    grad(new LatheGeometry(profile, 8), "#2a5a32", "#5a9a58", 0.04, 0.42, 0.14),
-    foliageLobe(0.09, 0.16, 0.04, 0.07, 0.05, 0.06, "#2a5830", "#568a4c"),
-    foliageLobe(-0.085, 0.2, -0.05, 0.065, 0.048, 0.055, "#24542c", "#528648"),
-    foliageLobe(0.05, 0.3, -0.06, 0.055, 0.042, 0.05, "#2c5c32", "#5a9250"),
-    foliageLobe(-0.04, 0.12, 0.08, 0.06, 0.04, 0.055, "#286030", "#568a4c"),
+    grad(at(new CylinderGeometry(0.02, 0.03, 0.08, 5, 1, true), 0, 0.04, 0), "#4a3220", "#6b4a2c", 0, 0.08),
+    clump(0, 0.24, 0, 0.12, 0.82, "#24542c", "#5a9650", 3),
+    ...ring,
+    clump(0.012, 0.335, -0.01, 0.075, 0.9, "#2c5c32", "#74ae60", 29),
     brushCard(0.04, 0.28, 0.02, 0.09, 0.07, 0.5, "#2f6b3a", "#5a9a58"),
     brushCard(-0.05, 0.22, -0.03, 0.08, 0.06, -0.8, "#2a6034", "#568a50"),
   ]);
@@ -228,24 +276,23 @@ function pineRoundGeometry(): BufferGeometry {
 
 /** 矮灌：短胖两层 + 侧叶团，偏橄榄绿，高约 0.3。 */
 function pineSmallGeometry(): BufferGeometry {
-  const profile = [
-    [0, 0.03], [0.11, 0.045], [0.1, 0.08], [0.07, 0.11], [0.095, 0.135], [0.065, 0.17],
-    [0.04, 0.21], [0.022, 0.25], [0.008, 0.28], [0, 0.3],
-  ].map(([x, y]) => new Vector2(x!, y!));
   return merged([
     grad(at(new CylinderGeometry(0.016, 0.022, 0.05, 5, 1, true), 0, 0.025, 0), "#3e2c1c", "#5c4028", 0, 0.05),
-    grad(new LatheGeometry(profile, 7), "#2a4a28", "#5a7a40", 0.03, 0.3, 0.14),
-    foliageLobe(0.07, 0.1, 0.03, 0.05, 0.035, 0.045, "#2a4a28", "#567838"),
-    foliageLobe(-0.06, 0.14, -0.04, 0.045, 0.032, 0.04, "#264424", "#527034"),
+    // R18: olive shrub = 4 painted clumps (no lathe cone)
+    clump(0, 0.115, 0, 0.088, 0.78, "#284626", "#5a7c40", 13),
+    clump(0.065, 0.085, 0.03, 0.06, 0.75, "#264424", "#567838", 17),
+    clump(-0.055, 0.095, -0.04, 0.062, 0.75, "#2a4a28", "#5e8044", 19),
+    clump(0.005, 0.19, 0.005, 0.056, 0.9, "#2c4e2a", "#668a48", 23),
     brushCard(0.01, 0.18, 0.0, 0.07, 0.055, 0.3, "#2f6b3a", "#5a8048"),
   ]);
 }
 
-/** R17 树冠云：远景几何伞再压；近景 brushCard 羽化保持（不回退 R16）。 */
+/** R18 树冠云：去掉残余几何伞体量，只留嵌进树冠的碎笔触片（远景不再读成伞盖）；近景 brushCard 羽化保持（不回退 R16）。 */
 function canopyGeometry(): BufferGeometry {
   return merged([
-    // thinner residual volume — far umbrella pressed further
-    grad(at(new SphereGeometry(0.09, 7, 3), 0, 0, 0, 1.35, 0.18, 1.15), "#2a5a34", "#3a7a48", -0.03, 0.035, 0.14),
+    // R18: residual umbrella volume removed — only broken feathered brush cards nested in the crowns.
+    brushCard(0.06, 0.012, -0.06, 0.08, 0.06, 2.1, "#2a5c34", "#4c8c54"),
+    brushCard(-0.07, 0.004, 0.05, 0.085, 0.065, -2.3, "#285a32", "#48884e"),
     brushCard(0.0, 0.01, 0.0, 0.19, 0.145, 0.15, "#2f6b3a", "#4a8a52"),
     brushCard(0.1, 0.015, 0.05, 0.125, 0.1, 0.9, "#2a6034", "#46884e"),
     brushCard(-0.09, 0.008, -0.04, 0.135, 0.1, -0.7, "#286032", "#42804a"),
@@ -261,37 +308,44 @@ function blobShadowGeometry(): BufferGeometry {
   return grad(at(new CircleGeometry(0.1, 12), 0, 0.002, 0, 1, 1, 1).rotateX(-Math.PI / 2), "#1a1814", "#1a1814", 0, 1);
 }
 
-/** R17 羊：剪影可读，但读成绘本牧场色斑（非桌上白团玩具）；腹下/面噪声与 #8fbf6a 同色系连片。 */
+/** R18 羊：剪影仍可读（头/腿），但色斑压暗贴牧场底色、身体压扁贴地；腹下径向溶边片 alpha→0，
+ *  配合羊专用材质的底部 alpha / 色相溶合，边缘连续溶进 hex 底色（不再像贴在地上的道具）。 */
 function sheepGeometry(): BufferGeometry {
-  // legs: soft earth-green, not black toy sticks
   const leg = (x: number, z: number) =>
-    grad(at(new CylinderGeometry(0.012, 0.01, 0.055, 5, 1, true), x, 0.028, z), "#4a5a38", "#6a7a48", 0, 0.055);
-  // meadow blotch "wool" — same family as pasture tile, not cream/white
-  const blotch = (x: number, y: number, z: number, r: number, sx = 1, sy = 1, sz = 1, lo = "#7aab58", hi = "#a8c878") =>
-    grad(at(new SphereGeometry(r, 7, 4), x, y, z, sx, sy, sz), lo, hi, y - r * sy, y + r * sy, 0.12);
-  return merged([
-    // body mass: meadow green field, slightly flattened (color blotch silhouette)
-    grad(at(new SphereGeometry(0.078, 9, 6), 0, 0.095, 0, 1.5, 0.72, 1.1), "#6a9a48", "#9ec86e", 0.03, 0.16, 0.14),
-    blotch(-0.045, 0.12, 0.04, 0.042, 1.15, 0.85, 1.1, "#7aab58", "#b0d080"),
-    blotch(0.04, 0.125, -0.035, 0.04, 1.1, 0.9, 1.05, "#88b860", "#a8c878"),
-    blotch(-0.06, 0.1, -0.045, 0.038, 1.05, 0.8, 1.15, "#6a9a48", "#98c068"),
-    blotch(0.055, 0.105, 0.045, 0.036, 1.1, 0.85, 1.0, "#82b458", "#b4d488"),
-    blotch(0.0, 0.14, 0.0, 0.034, 1.25, 0.7, 1.15, "#8fbf6a", "#c0d898"),
-    blotch(-0.02, 0.08, 0.06, 0.032, 1.05, 0.7, 1.2, "#78a850", "#a0c870"),
+    grad(at(new CylinderGeometry(0.011, 0.009, 0.04, 5, 1, true), x, 0.02, z), "#3e5228", "#526634", 0, 0.04);
+  const blotch = (x: number, y: number, z: number, r: number, sx = 1, sy = 1, sz = 1, lo = "#4c742c", hi = "#6c9040") =>
+    grad(at(new SphereGeometry(r, 7, 4), x, y, z, sx, sy, sz), lo, hi, y - r * sy, y + r * sy, 0.14);
+  const parts: BufferGeometry[] = [
+    // body: flattened meadow-dark color field (closer to rendered pasture, not a light toy blob)
+    grad(at(new SphereGeometry(0.078, 9, 6), 0, 0.078, 0, 1.5, 0.56, 1.12), "#456c26", "#668c3e", 0.03, 0.125, 0.14),
+    blotch(-0.045, 0.098, 0.04, 0.04, 1.15, 0.7, 1.1, "#4c742c", "#6e9242"),
+    blotch(0.04, 0.102, -0.035, 0.038, 1.1, 0.72, 1.05, "#4e7632", "#6a8e40"),
+    blotch(-0.06, 0.08, -0.045, 0.036, 1.05, 0.66, 1.15, "#456c26", "#66883c"),
+    blotch(0.055, 0.084, 0.045, 0.034, 1.1, 0.7, 1.0, "#4a722a", "#6e9244"),
+    blotch(0.0, 0.114, 0.0, 0.032, 1.25, 0.6, 1.15, "#527a32", "#74964a"),
+    blotch(-0.02, 0.064, 0.06, 0.03, 1.05, 0.6, 1.2, "#466e27", "#62863a"),
     // soft brush cards on flanks — continuous with hex meadow face
-    brushCard(0.02, 0.11, 0.02, 0.08, 0.055, 0.35, "#7aab58", "#8fbf6a"),
-    brushCard(-0.03, 0.095, -0.02, 0.07, 0.05, -0.7, "#6a9a48", "#98c068"),
-    // wide meadow bleed puddle under belly — same hue as sheep hex face
-    grad(at(new CircleGeometry(0.12, 12), 0, 0.003, 0, 1.35, 1, 1.1).rotateX(-Math.PI / 2), "#6a9a48", "#8fbf6a", 0, 0.01, 0.1),
-    grad(at(new CircleGeometry(0.08, 10), 0, 0.005, 0, 1.1, 1, 0.95).rotateX(-Math.PI / 2), "#8fbf6a", "#a8c878", 0, 0.01, 0.08),
-    // head: soft olive-brown, not black toy (silhouette still readable)
-    grad(at(new SphereGeometry(0.036, 7, 5), 0.12, 0.115, 0, 1.35, 0.95, 0.9), "#5a6a40", "#7a8a58", 0.08, 0.15),
-    grad(at(new CylinderGeometry(0.02, 0.026, 0.035, 5, 1, true), 0.085, 0.1, 0, 1, 1, 1, Math.PI / 2), "#5a6a40", "#6a7a48", 0.08, 0.13),
-    grad(at(new SphereGeometry(0.014, 5, 3), 0.105, 0.145, 0.042, 0.65, 1.2, 0.5), "#5a6a40", "#6a7a48", 0.13, 0.16),
-    grad(at(new SphereGeometry(0.014, 5, 3), 0.105, 0.145, -0.042, 0.65, 1.2, 0.5), "#5a6a40", "#6a7a48", 0.13, 0.16),
-    grad(at(new BoxGeometry(0.018, 0.012, 0.048), 0.148, 0.108, 0), "#4a5a38", "#5a6a40", 0, 1),
+    brushCard(0.02, 0.09, 0.02, 0.08, 0.055, 0.35, "#4c742c", "#66883c", 0.03),
+    brushCard(-0.03, 0.078, -0.02, 0.07, 0.05, -0.7, "#456c26", "#62863e", 0.03),
+    // head: soft olive (silhouette readable), low
+    grad(at(new SphereGeometry(0.034, 7, 5), 0.118, 0.094, 0, 1.35, 0.92, 0.9), "#4e6236", "#6a7e4c", 0.06, 0.13),
+    grad(at(new CylinderGeometry(0.019, 0.025, 0.034, 5, 1, true), 0.084, 0.082, 0, 1, 1, 1, Math.PI / 2), "#4e6236", "#5e7242", 0.06, 0.11),
+    grad(at(new SphereGeometry(0.013, 5, 3), 0.104, 0.122, 0.04, 0.65, 1.2, 0.5), "#4e6236", "#5e7242", 0.11, 0.14),
+    grad(at(new SphereGeometry(0.013, 5, 3), 0.104, 0.122, -0.04, 0.65, 1.2, 0.5), "#4e6236", "#5e7242", 0.11, 0.14),
+    grad(at(new BoxGeometry(0.017, 0.011, 0.045), 0.144, 0.088, 0), "#425430", "#4e6236", 0, 1),
     leg(0.048, 0.032), leg(0.048, -0.032), leg(-0.048, 0.032), leg(-0.048, -0.032),
-  ]);
+  ].map(rgba);
+  // wide radial bleed: alpha → 0 at rim so the patch has no edge on the hex face
+  parts.push(radialDisc(0.15, "#5a8434", "#4c7230", 1.45, 1.15, 0.007, 0.75));
+  parts.push(radialDisc(0.095, "#628c3c", "#557c32", 1.2, 1.0, 0.009, 0.6));
+  // feather dabs around the rim (broken edge, painted-in)
+  for (let k = 0; k < 6; k += 1) {
+    const a = k * (Math.PI / 3) + 0.25;
+    parts.push(radialDisc(0.05, "#5c8636", "#4e7430", 1.4, 0.8, 0.008, 0.5).applyMatrix4(
+      new Matrix4().compose(new Vector3(Math.cos(a) * 0.15, 0, Math.sin(a) * 0.12), new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), -a), new Vector3(1, 1, 1)),
+    ));
+  }
+  return merged(parts);
 }
 
 /** 水槽：木槽 + 水面 + 两个支脚。 */
@@ -495,8 +549,8 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
         terrain: tile.terrain,
         x: tile.center[0] + dx,
         // R16: slight sink into hex face so props read rooted / painted-in (not floating toys).
-        y: kind === "canopy" ? TILE_TOP + 0.3 + rand() * 0.08
-          : kind === "sheep" ? TILE_TOP - 0.02
+        y: kind === "canopy" ? TILE_TOP + 0.2 + rand() * 0.08
+          : kind === "sheep" ? TILE_TOP
           : isPine(kind) || kind === "boulder" || kind === "clay" || kind === "bricks" || kind === "wheatrow" || kind === "sheaf"
             ? TILE_TOP - 0.012
             : TILE_TOP,
@@ -504,7 +558,7 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
         yaw: kind === "wheatrow" ? -rowYaw + (rand() - 0.5) * 0.06 : rand() * Math.PI * 2,
         scale: isPine(kind)
           ? (kind === "pineTall" ? 0.95 + rand() * 0.45 : kind === "pineRound" ? 0.9 + rand() * 0.4 : 0.85 + rand() * 0.35)
-          : kind === "canopy" ? 1.2 + rand() * 0.55
+          : kind === "canopy" ? 0.95 + rand() * 0.35
           : kind === "sheep" ? 0.88 + rand() * 0.22
           : kind === "boulder" ? 1.05 + rand() * 0.35
           : kind === "clay" || kind === "bricks" ? 1.0 + rand() * 0.28
@@ -524,7 +578,8 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
   }
   // 接触阴影：在会投影的道具脚下各放一枚（同一次摆放，确定性）。
   if ((counts.blobshadow ?? 0) > 0) {
-    const bases = out.filter((p) => isPine(p.kind) || p.kind === "sheep" || p.kind === "boulder" || p.kind === "trough");
+    // R18: no dark contact disc under sheep (it outlined them as props stuck on the ground).
+    const bases = out.filter((p) => isPine(p.kind) || p.kind === "boulder" || p.kind === "trough");
     const want = Math.min(counts.blobshadow ?? 0, bases.length);
     for (let i = 0; i < want; i += 1) {
       const b = bases[i]!;
@@ -590,7 +645,7 @@ function toneFor(p: PropPlacement, out: Color): Color {
   const albedo = TERRAIN_ALBEDO[p.terrain];
   if (albedo && p.kind !== "blobshadow" && p.kind !== "trough") {
     // R17: sheep strongly → meadow tile; pines/canopy keep dissolve; hex-face continuous with props
-    const blend = p.kind === "sheep" ? 0.52
+    const blend = p.kind === "sheep" ? 0.66
       : isPine(p.kind) || p.kind === "canopy" ? 0.34
       : p.kind === "wheatrow" || p.kind === "sheaf" ? 0.32
       : p.kind === "boulder" || p.kind === "clay" || p.kind === "bricks" ? 0.36
@@ -608,6 +663,48 @@ function toneFor(p: PropPlacement, out: Color): Color {
 }
 
 // ── 场景图层 ───────────────────────────────────────────────────────────────
+
+/** R18 羊溶地：牧场贴地色（线性空间，≈ 渲染后 meadow hex 底色）。 */
+export const SHEEP_GROUND_TINT = "#4d6a22";
+/** R18 羊溶地带：世界高度 TILE_TOP+0.012 … +0.075 内向地色 / 透明过渡。 */
+export const SHEEP_DISSOLVE_BAND: readonly [number, number] = [TILE_TOP + 0.012, TILE_TOP + 0.105];
+
+/**
+ * R18 羊专用材质：与 hex 面同一世界坐标 grass pattern（笔触场连续），底部按高度溶向牧场底色并降 alpha，
+ * 让真实地表透上来（边缘连续溶进 hex 底色，非贴地道具）。vertexAlphas（RGBA 顶点色）给径向溶边片。
+ */
+export function createSheepDissolveMaterial(): MeshStandardMaterial {
+  const m = new MeshStandardMaterial({
+    vertexColors: true, flatShading: false, roughness: 1, metalness: 0, envMapIntensity: 0, transparent: true,
+  });
+  m.polygonOffset = true;
+  m.polygonOffsetFactor = -1;
+  m.polygonOffsetUnits = -2;
+  const pattern = installPattern(m, "grass");
+  pattern.value = 0.75;
+  const base = m.onBeforeCompile;
+  const ground = { value: new Color(SHEEP_GROUND_TINT) };
+  const [y0, y1] = SHEEP_DISSOLVE_BAND;
+  m.onBeforeCompile = (shader, renderer) => {
+    base.call(m, shader, renderer);
+    shader.uniforms.uGdGround = ground;
+    shader.fragmentShader = shader.fragmentShader
+      .replace("uniform float uGdPattern;", "uniform float uGdPattern;\nuniform vec3 uGdGround;")
+      .replace(
+        "diffuseColor.rgb *= mix(1.0, 0.52 + 0.96 * gdP, uGdPattern);",
+        [
+          "diffuseColor.rgb *= mix(1.0, 0.52 + 0.96 * gdP, uGdPattern);",
+          `float gdLow = 1.0 - smoothstep(${y0.toFixed(4)}, ${y1.toFixed(4)}, vGdWorld.y);`,
+          // whole fleece leans into the meadow field; the lower band becomes the ground itself
+          "diffuseColor.rgb = mix(diffuseColor.rgb, uGdGround * (0.52 + 0.96 * gdP), 0.3 + gdLow * 0.6);",
+          "diffuseColor.a *= 1.0 - gdLow * 0.72;",
+        ].join("\n"),
+      );
+  };
+  m.customProgramCacheKey = () => "gd-sheep-dissolve-r18";
+  m.userData.gdSheepGround = ground;
+  return m;
+}
 
 export type TerrainPropLayer = {
   group: Group;
@@ -629,9 +726,10 @@ export function createTerrainPropLayer(): TerrainPropLayer {
   });
   const canopyMaterial = new MeshStandardMaterial({
     vertexColors: true, flatShading: false, roughness: 1, metalness: 0, envMapIntensity: 0,
-    transparent: true, opacity: 0.38,
+    transparent: true, opacity: 0.4,
   });
   canopyMaterial.depthWrite = false;
+  const sheepMaterial = createSheepDissolveMaterial();
   const shadowMaterial = new MeshStandardMaterial({
     color: "#1a1814", flatShading: true, roughness: 1, metalness: 0, envMapIntensity: 0,
     transparent: true, opacity: 0.22,
@@ -668,7 +766,7 @@ export function createTerrainPropLayer(): TerrainPropLayer {
           geom = buildPropGeometry(kind);
           geometries.set(kind, geom);
         }
-        const mat = kind === "canopy" ? canopyMaterial : kind === "blobshadow" ? shadowMaterial : SMOOTH[kind] ? smoothMaterial : material;
+        const mat = kind === "canopy" ? canopyMaterial : kind === "sheep" ? sheepMaterial : kind === "blobshadow" ? shadowMaterial : SMOOTH[kind] ? smoothMaterial : material;
         const mesh = new InstancedMesh(geom, mat, list.length);
         mesh.name = `prop:${kind}`;
         mesh.castShadow = castShadow && CASTS[kind];
@@ -699,6 +797,7 @@ export function createTerrainPropLayer(): TerrainPropLayer {
       material.dispose();
       smoothMaterial.dispose();
       canopyMaterial.dispose();
+      sheepMaterial.dispose();
       shadowMaterial.dispose();
       key = "";
     },

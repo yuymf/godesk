@@ -411,22 +411,8 @@ export function HexSettlementBoard({
     return () => window.clearTimeout(t);
   }, [viewerResources, resourceLabel]);
 
-  /** round-7 ④：judge motion demo 触发真实 +N 飘字（不改资源账本）。
-   *  R9 FYI: keep one gain line for the full hop (up+hold+down ≈7.2s); do not clear mid-hold. */
-  useEffect(() => {
-    let clearTimer = 0;
-    const onDemo = (ev: Event) => {
-      const detail = (ev as CustomEvent<Partial<Record<Resource, number>>>).detail ?? {};
-      setResourceGain(detail);
-      window.clearTimeout(clearTimer);
-      clearTimer = window.setTimeout(() => setResourceGain({}), 7500);
-    };
-    window.addEventListener("g3d-judge-resource-gain", onDemo);
-    return () => {
-      window.removeEventListener("g3d-judge-resource-gain", onDemo);
-      window.clearTimeout(clearTimer);
-    };
-  }, []);
+  // R18: the judge motion demo no longer mirrors its +N into the HUD card pops (single +N source:
+  // the demo pill above the robber). Real ledger gains above still pop on the resource cards.
 
   const statusLine =
     status === "complete"

@@ -231,7 +231,9 @@ export function createJudgeMotion(c: JudgeMotionCtx) {
           });
           markShadowsDirtyRef.current();
           showToast(gain.text);
-          window.dispatchEvent(new CustomEvent("g3d-judge-resource-gain", { detail: gain.detail }));
+          // R18 ghost-toast fix: the floating pill above the robber is the ONLY +N for the demo.
+          // (R7–R17 also dispatched `g3d-judge-resource-gain` → HUD resourceGain card pops, so the same
+          // +N floated up a second time ~1–3 s later at the dock — audited in round-18 motion json.)
 
           const cleanupDemo = () => {
             cancelAnimationFrame(trackRaf);

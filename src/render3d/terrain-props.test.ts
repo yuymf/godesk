@@ -12,6 +12,9 @@ import {
   layoutProps,
   placeTileProps,
   buildPropGeometry,
+  createSheepDissolveMaterial,
+  SHEEP_DISSOLVE_BAND,
+  TILE_TOP,
 } from "./terrain-props";
 
 const tiles = dressingInputs(beginnerSceneInput()).tiles;
@@ -122,5 +125,63 @@ describe("G3D-PROPS terrain props", () => {
     expect(bricks.getAttribute("position").count).toBeGreaterThan(80);
     expect(h(bricks)).toBeGreaterThan(0.07);
     boulder.dispose(); clay.dispose(); bricks.dispose();
+  });
+
+  it("R18 sheep: edges dissolve — RGBA bleed with alpha→0 rim, no contact blob shadow, no cast shadow", () => {
+    const sheep = buildPropGeometry("sheep");
+    const col = sheep.getAttribute("color");
+    expect(col.itemSize).toBe(4);
+    let minA = 1;
+    for (let i = 0; i < col.count; i += 1) minA = Math.min(minA, col.getW(i));
+    expect(minA).toBeLessThan(0.05);
+    sheep.computeBoundingBox();
+    expect(sheep.boundingBox!.max.y - sheep.boundingBox!.min.y).toBeLessThan(0.17); // lower than R17 blotch
+    sheep.dispose();
+    const sheepTile = tiles.find((t) => t.terrain === "sheep")!;
+    const props = placeTileProps(sheepTile, PROP_COUNTS.high.sheep!);
+    const sheepXZ = props.filter((p) => p.kind === "sheep").map((p) => `${p.x},${p.z}`);
+    const blobXZ = props.filter((p) => p.kind === "blobshadow").map((p) => `${p.x},${p.z}`);
+    expect(sheepXZ.some((k) => blobXZ.includes(k))).toBe(false);
+    const layer = createTerrainPropLayer();
+    layer.sync(tiles, "high", true);
+    const mesh = layer.group.children.find((c) => c.name === "prop:sheep") as unknown as { castShadow: boolean; material: { transparent: boolean } };
+    expect(mesh.castShadow).toBe(false);
+    expect(mesh.material.transparent).toBe(true);
+    layer.dispose();
+  });
+
+  it("R18 sheep material: world grass pattern + height band fades into meadow ground", () => {
+    const m = createSheepDissolveMaterial();
+    expect(m.transparent).toBe(true);
+    expect(m.customProgramCacheKey()).toBe("gd-sheep-dissolve-r18");
+    const shader = {
+      uniforms: {} as Record<string, { value: unknown }>,
+      vertexShader: "#include <common>\nvoid main() {\n#include <project_vertex>\n}",
+      fragmentShader: "#include <common>\nvoid main() {\n#include <color_fragment>\n#include <roughnessmap_fragment>\n}",
+    };
+    m.onBeforeCompile(shader as never, undefined as never);
+    expect(shader.uniforms.uGdGround).toBeDefined();
+    expect(shader.fragmentShader).toContain("float gdLow");
+    expect(shader.fragmentShader).toContain("diffuseColor.a *=");
+    expect(SHEEP_DISSOLVE_BAND[0]).toBeGreaterThan(TILE_TOP);
+    expect(SHEEP_DISSOLVE_BAND[1]).toBeLessThan(TILE_TOP + 0.12);
+    m.dispose();
+  });
+
+  it("R18 canopies: clumped painted crowns (no smooth lathe umbrella), brush cards kept", () => {
+    const canopy = buildPropGeometry("canopy");
+    canopy.computeBoundingBox();
+    // umbrella volume gone: canopy is a near-flat feathered card stack only
+    expect(canopy.boundingBox!.max.y - canopy.boundingBox!.min.y).toBeLessThan(0.3);
+    canopy.dispose();
+    for (const kind of ["pineTall", "pineRound", "pineSmall"] as const) {
+      const g = buildPropGeometry(kind);
+      // clumps are icosahedron(detail 1) lobes: 240 verts each → far more facets than R17 lathe crowns
+      expect(g.getAttribute("position").count, kind).toBeGreaterThan(kind === "pineSmall" ? 900 : 1100);
+      g.computeBoundingBox();
+      // brush cards keep a near-flat feathered layer (R16 close-up feather not regressed)
+      expect(g.boundingBox!.max.x - g.boundingBox!.min.x, kind).toBeGreaterThan(0.12);
+      g.dispose();
+    }
   });
 });

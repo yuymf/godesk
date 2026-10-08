@@ -26,8 +26,9 @@ export const PATTERN_IDS: Record<MaterialPattern, number> = {
 };
 
 /** 贴图到达后 pattern 保留的强度（只做细节扰动）。 */
-/** R17: oil-paint continuous brush under PBR — hex faces read as painted color fields, not flat plastic. */
-export const PATTERN_STRENGTH_WITH_PBR = 0.42;
+/** R17: oil-paint continuous brush under PBR — hex faces read as painted color fields, not flat plastic.
+ *  R18: 0.42 → 0.5 (painted fields read at a glance in default a/b cameras). */
+export const PATTERN_STRENGTH_WITH_PBR = 0.5;
 /** 贴图到达后底色向白色混合的比例：保留地形色相，又不让贴图被压暗。 */
 export const PBR_TINT_TO_WHITE = 0.28;
 
@@ -75,20 +76,61 @@ float gdPattern(vec3 w) {
 }
 `;
 
+/**
+ * R18 油彩笔触层（仅地块 token.brush > 0）：沿低频流场取向的细长笔触 dab + 冷暖色相起伏；
+ * fwidth 抗锯齿——远处 / 掠射角笔触频率逼近像素时淡回均值（海岸机位不闪、不加噪）。
+ */
+const BRUSH_GLSL = /* glsl */ `
+uniform float uGdBrush;
+vec3 gdBrushStroke(vec3 w) {
+  // Cellular oil dabs (~0.14 world units): each cell owns one short elongated stroke with its own
+  // angle (loosely coherent), value and warm/cool hue; neighbours overlap like wet-on-wet paint.
+  vec2 g = w.xz * 7.0;
+  vec2 i = floor(g);
+  vec2 f = fract(g);
+  float val = 0.0;
+  float hue = 0.0;
+  float wsum = 0.0;
+  for (int y = -1; y <= 1; y++) {
+    for (int x = -1; x <= 1; x++) {
+      vec2 c = vec2(float(x), float(y));
+      vec2 id = i + c;
+      vec2 o = c + vec2(gdHash(id), gdHash(id + 17.3)) - f;
+      float ang = gdNoise(id * 0.21) * 3.6 + gdHash(id + 41.7) * 1.2;
+      vec2 d = vec2(cos(ang), sin(ang));
+      vec2 q = vec2(dot(o, d), dot(o, vec2(-d.y, d.x)));
+      float e = q.x * q.x * 3.2 + q.y * q.y * 30.0;
+      float k = exp(-e * 2.2);
+      val += k * gdHash(id + 5.1);
+      hue += k * gdHash(id + 9.9);
+      wsum += k;
+    }
+  }
+  float dab = wsum > 1e-4 ? val / wsum : 0.5;
+  float hu = wsum > 1e-4 ? hue / wsum : 0.5;
+  float fw = length(fwidth(g));
+  float aa = 1.0 - smoothstep(0.35, 0.9, fw);
+  return vec3(mix(0.5, dab, aa), mix(0.5, hu, aa), aa);
+}
+`;
+
 type PatternUniform = { value: number };
 
 /**
  * 给材质注入程序化 pattern。同一 pattern 的材质共享一个 program（customProgramCacheKey）。
  */
-export function installPattern(material: MeshStandardMaterial, pattern: MaterialPattern): PatternUniform {
+export function installPattern(material: MeshStandardMaterial, pattern: MaterialPattern, brush = 0): PatternUniform {
   const strength: PatternUniform = { value: pattern === "none" ? 0 : 1 };
   material.userData.gdPattern = pattern;
   material.userData.gdPatternStrength = strength;
   if (pattern === "none") return strength;
   const id = PATTERN_IDS[pattern];
-  material.defines = { ...(material.defines ?? {}), GD_PATTERN: id };
+  const brushUniform = { value: brush };
+  material.userData.gdBrush = brushUniform;
+  material.defines = { ...(material.defines ?? {}), GD_PATTERN: id, ...(brush > 0 ? { GD_BRUSH: 1 } : {}) };
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uGdPattern = strength;
+    if (brush > 0) shader.uniforms.uGdBrush = brushUniform;
     shader.vertexShader = shader.vertexShader
       .replace("#include <common>", "#include <common>\nvarying vec3 vGdWorld;")
       .replace(
@@ -103,13 +145,21 @@ export function installPattern(material: MeshStandardMaterial, pattern: Material
         ].join("\n"),
       );
     shader.fragmentShader = shader.fragmentShader
-      .replace("#include <common>", `#include <common>\n${PATTERN_GLSL}`)
+      .replace("#include <common>", `#include <common>\n${PATTERN_GLSL}${brush > 0 ? BRUSH_GLSL : ""}`)
       .replace(
         "#include <color_fragment>",
         [
           "#include <color_fragment>",
           "float gdP = gdPattern(vGdWorld);",
           "diffuseColor.rgb *= mix(1.0, 0.52 + 0.96 * gdP, uGdPattern);",
+          ...(brush > 0
+            ? [
+                // R18 oil dabs: luminance stroke + warm/cool hue drift, faded by AA term.
+                "vec3 gdB = gdBrushStroke(vGdWorld);",
+                "diffuseColor.rgb *= 1.0 + (gdB.x - 0.5) * 0.95 * uGdBrush;",
+                "diffuseColor.rgb *= mix(vec3(1.0), mix(vec3(0.93, 1.0, 1.08), vec3(1.07, 1.0, 0.9), gdB.y), uGdBrush * gdB.z);",
+              ]
+            : []),
         ].join("\n"),
       )
       .replace(
@@ -120,7 +170,7 @@ export function installPattern(material: MeshStandardMaterial, pattern: Material
         ].join("\n"),
       );
   };
-  material.customProgramCacheKey = () => `gd-pattern-${id}`;
+  material.customProgramCacheKey = () => (brush > 0 ? `gd-pattern-${id}-brush` : `gd-pattern-${id}`);
   return strength;
 }
 
@@ -243,7 +293,7 @@ export function createMaterial(token: MaterialToken, features: MaterialFeatures)
     features.clearcoat && token.clearcoat !== undefined && token.clearcoat > 0
       ? new MeshPhysicalMaterial({ ...params, clearcoat: token.clearcoat, clearcoatRoughness: 0.55 })
       : new MeshStandardMaterial(params);
-  installPattern(material, token.pattern);
+  installPattern(material, token.pattern, token.brush ?? 0);
   return material;
 }
 

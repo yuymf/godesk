@@ -49,6 +49,42 @@ async function main() {
     recordVideo: { dir: path.dirname(OUT), size: { width: 1440, height: 900 } },
   });
   const page = await context.newPage();
+  // R18: +N source timeline (ghost-toast audit) + 3D boot reveal timeline (2D→3D residual audit).
+  await page.addInitScript(() => {
+    const t0 = performance.now();
+    const tl = [];
+    const boot = [];
+    const prev = new Map();
+    globalThis.__judgeIdSeq = 0;
+    let lastBoot = "";
+    const vis = (el) => {
+      const cs = getComputedStyle(el);
+      if (cs.display === "none" || cs.visibility === "hidden") return 0;
+      return Number(cs.opacity || "1");
+    };
+    setInterval(() => {
+      const t = Math.round(performance.now() - t0);
+      const seen = new Map();
+      document.querySelectorAll(".g3d-judge-plusn-toast, .tidewell-resource-pop").forEach((el) => {
+        // Key by element identity (index keys shift when HUD pops unmount → false rise/fall pairs).
+        const i = (el.__judgeId ??= ++globalThis.__judgeIdSeq);
+        const kind = el.classList.contains("g3d-judge-plusn-toast") ? "demo-toast" : "hud-pop";
+        const op = kind === "demo-toast" && el.getAttribute("data-visible") !== "1" ? 0 : vis(el);
+        const r = el.getBoundingClientRect();
+        if (op > 0.05 && r.width > 0) seen.set(`${kind}#${i}`, { kind, text: (el.textContent || "").trim(), op: +op.toFixed(2), y: Math.round(r.top), onscreen: r.bottom > 0 && r.top < innerHeight });
+      });
+      for (const [k, v] of seen) if (!prev.has(k)) tl.push({ t, rise: true, ...v });
+      for (const [k, v] of prev) if (!seen.has(k)) tl.push({ t, rise: false, kind: v.kind, text: v.text, y: v.y });
+      prev.clear();
+      for (const [k, v] of seen) prev.set(k, v);
+      const host = document.querySelector('[data-testid="g3d-scene-host"]');
+      const cv = host?.querySelector("canvas");
+      const b = `${host?.getAttribute("data-boot") ?? "-"}|${cv ? getComputedStyle(cv).opacity : "-"}|water=${host?.getAttribute("data-water") ?? "-"}|props=${host?.getAttribute("data-terrain-props") ?? "-"}|pbr=${host?.getAttribute("data-pbr") ?? "-"}`;
+      if (b !== lastBoot) { boot.push({ t, b }); lastBoot = b; }
+    }, 100);
+    globalThis.__judgePlusN = () => tl;
+    globalThis.__judgeBoot = () => boot;
+  });
   const client = await context.newCDPSession(page);
   await client.send("Emulation.setEmulatedMedia", {
     features: [{ name: "prefers-reduced-motion", value: "no-preference" }],
@@ -187,6 +223,16 @@ async function main() {
   }));
   if (banned.ghost || banned.boardTargetsOpen) throw new Error(`banned UI: ${JSON.stringify(banned)}`);
 
+  const plusNTimeline = await page.evaluate(() => globalThis.__judgePlusN?.() ?? []);
+  const bootTimeline = await page.evaluate(() => globalThis.__judgeBoot?.() ?? []);
+  const rises = plusNTimeline.filter((e) => e.rise);
+  const falls = plusNTimeline.filter((e) => !e.rise);
+  const riseKinds = [...new Set(rises.map((e) => e.kind))];
+  // Ghost toast = the same demo gain floats up from more than one source / more than once per demo.
+  const ghostToast = riseKinds.length > 1 || rises.filter((e) => e.kind === "demo-toast").length > 2;
+  log("plusN rises", rises);
+  log("boot timeline", bootTimeline);
+
   const video = page.video();
   await context.close();
   await browser.close();
@@ -206,6 +252,8 @@ async function main() {
     locked,
     banned,
     demoWallMs: Date.now() - tDemo,
+    plusN: { riseKinds, rises, falls, ghostToast },
+    bootTimeline,
     notes: "b-robber THEN lockCamera; Mesh hop apexHeight=2.6 hold-hover; 3 elevated Y samples; stable +N across apex hold (R9 FYI)",
   };
   await writeFile(OUT.replace(/\.webm$/, ".json"), JSON.stringify(meta, null, 2));
