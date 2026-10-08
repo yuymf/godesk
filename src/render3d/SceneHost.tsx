@@ -632,7 +632,7 @@ export function SceneHost({
     sceneRef.current = scene;
     scene.background = new Color(SCENE_TOKENS.sky.horizon);
 
-    const camera = new PerspectiveCamera(45, 1, 0.1, 100);
+    const camera = new PerspectiveCamera(40, 1, 0.1, 100);
     camera.position.set(0, 9, 12);
 
     setPbrState("pending");
@@ -709,6 +709,14 @@ export function SceneHost({
       });
       (globalThis as { __g3dJudge?: unknown }).__g3dJudge = {
         presets: JUDGE_PRESETS,
+        /** R24+: polar/base/fit + live FOV for judge φ acceptance. */
+        framing(): { polarDeg: number; base: number; fit: number; fov: number; azimuthDeg: number } | null {
+          const director = directorRef.current;
+          const cam = cameraRef.current;
+          if (!director || !cam) return null;
+          const f = director.framing;
+          return { ...f, fov: cam.fov, azimuthDeg: director.getState().azimuthDeg };
+        },
         set(preset: JudgePreset): boolean {
           const cam = cameraRef.current;
           const ctl = controlsRef.current;
@@ -717,6 +725,13 @@ export function SceneHost({
           motion.finishAll();
           const director = directorRef.current;
           const pose = judgeCamera(preset, [...(model?.nodes ?? []), ...(dressingRef.current?.portNodes() ?? [])], cam.aspect);
+          // Lock FOV before pin/refit so play framing uses 40° (no boot 45° / spec 35° drift).
+          if (pose?.fov) cam.fov = pose.fov;
+          else {
+            const fr = viewportFrameRef.current;
+            cam.fov = fr?.fovDeg ?? 40;
+          }
+          cam.updateProjectionMatrix();
           if (!pose && director) {
             director.pinToMode(preset === "a-topdown" ? "overview" : "play");
           } else if (pose) {
@@ -728,8 +743,6 @@ export function SceneHost({
             ctl.target.set(0, 0, 0);
             fitCameraRef.current();
           }
-          if (pose?.fov) cam.fov = pose.fov;
-          cam.updateProjectionMatrix();
           ctl.update();
           // 抑制建造 / 换手 / 掷骰的自动 reframe，保证截图机位稳定。
           motion.noteUserDrag(Number.POSITIVE_INFINITY);
@@ -1227,6 +1240,10 @@ export function SceneHost({
     if (camera && controls && motionForCamera) {
       let director = directorRef.current;
       if (!director) {
+        // Hex play FOV lock 40° before first framing (viewportFrame or desktop default).
+        const fr = viewportFrameRef.current;
+        camera.fov = fr?.fovDeg ?? 40;
+        camera.updateProjectionMatrix();
         director = new kit.CameraDirector(camera, controls, motionForCamera);
         director.mode = kit.cameraModeFor(localSeatRef.current, activeSeatRef.current);
         directorRef.current = director;
@@ -1269,9 +1286,8 @@ export function SceneHost({
                 return;
               }
               waterRef.current = water;
-              // TODO(Track D): far-sea ring (±60) should expose `seaHalfExtent` on the water
-              // controller so play framing can keep ≥35° tilt sky-free on wide canvases. Use it when
-              // present; do not block SceneHost on Track D landing.
+              // Far-sea ring exposes `seaHalfExtent` so play framing can keep ≈54° tilt sky-free.
+              // Use it when present.
               const seaHalf = (water as { seaHalfExtent?: number }).seaHalfExtent;
               if (typeof seaHalf === "number" && Number.isFinite(seaHalf) && seaHalf > 0) {
                 directorRef.current?.setSeaExtent(seaHalf);
@@ -1359,6 +1375,8 @@ export function SceneHost({
             const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs), 8);
             const pose = framePose([cx, 0, cz], span * 0.55, cameraRef.current.aspect, fr);
             cameraRef.current.position.set(...pose.position);
+            cameraRef.current.fov = pose.fov;
+            cameraRef.current.updateProjectionMatrix();
             controlsRef.current.target.set(...pose.target);
             controlsRef.current.update();
             return;

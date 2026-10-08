@@ -12,6 +12,9 @@ import { playFraming,
   maxSeaPolar,
   orbitOffset,
   PLAY_MIN_POLAR_DEG,
+  CAMERA_MODE_POLAR_DEG,
+  PLAY_AZIMUTH_DEG,
+  POLAR_LIMITS_DEG,
   SEA_EDGE_PAD,
   SEA_HALF_EXTENT,
   seaSafeFraming,
@@ -170,29 +173,40 @@ describe("camera rig (pure)", () => {
   }
 
   for (const aspect of [1.6, 1.33, 0.87, 0.78]) {
-    it(`play (own turn) keeps ≥35° tilt when the sea covers the frame · aspect ${aspect}`, () => {
+    it(`play (own turn) keeps ≥45° tilt when the sea covers the frame · aspect ${aspect}`, () => {
       const nodes = islandWithHarbours();
       const points = framingPoints(nodes);
       const tilePoints = framingPoints(nodes.filter((n) => n.kind === "tile"));
       const { center } = islandCenter(nodes);
-      const f = playFraming(points, tilePoints, center, MathUtils.degToRad(38), 0, 45, aspect);
+      const f = playFraming(points, tilePoints, center, MathUtils.degToRad(54), 0, 40, aspect);
       expect(maxNdc(tilePoints, center, f, aspect)).toBeLessThanOrEqual(aspect < 0.85 ? 1.02 : 1);
       expect(f.polar).toBeGreaterThanOrEqual(MathUtils.degToRad(PLAY_MIN_POLAR_DEG) - 1e-9);
-      expect(f.polar).toBeLessThanOrEqual(MathUtils.degToRad(38) + 1e-9);
+      expect(f.polar).toBeLessThanOrEqual(MathUtils.degToRad(54) + 1e-9);
     });
   }
 
-  it("play prefers ≈38° and never collapses below 35° (even if wide canvas cannot cover the sea)", () => {
+  it("play prefers ≈54° and never collapses below 45° (even if wide canvas cannot cover the sea)", () => {
     const nodes = islandWithHarbours();
     const points = framingPoints(nodes);
     const tilePoints = framingPoints(nodes.filter((n) => n.kind === "tile"));
     const { center } = islandCenter(nodes);
-    const f = playFraming(points, tilePoints, center, MathUtils.degToRad(38), 0, 45, 1.8);
+    const f = playFraming(points, tilePoints, center, MathUtils.degToRad(54), 0, 40, 1.8);
     expect(f.polar).toBeGreaterThanOrEqual(MathUtils.degToRad(PLAY_MIN_POLAR_DEG) - 1e-9);
     expect(maxNdc(tilePoints, center, f, 1.8)).toBeLessThanOrEqual(1);
-    // Far-sea ring (±60) makes the preferred tilt sky-free.
-    const wide = playFraming(points, tilePoints, center, MathUtils.degToRad(38), 0, 45, 1.8, 60 - SEA_EDGE_PAD);
+    // Far-sea ring (±80) makes the preferred tilt sky-free.
+    const wide = playFraming(points, tilePoints, center, MathUtils.degToRad(54), 0, 40, 1.8, 80 - SEA_EDGE_PAD);
     expect(wide.safe).toBe(true);
-    expect(wide.polar).toBeCloseTo(MathUtils.degToRad(38), 5);
+    expect(wide.polar).toBeCloseTo(MathUtils.degToRad(54), 5);
+  });
+});
+
+describe("R24 camera alignment constants", () => {
+  it("play polar ≈54°, floor ≥45°, maxPolar ≈58°, azimuth 11–14°, FOV lock is viewport-side", () => {
+    expect(CAMERA_MODE_POLAR_DEG.play).toBe(54);
+    expect(PLAY_MIN_POLAR_DEG).toBeGreaterThanOrEqual(45);
+    expect(POLAR_LIMITS_DEG.max).toBeGreaterThanOrEqual(58);
+    expect(POLAR_LIMITS_DEG.max).toBeLessThanOrEqual(60);
+    expect(PLAY_AZIMUTH_DEG).toBeGreaterThanOrEqual(11);
+    expect(PLAY_AZIMUTH_DEG).toBeLessThanOrEqual(14);
   });
 });

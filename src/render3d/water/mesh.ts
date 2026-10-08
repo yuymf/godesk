@@ -40,8 +40,9 @@ export const WATER_FAR_HALF_EXTENT = WATER_SEA_HALF_EXTENT;
 const DEFAULT_SPEC: TideWaterSpec = {
   // R20：明亮青绿（浅滩环亮水绿 → 外海亮青），不再沉到海军蓝；浪高不变。
   // R21：#26b2aa/#065a6a → #2ab8af/#086070（略提亮，补偿崖脚白沫闪点减弱带来的水面均值下降；c 门槛 ①）。
+  // R24：外海再提亮（#086070→#1aa0a8），54° 斜视下远海占比升高时 a-default 水面 L 不掉破 c 闸。
   shallow: "#2ab8af",
-  deep: "#086070",
+  deep: "#1aa0a8",
   waveHeight: 0.065,
   waveSpeed: 0.55,
   foam: 1.0,

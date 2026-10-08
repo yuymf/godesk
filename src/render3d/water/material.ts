@@ -91,7 +91,8 @@ const FRAG_COLOR = [
   "  float dTex = texture2D(uTideDist, clamp(wu, 0.0, 1.0)).r;",
   // round-3d：场外直接深水，抹掉 ±half 方形 UV 环接缝。
   "  float fieldEdge = smoothstep(uTideHalf * 0.82, uTideHalf * 1.02, max(abs(vTideWorld.x), abs(vTideWorld.z)));",
-  "  float d = mix(dTex, 1.0, fieldEdge);",
+  // R24: far-sea plateaus at mid-deep (0.72) so 54° views stay bright teal, not navy.
+  "  float d = mix(dTex, 0.72, fieldEdge);",
   // R20：明亮青绿海 + 岛周一圈浅滩环（settlecoast 读感，自有实现）。
   // 0–0.05 浅滩核心（亮水绿）→ 0.15 环缘（落差处一道浅色唇线）→ 0.45 中海青绿 → 0.95 外海（仍是亮青，不回深蓝）。
   "  vec3 tideRing = mix(uTideShallow, uTideDeep, 0.22);",

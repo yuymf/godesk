@@ -17,10 +17,10 @@ export type ViewportFrame = {
 
 /** Desktop a/d: island ~78–85% of canvas height, sea margins OK left/right. */
 export const DEFAULT_DESKTOP_FRAME: Required<ViewportFrame> = {
-  // round-5d：岛更高占比，减弱「窗框」留白（更近机位 + 略顶视）。
+  // R24：对齐 settlecoast 源码默认 φ≈54° / θ≈11.5°；FOV 锁 40°；fill 维持 0.92。
   fill: 0.92,
-  polarDeg: 37,
-  azimuthDeg: 14,
+  polarDeg: 54,
+  azimuthDeg: 12,
   fovDeg: 40,
 };
 
