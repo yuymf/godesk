@@ -30,8 +30,8 @@ export const ZOOM_LIMITS = { min: 0.7, max: 3.2 } as const;
 export const ZOOM_STEP = 1.25;
 export const ROTATE_STEP_DEG = 45;
 export const POLAR_LIMITS_DEG = { min: 0, max: 58 } as const;
-/** Viewport fraction (NDC) the framed points may occupy. R26: tighten toward settlecoast jg fill. */
-export const FRAME_MARGIN = 0.97;
+/** Viewport fraction (NDC) the framed points may occupy. R27: ease vs R26 so halfH rises a bit. */
+export const FRAME_MARGIN = 0.95;
 const DEG = Math.PI / 180;
 /**
  * Half extent of the square tide-water plane (`water/mesh.ts` WATER_HALF_EXTENT,
@@ -54,8 +54,8 @@ export const ORTHO_ORBIT_DISTANCE = 22;
 /** settlecoast CR half-top floor / numerator (wide ≤ ~1.57 aspect uses 3.6). */
 export const ORTHO_CR_HALF_TOP_FLOOR = 3.6;
 export const ORTHO_CR_HALF_TOP_NUM = 5.65;
-/** settlecoast jg board-fit pad. R26: slightly tighter so island reads taller in-frame. */
-export const ORTHO_FRAME_PAD = 1.02;
+/** settlecoast jg board-fit pad. R27: ease vs R26 toward leave-space (halfH ↑ from ~2.89). */
+export const ORTHO_FRAME_PAD = 1.035;
 
 /** Pixel insets reserved for HUD chrome (settlecoast Hd / dice cinematic). */
 export type HudInsets = { top: number; bottom: number; left: number; right: number };

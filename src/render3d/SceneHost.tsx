@@ -34,7 +34,7 @@ import type { NumberLabelLayer } from "./number-labels";
 import type { JudgePreset } from "./judge-camera";
 import { REPLACED_NODE_KINDS } from "./dressing-kinds";
 import type { HexDressing } from "./hex-dressing";
-import { framePose, type ViewportFrame } from "./viewport-frame";
+import { DEFAULT_DESKTOP_FRAME, framePose, type ViewportFrame } from "./viewport-frame";
 import type { SceneModel, SceneNode } from "./scene-model";
 import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
 import { markInteractive, perfModeEnabled, perfRecorder } from "./perf";
@@ -755,7 +755,7 @@ export function SceneHost({
               zoom: ortho.zoom,
               orthoHalfH: ortho.halfH,
               hudInsets: insets,
-              fillTarget: 0.96,
+              fillTarget: DEFAULT_DESKTOP_FRAME.fill,
             };
           }
           return {

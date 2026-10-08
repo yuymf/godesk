@@ -1917,3 +1917,111 @@ body:has(.room-view-tidewell-immersive) {
   box-shadow:
     inset 0 0 22px 8px rgba(28, 16, 8, 0.32) !important;
 }
+
+/* ==== R27 画布嵌木框 · chrome 一体（settlecoast「桌面嵌在木框里」同构）====
+   Sea bands hold chrome (PLAY_SEA_CLEAR); continuous timber top/sides/dock;
+   stage reads as tray carved into one wood desk — not floating parchment plates. */
+.room-view-hex-island.room-view-tidewell-immersive {
+  /* Match SceneHost PLAY_SEA_CLEAR so wood→sea edge has no cream/beige void */
+  --tw-sea: #5a8a88;
+  --tw-wood: #4a2f1c;
+  --tw-wood-edge: #2c1a10;
+}
+
+.tidewell-game-screen {
+  /* One continuous wooden crate — shared timber plate for top/rails/dock */
+  background:
+    linear-gradient(180deg, rgba(55, 32, 16, 0.28) 0%, rgba(18, 10, 6, 0.55) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #4a3018 0%, #24140c 100%) !important;
+  background-size: auto, 280px 280px, auto !important;
+  box-shadow:
+    inset 0 0 0 4px #1a1008,
+    inset 0 0 0 5px rgba(201, 162, 39, 0.22),
+    inset 0 0 28px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* Top lid of the same crate */
+.tidewell-topbar {
+  background:
+    linear-gradient(180deg, rgba(90, 56, 28, 0.5) 0%, rgba(32, 18, 10, 0.88) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #5a3820 0%, #2a1810 100%) !important;
+  background-size: auto, 280px 280px, auto !important;
+  border-bottom: 2px solid rgba(201, 162, 39, 0.55) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 140, 0.18),
+    inset 0 -2px 0 rgba(26, 14, 8, 0.85),
+    0 3px 10px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Side rails = crate walls continuous with top/dock (no gold window lip toward stage) */
+.tidewell-players,
+.tidewell-turn-column {
+  background:
+    linear-gradient(180deg, rgba(70, 42, 22, 0.2) 0%, rgba(28, 16, 8, 0.35) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #4a3018 0%, #2a1810 100%) !important;
+  background-size: auto, 280px 280px, auto !important;
+  border: none !important;
+}
+.tidewell-players {
+  box-shadow:
+    inset -12px 0 20px -12px rgba(0, 0, 0, 0.55),
+    inset 0 0 16px rgba(0, 0, 0, 0.2) !important;
+}
+.tidewell-turn-column {
+  box-shadow:
+    inset 12px 0 20px -12px rgba(0, 0, 0, 0.55),
+    inset 0 0 16px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Dock = crate floor — same timber, gold hairline joins the stage bottom */
+.tidewell-dock {
+  background:
+    linear-gradient(180deg, rgba(90, 56, 28, 0.32) 0%, rgba(24, 12, 6, 0.82) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #5a3820 0%, #2a1810 100%) !important;
+  background-size: auto, 280px 280px, auto !important;
+  border-top: 2px solid rgba(201, 162, 39, 0.55) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 140, 0.14),
+    inset 0 2px 0 rgba(26, 14, 8, 0.85),
+    inset 0 10px 18px rgba(0, 0, 0, 0.32) !important;
+}
+
+/* Stage = sea tray carved into the continuous wood desk.
+   Warm timber rim + thin gold hairline (settlecoast bezel), sea clear behind canvas. */
+.tidewell-stage-wrap {
+  border: none !important;
+  border-radius: 0 !important;
+  background: var(--tw-sea, #5a8a88) !important;
+  box-shadow:
+    /* outer wood recess into desk */
+    inset 0 0 0 3px #1a1008,
+    inset 0 0 0 7px #3e2616,
+    inset 0 0 0 10px #5a3820,
+    /* thin carved gold lip */
+    inset 0 0 0 11px rgba(201, 162, 39, 0.42),
+    inset 0 0 0 12px rgba(26, 14, 8, 0.75),
+    /* soft wood→sea falloff so 海带托 chrome */
+    inset 0 0 24px 10px rgba(26, 16, 8, 0.38) !important;
+}
+.tidewell-stage-wrap::after {
+  /* wood→sea soft blend ring — supports chrome, no cream sky */
+  box-shadow:
+    inset 0 0 36px 14px rgba(32, 18, 10, 0.42),
+    inset 0 0 10px 3px rgba(74, 48, 24, 0.28) !important;
+}
+
+/* Keep parchment as nested inlays only — don't let cream read as sky/void next to sea */
+.tidewell-players .tidewell-panel-title,
+.tidewell-turn-column .tidewell-panel-title {
+  color: #4a2f1c !important;
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.92), rgba(243, 231, 201, 0.85)),
+    var(--tw-tex-parchment) !important;
+  background-size: auto, 140px 140px !important;
+  border-radius: 6px;
+  padding: 4px 8px;
+}
