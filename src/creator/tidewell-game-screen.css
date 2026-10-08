@@ -2312,3 +2312,141 @@ body:has(.room-view-tidewell-immersive) {
 .hex-island-hud-awards {
   max-width: 100%;
 }
+
+
+/* ==== R29 暖金棕木色 · 缩右栏纪事羊皮井（settlecoast warm golden brown）====
+   Judge R28: wood too deep/cold (#2a1810-class); right chronicle parchment well still too large.
+   Raise value / warmer hue toward settlecoast oak-gold midtones; keep gold carve readable.
+   Do NOT thicken bezel. Locks: fill 0.945 · ortho φ54/az12 · deep #0a6c74/0.96 · HUD insets · cream off. */
+
+.room-view-hex-island.room-view-tidewell-immersive {
+  --tw-wood: #5c3c22;
+  --tw-wood-edge: #3a2414;
+  --tw-carve-outer: #24180e;
+}
+
+/* Continuous desk plate: warm golden mid → warm edge (not near-black cold) */
+.tidewell-game-screen {
+  background:
+    repeating-linear-gradient(92deg, rgba(255, 220, 150, 0.04) 0 1px, transparent 1px 8px),
+    repeating-linear-gradient(0deg, rgba(40, 22, 10, 0.045) 0 2px, transparent 2px 12px),
+    linear-gradient(180deg, rgba(72, 44, 22, 0.28) 0%, rgba(36, 22, 12, 0.42) 100%),
+    linear-gradient(180deg, #6b4428 0%, #3a2414 100%) !important;
+  box-shadow:
+    inset 0 0 0 5px #24180e,
+    inset 0 0 0 6px rgba(201, 162, 39, 0.32),
+    inset 0 0 0 8px #3c2816,
+    inset 0 0 28px rgba(40, 22, 10, 0.38) !important;
+}
+
+.tidewell-topbar {
+  background:
+    repeating-linear-gradient(92deg, rgba(255, 220, 150, 0.04) 0 1px, transparent 1px 8px),
+    linear-gradient(180deg, rgba(120, 78, 40, 0.5) 0%, rgba(58, 34, 16, 0.78) 100%),
+    linear-gradient(180deg, #7a5230 0%, #4a3018 100%) !important;
+  border-bottom: 2px solid rgba(201, 162, 39, 0.62) !important;
+}
+
+.tidewell-dock {
+  background:
+    repeating-linear-gradient(92deg, rgba(255, 220, 150, 0.035) 0 1px, transparent 1px 8px),
+    linear-gradient(180deg, rgba(110, 72, 38, 0.32) 0%, rgba(48, 28, 14, 0.72) 100%),
+    linear-gradient(180deg, #6b4428 0%, #3a2414 100%) !important;
+  border-top: 2px solid rgba(201, 162, 39, 0.62) !important;
+}
+
+.tidewell-players,
+.tidewell-turn-column {
+  background:
+    repeating-linear-gradient(92deg, rgba(255, 220, 150, 0.035) 0 1px, transparent 1px 8px),
+    repeating-linear-gradient(0deg, rgba(40, 22, 10, 0.04) 0 2px, transparent 2px 12px),
+    linear-gradient(180deg, rgba(90, 56, 28, 0.28) 0%, rgba(48, 28, 14, 0.38) 100%),
+    linear-gradient(180deg, #6b4428 0%, #3a2414 100%) !important;
+  color: #f3e7c9 !important;
+}
+
+/* Warm player / turn wood plaques (same golden family) */
+.tidewell-player-card {
+  background:
+    linear-gradient(145deg, rgba(110, 72, 40, 0.5) 0%, rgba(58, 34, 16, 0.7) 100%),
+    linear-gradient(145deg, #7a5230 0%, #5a3820 55%, #3a2414 100%) !important;
+}
+.tidewell-player-card.is-active {
+  background:
+    linear-gradient(145deg, rgba(140, 88, 44, 0.48) 0%, rgba(70, 42, 20, 0.65) 100%),
+    linear-gradient(145deg, #8a5a30, #5a3820) !important;
+}
+.tidewell-turn-card {
+  background:
+    linear-gradient(180deg, rgba(100, 64, 32, 0.48) 0%, rgba(52, 30, 14, 0.65) 100%),
+    linear-gradient(180deg, #6b4428 0%, #3a2414 100%) !important;
+}
+
+/* Stage bezel colors only — thickness UNCHANGED (PASS); warm #2a1810-class rings */
+.tidewell-stage-wrap {
+  box-shadow:
+    inset 0 0 0 2px #1e140a,
+    inset 0 0 0 6px #3c2816,
+    inset 0 0 0 11px #4e3218,
+    inset 0 0 0 16px #6b4428,
+    inset 0 0 0 18px #5c3c20,
+    inset 0 0 0 19px rgba(201, 162, 39, 0.55),
+    inset 0 0 0 20px rgba(36, 22, 12, 0.85),
+    inset 0 0 28px 12px rgba(42, 26, 12, 0.36) !important;
+}
+.tidewell-stage-wrap::after {
+  box-shadow:
+    inset 0 0 0 2px #1e140a,
+    inset 0 0 0 6px #3c2816,
+    inset 0 0 0 12px #4e3218,
+    inset 0 0 0 17px #6b4428,
+    inset 0 0 0 19px #5c3c20,
+    inset 0 0 0 20px rgba(201, 162, 39, 0.62),
+    inset 0 0 0 21px rgba(36, 22, 12, 0.88),
+    inset 0 0 36px 14px rgba(48, 30, 14, 0.42),
+    inset 0 0 14px 4px rgba(106, 68, 36, 0.32) !important;
+}
+
+/* ---- Right chronicle: shrink parchment well; continuous timber dominates ---- */
+.tidewell-log-panel {
+  flex: 0 1 auto !important;
+  max-height: min(34vh, 220px) !important;
+  margin-top: 8px !important;
+  padding: 5px !important;
+  background:
+    linear-gradient(180deg, rgba(100, 64, 32, 0.42) 0%, rgba(52, 30, 14, 0.58) 100%),
+    linear-gradient(180deg, #6b4428 0%, #3a2414 100%) !important;
+  border: 1px solid rgba(201, 162, 39, 0.5) !important;
+  color: #f3e7c9 !important;
+}
+.tidewell-log-panel .tidewell-log-tabs {
+  margin-bottom: 4px !important;
+  gap: 3px !important;
+}
+.tidewell-log-panel .tidewell-log-tabs button {
+  min-height: 24px !important;
+  font-size: 10px !important;
+  background:
+    linear-gradient(180deg, rgba(110, 72, 40, 0.55), rgba(58, 34, 16, 0.72)),
+    linear-gradient(180deg, #6b4428, #3a2414);
+}
+.tidewell-log-panel .tidewell-log-body,
+.tidewell-log-body {
+  flex: 0 1 auto !important;
+  max-height: 132px !important;
+  min-height: 0 !important;
+  overflow: auto !important;
+  padding: 4px 6px !important;
+  border-radius: 4px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 248, 230, 0.28), rgba(232, 211, 162, 0.16)),
+    linear-gradient(180deg, rgba(90, 56, 28, 0.42), rgba(58, 34, 16, 0.55)) !important;
+  color: #f3e7c9 !important;
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.28) !important;
+}
+
+.tidewell-players .tidewell-panel-title,
+.tidewell-turn-column .tidewell-panel-title {
+  color: #5c3c22 !important;
+}
