@@ -30,8 +30,8 @@ export const ZOOM_LIMITS = { min: 0.7, max: 3.2 } as const;
 export const ZOOM_STEP = 1.25;
 export const ROTATE_STEP_DEG = 45;
 export const POLAR_LIMITS_DEG = { min: 0, max: 58 } as const;
-/** Viewport fraction (NDC) the framed points may occupy. */
-export const FRAME_MARGIN = 0.93;
+/** Viewport fraction (NDC) the framed points may occupy. R26: tighten toward settlecoast jg fill. */
+export const FRAME_MARGIN = 0.97;
 const DEG = Math.PI / 180;
 /**
  * Half extent of the square tide-water plane (`water/mesh.ts` WATER_HALF_EXTENT,
@@ -54,8 +54,28 @@ export const ORTHO_ORBIT_DISTANCE = 22;
 /** settlecoast CR half-top floor / numerator (wide ≤ ~1.57 aspect uses 3.6). */
 export const ORTHO_CR_HALF_TOP_FLOOR = 3.6;
 export const ORTHO_CR_HALF_TOP_NUM = 5.65;
-/** settlecoast jg board-fit pad. */
-export const ORTHO_FRAME_PAD = 1.04;
+/** settlecoast jg board-fit pad. R26: slightly tighter so island reads taller in-frame. */
+export const ORTHO_FRAME_PAD = 1.02;
+
+/** Pixel insets reserved for HUD chrome (settlecoast Hd / dice cinematic). */
+export type HudInsets = { top: number; bottom: number; left: number; right: number };
+
+/** Default play: top bar band + bottom camera toolbar; sides modest. */
+export const PLAY_HUD_INSETS = { top: 48, bottom: 72, left: 24, right: 24 } as const;
+/** settlecoast placement-like top reserve clamp. */
+export function settlecoastTopReservePx(canvasHeight: number): number {
+  return Math.min(62, Math.max(28, (canvasHeight - 300) * 0.3));
+}
+/** Dice cinematic bottom reserve (settlecoast ~158). */
+export const DICE_HUD_BOTTOM_PX = 158;
+
+export function playHudInsets(canvasWidth: number, canvasHeight: number): HudInsets {
+  const top = Math.round(settlecoastTopReservePx(canvasHeight));
+  // Keep usable height ≥ 55% of canvas so phone/narrow still frames.
+  const bottom = Math.min(PLAY_HUD_INSETS.bottom, Math.max(40, Math.floor(canvasHeight * 0.12)));
+  const side = Math.min(PLAY_HUD_INSETS.left, Math.max(12, Math.floor(canvasWidth * 0.02)));
+  return { top, bottom, left: side, right: side };
+}
 
 export function clampZoom(zoom: number): number {
   if (!Number.isFinite(zoom)) return 1;
@@ -524,6 +544,9 @@ export class CameraDirector implements CameraRigApi {
   private seaHalf = SEA_HALF_EXTENT - SEA_EDGE_PAD;
   /** Canvas aspect (ortho has no camera.aspect). */
   private aspect = 1;
+  private canvasW = 1;
+  private canvasH = 1;
+  private insets: HudInsets = { top: 0, bottom: 0, left: 0, right: 0 };
   private clampKey = "";
   private panMode = false;
   private tourToken = 0;
@@ -605,12 +628,28 @@ export class CameraDirector implements CameraRigApi {
     if (snap && !this.pinned && !this.tweening && !this.touring) this.apply(this.goal(), true);
   }
 
-  /** Aspect changed: refit and keep the current zoom / azimuth. */
-  onResize(aspect?: number): void {
-    if (typeof aspect === "number" && aspect > 1e-3) this.aspect = aspect;
-    else if (!this.ortho && "aspect" in this.camera) this.aspect = this.camera.aspect;
+  /** Aspect / canvas size changed: refit and keep the current zoom / azimuth. */
+  onResize(aspect?: number, canvasWidth?: number, canvasHeight?: number): void {
+    if (typeof canvasWidth === "number" && canvasWidth > 1) this.canvasW = canvasWidth;
+    if (typeof canvasHeight === "number" && canvasHeight > 1) this.canvasH = canvasHeight;
+    if (this.ortho && this.canvasW > 1 && this.canvasH > 1) {
+      this.insets = playHudInsets(this.canvasW, this.canvasH);
+      const usableW = Math.max(1, this.canvasW - this.insets.left - this.insets.right);
+      const usableH = Math.max(1, this.canvasH - this.insets.top - this.insets.bottom);
+      this.aspect = usableW / usableH;
+    } else if (typeof aspect === "number" && aspect > 1e-3) {
+      this.aspect = aspect;
+      this.insets = { top: 0, bottom: 0, left: 0, right: 0 };
+    } else if (!this.ortho && "aspect" in this.camera) {
+      this.aspect = this.camera.aspect;
+    }
     this.refit();
     if (!this.pinned && !this.tweening && !this.dragging && !this.touring) this.apply(this.goal(), true);
+  }
+
+  /** Readout: active HUD pixel insets (ortho play). */
+  get hudInsets(): HudInsets {
+    return { ...this.insets };
   }
 
   /** Turn-driven mode change; skipped while pinned (judge) or while the user is dragging. */
@@ -649,6 +688,10 @@ export class CameraDirector implements CameraRigApi {
       this.controls.maxZoom = 8;
       this.controls.minDistance = 0.1;
       this.controls.maxDistance = 200;
+      if (isOrthographicCamera(this.camera)) {
+        this.camera.clearViewOffset();
+        this.camera.updateProjectionMatrix();
+      }
     } else {
       this.controls.minDistance = 0.1;
       this.controls.maxDistance = 200;
@@ -996,6 +1039,14 @@ export class CameraDirector implements CameraRigApi {
       this.camera.near = 0.1;
       this.camera.far = 120;
       this.camera.zoom = this.zoom;
+      // R26: letterbox frustum into HUD-safe rect (settlecoast Hd-style reserves).
+      if (this.canvasW > 1 && this.canvasH > 1 && (this.insets.top > 0 || this.insets.bottom > 0)) {
+        const usableW = Math.max(1, this.canvasW - this.insets.left - this.insets.right);
+        const usableH = Math.max(1, this.canvasH - this.insets.top - this.insets.bottom);
+        this.camera.setViewOffset(this.canvasW, this.canvasH, this.insets.left, this.insets.top, usableW, usableH);
+      } else {
+        this.camera.clearViewOffset();
+      }
       this.camera.updateProjectionMatrix();
     }
     if (final) {

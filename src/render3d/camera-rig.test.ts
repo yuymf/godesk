@@ -257,3 +257,16 @@ describe("R25 orthographic framing", () => {
     expect(steep).toBeGreaterThan(1);
   });
 });
+
+describe("R26 fill and HUD insets", () => {
+  it("FRAME_MARGIN and ORTHO_FRAME_PAD tighten vs R25", async () => {
+    const { FRAME_MARGIN, ORTHO_FRAME_PAD, playHudInsets, settlecoastTopReservePx } = await import("./camera-rig");
+    expect(FRAME_MARGIN).toBeGreaterThanOrEqual(0.96);
+    expect(ORTHO_FRAME_PAD).toBeLessThanOrEqual(1.03);
+    expect(settlecoastTopReservePx(900)).toBeGreaterThanOrEqual(28);
+    expect(settlecoastTopReservePx(900)).toBeLessThanOrEqual(62);
+    const insets = playHudInsets(1440, 900);
+    expect(insets.top).toBeGreaterThanOrEqual(28);
+    expect(insets.bottom).toBeGreaterThanOrEqual(40);
+  });
+});

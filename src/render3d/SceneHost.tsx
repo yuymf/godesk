@@ -199,6 +199,8 @@ export const BOOT_REVEAL_CAP_MS = 6_000;
 /** R19: min ms between renders while the boot veil is up. */
 export const BOOT_VEILED_FRAME_MS = 500;
 export const BOOT_SEA_COLOR = "#1f5f66";
+/** R26 hex play clear/fog stand-in (settlecoast bg ≈#6d8e8b): sea-teal, not cream, not navy. */
+export const PLAY_SEA_CLEAR = "#5a8a88";
 
 
 function supportsWebGL2(): boolean {
@@ -674,7 +676,6 @@ export function SceneHost({
     let bootFirstContentAt = 0;
     let bootLastRender = 0;
     const bootSea = new Color(BOOT_SEA_COLOR);
-    const bootHorizon = new Color(SCENE_TOKENS.sky.horizon);
     if (bootVeil) {
       container.dataset.boot = "pending";
       renderer.domElement.style.opacity = "0";
@@ -732,6 +733,8 @@ export function SceneHost({
           bottom?: number;
           zoom?: number;
           orthoHalfH?: number;
+          hudInsets?: { top: number; bottom: number; left: number; right: number };
+          fillTarget?: number;
         } | null {
           const director = directorRef.current;
           const cam = cameraRef.current;
@@ -739,6 +742,7 @@ export function SceneHost({
           const f = director.framing;
           const ortho = director.orthoFrustum;
           if (ortho) {
+            const insets = director.hudInsets;
             return {
               ...f,
               fov: null,
@@ -750,6 +754,8 @@ export function SceneHost({
               bottom: ortho.bottom,
               zoom: ortho.zoom,
               orthoHalfH: ortho.halfH,
+              hudInsets: insets,
+              fillTarget: 0.96,
             };
           }
           return {
@@ -937,7 +943,7 @@ export function SceneHost({
       const dpr = Math.min(window.devicePixelRatio || 1, caps.dprCap);
       const aspect = width / height;
       if (isOrthographicCamera(camera)) {
-        directorRef.current?.onResize(aspect);
+        directorRef.current?.onResize(aspect, width, height);
         if (!directorRef.current) {
           // Before CameraDirector exists, keep settlecoast-ish CR frustum.
           const halfTop = Math.max(3.6, 5.65 / Math.max(aspect, 1e-3));
@@ -951,7 +957,7 @@ export function SceneHost({
       } else {
         camera.aspect = aspect;
         camera.updateProjectionMatrix();
-        directorRef.current?.onResize(aspect);
+        directorRef.current?.onResize(aspect, width, height);
       }
       fitCameraRef.current();
       setCompactToolbar(width < 480);
@@ -1098,9 +1104,12 @@ export function SceneHost({
       overlayRef.current?.render(renderer);
       const hasContent = contentRoot.children.length > 0;
       if (container.dataset.water === "on" && scene.background === bootSea) {
-        scene.background = bootHorizon;
-        renderer.setClearColor(bootHorizon, 1);
-        sky.visible = true;
+        // R26: settlecoast-like sea clear (no cream horizon strip at top edge).
+        // Mid-teal (not BOOT_SEA navy, not cream) so c-coast water L stays ≥ R23 baseline.
+        const seaClear = new Color(PLAY_SEA_CLEAR);
+        scene.background = seaClear;
+        renderer.setClearColor(seaClear, 1);
+        sky.visible = false;
       }
       if (hasContent && renderer.info.render.calls > 0) {
         if (container.dataset.boot === "pending") {
@@ -1314,7 +1323,7 @@ export function SceneHost({
         if (el) {
           const w = Math.max(el.clientWidth, 1);
           const h = Math.max(el.clientHeight, 1);
-          director.onResize(w / h);
+          director.onResize(w / h, w, h);
         }
         director.mode = kit.cameraModeFor(localSeatRef.current, activeSeatRef.current);
         directorRef.current = director;

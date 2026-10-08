@@ -17,8 +17,9 @@ export type ViewportFrame = {
 
 /** Desktop a/d: island ~78–85% of canvas height, sea margins OK left/right. */
 export const DEFAULT_DESKTOP_FRAME: Required<ViewportFrame> = {
-  // R24：对齐 settlecoast 源码默认 φ≈54° / θ≈11.5°；FOV 锁 40°；fill 维持 0.92。
-  fill: 0.92,
+  // R24：对齐 settlecoast 源码默认 φ≈54° / θ≈11.5°；FOV 锁 40°。
+  // R26：fill 0.92→0.96，贴 settlecoast jg 满桌观感（正交 halfH 同步收紧）。
+  fill: 0.96,
   polarDeg: 54,
   azimuthDeg: 12,
   fovDeg: 40,
@@ -26,7 +27,7 @@ export const DEFAULT_DESKTOP_FRAME: Required<ViewportFrame> = {
 
 /** iPhone: top-down-ish, fill width. */
 export const DEFAULT_NARROW_FRAME: Required<ViewportFrame> = {
-  fill: 0.94,
+  fill: 0.96,
   polarDeg: 12,
   azimuthDeg: 6,
   fovDeg: 40,
