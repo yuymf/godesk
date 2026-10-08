@@ -2450,3 +2450,253 @@ body:has(.room-view-tidewell-immersive) {
 .tidewell-turn-column .tidewell-panel-title {
   color: #5c3c22 !important;
 }
+
+/* ==== R30 金棕边沿高光 + 轻雕框 · 底栏厚木砖建造钮（settlecoast carve / brick）====
+   Judge R29: wood warm PASS — do NOT raise overall --tw-wood luminance.
+   P0: bezel / topbar / side rails — warm gold-brown edge highlights + light CSS
+       carved-frame (vertical grain / beveled highlights). Thickness LOCKED.
+   P1: four dock build buttons → thick solid wood bricks (warm face, gold rim,
+       layered box-shadow depth); reduce flat black-pad read.
+   Locks: fill 0.945 · ortho φ54/az12 · deep #0a6c74/0.96 · HUD insets ·
+          bezel thickness · log well size · wood base #5c3c22 family · cream off. */
+
+.room-view-hex-island.room-view-tidewell-immersive {
+  /* Edge-carve tokens only — base --tw-wood / --tw-wood-edge stay R29 locked */
+  --tw-gold-bright: #f0d070;
+  --tw-gold-mid: #d4a93a;
+  --tw-gold-deep: #9a7218;
+  --tw-carve-gold:
+    0 0 0 1px var(--tw-carve-outer),
+    0 0 0 2px var(--tw-gold-deep),
+    0 0 0 3px var(--tw-gold-mid),
+    0 0 0 4px rgba(240, 208, 112, 0.55);
+  --tw-carve-inset:
+    inset 0 0 0 1px rgba(240, 208, 112, 0.42),
+    inset 0 0 0 2px rgba(154, 114, 24, 0.9),
+    inset 0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 -1px 0 rgba(255, 220, 140, 0.18);
+  --tw-edge-grain-v: repeating-linear-gradient(
+    90deg,
+    rgba(255, 220, 150, 0.07) 0 1px,
+    transparent 1px 7px
+  );
+  --tw-edge-grain-h: repeating-linear-gradient(
+    0deg,
+    rgba(255, 220, 150, 0.055) 0 1px,
+    transparent 1px 9px
+  );
+}
+
+/* Outer crate: warmer gold hairline (no extra thickness rings) */
+.tidewell-game-screen {
+  box-shadow:
+    inset 0 0 0 5px #24180e,
+    inset 0 0 0 6px rgba(212, 169, 58, 0.48),
+    inset 0 0 0 7px rgba(240, 208, 112, 0.22),
+    inset 0 0 0 8px #3c2816,
+    inset 0 0 28px rgba(40, 22, 10, 0.38) !important;
+}
+
+/* Top bar: beveled gold-brown edge highlights + light vertical grain on lip */
+.tidewell-topbar {
+  background:
+    var(--tw-edge-grain-v, repeating-linear-gradient(90deg, rgba(255, 220, 150, 0.07) 0 1px, transparent 1px 7px)),
+    linear-gradient(180deg, rgba(140, 92, 48, 0.28) 0%, transparent 42%),
+    linear-gradient(180deg, rgba(120, 78, 40, 0.5) 0%, rgba(58, 34, 16, 0.78) 100%),
+    linear-gradient(180deg, #7a5230 0%, #4a3018 100%) !important;
+  border-bottom: 2px solid rgba(212, 169, 58, 0.72) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 230, 160, 0.38),
+    inset 0 2px 0 rgba(212, 169, 58, 0.28),
+    inset 0 -1px 0 rgba(154, 114, 24, 0.75),
+    inset 0 -2px 0 rgba(36, 22, 12, 0.85),
+    0 3px 10px rgba(0, 0, 0, 0.32) !important;
+}
+
+/* Side rails: stage-facing gold-brown carve lip + edge-only vertical grain */
+.tidewell-players {
+  background:
+    var(--tw-edge-grain-v, repeating-linear-gradient(90deg, rgba(255, 220, 150, 0.07) 0 1px, transparent 1px 7px)),
+    linear-gradient(90deg, transparent 0%, transparent 88%, rgba(255, 220, 150, 0.1) 96%, rgba(212, 169, 58, 0.18) 100%),
+    linear-gradient(180deg, rgba(90, 56, 28, 0.28) 0%, rgba(48, 28, 14, 0.38) 100%),
+    linear-gradient(180deg, #6b4428 0%, #3a2414 100%) !important;
+  box-shadow:
+    inset -1px 0 0 rgba(36, 22, 12, 0.9),
+    inset -2px 0 0 rgba(154, 114, 24, 0.7),
+    inset -3px 0 0 rgba(212, 169, 58, 0.55),
+    inset -4px 0 0 rgba(240, 208, 112, 0.28),
+    inset -10px 0 18px -10px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 220, 150, 0.12),
+    inset 0 0 18px rgba(0, 0, 0, 0.16) !important;
+}
+
+.tidewell-turn-column {
+  background:
+    var(--tw-edge-grain-v, repeating-linear-gradient(90deg, rgba(255, 220, 150, 0.07) 0 1px, transparent 1px 7px)),
+    linear-gradient(270deg, transparent 0%, transparent 88%, rgba(255, 220, 150, 0.1) 96%, rgba(212, 169, 58, 0.18) 100%),
+    linear-gradient(180deg, rgba(90, 56, 28, 0.28) 0%, rgba(48, 28, 14, 0.38) 100%),
+    linear-gradient(180deg, #6b4428 0%, #3a2414 100%) !important;
+  box-shadow:
+    inset 1px 0 0 rgba(36, 22, 12, 0.9),
+    inset 2px 0 0 rgba(154, 114, 24, 0.7),
+    inset 3px 0 0 rgba(212, 169, 58, 0.55),
+    inset 4px 0 0 rgba(240, 208, 112, 0.28),
+    inset 10px 0 18px -10px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 220, 150, 0.12),
+    inset 0 0 18px rgba(0, 0, 0, 0.16) !important;
+}
+
+/* Stage bezel: same thickness rings — warmer gold hairline + beveled highlight only */
+.tidewell-stage-wrap {
+  box-shadow:
+    inset 0 0 0 2px #1e140a,
+    inset 0 0 0 6px #3c2816,
+    inset 0 0 0 11px #4e3218,
+    inset 0 0 0 16px #6b4428,
+    inset 0 0 0 18px #5c3c20,
+    /* warmer gold hairline (not thicker) */
+    inset 0 0 0 19px rgba(212, 169, 58, 0.72),
+    inset 0 0 0 20px rgba(36, 22, 12, 0.88),
+    inset 0 0 28px 12px rgba(42, 26, 12, 0.36) !important;
+}
+.tidewell-stage-wrap::after {
+  /* thickness LOCKED (same px as R29); only warmer gold hairline + bevel highlight */
+  box-shadow:
+    inset 0 0 0 2px #1e140a,
+    inset 0 0 0 6px #3c2816,
+    inset 0 0 0 12px #4e3218,
+    inset 0 0 0 17px #6b4428,
+    inset 0 0 0 19px #5c3c20,
+    inset 0 0 0 20px rgba(240, 208, 112, 0.68),
+    inset 0 0 0 21px rgba(36, 22, 12, 0.9),
+    inset 0 0 36px 14px rgba(48, 30, 14, 0.42),
+    inset 0 0 14px 4px rgba(106, 68, 36, 0.32) !important;
+}
+
+/* Dock lip: gold-brown top bevel (base wood midtones unchanged) */
+.tidewell-dock {
+  background:
+    var(--tw-edge-grain-h, repeating-linear-gradient(0deg, rgba(255, 220, 150, 0.055) 0 1px, transparent 1px 9px)),
+    linear-gradient(180deg, rgba(255, 230, 160, 0.14) 0%, transparent 18%),
+    linear-gradient(180deg, rgba(110, 72, 38, 0.32) 0%, rgba(48, 28, 14, 0.72) 100%),
+    linear-gradient(180deg, #6b4428 0%, #3a2414 100%) !important;
+  border-top: 2px solid rgba(212, 169, 58, 0.75) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 230, 160, 0.32),
+    inset 0 2px 0 rgba(212, 169, 58, 0.35),
+    inset 0 3px 0 rgba(36, 22, 12, 0.7),
+    inset 0 10px 18px rgba(0, 0, 0, 0.28) !important;
+}
+
+/* ---- P1: thick solid wood-brick build buttons (not flat black pads) ---- */
+.tidewell-build-btn {
+  position: relative !important;
+  display: block !important;
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+  /* thicker raised brick */
+  min-height: 74px !important;
+  height: 74px !important;
+  padding: 5px !important;
+  gap: 0 !important;
+  border: 2.5px solid #c9a227 !important;
+  border-radius: 9px !important;
+  background:
+    linear-gradient(165deg, rgba(255, 230, 160, 0.28) 0%, transparent 38%),
+    linear-gradient(180deg, #9a6234 0%, #7a5230 38%, #5c3c22 72%, #3a2414 100%) !important;
+  box-shadow:
+    /* chunky raised brick shelf */
+    0 6px 0 #24180e,
+    0 8px 0 #1a1008,
+    0 10px 18px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(36, 22, 12, 0.9),
+    /* gold-brown carved rim */
+    inset 0 0 0 1px rgba(240, 208, 112, 0.45),
+    inset 0 2px 0 rgba(255, 236, 180, 0.42),
+    inset 0 -3px 5px rgba(26, 14, 8, 0.5),
+    inset 3px 0 0 rgba(255, 220, 150, 0.14),
+    inset -3px 0 0 rgba(26, 14, 8, 0.3) !important;
+  overflow: hidden !important;
+  isolation: isolate;
+}
+
+/* Carved gold lip overlay sitting above art */
+.tidewell-build-btn::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 3px !important;
+  border-radius: 5px !important;
+  pointer-events: none !important;
+  z-index: 2 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(212, 169, 58, 0.55),
+    inset 0 1px 0 rgba(255, 236, 180, 0.35),
+    inset 0 -2px 4px rgba(26, 14, 8, 0.35) !important;
+  background: linear-gradient(180deg, rgba(255, 230, 160, 0.1) 0%, transparent 35%, rgba(26, 14, 8, 0.12) 100%);
+}
+
+.tidewell-build-btn .tidewell-build-art {
+  display: block !important;
+  position: relative !important;
+  z-index: 1 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: fill !important;
+  border-radius: 5px !important;
+  border: none !important;
+  /* lift baked art off near-black pad toward warm oak face */
+  filter: sepia(0.28) saturate(1.2) brightness(1.22) contrast(0.95);
+}
+
+/* Keep label/cost hidden — art carries them; wood brick chrome is CSS */
+.tidewell-build-btn .tidewell-build-label,
+.tidewell-build-btn .tidewell-build-cost {
+  display: none !important;
+}
+
+.tidewell-build-btn.is-disabled,
+.tidewell-build-btn:disabled {
+  opacity: 0.48;
+  filter: grayscale(0.3);
+  box-shadow:
+    0 3px 0 #24180e,
+    0 5px 10px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(36, 22, 12, 0.7),
+    inset 0 1px 0 rgba(255, 220, 150, 0.12) !important;
+}
+.tidewell-build-btn.is-disabled .tidewell-build-art,
+.tidewell-build-btn:disabled .tidewell-build-art {
+  filter: grayscale(0.45) brightness(0.9) sepia(0.12);
+}
+.tidewell-build-btn.is-disabled::after,
+.tidewell-build-btn:disabled::after {
+  opacity: 0.5;
+}
+
+.tidewell-build-btn:not(:disabled):not(.is-disabled):hover {
+  filter: brightness(1.05);
+  border-color: #e8c85a !important;
+}
+
+@media (max-width: 1360px) {
+  .tidewell-build-btn {
+    min-height: 66px !important;
+    height: 66px !important;
+    padding: 4px !important;
+  }
+}
+
+/* Match dock height so thicker bricks fit without clipping */
+@media (min-width: 801px) {
+  .tidewell-dock {
+    --tw-dock: 136px;
+    height: var(--tw-dock, 136px) !important;
+    max-height: var(--tw-dock, 136px) !important;
+  }
+  .room-view-tidewell-immersive,
+  .tidewell-game-screen {
+    --tw-dock: 136px;
+  }
+}
