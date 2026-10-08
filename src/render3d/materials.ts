@@ -17,6 +17,13 @@ import {
 import type { MaterialPattern, MaterialToken, PbrSetId } from "./tokens";
 import { TILE_FACE_APOTHEM } from "./tokens";
 
+/** R21 soft hex-edge band: max share the top-face albedo eases toward the shared light earth tone (× brush). R22: 0.45 → 0.25. */
+export const SOFT_EDGE_STRENGTH = 0.25;
+/** R22: terrain albedo saturation (1 = texture as-is; R19–R21 used 0.86, a 14% pull toward grey). */
+export const TERRAIN_SATURATION = 1.12;
+/** R22: painted light hairline seam half-width on each tile top face (world units). */
+export const SEAM_HALF_WIDTH = 0.006;
+
 export const PATTERN_IDS: Record<MaterialPattern, number> = {
   none: 0,
   grain: 1,
@@ -169,15 +176,23 @@ export function installPattern(material: MeshStandardMaterial, pattern: Material
                 "vec3 gdB = gdBrushStroke(vGdWorld);",
                 "diffuseColor.rgb *= 1.0 + (gdB.x - 0.5) * 1.3 * uGdBrush;",
                 "diffuseColor.rgb *= mix(vec3(1.0), mix(vec3(0.9, 0.99, 1.1), vec3(1.1, 1.0, 0.86), gdB.y), uGdBrush * gdB.z);",
-                // R19: picture-book tone — pull terrain albedo ~14% toward its luminance (less saturated).
-                "diffuseColor.rgb = mix(vec3(dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722))), diffuseColor.rgb, 0.86);",
+                // R19 pulled terrain albedo 14% toward its luminance (0.86); R22: saturation restored + a light lift
+                // (1.12 = 12% away from luminance) so the six resources read at a glance — no grey wash.
+                `diffuseColor.rgb = max(mix(vec3(dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722))), diffuseColor.rgb, ${TERRAIN_SATURATION.toFixed(2)}), vec3(0.0));`,
                 // R21 soft hex edge: within ~0.2 of the face edge, albedo eases toward one shared light warm
                 // earth tone (same for every terrain) so neighbouring tiles melt into each other — no grid lines.
                 "float gdHexM = max(abs(vGdLocal.y), max(abs(0.8660254 * vGdLocal.x + 0.5 * vGdLocal.y), abs(0.8660254 * vGdLocal.x - 0.5 * vGdLocal.y)));",
                 `float gdEdge = smoothstep(${(TILE_FACE_APOTHEM - 0.2).toFixed(4)}, ${TILE_FACE_APOTHEM.toFixed(4)}, gdHexM);`,
                 // top face only — tile sides keep their own darker material so cliffs / shoreline stay readable
-                "gdEdge = gdEdge * gdEdge * (0.7 + 0.6 * gdB.x) * smoothstep(0.5, 0.9, vGdUp);",
-                "diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.72, 0.65, 0.5), clamp(gdEdge, 0.0, 1.0) * 0.45 * uGdBrush);",
+                "float gdTop = smoothstep(0.5, 0.9, vGdUp);",
+                "gdEdge = gdEdge * gdEdge * (0.7 + 0.6 * gdB.x) * gdTop;",
+                // R22: band strength 0.45 → 0.25 (faded halo gone; tiles keep their own colour up to the edge).
+                `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.72, 0.65, 0.5), clamp(gdEdge, 0.0, 1.0) * ${SOFT_EDGE_STRENGTH.toFixed(2)} * uGdBrush);`,
+                // R22: faces now touch (TILE_FACE_RADIUS 1.0, no open slot → no dark side / shadow line); the light
+                // hairline seam is painted on the top face instead (≈0.006 per side, AA'd with fwidth).
+                "float gdSeamFw = max(fwidth(gdHexM), 1e-4);",
+                `float gdSeam = smoothstep(${(TILE_FACE_APOTHEM - SEAM_HALF_WIDTH).toFixed(4)} - gdSeamFw, ${(TILE_FACE_APOTHEM - SEAM_HALF_WIDTH).toFixed(4)} + gdSeamFw * 0.5, gdHexM) * gdTop;`,
+                "diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.8, 0.73, 0.58), gdSeam * 0.6);",
               ]
             : []),
         ].join("\n"),

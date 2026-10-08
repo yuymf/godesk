@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""R20/R21 · painterly re-bake of 虹夏's 8 AI textures (sources unchanged: assets/ai-textures/r19/*.webp).
+"""R20/R21/R22 · painterly re-bake of 虹夏's 8 AI textures (sources unchanged: assets/ai-textures/r19/*.webp).
 
 R19 baked the AI sources straight to KTX2, so close-ups read as photo-detailed ground under the
 oil-dab shader. R20 first pushes every source into the same low-frequency painterly language as
@@ -10,6 +10,10 @@ the dabs, then bakes exactly like R19 (same toktx ETC1S flags, same output paths
                      brown ground (low tier included)
   0b. light rock   — R21, scree (ore hex) only: grey-brown → light grey rock (desaturate 80%, cool
                      tint, gamma 0.62 lift) before colour-blocking
+  0c. golden wheat — R22, wheat-field only: amber → bright golden yellow (HSV hue +6°, sat ×0.8,
+                     value gamma 0.74) so wheat never reads orange-brown next to brick / desert
+  0d. pale sand    — R22, sand (desert) only: hue +4°, sat ×0.72, value gamma 0.78 (paler, less orange)
+  0e. fresh meadow — R22, grass (pasture) only: hue +5°, sat ×0.95, value gamma 0.8 (light green, not olive)
   1. colour-block  — median-cut palette quantise (no dither) to K flat colours (posterise)
   2. kuwahara      — large-radius soft Kuwahara (r=9 @512, inverse-variance quadrant weights,
                      wrap-padded so tiles stay seamless), then a second r=5 pass
@@ -92,6 +96,32 @@ def restore_rim(painted: np.ndarray, source_rgba: np.ndarray, rim: int = 34) -> 
     outline = np.clip(1 - d / 5.0, 0, 1)[..., None] * (source_rgba[..., 3:4] > 127)
     out = out * (1 - 0.45 * outline)
     return np.clip(out, 0, 255).astype(np.uint8)
+
+
+def hsv_shift(rgb: np.ndarray, dh_deg: float, sat: float, gamma: float) -> np.ndarray:
+    """R22: hue rotate (degrees), saturation scale, value gamma (<1 lifts) in HSV."""
+    im = Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8), "RGB").convert("HSV")
+    hsv = np.asarray(im, dtype=np.float64) / 255.0
+    h = (hsv[..., 0] + dh_deg / 360.0) % 1.0
+    s = np.clip(hsv[..., 1] * sat, 0, 1)
+    v = np.clip(np.power(hsv[..., 2], gamma), 0, 1)
+    out = np.dstack([h, s, v]) * 255.0
+    return np.asarray(Image.fromarray(out.astype(np.uint8), "HSV").convert("RGB"), dtype=np.float64)
+
+
+def golden_wheat(rgb: np.ndarray) -> np.ndarray:
+    """R22 wheat-field: amber (hue ≈41°, sat 0.9) → bright golden yellow (hue +6°, sat ×0.8, value gamma 0.74)."""
+    return hsv_shift(rgb, 6.0, 0.8, 0.74)
+
+
+def pale_sand(rgb: np.ndarray) -> np.ndarray:
+    """R22 sand (desert): warm beige → paler, less orange sand (hue +4°, sat ×0.72, value gamma 0.78)."""
+    return hsv_shift(rgb, 4.0, 0.72, 0.78)
+
+
+def fresh_meadow(rgb: np.ndarray) -> np.ndarray:
+    """R22 grass (pasture): olive-leaning → fresher light green (hue +5°, sat ×0.95, value gamma 0.8)."""
+    return hsv_shift(rgb, 5.0, 0.95, 0.8)
 
 
 def colour_block(rgb: np.ndarray, k: int) -> np.ndarray:
@@ -178,6 +208,12 @@ def main() -> None:
                 src = moss_recolour(src)
             if name == "scree":
                 src = light_rock(src)
+            if name == "wheat-field":
+                src = golden_wheat(src)
+            if name == "sand":
+                src = pale_sand(src)
+            if name == "grass":
+                src = fresh_meadow(src)
             im = Image.fromarray(painterly(src, LEVELS[name]), "RGB")
             if PREVIEW:
                 im.save(PREVIEW / f"{name}.png")

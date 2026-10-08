@@ -67,7 +67,8 @@ export const PROP_COUNTS: Record<RenderTierId, Record<string, Counts>> = {
   high: {
     // R20: sparse, low, ground-hugging forest / ore so the hex colour face reads first at camera a.
     // R21: low dense conifer clusters — more, smaller trees (none taller than R20), dark-green field first.
-    wood: { pineTall: 22, pineRound: 10, pineSmall: 24, canopy: 4, blobshadow: 44 },
+    // R22: translucent canopy cards removed (they read as a light-green haze in close view b3).
+    wood: { pineTall: 22, pineRound: 10, pineSmall: 24, blobshadow: 44 },
     // R20: 8 sheep in 2 clumps (3–5 each) — see SHEEP_CLUMPS.
     sheep: { trough: 1, sheep: 8, blobshadow: 1 },
     ore: { boulder: 4, pebble: 8, blobshadow: 4 },
@@ -77,7 +78,7 @@ export const PROP_COUNTS: Record<RenderTierId, Record<string, Counts>> = {
     desert: { dune: 5, pebble: 9 },
   },
   medium: {
-    wood: { pineTall: 14, pineRound: 7, pineSmall: 16, canopy: 3, blobshadow: 30 },
+    wood: { pineTall: 14, pineRound: 7, pineSmall: 16, blobshadow: 30 },
     sheep: { trough: 1, sheep: 6, blobshadow: 1 },
     ore: { boulder: 3, pebble: 5, blobshadow: 3 },
     brick: { clay: 5, bricks: 3 },
@@ -104,6 +105,11 @@ export const SHEEP_CLUMPS: Record<number, ReadonlyArray<readonly number[]>> = {
 export const SHEEP_CLUMP_SPACING = 0.2;
 export const SHEEP_CLUMP_RADIUS = 0.27;
 export const SHEEP_CLUMP_GAP = 0.86;
+
+/** R22 麦浪：垄线正弦弯曲幅度 / 波数，垄高最小拉伸（最大 1.0）。 */
+export const WHEAT_WAVE_AMP = 0.055;
+export const WHEAT_WAVE_K = 4.2;
+export const WHEAT_STRETCH_MIN = 0.62;
 
 /** 道具间最小间距（相邻两件取均值）。 */
 const SPACING: Record<PropKind, number> = {
@@ -411,7 +417,7 @@ function sheafGeometry(): BufferGeometry {
   const profile = [[0, 0], [0.045, 0], [0.038, 0.04], [0.027, 0.085], [0.031, 0.11], [0.055, 0.165], [0.045, 0.2], [0, 0.21]]
     .map(([x, y]) => new Vector2(x!, y!));
   return merged([
-    paint(new LatheGeometry(profile, 8), "#d4b84a", 0.28),
+    paint(new LatheGeometry(profile, 8), "#e2c448", 0.28),
     paint(at(new CylinderGeometry(0.031, 0.031, 0.016, 8), 0, 0.095, 0), "#8a6a32"),
   ]);
 }
@@ -420,26 +426,29 @@ function sheafGeometry(): BufferGeometry {
 function wheatRowGeometry(): BufferGeometry {
   const parts: BufferGeometry[] = [
     // base band closer to tile albedo (less dark toy soil strip)
-    grad(at(new BoxGeometry(0.32, 0.024, 0.12), 0, 0.012, 0), "#c0a440", "#d8bc50", 0, 0.024),
-    grad(at(new BoxGeometry(0.3, 0.012, 0.03), 0, 0.01, 0), "#9a8430", "#b09838", 0, 0.012),
-    grad(at(new CircleGeometry(0.16, 10), 0, 0.003, 0, 1.15, 1, 0.85).rotateX(-Math.PI / 2), "#c4a840", "#d4b84a", 0, 0.01, 0.08),
+    // R22: bright golden (was #c0a440 / #d8bc50 ochre that read orange-brown under the warm key light)
+    grad(at(new BoxGeometry(0.32, 0.024, 0.12), 0, 0.012, 0), "#d2b83c", "#e8cc4e", 0, 0.024),
+    grad(at(new BoxGeometry(0.3, 0.012, 0.03), 0, 0.01, 0), "#b89e30", "#ccb23a", 0, 0.012),
+    grad(at(new CircleGeometry(0.16, 10), 0, 0.003, 0, 1.15, 1, 0.85).rotateX(-Math.PI / 2), "#d6bc40", "#e6ca4c", 0, 0.01, 0.08),
   ];
   const sides = [-0.04, 0, 0.04] as const;
   for (let i = 0; i < 9; i += 1) {
     const x = -0.14 + i * 0.035;
+    // R22: each row bends gently (z sway along the row) so a field of rows reads as a wave, not ruled lines.
+    const sway = 0.014 * Math.sin(i * 0.8 + 0.6);
     for (let si = 0; si < sides.length; si += 1) {
-      const z = sides[si]!;
+      const z = sides[si]! + sway;
       // R21: low stubble (0.055–0.103, was 0.12–0.208) — rows sit in the golden field, not a hedge.
       const stalkH = 0.055 + ((i * 17 + si * 7 + 3) % 5) * 0.012;
       const b = 0.024;
       parts.push(grad(
         at(new CylinderGeometry(0.006, 0.009, stalkH, 4, 1, true), x, b + stalkH / 2, z),
-        "#b89c38", "#d8bc50", b, b + stalkH,
+        "#bc9020", "#d8b030", b, b + stalkH,
       ));
       const headR = 0.016 + ((i * 11 + si) % 3) * 0.004;
       parts.push(grad(
         at(new SphereGeometry(headR, 5, 4), x, b + stalkH + headR * 0.7, z, 0.75, 1.3, 0.75),
-        "#d0b448", "#ecd474", b + stalkH - 0.016, b + stalkH + headR * 1.1,
+        "#dcac28", "#ecc23c", b + stalkH - 0.016, b + stalkH + headR * 1.1,
       ));
     }
   }
@@ -448,7 +457,8 @@ function wheatRowGeometry(): BufferGeometry {
 
 /** 沙丘：拉长的半球，比沙地略深。 */
 function duneGeometry(): BufferGeometry {
-  return paint(jag(at(new SphereGeometry(0.12, 10, 4, 0, Math.PI * 2, 0, Math.PI / 2), 0, 0, 0, 1.7, 0.42, 1), 0.05, 6), "#d2b47e", 0.12);
+  // R22: paler sand dune (was #d2b47e, read as brown blobs on the paler desert).
+  return paint(jag(at(new SphereGeometry(0.12, 10, 4, 0, Math.PI * 2, 0, Math.PI / 2), 0, 0, 0, 1.7, 0.42, 1), 0.05, 6), "#e2cfa2", 0.12);
 }
 
 /** 卵石 / 碎石：三颗压扁小石（中性浅灰，instanceColor 按地形染色）。 */
@@ -521,20 +531,31 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
     const s = SPACING[kind];
     let candidates: Array<[number, number]> = [];
     let rowYaw = 0;
+    const wheatWave = new Map<string, { theta: number; h: number }>();
     if (kind === "wheatrow") {
       // R11 麦垄：更密候选网格，整片随格子转 0° / 60° / 120°；两端都要在可摆放区内。
       rowYaw = Math.floor(rand() * 3) * (Math.PI / 3);
       const cr = Math.cos(rowYaw);
       const sr = Math.sin(rowYaw);
       const rot = (lx: number, lz: number): [number, number] => [lx * cr - lz * sr, lx * sr + lz * cr];
+      // R22 麦浪：每条垄沿一条正弦波弯曲（走向起伏），垄高按另一条斜向波起伏（高低），浪峰略亮。
+      const wavePhase = rand() * Math.PI * 2;
+      const heightPhase = rand() * Math.PI * 2;
       for (let row = -9; row <= 9; row += 1) {
         for (let col = -5; col <= 5; col += 1) {
-          const lx = col * 0.22 + (row % 2 ? 0.11 : 0);
-          const lz = row * 0.085;
-          const c = rot(lx, lz);
-          const e1 = rot(lx - 0.1, lz);
-          const e2 = rot(lx + 0.1, lz);
-          if (inPropRegion(...c) && inPropRegion(...e1) && inPropRegion(...e2)) candidates.push(c);
+          const lx0 = col * 0.22 + (row % 2 ? 0.11 : 0);
+          const lz0 = row * 0.085;
+          const lz = lz0 + WHEAT_WAVE_AMP * Math.sin(lx0 * WHEAT_WAVE_K + wavePhase + row * 0.35);
+          const theta = Math.atan(WHEAT_WAVE_AMP * WHEAT_WAVE_K * Math.cos(lx0 * WHEAT_WAVE_K + wavePhase + row * 0.35));
+          const c = rot(lx0, lz);
+          const ex = Math.cos(theta) * 0.1;
+          const ez = Math.sin(theta) * 0.1;
+          const e1 = rot(lx0 - ex, lz - ez);
+          const e2 = rot(lx0 + ex, lz + ez);
+          if (!(inPropRegion(...c) && inPropRegion(...e1) && inPropRegion(...e2))) continue;
+          candidates.push(c);
+          const h = 0.5 + 0.5 * Math.sin(lx0 * 2.4 + lz0 * 6.2 + heightPhase);
+          wheatWave.set(`${c[0]},${c[1]}`, { theta, h });
         }
       }
       for (let i = candidates.length - 1; i > 0; i -= 1) {
@@ -574,6 +595,24 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
       }
       if (!inPropRegion(dx, dz) || !free(dx, dz, s)) continue;
       taken.push({ x: dx, z: dz, s });
+      const wave = kind === "wheatrow" ? wheatWave.get(`${dx},${dz}`) : undefined;
+      if (wave) {
+        // R22 麦浪：走向跟随波的切线，垄高 / 明度跟随高低波；scale ≤ 1.0、stretch ≤ 1.0 → 仍是矮麦（<0.18）。
+        out.push({
+          kind,
+          terrain: tile.terrain,
+          x: tile.center[0] + dx,
+          y: TILE_TOP - 0.012,
+          z: tile.center[2] + dz,
+          yaw: -(rowYaw + wave.theta) + (rand() - 0.5) * 0.08,
+          scale: 0.9 + rand() * 0.1,
+          stretch: WHEAT_STRETCH_MIN + (1 - WHEAT_STRETCH_MIN) * wave.h,
+          tone: 0.2 + 0.8 * wave.h,
+          hue: rand(),
+        });
+        placed += 1;
+        continue;
+      }
       out.push({
         kind,
         terrain: tile.terrain,
@@ -729,8 +768,8 @@ const TERRAIN_ALBEDO: Record<string, Color> = {
   sheep: new Color("#8fbf6a"),
   ore: new Color("#a9afb7"),
   brick: new Color("#b85a3a"),
-  wheat: new Color("#d4b84a"),
-  desert: new Color("#c9b896"),
+  wheat: new Color("#e4c440"),
+  desert: new Color("#ddd2b2"),
 };
 
 function toneFor(p: PropPlacement, out: Color): Color {
@@ -739,6 +778,11 @@ function toneFor(p: PropPlacement, out: Color): Color {
     const k = 0.9 + p.tone * 0.2;
     out.multiplyScalar(k);
   } else if (p.kind === "pebble") out.copy(PEBBLE_TINT[p.terrain] ?? PEBBLE_TINT.desert!);
+  else if (p.kind === "wheatrow") {
+    // R22 麦浪：tone 跟随高低波（浪峰亮、浪谷略深的琥珀金），远景读成起伏的麦浪而非一排排。
+    const k = 0.8 + p.tone * 0.3;
+    out.setRGB(k, k * 0.95, k * 0.76);
+  }
   else {
     const k = 0.94 + p.tone * 0.12;
     out.setRGB(k, k, k);

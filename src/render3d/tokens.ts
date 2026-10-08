@@ -83,8 +83,10 @@ export const SCENE_TOKENS = {
 
 /** R19 汐屿六角岛灯光：主光 / 半球光提亮，绘本明亮基调（经 HexSettlementBoard → SceneHost lighting 传入）。 */
 export const HEX_ISLAND_LIGHTING = {
-  sun: { azimuthDeg: 128, elevationDeg: 48, intensity: 3.45, color: "#ffd4a4" },
-  hemisphere: { sky: "#f6eddc", ground: "#d4bf96", intensity: 1.42 },
+  // R22: less orange key light (#ffd4a4 → #ffecd2) + more neutral sky fill — the warm cast pushed wheat / desert
+  // toward orange-brown and ore / pasture toward beige-olive; resource hues now stay true (water gets brighter, not darker).
+  sun: { azimuthDeg: 128, elevationDeg: 48, intensity: 3.45, color: "#ffecd2" },
+  hemisphere: { sky: "#f3f1e8", ground: "#cfc3a2", intensity: 1.42 },
   shadow: { enabled: true, softness: 0.92 },
   exposure: 1.2,
 } as const satisfies LightingSpec;
@@ -96,19 +98,23 @@ export const HEX_ISLAND_LIGHTING = {
 export const TERRAIN_MATERIALS: Record<string, MaterialToken> = {
   wood: { base: "#46744a", roughness: 0.98, metalness: 0, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 1.65, pbrTint: 0.55, brush: 0.85 },
   brick: { base: "#bc6646", roughness: 0.98, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 1.65, pbrTint: 0.6, brush: 0.85 },
-  sheep: { base: "#a3c67e", roughness: 0.98, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 1.7, pbrTint: 0.6, brush: 0.85 },
-  wheat: { base: "#d8c070", roughness: 0.97, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 1.7, pbrTint: 0.6, brush: 0.85 },
+  // R22: fresher light-green pasture tint (was #a3c67e).
+  sheep: { base: "#a6d27e", roughness: 0.98, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 1.7, pbrTint: 0.6, brush: 0.85 },
+  // R22: wheat-field texture re-baked golden (bake-ai-r20.py golden_wheat) + a near-neutral light-gold tint (was #d8c070).
+  wheat: { base: "#e8e090", roughness: 0.97, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 1.7, pbrTint: 0.55, brush: 0.85 },
   // R21: light grey rock (was #7a7f86 grey-brown); scree texture is also desaturated + lifted in the bake.
   ore: { base: "#a4abb3", roughness: 0.96, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 1.55, pbrTint: 0.62, brush: 0.85 },
-  desert: { base: "#d2c29e", roughness: 0.98, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 1.45, pbrTint: 0.65, brush: 0.85 },
+  // R22: paler sand (texture re-baked pale_sand; tint #d2c29e → #e4dec8, less orange) — reads apart from golden wheat.
+  desert: { base: "#e4dec8", roughness: 0.98, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 1.45, pbrTint: 0.6, brush: 0.85 },
 };
 
 /** 其余物件材质。 */
 export const PROP_MATERIALS = {
   cliff: { base: "#7a7368", roughness: 0.9, metalness: 0, pattern: "stone", pbrSet: "t07-cliff", pbrRepeat: 5 },
-  "number-token": { base: "#f5f0e1", roughness: 0.7, metalness: 0, pattern: "none", pbrSet: "t11-parchment", pbrRepeat: 1 },
+  // R22: warmer cream (was #f5f0e1) — keeps the parchment token cream under the less-orange R22 key light.
+  "number-token": { base: "#eedcb8", roughness: 0.7, metalness: 0, pattern: "none", pbrSet: "t11-parchment", pbrRepeat: 1 },
   // G3D-ART-2：6/8 不再整块涂红（与座位 0 红色混淆、且盖住数字）；同用 N1 筹码面，数字用赤陶色高亮（number-labels.ts）。
-  "number-token-hot": { base: "#f7e6d2", roughness: 0.7, metalness: 0, pattern: "none", pbrSet: "t11-parchment", pbrRepeat: 1 },
+  "number-token-hot": { base: "#f0d8bc", roughness: 0.7, metalness: 0, pattern: "none", pbrSet: "t11-parchment", pbrRepeat: 1 },
   robber: { base: "#2c3e50", roughness: 0.7, metalness: 0, pattern: "none" },
   wood: { base: "#8b6914", roughness: 0.7, metalness: 0, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 1 },
   die: { base: "#f8f8f8", roughness: 0.5, metalness: 0, pattern: "none" },
@@ -188,8 +194,14 @@ export const TILE_RADIUS = 0.95;
  * R21 · 地块顶面实际外接半径。R20 前为 TILE_RADIUS − 0.04 = 0.91（相邻格缝 ≈ √3·0.09 ≈ 0.16，
  * 露出深褐顶盖 → 像格子棋盘）；R21 放大到 0.99（缝 ≈ 0.017，近乎相接），并在地块笔触 shader 里做边缘软过渡。
  * TILE_RADIUS 仍用于相机/水岸距离场/islandBounds，不随之改动。
+ * R22：0.99 → 1.0，顶面相接；0.017 的缝槽在近景会露出暗侧面 / 阴影成 1px 暗线，改在 shader 里画浅色发丝缝。
  */
-export const TILE_FACE_RADIUS = 0.99;
+export const TILE_FACE_RADIUS = 1.0;
+/**
+ * R22 · 地块侧面向下内收：底面外接半径 = TILE_FACE_RADIUS × TILE_BASE_SCALE。顶面相接（无缝槽、无暗线），
+ * 外圈侧面仍缩在岸崖顶（SKIRT_TOP_Y 处 ≈0.989）之内，不与岸崖面 z-fight。
+ */
+export const TILE_BASE_SCALE = 0.92;
 /** R21 · 顶面内切半径（边心距）= TILE_FACE_RADIUS·√3/2，供 shader 软边带使用。 */
 export const TILE_FACE_APOTHEM = TILE_FACE_RADIUS * (Math.sqrt(3) / 2);
 

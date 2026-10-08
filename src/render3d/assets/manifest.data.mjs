@@ -850,7 +850,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "texture/t03-meadow/512/baseColor",
     "file": "assets/textures/pbr/t03-meadow/512/baseColor.ktx2",
     "kind": "texture",
-    "bytes": 18319,
+    "bytes": 17329,
     "tier": "high-medium",
     "source": "ai-generated",
     "license": {
@@ -859,7 +859,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "author": "Grok Bot GenerateImage（AI 生成，俞孟凡 / GoDesk 委托）",
       "obtainedAt": "2026-10-08",
       "modified": true,
-      "modificationNote": "AI 生图（R19 虹夏 grass）；源图 assets/ai-textures/r19/grass.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=10 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
+      "modificationNote": "AI 生图（R19 虹夏 grass）；源图 assets/ai-textures/r19/grass.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R22 鲜绿化（scripts/bake-ai-r20.py fresh_meadow：HSV 色相 +5°、饱和 ×0.95、明度 gamma 0.8 提亮，橄榄绿→浅草绿）→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=10 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
       "orderRef": "n/a",
       "status": "cleared",
       "legalReview": "pending-G3D-17"
@@ -907,7 +907,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "texture/t03-meadow/256/baseColor",
     "file": "assets/textures/pbr/t03-meadow/256/baseColor.ktx2",
     "kind": "texture",
-    "bytes": 7318,
+    "bytes": 7093,
     "tier": "low",
     "source": "ai-generated",
     "license": {
@@ -916,7 +916,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "author": "Grok Bot GenerateImage（AI 生成，俞孟凡 / GoDesk 委托）",
       "obtainedAt": "2026-10-08",
       "modified": true,
-      "modificationNote": "AI 生图（R19 虹夏 grass）；源图 assets/ai-textures/r19/grass.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=10 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→回卷填充 Lanczos 缩至 256²→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
+      "modificationNote": "AI 生图（R19 虹夏 grass）；源图 assets/ai-textures/r19/grass.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R22 鲜绿化（scripts/bake-ai-r20.py fresh_meadow：HSV 色相 +5°、饱和 ×0.95、明度 gamma 0.8 提亮，橄榄绿→浅草绿）→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=10 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→回卷填充 Lanczos 缩至 256²→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
       "orderRef": "n/a",
       "status": "cleared",
       "legalReview": "pending-G3D-17"
@@ -964,7 +964,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "texture/t04-wheat/512/baseColor",
     "file": "assets/textures/pbr/t04-wheat/512/baseColor.ktx2",
     "kind": "texture",
-    "bytes": 23538,
+    "bytes": 21855,
     "tier": "high-medium",
     "source": "ai-generated",
     "license": {
@@ -973,7 +973,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "author": "Grok Bot GenerateImage（AI 生成，俞孟凡 / GoDesk 委托）",
       "obtainedAt": "2026-10-08",
       "modified": true,
-      "modificationNote": "AI 生图（R19 虹夏 wheat-field）；源图 assets/ai-textures/r19/wheat-field.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=9 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
+      "modificationNote": "AI 生图（R19 虹夏 wheat-field）；源图 assets/ai-textures/r19/wheat-field.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R22 金黄化（scripts/bake-ai-r20.py golden_wheat：HSV 色相 +6°、饱和 ×0.8、明度 gamma 0.74 提亮，琥珀橙→明亮金黄）→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=9 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
       "orderRef": "n/a",
       "status": "cleared",
       "legalReview": "pending-G3D-17"
@@ -1021,7 +1021,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "texture/t04-wheat/256/baseColor",
     "file": "assets/textures/pbr/t04-wheat/256/baseColor.ktx2",
     "kind": "texture",
-    "bytes": 7927,
+    "bytes": 7538,
     "tier": "low",
     "source": "ai-generated",
     "license": {
@@ -1030,7 +1030,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "author": "Grok Bot GenerateImage（AI 生成，俞孟凡 / GoDesk 委托）",
       "obtainedAt": "2026-10-08",
       "modified": true,
-      "modificationNote": "AI 生图（R19 虹夏 wheat-field）；源图 assets/ai-textures/r19/wheat-field.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=9 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→回卷填充 Lanczos 缩至 256²→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
+      "modificationNote": "AI 生图（R19 虹夏 wheat-field）；源图 assets/ai-textures/r19/wheat-field.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R22 金黄化（scripts/bake-ai-r20.py golden_wheat：HSV 色相 +6°、饱和 ×0.8、明度 gamma 0.74 提亮，琥珀橙→明亮金黄）→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=9 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→回卷填充 Lanczos 缩至 256²→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
       "orderRef": "n/a",
       "status": "cleared",
       "legalReview": "pending-G3D-17"
@@ -1192,7 +1192,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "texture/t06-sand/512/baseColor",
     "file": "assets/textures/pbr/t06-sand/512/baseColor.ktx2",
     "kind": "texture",
-    "bytes": 15281,
+    "bytes": 13067,
     "tier": "high-medium",
     "source": "ai-generated",
     "license": {
@@ -1201,7 +1201,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "author": "Grok Bot GenerateImage（AI 生成，俞孟凡 / GoDesk 委托）",
       "obtainedAt": "2026-10-08",
       "modified": true,
-      "modificationNote": "AI 生图（R19 虹夏 sand）；源图 assets/ai-textures/r19/sand.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=8 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
+      "modificationNote": "AI 生图（R19 虹夏 sand）；源图 assets/ai-textures/r19/sand.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R22 淡沙化（scripts/bake-ai-r20.py pale_sand：HSV 色相 +4°、饱和 ×0.72、明度 gamma 0.78 提亮，暖米→浅沙色）→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=8 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
       "orderRef": "n/a",
       "status": "cleared",
       "legalReview": "pending-G3D-17"
@@ -1249,7 +1249,7 @@ export const ASSET_MANIFEST = Object.freeze([
     "id": "texture/t06-sand/256/baseColor",
     "file": "assets/textures/pbr/t06-sand/256/baseColor.ktx2",
     "kind": "texture",
-    "bytes": 6555,
+    "bytes": 5868,
     "tier": "low",
     "source": "ai-generated",
     "license": {
@@ -1258,7 +1258,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "author": "Grok Bot GenerateImage（AI 生成，俞孟凡 / GoDesk 委托）",
       "obtainedAt": "2026-10-08",
       "modified": true,
-      "modificationNote": "AI 生图（R19 虹夏 sand）；源图 assets/ai-textures/r19/sand.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=8 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→回卷填充 Lanczos 缩至 256²→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
+      "modificationNote": "AI 生图（R19 虹夏 sand）；源图 assets/ai-textures/r19/sand.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R22 淡沙化（scripts/bake-ai-r20.py pale_sand：HSV 色相 +4°、饱和 ×0.72、明度 gamma 0.78 提亮，暖米→浅沙色）→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=8 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→回卷填充 Lanczos 缩至 256²→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
       "orderRef": "n/a",
       "status": "cleared",
       "legalReview": "pending-G3D-17"

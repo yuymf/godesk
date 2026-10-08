@@ -61,6 +61,7 @@ import {
   HEX_ISLAND_LIGHTING,
   SCENE_TOKENS,
   TERRAIN_MATERIALS,
+  TILE_BASE_SCALE,
   TILE_FACE_RADIUS,
   islandBounds,
   pbrResolutionFor,
@@ -226,6 +227,15 @@ function sharedTileGeom(): BufferGeometry {
     // R21: face radius 0.99 (was TILE_RADIUS − 0.04 = 0.91) → hairline light seams instead of a dark grid.
     const geom = new ExtrudeGeometry(hexShape(TILE_FACE_RADIUS, 0), { depth: 0.28, bevelEnabled: false });
     geom.rotateX(-Math.PI / 2);
+    // R22: faces touch (radius 1.0); the sides taper inward toward the base so neighbours leave no open slot
+    // (no dark 1px side / shadow line) and outer sides stay tucked inside the coast wall top.
+    const pos = geom.getAttribute("position");
+    for (let i = 0; i < pos.count; i += 1) {
+      const k = TILE_BASE_SCALE + (1 - TILE_BASE_SCALE) * Math.min(1, Math.max(0, pos.getY(i) / 0.28));
+      pos.setXYZ(i, pos.getX(i) * k, pos.getY(i), pos.getZ(i) * k);
+    }
+    pos.needsUpdate = true;
+    geom.computeVertexNormals();
     SHARED_TILE_GEOM = geom;
   }
   return SHARED_TILE_GEOM;

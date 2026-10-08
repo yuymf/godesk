@@ -17,6 +17,7 @@ import {
   TILE_TOP,
   SHEEP_CLUMP_GAP,
   SHEEP_CLUMP_RADIUS,
+  WHEAT_STRETCH_MIN,
 } from "./terrain-props";
 
 const tiles = dressingInputs(beginnerSceneInput()).tiles;
@@ -287,5 +288,37 @@ describe("G3D-PROPS terrain props", () => {
       }
     }
     expect(SHEEP_CLUMP_GAP).toBeGreaterThan(SHEEP_CLUMP_RADIUS * 2);
+  });
+});
+
+describe("R22 wheat wave + forest haze", () => {
+  it("wood hexes carry no translucent canopy cards (light-green haze in close view)", () => {
+    for (const tier of ["high", "medium", "low"] as const) {
+      expect(PROP_COUNTS[tier].wood?.canopy ?? 0, tier).toBe(0);
+      expect(layoutProps(tiles, tier).get("canopy") ?? []).toHaveLength(0);
+    }
+  });
+
+  it("wheat rows undulate in direction and height but stay low (rendered < 0.18)", () => {
+    const geom = buildPropGeometry("wheatrow");
+    geom.computeBoundingBox();
+    const h = geom.boundingBox!.max.y - geom.boundingBox!.min.y;
+    geom.dispose();
+    for (const tier of ["high", "medium"] as const) {
+      for (const tile of tiles.filter((t) => t.terrain === "wheat")) {
+        const rows = placeTileProps(tile, PROP_COUNTS[tier].wheat!).filter((p) => p.kind === "wheatrow");
+        expect(rows.length).toBeGreaterThanOrEqual(6);
+        for (const r of rows) {
+          expect(h * r.scale * r.stretch, `${tile.q},${tile.r}`).toBeLessThan(0.18);
+          expect(r.stretch).toBeGreaterThanOrEqual(WHEAT_STRETCH_MIN - 1e-9);
+        }
+        const stretches = rows.map((r) => r.stretch);
+        // height wave: rows clearly differ in height (not one flat hedge)
+        expect(Math.max(...stretches) - Math.min(...stretches), `${tile.q},${tile.r}`).toBeGreaterThan(0.15);
+        // direction wave: row yaws spread more than the R21 ±0.03 jitter
+        const yaws = rows.map((r) => r.yaw);
+        expect(Math.max(...yaws) - Math.min(...yaws), `${tile.q},${tile.r}`).toBeGreaterThan(0.2);
+      }
+    }
   });
 });

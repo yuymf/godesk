@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { defaultRenderSpec } from "../creator/render-spec";
 import { TIER_CAPS } from "./tiers";
+import { HEX_LAYOUT_RADIUS } from "./island";
+import { SEAM_HALF_WIDTH, SOFT_EDGE_STRENGTH, TERRAIN_SATURATION } from "./materials";
 import {
   HEX_ISLAND_LIGHTING,
   PROP_MATERIALS,
+  TILE_BASE_SCALE,
+  TILE_FACE_RADIUS,
   SCENE_TOKENS,
   SEAT_COLORS,
   TERRAIN_MATERIALS,
@@ -135,5 +139,42 @@ describe("R19 hex island brightness", () => {
     for (const key of ["wood", "brick", "sheep", "wheat", "ore", "desert"]) {
       expect(TERRAIN_MATERIALS[key]!.brush, key).toBeGreaterThan(0.6);
     }
+  });
+});
+
+describe("R22 resource colour + seams", () => {
+  const rgb = (hex: string) => {
+    const n = Number.parseInt(hex.slice(1), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255] as const;
+  };
+
+  it("soft hex-edge band ≤ 25% and terrain saturation no longer pulled toward grey", () => {
+    expect(SOFT_EDGE_STRENGTH).toBeGreaterThan(0);
+    expect(SOFT_EDGE_STRENGTH).toBeLessThanOrEqual(0.25);
+    expect(TERRAIN_SATURATION).toBeGreaterThanOrEqual(1);
+    expect(TERRAIN_SATURATION).toBeLessThanOrEqual(1.2);
+  });
+
+  it("tile top faces touch (no open slot → no dark 1px side line); sides taper inside the coast wall", () => {
+    expect(TILE_FACE_RADIUS).toBeCloseTo(HEX_LAYOUT_RADIUS, 6);
+    expect(TILE_BASE_SCALE).toBeLessThan(1);
+    // at the coast-wall top (y 0.24 of 0.28) the tile side stays ≥ 0.008 inside the wall plane
+    const atWallTop = TILE_FACE_RADIUS * (TILE_BASE_SCALE + (1 - TILE_BASE_SCALE) * (0.24 / 0.28));
+    expect(HEX_LAYOUT_RADIUS - atWallTop).toBeGreaterThan(0.008);
+    expect(SEAM_HALF_WIDTH).toBeGreaterThan(0);
+    expect(SEAM_HALF_WIDTH).toBeLessThan(0.012);
+  });
+
+  it("hex key light is no longer orange (G/R ≥ 0.9, B/R ≥ 0.75) so wheat / desert / ore keep their hue", () => {
+    const [r, g, b] = rgb(HEX_ISLAND_LIGHTING.sun.color);
+    expect(g / r).toBeGreaterThanOrEqual(0.9);
+    expect(b / r).toBeGreaterThanOrEqual(0.75);
+  });
+
+  it("wheat tint leans golden-yellow (G close to R), desert tint paler than R21", () => {
+    const [wr, wg] = rgb(TERRAIN_MATERIALS.wheat!.base);
+    expect(wg / wr).toBeGreaterThan(0.93);
+    const lum = (hex: string) => { const [r, g, b] = rgb(hex); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+    expect(lum(TERRAIN_MATERIALS.desert!.base)).toBeGreaterThan(lum("#d2c29e"));
   });
 });
