@@ -92,13 +92,15 @@ const FRAG_COLOR = [
   // round-3d：场外直接深水，抹掉 ±half 方形 UV 环接缝。
   "  float fieldEdge = smoothstep(uTideHalf * 0.82, uTideHalf * 1.02, max(abs(vTideWorld.x), abs(vTideWorld.z)));",
   "  float d = mix(dTex, 1.0, fieldEdge);",
-  // R12：绘本感 — 近岸青绿更快沉入中/远深蓝，崖脚白沫加宽可读。
-  "  vec3 tideNear = mix(uTideShallow, uTideDeep, 0.32);",
-  "  vec3 tideMid = mix(uTideShallow, uTideDeep, 0.72);",
-  "  vec3 tideFar = mix(uTideShallow, uTideDeep, 0.98);",
-  "  vec3 waterCol = mix(uTideShallow, tideNear, smoothstep(0.0, 0.04, d));",
-  "  waterCol = mix(waterCol, tideMid, smoothstep(0.04, 0.28, d));",
-  "  waterCol = mix(waterCol, tideFar, smoothstep(0.28, 0.85, d));",
+  // R20：明亮青绿海 + 岛周一圈浅滩环（settlecoast 读感，自有实现）。
+  // 0–0.05 浅滩核心（亮水绿）→ 0.15 环缘（落差处一道浅色唇线）→ 0.45 中海青绿 → 0.95 外海（仍是亮青，不回深蓝）。
+  "  vec3 tideRing = mix(uTideShallow, uTideDeep, 0.22);",
+  "  vec3 tideMid = mix(uTideShallow, uTideDeep, 0.66);",
+  "  vec3 waterCol = mix(uTideShallow, tideRing, smoothstep(0.03, 0.11, d));",
+  "  waterCol = mix(waterCol, tideMid, smoothstep(0.12, 0.2, d));",
+  "  waterCol = mix(waterCol, uTideDeep, smoothstep(0.24, 0.95, d));",
+  "  float ringLip = exp(-pow((d - 0.125) / 0.018, 2.0));",
+  "  waterCol = mix(waterCol, uTideShallow * 1.06, ringLip * 0.35);",
   // R14：在 R13 切向笔触上提高默认机位浪脊密度与节奏分段（自有算法，非抄 settlecoast）。
   "  vec2 fuv = vTideWorld.xz * 0.78 + vec2(uTideTime * 0.028 * uTideWaveS, uTideTime * -0.02 * uTideWaveS);",
   "  float foamN = texture2D(uTideFoamMap, fuv).r;",
@@ -189,7 +191,7 @@ export function createTideWaterMaterial(
       .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>\n${FRAG_NORMAL}`);
   };
   material.customProgramCacheKey = () =>
-    `tide-r14b-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
+    `tide-r20-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
 
   return {
     material,

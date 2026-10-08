@@ -38,9 +38,9 @@ export const WATER_FAR_HALF_EXTENT = WATER_SEA_HALF_EXTENT;
 
 
 const DEFAULT_SPEC: TideWaterSpec = {
-  // R12：更深青绿→海军蓝过渡；浪略高便于岸线读感。
-  shallow: "#216f6c",
-  deep: "#031828",
+  // R20：明亮青绿（浅滩环亮水绿 → 外海亮青），不再沉到海军蓝；浪高不变。
+  shallow: "#26b2aa",
+  deep: "#065a6a",
   waveHeight: 0.065,
   waveSpeed: 0.55,
   foam: 1.0,
@@ -206,7 +206,7 @@ export async function createWaterController(options: {
       uniforms.uTideFoam.value = features.foam ? spec.foam : 0;
       waveHeightBase = features.waveCount === 0 ? 0 : spec.waveHeight;
       material.customProgramCacheKey = () =>
-        `tide-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
+        `tide-r20-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
       material.needsUpdate = true;
     },
     rebuildDistance,

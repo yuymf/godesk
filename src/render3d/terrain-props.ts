@@ -8,8 +8,10 @@
  * R17：羊→牧场色斑溶合 + hex 面油彩连片；林冠远景几何伞继续压、近景 brushCard 不回退。
  * R18：画面色块完全溶进地表 — 羊/牧场色斑压暗贴地 + 底部 alpha 溶入 hex 底色（真地表透出）；
  *      林冠由车削几何伞改为手绘团簇（jag 块面 + 逐面明度笔触），近景 brushCard 羽化保留。
+ * R20：a 机位先读 hex 色面 — 林/矿 prop 降高、缩体积、减密度（稀疏贴地）；low 档（手机省电）
+ *      林地仍有矮树（只建 2 个 InstancedMesh），不再读成褐色地面；羊 3–5 只一簇、簇间留空。
  * - 每种道具 **一个 InstancedMesh**（≤1 draw call / 类型，阴影 pass 另计），共享一份顶点色材质，
- *   instanceColor 做色调变化。**low 档零道具**（不建任何网格）。
+ *   instanceColor 做色调变化。**low 档只有林地矮树**（其余地形零道具）。
  * - 摆放：按格子 (q,r) 播种的确定性拒绝采样，只落在六角内缩区域里，避开中心数字筹码 / 强盗、
  *   角上的渔村与边上的栈道。
  */
@@ -63,29 +65,47 @@ type Counts = Partial<Record<PropKind, number>>;
 /** 每格数量：terrain → kind → count。low 档全 0。 */
 export const PROP_COUNTS: Record<RenderTierId, Record<string, Counts>> = {
   high: {
-    // R11: denser forest / flock / wheat rows toward left-screen painterly read.
-    wood: { pineTall: 24, pineRound: 26, pineSmall: 18, canopy: 18, blobshadow: 68 },
-    sheep: { trough: 1, sheep: 7, blobshadow: 1 },
-    ore: { boulder: 9, pebble: 13, blobshadow: 9 },
+    // R20: sparse, low, ground-hugging forest / ore so the hex colour face reads first at camera a.
+    wood: { pineTall: 8, pineRound: 10, pineSmall: 12, canopy: 5, blobshadow: 30 },
+    // R20: 8 sheep in 2 clumps (3–5 each) — see SHEEP_CLUMPS.
+    sheep: { trough: 1, sheep: 8, blobshadow: 1 },
+    ore: { boulder: 4, pebble: 8, blobshadow: 4 },
     brick: { clay: 8, bricks: 4 },
     wheat: { wheatrow: 38, sheaf: 5 },
     desert: { dune: 5, pebble: 9 },
   },
   medium: {
-    wood: { pineTall: 14, pineRound: 16, pineSmall: 10, canopy: 8, blobshadow: 40 },
-    sheep: { trough: 1, sheep: 5, blobshadow: 1 },
-    ore: { boulder: 5, pebble: 7, blobshadow: 5 },
+    wood: { pineTall: 5, pineRound: 7, pineSmall: 9, canopy: 3, blobshadow: 21 },
+    sheep: { trough: 1, sheep: 6, blobshadow: 1 },
+    ore: { boulder: 3, pebble: 5, blobshadow: 3 },
     brick: { clay: 5, bricks: 3 },
     wheat: { wheatrow: 24, sheaf: 3 },
     desert: { dune: 3, pebble: 5 },
   },
-  low: {},
+  // R20: phone power-save keeps a few short trees on forest hexes (2 instanced meshes, no shadows)
+  // so wood never reads as bare brown ground; every other terrain stays prop-free.
+  low: {
+    wood: { pineRound: 5, pineSmall: 8 },
+  },
 };
+
+/** R20 羊群：每格分几簇、每簇几只（3–5，簇间留空）；按格子种子在候选里选一种。 */
+export const SHEEP_CLUMPS: Record<number, ReadonlyArray<readonly number[]>> = {
+  8: [[5, 3], [4, 4], [3, 5]],
+  6: [[3, 3]],
+  5: [[5]],
+  4: [[4]],
+  3: [[3]],
+};
+/** 簇内羊间距 / 簇半径 / 簇心最小间距（簇间留空）。 */
+export const SHEEP_CLUMP_SPACING = 0.18;
+export const SHEEP_CLUMP_RADIUS = 0.24;
+export const SHEEP_CLUMP_GAP = 0.8;
 
 /** 道具间最小间距（相邻两件取均值）。 */
 const SPACING: Record<PropKind, number> = {
   // R11: ~12% tighter pack so higher counts still land inside the hex.
-  pineTall: 0.095, pineRound: 0.11, pineSmall: 0.078, canopy: 0.105, sheep: 0.27, trough: 0.2, boulder: 0.16, clay: 0.18, bricks: 0.15, sheaf: 0.105, wheatrow: 0.088, dune: 0.26, pebble: 0.065, blobshadow: 0.07,
+  pineTall: 0.12, pineRound: 0.13, pineSmall: 0.1, canopy: 0.14, sheep: SHEEP_CLUMP_SPACING, trough: 0.2, boulder: 0.16, clay: 0.18, bricks: 0.15, sheaf: 0.105, wheatrow: 0.088, dune: 0.26, pebble: 0.065, blobshadow: 0.07,
 };
 const CASTS: Record<PropKind, boolean> = {
   pineTall: true, pineRound: true, pineSmall: true, canopy: false, sheep: false, trough: true, boulder: true, clay: false, bricks: true, sheaf: true, wheatrow: true, dune: false, pebble: false, blobshadow: false,
@@ -345,16 +365,15 @@ function troughGeometry(): BufferGeometry {
   ]);
 }
 
-/** R15/R16 山地：剪影保持；岩色贴 ore tile #6a6f78，根脚溶入灰石面。 */
+/** R20 山地：低矮贴地的岩块群（≈R19 一半高、体量 ~0.7×），岩色贴 ore tile，根脚溶入灰石面。 */
 function boulderGeometry(): BufferGeometry {
   return merged([
-    paint(jag(at(new DodecahedronGeometry(0.11, 1), 0, 0.09, 0, 1.35, 1.05, 1.15), 0.14, 1), "#6a6f78", 0.28),
-    paint(jag(at(new DodecahedronGeometry(0.075, 1), 0.08, 0.16, -0.04, 1.1, 1.2, 0.95, 0.5), 0.12, 3), "#5e646c", 0.26),
-    paint(jag(at(new DodecahedronGeometry(0.055, 0), -0.06, 0.22, 0.05, 1.0, 1.15, 0.9, -0.4), 0.1, 5), "#788088", 0.24),
-    paint(jag(at(new DodecahedronGeometry(0.035, 0), 0.02, 0.28, 0.0, 1.1, 0.7, 1.0), 0.08, 7), "#a0a6ae", 0.2),
-    paint(jag(at(new DodecahedronGeometry(0.05, 0), -0.1, 0.05, 0.08, 1.2, 0.7, 1.0, 1.1), 0.1, 2), "#565a62", 0.26),
+    paint(jag(at(new DodecahedronGeometry(0.085, 1), 0, 0.035, 0, 1.4, 0.62, 1.15), 0.14, 1), "#747a82", 0.26),
+    paint(jag(at(new DodecahedronGeometry(0.06, 1), 0.075, 0.06, -0.035, 1.1, 0.78, 0.95, 0.5), 0.12, 3), "#6a7078", 0.24),
+    paint(jag(at(new DodecahedronGeometry(0.045, 0), -0.06, 0.075, 0.04, 1.0, 0.8, 0.9, -0.4), 0.1, 5), "#848b93", 0.22),
+    paint(jag(at(new DodecahedronGeometry(0.04, 0), -0.09, 0.02, 0.07, 1.2, 0.6, 1.0, 1.1), 0.1, 2), "#62676e", 0.24),
     // ground-bleed skirt
-    grad(at(new CircleGeometry(0.14, 10), 0, 0.003, 0, 1.2, 1, 1.1).rotateX(-Math.PI / 2), "#5a6068", "#6a6f78", 0, 0.01, 0.1),
+    grad(at(new CircleGeometry(0.12, 10), 0, 0.003, 0, 1.2, 1, 1.1).rotateX(-Math.PI / 2), "#6a7078", "#7a7f86", 0, 0.01, 0.1),
   ]);
 }
 
@@ -517,6 +536,10 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
         [candidates[i], candidates[j]] = [candidates[j]!, candidates[i]!];
       }
     }
+    if (kind === "sheep") {
+      placeSheepClumps(tile, want, rand, taken, free, out);
+      continue;
+    }
     let placed = 0;
     for (let attempt = 0; placed < want && attempt < 1200; attempt += 1) {
       let dx: number;
@@ -536,25 +559,24 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
         terrain: tile.terrain,
         x: tile.center[0] + dx,
         // R16: slight sink into hex face so props read rooted / painted-in (not floating toys).
-        y: kind === "canopy" ? TILE_TOP + 0.2 + rand() * 0.08
-          : kind === "sheep" ? TILE_TOP
+        y: kind === "canopy" ? TILE_TOP + 0.11 + rand() * 0.04
           : isPine(kind) || kind === "boulder" || kind === "clay" || kind === "bricks" || kind === "wheatrow" || kind === "sheaf"
             ? TILE_TOP - 0.012
             : TILE_TOP,
         z: tile.center[2] + dz,
         yaw: kind === "wheatrow" ? -rowYaw + (rand() - 0.5) * 0.06 : rand() * Math.PI * 2,
+        // R20: smaller / lower trees + boulders (ground-hugging, hex face reads first).
         scale: isPine(kind)
-          ? (kind === "pineTall" ? 0.95 + rand() * 0.45 : kind === "pineRound" ? 0.9 + rand() * 0.4 : 0.85 + rand() * 0.35)
-          : kind === "canopy" ? 0.95 + rand() * 0.35
-          : kind === "sheep" ? 0.92 + rand() * 0.16
-          : kind === "boulder" ? 1.05 + rand() * 0.35
+          ? (kind === "pineTall" ? 0.6 + rand() * 0.18 : kind === "pineRound" ? 0.62 + rand() * 0.18 : 0.66 + rand() * 0.2)
+          : kind === "canopy" ? 0.62 + rand() * 0.18
+          : kind === "boulder" ? 0.8 + rand() * 0.25
           : kind === "clay" || kind === "bricks" ? 1.0 + rand() * 0.28
           : 0.95 + rand() * 0.3,
         stretch: isPine(kind)
-          ? (kind === "pineTall" ? 1.05 + rand() * 0.25 : kind === "pineRound" ? 0.85 + rand() * 0.25 : 0.9 + rand() * 0.2)
-          : kind === "canopy" ? 0.7 + rand() * 0.35
+          ? (kind === "pineTall" ? 0.82 + rand() * 0.14 : kind === "pineRound" ? 0.78 + rand() * 0.14 : 0.8 + rand() * 0.14)
+          : kind === "canopy" ? 0.6 + rand() * 0.2
           : kind === "wheatrow" ? 1.05 + rand() * 0.12
-          : kind === "boulder" ? 1.1 + rand() * 0.25
+          : kind === "boulder" ? 0.85 + rand() * 0.2
           : kind === "clay" ? 1.05 + rand() * 0.2
           : 0.92 + rand() * 0.16,
         tone: rand(),
@@ -585,6 +607,78 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
     }
   }
   return out;
+}
+
+/**
+ * R20 羊群成簇：先选簇心（彼此 ≥ SHEEP_CLUMP_GAP，簇间留空），每簇 3–5 只挤在 SHEEP_CLUMP_RADIUS 内，
+ * 同簇朝向相近（一起低头吃草）。确定性；放不下时退回整格拒绝采样，保证数量不变。
+ */
+function placeSheepClumps(
+  tile: PropTile,
+  want: number,
+  rand: () => number,
+  taken: Array<{ x: number; z: number; s: number }>,
+  free: (x: number, z: number, s: number) => boolean,
+  out: PropPlacement[],
+): void {
+  const options = SHEEP_CLUMPS[want] ?? [[want]];
+  const sizes = options[Math.floor(rand() * options.length)]!;
+  const s = SHEEP_CLUMP_SPACING;
+  const centers: Array<[number, number]> = [];
+  const push = (dx: number, dz: number, yaw: number) => {
+    taken.push({ x: dx, z: dz, s });
+    out.push({
+      kind: "sheep", terrain: tile.terrain, x: tile.center[0] + dx, y: TILE_TOP, z: tile.center[2] + dz,
+      yaw, scale: 0.94 + rand() * 0.14, stretch: 0.92 + rand() * 0.16, tone: rand(), hue: rand(),
+    });
+  };
+  let placed = 0;
+  for (const size of sizes) {
+    // try several clump centres; a clump that cannot reach its size is rolled back (no stragglers)
+    for (let tryCenter = 0; tryCenter < 12; tryCenter += 1) {
+      let center: [number, number] | null = null;
+      for (let attempt = 0; attempt < 400 && !center; attempt += 1) {
+        const cx = (rand() * 2 - 1) * 0.62;
+        const cz = (rand() * 2 - 1) * 0.62;
+        if (!inPropRegion(cx, cz) || hexMetric(cx, cz) > PROP_HEX_INSET - 0.12) continue;
+        if (centers.some(([x, z]) => Math.hypot(x - cx, z - cz) < SHEEP_CLUMP_GAP)) continue;
+        if (!free(cx, cz, s)) continue;
+        center = [cx, cz];
+      }
+      if (!center) break;
+      const takenMark = taken.length;
+      const outMark = out.length;
+      const herdYaw = rand() * Math.PI * 2;
+      const members: Array<[number, number]> = [];
+      for (let attempt = 0; members.length < size && attempt < 800; attempt += 1) {
+        // grow the clump: each new sheep sits next to an existing member (s … 1.3 s away), inside the clump radius
+        const [mx, mz] = members.length ? members[Math.floor(rand() * members.length)]! : center;
+        const a = rand() * Math.PI * 2;
+        const r = members.length ? s * (1 + rand() * 0.3) : 0;
+        const dx = mx + Math.cos(a) * r;
+        const dz = mz + Math.sin(a) * r;
+        if (Math.hypot(dx - center[0], dz - center[1]) > SHEEP_CLUMP_RADIUS) continue;
+        if (!inPropRegion(dx, dz) || !free(dx, dz, s)) continue;
+        members.push([dx, dz]);
+        push(dx, dz, herdYaw + (rand() - 0.5) * 1.1);
+      }
+      if (members.length === size) {
+        centers.push(center);
+        placed += size;
+        break;
+      }
+      taken.length = takenMark;
+      out.length = outMark;
+    }
+  }
+  // fallback: keep the count even on cramped hexes
+  for (let attempt = 0; placed < want && attempt < 1200; attempt += 1) {
+    const dx = (rand() * 2 - 1) * 0.8;
+    const dz = (rand() * 2 - 1) * 0.8;
+    if (!inPropRegion(dx, dz) || !free(dx, dz, s)) continue;
+    push(dx, dz, rand() * Math.PI * 2);
+    placed += 1;
+  }
 }
 
 export function layoutProps(tiles: readonly PropTile[], tier: RenderTierId): Map<PropKind, PropPlacement[]> {

@@ -198,3 +198,4 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 2026-10-07 | G3D-JUDGE round-5p 刀序③+④（`feat/g3d-judge-r5-pieces`）：房屋体积/强盗剪影放大；Kenney 调研无房屋 glTF；强盗 hop + 资源 +N 弹出加强；手写（Codex 额度用尽） | Track C |
 | 2026-10-07 | G3D-JUDGE round-6tex 刀序①：CC0 重烘焙 t01–t11 PBR（去 AI 塑性感）；棋子 UV+木纹 albedo×VC；手写 | Track TEX |
 | 2026-10-08 | G3D-JUDGE round-19（#148）：merge main `bdd69b0` + verify:assets 登记修复 `6de59d7`；白羊小羊群 + 虹夏 8 张 AI 贴图（t01–t06 baseColor / 岩壁 / 港口牌）+ b3 油彩 dab 加强 + 整体提亮去饱和 + 开局 1.0s 淡入；轨迹 [`docs/prompt-trace/2026-10-08-g3d-judge-r19.md`](./prompt-trace/2026-10-08-g3d-judge-r19.md)；未达标（自评），不合入 | Track D |
+| 2026-10-08 | G3D-JUDGE round-20（#148）：AI 贴图色块化 + Kuwahara 绘本化重烘焙（`scripts/bake-ai-r20.py`）+ 林/矿 prop 降高减密、低档林地矮树 + 明亮青绿水面与岛周浅滩环 + 羊 3–5 只成簇；轨迹 [`docs/prompt-trace/2026-10-08-g3d-judge-r20.md`](./prompt-trace/2026-10-08-g3d-judge-r20.md)；未达标（自评），不合入 | Track D |

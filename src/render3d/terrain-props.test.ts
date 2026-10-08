@@ -15,6 +15,8 @@ import {
   createSheepDissolveMaterial,
   SHEEP_DISSOLVE_BAND,
   TILE_TOP,
+  SHEEP_CLUMP_GAP,
+  SHEEP_CLUMP_RADIUS,
 } from "./terrain-props";
 
 const tiles = dressingInputs(beginnerSceneInput()).tiles;
@@ -43,21 +45,32 @@ describe("G3D-PROPS terrain props", () => {
       for (const p of props) expect(inPropRegion(p.x - tile.center[0], p.z - tile.center[2])).toBe(true);
     }
     const woodHigh = PROP_COUNTS.high.wood!;
-    expect((woodHigh.pineTall ?? 0) + (woodHigh.pineRound ?? 0) + (woodHigh.pineSmall ?? 0)).toBeGreaterThanOrEqual(50);
-    expect(woodHigh.canopy ?? 0).toBeGreaterThanOrEqual(12);
+    // R20: sparse ground-hugging forest (hex face reads first) — still a forest, far below R19's 68.
+    const trees = (woodHigh.pineTall ?? 0) + (woodHigh.pineRound ?? 0) + (woodHigh.pineSmall ?? 0);
+    expect(trees).toBeGreaterThanOrEqual(20);
+    expect(trees).toBeLessThanOrEqual(36);
+    expect(woodHigh.canopy ?? 0).toBeLessThanOrEqual(8);
+    expect(PROP_COUNTS.high.ore!.boulder ?? 0).toBeLessThanOrEqual(5);
     // R19: a small readable flock (settlecoast-like), not a shrub carpet.
     expect(PROP_COUNTS.high.sheep!.sheep).toBeGreaterThanOrEqual(5);
     expect(PROP_COUNTS.high.sheep!.sheep).toBeLessThanOrEqual(9);
     expect(PROP_COUNTS.high.wheat!.wheatrow ?? 0).toBeGreaterThanOrEqual(36);
   });
 
-  it("is deterministic; medium is reduced and low is empty", () => {
+  it("is deterministic; medium is reduced and low keeps only short forest trees", () => {
     expect(layoutProps(tiles, "high")).toEqual(layoutProps(tiles, "high"));
     const high = total(layoutProps(tiles, "high"));
     const medium = total(layoutProps(tiles, "medium"));
     expect(medium).toBeGreaterThan(0);
     expect(medium).toBeLessThan(high);
-    expect(total(layoutProps(tiles, "low"))).toBe(0);
+    // R20: low tier (phone power-save) — forests still show short trees, nothing else.
+    const low = layoutProps(tiles, "low");
+    expect(total(low)).toBeGreaterThan(0);
+    expect(total(low)).toBeLessThan(medium);
+    expect([...low.keys()].sort()).toEqual(["pineRound", "pineSmall"]);
+    for (const list of low.values()) expect(list.every((p) => p.terrain === "wood")).toBe(true);
+    const woodTiles = tiles.filter((t) => t.terrain === "wood").length;
+    expect(total(low)).toBeGreaterThanOrEqual(woodTiles * 10);
   });
 
   it("uses at most one instanced mesh (draw call) per prop type", () => {
@@ -68,7 +81,9 @@ describe("G3D-PROPS terrain props", () => {
     expect(layer.stats().meshes).toBeLessThanOrEqual(PROP_KINDS.length);
     expect(layer.group.children.every((c) => (c as { isInstancedMesh?: boolean }).isInstancedMesh)).toBe(true);
     layer.sync(tiles, "low", false);
-    expect(layer.stats().meshes).toBe(0);
+    // R20: low = 2 meshes (short pines), no shadows
+    expect(layer.stats().meshes).toBe(2);
+    expect(layer.group.children.every((c) => !(c as { castShadow?: boolean }).castShadow)).toBe(true);
     layer.dispose();
   });
 
@@ -121,7 +136,9 @@ describe("G3D-PROPS terrain props", () => {
     clay.computeBoundingBox();
     bricks.computeBoundingBox();
     const h = (g: ReturnType<typeof buildPropGeometry>) => g.boundingBox!.max.y - g.boundingBox!.min.y;
-    expect(h(boulder)).toBeGreaterThan(0.28);
+    // R20: low ground-hugging rock cluster (R19 was > 0.28 tall)
+    expect(h(boulder)).toBeGreaterThan(0.08);
+    expect(h(boulder)).toBeLessThan(0.16);
     expect(boulder.getAttribute("position").count).toBeGreaterThan(200);
     expect(h(clay)).toBeGreaterThan(0.1);
     expect(bricks.getAttribute("position").count).toBeGreaterThan(80);
@@ -214,5 +231,47 @@ describe("G3D-PROPS terrain props", () => {
       expect(g.boundingBox!.max.x - g.boundingBox!.min.x, kind).toBeGreaterThan(0.12);
       g.dispose();
     }
+  });
+
+  it("R20 forest + ore: lower and smaller than R19 at placement scale", () => {
+    const wood = tiles.find((t) => t.terrain === "wood")!;
+    const props = placeTileProps(wood, PROP_COUNTS.high.wood!);
+    const pines = props.filter((p) => p.kind.startsWith("pine"));
+    // tallest placed tree ≈ geometry height × scale × stretch stays well under the R19 ~0.9
+    const tall = buildPropGeometry("pineTall");
+    tall.computeBoundingBox();
+    const tallH = tall.boundingBox!.max.y - tall.boundingBox!.min.y;
+    for (const p of pines.filter((q) => q.kind === "pineTall")) expect(tallH * p.scale * p.stretch).toBeLessThan(0.5);
+    for (const p of pines) expect(p.scale).toBeLessThanOrEqual(0.86);
+    tall.dispose();
+    const ore = tiles.find((t) => t.terrain === "ore")!;
+    for (const p of placeTileProps(ore, PROP_COUNTS.high.ore!).filter((q) => q.kind === "boulder")) {
+      expect(p.scale * p.stretch).toBeLessThan(1.25);
+    }
+  });
+
+  it("R20 sheep: clumps of 3–5 with gaps between clumps (not a uniform scatter)", () => {
+    for (const tier of ["high", "medium"] as const) {
+      for (const tile of tiles.filter((t) => t.terrain === "sheep")) {
+        const sheep = placeTileProps(tile, PROP_COUNTS[tier].sheep!).filter((p) => p.kind === "sheep");
+        expect(sheep.length).toBe(PROP_COUNTS[tier].sheep!.sheep);
+        // single-linkage clusters at 0.3 (≈ 2× in-clump spacing)
+        const parent = sheep.map((_, i) => i);
+        const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i]!)));
+        for (let i = 0; i < sheep.length; i += 1) {
+          for (let j = i + 1; j < sheep.length; j += 1) {
+            if (Math.hypot(sheep[i]!.x - sheep[j]!.x, sheep[i]!.z - sheep[j]!.z) < 0.3) parent[find(i)] = find(j);
+          }
+        }
+        const sizes = new Map<number, number>();
+        for (let i = 0; i < sheep.length; i += 1) sizes.set(find(i), (sizes.get(find(i)) ?? 0) + 1);
+        for (const n of sizes.values()) {
+          expect(n, `${tier} ${tile.q},${tile.r}`).toBeGreaterThanOrEqual(3);
+          expect(n, `${tier} ${tile.q},${tile.r}`).toBeLessThanOrEqual(5);
+        }
+        if (tier === "high") expect(sizes.size).toBe(2);
+      }
+    }
+    expect(SHEEP_CLUMP_GAP).toBeGreaterThan(SHEEP_CLUMP_RADIUS * 2);
   });
 });

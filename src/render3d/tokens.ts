@@ -89,7 +89,7 @@ export const HEX_ISLAND_LIGHTING = {
   exposure: 1.2,
 } as const satisfies LightingSpec;
 
-/** R19：AI 贴图（虹夏 8 张，scripts/bake-ai-r19.py）为 t01–t06 baseColor；base 提亮去饱和、pbrTint 让贴图色相主导；
+/** R19：AI 贴图（虹夏 8 张；R20 起经 scripts/bake-ai-r20.py 色块化 + Kuwahara 绘本化后烘焙）为 t01–t06 baseColor；base 提亮去饱和、pbrTint 让贴图色相主导；
  *  brush 0.6→0.85：油彩 dab 层在 AI 贴图之上于 b3 近景可见（远景 / 掠射角仍由 fwidth AA 淡回均值）。 */
 /** 地块材质（颜色沿用现有地形色，pattern 按地形，贴图取 G3D-22 套件）。 */
 /** R17: matte hex faces + denser PBR repeat — continuous oil-paint brush, not flat plastic. */
