@@ -81,6 +81,11 @@ async function main() {
       const cv = host?.querySelector("canvas");
       const b = `${host?.getAttribute("data-boot") ?? "-"}|${cv ? getComputedStyle(cv).opacity : "-"}|water=${host?.getAttribute("data-water") ?? "-"}|props=${host?.getAttribute("data-terrain-props") ?? "-"}|pbr=${host?.getAttribute("data-pbr") ?? "-"}`;
       if (b !== lastBoot) { boot.push({ t, b }); lastBoot = b; }
+      // R19: canvas fade length (CSS transition on the 3D canvas) for the boot report.
+      if (cv && !globalThis.__judgeFadeCss) {
+        const d = getComputedStyle(cv).transitionDuration;
+        if (d && d !== "0s") globalThis.__judgeFadeCss = d;
+      }
     }, 100);
     globalThis.__judgePlusN = () => tl;
     globalThis.__judgeBoot = () => boot;
@@ -225,6 +230,22 @@ async function main() {
 
   const plusNTimeline = await page.evaluate(() => globalThis.__judgePlusN?.() ?? []);
   const bootTimeline = await page.evaluate(() => globalThis.__judgeBoot?.() ?? []);
+  const fadeCss = await page.evaluate(() => globalThis.__judgeFadeCss ?? null);
+  // R19 boot summary: veil → reveal (data-boot ready) → canvas fully opaque; no 2D/cream frame in between.
+  const opacityOf = (e) => Number(e.b.split("|")[1]);
+  const revealAt = bootTimeline.find((e) => e.b.startsWith("ready"))?.t ?? null;
+  const firstVisible = bootTimeline.find((e) => opacityOf(e) > 0)?.t ?? null;
+  const fullAt = bootTimeline.find((e) => opacityOf(e) >= 1)?.t ?? null;
+  const fade = {
+    transitionCss: fadeCss,
+    transitionMs: fadeCss ? Math.round(parseFloat(fadeCss) * (fadeCss.endsWith("ms") ? 1 : 1000)) : null,
+    revealAt,
+    firstVisibleAt: firstVisible,
+    opaqueAt: fullAt,
+    sampledFadeMs: firstVisible !== null && fullAt !== null ? fullAt - firstVisible : null,
+    waterOnBeforeReveal: bootTimeline.some((e) => e.b.includes("water=on") && e.b.startsWith("pending")) || bootTimeline.find((e) => e.b.startsWith("ready"))?.b.includes("water=on") === true,
+    pbrAtReveal: bootTimeline.find((e) => e.b.startsWith("ready"))?.b.split("pbr=")[1] ?? null,
+  };
   const rises = plusNTimeline.filter((e) => e.rise);
   const falls = plusNTimeline.filter((e) => !e.rise);
   const riseKinds = [...new Set(rises.map((e) => e.kind))];
@@ -254,6 +275,7 @@ async function main() {
     demoWallMs: Date.now() - tDemo,
     plusN: { riseKinds, rises, falls, ghostToast },
     bootTimeline,
+    fade,
     notes: "b-robber THEN lockCamera; Mesh hop apexHeight=2.6 hold-hover; 3 elevated Y samples; stable +N across apex hold (R9 FYI)",
   };
   await writeFile(OUT.replace(/\.webm$/, ".json"), JSON.stringify(meta, null, 2));

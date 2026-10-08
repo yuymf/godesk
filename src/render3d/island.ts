@@ -30,6 +30,8 @@ import {
   type Texture,
 } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import cliffRockUrl from "../../assets/textures/ai-r19/cliff-rock-512x256.webp?url";
+import harborSignUrl from "../../assets/textures/ai-r19/harbor-sign-256.webp?url";
 import type { SceneVec3 } from "./scene-model";
 import type { RenderTierId } from "./tiers";
 
@@ -147,24 +149,26 @@ export function docksFor(ports: readonly IslandPort[], length = 0.62): Dock[] {
 
 // ── 贴图 ───────────────────────────────────────────────────────────────────
 
-/** 程序化岩壁贴图：深灰褐底 + 水平岩层 + 裂隙 + 苔斑（u 绕一圈，v 自上而下）。 */
-function rockTexture(): Texture | null {
-  if (typeof document === "undefined") return null;
-  const c = document.createElement("canvas");
-  c.width = 512;
-  c.height = 256;
-  const x = c.getContext("2d");
-  if (!x) return null;
+/**
+ * 岩壁贴图（u 绕一圈，v 自上而下）。R19：底图 = 虹夏 AI 崖面（cliff-rock，横向无缝），
+ * 其上以减弱透明度叠回 R14 程序岩层 / 竖缝，湿暗崖脚带与顶部苔斑保持原强度（海岸读感不变）。
+ * 图片异步到达前先画纯程序版本。
+ */
+function drawRock(x: CanvasRenderingContext2D, img: HTMLImageElement | null): void {
+  const k = img ? 0.35 : 1;
   const rand = mulberry32(1337);
   // R14：手绘岸崖体块群 — 不规则岩层带宽 + 湿暗分层 + 疏密竖缝，少同心环读感。
-  x.fillStyle = "#433e39";
-  x.fillRect(0, 0, 512, 256);
+  if (img) x.drawImage(img, 0, 0, 512, 256);
+  else {
+    x.fillStyle = "#433e39";
+    x.fillRect(0, 0, 512, 256);
+  }
   // 大块水平岩层（体块读感）。
   for (let i = 0; i < 9; i += 1) {
     const y = 18 + i * 26 + (rand() - 0.5) * 6;
     const h = 14 + rand() * 16;
     const shade = 48 + Math.floor(rand() * 42);
-    x.fillStyle = `rgba(${shade + 22},${shade + 14},${shade + 4},${0.42 + rand() * 0.32})`;
+    x.fillStyle = `rgba(${shade + 22},${shade + 14},${shade + 4},${(0.42 + rand() * 0.32) * k})`;
     x.beginPath();
     x.moveTo(0, y);
     for (let u = 0; u <= 512; u += 28) x.lineTo(u, y + Math.sin(u * 0.02 + i) * 3.5 + (rand() - 0.5) * 4);
@@ -173,7 +177,7 @@ function rockTexture(): Texture | null {
     x.closePath();
     x.fill();
     // 层顶高光笔触
-    x.strokeStyle = `rgba(${shade + 55},${shade + 45},${shade + 30},${0.18 + rand() * 0.2})`;
+    x.strokeStyle = `rgba(${shade + 55},${shade + 45},${shade + 30},${(0.18 + rand() * 0.2) * k})`;
     x.lineWidth = 1.2;
     x.beginPath();
     x.moveTo(0, y + 1);
@@ -191,7 +195,7 @@ function rockTexture(): Texture | null {
     x.fillRect(0, y0, 512, h);
   }
   // 竖向块缝：疏密不均，把程序环切成岸崖体块群。
-  x.strokeStyle = "rgba(18, 16, 14, 0.72)";
+  x.strokeStyle = `rgba(18, 16, 14, ${0.72 * k})`;
   let ux = 4 + rand() * 18;
   while (ux < 508) {
     x.lineWidth = 1.2 + rand() * 3.4;
@@ -208,7 +212,7 @@ function rockTexture(): Texture | null {
   }
   for (let i = 0; i < 1400; i += 1) {
     const v = Math.floor(rand() * 70);
-    x.fillStyle = `rgba(${v},${v - 4 < 0 ? 0 : v - 4},${v - 8 < 0 ? 0 : v - 8},0.32)`;
+    x.fillStyle = `rgba(${v},${v - 4 < 0 ? 0 : v - 4},${v - 8 < 0 ? 0 : v - 8},${0.32 * k})`;
     x.fillRect(rand() * 512, rand() * 256, 1 + rand() * 3, 1 + rand() * 3);
   }
   // 顶部苔斑（接地块边缘）。
@@ -218,13 +222,36 @@ function rockTexture(): Texture | null {
     x.arc(rand() * 512, rand() * 24, 2 + rand() * 6, 0, Math.PI * 2);
     x.fill();
   }
+}
+
+function rockTexture(): Texture | null {
+  if (typeof document === "undefined") return null;
+  const c = document.createElement("canvas");
+  c.width = 512;
+  c.height = 256;
+  const x = c.getContext("2d");
+  if (!x) return null;
+  drawRock(x, null);
   const tex = new CanvasTexture(c);
   tex.colorSpace = SRGBColorSpace;
   tex.wrapS = RepeatWrapping;
   tex.wrapT = RepeatWrapping;
   tex.repeat.set(3, 1);
   tex.anisotropy = 4;
+  whenImage(cliffRockUrl, (img) => {
+    drawRock(x, img);
+    tex.needsUpdate = true;
+  });
   return tex;
+}
+
+/** R19：异步加载 AI 贴图；失败则保留程序版本。 */
+function whenImage(url: string, onLoad: (img: HTMLImageElement) => void): void {
+  if (typeof Image === "undefined") return;
+  const img = new Image();
+  img.decoding = "async";
+  img.onload = () => onLoad(img);
+  img.src = url;
 }
 
 export const SIGN_KINDS = ["any3", "wood", "brick", "sheep", "wheat", "ore"] as const;
@@ -244,7 +271,56 @@ export function signCell(kind: string): [number, number] {
   return [(i % SIGN_COLS) / SIGN_COLS, 1 - (Math.floor(i / SIGN_COLS) + 1) / SIGN_ROWS];
 }
 
-/** 港口牌图集：羊皮纸圆牌 + 木框，「2:1 / 3:1」+ 资源字。 */
+/** 港口牌图集：R19 底牌 = 虹夏 AI 圆木牌（harbor-sign，无字）+ 中心浅色衬底，「2:1 / 3:1」+ 资源字（奶油描边）。 */
+function drawSigns(x: CanvasRenderingContext2D, cell: number, plate: HTMLImageElement | null): void {
+  x.clearRect(0, 0, cell * SIGN_COLS, cell * SIGN_ROWS);
+  SIGN_KINDS.forEach((kind, i) => {
+    const cx = (i % SIGN_COLS) * cell + cell / 2;
+    const cy = Math.floor(i / SIGN_COLS) * cell + cell / 2;
+    const r = cell * 0.46;
+    if (plate) {
+      // plate disc fills 94% of the source; scale so its rim lands on r
+      const d = (r * 2) / 0.94;
+      x.drawImage(plate, cx - d / 2, cy - d / 2, d, d);
+      const g = x.createRadialGradient(cx, cy, r * 0.1, cx, cy, r * 0.74);
+      g.addColorStop(0, "rgba(251, 241, 216, 0.72)");
+      g.addColorStop(0.7, "rgba(251, 241, 216, 0.5)");
+      g.addColorStop(1, "rgba(251, 241, 216, 0)");
+      x.fillStyle = g;
+      x.beginPath();
+      x.arc(cx, cy, r * 0.74, 0, Math.PI * 2);
+      x.fill();
+    } else {
+      x.fillStyle = "#6b4a2f";
+      x.beginPath();
+      x.arc(cx, cy, r, 0, Math.PI * 2);
+      x.fill();
+      const g = x.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r * 0.86);
+      g.addColorStop(0, "#fbf1d8");
+      g.addColorStop(1, "#e7d3a8");
+      x.fillStyle = g;
+      x.beginPath();
+      x.arc(cx, cy, r * 0.86, 0, Math.PI * 2);
+      x.fill();
+    }
+    const label = SIGN_LABEL[kind]!;
+    x.textAlign = "center";
+    x.textBaseline = "middle";
+    x.lineJoin = "round";
+    x.strokeStyle = "rgba(251, 243, 222, 0.9)";
+    x.lineWidth = cell * 0.035;
+    x.fillStyle = "#2f2a24";
+    x.font = `900 ${Math.round(cell * 0.27)}px "Helvetica Neue", Helvetica, Arial, "Noto Sans", sans-serif`;
+    x.strokeText(label.ratio, cx, cy - cell * 0.12);
+    x.fillText(label.ratio, cx, cy - cell * 0.12);
+    // 第二行（资源）放大到与比例同级，远看可读。
+    x.fillStyle = label.color;
+    x.font = `900 ${Math.round(cell * (label.word.length > 1 ? 0.25 : 0.3))}px "PingFang SC", "Noto Sans CJK SC", "Noto Sans CJK JP", sans-serif`;
+    x.strokeText(label.word, cx, cy + cell * 0.16);
+    x.fillText(label.word, cx, cy + cell * 0.16);
+  });
+}
+
 function signAtlas(): Texture | null {
   if (typeof document === "undefined") return null;
   const cell = 256;
@@ -253,35 +329,14 @@ function signAtlas(): Texture | null {
   c.height = cell * SIGN_ROWS;
   const x = c.getContext("2d");
   if (!x) return null;
-  SIGN_KINDS.forEach((kind, i) => {
-    const cx = (i % SIGN_COLS) * cell + cell / 2;
-    const cy = Math.floor(i / SIGN_COLS) * cell + cell / 2;
-    const r = cell * 0.46;
-    x.fillStyle = "#6b4a2f";
-    x.beginPath();
-    x.arc(cx, cy, r, 0, Math.PI * 2);
-    x.fill();
-    const g = x.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r * 0.86);
-    g.addColorStop(0, "#fbf1d8");
-    g.addColorStop(1, "#e7d3a8");
-    x.fillStyle = g;
-    x.beginPath();
-    x.arc(cx, cy, r * 0.86, 0, Math.PI * 2);
-    x.fill();
-    const label = SIGN_LABEL[kind]!;
-    x.textAlign = "center";
-    x.textBaseline = "middle";
-    x.fillStyle = "#2f2a24";
-    x.font = `900 ${Math.round(cell * 0.27)}px "Helvetica Neue", Helvetica, Arial, "Noto Sans", sans-serif`;
-    x.fillText(label.ratio, cx, cy - cell * 0.12);
-    // 第二行（资源）放大到与比例同级，远看可读。
-    x.fillStyle = label.color;
-    x.font = `900 ${Math.round(cell * (label.word.length > 1 ? 0.25 : 0.3))}px "PingFang SC", "Noto Sans CJK SC", "Noto Sans CJK JP", sans-serif`;
-    x.fillText(label.word, cx, cy + cell * 0.16);
-  });
+  drawSigns(x, cell, null);
   const tex = new CanvasTexture(c);
   tex.colorSpace = SRGBColorSpace;
   tex.anisotropy = 4;
+  whenImage(harborSignUrl, (img) => {
+    drawSigns(x, cell, img);
+    tex.needsUpdate = true;
+  });
   return tex;
 }
 

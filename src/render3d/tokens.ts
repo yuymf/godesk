@@ -33,6 +33,8 @@ export type MaterialToken = {
    * 座位棋子用：彩漆木的木纹底色会把座位色压成棕色，座位色必须可辨认。
    */
   pbrBaseColor?: boolean;
+  /** R19：PBR baseColor 生效时 token.base 向白色 lerp 的比例（缺省 PBR_TINT_TO_WHITE）；AI 贴图自带色相时调高。 */
+  pbrTint?: number;
   /** R18：油彩笔触层强度（仅地块；0 / 缺省 = 无笔触层，崖壁 / 棋子 / 桌面不受影响）。 */
   brush?: number;
 };
@@ -79,15 +81,25 @@ export const SCENE_TOKENS = {
   piece: { roughness: 0.82, metalness: 0, clearcoat: 0 },
 } as const;
 
+/** R19 汐屿六角岛灯光：主光 / 半球光提亮，绘本明亮基调（经 HexSettlementBoard → SceneHost lighting 传入）。 */
+export const HEX_ISLAND_LIGHTING = {
+  sun: { azimuthDeg: 128, elevationDeg: 48, intensity: 3.45, color: "#ffd4a4" },
+  hemisphere: { sky: "#f6eddc", ground: "#d4bf96", intensity: 1.42 },
+  shadow: { enabled: true, softness: 0.92 },
+  exposure: 1.2,
+} as const satisfies LightingSpec;
+
+/** R19：AI 贴图（虹夏 8 张，scripts/bake-ai-r19.py）为 t01–t06 baseColor；base 提亮去饱和、pbrTint 让贴图色相主导；
+ *  brush 0.6→0.85：油彩 dab 层在 AI 贴图之上于 b3 近景可见（远景 / 掠射角仍由 fwidth AA 淡回均值）。 */
 /** 地块材质（颜色沿用现有地形色，pattern 按地形，贴图取 G3D-22 套件）。 */
 /** R17: matte hex faces + denser PBR repeat — continuous oil-paint brush, not flat plastic. */
 export const TERRAIN_MATERIALS: Record<string, MaterialToken> = {
-  wood: { base: "#2f6b3a", roughness: 0.98, metalness: 0, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 1.65, brush: 0.6 },
-  brick: { base: "#b85a3a", roughness: 0.98, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 1.65, brush: 0.6 },
-  sheep: { base: "#8fbf6a", roughness: 0.98, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 1.7, brush: 0.6 },
-  wheat: { base: "#d4b84a", roughness: 0.97, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 1.7, brush: 0.6 },
-  ore: { base: "#6a6f78", roughness: 0.96, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 1.55, brush: 0.6 },
-  desert: { base: "#c9b896", roughness: 0.98, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 1.45, brush: 0.6 },
+  wood: { base: "#46744a", roughness: 0.98, metalness: 0, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 1.65, pbrTint: 0.55, brush: 0.85 },
+  brick: { base: "#bc6646", roughness: 0.98, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 1.65, pbrTint: 0.6, brush: 0.85 },
+  sheep: { base: "#a3c67e", roughness: 0.98, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 1.7, pbrTint: 0.6, brush: 0.85 },
+  wheat: { base: "#d8c070", roughness: 0.97, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 1.7, pbrTint: 0.6, brush: 0.85 },
+  ore: { base: "#7a7f86", roughness: 0.96, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 1.55, pbrTint: 0.6, brush: 0.85 },
+  desert: { base: "#d2c29e", roughness: 0.98, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 1.45, pbrTint: 0.65, brush: 0.85 },
 };
 
 /** 其余物件材质。 */

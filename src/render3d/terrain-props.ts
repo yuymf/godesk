@@ -65,7 +65,7 @@ export const PROP_COUNTS: Record<RenderTierId, Record<string, Counts>> = {
   high: {
     // R11: denser forest / flock / wheat rows toward left-screen painterly read.
     wood: { pineTall: 24, pineRound: 26, pineSmall: 18, canopy: 18, blobshadow: 68 },
-    sheep: { trough: 1, sheep: 22, blobshadow: 23 },
+    sheep: { trough: 1, sheep: 7, blobshadow: 1 },
     ore: { boulder: 9, pebble: 13, blobshadow: 9 },
     brick: { clay: 8, bricks: 4 },
     wheat: { wheatrow: 38, sheaf: 5 },
@@ -73,7 +73,7 @@ export const PROP_COUNTS: Record<RenderTierId, Record<string, Counts>> = {
   },
   medium: {
     wood: { pineTall: 14, pineRound: 16, pineSmall: 10, canopy: 8, blobshadow: 40 },
-    sheep: { trough: 1, sheep: 12, blobshadow: 13 },
+    sheep: { trough: 1, sheep: 5, blobshadow: 1 },
     ore: { boulder: 5, pebble: 7, blobshadow: 5 },
     brick: { clay: 5, bricks: 3 },
     wheat: { wheatrow: 24, sheaf: 3 },
@@ -85,7 +85,7 @@ export const PROP_COUNTS: Record<RenderTierId, Record<string, Counts>> = {
 /** 道具间最小间距（相邻两件取均值）。 */
 const SPACING: Record<PropKind, number> = {
   // R11: ~12% tighter pack so higher counts still land inside the hex.
-  pineTall: 0.095, pineRound: 0.11, pineSmall: 0.078, canopy: 0.105, sheep: 0.14, trough: 0.2, boulder: 0.16, clay: 0.18, bricks: 0.15, sheaf: 0.105, wheatrow: 0.088, dune: 0.26, pebble: 0.065, blobshadow: 0.07,
+  pineTall: 0.095, pineRound: 0.11, pineSmall: 0.078, canopy: 0.105, sheep: 0.27, trough: 0.2, boulder: 0.16, clay: 0.18, bricks: 0.15, sheaf: 0.105, wheatrow: 0.088, dune: 0.26, pebble: 0.065, blobshadow: 0.07,
 };
 const CASTS: Record<PropKind, boolean> = {
   pineTall: true, pineRound: true, pineSmall: true, canopy: false, sheep: false, trough: true, boulder: true, clay: false, bricks: true, sheaf: true, wheatrow: true, dune: false, pebble: false, blobshadow: false,
@@ -308,43 +308,30 @@ function blobShadowGeometry(): BufferGeometry {
   return grad(at(new CircleGeometry(0.1, 12), 0, 0.002, 0, 1, 1, 1).rotateX(-Math.PI / 2), "#1a1814", "#1a1814", 0, 1);
 }
 
-/** R18 羊：剪影仍可读（头/腿），但色斑压暗贴牧场底色、身体压扁贴地；腹下径向溶边片 alpha→0，
- *  配合羊专用材质的底部 alpha / 色相溶合，边缘连续溶进 hex 底色（不再像贴在地上的道具）。 */
+/** R19 羊：白色羊毛小羊群（settlecoast 基准的读感：白绒身体 + 深色头腿，低头吃草），
+ *  脚下只留牧场底色的软溶片（alpha→0，无硬边圆盘、无深色接触阴影）。 */
 function sheepGeometry(): BufferGeometry {
   const leg = (x: number, z: number) =>
-    grad(at(new CylinderGeometry(0.011, 0.009, 0.04, 5, 1, true), x, 0.02, z), "#3e5228", "#526634", 0, 0.04);
-  const blotch = (x: number, y: number, z: number, r: number, sx = 1, sy = 1, sz = 1, lo = "#4c742c", hi = "#6c9040") =>
-    grad(at(new SphereGeometry(r, 7, 4), x, y, z, sx, sy, sz), lo, hi, y - r * sy, y + r * sy, 0.14);
+    grad(at(new CylinderGeometry(0.0115, 0.0095, 0.07, 6, 1, true), x, 0.035, z), "#2a231e", "#3f352d", 0, 0.07);
+  const puff = (x: number, y: number, z: number, r: number) =>
+    grad(at(new SphereGeometry(r, 8, 6), x, y, z), "#d9d3c4", "#fffdf6", y - r, y + r, 0.06);
   const parts: BufferGeometry[] = [
-    // body: flattened meadow-dark color field (closer to rendered pasture, not a light toy blob)
-    grad(at(new SphereGeometry(0.078, 9, 6), 0, 0.078, 0, 1.5, 0.56, 1.12), "#456c26", "#668c3e", 0.03, 0.125, 0.14),
-    blotch(-0.045, 0.098, 0.04, 0.04, 1.15, 0.7, 1.1, "#4c742c", "#6e9242"),
-    blotch(0.04, 0.102, -0.035, 0.038, 1.1, 0.72, 1.05, "#4e7632", "#6a8e40"),
-    blotch(-0.06, 0.08, -0.045, 0.036, 1.05, 0.66, 1.15, "#456c26", "#66883c"),
-    blotch(0.055, 0.084, 0.045, 0.034, 1.1, 0.7, 1.0, "#4a722a", "#6e9244"),
-    blotch(0.0, 0.114, 0.0, 0.032, 1.25, 0.6, 1.15, "#527a32", "#74964a"),
-    blotch(-0.02, 0.064, 0.06, 0.03, 1.05, 0.6, 1.2, "#466e27", "#62863a"),
-    // soft brush cards on flanks — continuous with hex meadow face
-    brushCard(0.02, 0.09, 0.02, 0.08, 0.055, 0.35, "#4c742c", "#66883c", 0.03),
-    brushCard(-0.03, 0.078, -0.02, 0.07, 0.05, -0.7, "#456c26", "#62863e", 0.03),
-    // head: soft olive (silhouette readable), low
-    grad(at(new SphereGeometry(0.034, 7, 5), 0.118, 0.094, 0, 1.35, 0.92, 0.9), "#4e6236", "#6a7e4c", 0.06, 0.13),
-    grad(at(new CylinderGeometry(0.019, 0.025, 0.034, 5, 1, true), 0.084, 0.082, 0, 1, 1, 1, Math.PI / 2), "#4e6236", "#5e7242", 0.06, 0.11),
-    grad(at(new SphereGeometry(0.013, 5, 3), 0.104, 0.122, 0.04, 0.65, 1.2, 0.5), "#4e6236", "#5e7242", 0.11, 0.14),
-    grad(at(new SphereGeometry(0.013, 5, 3), 0.104, 0.122, -0.04, 0.65, 1.2, 0.5), "#4e6236", "#5e7242", 0.11, 0.14),
-    grad(at(new BoxGeometry(0.017, 0.011, 0.045), 0.144, 0.088, 0), "#425430", "#4e6236", 0, 1),
-    leg(0.048, 0.032), leg(0.048, -0.032), leg(-0.048, 0.032), leg(-0.048, -0.032),
+    // fleece body: soft cream underside → white top (volume from colour, not a dark blotch)
+    grad(at(new SphereGeometry(0.074, 12, 8), 0, 0.128, 0, 1.45, 0.92, 1.05), "#cfc8b8", "#fbf8f0", 0.06, 0.2, 0.05),
+    puff(0.05, 0.168, 0.03, 0.04), puff(-0.01, 0.178, -0.028, 0.042), puff(-0.06, 0.162, 0.03, 0.038),
+    puff(0.035, 0.16, -0.045, 0.036), puff(-0.055, 0.15, -0.045, 0.035), puff(0.075, 0.138, 0.0, 0.034),
+    puff(-0.095, 0.14, 0.0, 0.033), puff(0.0, 0.15, 0.06, 0.036), puff(0.0, 0.112, -0.062, 0.034),
+    // tail tuft
+    puff(-0.115, 0.15, 0, 0.022),
+    // head lowered to graze: dark face + ears + cream wool cap
+    grad(at(new SphereGeometry(0.03, 9, 6), 0.128, 0.082, 0, 1.45, 0.95, 0.85), "#2c241f", "#463a31", 0.05, 0.11),
+    grad(at(new SphereGeometry(0.012, 6, 4), 0.112, 0.106, 0.034, 0.7, 0.55, 1.35), "#2c241f", "#463a31", 0.09, 0.12),
+    grad(at(new SphereGeometry(0.012, 6, 4), 0.112, 0.106, -0.034, 0.7, 0.55, 1.35), "#2c241f", "#463a31", 0.09, 0.12),
+    puff(0.1, 0.122, 0, 0.026),
+    leg(0.052, 0.034), leg(0.052, -0.034), leg(-0.052, 0.034), leg(-0.052, -0.034),
   ].map(rgba);
-  // wide radial bleed: alpha → 0 at rim so the patch has no edge on the hex face
-  parts.push(radialDisc(0.15, "#5a8434", "#4c7230", 1.45, 1.15, 0.007, 0.75));
-  parts.push(radialDisc(0.095, "#628c3c", "#557c32", 1.2, 1.0, 0.009, 0.6));
-  // feather dabs around the rim (broken edge, painted-in)
-  for (let k = 0; k < 6; k += 1) {
-    const a = k * (Math.PI / 3) + 0.25;
-    parts.push(radialDisc(0.05, "#5c8636", "#4e7430", 1.4, 0.8, 0.008, 0.5).applyMatrix4(
-      new Matrix4().compose(new Vector3(Math.cos(a) * 0.15, 0, Math.sin(a) * 0.12), new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), -a), new Vector3(1, 1, 1)),
-    ));
-  }
+  // ground-colour soft dissolve under the hooves: pasture tone, alpha → 0 at rim (no hard disc)
+  parts.push(radialDisc(0.13, "#6f9a44", "#7ea84e", 1.35, 1.0, 0.004, 0.42));
   return merged(parts);
 }
 
@@ -559,7 +546,7 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
         scale: isPine(kind)
           ? (kind === "pineTall" ? 0.95 + rand() * 0.45 : kind === "pineRound" ? 0.9 + rand() * 0.4 : 0.85 + rand() * 0.35)
           : kind === "canopy" ? 0.95 + rand() * 0.35
-          : kind === "sheep" ? 0.88 + rand() * 0.22
+          : kind === "sheep" ? 0.92 + rand() * 0.16
           : kind === "boulder" ? 1.05 + rand() * 0.35
           : kind === "clay" || kind === "bricks" ? 1.0 + rand() * 0.28
           : 0.95 + rand() * 0.3,
@@ -643,10 +630,10 @@ function toneFor(p: PropPlacement, out: Color): Color {
   }
   // Pull toward tile albedo (painterly dissolve, not grey plastic multiply).
   const albedo = TERRAIN_ALBEDO[p.terrain];
-  if (albedo && p.kind !== "blobshadow" && p.kind !== "trough") {
+  // R19: sheep stay white (no meadow blend) — the flock must read as sheep, not shrubs.
+  if (albedo && p.kind !== "blobshadow" && p.kind !== "trough" && p.kind !== "sheep") {
     // R17: sheep strongly → meadow tile; pines/canopy keep dissolve; hex-face continuous with props
-    const blend = p.kind === "sheep" ? 0.66
-      : isPine(p.kind) || p.kind === "canopy" ? 0.34
+    const blend = isPine(p.kind) || p.kind === "canopy" ? 0.34
       : p.kind === "wheatrow" || p.kind === "sheaf" ? 0.32
       : p.kind === "boulder" || p.kind === "clay" || p.kind === "bricks" ? 0.36
       : 0.16;
@@ -655,7 +642,7 @@ function toneFor(p: PropPlacement, out: Color): Color {
     out.b = out.b * (1 - blend) + albedo.b * blend;
   }
   const j = p.hue - 0.5;
-  const amp = isPine(p.kind) ? 0.1 : 0.05;
+  const amp = isPine(p.kind) ? 0.1 : p.kind === "sheep" ? 0.02 : 0.05;
   out.r = Math.max(0, out.r * (1 + j * amp));
   out.g = Math.max(0, out.g * (1 - Math.abs(j) * amp * 0.5));
   out.b = Math.max(0, out.b * (1 - j * amp));
@@ -664,14 +651,14 @@ function toneFor(p: PropPlacement, out: Color): Color {
 
 // ── 场景图层 ───────────────────────────────────────────────────────────────
 
-/** R18 羊溶地：牧场贴地色（线性空间，≈ 渲染后 meadow hex 底色）。 */
-export const SHEEP_GROUND_TINT = "#4d6a22";
-/** R18 羊溶地带：世界高度 TILE_TOP+0.012 … +0.075 内向地色 / 透明过渡。 */
-export const SHEEP_DISSOLVE_BAND: readonly [number, number] = [TILE_TOP + 0.012, TILE_TOP + 0.105];
+/** R19 羊溶地：明亮牧场贴地色（≈ 渲染后 meadow hex 底色）。 */
+export const SHEEP_GROUND_TINT = "#7aa24c";
+/** R19 羊溶地带：只在蹄部 / 溶片（TILE_TOP+0.002 … +0.03）向地色过渡；羊毛本体保持白。 */
+export const SHEEP_DISSOLVE_BAND: readonly [number, number] = [TILE_TOP + 0.002, TILE_TOP + 0.03];
 
 /**
- * R18 羊专用材质：与 hex 面同一世界坐标 grass pattern（笔触场连续），底部按高度溶向牧场底色并降 alpha，
- * 让真实地表透上来（边缘连续溶进 hex 底色，非贴地道具）。vertexAlphas（RGBA 顶点色）给径向溶边片。
+ * R19 羊专用材质：羊毛只叠很轻的世界坐标 grass pattern（白羊可读），蹄部溶带向牧场底色过渡、
+ * 溶片 pattern 与 hex 面同强（与地面笔触场连续）。vertexAlphas（RGBA 顶点色）给溶片 alpha→0。
  */
 export function createSheepDissolveMaterial(): MeshStandardMaterial {
   const m = new MeshStandardMaterial({
@@ -681,7 +668,7 @@ export function createSheepDissolveMaterial(): MeshStandardMaterial {
   m.polygonOffsetFactor = -1;
   m.polygonOffsetUnits = -2;
   const pattern = installPattern(m, "grass");
-  pattern.value = 0.75;
+  pattern.value = 0.8;
   const base = m.onBeforeCompile;
   const ground = { value: new Color(SHEEP_GROUND_TINT) };
   const [y0, y1] = SHEEP_DISSOLVE_BAND;
@@ -693,15 +680,15 @@ export function createSheepDissolveMaterial(): MeshStandardMaterial {
       .replace(
         "diffuseColor.rgb *= mix(1.0, 0.52 + 0.96 * gdP, uGdPattern);",
         [
-          "diffuseColor.rgb *= mix(1.0, 0.52 + 0.96 * gdP, uGdPattern);",
           `float gdLow = 1.0 - smoothstep(${y0.toFixed(4)}, ${y1.toFixed(4)}, vGdWorld.y);`,
-          // whole fleece leans into the meadow field; the lower band becomes the ground itself
-          "diffuseColor.rgb = mix(diffuseColor.rgb, uGdGround * (0.52 + 0.96 * gdP), 0.3 + gdLow * 0.6);",
-          "diffuseColor.a *= 1.0 - gdLow * 0.72;",
+          // fleece: faint paint texture only; hoof band / ground disc: full hex-face pattern
+          "diffuseColor.rgb *= mix(1.0, 0.52 + 0.96 * gdP, uGdPattern * mix(0.2, 1.0, gdLow));",
+          "diffuseColor.rgb = mix(diffuseColor.rgb, uGdGround * (0.52 + 0.96 * gdP), gdLow * 0.85);",
+          "diffuseColor.a *= 1.0 - gdLow * 0.35;",
         ].join("\n"),
       );
   };
-  m.customProgramCacheKey = () => "gd-sheep-dissolve-r18";
+  m.customProgramCacheKey = () => "gd-sheep-dissolve-r19";
   m.userData.gdSheepGround = ground;
   return m;
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { defaultRenderSpec } from "../creator/render-spec";
 import { TIER_CAPS } from "./tiers";
 import {
+  HEX_ISLAND_LIGHTING,
   PROP_MATERIALS,
   SCENE_TOKENS,
   SEAT_COLORS,
@@ -105,5 +106,34 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
     expect(bounds.center).toEqual([0, 0, 0]);
     expect(bounds.radius).toBeCloseTo(3.95, 6);
     expect(islandBounds([]).radius).toBe(4);
+  });
+});
+
+describe("R19 hex island brightness", () => {
+  it("hex rig is brighter than the tabletop default (sun, hemisphere, exposure)", () => {
+    expect(HEX_ISLAND_LIGHTING.sun.intensity).toBeGreaterThan(SCENE_TOKENS.lighting.sun.intensity);
+    expect(HEX_ISLAND_LIGHTING.hemisphere.intensity).toBeGreaterThan(SCENE_TOKENS.lighting.hemisphere.intensity);
+    expect(HEX_ISLAND_LIGHTING.exposure).toBeGreaterThan(SCENE_TOKENS.lighting.exposure);
+    expect(HEX_ISLAND_LIGHTING.exposure).toBeLessThan(1.4); // coast camera must not blow out
+  });
+
+  it("AI-textured terrains let the texture hue lead (pbrTint) on lighter, less saturated bases", () => {
+    for (const key of ["wood", "brick", "sheep", "wheat", "ore", "desert"]) {
+      const t = TERRAIN_MATERIALS[key]!;
+      expect(t.pbrTint, key).toBeGreaterThanOrEqual(0.5);
+    }
+    const sat = (hex: string) => {
+      const n = Number.parseInt(hex.slice(1), 16);
+      const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+      return (Math.max(...c) - Math.min(...c)) / Math.max(...c);
+    };
+    expect(sat(TERRAIN_MATERIALS.sheep!.base)).toBeLessThan(sat("#8fbf6a"));
+    expect(sat(TERRAIN_MATERIALS.wood!.base)).toBeLessThan(sat("#2f6b3a"));
+  });
+
+  it("oil-dab layer is stronger than R18 (0.6) so it stays visible over the AI albedo at b3", () => {
+    for (const key of ["wood", "brick", "sheep", "wheat", "ore", "desert"]) {
+      expect(TERRAIN_MATERIALS[key]!.brush, key).toBeGreaterThan(0.6);
+    }
   });
 });

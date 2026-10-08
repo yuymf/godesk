@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MeshPhysicalMaterial, MeshStandardMaterial, Texture } from "three";
+import { Color, MeshPhysicalMaterial, MeshStandardMaterial, Texture } from "three";
 import {
   MaterialLibrary,
   PATTERN_IDS,
@@ -86,6 +86,10 @@ describe("G3D-07 materials", () => {
     expect(wood.roughnessMap).toBe(woodMaps.ormMap);
     expect(wood.metalnessMap).toBe(woodMaps.ormMap);
     expect((wood.userData.gdPatternStrength as { value: number }).value).toBe(PATTERN_STRENGTH_WITH_PBR);
+    // R19: AI baseColor leads — token.base lerps toward white by token.pbrTint.
+    const expected = new Color(TERRAIN_MATERIALS.wood!.base).lerp(new Color(0xffffff), TERRAIN_MATERIALS.wood!.pbrTint!);
+    expect(wood.color.r).toBeCloseTo(expected.r, 5);
+    expect(wood.color.g).toBeCloseTo(expected.g, 5);
     const seatMaps = maps();
     library.applyPbrSet("t09-paintwood", seatMaps);
     // Round-6tex: wood albedo on (multiplies with vertex / seat colour).

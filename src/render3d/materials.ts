@@ -83,14 +83,15 @@ float gdPattern(vec3 w) {
 const BRUSH_GLSL = /* glsl */ `
 uniform float uGdBrush;
 vec3 gdBrushStroke(vec3 w) {
-  // Cellular oil dabs (~0.14 world units): each cell owns one short elongated stroke with its own
-  // angle (loosely coherent), value and warm/cool hue; neighbours overlap like wet-on-wet paint.
-  vec2 g = w.xz * 7.0;
+  // Cellular oil dabs (~0.17 world units, R19: 7→6 cells/unit so b3 reads distinct strokes): each cell
+  // owns one short elongated stroke with its own angle (loosely coherent), value and warm/cool hue.
+  vec2 g = w.xz * 6.0;
   vec2 i = floor(g);
   vec2 f = fract(g);
   float val = 0.0;
   float hue = 0.0;
   float wsum = 0.0;
+  float kmax = 0.0;
   for (int y = -1; y <= 1; y++) {
     for (int x = -1; x <= 1; x++) {
       vec2 c = vec2(float(x), float(y));
@@ -101,13 +102,18 @@ vec3 gdBrushStroke(vec3 w) {
       vec2 q = vec2(dot(o, d), dot(o, vec2(-d.y, d.x)));
       float e = q.x * q.x * 3.2 + q.y * q.y * 30.0;
       float k = exp(-e * 2.2);
-      val += k * gdHash(id + 5.1);
-      hue += k * gdHash(id + 9.9);
-      wsum += k;
+      // R19: k^4 → the top stroke dominates (distinct dabs instead of a blurred average).
+      float k4 = k * k;
+      k4 *= k4;
+      val += k4 * gdHash(id + 5.1);
+      hue += k4 * gdHash(id + 9.9);
+      wsum += k4;
+      kmax = max(kmax, k);
     }
   }
-  float dab = wsum > 1e-4 ? val / wsum : 0.5;
-  float hu = wsum > 1e-4 ? hue / wsum : 0.5;
+  // Between strokes (low kmax) reads as a slightly darker paint seam.
+  float dab = (wsum > 1e-6 ? val / wsum : 0.5) - (1.0 - smoothstep(0.08, 0.5, kmax)) * 0.18;
+  float hu = wsum > 1e-6 ? hue / wsum : 0.5;
   float fw = length(fwidth(g));
   float aa = 1.0 - smoothstep(0.35, 0.9, fw);
   return vec3(mix(0.5, dab, aa), mix(0.5, hu, aa), aa);
@@ -154,10 +160,12 @@ export function installPattern(material: MeshStandardMaterial, pattern: Material
           "diffuseColor.rgb *= mix(1.0, 0.52 + 0.96 * gdP, uGdPattern);",
           ...(brush > 0
             ? [
-                // R18 oil dabs: luminance stroke + warm/cool hue drift, faded by AA term.
+                // R18/R19 oil dabs: dominant-stroke luminance + warm/cool hue drift, faded by AA term.
                 "vec3 gdB = gdBrushStroke(vGdWorld);",
-                "diffuseColor.rgb *= 1.0 + (gdB.x - 0.5) * 0.95 * uGdBrush;",
-                "diffuseColor.rgb *= mix(vec3(1.0), mix(vec3(0.93, 1.0, 1.08), vec3(1.07, 1.0, 0.9), gdB.y), uGdBrush * gdB.z);",
+                "diffuseColor.rgb *= 1.0 + (gdB.x - 0.5) * 1.3 * uGdBrush;",
+                "diffuseColor.rgb *= mix(vec3(1.0), mix(vec3(0.9, 0.99, 1.1), vec3(1.1, 1.0, 0.86), gdB.y), uGdBrush * gdB.z);",
+                // R19: picture-book tone — pull terrain albedo ~14% toward its luminance (less saturated).
+                "diffuseColor.rgb = mix(vec3(dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722))), diffuseColor.rgb, 0.86);",
               ]
             : []),
         ].join("\n"),
@@ -329,7 +337,7 @@ function applyMaps(material: MeshStandardMaterial, token: MaterialToken, maps: P
   material.roughnessMap = maps.ormMap;
   material.metalnessMap = maps.ormMap;
   material.color.set(token.base);
-  if (useBaseColor) material.color.lerp(new Color(0xffffff), PBR_TINT_TO_WHITE);
+  if (useBaseColor) material.color.lerp(new Color(0xffffff), token.pbrTint ?? PBR_TINT_TO_WHITE);
   const strength = material.userData.gdPatternStrength as PatternUniform | undefined;
   if (strength && token.pattern !== "none") strength.value = PATTERN_STRENGTH_WITH_PBR;
   material.userData.gdPbr = token.pbrSet;

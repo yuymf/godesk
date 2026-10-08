@@ -45,7 +45,9 @@ describe("G3D-PROPS terrain props", () => {
     const woodHigh = PROP_COUNTS.high.wood!;
     expect((woodHigh.pineTall ?? 0) + (woodHigh.pineRound ?? 0) + (woodHigh.pineSmall ?? 0)).toBeGreaterThanOrEqual(50);
     expect(woodHigh.canopy ?? 0).toBeGreaterThanOrEqual(12);
-    expect(PROP_COUNTS.high.sheep!.sheep).toBeGreaterThanOrEqual(16);
+    // R19: a small readable flock (settlecoast-like), not a shrub carpet.
+    expect(PROP_COUNTS.high.sheep!.sheep).toBeGreaterThanOrEqual(5);
+    expect(PROP_COUNTS.high.sheep!.sheep).toBeLessThanOrEqual(9);
     expect(PROP_COUNTS.high.wheat!.wheatrow ?? 0).toBeGreaterThanOrEqual(36);
   });
 
@@ -135,7 +137,8 @@ describe("G3D-PROPS terrain props", () => {
     for (let i = 0; i < col.count; i += 1) minA = Math.min(minA, col.getW(i));
     expect(minA).toBeLessThan(0.05);
     sheep.computeBoundingBox();
-    expect(sheep.boundingBox!.max.y - sheep.boundingBox!.min.y).toBeLessThan(0.17); // lower than R17 blotch
+    // R19: stands on legs (readable sheep), still below the R17 0.28 toy height
+    expect(sheep.boundingBox!.max.y - sheep.boundingBox!.min.y).toBeLessThan(0.25);
     sheep.dispose();
     const sheepTile = tiles.find((t) => t.terrain === "sheep")!;
     const props = placeTileProps(sheepTile, PROP_COUNTS.high.sheep!);
@@ -153,7 +156,7 @@ describe("G3D-PROPS terrain props", () => {
   it("R18 sheep material: world grass pattern + height band fades into meadow ground", () => {
     const m = createSheepDissolveMaterial();
     expect(m.transparent).toBe(true);
-    expect(m.customProgramCacheKey()).toBe("gd-sheep-dissolve-r18");
+    expect(m.customProgramCacheKey()).toBe("gd-sheep-dissolve-r19");
     const shader = {
       uniforms: {} as Record<string, { value: unknown }>,
       vertexShader: "#include <common>\nvoid main() {\n#include <project_vertex>\n}",
@@ -166,6 +169,34 @@ describe("G3D-PROPS terrain props", () => {
     expect(SHEEP_DISSOLVE_BAND[0]).toBeGreaterThan(TILE_TOP);
     expect(SHEEP_DISSOLVE_BAND[1]).toBeLessThan(TILE_TOP + 0.12);
     m.dispose();
+  });
+
+  it("R19 sheep: white fleece + dark head/legs, ground disc is bright pasture (no dark contact shadow)", () => {
+    const sheep = buildPropGeometry("sheep");
+    const col = sheep.getAttribute("color");
+    const pos = sheep.getAttribute("position");
+    let fleece = 0;
+    let fleeceLum = 0;
+    let dark = 0;
+    let discMin = 1;
+    for (let i = 0; i < col.count; i += 1) {
+      const [r, g, b, a] = [col.getX(i), col.getY(i), col.getZ(i), col.getW(i)];
+      const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      if (a < 1) {
+        discMin = Math.min(discMin, lum);
+        continue;
+      }
+      if (pos.getY(i) > 0.12 && Math.max(r, g, b) - Math.min(r, g, b) < 0.12) {
+        fleece += 1;
+        fleeceLum += lum;
+      }
+      if (lum < 0.12) dark += 1;
+    }
+    expect(fleece).toBeGreaterThan(200);
+    expect(fleeceLum / fleece).toBeGreaterThan(0.6);
+    expect(dark).toBeGreaterThan(20); // head + legs keep the silhouette
+    expect(discMin).toBeGreaterThan(0.15); // pasture tone, not a dark blob
+    sheep.dispose();
   });
 
   it("R18 canopies: clumped painted crowns (no smooth lathe umbrella), brush cards kept", () => {

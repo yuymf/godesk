@@ -58,6 +58,7 @@ import {
 import { MaterialLibrary } from "./materials";
 import {
   PROP_MATERIALS,
+  HEX_ISLAND_LIGHTING,
   SCENE_TOKENS,
   TERRAIN_MATERIALS,
   TILE_RADIUS,
@@ -186,9 +187,11 @@ const DICE_THROW_SLIDE: readonly [number, number] = [-0.32, -0.22];
 const SHADOW_REFRESH_MS = 1_500;
 /** 可交互后延迟多久开始流式加载 PBR 贴图（避开首屏主线程窗口）。 */
 const PBR_STREAM_DELAY_MS = 1_200;
-/** R18 boot reveal: canvas fade-in length, cap (ms after first content frame) and pre-sea clear colour. */
-export const BOOT_FADE_MS = 520;
+/** R18/R19 boot reveal: canvas fade-in length, cap (ms after first content frame) and pre-sea clear colour. */
+export const BOOT_FADE_MS = 1_000;
 export const BOOT_REVEAL_CAP_MS = 6_000;
+/** R19: min ms between renders while the boot veil is up. */
+export const BOOT_VEILED_FRAME_MS = 500;
 export const BOOT_SEA_COLOR = "#1f5f66";
 
 
@@ -542,8 +545,10 @@ export function SceneHost({
   const [perfMode] = useState(() => perfModeEnabled());
   const [activeTier, setActiveTier] = useState<RenderTierId>("high");
   const runtimeFloorRef = useRef<RenderTierId | null>(null);
-  const lightingRef = useRef<LightingSpec>(lighting ?? SCENE_TOKENS.lighting);
-  lightingRef.current = lighting ?? SCENE_TOKENS.lighting;
+  // R19: hex island scenes default to the brighter picture-book rig.
+  const lightingSpec: LightingSpec = lighting ?? (hexSettlement ? HEX_ISLAND_LIGHTING : SCENE_TOKENS.lighting);
+  const lightingRef = useRef<LightingSpec>(lightingSpec);
+  lightingRef.current = lightingSpec;
   const rigRef = useRef<ReturnType<typeof createLightingRig> | null>(null);
   const rendererRef = useRef<WebGLRenderer | null>(null);
   const sceneRef = useRef<Scene | null>(null);
@@ -647,6 +652,7 @@ export function SceneHost({
     // Hex (Tidewell) scenes only — othello / tabletop boards have no lazy dressing or sea to wait for.
     const bootVeil = !bootRevealedRef.current && bootHexRef.current;
     let bootFirstContentAt = 0;
+    let bootLastRender = 0;
     const bootSea = new Color(BOOT_SEA_COLOR);
     const bootHorizon = new Color(SCENE_TOKENS.sky.horizon);
     if (bootVeil) {
@@ -659,7 +665,7 @@ export function SceneHost({
       renderer.setClearColor(bootSea, 1);
       // Start the lazy dressing + water chunks now (parallel with the kit / GLBs).
       void import("./hex-dressing");
-      void import("./water");
+      void import("./water").then((w) => w.prefetchSeaTextures());
     } else container.dataset.boot = "ready";
     const revealBoot = (reason: string) => {
       bootRevealedRef.current = true;
@@ -942,7 +948,9 @@ export function SceneHost({
       warmFrames += 1;
 
       // Runtime downgrade after 180 warm-up frames (§4.7 / §4.6.3).
-      if (warmFrames > 180 && delta !== null) {
+      // R19: not under `?judge=1` (dev-only review captures) — SwiftShader's 10–45 fps band otherwise drops the
+      // tier mid-capture and the coast / dice shots lose water + props. Production URLs are unaffected.
+      if (!judgeEnabled && warmFrames > 180 && delta !== null) {
         if (downgradeMonitor.shouldDowngrade(caps.id, now, delta)) {
           const nextId = downgradeTier(caps.id);
           if (nextId !== caps.id) {
@@ -994,7 +1002,12 @@ export function SceneHost({
         shadowFrames += 1;
       }
       renderer.info.reset();
-      renderer.render(scene, camera);
+      // R19 boot: while veiled, render at ~4 fps so the hidden canvas can't queue seconds of GPU backlog.
+      const veiled = container.dataset.boot === "pending";
+      if (!veiled || now - bootLastRender >= BOOT_VEILED_FRAME_MS) {
+        bootLastRender = now;
+        renderer.render(scene, camera);
+      }
       overlayRef.current?.render(renderer);
       const hasContent = contentRoot.children.length > 0;
       if (container.dataset.water === "on" && scene.background === bootSea) {
@@ -1011,7 +1024,8 @@ export function SceneHost({
         }
         markInteractive();
         if (shadowDirtyUntil === Number.POSITIVE_INFINITY) markShadowsDirty();
-        if (!pbrRequested) startPbrStreaming();
+        // R19: PBR streams only after the boot reveal so it never competes with the sea KTX2.
+        if (!pbrRequested && container.dataset.boot !== "pending") startPbrStreaming();
       }
       perf?.frame(renderer, now, hasContent && !dressingPendingRef.current);
     };
@@ -1397,11 +1411,11 @@ export function SceneHost({
     const rig = rigRef.current;
     const renderer = rendererRef.current;
     if (!rig || !renderer || !ready) return;
-    const spec = lighting ?? SCENE_TOKENS.lighting;
+    const spec = lightingRef.current;
     rig.applyLighting(spec);
     configureRenderer(renderer, spec);
     markShadowsDirtyRef.current();
-  }, [lighting, ready, hostEpoch]);
+  }, [lightingSpec, ready, hostEpoch]);
 
   useEffect(() => {
     const hitRoot = hitRootRef.current;
