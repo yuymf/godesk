@@ -689,6 +689,7 @@ export class CameraDirector implements CameraRigApi {
       this.controls.minDistance = 0.1;
       this.controls.maxDistance = 200;
       if (isOrthographicCamera(this.camera)) {
+        this.insets = { top: 0, bottom: 0, left: 0, right: 0 };
         this.camera.clearViewOffset();
         this.camera.updateProjectionMatrix();
       }
@@ -1029,24 +1030,26 @@ export class CameraDirector implements CameraRigApi {
     this.camera.position.set(pose.target[0] + ox, pose.target[1] + oy, pose.target[2] + oz);
     this.camera.lookAt(pose.target[0], pose.target[1], pose.target[2]);
     if (this.ortho && isOrthographicCamera(this.camera)) {
-      // Zoom=1 frustum = fitted half-height; OrbitControls scales via camera.zoom.
+      // Zoom=1: fit island into HUD-usable rect, then expand frustum to the full
+      // canvas so top/bottom sea bands reserve chrome (no setViewOffset — keeps
+      // NDC/projectLabels/e2e number-token probes correct on the full canvas).
       const fitH = Math.max(this.base, 0.5);
-      const fitW = fitH * Math.max(this.aspect, 1e-3);
-      this.camera.left = -fitW;
-      this.camera.right = fitW;
-      this.camera.top = fitH;
-      this.camera.bottom = -fitH;
+      let halfH = fitH;
+      let halfW = fitH * Math.max(this.aspect, 1e-3);
+      if (this.canvasW > 1 && this.canvasH > 1 && (this.insets.top > 0 || this.insets.bottom > 0)) {
+        const usableH = Math.max(1, this.canvasH - this.insets.top - this.insets.bottom);
+        const fullAspect = this.canvasW / this.canvasH;
+        halfH = fitH * (this.canvasH / usableH);
+        halfW = halfH * fullAspect;
+      }
+      this.camera.left = -halfW;
+      this.camera.right = halfW;
+      this.camera.top = halfH;
+      this.camera.bottom = -halfH;
       this.camera.near = 0.1;
       this.camera.far = 120;
       this.camera.zoom = this.zoom;
-      // R26: letterbox frustum into HUD-safe rect (settlecoast Hd-style reserves).
-      if (this.canvasW > 1 && this.canvasH > 1 && (this.insets.top > 0 || this.insets.bottom > 0)) {
-        const usableW = Math.max(1, this.canvasW - this.insets.left - this.insets.right);
-        const usableH = Math.max(1, this.canvasH - this.insets.top - this.insets.bottom);
-        this.camera.setViewOffset(this.canvasW, this.canvasH, this.insets.left, this.insets.top, usableW, usableH);
-      } else {
-        this.camera.clearViewOffset();
-      }
+      this.camera.clearViewOffset();
       this.camera.updateProjectionMatrix();
     }
     if (final) {
