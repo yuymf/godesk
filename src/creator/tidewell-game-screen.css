@@ -2833,3 +2833,107 @@ body:has(.room-view-tidewell-immersive) {
 .hex-island-hud-awards > div:nth-child(3) {
   grid-column: 1 / -1;
 }
+
+/* ==== R32 非当前玩家行：settlecoast 式 flush（薄横隔线 + 文字/头像落木）====
+   Judge R31: awards inset PASS; players mostly PASS but inactive seats still read as
+   independent card frames. settlecoast = hairline divider + text/avatar on wood.
+   P0: inactive = flush (no card-frame bg/border/inset niche); active keeps gold edge /
+       「轮到你行」— do NOT thicken gold; do NOT raise shallow-wash opacity.
+   KEEP: awards inset · 「开拓者」cream inlay · shallow wash opacity · gold/carve locks ·
+         build buttons · wood #5c3c22 · fill 0.945 · Ortho φ54/az12 · deep #0a6c74/0.96 ·
+         HUD · bezel · chronicle well · cream sky off · texture CANCELLED. */
+
+/* Hairline rows instead of spaced card niches */
+.tidewell-player-list {
+  gap: 0 !important;
+}
+
+/* Inactive seat: flush into rail wood — kill independent card-frame look */
+.tidewell-player-card:not(.is-active) {
+  background: transparent !important;
+  background-image: none !important;
+  background-size: auto !important;
+  border: none !important;
+  border-radius: 0 !important;
+  /* settlecoast-style thin horizontal divider */
+  border-top: 1px solid rgba(18, 10, 4, 0.62) !important;
+  box-shadow: none !important;
+  padding: 7px 2px 6px !important;
+  color: #f3e7c9 !important;
+}
+
+/* First inactive (or first overall if not active) — still hairline under title is fine;
+   if first child is active, its own border-radius frame handles separation. */
+.tidewell-player-list > .tidewell-player-card:first-child:not(.is-active) {
+  border-top: 1px solid rgba(18, 10, 4, 0.45) !important;
+}
+
+/* Active / current-turn: KEEP gold edge + wood niche (R31 treatment) — do not thicken */
+.tidewell-player-card.is-active {
+  background:
+    linear-gradient(165deg, rgba(90, 56, 28, 0.32) 0%, rgba(48, 28, 14, 0.5) 100%),
+    linear-gradient(145deg, #6b4428 0%, #5c3c22 50%, #3a2414 100%) !important;
+  background-size: auto, auto !important;
+  border: 1px solid rgba(36, 22, 12, 0.92) !important;
+  border-radius: 8px !important;
+  padding: 5px !important;
+  margin: 4px 0 2px !important;
+  box-shadow:
+    0 0 0 1.5px var(--seat-color, #c9a227),
+    inset 0 0 0 1px rgba(154, 114, 24, 0.5),
+    inset 0 0 0 2px rgba(36, 22, 12, 0.7),
+    inset 0 2px 5px rgba(0, 0, 0, 0.38),
+    inset 0 -1px 0 rgba(255, 220, 140, 0.12) !important;
+}
+
+/* Inactive meta: same wash opacity (do NOT raise) — drop mini-plate border so text sits on wood */
+.tidewell-player-card:not(.is-active) .tidewell-player-meta {
+  background:
+    linear-gradient(180deg, rgba(255, 248, 230, 0.22), rgba(232, 211, 162, 0.1)),
+    linear-gradient(180deg, rgba(90, 56, 28, 0.22), rgba(58, 34, 16, 0.28)) !important;
+  border: none !important;
+  border-radius: 4px;
+  box-shadow: none !important;
+  padding: 2px 4px !important;
+}
+
+/* Active meta: keep R31 shallow wash plate (readable current-turn cue companion) */
+.tidewell-player-card.is-active .tidewell-player-meta {
+  background:
+    linear-gradient(180deg, rgba(255, 248, 230, 0.34), rgba(232, 211, 162, 0.18)),
+    linear-gradient(180deg, rgba(90, 56, 28, 0.38), rgba(58, 34, 16, 0.5)) !important;
+  border-radius: 5px;
+  padding: 4px 6px !important;
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 2px 5px rgba(0, 0, 0, 0.28);
+}
+
+/* Inactive avatar sits directly on wood */
+.tidewell-player-card:not(.is-active) .tidewell-player-avatar,
+.tidewell-player-card:not(.is-active) .tidewell-medallion {
+  background: #4a3018 !important;
+  box-shadow:
+    0 0 0 1px rgba(36, 22, 12, 0.75),
+    inset 0 1px 0 rgba(255, 220, 140, 0.1) !important;
+}
+
+/* R32b: inactive meta — kill remaining wash plate; text sits on wood (settlecoast).
+   Keep opacity BELOW R31 shallow wash; do NOT raise. Active meta unchanged. */
+.tidewell-player-card:not(.is-active) .tidewell-player-meta {
+  background: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 1px 2px !important;
+}
+.tidewell-player-card:not(.is-active) .tidewell-player-meta b,
+.tidewell-player-card:not(.is-active) .tidewell-player-vp,
+.tidewell-player-card:not(.is-active) .tidewell-house-name,
+.tidewell-player-card:not(.is-active) .tidewell-player-stats {
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.65),
+    0 0 1px rgba(20, 10, 4, 0.8);
+}
