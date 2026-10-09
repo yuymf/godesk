@@ -2731,16 +2731,16 @@ body:has(.room-view-tidewell-immersive) {
 }
 
 .tidewell-player-card.is-active {
+  /* R33: wood-transparent niche; gold ring thickness unchanged (final override below) */
   background:
-    linear-gradient(165deg, rgba(90, 56, 28, 0.32) 0%, rgba(48, 28, 14, 0.5) 100%),
-    linear-gradient(145deg, #6b4428 0%, #5c3c22 50%, #3a2414 100%) !important;
-  background-size: auto, auto !important;
+    linear-gradient(165deg, rgba(90, 56, 28, 0.1) 0%, rgba(48, 28, 14, 0.14) 100%) !important;
+  background-size: auto !important;
   box-shadow:
     0 0 0 1.5px var(--seat-color, #c9a227),
     inset 0 0 0 1px rgba(154, 114, 24, 0.5),
-    inset 0 0 0 2px rgba(36, 22, 12, 0.7),
-    inset 0 2px 5px rgba(0, 0, 0, 0.38),
-    inset 0 -1px 0 rgba(255, 220, 140, 0.12) !important;
+    inset 0 0 0 2px rgba(36, 22, 12, 0.55),
+    inset 0 1px 3px rgba(0, 0, 0, 0.18),
+    inset 0 -1px 0 rgba(255, 220, 140, 0.1) !important;
 }
 
 /* Inner text core — shallow parchment wash on wood (log-panel body pattern), not opaque cream plate */
@@ -2868,22 +2868,25 @@ body:has(.room-view-tidewell-immersive) {
   border-top: 1px solid rgba(18, 10, 4, 0.45) !important;
 }
 
-/* Active / current-turn: KEEP gold edge + wood niche (R31 treatment) — do not thicken */
+/* Active / current-turn: R33 — thin gold ring KEEP; interior wood-transparent (ultra-faint wash).
+   Kill opaque card-slot fill so timber rail shows through (settlecoast: 细金框+框内透木).
+   Do NOT thicken/brighten gold. Inactive flush / awards / 开拓者 untouched. */
 .tidewell-player-card.is-active {
   background:
-    linear-gradient(165deg, rgba(90, 56, 28, 0.32) 0%, rgba(48, 28, 14, 0.5) 100%),
-    linear-gradient(145deg, #6b4428 0%, #5c3c22 50%, #3a2414 100%) !important;
-  background-size: auto, auto !important;
-  border: 1px solid rgba(36, 22, 12, 0.92) !important;
+    linear-gradient(165deg, rgba(90, 56, 28, 0.1) 0%, rgba(48, 28, 14, 0.14) 100%) !important;
+  background-image:
+    linear-gradient(165deg, rgba(90, 56, 28, 0.1) 0%, rgba(48, 28, 14, 0.14) 100%) !important;
+  background-size: auto !important;
+  border: 1px solid rgba(36, 22, 12, 0.55) !important;
   border-radius: 8px !important;
   padding: 5px !important;
   margin: 4px 0 2px !important;
   box-shadow:
     0 0 0 1.5px var(--seat-color, #c9a227),
     inset 0 0 0 1px rgba(154, 114, 24, 0.5),
-    inset 0 0 0 2px rgba(36, 22, 12, 0.7),
-    inset 0 2px 5px rgba(0, 0, 0, 0.38),
-    inset 0 -1px 0 rgba(255, 220, 140, 0.12) !important;
+    inset 0 0 0 2px rgba(36, 22, 12, 0.55),
+    inset 0 1px 3px rgba(0, 0, 0, 0.18),
+    inset 0 -1px 0 rgba(255, 220, 140, 0.1) !important;
 }
 
 /* Inactive meta: same wash opacity (do NOT raise) — drop mini-plate border so text sits on wood */
@@ -2897,17 +2900,17 @@ body:has(.room-view-tidewell-immersive) {
   padding: 2px 4px !important;
 }
 
-/* Active meta: keep R31 shallow wash plate (readable current-turn cue companion) */
+/* Active meta: R33 ultra-faint wash on wood (companion to transparent niche; keep readable) */
 .tidewell-player-card.is-active .tidewell-player-meta {
   background:
-    linear-gradient(180deg, rgba(255, 248, 230, 0.34), rgba(232, 211, 162, 0.18)),
-    linear-gradient(180deg, rgba(90, 56, 28, 0.38), rgba(58, 34, 16, 0.5)) !important;
+    linear-gradient(180deg, rgba(255, 248, 230, 0.14), rgba(232, 211, 162, 0.06)),
+    linear-gradient(180deg, rgba(90, 56, 28, 0.1), rgba(58, 34, 16, 0.12)) !important;
   border-radius: 5px;
   padding: 4px 6px !important;
-  border: 1px solid rgba(201, 162, 39, 0.28);
+  border: 1px solid rgba(201, 162, 39, 0.18);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    inset 0 2px 5px rgba(0, 0, 0, 0.28);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 
 /* Inactive avatar sits directly on wood */
