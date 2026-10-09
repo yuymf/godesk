@@ -42,6 +42,7 @@ const VERT_PARS = [
   "uniform float uTideWaveH;",
   "uniform float uTideWaveS;",
   "uniform float uTideWaves;",
+  "uniform float uTideHalf;",
   "varying vec3 vTideWorld;",
   "vec3 tideGerstner(vec3 p, vec2 dir, float steep, float waveLen, float speed) {",
   "  float k = 6.2831853 / waveLen;",
@@ -57,12 +58,16 @@ const VERT_PARS = [
 ].join("\n");
 
 const VERT_MAIN = [
+  // G3D-ISLAND：外圈远海环（同材质、平面）与主水面无缝衔接 —— 波浪位移在主水面外缘淡出到 0。
+  "vec3 tideRest = transformed;",
   "if (uTideWaves > 0.5 && uTideWaveH > 0.0001) {",
   "  transformed = tideGerstner(transformed, normalize(vec2(1.0, 0.35)), 0.22, 2.4, 1.0);",
   "  if (uTideWaves > 1.5) {",
   "    transformed = tideGerstner(transformed, normalize(vec2(-0.55, 1.0)), 0.14, 1.5, 1.25);",
   "  }",
   "}",
+  "float tideEdge = 1.0 - smoothstep(uTideHalf * 0.7, uTideHalf * 0.97, max(abs(tideRest.x), abs(tideRest.z)));",
+  "transformed = mix(tideRest, transformed, tideEdge);",
   "vTideWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;",
 ].join("\n");
 
@@ -83,12 +88,52 @@ const FRAG_PARS = [
 const FRAG_COLOR = [
   "{",
   "  vec2 wu = vTideWorld.xz / max(uTideHalf * 2.0, 0.001) + 0.5;",
-  "  float d = texture2D(uTideDist, clamp(wu, 0.0, 1.0)).r;",
-  "  vec3 waterCol = mix(uTideShallow, uTideDeep, smoothstep(0.02, 0.85, d));",
-  "  float foamBand = (1.0 - smoothstep(0.0, 0.18, d)) * uTideFoam;",
-  "  vec2 fuv = vTideWorld.xz * 0.35 + vec2(uTideTime * 0.03 * uTideWaveS, uTideTime * -0.02 * uTideWaveS);",
+  "  float dTex = texture2D(uTideDist, clamp(wu, 0.0, 1.0)).r;",
+  // round-3d：场外直接深水，抹掉 ±half 方形 UV 环接缝。
+  "  float fieldEdge = smoothstep(uTideHalf * 0.82, uTideHalf * 1.02, max(abs(vTideWorld.x), abs(vTideWorld.z)));",
+  // R24: far-sea plateaus at mid-deep (0.72) so 54° views stay bright teal, not navy.
+  // R25: restore toward full deep (1.0) — settlecoast deep teal; c-gate verified by capture.
+  "  float d = mix(dTex, 0.96, fieldEdge);",
+  // R20：明亮青绿海 + 岛周一圈浅滩环（settlecoast 读感，自有实现）。
+  // 0–0.05 浅滩核心（亮水绿）→ 0.15 环缘（落差处一道浅色唇线）→ 0.45 中海青绿 → 0.95 外海（仍是亮青，不回深蓝）。
+  "  vec3 tideRing = mix(uTideShallow, uTideDeep, 0.22);",
+  "  vec3 tideMid = mix(uTideShallow, uTideDeep, 0.66);",
+  "  vec3 waterCol = mix(uTideShallow, tideRing, smoothstep(0.03, 0.11, d));",
+  "  waterCol = mix(waterCol, tideMid, smoothstep(0.12, 0.2, d));",
+  "  waterCol = mix(waterCol, uTideDeep, smoothstep(0.24, 0.95, d));",
+  "  float ringLip = exp(-pow((d - 0.125) / 0.018, 2.0));",
+  "  waterCol = mix(waterCol, uTideShallow * 1.06, ringLip * 0.35);",
+  // R14：在 R13 切向笔触上提高默认机位浪脊密度与节奏分段（自有算法，非抄 settlecoast）。
+  "  vec2 fuv = vTideWorld.xz * 0.78 + vec2(uTideTime * 0.028 * uTideWaveS, uTideTime * -0.02 * uTideWaveS);",
   "  float foamN = texture2D(uTideFoamMap, fuv).r;",
-  "  waterCol = mix(waterCol, vec3(0.92, 0.96, 0.95), foamBand * (0.45 + 0.55 * foamN));",
+  "  float foamN2 = texture2D(uTideFoamMap, fuv * 2.15 + vec2(0.31, -0.17)).r;",
+  "  float foamN3 = texture2D(uTideFoamMap, fuv * 3.4 + vec2(-0.19, 0.41)).r;",
+  "  float ang = atan(vTideWorld.z, vTideWorld.x);",
+  // 三层切向节奏：密笔触 + 中段团块 + 稀疏空隙，破匀密锯齿。
+  "  float strokeFine = 0.5 + 0.5 * sin(ang * 38.0 + foamN * 12.0 + vTideWorld.x * 2.1);",
+  "  float strokeMid = 0.5 + 0.5 * sin(ang * 17.0 - foamN2 * 8.0 + vTideWorld.z * 1.4);",
+  "  float strokeGap = 0.5 + 0.5 * sin(ang * 7.0 + foamN3 * 5.5 + vTideWorld.x * 0.55);",
+  "  float strokeRaw = strokeFine * strokeMid;",
+  "  strokeRaw *= mix(0.55, 1.0, smoothstep(0.22, 0.62, strokeGap));",
+  "  float strokeGate = smoothstep(0.32, 0.58, strokeRaw);",
+  "  strokeGate *= smoothstep(0.18, 0.6, foamN2);",
+  // 极弱底 + 更多窄浪脊带（默认机位可读密度，非软晕宽带）。
+  // R21: less cliff-foot sparkle — a soft light surf band carries the shoreline; ridges/crest/lace are
+  // dimmer, lower-contrast and off-white instead of pure-white flecks gated by the fine stroke noise.
+  "  float foamSoft = (1.0 - smoothstep(0.0, 0.1, d)) * uTideFoam * 0.2;",
+  "  float r1 = exp(-pow((d - 0.008) / 0.0058, 2.0));",
+  "  float r2 = exp(-pow((d - 0.024) / 0.0075, 2.0));",
+  "  float r3 = exp(-pow((d - 0.046) / 0.009, 2.0));",
+  "  float r4 = exp(-pow((d - 0.074) / 0.011, 2.0));",
+  "  float rLace = exp(-pow((d - 0.108) / 0.014, 2.0));",
+  "  float rSpray = exp(-pow((d - 0.145) / 0.018, 2.0));",
+  "  float ridges = (r1 * 0.95 + r2 * 0.8 + r3 * 0.6 + r4 * 0.4) * uTideFoam * mix(0.35, 0.8, strokeGate);",
+  "  float lace = (rLace * 0.5 + rSpray * 0.3) * uTideFoam * strokeGate * (0.4 + 0.6 * foamN);",
+  "  float crest = r1 * mix(0.06, 0.5, strokeGate) * uTideFoam * (0.7 + 0.3 * foamN3);",
+  "  waterCol = mix(waterCol, vec3(0.8, 0.9, 0.88), foamSoft);",
+  "  waterCol = mix(waterCol, vec3(0.88, 0.95, 0.93), clamp(ridges, 0.0, 0.85) * (0.6 + 0.4 * foamN));",
+  "  waterCol = mix(waterCol, vec3(0.93, 0.97, 0.96), clamp(crest, 0.0, 0.7));",
+  "  waterCol = mix(waterCol, vec3(0.86, 0.94, 0.92), lace);",
   "  diffuseColor.rgb = waterCol;",
   "}",
 ].join("\n");
@@ -131,9 +176,10 @@ export function createTideWaterMaterial(
 
   const material = new MeshStandardMaterial({
     color: spec.shallow,
-    roughness: 0.28,
-    metalness: 0.05,
-    envMapIntensity: 0.45,
+    // R12：略哑光，绘本感非镜面塑料。
+    roughness: 0.42,
+    metalness: 0.03,
+    envMapIntensity: 0.38,
   });
   material.userData.gdShared = false;
   material.userData.tideUniforms = uniforms;
@@ -149,7 +195,7 @@ export function createTideWaterMaterial(
       .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>\n${FRAG_NORMAL}`);
   };
   material.customProgramCacheKey = () =>
-    `tide-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
+    `tide-r21-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
 
   return {
     material,

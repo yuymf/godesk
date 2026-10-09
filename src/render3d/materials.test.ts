@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MeshPhysicalMaterial, MeshStandardMaterial, Texture } from "three";
+import { Color, MeshPhysicalMaterial, MeshStandardMaterial, Texture } from "three";
 import {
   MaterialLibrary,
   PATTERN_IDS,
@@ -8,6 +8,15 @@ import {
   installPattern,
 } from "./materials";
 import { PROP_MATERIALS, TERRAIN_MATERIALS, seatMaterial } from "./tokens";
+import type { MaterialToken } from "./tokens";
+
+/** Glossy fixture — seats dropped clearcoat in round-6tex (anti-plastic). */
+const GLOSSY_SEAT: MaterialToken = {
+  ...seatMaterial(0),
+  roughness: 0.5,
+  clearcoat: 0.12,
+  pbrBaseColor: false,
+};
 
 function compile(material: MeshStandardMaterial) {
   const shader = {
@@ -40,12 +49,15 @@ describe("G3D-07 materials", () => {
   });
 
   it("uses MeshPhysicalMaterial clearcoat only when the tier allows it", () => {
-    const high = createMaterial(seatMaterial(0), { clearcoat: true });
+    const high = createMaterial(GLOSSY_SEAT, { clearcoat: true });
     expect(high).toBeInstanceOf(MeshPhysicalMaterial);
-    expect((high as MeshPhysicalMaterial).clearcoat).toBeCloseTo(0.3);
-    const medium = createMaterial(seatMaterial(0), { clearcoat: false });
+    expect((high as MeshPhysicalMaterial).clearcoat).toBeCloseTo(0.12);
+    const medium = createMaterial(GLOSSY_SEAT, { clearcoat: false });
     expect(medium).not.toBeInstanceOf(MeshPhysicalMaterial);
-    expect(medium.roughness).toBeCloseTo(0.45);
+    expect(medium.roughness).toBeCloseTo(0.5);
+    // Round-6tex seats: matte wood, no clearcoat even on high tier.
+    const matte = createMaterial(seatMaterial(0), { clearcoat: true });
+    expect(matte).not.toBeInstanceOf(MeshPhysicalMaterial);
     expect(createMaterial(TERRAIN_MATERIALS.wood!, { clearcoat: true })).not.toBeInstanceOf(MeshPhysicalMaterial);
   });
 
@@ -62,11 +74,10 @@ describe("G3D-07 materials", () => {
     expect(library.pbrSetsInUse()).toEqual(["t01-pine", "t09-paintwood"]);
   });
 
-  it("streams PBR maps into every material of a set; seat pieces keep their colour", () => {
+  it("streams PBR maps into every material of a set; seat pieces multiply wood albedo", () => {
     const library = new MaterialLibrary({ clearcoat: false });
     const wood = library.get("terrain-wood", TERRAIN_MATERIALS.wood!);
     const seat = library.get("seat-0", seatMaterial(0));
-    const seatColour = seat.color.getHex();
     const woodMaps = maps();
     expect(library.applyPbrSet("t01-pine", woodMaps)).toBe(1);
     expect(wood.map).toBe(woodMaps.map);
@@ -75,12 +86,15 @@ describe("G3D-07 materials", () => {
     expect(wood.roughnessMap).toBe(woodMaps.ormMap);
     expect(wood.metalnessMap).toBe(woodMaps.ormMap);
     expect((wood.userData.gdPatternStrength as { value: number }).value).toBe(PATTERN_STRENGTH_WITH_PBR);
+    // R19: AI baseColor leads — token.base lerps toward white by token.pbrTint.
+    const expected = new Color(TERRAIN_MATERIALS.wood!.base).lerp(new Color(0xffffff), TERRAIN_MATERIALS.wood!.pbrTint!);
+    expect(wood.color.r).toBeCloseTo(expected.r, 5);
+    expect(wood.color.g).toBeCloseTo(expected.g, 5);
     const seatMaps = maps();
     library.applyPbrSet("t09-paintwood", seatMaps);
-    expect(seat.map).toBeNull();
+    // Round-6tex: wood albedo on (multiplies with vertex / seat colour).
+    expect(seat.map).toBe(seatMaps.map);
     expect(seat.normalMap).toBe(seatMaps.normalMap);
-    expect(seat.color.getHex()).toBe(seatColour);
-    // Materials created after the set arrived get it too.
     const late = library.get("terrain-wood-2", TERRAIN_MATERIALS.wood!);
     expect(late.map).toBe(woodMaps.map);
   });
@@ -97,7 +111,6 @@ describe("G3D-07 materials", () => {
     library.dispose();
     expect(materialDisposed).toBe(1);
     expect(texturesDisposed).toBe(3);
-    // Late arrivals after teardown are disposed immediately, never applied.
     const late = maps();
     let lateDisposed = 0;
     for (const texture of [late.map, late.normalMap, late.ormMap]) texture.addEventListener("dispose", () => { lateDisposed += 1; });
@@ -107,8 +120,8 @@ describe("G3D-07 materials", () => {
 
   it("drops clearcoat when a runtime downgrade leaves high", () => {
     const library = new MaterialLibrary({ clearcoat: true });
-    const seat = library.get("seat-0", seatMaterial(0)) as MeshPhysicalMaterial;
-    expect(seat.clearcoat).toBeCloseTo(0.3);
+    const seat = library.get("glossy-0", GLOSSY_SEAT) as MeshPhysicalMaterial;
+    expect(seat.clearcoat).toBeCloseTo(0.12);
     library.setClearcoat(false);
     expect(seat.clearcoat).toBe(0);
   });
@@ -118,15 +131,30 @@ describe("G3D-07 environment reflections", () => {
   it("puts the RoomEnvironment on glossy materials only, so tile shadows stay readable", () => {
     const library = new MaterialLibrary({ clearcoat: true });
     const tile = library.get("terrain-wood", TERRAIN_MATERIALS.wood!);
-    const seat = library.get("seat-0", seatMaterial(0));
+    const glossy = library.get("glossy-0", GLOSSY_SEAT);
     const env = new Texture();
-    library.setEnvironment(env, 0.35);
-    expect(seat.envMap).toBe(env);
-    expect(seat.envMapIntensity).toBe(0.35);
+    library.setEnvironment(env, 0.2);
+    expect(glossy.envMap).toBe(env);
+    expect(glossy.envMapIntensity).toBe(0.2);
     expect(tile.envMap).toBeNull();
     const robber = library.get("robber", PROP_MATERIALS.robber);
-    expect(robber.envMap).toBe(env);
+    expect(robber.envMap).toBeNull();
     library.setEnvironment(null, 0);
-    expect(seat.envMap).toBeNull();
+    expect(glossy.envMap).toBeNull();
+  });
+
+  it("R18 oil brush layer only on terrain tiles (brush > 0): own program, AA-faded dabs", () => {
+    const tile = createMaterial(TERRAIN_MATERIALS.sheep!, { clearcoat: false });
+    expect(tile.defines?.GD_BRUSH).toBe(1);
+    expect(tile.customProgramCacheKey()).toBe("gd-pattern-4-brush");
+    const shader = compile(tile);
+    expect(shader.uniforms.uGdBrush).toEqual({ value: TERRAIN_MATERIALS.sheep!.brush });
+    expect(shader.fragmentShader).toContain("vec3 gdB = gdBrushStroke(vGdWorld);");
+    expect(shader.fragmentShader).toContain("fwidth(g)");
+    const cliff = createMaterial(PROP_MATERIALS.cliff, { clearcoat: false });
+    expect(cliff.defines?.GD_BRUSH).toBeUndefined();
+    expect(cliff.customProgramCacheKey()).toBe("gd-pattern-3");
+    expect(compile(cliff).fragmentShader).not.toContain("gdBrushStroke");
+    expect(PATTERN_STRENGTH_WITH_PBR).toBeGreaterThanOrEqual(0.5);
   });
 });

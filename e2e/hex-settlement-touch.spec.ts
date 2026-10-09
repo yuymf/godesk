@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
+import { clickTidewellBoardAction, openTidewellBoardTargets, claimTidewellSeat } from "./helpers/tidewell-actions";
 
 /** G3D-04 EP-I: iPhone 12 Pro touch emulation can tap a legal action (no HUD/header overlap). */
 test("汐屿 room: iPhone 12 Pro touch taps a legal settlement", async ({ browser }) => {
@@ -25,7 +25,7 @@ test("汐屿 room: iPhone 12 Pro touch taps a legal settlement", async ({ browse
     });
     await card.getByRole("link", { name: "继续这一局" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/room\//);
-    await page.getByLabel("你的席位").selectOption("0");
+    await claimTidewellSeat(page, 0);
     const board = page.getByRole("region", { name: "汐屿六角岛" });
     await expect(page.getByRole("img", { name: "汐屿六角岛" })).toBeVisible();
     const { openTidewellBoardTargets } = await import("./helpers/tidewell-actions");

@@ -33,6 +33,10 @@ export type MaterialToken = {
    * 座位棋子用：彩漆木的木纹底色会把座位色压成棕色，座位色必须可辨认。
    */
   pbrBaseColor?: boolean;
+  /** R19：PBR baseColor 生效时 token.base 向白色 lerp 的比例（缺省 PBR_TINT_TO_WHITE）；AI 贴图自带色相时调高。 */
+  pbrTint?: number;
+  /** R18：油彩笔触层强度（仅地块；0 / 缺省 = 无笔触层，崖壁 / 棋子 / 桌面不受影响）。 */
+  brush?: number;
 };
 
 export type PbrSetId =
@@ -55,10 +59,11 @@ export const SCENE_TOKENS = {
   toneMapping: "agx",
   outputColorSpace: "srgb",
   lighting: {
-    sun: { azimuthDeg: 135, elevationDeg: 52, intensity: 2.6, color: "#fff4e0" },
-    hemisphere: { sky: "#dfe9f5", ground: "#b59c74", intensity: 0.7 },
-    shadow: { enabled: true, softness: 0.5 },
-    exposure: 1,
+    // round-5d：再暖一点主光 + 更软投影，压塑料感。
+    sun: { azimuthDeg: 128, elevationDeg: 46, intensity: 3.05, color: "#ffc890" },
+    hemisphere: { sky: "#f2e6d2", ground: "#c9a878", intensity: 1.05 },
+    shadow: { enabled: true, softness: 0.92 },
+    exposure: 1.12,
   } satisfies LightingSpec,
   shadow: {
     /** high / medium 的 PCF 半径；low 档用 TierCaps.shadowRadius（= 1）。 */
@@ -68,37 +73,56 @@ export const SCENE_TOKENS = {
     /** 阴影相机正交范围 = 岛屿包围半径 + 1.5 单位（§4.3）。 */
     boundsPadding: 1.5,
   },
-  environment: { intensity: 0.35, pmremSigma: 0.04 },
+  environment: { intensity: 0.2, pmremSigma: 0.05 },
   /** §5.5 S-01 程序化渐变天空穹顶。 */
-  sky: { top: "#8fb8d8", horizon: "#e9eef0", bottom: "#d8ccb2", exponent: 0.8, radius: 60 },
+  sky: { top: "#9ab8cc", horizon: "#efe6d4", bottom: "#d4c4a4", exponent: 0.75, radius: 60 },
   camera: { fovDeg: 35, distance: 16, minPolarDeg: 25, maxPolarDeg: 70 },
-  tile: { roughness: 0.82, metalness: 0 },
-  piece: { roughness: 0.45, metalness: 0, clearcoat: 0.3 },
+  tile: { roughness: 0.98, metalness: 0 },
+  piece: { roughness: 0.82, metalness: 0, clearcoat: 0 },
 } as const;
 
+/** R19 汐屿六角岛灯光：主光 / 半球光提亮，绘本明亮基调（经 HexSettlementBoard → SceneHost lighting 传入）。 */
+export const HEX_ISLAND_LIGHTING = {
+  // R22: less orange key light (#ffd4a4 → #ffecd2) + more neutral sky fill — the warm cast pushed wheat / desert
+  // toward orange-brown and ore / pasture toward beige-olive; resource hues now stay true (water gets brighter, not darker).
+  sun: { azimuthDeg: 128, elevationDeg: 48, intensity: 3.45, color: "#ffecd2" },
+  hemisphere: { sky: "#f3f1e8", ground: "#cfc3a2", intensity: 1.42 },
+  shadow: { enabled: true, softness: 0.92 },
+  exposure: 1.2,
+} as const satisfies LightingSpec;
+
+/** R19：AI 贴图（虹夏 8 张；R20 起经 scripts/bake-ai-r20.py 色块化 + Kuwahara 绘本化后烘焙）为 t01–t06 baseColor；base 提亮去饱和、pbrTint 让贴图色相主导；
+ *  brush 0.6→0.85：油彩 dab 层在 AI 贴图之上于 b3 近景可见（远景 / 掠射角仍由 fwidth AA 淡回均值）。 */
 /** 地块材质（颜色沿用现有地形色，pattern 按地形，贴图取 G3D-22 套件）。 */
+/** R17: matte hex faces + denser PBR repeat — continuous oil-paint brush, not flat plastic. */
 export const TERRAIN_MATERIALS: Record<string, MaterialToken> = {
-  wood: { base: "#2f6b3a", roughness: 0.82, metalness: 0, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 0.6 },
-  brick: { base: "#b85a3a", roughness: 0.82, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 0.6 },
-  sheep: { base: "#8fbf6a", roughness: 0.82, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 0.6 },
-  wheat: { base: "#d4b84a", roughness: 0.82, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 0.6 },
-  ore: { base: "#6a6f78", roughness: 0.82, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 0.6 },
-  desert: { base: "#c9b896", roughness: 0.82, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 0.6 },
+  wood: { base: "#46744a", roughness: 0.98, metalness: 0, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 1.65, pbrTint: 0.55, brush: 0.85 },
+  brick: { base: "#bc6646", roughness: 0.98, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 1.65, pbrTint: 0.6, brush: 0.85 },
+  // R22: fresher light-green pasture tint (was #a3c67e).
+  sheep: { base: "#a6d27e", roughness: 0.98, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 1.7, pbrTint: 0.6, brush: 0.85 },
+  // R22: wheat-field texture re-baked golden (bake-ai-r20.py golden_wheat) + a near-neutral light-gold tint (was #d8c070).
+  // R23: continuous golden field (no wheatrow props); texture gets low-freq undulating wave in bake; brush slightly up for colour noise.
+  wheat: { base: "#e8e090", roughness: 0.97, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 1.7, pbrTint: 0.5, brush: 0.92 },
+  // R21: light grey rock; R23: cooler + brighter (#a4abb3 → #b8c4cc), scree re-baked cooler_light_rock.
+  ore: { base: "#c2ced6", roughness: 0.96, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 1.55, pbrTint: 0.5, brush: 0.85 },
+  // R22: paler sand (texture re-baked pale_sand; tint #d2c29e → #e4dec8, less orange) — reads apart from golden wheat.
+  desert: { base: "#e4dec8", roughness: 0.98, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 1.45, pbrTint: 0.6, brush: 0.85 },
 };
 
 /** 其余物件材质。 */
 export const PROP_MATERIALS = {
   cliff: { base: "#7a7368", roughness: 0.9, metalness: 0, pattern: "stone", pbrSet: "t07-cliff", pbrRepeat: 5 },
-  "number-token": { base: "#f5f0e1", roughness: 0.7, metalness: 0, pattern: "none", pbrSet: "t11-parchment", pbrRepeat: 1 },
+  // R22: warmer cream (was #f5f0e1) — keeps the parchment token cream under the less-orange R22 key light.
+  "number-token": { base: "#eedcb8", roughness: 0.7, metalness: 0, pattern: "none", pbrSet: "t11-parchment", pbrRepeat: 1 },
   // G3D-ART-2：6/8 不再整块涂红（与座位 0 红色混淆、且盖住数字）；同用 N1 筹码面，数字用赤陶色高亮（number-labels.ts）。
-  "number-token-hot": { base: "#f7e6d2", roughness: 0.7, metalness: 0, pattern: "none", pbrSet: "t11-parchment", pbrRepeat: 1 },
-  robber: { base: "#2c3e50", roughness: 0.55, metalness: 0, pattern: "none" },
+  "number-token-hot": { base: "#f0d8bc", roughness: 0.7, metalness: 0, pattern: "none", pbrSet: "t11-parchment", pbrRepeat: 1 },
+  robber: { base: "#2c3e50", roughness: 0.7, metalness: 0, pattern: "none" },
   wood: { base: "#8b6914", roughness: 0.7, metalness: 0, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 1 },
   die: { base: "#f8f8f8", roughness: 0.5, metalness: 0, pattern: "none" },
   ground: { base: "#d7e6c8", roughness: 0.9, metalness: 0, pattern: "cloth" },
 } satisfies Record<string, MaterialToken>;
 
-/** 座位棋子：roughness 0.45、clearcoat 0.3（仅 high 档），pattern none，贴图彩漆木。 */
+/** 座位棋子：roughness 0.82、clearcoat 0（r6tex 去塑料）（仅 high 档），pattern none，贴图彩漆木。 */
 export function seatMaterial(seat: number): MaterialToken {
   return {
     base: SEAT_COLORS[seat] ?? "#ffffff",
@@ -107,8 +131,8 @@ export function seatMaterial(seat: number): MaterialToken {
     clearcoat: SCENE_TOKENS.piece.clearcoat,
     pattern: "none",
     pbrSet: "t09-paintwood",
-    pbrRepeat: 1,
-    pbrBaseColor: false,
+    pbrRepeat: 2.2,
+    pbrBaseColor: true,
   };
 }
 
@@ -167,9 +191,23 @@ export function pbrResolutionFor(tier: "high" | "medium" | "low"): 512 | 256 {
 
 /** 地块外接半径（与 SceneHost 六棱柱一致）。 */
 export const TILE_RADIUS = 0.95;
+/**
+ * R21 · 地块顶面实际外接半径。R20 前为 TILE_RADIUS − 0.04 = 0.91（相邻格缝 ≈ √3·0.09 ≈ 0.16，
+ * 露出深褐顶盖 → 像格子棋盘）；R21 放大到 0.99（缝 ≈ 0.017，近乎相接），并在地块笔触 shader 里做边缘软过渡。
+ * TILE_RADIUS 仍用于相机/水岸距离场/islandBounds，不随之改动。
+ * R22：0.99 → 1.0，顶面相接；0.017 的缝槽在近景会露出暗侧面 / 阴影成 1px 暗线，改在 shader 里画浅色发丝缝。
+ */
+export const TILE_FACE_RADIUS = 1.0;
+/**
+ * R22 · 地块侧面向下内收：底面外接半径 = TILE_FACE_RADIUS × TILE_BASE_SCALE。顶面相接（无缝槽、无暗线），
+ * 外圈侧面仍缩在岸崖顶（SKIRT_TOP_Y 处 ≈0.989）之内，不与岸崖面 z-fight。
+ */
+export const TILE_BASE_SCALE = 0.92;
+/** R21 · 顶面内切半径（边心距）= TILE_FACE_RADIUS·√3/2，供 shader 软边带使用。 */
+export const TILE_FACE_APOTHEM = TILE_FACE_RADIUS * (Math.sqrt(3) / 2);
 
 /** G3D-ART-2：点数筹码水平放大倍数（0.22 半径只占六角宽 23%，远看读不出数字；放大到 ≈42%，G3D-ART-3 由 1.6 调到 1.8 保证 iPhone 低档远处筹码可读）。 */
-export const NUMBER_TOKEN_SCALE = 1.8;
+export const NUMBER_TOKEN_SCALE = 1.45;
 
 /**
  * 由场景节点求岛屿包围球（XZ 平面）：中心 = 地块中心均值，半径 = 最远地块中心距离 + 地块外接半径。

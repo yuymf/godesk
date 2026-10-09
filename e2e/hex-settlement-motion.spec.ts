@@ -1,5 +1,5 @@
 import { expect, type Browser, type Locator, type Page, test } from "@playwright/test";
-import { openTidewellBoardTargets } from "./helpers/tidewell-actions";
+import { openTidewellBoardTargets, claimTidewellSeat } from "./helpers/tidewell-actions";
 
 /**
  * G3D-09: motion durations (place 280 / dice 900 / turn camera 600), reduced motion → 0 ms,
@@ -21,7 +21,7 @@ async function openRoom(page: Page) {
   const card = page.locator(".lobby-card").filter({ has: page.locator(`a[href$="/studio/${projectId}"]`) });
   await card.getByRole("link", { name: "继续这一局" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
-  await page.getByLabel("你的席位").selectOption("0");
+  await claimTidewellSeat(page, 0);
   const board = page.getByRole("region", { name: "汐屿六角岛" });
   await expect(page.getByRole("img", { name: "汐屿六角岛" })).toBeVisible();
   await expect(page.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
@@ -33,7 +33,7 @@ async function joinSeat1(browser: Browser, url: string, reducedMotion: "reduce" 
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion });
   const page = await ctx.newPage();
   await page.goto(url);
-  await page.getByLabel("你的席位").selectOption("1");
+  await claimTidewellSeat(page, 1);
   const board = page.getByRole("region", { name: "汐屿六角岛" });
   await expect(board).toBeVisible({ timeout: 30_000 });
   return { ctx, page, board };

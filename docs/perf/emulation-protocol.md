@@ -119,6 +119,7 @@ CPU 4× / 6× 对应 DevTools 的固定预设「Mid-tier mobile」/「Low-tier m
 | --- | --- | --- |
 | 首页首屏 JS（gzip） | ≤ 170 KB | CI：`pnpm size` |
 | 3D 核心 chunk（gzip） | ≤ 210 KB | CI：`pnpm size` |
+| hex 盘专用懒加载 chunk `g3d-hexkit-*`（gzip） | ≤ 10 KB | CI：`pnpm size`（G3D-JUDGE-PIECES：镜头导演 / 骰盘角标 / hex mapper / 点数贴花 / 命中区从核心挪出，与 GLB 并行加载；核心预算不放宽） |
 | 可交互前传输 | ≤ 1.4 MB | CI + 桌面 |
 | 首局总传输 | high / medium ≤ 7.6 MB；low ≤ 5.5 MB | CI + 桌面 |
 | 首局请求数 | ≤ 80 | CI + 桌面 |

@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
+import { clickTidewellBoardAction, openTidewellBoardTargets, claimTidewellSeat } from "./helpers/tidewell-actions";
 import { mkdirSync } from "node:fs";
 
 /**
@@ -24,14 +24,18 @@ async function openAiRoom(page: Page) {
   const card = page.locator(".lobby-card").filter({ has: page.locator(`a[href$="/studio/${projectId}"]`) });
   await card.getByRole("button", { name: "和电脑对战" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
+  const menu = page.locator("details.tidewell-menu");
+  await menu.locator("summary").click();
+  await expect(menu).toHaveAttribute("open", "", { timeout: 5_000 });
   const seatSelect = page.getByLabel("你的席位");
+  await expect(seatSelect).toBeVisible({ timeout: 10_000 });
   await expect(seatSelect.locator("option[value='1']")).toHaveText(/电脑/);
   await expect(seatSelect.locator("option[value='1']")).toHaveAttribute("disabled", "");
   await seatSelect.selectOption("0");
   const board = page.getByRole("region", { name: "汐屿六角岛" });
   await expect(page.getByRole("img", { name: "汐屿六角岛" })).toBeVisible({ timeout: 30_000 });
   await expect(page.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
-  await expect(page.locator(".seat-chip").filter({ hasText: "电脑" })).toHaveCount(1);
+  await expect(board.locator(".tidewell-player-card").filter({ hasText: "电脑" })).toHaveCount(1);
   return board;
 }
 

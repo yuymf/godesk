@@ -95,6 +95,18 @@ import {
   type StoredRestoreBuildResult,
 } from "./project-operations";
 
+/**
+ * Close codes a server may pass to `WebSocket.close()`: 1000–1003, 1007–1014
+ * and the application range 3000–4999. 1004/1005/1006/1015 are reserved for
+ * the protocol and throw, so they (and anything out of range) map to 1000.
+ */
+export function sendableCloseCode(code: number): number {
+  if (code === 1000 || (code >= 1001 && code <= 1003)) return code;
+  if (code >= 1007 && code <= 1014) return code;
+  if (code >= 3000 && code <= 4999) return code;
+  return 1000;
+}
+
 /** Next time queued/running jobs should be recovered by the alarm (ms epoch). */
 const JOB_RECOVERY_AT_KEY = "alarm:job-recovery-at";
 
@@ -2587,6 +2599,14 @@ export class CreatorProjects extends DurableObject<Env> {
   }
 
   webSocketClose(socket: WebSocket, code: number, reason: string) {
-    socket.close(code, reason);
+    // With web_socket_auto_reply_to_close (compat date >= 2026-04-07) the
+    // runtime already completed the handshake; reciprocating is harmless but the
+    // peer's code may be reserved (1005 no-status / 1006 abnormal drop), and
+    // `close()` throws on those, so never echo them back.
+    try {
+      socket.close(sendableCloseCode(code), reason.slice(0, 120));
+    } catch {
+      // Already closed / torn down: nothing left to reciprocate.
+    }
   }
 }

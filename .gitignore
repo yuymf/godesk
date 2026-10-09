@@ -17,3 +17,9 @@ playwright/.cache/
 test-results/
 vite.config.d.ts
 vite.config.js
+
+# Round-6tex: raw imported maps stay local / evidence; only ktx2 ships
+assets/imported/polyhaven/**/*.jpg
+assets/imported/polyhaven/**/*.png
+assets/imported/polyhaven/**/*.bin
+assets/imported/ambientcg/**

@@ -39,17 +39,17 @@ const MODEL_URLS = import.meta.glob("../../assets/models/{pieces,decor,props}.gl
   import: "default",
 }) as Record<string, () => Promise<string>>;
 
+/**
+ * G3D-JUDGE round-3/4 knife ②: settlement / city / road / robber are hand-built
+ * miniature meshes in `assets/pieces.ts` (merged → InstancedMesh pools); dice/tray
+ * stay thin felt pad in `assets/dice-geometry.ts`. GLB bundle still supplies
+ * decor / sheep / docks / ships only — not piece buildings.
+ */
 export type TidewellGeometries = {
-  settlement: BufferGeometry;
-  city: BufferGeometry;
-  robber: BufferGeometry;
-  road: BufferGeometry;
   sheep: BufferGeometry;
   dock: BufferGeometry;
   shipA: BufferGeometry;
   shipB: BufferGeometry;
-  die: BufferGeometry;
-  diceTray: BufferGeometry;
   decorByTerrain: Record<string, BufferGeometry>;
   ready: boolean;
 };
@@ -60,16 +60,10 @@ function stubPillar(): BufferGeometry {
 
 function makeFallback(): TidewellGeometries {
   return {
-    settlement: new BoxGeometry(0.22, 0.22, 0.22),
-    city: new BoxGeometry(0.3, 0.34, 0.3),
-    robber: new CylinderGeometry(0.12, 0.18, 0.7, 12),
-    road: new BoxGeometry(1, 1, 1),
     sheep: stubPillar(),
     dock: new BoxGeometry(0.4, 0.12, 0.4),
     shipA: new BoxGeometry(0.5, 0.18, 0.22),
     shipB: new BoxGeometry(0.5, 0.18, 0.22),
-    die: new BoxGeometry(0.22, 0.22, 0.22),
-    diceTray: new BoxGeometry(0.7, 0.1, 0.5),
     decorByTerrain: {
       wood: stubPillar(),
       brick: stubPillar(),
@@ -156,40 +150,22 @@ export async function ensureTidewellGeometries(): Promise<TidewellGeometries> {
         const g = pick(decor, ...names) ?? pick(pieces, ...names);
         if (g) decorByTerrain[terrain] = g;
       }
-      const settle = pick(pieces, "settlement") ?? FALLBACK.settlement;
-      const city = pick(pieces, "city") ?? FALLBACK.city;
-      const robber = pick(pieces, "fog_lamp", "fog-lamp") ?? FALLBACK.robber;
-      const road = pick(pieces, "road") ?? FALLBACK.road;
       const sheep = pick(pieces, "sheep") ?? FALLBACK.sheep;
       const dock = pick(props, "dock") ?? FALLBACK.dock;
       const shipA = pick(props, "boat-a", "boat_a") ?? FALLBACK.shipA;
       const shipB = pick(props, "boat-b", "boat_b") ?? FALLBACK.shipB;
-      const die = pick(props, "dice", "die") ?? FALLBACK.die;
-      const diceTray = pick(props, "dice_tray", "dice-tray") ?? FALLBACK.diceTray;
       // G3D-13 proportions vs TILE_RADIUS≈0.95 (≈hex edge): settlement footprint ~0.25 edge, dock <0.6 edge.
-      if (settle !== FALLBACK.settlement) normalizeExtent(settle, 0.25);
-      if (city !== FALLBACK.city) normalizeExtent(city, 0.36);
-      if (robber !== FALLBACK.robber) normalizeExtent(robber, 0.55);
       if (dock !== FALLBACK.dock) normalizeExtent(dock, 0.52);
       if (shipA !== FALLBACK.shipA) normalizeExtent(shipA, 0.4);
       if (shipB !== FALLBACK.shipB) normalizeExtent(shipB, 0.4);
-      if (road !== FALLBACK.road) normalizeExtent(road, 0.55);
-      if (die !== FALLBACK.die) normalizeExtent(die, 0.22);
-      if (diceTray !== FALLBACK.diceTray) normalizeExtent(diceTray, 0.7);
       for (const [key, geom] of Object.entries(decorByTerrain)) {
         if (geom !== FALLBACK.decorByTerrain[key]) normalizeExtent(geom, 0.4);
       }
       cache = {
-        settlement: settle,
-        city,
-        robber,
-        road,
         sheep: sheep !== FALLBACK.sheep ? normalizeExtent(sheep, 0.35) : sheep,
         dock,
         shipA,
         shipB,
-        die,
-        diceTray,
         decorByTerrain,
         ready: true,
       };
@@ -212,18 +188,7 @@ export function disposeTidewellGeometryCache(): void {
   bags.push(FALLBACK);
   const seen = new Set<BufferGeometry>();
   for (const bag of bags) {
-    for (const key of [
-      "settlement",
-      "city",
-      "robber",
-      "road",
-      "sheep",
-      "dock",
-      "shipA",
-      "shipB",
-      "die",
-      "diceTray",
-    ] as const) {
+    for (const key of ["sheep", "dock", "shipA", "shipB"] as const) {
       const geom = bag[key];
       if (geom && !seen.has(geom)) {
         seen.add(geom);
@@ -248,28 +213,16 @@ export function getTidewellGeometriesSync(): TidewellGeometries {
 
 export function geometryForNode(node: SceneNode, geoms: TidewellGeometries): BufferGeometry {
   switch (node.kind) {
-    case "settlement":
-      return geoms.settlement;
-    case "city":
-      return geoms.city;
-    case "robber":
-      return geoms.robber;
-    case "road":
-      return geoms.road;
     case "port":
       return geoms.dock;
     case "ship":
       return node.tag === "ship-b" ? geoms.shipB : geoms.shipA;
-    case "die":
-      return geoms.die;
-    case "dice-tray":
-      return geoms.diceTray;
     case "decor": {
       const tag = node.tag ?? "desert";
       return geoms.decorByTerrain[tag] ?? geoms.decorByTerrain.desert ?? FALLBACK.decorByTerrain.desert!;
     }
     default:
-      return FALLBACK.settlement;
+      return FALLBACK.dock;
   }
 }
 

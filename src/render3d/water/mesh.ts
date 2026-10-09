@@ -26,14 +26,27 @@ import {
 import { loadSeaTextures, type SeaTextures } from "./sea-textures";
 import { waterFeaturesFor } from "./tiers";
 
+/** 海岸距离场覆盖半宽（主水面材质采样用；世界坐标外被 clamp 成深水）。 */
 export const WATER_HALF_EXTENT = 9;
+/**
+ * 可见海面半宽（Track C 取景用）。round-2d3：单张大平面到 ±80，去掉远海环，根除 ±9 接缝。
+ * 距离场仍按 WATER_HALF_EXTENT 采样，外圈 clamp 成深水。
+ */
+export const WATER_SEA_HALF_EXTENT = 80;
+/** @deprecated 用 WATER_SEA_HALF_EXTENT；保留别名以免旧引用挂掉。 */
+export const WATER_FAR_HALF_EXTENT = WATER_SEA_HALF_EXTENT;
+
 
 const DEFAULT_SPEC: TideWaterSpec = {
-  shallow: "#5fb3b3",
-  deep: "#1f4e6b",
-  waveHeight: 0.06,
-  waveSpeed: 0.6,
-  foam: 0.55,
+  // R20：明亮青绿（浅滩环亮水绿 → 外海亮青），不再沉到海军蓝；浪高不变。
+  // R21：#26b2aa/#065a6a → #2ab8af/#086070（略提亮，补偿崖脚白沫闪点减弱带来的水面均值下降；c 门槛 ①）。
+  // R24：外海再提亮（#086070→#1aa0a8），54° 斜视下远海占比升高时 a-default 水面 L 不掉破 c 闸。
+  // R25：外海回收向 settlecoast 深青绿（#1aa0a8→#0a6c74，近 R23 #086070；c 闸实测调）；正交后远海无透视压暗，勿再为 c 闸加码提亮。
+  shallow: "#2ab8af",
+  deep: "#0a6c74",
+  waveHeight: 0.065,
+  waveSpeed: 0.55,
+  foam: 1.0,
 };
 
 function coastsFromModel(model: SceneModel | null): CoastSample[] {
@@ -63,6 +76,8 @@ function makeDistTexture(data: Float32Array, size: number): DataTexture {
 export type WaterController = {
   mesh: Mesh;
   lastDistanceMs: number;
+  /** 可见海面半宽（世界单位）；Track C 取景 / 相机适配用。 */
+  seaHalfExtent: number;
   update(nowMs: number): void;
   setTier(tier: RenderTierId): void;
   rebuildDistance(model: SceneModel | null): void;
@@ -85,15 +100,16 @@ export async function createWaterController(options: {
   const { material, uniforms, setOwnedTexture, releaseOwned, disposeOwnedTextures } =
     createTideWaterMaterial(spec, features);
   const geom = new PlaneGeometry(
-    WATER_HALF_EXTENT * 2,
-    WATER_HALF_EXTENT * 2,
+    WATER_SEA_HALF_EXTENT * 2,
+    WATER_SEA_HALF_EXTENT * 2,
     features.segments,
     features.segments,
   );
   geom.rotateX(-Math.PI / 2);
   const mesh = new Mesh(geom, material);
   mesh.position.set(0, -0.08, 0);
-  mesh.receiveShadow = true;
+  // round-2d2/2d3：水面不接收阴影 —— 阴影相机只罩住岛，罩外偏亮会留接缝。
+  mesh.receiveShadow = false;
   mesh.castShadow = false;
   mesh.userData.kind = "water";
   mesh.userData.nodeId = "water";
@@ -179,6 +195,7 @@ export async function createWaterController(options: {
     get lastDistanceMs() {
       return lastDistanceMs;
     },
+    seaHalfExtent: WATER_SEA_HALF_EXTENT,
     update(nowMs: number) {
       if (disposed) return;
       const reduced = prefersReducedMotion();
@@ -192,7 +209,7 @@ export async function createWaterController(options: {
       uniforms.uTideFoam.value = features.foam ? spec.foam : 0;
       waveHeightBase = features.waveCount === 0 ? 0 : spec.waveHeight;
       material.customProgramCacheKey = () =>
-        `tide-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
+        `tide-r20-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
       material.needsUpdate = true;
     },
     rebuildDistance,

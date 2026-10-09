@@ -68,6 +68,8 @@ for (const viewport of [
     await openPreview(page);
     const host = page.getByTestId("g3d-scene-host").first();
     await expect(host).toHaveAttribute("data-number-labels", "18", { timeout: 60_000 });
+    // R18 boot reveal: the canvas fades in once the dressed scene is up (no flat-board flash).
+    await expect(host).toHaveAttribute("data-boot", "ready", { timeout: 30_000 });
     await host.scrollIntoViewIfNeeded();
     await page.waitForTimeout(1_500);
     const labels = (await page.evaluate(() =>

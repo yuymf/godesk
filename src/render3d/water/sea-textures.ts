@@ -17,16 +17,20 @@ function urlFor(name: "sea-normal" | "foam-noise"): string {
   return hit[1]!;
 }
 
-const bufferCache = new Map<string, ArrayBuffer>();
+const bufferCache = new Map<string, Promise<ArrayBuffer>>();
 
 async function fetchBuffer(url: string): Promise<ArrayBuffer> {
-  const hit = bufferCache.get(url);
-  if (hit) return hit.slice(0);
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`sea KTX2 fetch ${response.status}`);
-  const buffer = await response.arrayBuffer();
-  bufferCache.set(url, buffer);
-  return buffer.slice(0);
+  // Promise cache so the R19 boot prefetch and the mount share one in-flight request.
+  let hit = bufferCache.get(url);
+  if (!hit) {
+    hit = fetch(url).then((response) => {
+      if (!response.ok) throw new Error(`sea KTX2 fetch ${response.status}`);
+      return response.arrayBuffer();
+    });
+    bufferCache.set(url, hit);
+    hit.catch(() => bufferCache.delete(url));
+  }
+  return (await hit).slice(0);
 }
 
 function parseKtx2(
@@ -36,6 +40,12 @@ function parseKtx2(
   return new Promise((resolve, reject) => {
     loader.parse(bytes, resolve, reject);
   });
+}
+
+/** R19 boot: warm the sea KTX2 bytes + loader chunk while the kit / GLBs still load. */
+export function prefetchSeaTextures(): void {
+  void import("../assets/loaders");
+  for (const name of ["sea-normal", "foam-noise"] as const) void fetchBuffer(urlFor(name)).catch(() => undefined);
 }
 
 export type SeaTextures = { normal: Texture; foam: Texture; dispose(): void };

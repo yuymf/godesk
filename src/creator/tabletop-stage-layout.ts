@@ -23,16 +23,16 @@ const HARBOR_TARGETS = HARBOR_TARGET_GROUPS.flatMap((group) => group.targets);
  * 从懒加载 chunk 引用会把整段 Kernel 默认值留在首页包里（约 +1.1 KB gzip）。
  */
 export function fallbackTabletopRender(kernel: TabletopStageProps["kernel"]): TabletopRenderInput {
-  const seat = (base: string) => ({ base, roughness: 0.45, metalness: 0, clearcoat: 0.3, pattern: "none" as const });
+  const seat = (base: string) => ({ base, roughness: 0.58, metalness: 0, clearcoat: 0.12, pattern: "none" as const });
   const colors = kernel === "disc-flipping-v1" ? ["#1d1d1f", "#f4efe6", SEAT_COLORS[2], SEAT_COLORS[3]] : SEAT_COLORS;
   return {
     camera: { ...SCENE_TOKENS.camera, pan: false },
     lighting: SCENE_TOKENS.lighting,
-    water: { enabled: kernel === "harbor-voyage-v1", shallow: "#5fb3b3", deep: "#1f4e6b" },
+    water: { enabled: kernel === "harbor-voyage-v1", shallow: "#4aa8a8", deep: "#0e3a55" },
     materials: {
       ...Object.fromEntries(colors.map((base, index) => [`seat${index}`, seat(base)])),
-      table: { base: "#8b5a2b", roughness: 0.82, metalness: 0, pattern: "grain" },
-      piece: { base: "#f4efe6", roughness: 0.45, metalness: 0, pattern: "none" },
+      table: { base: "#8b5a2b", roughness: 0.9, metalness: 0, pattern: "grain" },
+      piece: { base: "#f4efe6", roughness: 0.58, metalness: 0, pattern: "none" },
       board: { base: kernel === "disc-flipping-v1" ? "#1f6b4a" : "#b9a77d", roughness: 0.8, metalness: 0, pattern: "cloth" },
     },
     bindings: [{ objectKind: "cell", mesh: "tile-square", material: "board", scale: 1 }],

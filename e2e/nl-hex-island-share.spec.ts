@@ -1,6 +1,6 @@
 import { chromium, expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
-import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
+import { clickTidewellBoardAction, openTidewellBoardTargets, claimTidewellSeat } from "./helpers/tidewell-actions";
 import {
   NORTH_STAR_HEX_ISLAND_PROMPT,
   openLobbyCard,
@@ -71,9 +71,8 @@ test("NL hex-island proposal → hex-settlement build → share= guest setup set
     await guestPage.goto(shareUrl);
     await guestPage.waitForURL(/\/chatgpt-plugin\/room\//);
     expect(new URL(guestPage.url()).searchParams.get("share")).toBeTruthy();
-    await page.getByLabel("你的席位").selectOption("1");
-    await guestPage.getByLabel("你的席位").selectOption("0");
-
+    await claimTidewellSeat(page, 1);
+    await claimTidewellSeat(guestPage, 0);
     const hostBoard = page.getByRole("region", { name: "汐屿六角岛" });
     const guestBoard = guestPage.getByRole("region", { name: "汐屿六角岛" });
     await expect(hostBoard).toBeVisible();

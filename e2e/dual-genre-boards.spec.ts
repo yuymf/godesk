@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { clickTidewellBoardAction, openTidewellBoardTargets } from "./helpers/tidewell-actions";
+import { clickTidewellBoardAction, openTidewellBoardTargets, claimTidewellSeat } from "./helpers/tidewell-actions";
 
 /** Frozen Sol max baseline prompts (GameSpec fixtures). */
 const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿六角岛资源建造游戏";
@@ -83,7 +83,7 @@ test.describe("dual-genre boards: Othello + hex-island generate → lobby → ac
     await expect(board.getByRole("region", { name: "对局状态" })).toBeVisible();
     await expect(page.getByRole("grid", { name: "黑白棋盘" })).toBeVisible();
 
-    await page.getByLabel("你的席位").selectOption("0");
+    await claimTidewellSeat(page, 0);
     await expect(board.getByRole("region", { name: "对局状态" })).toContainText("轮到你落子");
     await capture(page, "room-othello");
 
@@ -135,7 +135,7 @@ test.describe("dual-genre boards: Othello + hex-island generate → lobby → ac
     await expect(hud).toContainText("初始放置");
     await expect(page.getByRole("img", { name: "汐屿六角岛" })).toBeVisible();
 
-    await page.getByLabel("你的席位").selectOption("0");
+    await claimTidewellSeat(page, 0);
     await expect(hud).toContainText("轮到你行动");
     await capture(page, "room-hex-island");
     await expect(board.getByLabel("你的资源")).toBeVisible();

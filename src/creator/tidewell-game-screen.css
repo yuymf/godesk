@@ -1,0 +1,2942 @@
+/* G3D-judge-HUD · full-viewport Tidewell game screen (lazy with HexSettlementBoard).
+   Own wood/parchment/wax look — no settlecoast assets. Round 2h2: true 100vw×100dvh. */
+
+/* —— Immersive room shell: game IS the viewport —— */
+.room-view-hex-island.room-view-tidewell-immersive {
+  --tw-wood: #4a2f1c;
+  --tw-wood-edge: #2c1a10;
+  --tw-parchment: #f3e7c9;
+  --tw-parchment-deep: #e8d3a2;
+  --tw-ink: #2a1c12;
+  --tw-gold: #c9a227;
+  --tw-sea: #2e7f86;
+  --tw-tex-wood: none;
+  --tw-tex-parchment: none;
+  /* ⑤ carved wooden box — gold lip + deep inset well (#157); fill via camera not thinner rails */
+  --tw-gold-bright: #e8c85a;
+  --tw-gold-mid: #c9a227;
+  --tw-gold-deep: #8a6a14;
+  --tw-carve-outer: #1a0e08;
+  --tw-carve-gold:
+    0 0 0 1px var(--tw-carve-outer),
+    0 0 0 2px var(--tw-gold-deep),
+    0 0 0 3px var(--tw-gold-mid),
+    0 0 0 4px rgba(232, 200, 90, 0.55);
+  --tw-carve-inset:
+    inset 0 0 0 1px rgba(232, 200, 90, 0.35),
+    inset 0 0 0 2px rgba(138, 106, 20, 0.85),
+    inset 0 2px 6px rgba(0, 0, 0, 0.45),
+    inset 0 -1px 0 rgba(255, 220, 140, 0.12);
+  --tw-side: 260px;
+  --tw-dock: 148px;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 80;
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100vw !important;
+  max-width: none !important;
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  background:
+    radial-gradient(ellipse at 50% 18%, #5a3a22 0%, transparent 55%),
+    linear-gradient(180deg, #1a120c 0%, #0f0b08 100%);
+  color: var(--tw-parchment);
+  grid-template-columns: none !important;
+  gap: 0 !important;
+}
+
+html:has(.room-view-tidewell-immersive),
+body:has(.room-view-tidewell-immersive) {
+  overflow: hidden !important;
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+.room-view-tidewell-immersive > .action-log,
+.room-view-tidewell-immersive > .room-shell-header,
+.room-view-tidewell-immersive > .room-invitation {
+  display: none !important;
+}
+
+.room-view-tidewell-immersive > .hex-island-board {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* Hide floating feedback FAB + sound FAB — controls live in top-bar menu */
+.room-view-tidewell-immersive > .room-feedback-drawer,
+.room-view-tidewell-immersive .room-sound-settings {
+  position: fixed !important;
+  right: 12px;
+  top: 48px;
+  bottom: auto !important;
+  z-index: 95;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+/* When opened via topbar, restore interaction */
+.room-view-tidewell-immersive > .room-feedback-drawer[open],
+.room-view-tidewell-immersive .room-sound-settings[data-open="1"],
+.room-view-tidewell-immersive .room-sound-settings:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  max-width: min(360px, calc(100vw - 24px));
+}
+
+.room-feedback-drawer > summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid #c9a227;
+  background: linear-gradient(180deg, #5c3a22, #3a2416);
+  color: #f3e7c9;
+  font-size: 12px;
+}
+.room-feedback-drawer > summary::-webkit-details-marker { display: none; }
+.room-feedback-drawer[open] > .room-feedback-panel {
+  display: block;
+  margin-top: 8px;
+  max-height: min(50vh, 420px);
+  overflow: auto;
+  border-radius: 12px;
+  border: 2px solid #c9a22788;
+  background: #f3e7c9;
+  color: #2a1c12;
+  padding: 12px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+}
+
+/* —— Game screen grid —— */
+.tidewell-game-screen {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) var(--tw-dock, 196px);
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  color: var(--tw-ink, #2a1c12);
+  /* ⑤ one continuous wooden crate — top/sides/dock share the same timber */
+  background:
+    linear-gradient(180deg, rgba(40, 22, 12, 0.35) 0%, rgba(12, 6, 4, 0.55) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #3e2616 0%, #1a100a 100%);
+  background-size: auto, 320px 320px, auto;
+  box-shadow:
+    var(--tw-carve-gold),
+    inset 0 0 0 6px #2a1810,
+    inset 0 0 28px rgba(0, 0, 0, 0.55);
+}
+
+.tidewell-topbar {
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  min-height: 48px;
+  background:
+    linear-gradient(180deg, rgba(90, 56, 28, 0.42) 0%, rgba(28, 14, 8, 0.78) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #6b4428 0%, #3e2616 100%);
+  background-size: auto, 256px 256px, auto;
+  /* ⑤ carved gold belt — joins left/right rail lips into one crate lid */
+  border-bottom: 3px solid var(--tw-gold-mid, #c9a227);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 140, 0.28),
+    inset 0 -1px 0 var(--tw-gold-deep, #8a6a14),
+    inset 0 -3px 0 rgba(26, 14, 8, 0.9),
+    0 4px 14px rgba(0, 0, 0, 0.45);
+  color: var(--tw-parchment, #f3e7c9);
+  z-index: 5;
+}
+.tidewell-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: Georgia, "Times New Roman", serif;
+  letter-spacing: 0.02em;
+}
+.tidewell-home-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #c9a22788;
+  background: linear-gradient(180deg, #5c3a22, #3a2416);
+  color: #f3e7c9;
+  text-decoration: none;
+  font-size: 16px;
+  line-height: 1;
+}
+.tidewell-wax-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #e85d4c, #8b1e1e 70%);
+  box-shadow: 0 0 0 2px #c9a22755;
+}
+.tidewell-topbar-status {
+  flex: 1;
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tidewell-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tidewell-chip-btn {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid #c9a227aa;
+  background: linear-gradient(180deg, #5c3a22, #3a2416);
+  color: #f3e7c9;
+  font-size: 11px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.tidewell-menu {
+  position: relative;
+}
+.tidewell-menu > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.tidewell-menu > summary::-webkit-details-marker { display: none; }
+.tidewell-menu-panel {
+  position: fixed;
+  right: 8px;
+  top: 48px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid #c9a22788;
+  background: #2c1a10;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+.tidewell-menu-panel .tidewell-chip-btn,
+.tidewell-menu-panel button,
+.tidewell-menu-panel a {
+  width: 100%;
+  text-align: left;
+  box-sizing: border-box;
+}
+.tidewell-seat-select {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 2px 6px;
+  border-bottom: 1px solid #c9a22744;
+  margin-bottom: 4px;
+  font-size: 11px;
+  color: #f3e7c9;
+}
+.tidewell-seat-select select {
+  min-height: 32px;
+  border-radius: 6px;
+  border: 1px solid #c9a22788;
+  background: #f3e7c9;
+  color: #2a1c12;
+}
+
+.tidewell-game-body {
+  display: grid;
+  grid-template-columns: var(--tw-side, 260px) minmax(0, 1fr) var(--tw-side, 260px);
+  gap: 0;
+  min-height: 0;
+  padding: 0;
+  /* Centre ~62–68% at 1440: (1440-520)/1440 ≈ 64% */
+}
+
+.tidewell-panel-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-family: Georgia, serif;
+  color: var(--tw-wood, #4a2f1c);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tidewell-players,
+.tidewell-turn-column {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  padding: 8px;
+  border: none;
+  border-radius: 0;
+  overflow: auto;
+}
+.tidewell-turn-column {
+  border: none;
+}
+
+.tidewell-player-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tidewell-player-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 68px 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(255, 252, 245, 0.65);
+  border: 1px solid rgba(74, 47, 28, 0.18);
+}
+.tidewell-player-card.is-active {
+  box-shadow: 0 0 0 2px var(--seat-color, #c9a227), 0 0 12px rgba(201, 162, 39, 0.55);
+  background: #fff8e8;
+}
+.tidewell-player-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid var(--seat-color, #c9a227);
+  box-shadow:
+    0 0 0 1px rgba(26, 14, 8, 0.85),
+    0 2px 6px rgba(0, 0, 0, 0.35);
+  background: #c4a882;
+  flex-shrink: 0;
+}
+.tidewell-player-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #e8d3a2;
+}
+.hex-island-seat-swatch {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--seat-color, #888);
+}
+.tidewell-player-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.tidewell-player-meta b { font-size: 13px; }
+.tidewell-player-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  color: #5a4634;
+}
+.tidewell-turn-badge {
+  position: absolute;
+  top: -8px;
+  right: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, #f0d060, #b8860b);
+  color: #2a1c12;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.hex-island-hud-awards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 8px 0 0;
+  font-size: 11px;
+}
+.hex-island-hud-awards dt { margin: 0; color: #6b543c; }
+.hex-island-hud-awards dd { margin: 0; font-weight: 600; }
+
+
+/* 2h3: round wooden icon buttons + centred island name */
+.tidewell-topbar-center {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  text-align: center;
+  gap: 2px;
+}
+.tidewell-island-name {
+  font-family: Georgia, "Noto Serif CJK SC", serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #f0d060;
+  text-shadow: 0 1px 0 #2a1c12;
+}
+.tidewell-topbar-center .tidewell-topbar-status {
+  margin: 0;
+  font-size: 11px;
+  opacity: 0.85;
+  max-width: 28vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tidewell-brand-name {
+  font-family: Georgia, serif;
+  font-size: 14px;
+}
+.tidewell-wood-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid #c9a227;
+  background:
+    radial-gradient(circle at 35% 30%, #7a5230, #3e2616 70%),
+    linear-gradient(180deg, #5c3a22, #2c1a10);
+  color: #f3e7c9;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,220,140,0.25);
+  list-style: none;
+}
+.tidewell-wood-icon::-webkit-details-marker { display: none; }
+.tidewell-menu > summary.tidewell-wood-icon { list-style: none; }
+.tidewell-menu-panel .tidewell-seat-select {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #f3e7c9;
+}
+.tidewell-menu-panel .tidewell-seat-select select {
+  min-height: 36px;
+  border-radius: 8px;
+  border: 1px solid #c9a22788;
+  background: #2c1a10;
+  color: #f3e7c9;
+  padding: 4px 8px;
+}
+
+/* ③/④/⑤: wood-grain side rail — deep carved well into the crate */
+.tidewell-players {
+  background:
+    linear-gradient(90deg, rgba(18, 10, 6, 0.55) 0%, rgba(40, 22, 12, 0.2) 40%, rgba(18, 10, 6, 0.35) 100%),
+    linear-gradient(180deg, rgba(55, 32, 16, 0.45) 0%, rgba(20, 10, 6, 0.72) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #4a2f1c 0%, #2c1a10 100%) !important;
+  background-size: auto, auto, 220px 220px, auto !important;
+  color: #f3e7c9;
+  border-right: none !important;
+  /* carved gold lip toward the stage + deep recess */
+  box-shadow:
+    inset -1px 0 0 var(--tw-carve-outer, #1a0e08),
+    inset -2px 0 0 var(--tw-gold-deep, #8a6a14),
+    inset -3px 0 0 var(--tw-gold-mid, #c9a227),
+    inset -4px 0 0 rgba(232, 200, 90, 0.45),
+    inset 0 0 18px rgba(0, 0, 0, 0.55),
+    inset 4px 0 10px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 220, 140, 0.1);
+  padding: 10px 12px 10px 10px !important;
+}
+.tidewell-players .tidewell-panel-title {
+  color: #f0d060;
+}
+.tidewell-player-card {
+  background:
+    linear-gradient(145deg, rgba(90, 56, 32, 0.72) 0%, rgba(40, 22, 12, 0.82) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(145deg, #5a3820 0%, #3a2416 55%, #2c1a10 100%) !important;
+  background-size: auto, 180px 180px, auto !important;
+  border: 1px solid var(--tw-gold-mid, #c9a227) !important;
+  color: #f3e7c9;
+  border-radius: 8px !important;
+  box-shadow:
+    0 0 0 1px var(--tw-carve-outer, #1a0e08),
+    0 0 0 2px rgba(138, 106, 20, 0.75),
+    0 4px 10px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 220, 140, 0.22),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.35);
+}
+.tidewell-player-card.is-active {
+  background:
+    linear-gradient(145deg, rgba(120, 72, 36, 0.55) 0%, rgba(50, 28, 14, 0.75) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(145deg, #6b4428, #3e2616) !important;
+  background-size: auto, 180px 180px, auto !important;
+  box-shadow: 0 0 0 2px var(--seat-color, #c9a227), 0 0 14px rgba(201, 162, 39, 0.55);
+}
+.tidewell-player-meta b { color: #f3e7c9; }
+.tidewell-house-name {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #d4b56a;
+  opacity: 0.9;
+}
+.tidewell-player-stats { color: #d8c9a8 !important; }
+.tidewell-medallion {
+  width: 64px !important;
+  height: 64px !important;
+  border-width: 3px !important;
+  box-shadow: 0 0 0 2px #c9a227aa, 0 3px 8px rgba(0,0,0,0.45);
+}
+.tidewell-player-card {
+  grid-template-columns: 68px 1fr !important;
+  gap: 8px !important;
+  padding: 6px 8px !important;
+}
+.tidewell-player-list {
+  gap: 6px !important;
+}
+.tidewell-medallion {
+  width: 48px !important;
+  height: 48px !important;
+}
+.tidewell-player-meta b {
+  font-size: 12px;
+  line-height: 1.15;
+}
+.tidewell-player-vp {
+  font-size: 12px;
+  margin-top: 1px;
+}
+.tidewell-player-stats {
+  gap: 8px !important;
+  font-size: 10px !important;
+}
+.hex-island-hud-awards {
+  gap: 4px !important;
+  margin-top: 6px !important;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(243, 231, 201, 0.14), rgba(232, 211, 162, 0.08)),
+    var(--tw-tex-parchment);
+  background-size: auto, 160px 160px;
+  border: 1px solid var(--tw-gold-mid, #c9a227);
+  box-shadow:
+    0 0 0 1px var(--tw-carve-outer, #1a0e08),
+    inset 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.tidewell-player-vp {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f0d060;
+  letter-spacing: 0.02em;
+}
+.tidewell-house-name {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #d4b56a;
+}
+.hex-island-hud-awards { color: #d8c9a8; }
+.hex-island-hud-awards dt { color: #c9a227aa !important; }
+.hex-island-hud-awards dd { color: #f3e7c9; }
+
+/* ④/⑤: right rail is wood crate wall; parchment lives as nested inset panels */
+.tidewell-turn-column {
+  background:
+    linear-gradient(270deg, rgba(18, 10, 6, 0.55) 0%, rgba(40, 22, 12, 0.2) 40%, rgba(18, 10, 6, 0.35) 100%),
+    linear-gradient(180deg, rgba(55, 32, 16, 0.45) 0%, rgba(20, 10, 6, 0.72) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #4a2f1c 0%, #2c1a10 100%) !important;
+  background-size: auto, auto, 220px 220px, auto !important;
+  border-left: none !important;
+  box-shadow:
+    inset 1px 0 0 var(--tw-carve-outer, #1a0e08),
+    inset 2px 0 0 var(--tw-gold-deep, #8a6a14),
+    inset 3px 0 0 var(--tw-gold-mid, #c9a227),
+    inset 4px 0 0 rgba(232, 200, 90, 0.45),
+    inset 0 0 18px rgba(0, 0, 0, 0.55),
+    inset -4px 0 10px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 220, 140, 0.1);
+  padding: 10px 10px 10px 12px !important;
+  color: #f3e7c9;
+}
+.tidewell-turn-column .tidewell-panel-title {
+  color: #f0d060;
+}
+.tidewell-turn-card {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--tw-gold-mid, #c9a227);
+  background:
+    linear-gradient(180deg, rgba(255, 248, 232, 0.72), rgba(243, 231, 201, 0.55)),
+    var(--tw-tex-parchment),
+    linear-gradient(180deg, #fff8e8 0%, #f3e7c9 100%);
+  background-size: auto, 200px 200px, auto;
+  box-shadow:
+    0 0 0 1px var(--tw-carve-outer, #1a0e08),
+    0 0 0 2px rgba(138, 106, 20, 0.7),
+    0 3px 8px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+    inset 0 2px 6px rgba(74, 47, 28, 0.12);
+}
+.tidewell-turn-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tidewell-turn-flourish {
+  flex: 0 0 auto;
+  width: 72px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #c9a22766;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.tidewell-primary-cta {
+  border-radius: 12px !important;
+  border: 2px solid #c9a227 !important;
+  background:
+    linear-gradient(180deg, #6b4428 0%, #3e2616 55%, #2c1a10 100%) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,220,140,0.3) !important;
+}
+.tidewell-log-panel {
+  margin-top: 6px;
+  padding: 8px;
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.55), rgba(243, 231, 201, 0.4)),
+    var(--tw-tex-parchment);
+  background-size: auto, 180px 180px;
+  border: 1px solid var(--tw-gold-mid, #c9a227);
+  box-shadow:
+    0 0 0 1px var(--tw-carve-outer, #1a0e08),
+    0 0 0 2px rgba(138, 106, 20, 0.55),
+    inset 0 2px 6px rgba(74, 47, 28, 0.15);
+}
+
+/* 2h3: larger parchment resource cards + wooden build tiles */
+.tidewell-dock {
+  --tw-dock: 148px;
+  height: var(--tw-dock, 148px);
+  max-height: var(--tw-dock, 148px);
+}
+.room-view-tidewell-immersive {
+  --tw-dock: 148px;
+}
+.tidewell-resource-tile {
+  width: 64px !important;
+}
+.tidewell-resource-art {
+  width: 60px !important;
+  height: 80px !important;
+  border-radius: 6px !important;
+  border: 2px solid #c9a227 !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.15) !important;
+}
+.tidewell-resource-count {
+  min-width: 24px !important;
+  padding: 2px 7px !important;
+  background: #f3e7c9 !important;
+  border: 1px solid #c9a227aa;
+  font-size: 13px !important;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+.tidewell-build-btn {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 2px !important;
+  min-width: 72px !important;
+  min-height: 96px !important;
+  padding: 3px 3px 4px !important;
+  border-radius: 8px !important;
+  border: 2px solid #c9a227 !important;
+  background:
+    linear-gradient(160deg, #7a5230 0%, #4a3018 55%, #2a1810 100%) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,220,140,0.2) !important;
+}
+.tidewell-build-art {
+  display: block;
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border-radius: 8px;
+  image-rendering: auto;
+}
+.tidewell-build-label {
+  font-size: 11px !important;
+  color: #f3e7c9 !important;
+}
+.tidewell-build-cost img {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+/* Canvas dominates — sea fill, no letterbox.
+   Track C (#151) pins the dice tray as a WebGL corner overlay inside the canvas —
+   keep bottom-right of .tidewell-stage-wrap free of DOM (no FAB / chip / drawer there).
+   Desktop: dock sits below the stage; iPhone: mobile bar sits below — both leave BR clear. */
+
+.tidewell-stage-wrap {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  border-radius: 0;
+  overflow: hidden;
+  border: none;
+  /* round-6 ②：浅金唇贴木桌，去掉深井阴影，岛缘与木框相接 */
+  box-shadow:
+    inset 0 0 0 1px var(--tw-carve-outer, #1a0e08),
+    inset 0 0 0 2px var(--tw-gold-deep, #8a6a14),
+    inset 0 0 0 3px rgba(232, 200, 90, 0.45),
+    inset 0 0 10px rgba(0, 0, 0, 0.18);
+  background: radial-gradient(ellipse at 50% 35%, #4a9eaa 0%, var(--tw-sea, #2e7f86) 48%, #1f4550 100%);
+}
+/* wood→sea soft blend ring (DOM overlay, pointer-events none) */
+.tidewell-stage-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  box-shadow:
+    inset 0 0 28px 10px rgba(42, 24, 12, 0.55),
+    inset 0 0 8px 2px rgba(201, 162, 39, 0.18);
+}
+.tidewell-game-screen .g3d-stage {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  aspect-ratio: auto !important;
+  box-shadow: none !important;
+  /* Override surface.css clamp(280px, 56vh, 620px) */
+}
+.tidewell-game-screen .g3d-stage,
+.tidewell-game-screen [data-testid="g3d-scene-host"],
+.tidewell-game-screen .room-g3d-scene-host {
+  height: 100% !important;
+  min-height: 100% !important;
+  width: 100% !important;
+  background: transparent !important;
+}
+.tidewell-game-screen .g3d-stage canvas {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  position: relative;
+  z-index: 0;
+}
+.tidewell-game-screen .g3d-camera-toolbar,
+.tidewell-game-screen [data-testid="g3d-camera-toolbar"] {
+  z-index: 2 !important;
+}
+.tidewell-game-screen [data-testid="g3d-camera-toolbar"]:hover,
+.tidewell-game-screen [data-testid="g3d-camera-toolbar"]:focus-within {
+  opacity: 0.92 !important;
+  background: linear-gradient(180deg, rgb(90 58 34 / 82%) 0%, rgb(52 32 18 / 88%) 100%) !important;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 35%) !important;
+  color: #f3e4c1 !important;
+}
+
+.tidewell-turn-panel { display: flex; flex-direction: column; gap: 8px; }
+.tidewell-turn-blurb { margin: 0; font-size: 13px; color: #3d2c1c; }
+.hex-island-hud-dice { margin: 0; font-size: 12px; color: #5a4634; }
+.tidewell-primary-cta {
+  min-height: 48px;
+  border-radius: 999px;
+  border: 2px solid #c9a227;
+  background:
+    radial-gradient(circle at 50% 20%, #8b1e1e, #5a1414 70%),
+    linear-gradient(180deg, #6b4428, #2c1a10);
+  color: #f3e7c9;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 220, 140, 0.25);
+}
+.tidewell-primary-cta:disabled { opacity: 0.5; cursor: not-allowed; }
+.tidewell-turn-idle { margin: 0; font-size: 12px; color: #7a6550; }
+.hex-island-action-row {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tidewell-log-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  flex: 1;
+}
+.tidewell-log-tabs { display: flex; gap: 4px; }
+.tidewell-log-tabs button {
+  flex: 1;
+  min-height: 32px;
+  border: 1px solid rgba(74, 47, 28, 0.25);
+  border-radius: 8px;
+  background: rgba(255, 252, 245, 0.5);
+  color: #4a2f1c;
+  font-size: 11px;
+  cursor: pointer;
+}
+.tidewell-log-tabs button.is-active {
+  background: linear-gradient(180deg, #f7ecd2, #e5d0a0);
+  border-color: #c9a227;
+  font-weight: 700;
+}
+.tidewell-log-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  font-size: 12px;
+}
+.tidewell-chronicle {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #3d2c1c;
+}
+.tidewell-log-empty { margin: 0; color: #7a6550; }
+
+/* Bottom dock ~150–170px */
+.tidewell-dock {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  height: var(--tw-dock, 196px);
+  max-height: var(--tw-dock, 196px);
+  box-sizing: border-box;
+  padding: 10px 14px;
+  background:
+    linear-gradient(180deg, rgba(70, 42, 22, 0.45) 0%, rgba(24, 12, 6, 0.78) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #5a3820 0%, #2c1a10 100%);
+  background-size: auto, 280px 280px, auto;
+  border-top: 3px solid var(--tw-gold-mid, #c9a227);
+  box-shadow:
+    inset 0 1px 0 var(--tw-gold-deep, #8a6a14),
+    inset 0 3px 0 rgba(26, 14, 8, 0.9),
+    inset 0 1px 0 rgba(255, 220, 140, 0.2),
+    inset 0 10px 18px rgba(0, 0, 0, 0.35);
+  color: #f3e7c9;
+  z-index: 5;
+}
+.tidewell-hand {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 0;
+  scrollbar-width: thin;
+  justify-content: flex-start;
+  align-items: flex-end;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.tidewell-hand::-webkit-scrollbar { height: 4px; }
+.tidewell-hand::-webkit-scrollbar-thumb { background: #c9a22788; border-radius: 4px; }
+.tidewell-resource-tile {
+  position: relative;
+  flex: 0 0 auto;
+  width: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.tidewell-resource-art {
+  display: block;
+  width: 52px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 5px;
+  border: 2px solid #c9a227aa;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  background: #e8d3a2;
+}
+.tidewell-resource-art.is-fallback {
+  display: grid;
+  place-items: center;
+}
+.tidewell-resource-name { font-size: 10px; opacity: 0.9; }
+.tidewell-resource-count {
+  min-width: 20px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: #f3e7c9;
+  color: #2a1c12;
+  font-size: 11px;
+  text-align: center;
+}
+.tidewell-resource-pop {
+  position: absolute;
+  top: -10px;
+  right: -4px;
+  z-index: 3;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid #f3e7c9aa;
+  background: #1f9a4a;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  animation: tidewell-pop 1.8s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+@keyframes tidewell-pop {
+  0% { transform: translateY(10px) scale(0.55); opacity: 0; }
+  18% { transform: translateY(-2px) scale(1.25); opacity: 1; }
+  35% { transform: translateY(-8px) scale(1); opacity: 1; }
+  100% { transform: translateY(-28px) scale(0.95); opacity: 0; }
+}
+
+.tidewell-dev-slot {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 88px;
+  max-width: 120px;
+  height: 72px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #c9a22788;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 11px;
+  box-sizing: border-box;
+}
+.tidewell-dev-slot .hex-island-kicker { opacity: 0.75; }
+.tidewell-dev-slot strong { font-size: 18px; }
+
+.tidewell-build-row {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  overflow-x: auto;
+}
+.tidewell-build-btn {
+  width: 68px;
+  min-height: 78px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  border: 2px solid #c9a227;
+  background: radial-gradient(circle at 50% 20%, #6b4428, #2c1a10 75%);
+  color: #f3e7c9;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 220, 140, 0.2);
+  flex: 0 0 auto;
+}
+.tidewell-build-btn.is-disabled,
+.tidewell-build-btn:disabled {
+  opacity: 0.42;
+  filter: grayscale(0.35);
+  cursor: not-allowed;
+}
+.tidewell-build-label { font-size: 11px; font-weight: 700; }
+.tidewell-build-cost {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: center;
+}
+.tidewell-build-cost img {
+  border-radius: 2px;
+  background: #f3e7c9;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.tidewell-game-screen > .hex-settlement-actions {
+  position: absolute;
+  left: 8px;
+  bottom: calc(var(--tw-dock, 160px) + 8px);
+  z-index: 70;
+  max-width: min(360px, 40vw);
+}
+.tidewell-game-screen .hex-settlement-board-targets {
+  background: rgba(243, 231, 201, 0.95);
+  border-radius: 8px;
+  border: 1px solid #c9a22788;
+  color: #2a1c12;
+}
+.tidewell-game-screen .hex-settlement-board-targets > summary {
+  cursor: pointer;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+/* Open drawer: fixed centered overlay so e2e/keyboard targets stay in-viewport
+   under overflow:hidden fullscreen shell. */
+.tidewell-game-screen .hex-settlement-board-targets[open] {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 120;
+  width: min(440px, calc(100vw - 24px));
+  max-width: min(440px, calc(100vw - 24px));
+  max-height: min(70vh, 560px);
+  overflow: auto;
+  padding: 8px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+.tidewell-game-screen .hex-settlement-board-targets[open] .hex-settlement-action-list {
+  max-height: none;
+  overflow: visible;
+}
+
+/* Mobile bottom chrome — hidden on desktop (sheet duplicates dock content) */
+.tidewell-mobile-bar,
+.tidewell-table-sheet {
+  display: none;
+}
+
+/* —— Mobile ≤800: board fullscreen + table sheet —— */
+@media (max-width: 800px) {
+  .room-view-tidewell-immersive {
+    --tw-dock: 0px;
+  }
+  .tidewell-game-screen {
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    --tw-dock: 0px;
+  }
+  .tidewell-topbar-status { display: none; }
+  /* Log opens from menu on phone; keep sound / replay / menu wood icons */
+  .tidewell-topbar-actions > button.tidewell-log-chip {
+    display: none;
+  }
+  .tidewell-topbar-actions > .tidewell-menu > summary {
+    display: inline-grid;
+  }
+  .tidewell-menu-panel .tidewell-chip-btn {
+    display: block;
+  }
+
+  .tidewell-game-body {
+    display: contents;
+  }
+
+  /* Player strip under topbar — does not cover canvas */
+  .tidewell-players {
+    order: 2;
+    grid-row: 2;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 6px 8px;
+    border: none;
+    border-bottom: 1px solid #c9a22755;
+    background: rgba(30, 18, 10, 0.94) !important;
+    color: #f3e7c9;
+    max-height: 72px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tidewell-players .tidewell-panel-title,
+  .tidewell-players .hex-island-hud-awards,
+  .tidewell-players .hex-island-hud-status,
+  .tidewell-players .hex-island-hud-scores {
+    display: none !important;
+  }
+  .tidewell-player-list {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 6px;
+    width: max-content;
+  }
+  /* Compact portrait medallions with VP (ref style) */
+  .tidewell-player-list {
+    gap: 10px;
+    padding: 0 4px;
+  }
+  .tidewell-player-list {
+    width: 100%;
+    justify-content: space-evenly;
+    gap: 4px;
+  }
+  .tidewell-player-card {
+    min-width: 0;
+    max-width: none;
+    flex: 1 1 0;
+    grid-template-columns: 1fr !important;
+    justify-items: center;
+    text-align: center;
+    padding: 2px 2px 4px;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #f3e7c9;
+    gap: 2px;
+  }
+  .tidewell-player-card.is-active {
+    background: transparent !important;
+  }
+  .tidewell-player-avatar,
+  .tidewell-medallion {
+    width: 48px !important;
+    height: 48px !important;
+  }
+  .tidewell-player-vp {
+    font-size: 11px;
+    color: #f0d060;
+  }
+  .tidewell-player-stats {
+    display: none !important;
+  }
+  .tidewell-player-meta {
+    align-items: center;
+  }
+  .tidewell-player-meta b {
+    font-size: 10px;
+    color: #f3e7c9;
+    max-width: 56px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tidewell-house-name { display: none; }
+  .tidewell-player-stats {
+    font-size: 10px;
+    color: #f0d060;
+    gap: 0;
+    justify-content: center;
+  }
+  .tidewell-player-stats span:not([title="胜利点"]):not([title="Victory points"]) {
+    display: none;
+  }
+  /* Keep VP span; hide card/dev counts on compact medallions via nth */
+  .tidewell-player-stats span:nth-child(2),
+  .tidewell-player-stats span:nth-child(3) {
+    display: none;
+  }
+  .tidewell-turn-badge {
+    font-size: 7px;
+    top: -4px;
+    right: 0;
+    padding: 1px 5px;
+  }
+  .tidewell-topbar-center .tidewell-topbar-status { display: none; }
+  .tidewell-island-name { font-size: 13px; }
+
+  .tidewell-stage-wrap {
+    order: 3;
+    grid-row: 3;
+    height: auto;
+    min-height: 0;
+    /* fills remaining — no white letterbox */
+  }
+
+  /* Right column becomes log drawer only */
+  .tidewell-turn-column {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 40;
+    max-height: 52dvh;
+    transform: translateY(110%);
+    transition: transform 0.22s ease;
+    border-radius: 16px 16px 0 0;
+    border: none;
+    background: #f3e7c9;
+  }
+  .tidewell-turn-column.is-open {
+    transform: translateY(0);
+  }
+  .tidewell-turn-column .tidewell-turn-panel {
+    display: none; /* primary CTA lives in mobile bar */
+  }
+
+  /* Dock becomes pull-up table sheet */
+  .tidewell-dock {
+    display: none; /* replaced by mobile bar + sheet */
+  }
+  .tidewell-mobile-bar {
+    display: flex;
+    order: 4;
+    grid-row: 4;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    background:
+      linear-gradient(180deg, rgba(70, 42, 22, 0.45) 0%, rgba(24, 12, 6, 0.78) 100%),
+      var(--tw-tex-wood),
+      linear-gradient(180deg, #5a3820 0%, #2c1a10 100%);
+    background-size: auto, 220px 220px, auto;
+    border-top: 3px solid var(--tw-gold-mid, #c9a227);
+    box-shadow:
+      inset 0 1px 0 var(--tw-gold-deep, #8a6a14),
+      inset 0 3px 0 rgba(26, 14, 8, 0.9),
+      inset 0 1px 0 rgba(255, 220, 140, 0.18);
+    z-index: 30;
+  }
+  .tidewell-table-toggle {
+    min-height: 52px;
+    min-width: 72px;
+    padding: 0 14px;
+    border-radius: 12px;
+    border: 2px solid #c9a227;
+    background: linear-gradient(180deg, #6b4428, #3a2416);
+    color: #f3e7c9;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,220,140,0.2);
+  }
+  .tidewell-mobile-bar .tidewell-primary-cta {
+    flex: 1;
+    min-height: 48px;
+  }
+
+  .tidewell-table-sheet {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    max-height: 62dvh;
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+    border-radius: 18px 18px 0 0;
+    background:
+      linear-gradient(180deg, #f3e7c9 0%, #e8d3a2 28%, #3e2616 28%, #2c1a10 100%);
+    color: #f3e7c9;
+    box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.45);
+    transform: translateY(110%);
+    transition: transform 0.22s ease;
+    overflow: auto;
+  }
+  .tidewell-table-sheet.is-open {
+    transform: translateY(0);
+  }
+  .tidewell-table-sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #2a1c12;
+    padding-bottom: 4px;
+  }
+  .tidewell-table-sheet-head strong {
+    font-family: Georgia, serif;
+    font-size: 16px;
+  }
+  .tidewell-table-sheet .tidewell-hand {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    overflow: visible;
+  }
+  .tidewell-table-sheet .tidewell-resource-tile {
+    width: auto;
+    min-width: 0;
+  }
+  .tidewell-table-sheet .tidewell-resource-art {
+    width: 100%;
+    max-width: 56px;
+    height: 64px;
+    margin: 0 auto;
+  }
+  .tidewell-table-sheet .tidewell-dev-slot {
+    flex-direction: row;
+    width: 100%;
+    max-width: none;
+    height: 44px;
+    min-height: 44px;
+    justify-content: space-between;
+    padding: 0 12px;
+    color: #f3e7c9;
+  }
+  .tidewell-table-sheet .tidewell-build-row {
+    justify-content: space-between;
+    overflow: visible;
+  }
+  .tidewell-table-sheet .tidewell-build-btn {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    min-height: 72px;
+  }
+
+  .tidewell-game-screen > .hex-settlement-actions {
+    bottom: 64px;
+    max-width: calc(100vw - 16px);
+  }
+}
+
+@media (min-width: 801px) and (max-width: 1100px) {
+  .room-view-tidewell-immersive {
+    --tw-side: 220px;
+    --tw-dock: 188px;
+  }
+}
+
+/* round-8：+N 跟棋子（JS 每帧 project → transform） */
+.g3d-judge-plusn-toast {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 200;
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: 3px solid #f3e7c9;
+  background: #1f9a4a;
+  color: #fff;
+  font: 800 24px/1.1 system-ui, "PingFang SC", sans-serif;
+  letter-spacing: 0.04em;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, opacity;
+  transition: opacity 120ms ease;
+}
+.g3d-judge-plusn-toast[data-visible="1"] {
+  opacity: 1;
+}
+
+/* ==== R8 整桌一体感：羊皮嵌板 + 木砖建造钮 + 半身肖像 ==== */
+
+/* Top bar: parchment strip on wood, not dark glass */
+.tidewell-topbar {
+  background:
+    linear-gradient(180deg, rgba(255, 248, 232, 0.88) 0%, rgba(232, 211, 162, 0.78) 100%),
+    var(--tw-tex-parchment),
+    linear-gradient(180deg, #fff8e8 0%, #e8d3a2 100%) !important;
+  background-size: auto, 220px 220px, auto !important;
+  border-bottom: 2px solid var(--tw-gold-mid, #c9a227) !important;
+  box-shadow:
+    0 1px 0 var(--tw-gold-deep, #8a6a14),
+    0 3px 8px rgba(42, 24, 12, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45) !important;
+  color: #2a1c12 !important;
+}
+.tidewell-topbar-brand,
+.tidewell-topbar-status,
+.tidewell-topbar-center {
+  color: #2a1c12 !important;
+}
+.tidewell-topbar-brand {
+  font-family: Georgia, "Songti SC", serif !important;
+  letter-spacing: 0.06em;
+}
+
+/* Side rails: wood table showing through; nested parchment plaques */
+.tidewell-players,
+.tidewell-turn-column {
+  background:
+    linear-gradient(180deg, rgba(90, 58, 32, 0.35) 0%, rgba(55, 34, 18, 0.45) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #6b4428 0%, #3e2616 100%) !important;
+  background-size: auto, 200px 200px, auto !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(26, 14, 8, 0.55),
+    inset 0 0 0 2px rgba(201, 162, 39, 0.35),
+    inset 0 0 12px rgba(0, 0, 0, 0.18) !important;
+  color: #2a1c12 !important;
+}
+.tidewell-players .tidewell-panel-title,
+.tidewell-turn-column .tidewell-panel-title {
+  color: #4a2f1c !important;
+  background: rgba(243, 231, 201, 0.75);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(201, 162, 39, 0.55);
+  display: inline-block;
+}
+
+/* Player cards = parchment plaques inset on wood */
+.tidewell-player-card {
+  background:
+    linear-gradient(165deg, rgba(255, 252, 245, 0.95) 0%, rgba(243, 231, 201, 0.88) 100%),
+    var(--tw-tex-parchment),
+    #f3e7c9 !important;
+  background-size: auto, 160px 160px, auto !important;
+  border: 1px solid #c9a227 !important;
+  border-radius: 10px !important;
+  color: #2a1c12 !important;
+  box-shadow:
+    0 0 0 1px rgba(26, 14, 8, 0.45),
+    0 2px 6px rgba(42, 24, 12, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55) !important;
+  grid-template-columns: 72px 1fr !important;
+  padding: 8px !important;
+}
+.tidewell-player-card.is-active {
+  box-shadow:
+    0 0 0 2px var(--seat-color, #c9a227),
+    0 0 12px rgba(201, 162, 39, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+  background:
+    linear-gradient(165deg, #fffef8 0%, #f8ecd0 100%),
+    var(--tw-tex-parchment) !important;
+}
+.tidewell-player-meta b,
+.tidewell-player-vp,
+.tidewell-player-stats,
+.tidewell-house-name {
+  color: #2a1c12 !important;
+}
+.tidewell-player-vp { color: #8a6a14 !important; }
+.tidewell-house-name { color: #6b4428 !important; opacity: 0.9; }
+
+/* Half-body portrait (not circle medallion) */
+.tidewell-player-avatar,
+.tidewell-medallion {
+  width: 64px !important;
+  height: 80px !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  border: 2px solid var(--seat-color, #c9a227) !important;
+  box-shadow:
+    0 0 0 1px rgba(26, 14, 8, 0.5),
+    0 2px 5px rgba(0, 0, 0, 0.25) !important;
+  background: #e8d3a2 !important;
+}
+.tidewell-player-avatar img,
+.tidewell-portrait-img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center top !important;
+}
+
+/* Right parchment panels already ok — lighten log/turn further */
+.tidewell-turn-card,
+.tidewell-log-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.92), rgba(243, 231, 201, 0.82)),
+    var(--tw-tex-parchment) !important;
+  background-size: auto, 180px 180px !important;
+  color: #2a1c12 !important;
+  box-shadow:
+    0 0 0 1px rgba(26, 14, 8, 0.4),
+    0 2px 6px rgba(42, 24, 12, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+}
+.tidewell-turn-column .tidewell-turn-blurb,
+.tidewell-turn-column .hex-island-hud-dice,
+.tidewell-log-body {
+  color: #3d2c1c !important;
+}
+
+/* Dock: wood table lip; R9 build = horizontal large wood bricks */
+.tidewell-dock {
+  --tw-dock: 148px;
+  height: var(--tw-dock, 132px) !important;
+  max-height: var(--tw-dock, 132px) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 248, 232, 0.14) 0%, rgba(42, 24, 12, 0.18) 16%, rgba(42, 24, 12, 0.62) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #6b4428 0%, #2c1a10 100%) !important;
+  background-size: auto, 260px 260px, auto !important;
+  border-top: 4px solid var(--tw-gold-mid, #c9a227) !important;
+  box-shadow: inset 0 3px 0 rgba(255, 220, 140, 0.18) !important;
+}
+.room-view-tidewell-immersive {
+  --tw-dock: 148px;
+}
+.tidewell-build-row {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  overflow-x: auto !important;
+}
+.tidewell-build-btn {
+  position: relative !important;
+  display: block !important;
+  flex: 0 0 auto !important;
+  min-width: 196px !important;
+  width: 196px !important;
+  min-height: 72px !important;
+  height: 72px !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  border: none !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  box-shadow:
+    0 5px 14px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(26, 14, 8, 0.75),
+    inset 0 1px 0 rgba(255, 220, 140, 0.22) !important;
+  overflow: hidden !important;
+}
+.tidewell-build-btn .tidewell-build-art {
+  display: block !important;
+  width: 196px !important;
+  height: 72px !important;
+  object-fit: fill !important;
+  border-radius: 8px !important;
+  border: none !important;
+}
+/* Label + cost baked into horizontal wood brick */
+.tidewell-build-btn .tidewell-build-label,
+.tidewell-build-btn .tidewell-build-cost {
+  display: none !important;
+}
+.tidewell-build-btn.is-disabled .tidewell-build-art,
+.tidewell-build-btn:disabled .tidewell-build-art {
+  filter: grayscale(0.4) brightness(0.85);
+}
+
+/* R9 ①: deeper carved wood lip — island reads as tray inset in desk */
+.tidewell-stage-wrap {
+  box-shadow:
+    inset 0 0 0 2px #140a06,
+    inset 0 0 0 5px #5a3a18,
+    inset 0 0 0 7px #c9a227,
+    inset 0 0 0 9px rgba(232, 200, 90, 0.55),
+    inset 0 0 0 14px rgba(42, 24, 12, 0.92),
+    inset 0 0 36px 16px rgba(28, 16, 8, 0.72),
+    inset 0 0 12px 3px rgba(201, 162, 39, 0.22) !important;
+}
+.tidewell-stage-wrap::after {
+  box-shadow:
+    inset 0 0 42px 18px rgba(32, 18, 8, 0.72),
+    inset 0 0 10px 3px rgba(201, 162, 39, 0.28) !important;
+}
+
+/* Awards plaque on parchment */
+.hex-island-hud-awards {
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.9), rgba(243, 231, 201, 0.8)),
+    var(--tw-tex-parchment) !important;
+  color: #2a1c12 !important;
+}
+.hex-island-hud-awards dt { color: #8a6a14 !important; }
+.hex-island-hud-awards dd { color: #2a1c12 !important; }
+
+/* ==== R10 整桌一体 + 建造四钮始终同屏 ====
+   Goal: left/right/top + dock = one continuous wood desk with parchment inlays;
+   island stage reads as tray carved into the desk (not App chrome 3D window);
+   build row always shows road/settlement/city/buy — never scroll road away. */
+
+/* Top bar: continuous timber with desk (parchment is for nested plaques only) */
+.tidewell-topbar {
+  background:
+    linear-gradient(180deg, rgba(95, 60, 32, 0.55) 0%, rgba(36, 20, 10, 0.82) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #5a3820 0%, #2a1810 100%) !important;
+  background-size: auto, 280px 280px, auto !important;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.45) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 140, 0.14),
+    inset 0 -1px 0 rgba(26, 14, 8, 0.65),
+    0 2px 6px rgba(0, 0, 0, 0.28) !important;
+  color: #f3e7c9 !important;
+}
+.tidewell-topbar-brand,
+.tidewell-topbar-status,
+.tidewell-topbar-center,
+.tidewell-island-name,
+.tidewell-brand-name {
+  color: #f3e7c9 !important;
+}
+.tidewell-topbar-center .tidewell-topbar-status {
+  color: #e8d3a2 !important;
+}
+
+/* Side rails: same timber plate as game-screen — kill gold vertical window lips */
+.tidewell-players,
+.tidewell-turn-column {
+  background:
+    linear-gradient(180deg, rgba(70, 42, 22, 0.22) 0%, rgba(28, 16, 8, 0.32) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #5a3820 0%, #2c1a10 100%) !important;
+  background-size: auto, 280px 280px, auto !important;
+  border: none !important;
+  border-right: none !important;
+  border-left: none !important;
+  /* soft wood recess only — no carved gold chrome toward stage */
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.22) !important;
+  color: #2a1c12 !important;
+}
+.tidewell-players {
+  box-shadow:
+    inset -10px 0 18px -10px rgba(0, 0, 0, 0.4),
+    inset 0 0 18px rgba(0, 0, 0, 0.18) !important;
+}
+.tidewell-turn-column {
+  box-shadow:
+    inset 10px 0 18px -10px rgba(0, 0, 0, 0.4),
+    inset 0 0 18px rgba(0, 0, 0, 0.18) !important;
+}
+
+/* Title chips stay parchment inlays on wood */
+.tidewell-players .tidewell-panel-title,
+.tidewell-turn-column .tidewell-panel-title {
+  color: #4a2f1c !important;
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.92), rgba(243, 231, 201, 0.85)),
+    var(--tw-tex-parchment) !important;
+  background-size: auto, 140px 140px !important;
+}
+
+/* Stage = tray carved into continuous desk (warm wood lip, not black/gold window frame) */
+.tidewell-stage-wrap {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow:
+    inset 0 0 0 2px #24140c,
+    inset 0 0 0 5px #4a3018,
+    inset 0 0 0 7px #6b4428,
+    inset 0 0 0 8px rgba(201, 162, 39, 0.28),
+    inset 0 0 32px 14px rgba(28, 16, 8, 0.58) !important;
+}
+.tidewell-stage-wrap::after {
+  box-shadow:
+    inset 0 0 40px 16px rgba(36, 20, 10, 0.55),
+    inset 0 0 10px 3px rgba(74, 48, 24, 0.4) !important;
+}
+
+/* Dock: continuous desk lip; give build column room; never scroll road away */
+.tidewell-dock {
+  --tw-dock: 124px;
+  height: var(--tw-dock, 124px) !important;
+  max-height: var(--tw-dock, 124px) !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 0.9fr) auto minmax(0, 1.55fr) !important;
+  gap: 8px !important;
+  align-items: center !important;
+  padding: 8px 12px !important;
+  background:
+    linear-gradient(180deg, rgba(90, 56, 28, 0.35) 0%, rgba(28, 14, 8, 0.78) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #5a3820 0%, #2a1810 100%) !important;
+  background-size: auto, 280px 280px, auto !important;
+  border-top: 1px solid rgba(201, 162, 39, 0.5) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 140, 0.12),
+    inset 0 8px 16px rgba(0, 0, 0, 0.28) !important;
+}
+.room-view-tidewell-immersive,
+.tidewell-game-screen {
+  --tw-dock: 124px;
+}
+.tidewell-game-screen {
+  grid-template-rows: auto minmax(0, 1fr) var(--tw-dock, 124px);
+}
+
+.tidewell-build-row {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+  gap: 6px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important; /* shrink bricks — do not scroll road off-screen */
+}
+
+.tidewell-build-btn {
+  position: relative !important;
+  display: block !important;
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+  min-height: 64px !important;
+  height: 64px !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  border: none !important;
+  border-radius: 7px !important;
+  background: transparent !important;
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(26, 14, 8, 0.7),
+    inset 0 1px 0 rgba(255, 220, 140, 0.2) !important;
+  overflow: hidden !important;
+}
+
+.tidewell-build-btn .tidewell-build-art {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: fill !important;
+  border-radius: 7px !important;
+  border: none !important;
+}
+
+/* Dev slot compact so build keeps width */
+.tidewell-dev-slot {
+  min-width: 72px !important;
+  max-width: 96px !important;
+  height: 64px !important;
+  padding: 4px 8px !important;
+}
+
+/* Desktop ≤1360: keep four bricks by shrinking further, still no overflow scroll */
+@media (max-width: 1360px) {
+  .tidewell-dock {
+    grid-template-columns: minmax(0, 0.75fr) auto minmax(0, 1.7fr) !important;
+    gap: 6px !important;
+    padding: 6px 8px !important;
+  }
+  .tidewell-build-row { gap: 4px !important; }
+  .tidewell-build-btn {
+    min-height: 58px !important;
+    height: 58px !important;
+  }
+  .tidewell-resource-tile { width: 52px !important; }
+  .tidewell-resource-art {
+    width: 48px !important;
+    height: 64px !important;
+  }
+}
+
+/* R10b: stage tray = warm wood recess into desk (drop gold window chrome) */
+.tidewell-stage-wrap {
+  box-shadow:
+    inset 0 0 0 1px #1a1008,
+    inset 0 0 0 4px #4a3018,
+    inset 0 0 0 7px #5a3820,
+    inset 0 0 0 9px #3a2414,
+    inset 0 0 28px 12px rgba(24, 14, 8, 0.5) !important;
+}
+.tidewell-stage-wrap::after {
+  box-shadow:
+    inset 0 0 36px 14px rgba(32, 18, 10, 0.48),
+    inset 0 0 8px 2px rgba(58, 36, 20, 0.35) !important;
+}
+/* Continuous timber: game-screen outer carve softer so rails≠window frame */
+.tidewell-game-screen {
+  box-shadow:
+    inset 0 0 0 3px #2a1810,
+    inset 0 0 22px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* R10c: desktop-only dock/grid — do not break ≤800 mobile board-above-fold */
+@media (max-width: 800px) {
+  .room-view-tidewell-immersive,
+  .tidewell-game-screen {
+    --tw-dock: 0px !important;
+  }
+  .tidewell-game-screen {
+    grid-template-rows: auto auto minmax(0, 1fr) auto !important;
+  }
+  .tidewell-dock {
+    display: none !important;
+    height: 0 !important;
+    max-height: 0 !important;
+  }
+  /* Compact mobile player strip — R8 half-body portraits stay desktop */
+  .tidewell-players {
+    max-height: 72px !important;
+    padding: 4px 6px !important;
+  }
+  .tidewell-player-avatar,
+  .tidewell-medallion {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 50% !important;
+  }
+  .tidewell-player-card {
+    grid-template-columns: 1fr !important;
+    padding: 2px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
+
+/* ==== R11 横牌资源手牌 + 金框节奏（对标左屏 bottom resource row）====
+   Keep R10 whole-desk timber + four build bricks; do not undo R10c mobile dock hide. */
+.tidewell-hand {
+  gap: 6px !important;
+  align-items: center !important;
+}
+.tidewell-resource-tile {
+  position: relative !important;
+  width: 82px !important;
+  gap: 0 !important;
+}
+.tidewell-resource-art {
+  display: block !important;
+  width: 80px !important;
+  height: 58px !important;
+  object-fit: cover !important;
+  border-radius: 6px !important;
+  border: 2.5px solid var(--tw-gold-mid, #c9a227) !important;
+  box-shadow:
+    0 0 0 1px var(--tw-gold-deep, #8a6a14),
+    0 3px 8px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 220, 140, 0.35) !important;
+  background: #f3e7c9 !important;
+}
+.tidewell-resource-name {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+.tidewell-resource-count {
+  position: absolute !important;
+  left: 50% !important;
+  bottom: 4px !important;
+  transform: translateX(-50%) !important;
+  z-index: 2 !important;
+  min-width: 22px !important;
+  height: 22px !important;
+  padding: 0 5px !important;
+  border-radius: 999px !important;
+  border: 2px solid var(--tw-gold-mid, #c9a227) !important;
+  background: #f3e7c9 !important;
+  color: #2a1c12 !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  line-height: 18px !important;
+  text-align: center !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35) !important;
+}
+.tidewell-resource-pop {
+  top: -12px !important;
+  right: -6px !important;
+}
+
+@media (max-width: 1360px) {
+  .tidewell-resource-tile { width: 72px !important; }
+  .tidewell-resource-art {
+    width: 70px !important;
+    height: 52px !important;
+  }
+}
+
+/* Mobile table sheet: same landscape hand rhythm */
+@media (max-width: 800px) {
+  .tidewell-table-sheet .tidewell-resource-art {
+    width: 100% !important;
+    max-width: 72px !important;
+    height: 52px !important;
+  }
+  .tidewell-table-sheet .tidewell-resource-name {
+    position: absolute !important;
+    clip: rect(0, 0, 0, 0) !important;
+  }
+  .tidewell-table-sheet .tidewell-resource-count {
+    position: absolute !important;
+    left: 50% !important;
+    bottom: 2px !important;
+    transform: translateX(-50%) !important;
+  }
+}
+
+/* ==== R12 水面海岸绘本化配套 · 岛缘嵌桌（去托盘窗框）====
+   Soften stage wood lip so cliff skirt is the physical rim embedded in the desk.
+   Keep R11 hand plaques + R10 whole-desk timber + R10c ≤800 dock hide. */
+.tidewell-stage-wrap {
+  border: none !important;
+  border-radius: 0 !important;
+  /* subtle timber recess only — no gold / multi-ring tray chrome */
+  box-shadow:
+    inset 0 0 0 1px rgba(26, 16, 8, 0.85),
+    inset 0 0 0 2px rgba(58, 36, 20, 0.35),
+    inset 0 0 18px 6px rgba(20, 12, 6, 0.28) !important;
+}
+.tidewell-stage-wrap::after {
+  box-shadow:
+    inset 0 0 22px 8px rgba(28, 16, 8, 0.32) !important;
+}
+
+/* ==== R27 画布嵌木框 · chrome 一体（settlecoast「桌面嵌在木框里」同构）====
+   Sea bands hold chrome (PLAY_SEA_CLEAR); continuous timber top/sides/dock;
+   stage reads as tray carved into one wood desk — not floating parchment plates. */
+.room-view-hex-island.room-view-tidewell-immersive {
+  /* Match SceneHost PLAY_SEA_CLEAR so wood→sea edge has no cream/beige void */
+  --tw-sea: #5a8a88;
+  --tw-wood: #4a2f1c;
+  --tw-wood-edge: #2c1a10;
+}
+
+.tidewell-game-screen {
+  /* One continuous wooden crate — shared timber plate for top/rails/dock */
+  background:
+    linear-gradient(180deg, rgba(55, 32, 16, 0.28) 0%, rgba(18, 10, 6, 0.55) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #4a3018 0%, #24140c 100%) !important;
+  background-size: auto, 280px 280px, auto !important;
+  box-shadow:
+    inset 0 0 0 4px #1a1008,
+    inset 0 0 0 5px rgba(201, 162, 39, 0.22),
+    inset 0 0 28px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* Top lid of the same crate */
+.tidewell-topbar {
+  background:
+    linear-gradient(180deg, rgba(90, 56, 28, 0.5) 0%, rgba(32, 18, 10, 0.88) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #5a3820 0%, #2a1810 100%) !important;
+  background-size: auto, 280px 280px, auto !important;
+  border-bottom: 2px solid rgba(201, 162, 39, 0.55) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 140, 0.18),
+    inset 0 -2px 0 rgba(26, 14, 8, 0.85),
+    0 3px 10px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Side rails = crate walls continuous with top/dock (no gold window lip toward stage) */
+.tidewell-players,
+.tidewell-turn-column {
+  background:
+    linear-gradient(180deg, rgba(70, 42, 22, 0.2) 0%, rgba(28, 16, 8, 0.35) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #4a3018 0%, #2a1810 100%) !important;
+  background-size: auto, 280px 280px, auto !important;
+  border: none !important;
+}
+.tidewell-players {
+  box-shadow:
+    inset -12px 0 20px -12px rgba(0, 0, 0, 0.55),
+    inset 0 0 16px rgba(0, 0, 0, 0.2) !important;
+}
+.tidewell-turn-column {
+  box-shadow:
+    inset 12px 0 20px -12px rgba(0, 0, 0, 0.55),
+    inset 0 0 16px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Dock = crate floor — same timber, gold hairline joins the stage bottom */
+.tidewell-dock {
+  background:
+    linear-gradient(180deg, rgba(90, 56, 28, 0.32) 0%, rgba(24, 12, 6, 0.82) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #5a3820 0%, #2a1810 100%) !important;
+  background-size: auto, 280px 280px, auto !important;
+  border-top: 2px solid rgba(201, 162, 39, 0.55) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 140, 0.14),
+    inset 0 2px 0 rgba(26, 14, 8, 0.85),
+    inset 0 10px 18px rgba(0, 0, 0, 0.32) !important;
+}
+
+/* Stage = sea tray carved into the continuous wood desk.
+   Warm timber rim + thin gold hairline (settlecoast bezel), sea clear behind canvas. */
+.tidewell-stage-wrap {
+  border: none !important;
+  border-radius: 0 !important;
+  background: var(--tw-sea, #5a8a88) !important;
+  box-shadow:
+    /* outer wood recess into desk */
+    inset 0 0 0 3px #1a1008,
+    inset 0 0 0 7px #3e2616,
+    inset 0 0 0 10px #5a3820,
+    /* thin carved gold lip */
+    inset 0 0 0 11px rgba(201, 162, 39, 0.42),
+    inset 0 0 0 12px rgba(26, 14, 8, 0.75),
+    /* soft wood→sea falloff so 海带托 chrome */
+    inset 0 0 24px 10px rgba(26, 16, 8, 0.38) !important;
+}
+.tidewell-stage-wrap::after {
+  /* wood→sea soft blend ring — supports chrome, no cream sky */
+  box-shadow:
+    inset 0 0 36px 14px rgba(32, 18, 10, 0.42),
+    inset 0 0 10px 3px rgba(74, 48, 24, 0.28) !important;
+}
+
+/* Keep parchment as nested inlays only — don't let cream read as sky/void next to sea */
+.tidewell-players .tidewell-panel-title,
+.tidewell-turn-column .tidewell-panel-title {
+  color: #4a2f1c !important;
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.92), rgba(243, 231, 201, 0.85)),
+    var(--tw-tex-parchment) !important;
+  background-size: auto, 140px 140px !important;
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+/* ==== R28 加厚木框 bezel · 弱化羊皮大板（settlecoast 雕框一体）====
+   Thicken warm-wood stage rim; gold stays a hairline carve (not a nested second frame).
+   Side rails stay continuous --tw-wood timber; parchment only for small chips / text wells.
+   Locks untouched: fill 0.945 · ortho φ54/az12 · deep #0a6c74/0.96 · HUD insets · cream off. */
+
+/* Stage bezel: thicker timber stack (~18px wood) + single gold hairline (not nested rings) */
+.tidewell-stage-wrap {
+  border: none !important;
+  border-radius: 0 !important;
+  background: var(--tw-sea, #5a8a88) !important;
+  box-shadow:
+    /* outer dark recess into continuous desk */
+    inset 0 0 0 2px #140a06,
+    inset 0 0 0 6px #2a1810,
+    inset 0 0 0 11px #3e2616,
+    inset 0 0 0 16px #5a3820,
+    inset 0 0 0 18px #4a3018,
+    /* single carved gold hairline — weight without nested-frame read */
+    inset 0 0 0 19px rgba(201, 162, 39, 0.55),
+    inset 0 0 0 20px rgba(26, 14, 8, 0.85),
+    /* wood→sea falloff (海带托 chrome) */
+    inset 0 0 28px 12px rgba(26, 16, 8, 0.42) !important;
+}
+.tidewell-stage-wrap::after {
+  box-shadow:
+    inset 0 0 40px 16px rgba(32, 18, 10, 0.48),
+    inset 0 0 12px 4px rgba(74, 48, 24, 0.32) !important;
+}
+
+/* Outer crate lip slightly heavier so stage bezel + shell read as one carved frame */
+.tidewell-game-screen {
+  box-shadow:
+    inset 0 0 0 5px #1a1008,
+    inset 0 0 0 6px rgba(201, 162, 39, 0.28),
+    inset 0 0 0 8px #2a1810,
+    inset 0 0 30px rgba(0, 0, 0, 0.48) !important;
+}
+
+/* Side rails: deepen continuous timber face (less cream bleed from nested plates) */
+.tidewell-players,
+.tidewell-turn-column {
+  background:
+    linear-gradient(180deg, rgba(55, 32, 16, 0.35) 0%, rgba(22, 12, 6, 0.5) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #4a3018 0%, #24140c 100%) !important;
+  background-size: auto, 280px 280px, auto !important;
+  color: #f3e7c9 !important;
+}
+
+/* Player cards → warm wood plaques (not floating parchment plates); cream for text only */
+.tidewell-player-card {
+  background:
+    linear-gradient(145deg, rgba(90, 56, 32, 0.55) 0%, rgba(40, 22, 12, 0.78) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(145deg, #5a3820 0%, #3a2416 55%, #2c1a10 100%) !important;
+  background-size: auto, 180px 180px, auto !important;
+  border: 1px solid rgba(201, 162, 39, 0.7) !important;
+  color: #f3e7c9 !important;
+  box-shadow:
+    0 0 0 1px rgba(26, 14, 8, 0.75),
+    0 0 0 2px rgba(138, 106, 20, 0.45),
+    0 3px 8px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 220, 140, 0.18),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.35) !important;
+}
+.tidewell-player-card.is-active {
+  background:
+    linear-gradient(145deg, rgba(120, 72, 36, 0.5) 0%, rgba(50, 28, 14, 0.72) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(145deg, #6b4428, #3e2616) !important;
+  background-size: auto, 180px 180px, auto !important;
+  box-shadow:
+    0 0 0 2px var(--seat-color, #c9a227),
+    0 0 12px rgba(201, 162, 39, 0.45),
+    inset 0 1px 0 rgba(255, 220, 140, 0.22) !important;
+}
+.tidewell-player-meta b,
+.tidewell-player-stats {
+  color: #f3e7c9 !important;
+}
+.tidewell-player-vp {
+  color: #f0d060 !important;
+}
+.tidewell-house-name {
+  color: #d4b56a !important;
+  opacity: 0.9;
+}
+
+/* Awards: small recessed parchment chip on wood (not a large plate) */
+.hex-island-hud-awards {
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.78), rgba(243, 231, 201, 0.62)),
+    var(--tw-tex-parchment) !important;
+  background-size: auto, 140px 140px !important;
+  border: 1px solid rgba(201, 162, 39, 0.55) !important;
+  box-shadow:
+    0 0 0 1px rgba(26, 14, 8, 0.55),
+    inset 0 2px 6px rgba(0, 0, 0, 0.28) !important;
+  color: #2a1c12 !important;
+  padding: 5px 7px !important;
+  margin-top: 6px !important;
+}
+.hex-island-hud-awards dt { color: #8a6a14 !important; }
+.hex-island-hud-awards dd { color: #2a1c12 !important; }
+
+/* Turn card: wood tray with parchment text well inset (shrink floating cream face) */
+.tidewell-turn-card {
+  background:
+    linear-gradient(180deg, rgba(70, 42, 22, 0.55) 0%, rgba(36, 20, 10, 0.72) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #5a3820 0%, #2c1a10 100%) !important;
+  background-size: auto, 200px 200px, auto !important;
+  border: 1px solid rgba(201, 162, 39, 0.65) !important;
+  color: #f3e7c9 !important;
+  box-shadow:
+    0 0 0 1px rgba(26, 14, 8, 0.7),
+    0 0 0 2px rgba(138, 106, 20, 0.4),
+    0 3px 8px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 220, 140, 0.14) !important;
+  padding: 8px !important;
+}
+/* Parchment text well inside turn card — small nested plate, not full-rail face */
+.tidewell-turn-card .tidewell-turn-card-head,
+.tidewell-turn-card .tidewell-turn-blurb,
+.tidewell-turn-card .hex-island-hud-dice {
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.88), rgba(243, 231, 201, 0.72)),
+    var(--tw-tex-parchment);
+  background-size: auto, 160px 160px;
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: #2a1c12 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.tidewell-turn-card .tidewell-turn-card-head {
+  margin-bottom: 6px;
+}
+.tidewell-turn-card .tidewell-turn-blurb,
+.tidewell-turn-card .hex-island-hud-dice {
+  margin: 4px 0 0;
+}
+.tidewell-turn-column .tidewell-turn-blurb,
+.tidewell-turn-column .hex-island-hud-dice {
+  color: #2a1c12 !important;
+}
+
+/* Log panel: wood shell + parchment body well (recessed, not full cream plate) */
+.tidewell-log-panel {
+  background:
+    linear-gradient(180deg, rgba(70, 42, 22, 0.5) 0%, rgba(36, 20, 10, 0.7) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #5a3820 0%, #2c1a10 100%) !important;
+  background-size: auto, 180px 180px, auto !important;
+  border: 1px solid rgba(201, 162, 39, 0.55) !important;
+  box-shadow:
+    0 0 0 1px rgba(26, 14, 8, 0.65),
+    0 2px 6px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 220, 140, 0.1) !important;
+  color: #f3e7c9 !important;
+  padding: 6px !important;
+}
+.tidewell-log-panel .tidewell-log-body,
+.tidewell-log-panel .hex-island-hud-log,
+.tidewell-log-body {
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.82), rgba(243, 231, 201, 0.68)),
+    var(--tw-tex-parchment) !important;
+  background-size: auto, 160px 160px !important;
+  border-radius: 5px;
+  padding: 6px 8px !important;
+  color: #3d2c1c !important;
+  box-shadow: inset 0 1px 3px rgba(74, 47, 28, 0.12);
+}
+
+/* Title chips stay small parchment inlays on wood rails */
+.tidewell-players .tidewell-panel-title,
+.tidewell-turn-column .tidewell-panel-title {
+  color: #4a2f1c !important;
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.9), rgba(243, 231, 201, 0.8)),
+    var(--tw-tex-parchment) !important;
+  background-size: auto, 140px 140px !important;
+  border-radius: 6px;
+  padding: 3px 8px;
+  border: 1px solid rgba(201, 162, 39, 0.5);
+  display: inline-block;
+}
+
+/* Top + dock: reinforce continuous timber (match thickened stage crate) */
+.tidewell-topbar {
+  background:
+    linear-gradient(180deg, rgba(90, 56, 28, 0.52) 0%, rgba(28, 14, 8, 0.9) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #5a3820 0%, #2a1810 100%) !important;
+  background-size: auto, 280px 280px, auto !important;
+  border-bottom: 2px solid rgba(201, 162, 39, 0.6) !important;
+}
+.tidewell-dock {
+  background:
+    linear-gradient(180deg, rgba(90, 56, 28, 0.35) 0%, rgba(22, 10, 6, 0.85) 100%),
+    var(--tw-tex-wood),
+    linear-gradient(180deg, #5a3820 0%, #2a1810 100%) !important;
+  background-size: auto, 280px 280px, auto !important;
+  border-top: 2px solid rgba(201, 162, 39, 0.6) !important;
+}
+
+/* R28 refine: title inside parchment well stays ink-on-clear (no double parchment chip) */
+.tidewell-turn-card .tidewell-panel-title {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  color: #4a2f1c !important;
+  display: inline !important;
+}
+/* Log tabs sit on wood shell — not cream strip */
+.tidewell-log-panel .tidewell-log-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.tidewell-log-panel .tidewell-log-tabs button {
+  flex: 1 1 0;
+  min-height: 28px;
+  border-radius: 6px;
+  border: 1px solid rgba(201, 162, 39, 0.45);
+  background:
+    linear-gradient(180deg, rgba(90, 56, 32, 0.55), rgba(42, 24, 12, 0.75)),
+    linear-gradient(180deg, #5a3820, #2c1a10);
+  color: #f3e7c9 !important;
+  font-size: 11px;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 220, 140, 0.12);
+}
+.tidewell-log-panel .tidewell-log-tabs button.is-active,
+.tidewell-log-panel .tidewell-log-tabs button[aria-selected="true"] {
+  border-color: rgba(201, 162, 39, 0.85);
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.88), rgba(243, 231, 201, 0.75)),
+    var(--tw-tex-parchment);
+  color: #2a1c12 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.tidewell-turn-card .tidewell-turn-idle {
+  color: #d8c9a8 !important;
+}
+
+/* ==== R28b: bezel must paint ABOVE canvas (::after z-index:1); solid rings on parent sit under opaque WebGL ==== */
+.tidewell-stage-wrap::after {
+  /* thickened carved timber rim + single gold hairline, then soft wood→sea falloff */
+  box-shadow:
+    inset 0 0 0 2px #140a06,
+    inset 0 0 0 6px #2a1810,
+    inset 0 0 0 12px #3e2616,
+    inset 0 0 0 17px #5a3820,
+    inset 0 0 0 19px #4a3018,
+    inset 0 0 0 20px rgba(201, 162, 39, 0.62),
+    inset 0 0 0 21px rgba(26, 14, 8, 0.9),
+    inset 0 0 36px 14px rgba(32, 18, 10, 0.5),
+    inset 0 0 14px 4px rgba(74, 48, 24, 0.35) !important;
+}
+
+/* Log body: wood-tinted parchment wash (not a full cream plate filling the rail) */
+.tidewell-log-panel .tidewell-log-body,
+.tidewell-log-body {
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.55), rgba(232, 211, 162, 0.38)),
+    linear-gradient(180deg, rgba(74, 48, 24, 0.35), rgba(42, 24, 12, 0.45)),
+    var(--tw-tex-parchment) !important;
+  background-size: auto, auto, 160px 160px !important;
+  color: #f3e7c9 !important;
+  border: 1px solid rgba(201, 162, 39, 0.35);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+}
+.tidewell-log-body .tidewell-chronicle,
+.tidewell-chronicle,
+.tidewell-log-empty {
+  color: #f3e7c9 !important;
+}
+.tidewell-chronicle li {
+  color: #e8d3a2 !important;
+}
+
+/* Awards stay small parchment chip — already OK; ensure not oversized */
+.hex-island-hud-awards {
+  max-width: 100%;
+}
+
+
+/* ==== R29 暖金棕木色 · 缩右栏纪事羊皮井（settlecoast warm golden brown）====
+   Judge R28: wood too deep/cold (#2a1810-class); right chronicle parchment well still too large.
+   Raise value / warmer hue toward settlecoast oak-gold midtones; keep gold carve readable.
+   Do NOT thicken bezel. Locks: fill 0.945 · ortho φ54/az12 · deep #0a6c74/0.96 · HUD insets · cream off. */
+
+.room-view-hex-island.room-view-tidewell-immersive {
+  --tw-wood: #5c3c22;
+  --tw-wood-edge: #3a2414;
+  --tw-carve-outer: #24180e;
+}
+
+/* Continuous desk plate: warm golden mid → warm edge (not near-black cold) */
+.tidewell-game-screen {
+  background:
+    repeating-linear-gradient(92deg, rgba(255, 220, 150, 0.04) 0 1px, transparent 1px 8px),
+    repeating-linear-gradient(0deg, rgba(40, 22, 10, 0.045) 0 2px, transparent 2px 12px),
+    linear-gradient(180deg, rgba(72, 44, 22, 0.28) 0%, rgba(36, 22, 12, 0.42) 100%),
+    linear-gradient(180deg, #6b4428 0%, #3a2414 100%) !important;
+  box-shadow:
+    inset 0 0 0 5px #24180e,
+    inset 0 0 0 6px rgba(201, 162, 39, 0.32),
+    inset 0 0 0 8px #3c2816,
+    inset 0 0 28px rgba(40, 22, 10, 0.38) !important;
+}
+
+.tidewell-topbar {
+  background:
+    repeating-linear-gradient(92deg, rgba(255, 220, 150, 0.04) 0 1px, transparent 1px 8px),
+    linear-gradient(180deg, rgba(120, 78, 40, 0.5) 0%, rgba(58, 34, 16, 0.78) 100%),
+    linear-gradient(180deg, #7a5230 0%, #4a3018 100%) !important;
+  border-bottom: 2px solid rgba(201, 162, 39, 0.62) !important;
+}
+
+.tidewell-dock {
+  background:
+    repeating-linear-gradient(92deg, rgba(255, 220, 150, 0.035) 0 1px, transparent 1px 8px),
+    linear-gradient(180deg, rgba(110, 72, 38, 0.32) 0%, rgba(48, 28, 14, 0.72) 100%),
+    linear-gradient(180deg, #6b4428 0%, #3a2414 100%) !important;
+  border-top: 2px solid rgba(201, 162, 39, 0.62) !important;
+}
+
+.tidewell-players,
+.tidewell-turn-column {
+  background:
+    repeating-linear-gradient(92deg, rgba(255, 220, 150, 0.035) 0 1px, transparent 1px 8px),
+    repeating-linear-gradient(0deg, rgba(40, 22, 10, 0.04) 0 2px, transparent 2px 12px),
+    linear-gradient(180deg, rgba(90, 56, 28, 0.28) 0%, rgba(48, 28, 14, 0.38) 100%),
+    linear-gradient(180deg, #6b4428 0%, #3a2414 100%) !important;
+  color: #f3e7c9 !important;
+}
+
+/* Warm player / turn wood plaques (same golden family) */
+.tidewell-player-card {
+  background:
+    linear-gradient(145deg, rgba(110, 72, 40, 0.5) 0%, rgba(58, 34, 16, 0.7) 100%),
+    linear-gradient(145deg, #7a5230 0%, #5a3820 55%, #3a2414 100%) !important;
+}
+.tidewell-player-card.is-active {
+  background:
+    linear-gradient(145deg, rgba(140, 88, 44, 0.48) 0%, rgba(70, 42, 20, 0.65) 100%),
+    linear-gradient(145deg, #8a5a30, #5a3820) !important;
+}
+.tidewell-turn-card {
+  background:
+    linear-gradient(180deg, rgba(100, 64, 32, 0.48) 0%, rgba(52, 30, 14, 0.65) 100%),
+    linear-gradient(180deg, #6b4428 0%, #3a2414 100%) !important;
+}
+
+/* Stage bezel colors only — thickness UNCHANGED (PASS); warm #2a1810-class rings */
+.tidewell-stage-wrap {
+  box-shadow:
+    inset 0 0 0 2px #1e140a,
+    inset 0 0 0 6px #3c2816,
+    inset 0 0 0 11px #4e3218,
+    inset 0 0 0 16px #6b4428,
+    inset 0 0 0 18px #5c3c20,
+    inset 0 0 0 19px rgba(201, 162, 39, 0.55),
+    inset 0 0 0 20px rgba(36, 22, 12, 0.85),
+    inset 0 0 28px 12px rgba(42, 26, 12, 0.36) !important;
+}
+.tidewell-stage-wrap::after {
+  box-shadow:
+    inset 0 0 0 2px #1e140a,
+    inset 0 0 0 6px #3c2816,
+    inset 0 0 0 12px #4e3218,
+    inset 0 0 0 17px #6b4428,
+    inset 0 0 0 19px #5c3c20,
+    inset 0 0 0 20px rgba(201, 162, 39, 0.62),
+    inset 0 0 0 21px rgba(36, 22, 12, 0.88),
+    inset 0 0 36px 14px rgba(48, 30, 14, 0.42),
+    inset 0 0 14px 4px rgba(106, 68, 36, 0.32) !important;
+}
+
+/* ---- Right chronicle: shrink parchment well; continuous timber dominates ---- */
+.tidewell-log-panel {
+  flex: 0 1 auto !important;
+  max-height: min(34vh, 220px) !important;
+  margin-top: 8px !important;
+  padding: 5px !important;
+  background:
+    linear-gradient(180deg, rgba(100, 64, 32, 0.42) 0%, rgba(52, 30, 14, 0.58) 100%),
+    linear-gradient(180deg, #6b4428 0%, #3a2414 100%) !important;
+  border: 1px solid rgba(201, 162, 39, 0.5) !important;
+  color: #f3e7c9 !important;
+}
+.tidewell-log-panel .tidewell-log-tabs {
+  margin-bottom: 4px !important;
+  gap: 3px !important;
+}
+.tidewell-log-panel .tidewell-log-tabs button {
+  min-height: 24px !important;
+  font-size: 10px !important;
+  background:
+    linear-gradient(180deg, rgba(110, 72, 40, 0.55), rgba(58, 34, 16, 0.72)),
+    linear-gradient(180deg, #6b4428, #3a2414);
+}
+.tidewell-log-panel .tidewell-log-body,
+.tidewell-log-body {
+  flex: 0 1 auto !important;
+  max-height: 132px !important;
+  min-height: 0 !important;
+  overflow: auto !important;
+  padding: 4px 6px !important;
+  border-radius: 4px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 248, 230, 0.28), rgba(232, 211, 162, 0.16)),
+    linear-gradient(180deg, rgba(90, 56, 28, 0.42), rgba(58, 34, 16, 0.55)) !important;
+  color: #f3e7c9 !important;
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.28) !important;
+}
+
+.tidewell-players .tidewell-panel-title,
+.tidewell-turn-column .tidewell-panel-title {
+  color: #5c3c22 !important;
+}
+
+/* ==== R30 金棕边沿高光 + 轻雕框 · 底栏厚木砖建造钮（settlecoast carve / brick）====
+   Judge R29: wood warm PASS — do NOT raise overall --tw-wood luminance.
+   P0: bezel / topbar / side rails — warm gold-brown edge highlights + light CSS
+       carved-frame (vertical grain / beveled highlights). Thickness LOCKED.
+   P1: four dock build buttons → thick solid wood bricks (warm face, gold rim,
+       layered box-shadow depth); reduce flat black-pad read.
+   Locks: fill 0.945 · ortho φ54/az12 · deep #0a6c74/0.96 · HUD insets ·
+          bezel thickness · log well size · wood base #5c3c22 family · cream off. */
+
+.room-view-hex-island.room-view-tidewell-immersive {
+  /* Edge-carve tokens only — base --tw-wood / --tw-wood-edge stay R29 locked */
+  --tw-gold-bright: #f0d070;
+  --tw-gold-mid: #d4a93a;
+  --tw-gold-deep: #9a7218;
+  --tw-carve-gold:
+    0 0 0 1px var(--tw-carve-outer),
+    0 0 0 2px var(--tw-gold-deep),
+    0 0 0 3px var(--tw-gold-mid),
+    0 0 0 4px rgba(240, 208, 112, 0.55);
+  --tw-carve-inset:
+    inset 0 0 0 1px rgba(240, 208, 112, 0.42),
+    inset 0 0 0 2px rgba(154, 114, 24, 0.9),
+    inset 0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 -1px 0 rgba(255, 220, 140, 0.18);
+  --tw-edge-grain-v: repeating-linear-gradient(
+    90deg,
+    rgba(255, 220, 150, 0.07) 0 1px,
+    transparent 1px 7px
+  );
+  --tw-edge-grain-h: repeating-linear-gradient(
+    0deg,
+    rgba(255, 220, 150, 0.055) 0 1px,
+    transparent 1px 9px
+  );
+}
+
+/* Outer crate: warmer gold hairline (no extra thickness rings) */
+.tidewell-game-screen {
+  box-shadow:
+    inset 0 0 0 5px #24180e,
+    inset 0 0 0 6px rgba(212, 169, 58, 0.48),
+    inset 0 0 0 7px rgba(240, 208, 112, 0.22),
+    inset 0 0 0 8px #3c2816,
+    inset 0 0 28px rgba(40, 22, 10, 0.38) !important;
+}
+
+/* Top bar: beveled gold-brown edge highlights + light vertical grain on lip */
+.tidewell-topbar {
+  background:
+    var(--tw-edge-grain-v, repeating-linear-gradient(90deg, rgba(255, 220, 150, 0.07) 0 1px, transparent 1px 7px)),
+    linear-gradient(180deg, rgba(140, 92, 48, 0.28) 0%, transparent 42%),
+    linear-gradient(180deg, rgba(120, 78, 40, 0.5) 0%, rgba(58, 34, 16, 0.78) 100%),
+    linear-gradient(180deg, #7a5230 0%, #4a3018 100%) !important;
+  border-bottom: 2px solid rgba(212, 169, 58, 0.72) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 230, 160, 0.38),
+    inset 0 2px 0 rgba(212, 169, 58, 0.28),
+    inset 0 -1px 0 rgba(154, 114, 24, 0.75),
+    inset 0 -2px 0 rgba(36, 22, 12, 0.85),
+    0 3px 10px rgba(0, 0, 0, 0.32) !important;
+}
+
+/* Side rails: stage-facing gold-brown carve lip + edge-only vertical grain */
+.tidewell-players {
+  background:
+    var(--tw-edge-grain-v, repeating-linear-gradient(90deg, rgba(255, 220, 150, 0.07) 0 1px, transparent 1px 7px)),
+    linear-gradient(90deg, transparent 0%, transparent 88%, rgba(255, 220, 150, 0.1) 96%, rgba(212, 169, 58, 0.18) 100%),
+    linear-gradient(180deg, rgba(90, 56, 28, 0.28) 0%, rgba(48, 28, 14, 0.38) 100%),
+    linear-gradient(180deg, #6b4428 0%, #3a2414 100%) !important;
+  box-shadow:
+    inset -1px 0 0 rgba(36, 22, 12, 0.9),
+    inset -2px 0 0 rgba(154, 114, 24, 0.7),
+    inset -3px 0 0 rgba(212, 169, 58, 0.55),
+    inset -4px 0 0 rgba(240, 208, 112, 0.28),
+    inset -10px 0 18px -10px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 220, 150, 0.12),
+    inset 0 0 18px rgba(0, 0, 0, 0.16) !important;
+}
+
+.tidewell-turn-column {
+  background:
+    var(--tw-edge-grain-v, repeating-linear-gradient(90deg, rgba(255, 220, 150, 0.07) 0 1px, transparent 1px 7px)),
+    linear-gradient(270deg, transparent 0%, transparent 88%, rgba(255, 220, 150, 0.1) 96%, rgba(212, 169, 58, 0.18) 100%),
+    linear-gradient(180deg, rgba(90, 56, 28, 0.28) 0%, rgba(48, 28, 14, 0.38) 100%),
+    linear-gradient(180deg, #6b4428 0%, #3a2414 100%) !important;
+  box-shadow:
+    inset 1px 0 0 rgba(36, 22, 12, 0.9),
+    inset 2px 0 0 rgba(154, 114, 24, 0.7),
+    inset 3px 0 0 rgba(212, 169, 58, 0.55),
+    inset 4px 0 0 rgba(240, 208, 112, 0.28),
+    inset 10px 0 18px -10px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 220, 150, 0.12),
+    inset 0 0 18px rgba(0, 0, 0, 0.16) !important;
+}
+
+/* Stage bezel: same thickness rings — warmer gold hairline + beveled highlight only */
+.tidewell-stage-wrap {
+  box-shadow:
+    inset 0 0 0 2px #1e140a,
+    inset 0 0 0 6px #3c2816,
+    inset 0 0 0 11px #4e3218,
+    inset 0 0 0 16px #6b4428,
+    inset 0 0 0 18px #5c3c20,
+    /* warmer gold hairline (not thicker) */
+    inset 0 0 0 19px rgba(212, 169, 58, 0.72),
+    inset 0 0 0 20px rgba(36, 22, 12, 0.88),
+    inset 0 0 28px 12px rgba(42, 26, 12, 0.36) !important;
+}
+.tidewell-stage-wrap::after {
+  /* thickness LOCKED (same px as R29); only warmer gold hairline + bevel highlight */
+  box-shadow:
+    inset 0 0 0 2px #1e140a,
+    inset 0 0 0 6px #3c2816,
+    inset 0 0 0 12px #4e3218,
+    inset 0 0 0 17px #6b4428,
+    inset 0 0 0 19px #5c3c20,
+    inset 0 0 0 20px rgba(240, 208, 112, 0.68),
+    inset 0 0 0 21px rgba(36, 22, 12, 0.9),
+    inset 0 0 36px 14px rgba(48, 30, 14, 0.42),
+    inset 0 0 14px 4px rgba(106, 68, 36, 0.32) !important;
+}
+
+/* Dock lip: gold-brown top bevel (base wood midtones unchanged) */
+.tidewell-dock {
+  background:
+    var(--tw-edge-grain-h, repeating-linear-gradient(0deg, rgba(255, 220, 150, 0.055) 0 1px, transparent 1px 9px)),
+    linear-gradient(180deg, rgba(255, 230, 160, 0.14) 0%, transparent 18%),
+    linear-gradient(180deg, rgba(110, 72, 38, 0.32) 0%, rgba(48, 28, 14, 0.72) 100%),
+    linear-gradient(180deg, #6b4428 0%, #3a2414 100%) !important;
+  border-top: 2px solid rgba(212, 169, 58, 0.75) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 230, 160, 0.32),
+    inset 0 2px 0 rgba(212, 169, 58, 0.35),
+    inset 0 3px 0 rgba(36, 22, 12, 0.7),
+    inset 0 10px 18px rgba(0, 0, 0, 0.28) !important;
+}
+
+/* ---- P1: thick solid wood-brick build buttons (not flat black pads) ---- */
+.tidewell-build-btn {
+  position: relative !important;
+  display: block !important;
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+  /* thicker raised brick */
+  min-height: 74px !important;
+  height: 74px !important;
+  padding: 5px !important;
+  gap: 0 !important;
+  border: 2.5px solid #c9a227 !important;
+  border-radius: 9px !important;
+  background:
+    linear-gradient(165deg, rgba(255, 230, 160, 0.28) 0%, transparent 38%),
+    linear-gradient(180deg, #9a6234 0%, #7a5230 38%, #5c3c22 72%, #3a2414 100%) !important;
+  box-shadow:
+    /* chunky raised brick shelf */
+    0 6px 0 #24180e,
+    0 8px 0 #1a1008,
+    0 10px 18px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(36, 22, 12, 0.9),
+    /* gold-brown carved rim */
+    inset 0 0 0 1px rgba(240, 208, 112, 0.45),
+    inset 0 2px 0 rgba(255, 236, 180, 0.42),
+    inset 0 -3px 5px rgba(26, 14, 8, 0.5),
+    inset 3px 0 0 rgba(255, 220, 150, 0.14),
+    inset -3px 0 0 rgba(26, 14, 8, 0.3) !important;
+  overflow: hidden !important;
+  isolation: isolate;
+}
+
+/* Carved gold lip overlay sitting above art */
+.tidewell-build-btn::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 3px !important;
+  border-radius: 5px !important;
+  pointer-events: none !important;
+  z-index: 2 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(212, 169, 58, 0.55),
+    inset 0 1px 0 rgba(255, 236, 180, 0.35),
+    inset 0 -2px 4px rgba(26, 14, 8, 0.35) !important;
+  background: linear-gradient(180deg, rgba(255, 230, 160, 0.1) 0%, transparent 35%, rgba(26, 14, 8, 0.12) 100%);
+}
+
+.tidewell-build-btn .tidewell-build-art {
+  display: block !important;
+  position: relative !important;
+  z-index: 1 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: fill !important;
+  border-radius: 5px !important;
+  border: none !important;
+  /* lift baked art off near-black pad toward warm oak face */
+  filter: sepia(0.28) saturate(1.2) brightness(1.22) contrast(0.95);
+}
+
+/* Keep label/cost hidden — art carries them; wood brick chrome is CSS */
+.tidewell-build-btn .tidewell-build-label,
+.tidewell-build-btn .tidewell-build-cost {
+  display: none !important;
+}
+
+.tidewell-build-btn.is-disabled,
+.tidewell-build-btn:disabled {
+  opacity: 0.48;
+  filter: grayscale(0.3);
+  box-shadow:
+    0 3px 0 #24180e,
+    0 5px 10px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(36, 22, 12, 0.7),
+    inset 0 1px 0 rgba(255, 220, 150, 0.12) !important;
+}
+.tidewell-build-btn.is-disabled .tidewell-build-art,
+.tidewell-build-btn:disabled .tidewell-build-art {
+  filter: grayscale(0.45) brightness(0.9) sepia(0.12);
+}
+.tidewell-build-btn.is-disabled::after,
+.tidewell-build-btn:disabled::after {
+  opacity: 0.5;
+}
+
+.tidewell-build-btn:not(:disabled):not(.is-disabled):hover {
+  filter: brightness(1.05);
+  border-color: #e8c85a !important;
+}
+
+@media (max-width: 1360px) {
+  .tidewell-build-btn {
+    min-height: 66px !important;
+    height: 66px !important;
+    padding: 4px !important;
+  }
+}
+
+/* Match dock height so thicker bricks fit without clipping */
+@media (min-width: 801px) {
+  .tidewell-dock {
+    --tw-dock: 136px;
+    height: var(--tw-dock, 136px) !important;
+    max-height: var(--tw-dock, 136px) !important;
+  }
+  .room-view-tidewell-immersive,
+  .tidewell-game-screen {
+    --tw-dock: 136px;
+  }
+}
+
+/* ==== R31 左栏玩家卡 + 战绩盒：inset 木框嵌进木材（奶油只留浅文字洗，非整块贴板）====
+   Judge R30: left player/award cream boards still look like pasted cards vs wood furniture.
+   P0: outer = continuous wood + inset carve (--tw-carve-* hairline only); inner = shallow
+       parchment text wash (R28–R29 log-panel pattern), NOT opaque cream plaques.
+   Do NOT thicken/brighten gold; do NOT raise wood base luminance.
+   Locks: fill 0.945 · ortho φ54/az12 · deep #0a6c74/0.96 · HUD insets · bezel thickness ·
+          chronicle well size · build-btn styling · wood base #5c3c22 family · cream sky off ·
+          gold/carve edges locked (R30 PASS). */
+
+/* Player card outer shell: recessed timber niche nested into left rail (not a floating plaque) */
+.tidewell-player-card {
+  background:
+    linear-gradient(165deg, rgba(72, 44, 22, 0.35) 0%, rgba(40, 24, 12, 0.55) 100%),
+    linear-gradient(145deg, #5c3c22 0%, #4a3018 48%, #3a2414 100%) !important;
+  background-size: auto, auto !important;
+  border: 1px solid rgba(36, 22, 12, 0.92) !important;
+  border-radius: 8px !important;
+  color: #f3e7c9 !important;
+  padding: 5px !important;
+  /* RECESSED into rail: inset shadows only — kill outward lift that reads as pasted card */
+  box-shadow:
+    inset 0 0 0 1px rgba(154, 114, 24, 0.55),
+    inset 0 0 0 2px rgba(36, 22, 12, 0.75),
+    inset 0 2px 5px rgba(0, 0, 0, 0.42),
+    inset 0 -1px 0 rgba(255, 220, 140, 0.1),
+    inset 1px 0 0 rgba(255, 220, 150, 0.06),
+    inset -1px 0 0 rgba(0, 0, 0, 0.2) !important;
+}
+
+.tidewell-player-card.is-active {
+  /* R33: wood-transparent niche; gold ring thickness unchanged (final override below) */
+  background:
+    linear-gradient(165deg, rgba(90, 56, 28, 0.1) 0%, rgba(48, 28, 14, 0.14) 100%) !important;
+  background-size: auto !important;
+  box-shadow:
+    0 0 0 1.5px var(--seat-color, #c9a227),
+    inset 0 0 0 1px rgba(154, 114, 24, 0.5),
+    inset 0 0 0 2px rgba(36, 22, 12, 0.55),
+    inset 0 1px 3px rgba(0, 0, 0, 0.18),
+    inset 0 -1px 0 rgba(255, 220, 140, 0.1) !important;
+}
+
+/* Inner text core — shallow parchment wash on wood (log-panel body pattern), not opaque cream plate */
+.tidewell-player-card .tidewell-player-meta {
+  background:
+    linear-gradient(180deg, rgba(255, 248, 230, 0.34), rgba(232, 211, 162, 0.18)),
+    linear-gradient(180deg, rgba(90, 56, 28, 0.38), rgba(58, 34, 16, 0.5)) !important;
+  border-radius: 5px;
+  padding: 4px 6px !important;
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 2px 5px rgba(0, 0, 0, 0.28);
+  min-width: 0;
+}
+
+/* Ink/cream readable on shallow wash — prefer warm parchment ink */
+.tidewell-player-card .tidewell-player-meta b {
+  color: #f3e7c9 !important;
+}
+.tidewell-player-card .tidewell-player-vp {
+  color: #f0d060 !important;
+}
+.tidewell-player-card .tidewell-house-name {
+  color: #d4b56a !important;
+  opacity: 0.92;
+}
+.tidewell-player-card .tidewell-player-stats {
+  color: #e8d3a2 !important;
+}
+
+/* Avatar sits on wood shell — no cream pad expand */
+.tidewell-player-card .tidewell-player-avatar,
+.tidewell-player-card .tidewell-medallion {
+  background: #4a3018 !important;
+  box-shadow:
+    0 0 0 1px rgba(36, 22, 12, 0.85),
+    inset 0 1px 0 rgba(255, 220, 140, 0.12) !important;
+}
+
+/* Awards outer: wood inset tray nested into rail (kill whole-cream plaque) */
+.hex-island-hud-awards {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 5px !important;
+  margin: 8px 0 0 !important;
+  padding: 5px !important;
+  border-radius: 8px !important;
+  background:
+    linear-gradient(180deg, rgba(72, 44, 22, 0.3) 0%, rgba(40, 24, 12, 0.5) 100%),
+    linear-gradient(180deg, #5c3c22 0%, #3a2414 100%) !important;
+  background-size: auto, auto !important;
+  border: 1px solid rgba(36, 22, 12, 0.92) !important;
+  color: #f3e7c9 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(154, 114, 24, 0.5),
+    inset 0 0 0 2px rgba(36, 22, 12, 0.7),
+    inset 0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 -1px 0 rgba(255, 220, 140, 0.08) !important;
+  max-width: 100%;
+}
+
+/* Each award cell = shallow parchment text wash (not opaque cream chip stuck on wood) */
+.hex-island-hud-awards > div {
+  background:
+    linear-gradient(180deg, rgba(255, 248, 230, 0.32), rgba(232, 211, 162, 0.16)),
+    linear-gradient(180deg, rgba(90, 56, 28, 0.4), rgba(58, 34, 16, 0.52)) !important;
+  border-radius: 5px;
+  padding: 4px 6px;
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 2px 5px rgba(0, 0, 0, 0.28);
+  min-width: 0;
+}
+
+.hex-island-hud-awards dt {
+  margin: 0 !important;
+  color: #c9a227aa !important;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+.hex-island-hud-awards dd {
+  margin: 0 !important;
+  color: #f3e7c9 !important;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.hex-island-hud-awards > div:nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+/* ==== R32 非当前玩家行：settlecoast 式 flush（薄横隔线 + 文字/头像落木）====
+   Judge R31: awards inset PASS; players mostly PASS but inactive seats still read as
+   independent card frames. settlecoast = hairline divider + text/avatar on wood.
+   P0: inactive = flush (no card-frame bg/border/inset niche); active keeps gold edge /
+       「轮到你行」— do NOT thicken gold; do NOT raise shallow-wash opacity.
+   KEEP: awards inset · 「开拓者」cream inlay · shallow wash opacity · gold/carve locks ·
+         build buttons · wood #5c3c22 · fill 0.945 · Ortho φ54/az12 · deep #0a6c74/0.96 ·
+         HUD · bezel · chronicle well · cream sky off · texture CANCELLED. */
+
+/* Hairline rows instead of spaced card niches */
+.tidewell-player-list {
+  gap: 0 !important;
+}
+
+/* Inactive seat: flush into rail wood — kill independent card-frame look */
+.tidewell-player-card:not(.is-active) {
+  background: transparent !important;
+  background-image: none !important;
+  background-size: auto !important;
+  border: none !important;
+  border-radius: 0 !important;
+  /* settlecoast-style thin horizontal divider */
+  border-top: 1px solid rgba(18, 10, 4, 0.62) !important;
+  box-shadow: none !important;
+  padding: 7px 2px 6px !important;
+  color: #f3e7c9 !important;
+}
+
+/* First inactive (or first overall if not active) — still hairline under title is fine;
+   if first child is active, its own border-radius frame handles separation. */
+.tidewell-player-list > .tidewell-player-card:first-child:not(.is-active) {
+  border-top: 1px solid rgba(18, 10, 4, 0.45) !important;
+}
+
+/* Active / current-turn: R33 — thin gold ring KEEP; interior wood-transparent (ultra-faint wash).
+   Kill opaque card-slot fill so timber rail shows through (settlecoast: 细金框+框内透木).
+   Do NOT thicken/brighten gold. Inactive flush / awards / 开拓者 untouched. */
+.tidewell-player-card.is-active {
+  background:
+    linear-gradient(165deg, rgba(90, 56, 28, 0.1) 0%, rgba(48, 28, 14, 0.14) 100%) !important;
+  background-image:
+    linear-gradient(165deg, rgba(90, 56, 28, 0.1) 0%, rgba(48, 28, 14, 0.14) 100%) !important;
+  background-size: auto !important;
+  border: 1px solid rgba(36, 22, 12, 0.55) !important;
+  border-radius: 8px !important;
+  padding: 5px !important;
+  margin: 4px 0 2px !important;
+  box-shadow:
+    0 0 0 1.5px var(--seat-color, #c9a227),
+    inset 0 0 0 1px rgba(154, 114, 24, 0.5),
+    inset 0 0 0 2px rgba(36, 22, 12, 0.55),
+    inset 0 1px 3px rgba(0, 0, 0, 0.18),
+    inset 0 -1px 0 rgba(255, 220, 140, 0.1) !important;
+}
+
+/* Inactive meta: same wash opacity (do NOT raise) — drop mini-plate border so text sits on wood */
+.tidewell-player-card:not(.is-active) .tidewell-player-meta {
+  background:
+    linear-gradient(180deg, rgba(255, 248, 230, 0.22), rgba(232, 211, 162, 0.1)),
+    linear-gradient(180deg, rgba(90, 56, 28, 0.22), rgba(58, 34, 16, 0.28)) !important;
+  border: none !important;
+  border-radius: 4px;
+  box-shadow: none !important;
+  padding: 2px 4px !important;
+}
+
+/* Active meta: R33 ultra-faint wash on wood (companion to transparent niche; keep readable) */
+.tidewell-player-card.is-active .tidewell-player-meta {
+  background:
+    linear-gradient(180deg, rgba(255, 248, 230, 0.14), rgba(232, 211, 162, 0.06)),
+    linear-gradient(180deg, rgba(90, 56, 28, 0.1), rgba(58, 34, 16, 0.12)) !important;
+  border-radius: 5px;
+  padding: 4px 6px !important;
+  border: 1px solid rgba(201, 162, 39, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* Inactive avatar sits directly on wood */
+.tidewell-player-card:not(.is-active) .tidewell-player-avatar,
+.tidewell-player-card:not(.is-active) .tidewell-medallion {
+  background: #4a3018 !important;
+  box-shadow:
+    0 0 0 1px rgba(36, 22, 12, 0.75),
+    inset 0 1px 0 rgba(255, 220, 140, 0.1) !important;
+}
+
+/* R32b: inactive meta — kill remaining wash plate; text sits on wood (settlecoast).
+   Keep opacity BELOW R31 shallow wash; do NOT raise. Active meta unchanged. */
+.tidewell-player-card:not(.is-active) .tidewell-player-meta {
+  background: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 1px 2px !important;
+}
+.tidewell-player-card:not(.is-active) .tidewell-player-meta b,
+.tidewell-player-card:not(.is-active) .tidewell-player-vp,
+.tidewell-player-card:not(.is-active) .tidewell-house-name,
+.tidewell-player-card:not(.is-active) .tidewell-player-stats {
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.65),
+    0 0 1px rgba(20, 10, 4, 0.8);
+}
