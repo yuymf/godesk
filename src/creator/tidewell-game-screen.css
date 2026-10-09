@@ -2700,3 +2700,136 @@ body:has(.room-view-tidewell-immersive) {
     --tw-dock: 136px;
   }
 }
+
+/* ==== R31 左栏玩家卡 + 战绩盒：inset 木框嵌进木材（奶油只留浅文字洗，非整块贴板）====
+   Judge R30: left player/award cream boards still look like pasted cards vs wood furniture.
+   P0: outer = continuous wood + inset carve (--tw-carve-* hairline only); inner = shallow
+       parchment text wash (R28–R29 log-panel pattern), NOT opaque cream plaques.
+   Do NOT thicken/brighten gold; do NOT raise wood base luminance.
+   Locks: fill 0.945 · ortho φ54/az12 · deep #0a6c74/0.96 · HUD insets · bezel thickness ·
+          chronicle well size · build-btn styling · wood base #5c3c22 family · cream sky off ·
+          gold/carve edges locked (R30 PASS). */
+
+/* Player card outer shell: recessed timber niche nested into left rail (not a floating plaque) */
+.tidewell-player-card {
+  background:
+    linear-gradient(165deg, rgba(72, 44, 22, 0.35) 0%, rgba(40, 24, 12, 0.55) 100%),
+    linear-gradient(145deg, #5c3c22 0%, #4a3018 48%, #3a2414 100%) !important;
+  background-size: auto, auto !important;
+  border: 1px solid rgba(36, 22, 12, 0.92) !important;
+  border-radius: 8px !important;
+  color: #f3e7c9 !important;
+  padding: 5px !important;
+  /* RECESSED into rail: inset shadows only — kill outward lift that reads as pasted card */
+  box-shadow:
+    inset 0 0 0 1px rgba(154, 114, 24, 0.55),
+    inset 0 0 0 2px rgba(36, 22, 12, 0.75),
+    inset 0 2px 5px rgba(0, 0, 0, 0.42),
+    inset 0 -1px 0 rgba(255, 220, 140, 0.1),
+    inset 1px 0 0 rgba(255, 220, 150, 0.06),
+    inset -1px 0 0 rgba(0, 0, 0, 0.2) !important;
+}
+
+.tidewell-player-card.is-active {
+  background:
+    linear-gradient(165deg, rgba(90, 56, 28, 0.32) 0%, rgba(48, 28, 14, 0.5) 100%),
+    linear-gradient(145deg, #6b4428 0%, #5c3c22 50%, #3a2414 100%) !important;
+  background-size: auto, auto !important;
+  box-shadow:
+    0 0 0 1.5px var(--seat-color, #c9a227),
+    inset 0 0 0 1px rgba(154, 114, 24, 0.5),
+    inset 0 0 0 2px rgba(36, 22, 12, 0.7),
+    inset 0 2px 5px rgba(0, 0, 0, 0.38),
+    inset 0 -1px 0 rgba(255, 220, 140, 0.12) !important;
+}
+
+/* Inner text core — shallow parchment wash on wood (log-panel body pattern), not opaque cream plate */
+.tidewell-player-card .tidewell-player-meta {
+  background:
+    linear-gradient(180deg, rgba(255, 248, 230, 0.34), rgba(232, 211, 162, 0.18)),
+    linear-gradient(180deg, rgba(90, 56, 28, 0.38), rgba(58, 34, 16, 0.5)) !important;
+  border-radius: 5px;
+  padding: 4px 6px !important;
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 2px 5px rgba(0, 0, 0, 0.28);
+  min-width: 0;
+}
+
+/* Ink/cream readable on shallow wash — prefer warm parchment ink */
+.tidewell-player-card .tidewell-player-meta b {
+  color: #f3e7c9 !important;
+}
+.tidewell-player-card .tidewell-player-vp {
+  color: #f0d060 !important;
+}
+.tidewell-player-card .tidewell-house-name {
+  color: #d4b56a !important;
+  opacity: 0.92;
+}
+.tidewell-player-card .tidewell-player-stats {
+  color: #e8d3a2 !important;
+}
+
+/* Avatar sits on wood shell — no cream pad expand */
+.tidewell-player-card .tidewell-player-avatar,
+.tidewell-player-card .tidewell-medallion {
+  background: #4a3018 !important;
+  box-shadow:
+    0 0 0 1px rgba(36, 22, 12, 0.85),
+    inset 0 1px 0 rgba(255, 220, 140, 0.12) !important;
+}
+
+/* Awards outer: wood inset tray nested into rail (kill whole-cream plaque) */
+.hex-island-hud-awards {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 5px !important;
+  margin: 8px 0 0 !important;
+  padding: 5px !important;
+  border-radius: 8px !important;
+  background:
+    linear-gradient(180deg, rgba(72, 44, 22, 0.3) 0%, rgba(40, 24, 12, 0.5) 100%),
+    linear-gradient(180deg, #5c3c22 0%, #3a2414 100%) !important;
+  background-size: auto, auto !important;
+  border: 1px solid rgba(36, 22, 12, 0.92) !important;
+  color: #f3e7c9 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(154, 114, 24, 0.5),
+    inset 0 0 0 2px rgba(36, 22, 12, 0.7),
+    inset 0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 -1px 0 rgba(255, 220, 140, 0.08) !important;
+  max-width: 100%;
+}
+
+/* Each award cell = shallow parchment text wash (not opaque cream chip stuck on wood) */
+.hex-island-hud-awards > div {
+  background:
+    linear-gradient(180deg, rgba(255, 248, 230, 0.32), rgba(232, 211, 162, 0.16)),
+    linear-gradient(180deg, rgba(90, 56, 28, 0.4), rgba(58, 34, 16, 0.52)) !important;
+  border-radius: 5px;
+  padding: 4px 6px;
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 2px 5px rgba(0, 0, 0, 0.28);
+  min-width: 0;
+}
+
+.hex-island-hud-awards dt {
+  margin: 0 !important;
+  color: #c9a227aa !important;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+.hex-island-hud-awards dd {
+  margin: 0 !important;
+  color: #f3e7c9 !important;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.hex-island-hud-awards > div:nth-child(3) {
+  grid-column: 1 / -1;
+}
