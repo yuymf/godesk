@@ -1,3 +1,4 @@
+import { pullCc0GlbFromPrompt } from "./asset-pull";
 import { generationMetadataSchema } from "../src/creator/game-spec";
 import { renderPatchSchema, renderSpecSchema } from "../src/creator/render-spec";
 import { McpServer } from "@modelcontextprotocol/server";
@@ -1357,6 +1358,71 @@ export function createGodeskMcpServer(
           }),
         );
         return result(await publicSession(asSession(room), origin, creatorId, secret, mount));
+      } catch (reason) {
+        return toolError(reason);
+      }
+    },
+  );
+
+  server.registerTool(
+    "pull_project_asset",
+    {
+      title: "Pull a CC0 3D model into a GoDesk project from one sentence",
+      description:
+        "Given one natural-language sentence (e.g. 「给汐屿加一个木桶」 or \"add a barrel\"), search the local 3d-asset-server sidecar for a free, directly downloadable CC0 model, convert it to a self-contained GLB, store it under the project's assets/imported/ and append the licence row to assets/LICENSES.md. Rooms of this project render the GLB on the table.",
+      inputSchema: z.object({
+        projectId: z.string().min(1),
+        prompt: z.string().min(1).max(400),
+        idempotencyKey: z.string().min(1).max(200),
+      }),
+      outputSchema: z.object({
+        query: z.string(),
+        asset: z.object({
+          id: z.string(),
+          title: z.string(),
+          provider: z.string(),
+          path: z.string(),
+          bytes: z.number(),
+          licenseSpdx: z.string(),
+          sourceUrl: z.string(),
+        }),
+        licensesMarkdown: z.string(),
+        studioUrl: z.string(),
+      }),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async ({ projectId, prompt, idempotencyKey }) => {
+      try {
+        const pulled = await pullCc0GlbFromPrompt(env, projectRequest, projectId, prompt, idempotencyKey);
+        const imported = await bodyOrError(
+          await projectRequest(`/projects/${projectId}/imported-assets`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(pulled.importBody),
+          }),
+        ) as { importedAssets?: Array<Record<string, unknown>>; licensesMarkdown?: string };
+        const entry = (imported.importedAssets ?? []).find(
+          (item) => item.assetServerId === pulled.asset.id,
+        ) ?? {};
+        return result({
+          query: pulled.query,
+          asset: {
+            id: String(entry.id ?? ""),
+            title: String(entry.title ?? pulled.asset.title),
+            provider: String(entry.provider ?? pulled.asset.provider),
+            path: String(entry.path ?? ""),
+            bytes: Number(entry.bytes ?? pulled.glbBytes),
+            licenseSpdx: String(entry.licenseSpdx ?? "CC0-1.0"),
+            sourceUrl: String(entry.sourceUrl ?? pulled.asset.url),
+          },
+          licensesMarkdown: imported.licensesMarkdown ?? "",
+          studioUrl: studioUrl(origin, projectId),
+        });
       } catch (reason) {
         return toolError(reason);
       }

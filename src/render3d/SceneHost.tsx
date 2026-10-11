@@ -37,7 +37,8 @@ import type { HexDressing } from "./hex-dressing";
 import { DEFAULT_DESKTOP_FRAME, framePose, type ViewportFrame } from "./viewport-frame";
 import type { SceneModel, SceneNode } from "./scene-model";
 import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
-import { markInteractive, perfModeEnabled, perfRecorder } from "./perf";
+import { markInteractive, perfModeEnabled } from "./perf-mark";
+import type { PerfRecorder } from "./perf";
 import { applyDieOrientation, idleBob, MotionController, prefersReducedMotion } from "./motion";
 import type { CameraDirector, CameraRigApi, PlayCamera } from "./camera-rig";
 
@@ -53,7 +54,8 @@ type HexKit = typeof import("./hex-kit");
 let hexKit: HexKit | null = null;
 /** Toolbar is UI chrome, not render core: its own lazy chunk (keeps render3d core ≤ 210 KB). */
 const CameraToolbar = lazy(async () => ({ default: (await import("./overlay/CameraToolbar")).CameraToolbar }));
-import { PerfOverlay } from "./PerfOverlay";
+/** `?perf=1` HUD：懒加载，不进 render3d 核心。Recorder 同样动态 import，采样等 PBR/dressing 就绪。 */
+const PerfOverlay = lazy(() => import("./PerfOverlay").then((m) => ({ default: m.PerfOverlay })));
 import {
   configureRenderer,
   createLightingRig,
@@ -131,7 +133,12 @@ export type SceneHostProps = {
   cameraToolbar?: boolean;
   /** Receives the camera API (zoom / rotate / reset / subscribe) for external HUD controls. */
   onCameraApi?: (api: CameraRigApi | null) => void;
+  /** GoDesk ②：项目导入的 CC0 GLB（assets/imported/），按顺序摆在桌边。 */
+  importedModels?: readonly ImportedSceneModel[];
 };
+
+export type { ImportedSceneModel } from "./imported-props";
+import type { ImportedSceneModel } from "./imported-props";
 
 /** Vertex-coloured procedural pieces share three white materials (seat colour is baked). */
 const PIECE_VC_TOKEN: MaterialToken = {
@@ -491,6 +498,7 @@ export function SceneHost({
   localSeat = null,
   cameraToolbar = true,
   onCameraApi,
+  importedModels,
 }: SceneHostProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   /** R18 boot reveal：首挂载 canvas 先隐身，装扮好的 3D 场景再淡入（无平面 2D 盘闪现）；重挂载不再遮。 */
@@ -540,8 +548,8 @@ export function SceneHost({
   const dressingRef = useRef<HexDressing | null>(null);
   const dressingModRef = useRef<typeof import("./hex-dressing") | null>(null);
   const dressingLoadingRef = useRef(false);
-  /** 汐屿盘面的道具层在懒加载中：性能采样等它就位。 */
-  const dressingPendingRef = useRef(false);
+  /** 汐屿盘面的道具层在懒加载中：性能采样等它就位（hex 开局即为 true，避免首帧把空场景记成 memoryOnMount）。 */
+  const dressingPendingRef = useRef(Boolean(hexSettlement));
   const [dressingReady, setDressingReady] = useState(0);
 
   const activeSeatRef = useRef(activeSeat);
@@ -647,6 +655,8 @@ export function SceneHost({
     camera.position.set(0, 9, 12);
 
     setPbrState("pending");
+    // Sync DOM before the next rAF so remount leak samples cannot see the previous mount's "512".
+    container.dataset.pbr = "pending";
     const env = detectEnvFromBrowser();
     let resolution = resolveTier({ env, runtimeFloor: runtimeFloorRef.current });
     let caps = resolution.caps;
@@ -869,13 +879,24 @@ export function SceneHost({
       onPickRef.current(matched);
     };
     renderer.domElement.addEventListener("pointerup", onPointerUp);
-    const perf = perfRecorder();
-    const detachPerf = perf?.attach({
-      renderer,
-      scene,
-      remount: () => setHostEpoch((epoch) => epoch + 1),
-      tier: () => caps.id,
-    });
+    // `?perf=1` only: recorder + harness load lazily (out of the render3d core bundle).
+    // Leak samples wait for dressing + PBR ready (see tick) so lazy attach is safe.
+    let perf: PerfRecorder | null = null;
+    let detachPerf: (() => void) | undefined;
+    let perfDisposed = false;
+    if (perfModeEnabled()) {
+      void import("./perf").then(({ perfRecorder }) => {
+        if (perfDisposed) return;
+        perf = perfRecorder();
+        detachPerf = perf?.attach({
+          renderer,
+          scene,
+          remount: () => setHostEpoch((epoch) => epoch + 1),
+          tier: () => caps.id,
+        });
+      });
+    }
+    if (hexSettlement) dressingPendingRef.current = true;
 
     // Fallback test cube when no hex state yet (G3D-02 smoke path).
     if (!hexSettlement && !adapterRef.current) {
@@ -986,6 +1007,7 @@ export function SceneHost({
       const resolutionPx = pbrResolutionFor(caps.id);
       if (new URLSearchParams(window.location.search).get("pbr") === "0") {
         setPbrState("off");
+        container.dataset.pbr = "off";
         return;
       }
       pbrTimer = window.setTimeout(() => {
@@ -1014,7 +1036,9 @@ export function SceneHost({
             pbr.dispose();
             streamer = null;
             if (!disposed) {
-              setPbrState(resolutionPx === 512 ? "512" : "256");
+              const next = resolutionPx === 512 ? "512" : "256";
+              setPbrState(next);
+              container.dataset.pbr = next;
               markShadowsDirty();
             }
           })
@@ -1022,6 +1046,7 @@ export function SceneHost({
             if (disposed) return;
             console.warn("[godesk.pbr] texture streaming failed", error);
             setPbrState("error");
+            container.dataset.pbr = "error";
           });
       }, PBR_STREAM_DELAY_MS);
     };
@@ -1123,7 +1148,13 @@ export function SceneHost({
         // R19: PBR streams only after the boot reveal so it never competes with the sea KTX2.
         if (!pbrRequested && container.dataset.boot !== "pending") startPbrStreaming();
       }
-      perf?.frame(renderer, now, hasContent && !dressingPendingRef.current);
+      // Wait for PBR + hex dressing/water so remount leak samples share geometry/texture counts.
+      const pbr = container.dataset.pbr;
+      const pbrReady = pbr === "off" || pbr === "512" || pbr === "256" || pbr === "error";
+      const hexDressed =
+        !hexSettlement ||
+        (container.dataset.terrainProps !== undefined && container.dataset.water === "on");
+      perf?.frame(renderer, now, hasContent && !dressingPendingRef.current && pbrReady && hexDressed);
     };
     frameId = window.requestAnimationFrame(tick);
 
@@ -1195,13 +1226,15 @@ export function SceneHost({
       disposeTidewellGeometryCache();
       hexKit?.disposePieceGeometries();
       hexKit?.disposeDiceGeometries();
-      perf?.beforeDispose(renderer);
+      perfDisposed = true;
+      (perf as PerfRecorder | null)?.beforeDispose(renderer);
       detachPerf?.();
       renderer.dispose();
       renderer.forceContextLoss();
       if (renderer.domElement.parentElement === container) {
         container.removeChild(renderer.domElement);
       }
+      dressingPendingRef.current = Boolean(hexSettlement);
       contentRootRef.current = null;
       reconcileHostRef.current = null;
       hitRootRef.current = null;
@@ -1277,6 +1310,37 @@ export function SceneHost({
     (globalThis as { __g3dDressing?: () => unknown }).__g3dDressing = () => dressingRef.current?.stats() ?? null;
     markShadowsDirtyRef.current();
   }
+
+  // GoDesk ②：导入的 CC0 GLB —— 懒加载 chunk（imported-props）负责归一尺寸 + 岛外 / 码头旁摆放。
+  const importedKey = (importedModels ?? []).map((model) => `${model.id}@${model.url}`).join("|");
+  useEffect(() => {
+    const root = contentRootRef.current;
+    const container = containerRef.current;
+    if (!ready || !root || !container || !importedModels?.length) return;
+    let dispose: (() => void) | null = null;
+    let cancelled = false;
+    container.dataset.importedModels = "0";
+    const nodes = hexSettlement && hexKit ? hexKit.mapHexSettlementToScene(hexSettlement).nodes : [];
+    void import("./imported-props").then(({ mountImportedProps }) => {
+      if (cancelled) return;
+      dispose = mountImportedProps({
+        root,
+        models: importedModels,
+        nodes,
+        onLoaded: (count, info) => {
+          container.dataset.importedModels = String(count);
+          container.dataset.importedMinTileGap = info.minTileGap.toFixed(3);
+          container.dataset.importedMaxHeight = info.maxHeight.toFixed(3);
+          markShadowsDirtyRef.current();
+        },
+      });
+    });
+    return () => {
+      cancelled = true;
+      dispose?.();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, hostEpoch, importedKey, hexKit !== null]);
 
   // 档位变化（high ↔ medium 不重挂 host）时按新档位重建道具密度。
   useEffect(() => {
@@ -1471,7 +1535,7 @@ export function SceneHost({
         const halfH = Math.atan(Math.tan((spec.fovDeg * Math.PI) / 360) * camera.aspect);
         const distance = Math.max(
           spec.distance * Math.min(Math.max(radius / 7.5, 0.5), 1.6),
-          (radius * 0.92) / Math.tan(halfH),
+          (radius * 1.02) / Math.tan(halfH),
         );
         camera.fov = spec.fovDeg;
         camera.position.set(center[0], center[1] + distance * Math.cos(polar), center[2] + distance * Math.sin(polar));
@@ -1580,7 +1644,11 @@ export function SceneHost({
         role="img"
         style={{ width: "100%", height: "100%", minHeight: 280, touchAction: "none", position: perfMode ? "relative" : undefined }}
       >
-        {perfMode && <PerfOverlay />}
+        {perfMode && (
+          <Suspense fallback={null}>
+            <PerfOverlay />
+          </Suspense>
+        )}
       </div>
       {/* Sibling of the role="img" host (children of an img are not exposed to assistive tech). */}
       {cameraToolbar && cameraApi && hexSettlement && (

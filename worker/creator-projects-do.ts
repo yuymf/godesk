@@ -2474,6 +2474,21 @@ export class CreatorProjects extends DurableObject<Env> {
       if (view === "sources") {
         return json(paginated(record.sources, url, "sources"));
       }
+      if (view === "imported-blob") {
+        const assetId = url.searchParams.get("assetId") ?? "";
+        const known = (record.importedAssets ?? []).find((item) => item.id === assetId);
+        if (!known) return error("没有找到这个导入资产。", 404);
+        const blob = await this.ctx.storage.get<{ mimeType: string; bytes: Uint8Array }>(
+          importedBlobKey(record.project.id, known.id),
+        );
+        if (!blob) return error("导入资产文件缺失。", 404);
+        return new Response(new Uint8Array(blob.bytes) as Uint8Array<ArrayBuffer>, {
+          headers: {
+            "content-type": blob.mimeType || "application/octet-stream",
+            "cache-control": "private, max-age=300",
+          },
+        });
+      }
       if (view === "imported-assets") {
         return json({
           assets: record.importedAssets ?? [],

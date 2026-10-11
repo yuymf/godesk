@@ -3,6 +3,7 @@ import { GameMark } from "./CreatorBrand";
 import {
   claimSessionSeat,
   getBuild,
+  getImportedSceneModels,
   publicSharedSession,
   sharedSessionSocketUrl,
   submitSessionFeedback,
@@ -182,6 +183,20 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       .then(setBuild)
       .catch((reason: Error) => setError(reason.message));
   }, [room?.buildId, shareToken, buildRetry]);
+
+  const [importedModels, setImportedModels] = useState<
+    Array<{ id: string; url: string; title?: string }>
+  >([]);
+  useEffect(() => {
+    if (!room?.projectId) return;
+    let cancelled = false;
+    void getImportedSceneModels(room.projectId).then((models) => {
+      if (!cancelled) setImportedModels(models);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [room?.projectId]);
 
   async function claimSeat(nextSeat: number) {
     if (!room) return;
@@ -645,6 +660,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
               void claimSeat(next);
             }}
             replayUrl={room.replayUrl}
+            importedModels={importedModels}
             status={room.state.status}
             viewerSeat={seat}
             winnerSeat={room.state.winnerSeat}

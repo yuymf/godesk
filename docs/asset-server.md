@@ -56,3 +56,17 @@ Studio 路由与搜索 fetch 都是懒加载，不打进首页 `index-*.js`（Li
 - Worker：`ASSET_SERVER_URL=http://127.0.0.1:8787`，本机 `pnpm`/`wrangler` 在 **8799**
 - 实测：`GET /api/asset-search?q=trees` → 24 条；「加入项目」写入 Durable Object `assets/imported/` + 项目内 `assets/LICENSES.md`
 - 证据目录（仓外）：`/workspace/g3d-evidence/asset-server/panel-live/`
+
+## 插件一句话拉 CC0 GLB（GoDesk ②，MCP `pull_project_asset`）
+
+插件（MCP）工具 `pull_project_asset { projectId, prompt, idempotencyKey }`：
+
+1. 从一句话里抽搜索词（中文关键词表：桶→barrel、箱→crate、树→tree…；英文取名词）。
+2. 调 sidecar `/v1/search?type=model&free=true&downloadable=true`，只取 **CC0-1.0**、可直链、带 `glb`/`gltf` 的模型。
+3. 下载（优先 `glb`，否则 `gltf` 1k；Poly Haven 回的是 gltf+bin+贴图 zip），在 Worker 里打包成单个 GLB（`worker/gltf-zip-to-glb.ts`），仍受 1.5 MB 上限。
+4. 走 #153 同一条导入路径：写 `assets/imported/<provider>-<id>/<id>.glb` + 项目内 `assets/LICENSES.md` 行。
+5. Room（`/room/<id>`）读 `?view=imported-assets`，经 `?view=imported-blob&assetId=` 拉 GLB，在岛边缘摆放渲染（`data-imported-models`）。
+
+限制：分享访客若没有项目读权限，Room 静默不显示导入模型；`/play/<build>` 预览暂不显示；生产环境没有 sidecar 时工具返回「3D 资产服务不可用」。
+
+e2e：`e2e/asset-pull-glb.spec.ts`。工程箱上用真 sidecar（Poly Haven `Barrel_01`）；CI 无 sidecar 时测试自起 mock（:8787，gltf zip）。

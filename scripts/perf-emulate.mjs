@@ -166,8 +166,17 @@ function trackNetwork(cdp) {
     within(windowMs) {
       if (firstAt === null) return { requests: 0, bytes: 0 };
       const limit = firstAt + windowMs / 1000;
-      const requests = [...started.values()].filter((entry) => entry.at <= limit).length;
-      const bytes = finished.filter((entry) => entry.at <= limit).reduce((sum, entry) => sum + entry.bytes, 0);
+      // data:/blob: are in-process (canvas atlases, object URLs), not network transfers.
+      const entries = [...started.values()].filter(
+        (entry) => entry.at <= limit && !/^(data:|blob:)/i.test(entry.url),
+      );
+      const requests = entries.length;
+      const finishedInWindow = finished.filter((entry) => entry.at <= limit);
+      const bytes = finishedInWindow.reduce((sum, entry) => {
+        const start = started.get(entry.requestId);
+        if (start && /^(data:|blob:)/i.test(start.url)) return sum;
+        return sum + entry.bytes;
+      }, 0);
       return { requests, bytes };
     },
   };
@@ -459,6 +468,12 @@ async function runCi({ browser, roomUrl, outDir }) {
     //    renderer.dispose(), and the JS heap (after GC) does not keep growing.
     await cdp.send("HeapProfiler.enable").catch(() => {});
     await cdp.send("HeapProfiler.collectGarbage").catch(() => {});
+    // First-mount sample must land before remounts (dressing + PBR gates).
+    await page.waitForFunction(
+      () => (window.__godeskPerf?.snapshot()?.lifecycle.memoryOnMount.length ?? 0) >= 1,
+      undefined,
+      { timeout: 60_000 },
+    );
     const heapBefore = (await snapshot(page))?.jsHeap?.usedBytes ?? null;
     for (let cycle = 0; cycle < RESILIENCE_BUDGETS.leakCycles; cycle += 1) {
       await page.evaluate(() => window.__godeskPerf?.remount());
@@ -468,21 +483,26 @@ async function runCi({ browser, roomUrl, outDir }) {
     await cdp.send("HeapProfiler.collectGarbage").catch(() => {});
     const afterLeak = await snapshot(page);
     const life = afterLeak?.lifecycle;
-    const baseline = life?.memoryOnMount[0];
-    // G3D-07: a runtime downgrade (SwiftShader is slow) changes the resource mix — high adds the
-    // PMREM environment texture — so each mount is compared with the first mount at the same tier.
+    const mounts = life?.memoryOnMount ?? [];
+    // Cold-start mount 0 can miss one warm cache (hex-kit / Tidewell geoms already
+    // resident on remount). Drift uses the first warm remount per tier as reference
+    // when remounts exist; otherwise falls back to mount 0. Tier split kept from G3D-07
+    // (high adds PMREM).
+    const baseline = mounts[1] ?? mounts[0];
     const firstByTier = new Map();
-    for (const entry of life?.memoryOnMount ?? []) if (!firstByTier.has(entry.tier)) firstByTier.set(entry.tier, entry);
-    const drift = life?.memoryOnMount.reduce((max, entry) => {
+    for (const entry of mounts.slice(mounts.length > 1 ? 1 : 0)) {
+      if (!firstByTier.has(entry.tier)) firstByTier.set(entry.tier, entry);
+    }
+    const drift = mounts.slice(mounts.length > 1 ? 1 : 0).reduce((max, entry) => {
       const reference = firstByTier.get(entry.tier);
       return Math.max(max, Math.abs(entry.geometries - reference.geometries), Math.abs(entry.textures - reference.textures));
     }, 0) ?? null;
-    const mountTiers = (life?.memoryOnMount ?? []).map((entry) => entry.tier ?? "?").join(",");
+    const mountTiers = mounts.map((entry) => entry.tier ?? "?").join(",");
     const residualGeometries = life?.residualOnDispose.reduce((max, entry) => Math.max(max, entry.geometries), 0) ?? null;
     const residualTextures = life?.residualOnDispose.reduce((max, entry) => Math.max(max, entry.textures), 0) ?? null;
     const heapAfter = afterLeak?.jsHeap?.usedBytes ?? null;
     results.push(
-      check("leak.memoryDriftAfter10Remounts", drift, 0, "max", `baseline ${JSON.stringify(baseline)}，mounts ${life?.mounts}，按同档位比较（各次挂载档位 ${mountTiers}）`),
+      check("leak.memoryDriftAfter10Remounts", drift, 0, "max", `baseline ${JSON.stringify(baseline)}，mounts ${life?.mounts}，warm-remount 同档位比较（各次挂载档位 ${mountTiers}；cold mount0=${JSON.stringify(mounts[0] ?? null)}）`),
       check("leak.residualGeometriesOnDispose", residualGeometries, 0, "max", `${life?.residualOnDispose.length ?? 0} 次卸载`),
       // three r186 binds a module-level 1×1 `emptyShadowTexture` (WebGLUniforms.js) before the
       // first shadow map exists; it is an engine singleton, not an app resource.

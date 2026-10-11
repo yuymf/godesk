@@ -9,8 +9,10 @@
  */
 import type { Object3D, WebGLRenderer } from "three";
 
-export const INTERACTIVE_MARK = "render3d:interactive";
-export const INTERACTIVE_MEASURE = "render3d:tti";
+import { INTERACTIVE_MEASURE } from "./perf-mark";
+
+export { INTERACTIVE_MARK, INTERACTIVE_MEASURE, markInteractive, perfModeEnabled } from "./perf-mark";
+import { perfModeEnabled } from "./perf-mark";
 /** SPEC §4.6.3: discard the first 180 frames (shader compile, layout, GC warm-up). */
 export const WARMUP_FRAMES = 180;
 /** 120 s at 60 fps; older samples fall off the ring buffer. */
@@ -82,11 +84,6 @@ declare global {
   interface Window {
     __godeskPerf?: PerfHarnessApi;
   }
-}
-
-export function perfModeEnabled(search: string = typeof location === "undefined" ? "" : location.search): boolean {
-  const value = new URLSearchParams(search).get("perf");
-  return value === "1" || value === "true";
 }
 
 export function requestedTier(search: string = typeof location === "undefined" ? "" : location.search): {
@@ -165,20 +162,6 @@ export function estimateGpuMemoryBytes(root: Object3D, extraTextureBytes = 0): n
   return bytes;
 }
 
-let interactiveMarked = false;
-
-/** Records `render3d:interactive` once per page (first frame with content). */
-export function markInteractive(): void {
-  if (interactiveMarked || typeof performance === "undefined") return;
-  interactiveMarked = true;
-  try {
-    performance.mark(INTERACTIVE_MARK);
-    performance.measure(INTERACTIVE_MEASURE, { start: 0, end: INTERACTIVE_MARK });
-  } catch {
-    /* User Timing unavailable: harness falls back to null. */
-  }
-}
-
 function interactiveMs(): number | null {
   if (typeof performance === "undefined") return null;
   const entry = performance.getEntriesByName(INTERACTIVE_MEASURE).at(0);
@@ -207,6 +190,8 @@ class PerfRecorder {
     memoryOnMount: [] as Array<{ geometries: number; textures: number; tier?: string }>,
   };
   private memoryPending = false;
+  private memorySettleFrames = 0;
+  private memorySettleLast: { geometries: number; textures: number } | null = null;
   private peak = { calls: 0, triangles: 0 };
   private lastRenderer: RendererInfoSnapshot = {
     calls: 0, triangles: 0, points: 0, lines: 0, geometries: 0, textures: 0, programs: 0,
@@ -217,6 +202,8 @@ class PerfRecorder {
     this.lifecycle.mounts += 1;
     this.lifecycle.activeHosts += 1;
     this.memoryPending = true;
+    this.memorySettleFrames = 0;
+    this.memorySettleLast = null;
     this.lastFrameAt = null;
     this.peak = { calls: 0, triangles: 0 };
     const canvas = handle.renderer.domElement;
@@ -274,9 +261,27 @@ class PerfRecorder {
       textures: info.memory.textures,
       programs: info.programs?.length ?? 0,
     };
-    if (hasContent && this.memoryPending && info.render.calls > 0) {
-      this.memoryPending = false;
-      this.lifecycle.memoryOnMount.push({ ...memoryOf(renderer), tier: this.host?.tier?.() });
+    if (hasContent && this.memoryPending && info.render.calls > 0 && info.memory.geometries >= 8) {
+      // Skip the bare host (sky / empty root ≈ 3 geometries). Require stable
+      // geometry/texture counts across frames so late-arriving dressing/PBR/labels
+      // do not create a 1-count remount drift.
+      const mem = memoryOf(renderer);
+      const last = this.memorySettleLast;
+      if (last && last.geometries === mem.geometries && last.textures === mem.textures) {
+        this.memorySettleFrames += 1;
+      } else {
+        this.memorySettleLast = mem;
+        this.memorySettleFrames = 0;
+      }
+      if (this.memorySettleFrames >= 15) {
+        this.memoryPending = false;
+        this.memorySettleFrames = 0;
+        this.memorySettleLast = null;
+        this.lifecycle.memoryOnMount.push({ ...mem, tier: this.host?.tier?.() });
+      }
+    } else if (!hasContent) {
+      this.memorySettleFrames = 0;
+      this.memorySettleLast = null;
     }
     if (this.rebuildPending && info.render.calls > 0 && this.lostAt !== null) {
       this.rebuildPending = false;
