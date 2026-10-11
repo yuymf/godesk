@@ -1522,40 +1522,28 @@ export function SceneHost({
     modelRef.current = reconcileScene(host, modelRef.current, adapter.model, registryRef.current);
     const container = containerRef.current;
     if (container) container.dataset.sceneNodes = String(adapter.model.nodes.length);
-    // step3 R2：surround = sea 的通用桌面也挂 G3D-08 潮水（岸台矩形当海岸），挂上后隐藏兜底水面板。
-    const seaTable = adapter.model.nodes.find((n) => n.id === "table" && n.tag === "sea");
-    if (seaTable && !waterRef.current && !waterMountingRef.current) {
-      waterMountingRef.current = true;
-      const signal = waterAbortRef.current?.signal;
-      const model = adapter.model;
-      void import("./water")
-        .then(async ({ createWaterController }) => {
-          const renderer = rendererRef.current;
-          const root = contentRootRef.current;
+    // step3 R2: surround=sea → mount G3D-08 tide water (shore rect as coast); hide flat sea panel.
+    const seaTable = adapter.model.nodes.some((n) => n.id === "table" && n.tag === "sea");
+    if (seaTable) {
+      const hide = () => { const t = registryRef.current.get("table"); if (t) t.visible = false; };
+      if (waterRef.current) hide();
+      else if (!waterMountingRef.current) {
+        waterMountingRef.current = true;
+        const signal = waterAbortRef.current?.signal;
+        const model = adapter.model;
+        void import("./water").then(async ({ createWaterController }) => {
+          const renderer = rendererRef.current, root = contentRootRef.current;
           if (!renderer || !root || !waterAliveRef.current || waterRef.current) return;
           const tierAttr = containerRef.current?.dataset.tier;
           const tier = tierAttr === "high" || tierAttr === "medium" || tierAttr === "low" ? tierAttr : "medium";
           const water = await createWaterController({ renderer, parent: root, model, tier, signal });
-          if (!waterAliveRef.current || signal?.aborted || waterRef.current) {
-            water.dispose();
-            return;
-          }
-          waterRef.current = water;
-          const table = registryRef.current.get("table");
-          if (table) table.visible = false;
-          const el = containerRef.current;
-          if (el) el.dataset.water = "on";
+          if (!waterAliveRef.current || signal?.aborted || waterRef.current) { water.dispose(); return; }
+          waterRef.current = water; hide();
+          const el = containerRef.current; if (el) el.dataset.water = "on";
           markShadowsDirtyRef.current();
-        })
-        .catch((error) => {
-          if (!(error instanceof DOMException && error.name === "AbortError")) console.warn("[godesk.water] tabletop mount failed", error);
-        })
-        .finally(() => {
-          waterMountingRef.current = false;
-        });
-    } else if (seaTable && waterRef.current) {
-      const table = registryRef.current.get("table");
-      if (table) table.visible = false;
+        }).catch((e) => { if (!(e instanceof DOMException && e.name === "AbortError")) console.warn("[godesk.water] tabletop mount failed", e); })
+          .finally(() => { waterMountingRef.current = false; });
+      }
     }
     const bounds = adapter.bounds;
     if (bounds && adapter.layoutKey !== layoutKeyRef.current) {

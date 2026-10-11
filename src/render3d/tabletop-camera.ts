@@ -1,10 +1,4 @@
-/**
- * step3 · 通用桌面的正交机位（汐屿同款取景，任何空间 Kernel 可用）。
- *
- * 汐屿 / settlecoast 的观感来自：OrthographicCamera、φ≈54° 斜视、方位 ≈12°、
- * 内容占 HUD 内可用区域的 fill≈0.945。这里把同样的取景做成纯函数：
- * 输入要入镜的点（底板八角），输出相机位置 / 目标 / 正交视锥。
- */
+/** step3 · generic tabletop ortho framing (汐屿 φ54/az12/fill0.945). */
 import type { SceneVec3 } from "./scene-model";
 
 export type HudInsetsPx = { top: number; bottom: number; left: number; right: number };
@@ -17,9 +11,9 @@ export type TabletopOrthoInput = {
   canvasHeight: number;
   insets: HudInsetsPx;
   fill: number;
-  /** 轨道半径（正交下只影响裁剪面，不影响大小）。 */
+  
   distance?: number;
-  /** 近景：在 `focus` 周围按 zoom 放大（1 = 整盘）。 */
+  
   zoom?: number;
   focus?: SceneVec3;
 };
@@ -31,7 +25,7 @@ export type TabletopOrthoFrame = {
   right: number;
   top: number;
   bottom: number;
-  /** 世界单位 / 像素（zoom=1 时）。 */
+  
   worldPerPx: number;
 };
 
@@ -49,7 +43,7 @@ export function orthoBasis(polarDeg: number, azimuthDeg: number) {
 
 const dot = (a: SceneVec3, b: SceneVec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
-/** 盒子（中心 + 尺寸）→ 八个角点。 */
+
 export function boxCorners(center: SceneVec3, size: SceneVec3): SceneVec3[] {
   const out: SceneVec3[] = [];
   for (const sx of [-0.5, 0.5]) for (const sy of [-0.5, 0.5]) for (const sz of [-0.5, 0.5]) {
@@ -100,7 +94,7 @@ export function tabletopOrthoFrame(input: TabletopOrthoInput): TabletopOrthoFram
   return { position, target, left: -halfW, right: halfW, top: halfH, bottom: -halfH, worldPerPx };
 }
 
-/** 正交桌面画布内的 HUD 留白（木框舞台本身已是内嵌框，只留细边；比例同汐屿 playHudInsets 的量级）。 */
+/** HUD insets (Tidewell-scale). */
 export function tabletopHudInsets(canvasWidth: number, canvasHeight: number): HudInsetsPx {
   const side = Math.min(24, Math.max(10, Math.floor(canvasWidth * 0.02)));
   return {
@@ -111,7 +105,7 @@ export function tabletopHudInsets(canvasWidth: number, canvasHeight: number): Hu
   };
 }
 
-/** 近景焦点：棋子最密的一簇（半径 r 内数量最多，平局取离中心近的）。 */
+/** Densest piece cluster focus. */
 export function densestCluster(points: readonly SceneVec3[], radius = 1.6): SceneVec3 | null {
   let best: { n: number; c: SceneVec3; d: number } | null = null;
   for (const p of points) {
