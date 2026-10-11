@@ -44,7 +44,7 @@ export function tileGap(point: XZ, tiles: readonly XZ[]): number {
 export function roleFromModel(model: ImportedSceneModel): "tree" | "station" | "rail" | "prop" {
   const t = `${model.title ?? ""} ${model.id}`.toLowerCase();
   if (/tree|pine|fir|oak|foliage|palm|bush|stump|trunk|fern|plant|树|松|杉|桩|蕨/.test(t)) return "tree";
-  if (/cabin|house|station|cottage|building|hut|shed|home|cabinet|车站|站房|木屋|小屋|柜/.test(t)) return "station";
+  if (/(?:^|[^a-z])(?:cabin|house|station|cottage|building|hut|shed|home)(?:[^a-z]|$)|车站|站房|木屋|小屋/.test(t) && !/cabinet|柜/.test(t)) return "station";
   if (/rail|track|train|sleeper|铁轨|轨道|铁路/.test(t)) return "rail";
   return "prop";
 }
@@ -125,10 +125,6 @@ export function mountImportedProps(opts: {
   nodes: readonly SceneNode[];
   /** 每成功一个回调一次：已载数量 + 全部已摆道具离最近六角格的最小间隙 / 最大高度（世界单位）。 */
   onLoaded: (count: number, info: { minTileGap: number; maxHeight: number }) => void;
-  /** Hide procedural nodes replaced by imported GLBs (stations / trees). */
-  hideNode?: (id: string) => void;
-  /** Live scene nodes (tabletop board/shore/stations); preferred over the hex snapshot when non-empty. */
-  getNodes?: () => readonly SceneNode[];
 }): () => void {
   let cancelled = false;
   const group = new Group();
@@ -137,8 +133,7 @@ export function mountImportedProps(opts: {
   void (async () => {
     const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
     const loader = new GLTFLoader();
-    const live = opts.getNodes?.() ?? [];
-    const nodes = live.length ? live : opts.nodes;
+    const nodes = opts.nodes;
     const layout = layoutFromNodes(nodes);
     const land = tabletopLandFromNodes(nodes);
     const hexMode = layout.tiles.length > 0;
@@ -226,7 +221,12 @@ export function mountImportedProps(opts: {
         const half = Math.hypot(placed.max.x - placed.min.x, placed.max.z - placed.min.z) / 2;
         minTileGap = Math.min(minTileGap, tileGap(spot, layout.tiles) - half);
         maxHeight = Math.max(maxHeight, placed.max.y - placed.min.y);
-        for (const id of hideIds) opts.hideNode?.(id);
+        if (hideIds.length) {
+          opts.root.traverse((obj) => {
+            const id = (obj as { userData?: { nodeId?: string } }).userData?.nodeId;
+            if (id && hideIds.includes(id)) obj.visible = false;
+          });
+        }
         opts.onLoaded(loaded, { minTileGap, maxHeight });
       } catch (reason) {
         console.warn("[godesk] imported GLB failed", model.url, reason);

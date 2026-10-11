@@ -309,76 +309,102 @@ function boxAt(w: number, h: number, d: number, x: number, y: number, z: number)
  * 已占领（node.seat 有值）：座位色道床 + 木枕 + 钢轨（立体）；未占领：印在图上的墨色枕木虚线。
  */
 function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
+  // step3 R4 · stereoscopic track: wood ties + raised rail bars (readable in close-up).
   const [lengthRaw, widthRaw] = (node.tag ?? "1:0.2").split(":").map(Number);
   const length = Math.max(0.2, lengthRaw || 1);
-  const gauge = Math.max(0.08, widthRaw || 0.2);
+  const gauge = Math.max(0.1, widthRaw || 0.22);
   const claimed = node.seat !== undefined;
   const group = new Group();
-  const usable = length - 0.5; // 两端让出车站
-  const step = 0.19;
-  const count = Math.max(1, Math.floor(usable / step));
+  const usable = Math.max(0.35, length - 0.42);
+  const step = claimed ? 0.17 : 0.2;
+  const count = Math.max(2, Math.floor(usable / step));
   const start = -((count - 1) * step) / 2;
-  if (!claimed) {
-    const ties: Geometry[] = [];
-    for (let i = 0; i < count; i += 1) ties.push(boxAt(0.06, 0.012, gauge * 0.9, start + i * step, 0.006, 0));
-    const printed = new Mesh(mergeGeometries(ties) ?? ties[0]!, materialFor(node, ctx));
-    printed.receiveShadow = true;
-    group.add(printed);
-    // 拾取带：透明命中盒，比墨线粗，便于点中。
-    const hit = new Mesh(new BoxGeometry(usable, 0.06, gauge * 1.6), new MeshBasicMaterial({ visible: false }));
-    hit.position.y = 0.03;
-    group.add(hit);
-    return group;
-  }
-  const bed = new Mesh(boxAt(usable + 0.1, 0.05, gauge * 1.15, 0, 0.025, 0), materialFor(node, ctx));
-  bed.receiveShadow = true;
-  bed.castShadow = true;
+  const railZ = gauge * 0.32;
+  const tieMat = claimed ? ctx.library.get("tt-sleeper", SLEEPER) : materialFor(node, ctx);
+  const steel = ctx.library.get("tt-steel", STEEL);
   const ties: Geometry[] = [];
-  for (let i = 0; i < count; i += 1) ties.push(boxAt(0.07, 0.03, gauge * 0.95, start + i * step, 0.065, 0));
-  const sleepers = new Mesh(mergeGeometries(ties) ?? ties[0]!, ctx.library.get("tt-sleeper", SLEEPER));
+  for (let i = 0; i < count; i += 1) {
+    const x = start + i * step;
+    // Slightly thicker / taller ties so they read as lumber, not printed dashes.
+    ties.push(boxAt(claimed ? 0.08 : 0.07, claimed ? 0.04 : 0.028, gauge * 1.05, x, claimed ? 0.055 : 0.03, 0));
+  }
+  const sleepers = new Mesh(mergeGeometries(ties) ?? ties[0]!, tieMat);
   sleepers.castShadow = true;
   sleepers.receiveShadow = true;
-  const rails = new Mesh(
-    mergeGeometries([
-      boxAt(usable, 0.035, 0.026, 0, 0.097, gauge * 0.28),
-      boxAt(usable, 0.035, 0.026, 0, 0.097, -gauge * 0.28),
-    ]) ?? new BoxGeometry(usable, 0.03, 0.02),
-    ctx.library.get("tt-steel", STEEL),
-  );
+  // I-ish rail: web + head (two boxes per side) for a raised bar look in ortho close-up.
+  const railY = claimed ? 0.095 : 0.055;
+  const railH = claimed ? 0.04 : 0.028;
+  const head = claimed ? 0.034 : 0.024;
+  const web = claimed ? 0.016 : 0.012;
+  const railGeoms = [
+    boxAt(usable, railH, web, 0, railY, railZ),
+    boxAt(usable, head * 0.55, head, 0, railY + railH * 0.55, railZ),
+    boxAt(usable, railH, web, 0, railY, -railZ),
+    boxAt(usable, head * 0.55, head, 0, railY + railH * 0.55, -railZ),
+  ];
+  const rails = new Mesh(mergeGeometries(railGeoms) ?? railGeoms[0]!, claimed ? steel : materialFor(node, ctx));
   rails.castShadow = true;
-  group.add(bed, sleepers, rails);
+  if (claimed) {
+    const bed = new Mesh(boxAt(usable + 0.12, 0.045, gauge * 1.25, 0, 0.022, 0), materialFor(node, ctx));
+    bed.receiveShadow = true;
+    bed.castShadow = true;
+    group.add(bed, sleepers, rails);
+  } else {
+    group.add(sleepers, rails);
+  }
+  const hit = new Mesh(new BoxGeometry(usable, 0.1, gauge * 1.7), new MeshBasicMaterial({ visible: false }));
+  hit.position.y = 0.05;
+  group.add(hit);
   return group;
 }
 
-/** step3 · 车站：石台 + 站房 + 坡顶；枢纽（scale 大）加钟楼。底面 y=0、单位尺寸。 */
+/** step3 R4 · 车站小木屋：月台 + 站房 + 坡顶门廊；枢纽加烟囱/钟楼。可读的建筑轮廓，不用导入柜体顶替。 */
 function station(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const group = new Group();
-  const plinth = new Mesh(translated(new CylinderGeometry(0.5, 0.54, 0.1, 24), 0.05), ctx.library.get("tt-stone", STONE));
+  const stone = ctx.library.get("tt-stone", STONE);
+  const wall = ctx.library.get("tt-wall", WALL);
+  const roofMat = ctx.library.get("tt-roof", ROOF);
+  const ink = materialFor(node, ctx);
+  // Round stone platform (reads as a station pad, not a cabinet base).
+  const plinth = new Mesh(translated(new CylinderGeometry(0.52, 0.56, 0.09, 20), 0.045), stone);
   plinth.receiveShadow = true;
   plinth.castShadow = true;
-  const accent = new Mesh(translated(new CylinderGeometry(0.47, 0.47, 0.03, 24), 0.115), materialFor(node, ctx));
-  accent.receiveShadow = true;
-  const walls = new Mesh(boxAt(0.52, 0.26, 0.32, 0, 0.26, 0), ctx.library.get("tt-wall", WALL));
+  const ring = new Mesh(translated(new CylinderGeometry(0.48, 0.48, 0.025, 20), 0.1), ink);
+  ring.receiveShadow = true;
+  // Main cabin body
+  const walls = new Mesh(boxAt(0.5, 0.34, 0.34, 0, 0.28, 0), wall);
   walls.castShadow = true;
   walls.receiveShadow = true;
+  // Door slab + two window insets (dark) so it reads as a house in ortho.
+  const door = new Mesh(boxAt(0.12, 0.2, 0.02, 0, 0.22, 0.175), ink);
+  const winL = new Mesh(boxAt(0.1, 0.1, 0.02, -0.16, 0.3, 0.175), ink);
+  const winR = new Mesh(boxAt(0.1, 0.1, 0.02, 0.16, 0.3, 0.175), ink);
+  // Gabled roof
   const roofShape = new Shape();
-  roofShape.moveTo(-0.32, 0);
-  roofShape.lineTo(0.32, 0);
-  roofShape.lineTo(0, 0.2);
+  roofShape.moveTo(-0.34, 0);
+  roofShape.lineTo(0.34, 0);
+  roofShape.lineTo(0, 0.22);
   roofShape.closePath();
-  const roofGeom = new ExtrudeGeometry(roofShape, { depth: 0.4, bevelEnabled: false });
-  roofGeom.translate(0, 0.39, -0.2);
-  const roof = new Mesh(roofGeom, ctx.library.get("tt-roof", ROOF));
+  const roofGeom = new ExtrudeGeometry(roofShape, { depth: 0.42, bevelEnabled: false });
+  roofGeom.translate(0, 0.45, -0.21);
+  const roof = new Mesh(roofGeom, roofMat);
   roof.castShadow = true;
-  group.add(plinth, accent, walls, roof);
+  // Short platform canopy toward the tracks
+  const canopy = new Mesh(boxAt(0.55, 0.03, 0.18, 0, 0.36, -0.28), roofMat);
+  canopy.castShadow = true;
+  const postL = new Mesh(boxAt(0.04, 0.28, 0.04, -0.2, 0.2, -0.28), wall);
+  const postR = new Mesh(boxAt(0.04, 0.28, 0.04, 0.2, 0.2, -0.28), wall);
+  group.add(plinth, ring, walls, door, winL, winR, roof, canopy, postL, postR);
   if (node.tag === "major") {
-    const tower = new Mesh(boxAt(0.14, 0.42, 0.14, 0.2, 0.34, 0.12), ctx.library.get("tt-wall", WALL));
+    const chimney = new Mesh(boxAt(0.1, 0.28, 0.1, -0.14, 0.62, -0.02), wall);
+    chimney.castShadow = true;
+    const tower = new Mesh(boxAt(0.16, 0.48, 0.16, 0.18, 0.42, 0.08), wall);
     tower.castShadow = true;
-    const cap = new Mesh(translated(new ConeGeometry(0.12, 0.14, 4), 0.62), ctx.library.get("tt-roof", ROOF));
-    cap.position.set(0.2, 0, 0.12);
+    const cap = new Mesh(translated(new ConeGeometry(0.13, 0.16, 4), 0.7), roofMat);
+    cap.position.set(0.18, 0, 0.08);
     cap.rotation.y = Math.PI / 4;
     cap.castShadow = true;
-    group.add(tower, cap);
+    group.add(chimney, tower, cap);
   }
   return group;
 }

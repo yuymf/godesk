@@ -7,6 +7,8 @@ describe("step3 R3 imported props on tabletop", () => {
   it("classifies pull titles into tree / station / rail roles", () => {
     expect(roleFromModel({ id: "a", url: "x", title: "Pine Tree 01" })).toBe("tree");
     expect(roleFromModel({ id: "b", url: "x", title: "Forest Cabin" })).toBe("station");
+    expect(roleFromModel({ id: "cab", url: "x", title: "Gothic Cabinet 01" })).toBe("prop");
+    expect(roleFromModel({ id: "bar", url: "x", title: "Barrel 03" })).toBe("prop");
     expect(roleFromModel({ id: "c", url: "x", title: "Scan Train railwall" })).toBe("rail");
     expect(roleFromModel({ id: "d", url: "x", title: "Barrel_01" })).toBe("prop");
   });

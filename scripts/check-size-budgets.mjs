@@ -2,7 +2,7 @@
 /**
  * G3D size budgets with correct disambiguation:
  * - index-*.js ≤ 170 KB gzip (homepage)
- * - render3d-*.js excluding render3d-assets-* ≤ 208 KB gzip (sum; step3 tabletop sea/import wiring +0.5KB)
+ * - render3d-*.js excluding render3d-assets-* ≤ 208 KB gzip (sum; R4: tabletop surround.sea boot in SceneHost +0.5KB — see REPORT)
  * - render3d-assets-*.js ≤ 60 KB gzip
  * - board-dressing-*.js ≤ 30 KB gzip（G3D-ISLAND / PROPS，懒加载）
  * - TabletopScene3D-*.js ≤ 12 KB gzip（G3D-14 通用桌面 mapper + 网格工厂，懒加载，不计入核心）

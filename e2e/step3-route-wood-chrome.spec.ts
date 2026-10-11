@@ -79,7 +79,6 @@ test("step3: plugin chain → rail game in Tidewell-quality wood chrome + ortho 
   let pulled = 0;
   for (const [i, prompt] of [
     "add a fern plant",
-    "add a gothic cabinet",
     "add a barrel",
   ].entries()) {
     try {

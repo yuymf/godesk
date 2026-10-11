@@ -1,25 +1,22 @@
 import type { Object3D, WebGLRenderer } from "three";
 import type { SceneModel } from "../scene-model";
 import { createWaterController, type WaterController } from "./mesh";
-import type { RenderTierId } from "../tiers";
 
-/** step3 R2/R3: mount tide water for surround=sea tabletop; hide flat sea panel. */
+/** Mount tide water for tabletop surround.sea (same controller as hex). */
 export async function mountTabletopSea(opts: {
   renderer: WebGLRenderer;
   parent: Object3D;
   model: SceneModel;
-  tier: RenderTierId;
+  tier: "high" | "medium" | "low";
   signal?: AbortSignal;
-  hideTable: () => void;
+  hideTable?: () => void;
 }): Promise<WaterController | null> {
-  if (!opts.model.nodes.some((n) => n.id === "table" && n.tag === "sea")) return null;
-  const water = await createWaterController({
-    renderer: opts.renderer,
-    parent: opts.parent,
-    model: opts.model,
-    tier: opts.tier,
-    signal: opts.signal,
-  });
-  opts.hideTable();
-  return water;
+  try {
+    const water = await createWaterController(opts);
+    opts.hideTable?.();
+    return water;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") return null;
+    throw error;
+  }
 }
