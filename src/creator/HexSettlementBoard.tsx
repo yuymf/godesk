@@ -309,7 +309,9 @@ export function HexSettlementBoard({
   onClaimSeat,
   homeHref = "/chatgpt-plugin/games",
   replayUrl,
+  importedModels,
 }: {
+  importedModels?: ReadonlyArray<{ id: string; url: string; title?: string }>;
   hexIsland: HexSettlementBoardState;
   activeSeat: number;
   viewerSeat: number | null;
@@ -814,6 +816,7 @@ export function HexSettlementBoard({
                 legalActions={pickableActions}
                 onPick={handlePick}
                 viewportFrame={viewportFrame}
+                importedModels={importedModels}
               />
             </Suspense>
           </div>

@@ -1,9 +1,11 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import {
+  Box3,
   BoxGeometry,
   Color,
   CylinderGeometry,
   ExtrudeGeometry,
+  Group,
   Mesh,
   Object3D,
   OrthographicCamera,
@@ -11,6 +13,7 @@ import {
   Scene,
   Shape,
   SphereGeometry,
+  Vector3,
   type Texture,
   WebGLRenderer,
   type BufferGeometry,
@@ -131,7 +134,11 @@ export type SceneHostProps = {
   cameraToolbar?: boolean;
   /** Receives the camera API (zoom / rotate / reset / subscribe) for external HUD controls. */
   onCameraApi?: (api: CameraRigApi | null) => void;
+  /** GoDesk ②：项目导入的 CC0 GLB（assets/imported/），按顺序摆在桌边。 */
+  importedModels?: readonly ImportedSceneModel[];
 };
+
+export type ImportedSceneModel = { id: string; url: string; title?: string };
 
 /** Vertex-coloured procedural pieces share three white materials (seat colour is baked). */
 const PIECE_VC_TOKEN: MaterialToken = {
@@ -491,6 +498,7 @@ export function SceneHost({
   localSeat = null,
   cameraToolbar = true,
   onCameraApi,
+  importedModels,
 }: SceneHostProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   /** R18 boot reveal：首挂载 canvas 先隐身，装扮好的 3D 场景再淡入（无平面 2D 盘闪现）；重挂载不再遮。 */
@@ -1278,6 +1286,64 @@ export function SceneHost({
     markShadowsDirtyRef.current();
   }
 
+  // GoDesk ②：导入的 CC0 GLB 摆在桌边（归一到 ~0.9 单位，投影到岛的包围盒外缘）。
+  const importedKey = (importedModels ?? []).map((model) => `${model.id}@${model.url}`).join("|");
+  useEffect(() => {
+    const root = contentRootRef.current;
+    const container = containerRef.current;
+    if (!ready || !root || !container || !importedModels?.length) return;
+    let cancelled = false;
+    const group = new Group();
+    group.name = "imported-models";
+    root.add(group);
+    container.dataset.importedModels = "0";
+    void (async () => {
+      const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
+      const loader = new GLTFLoader();
+      const island = new Box3().setFromObject(root);
+      const radius = Math.max(4, island.isEmpty() ? 4 : Math.max(island.max.x, island.max.z, -island.min.x, -island.min.z));
+      let loaded = 0;
+      for (const [index, model] of importedModels.entries()) {
+        try {
+          const gltf = await loader.loadAsync(model.url);
+          if (cancelled) return;
+          const object = gltf.scene;
+          const box = new Box3().setFromObject(object);
+          const size = box.getSize(new Vector3());
+          const scale = 0.9 / Math.max(size.x, size.y, size.z, 1e-3);
+          object.scale.setScalar(scale);
+          const angle = Math.PI * 0.18 + index * 0.45;
+          const center = box.getCenter(new Vector3());
+          object.position.set(
+            Math.cos(angle) * radius * 1.02 - center.x * scale,
+            -box.min.y * scale + 0.02,
+            Math.sin(angle) * radius * 1.02 - center.z * scale,
+          );
+          object.name = `imported:${model.id}`;
+          object.traverse((child) => {
+            child.castShadow = true;
+            child.receiveShadow = true;
+          });
+          group.add(object);
+          loaded += 1;
+          container.dataset.importedModels = String(loaded);
+          markShadowsDirtyRef.current();
+        } catch (reason) {
+          console.warn("[godesk] imported GLB failed", model.url, reason);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+      group.removeFromParent();
+      group.traverse((child) => {
+        const mesh = child as Mesh;
+        mesh.geometry?.dispose?.();
+      });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, hostEpoch, importedKey]);
+
   // 档位变化（high ↔ medium 不重挂 host）时按新档位重建道具密度。
   useEffect(() => {
     if (ready) syncDressing();
@@ -1471,7 +1537,7 @@ export function SceneHost({
         const halfH = Math.atan(Math.tan((spec.fovDeg * Math.PI) / 360) * camera.aspect);
         const distance = Math.max(
           spec.distance * Math.min(Math.max(radius / 7.5, 0.5), 1.6),
-          (radius * 0.92) / Math.tan(halfH),
+          (radius * 1.02) / Math.tan(halfH),
         );
         camera.fov = spec.fovDeg;
         camera.position.set(center[0], center[1] + distance * Math.cos(polar), center[2] + distance * Math.sin(polar));

@@ -57,6 +57,7 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
       "create_shared_session",
       "read_shared_session",
       "submit_session_intent",
+      "pull_project_asset",
       "read_replay",
       "duplicate_rule_system",
       "restore_build_as_rule_system",

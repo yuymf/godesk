@@ -402,3 +402,27 @@ export function listProjects() {
     .then(readJson<{ projects: GameProject[] }>)
     .then((result) => result.projects);
 }
+
+/** GoDesk ②：项目导入的 GLB（Room 桌边渲染）。拿不到（分享访客无项目权限等）时返回空。 */
+export async function getImportedSceneModels(projectId: string) {
+  try {
+    const response = await fetch(
+      apiPath(`/api/projects/${encodeURIComponent(projectId)}?view=imported-assets`),
+    );
+    if (!response.ok) return [];
+    const body = await response.json() as {
+      assets?: Array<{ id: string; title?: string; path?: string; mimeType?: string }>;
+    };
+    return (body.assets ?? [])
+      .filter((asset) => /\.glb$/i.test(asset.path ?? "") || asset.mimeType === "model/gltf-binary")
+      .map((asset) => ({
+        id: asset.id,
+        title: asset.title,
+        url: apiPath(
+          `/api/projects/${encodeURIComponent(projectId)}?view=imported-blob&assetId=${encodeURIComponent(asset.id)}`,
+        ),
+      }));
+  } catch {
+    return [];
+  }
+}
