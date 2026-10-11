@@ -99,7 +99,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 原因 | 解除条件 |
 | --- | --- | --- |
-| box Codex 用量上限 | 至 2026-11-05 02:04 Asia/Shanghai；Cloud Agent 兜底（本席无该工具时手写） | 用量恢复 |
+| box Codex 用量上限 | 至 2026-11-05 02:04 Asia/Shanghai；用户 2026-10-11 定：禁用 Cloud Agent，一律在本地仓库手写 | 用量恢复 |
 | GitHub Actions | 仓库 visibility = PUBLIC（`gh repo view`，2026-10-11）。main 最近一次 run：2026-10-09 22:46 `f3ea418` success；同时刻 `8fb6d19` 两次 run failure（未查原因）。仍禁无绿合入、禁循环 rerun | 每个 PR CI 绿后再合 |
 
 ## 下一刀
@@ -118,7 +118,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 1. Track C：G3D-17 预备 #144 已合入 `1884e19`（warning 模式）；G3D-16 首页示例：#146（base `feat/g3d-13-tidewell`）已 closed 未合入，需重新开刀（依赖 G3D-13 #138 已满足）。
 2. Track A：G3D-09 / G3D-04b / G3D-04c（#141）已合入；队列清空。
-3. Track B：G3D-08 #131 `e8b59e8` / G3D-13 #138 `19f212d` 已合入；G3D-ART 已由 Track D 用 AI 生图完成（#137 `902075e`）。Track D：G3D-JUDGE #148 `f3ea418` 已合入（汐屿视觉 R33 由大主管评定达标）。
+3. Track B：G3D-08 #131 `e8b59e8` / G3D-13 #138 `19f212d` 已合入；G3D-ART 已由 Track D 用 AI 生图完成（#137 `902075e`）。Track D：G3D-JUDGE #148 `f3ea418` 已合入（汐屿视觉 R33 由大主管评定达标；R33 记录见 [#148 评论](https://github.com/yuymf/godesk/pull/148#issuecomment-6074167290)）。
 
 
 ## G3D-17 上线前清单（发布闸门）
