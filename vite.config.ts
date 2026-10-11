@@ -48,6 +48,14 @@ export default defineConfig({
           if (/\/src\/render3d\/(hex-dressing|island|terrain-props)\.ts$/.test(normalized)) {
             return "board-dressing";
           }
+          // GoDesk ②：导入 GLB 摆放 / 归一，仅项目有导入模型时懒加载，不计入 render3d 核心。
+          if (normalized.endsWith("/src/render3d/imported-props.ts")) {
+            return "imported-props";
+          }
+          // `?perf=1` HUD + recorder 懒加载，不进 render3d 核心。
+          if (/\/src\/render3d\/(PerfOverlay\.tsx|perf\.ts)$/.test(normalized)) {
+            return "perf-overlay";
+          }
           // R25: CameraDirector + ortho framing is hex/Tidewell-only; keep out of render3d core 210KB.
           if (normalized.endsWith("/src/render3d/camera-rig.ts")) {
             return "g3d-hexkit";
@@ -68,6 +76,12 @@ export default defineConfig({
           // G3D-08：水体必须先于 render3d 命名，避免被算进 210 KB 核心。
           if (chunkInfo.name === "tide-water" || facade.includes("/src/render3d/water/")) {
             return "assets/tide-water-[hash].js";
+          }
+          if (chunkInfo.name === "imported-props") {
+            return "assets/imported-props-[hash].js";
+          }
+          if (chunkInfo.name === "perf-overlay") {
+            return "assets/perf-overlay-[hash].js";
           }
           if (chunkInfo.name === "board-dressing") {
             return "assets/board-dressing-[hash].js";

@@ -1,11 +1,9 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import {
-  Box3,
   BoxGeometry,
   Color,
   CylinderGeometry,
   ExtrudeGeometry,
-  Group,
   Mesh,
   Object3D,
   OrthographicCamera,
@@ -13,7 +11,6 @@ import {
   Scene,
   Shape,
   SphereGeometry,
-  Vector3,
   type Texture,
   WebGLRenderer,
   type BufferGeometry,
@@ -40,7 +37,8 @@ import type { HexDressing } from "./hex-dressing";
 import { DEFAULT_DESKTOP_FRAME, framePose, type ViewportFrame } from "./viewport-frame";
 import type { SceneModel, SceneNode } from "./scene-model";
 import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
-import { markInteractive, perfModeEnabled, perfRecorder } from "./perf";
+import { markInteractive, perfModeEnabled } from "./perf-mark";
+import type { PerfRecorder } from "./perf";
 import { applyDieOrientation, idleBob, MotionController, prefersReducedMotion } from "./motion";
 import type { CameraDirector, CameraRigApi, PlayCamera } from "./camera-rig";
 
@@ -56,7 +54,8 @@ type HexKit = typeof import("./hex-kit");
 let hexKit: HexKit | null = null;
 /** Toolbar is UI chrome, not render core: its own lazy chunk (keeps render3d core ≤ 210 KB). */
 const CameraToolbar = lazy(async () => ({ default: (await import("./overlay/CameraToolbar")).CameraToolbar }));
-import { PerfOverlay } from "./PerfOverlay";
+/** `?perf=1` 才用的 HUD：懒加载，不进 render3d 核心。 */
+const PerfOverlay = lazy(() => import("./PerfOverlay").then((m) => ({ default: m.PerfOverlay })));
 import {
   configureRenderer,
   createLightingRig,
@@ -138,7 +137,8 @@ export type SceneHostProps = {
   importedModels?: readonly ImportedSceneModel[];
 };
 
-export type ImportedSceneModel = { id: string; url: string; title?: string };
+export type { ImportedSceneModel } from "./imported-props";
+import type { ImportedSceneModel } from "./imported-props";
 
 /** Vertex-coloured procedural pieces share three white materials (seat colour is baked). */
 const PIECE_VC_TOKEN: MaterialToken = {
@@ -877,13 +877,22 @@ export function SceneHost({
       onPickRef.current(matched);
     };
     renderer.domElement.addEventListener("pointerup", onPointerUp);
-    const perf = perfRecorder();
-    const detachPerf = perf?.attach({
-      renderer,
-      scene,
-      remount: () => setHostEpoch((epoch) => epoch + 1),
-      tier: () => caps.id,
-    });
+    // `?perf=1` only: recorder + harness load lazily (out of the render3d core bundle).
+    let perf: PerfRecorder | null = null;
+    let detachPerf: (() => void) | undefined;
+    let perfDisposed = false;
+    if (perfModeEnabled()) {
+      void import("./perf").then(({ perfRecorder }) => {
+        if (perfDisposed) return;
+        perf = perfRecorder();
+        detachPerf = perf?.attach({
+          renderer,
+          scene,
+          remount: () => setHostEpoch((epoch) => epoch + 1),
+          tier: () => caps.id,
+        });
+      });
+    }
 
     // Fallback test cube when no hex state yet (G3D-02 smoke path).
     if (!hexSettlement && !adapterRef.current) {
@@ -1203,7 +1212,8 @@ export function SceneHost({
       disposeTidewellGeometryCache();
       hexKit?.disposePieceGeometries();
       hexKit?.disposeDiceGeometries();
-      perf?.beforeDispose(renderer);
+      perfDisposed = true;
+      (perf as PerfRecorder | null)?.beforeDispose(renderer);
       detachPerf?.();
       renderer.dispose();
       renderer.forceContextLoss();
@@ -1286,63 +1296,36 @@ export function SceneHost({
     markShadowsDirtyRef.current();
   }
 
-  // GoDesk ②：导入的 CC0 GLB 摆在桌边（归一到 ~0.9 单位，投影到岛的包围盒外缘）。
+  // GoDesk ②：导入的 CC0 GLB —— 懒加载 chunk（imported-props）负责归一尺寸 + 岛外 / 码头旁摆放。
   const importedKey = (importedModels ?? []).map((model) => `${model.id}@${model.url}`).join("|");
   useEffect(() => {
     const root = contentRootRef.current;
     const container = containerRef.current;
     if (!ready || !root || !container || !importedModels?.length) return;
+    let dispose: (() => void) | null = null;
     let cancelled = false;
-    const group = new Group();
-    group.name = "imported-models";
-    root.add(group);
     container.dataset.importedModels = "0";
-    void (async () => {
-      const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
-      const loader = new GLTFLoader();
-      const island = new Box3().setFromObject(root);
-      const radius = Math.max(4, island.isEmpty() ? 4 : Math.max(island.max.x, island.max.z, -island.min.x, -island.min.z));
-      let loaded = 0;
-      for (const [index, model] of importedModels.entries()) {
-        try {
-          const gltf = await loader.loadAsync(model.url);
-          if (cancelled) return;
-          const object = gltf.scene;
-          const box = new Box3().setFromObject(object);
-          const size = box.getSize(new Vector3());
-          const scale = 0.9 / Math.max(size.x, size.y, size.z, 1e-3);
-          object.scale.setScalar(scale);
-          const angle = Math.PI * 0.18 + index * 0.45;
-          const center = box.getCenter(new Vector3());
-          object.position.set(
-            Math.cos(angle) * radius * 1.02 - center.x * scale,
-            -box.min.y * scale + 0.02,
-            Math.sin(angle) * radius * 1.02 - center.z * scale,
-          );
-          object.name = `imported:${model.id}`;
-          object.traverse((child) => {
-            child.castShadow = true;
-            child.receiveShadow = true;
-          });
-          group.add(object);
-          loaded += 1;
-          container.dataset.importedModels = String(loaded);
+    const nodes = hexSettlement && hexKit ? hexKit.mapHexSettlementToScene(hexSettlement).nodes : [];
+    void import("./imported-props").then(({ mountImportedProps }) => {
+      if (cancelled) return;
+      dispose = mountImportedProps({
+        root,
+        models: importedModels,
+        nodes,
+        onLoaded: (count, info) => {
+          container.dataset.importedModels = String(count);
+          container.dataset.importedMinTileGap = info.minTileGap.toFixed(3);
+          container.dataset.importedMaxHeight = info.maxHeight.toFixed(3);
           markShadowsDirtyRef.current();
-        } catch (reason) {
-          console.warn("[godesk] imported GLB failed", model.url, reason);
-        }
-      }
-    })();
+        },
+      });
+    });
     return () => {
       cancelled = true;
-      group.removeFromParent();
-      group.traverse((child) => {
-        const mesh = child as Mesh;
-        mesh.geometry?.dispose?.();
-      });
+      dispose?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, hostEpoch, importedKey]);
+  }, [ready, hostEpoch, importedKey, hexKit !== null]);
 
   // 档位变化（high ↔ medium 不重挂 host）时按新档位重建道具密度。
   useEffect(() => {
@@ -1646,7 +1629,11 @@ export function SceneHost({
         role="img"
         style={{ width: "100%", height: "100%", minHeight: 280, touchAction: "none", position: perfMode ? "relative" : undefined }}
       >
-        {perfMode && <PerfOverlay />}
+        {perfMode && (
+          <Suspense fallback={null}>
+            <PerfOverlay />
+          </Suspense>
+        )}
       </div>
       {/* Sibling of the role="img" host (children of an img are not exposed to assistive tech). */}
       {cameraToolbar && cameraApi && hexSettlement && (

@@ -23,7 +23,7 @@
 
 ## 审查与合入口径（2026-10-06）
 
-C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均用 box Codex 高档 gpt-5.5；合入授权：满足 CI/本地测试/活测证据后按序 squash。**Codex 额度耗尽（至 2026-11-05 02:04 Asia/Shanghai）时，按站立刀序改 Cursor Cloud Agent 兜底写码。**
+C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均用 box Codex 高档 gpt-5.5；合入授权：满足 CI/本地测试/活测证据后按序 squash。**用户 2026-10-11 定：禁用 Cloud Agent，一律在本地仓库手写。**
 
 ## 当前里程碑
 
@@ -95,6 +95,14 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | --- | --- | --- | --- |
 | （无） | — | — | 2026-10-11 核对：`gh pr list --state open` 为 0；远端只有 `main` 分支 |
 
+## 已知限制
+
+GoDesk ② 导入 GLB（#160），本 PR 未修：
+
+- 分享链接访客若无项目读权限，看不到导入模型（`imported-blob` 需项目读权限）。
+- `/play/<build>` 预览不显示导入模型（只有 Room 拉取 `imported-assets`）。
+- 生产环境没有 asset sidecar，`pull_project_asset` 返回 “asset service unavailable”。
+
 ## 阻塞
 
 | 项 | 原因 | 解除条件 |
@@ -118,7 +126,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 1. Track C：G3D-17 预备 #144 已合入 `1884e19`（warning 模式）；G3D-16 首页示例：#146（base `feat/g3d-13-tidewell`）已 closed 未合入，需重新开刀（依赖 G3D-13 #138 已满足）。
 2. Track A：G3D-09 / G3D-04b / G3D-04c（#141）已合入；队列清空。
-3. Track B：G3D-08 #131 `e8b59e8` / G3D-13 #138 `19f212d` 已合入；G3D-ART 已由 Track D 用 AI 生图完成（#137 `902075e`）。Track D：G3D-JUDGE #148 `f3ea418` 已合入（汐屿视觉 R33 由大主管评定达标；R33 记录见 [#148 评论](https://github.com/yuymf/godesk/pull/148#issuecomment-6074167290)）。
+3. Track B：G3D-08 #131 `e8b59e8` / G3D-13 #138 `19f212d` 已合入；G3D-ART 已由 Track D 用 AI 生图完成（#137 `902075e`）。Track D：G3D-JUDGE #148 `f3ea418` 已合入（汐屿视觉 R33 由大主管评定达标；R33 记录见 [#148 评论](https://github.com/yuymf/godesk/pull/148#issuecomment-6106295330)）。
 
 
 ## G3D-17 上线前清单（发布闸门）

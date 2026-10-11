@@ -111,7 +111,14 @@ test.describe("GoDesk ② CC0 GLB asset chain", () => {
     await page.goto(roomUrl);
     await expect(host).toHaveAttribute("data-tier", "high", { timeout: 30_000 });
     await expect(host).toHaveAttribute("data-imported-models", "1", { timeout: 60_000 });
+    // 摆放：岛外 / 码头旁，缩放后包围盒不压任何六角格；尺寸 ≈ 一座村庄。
+    const gap = Number(await host.getAttribute("data-imported-min-tile-gap"));
+    const height = Number(await host.getAttribute("data-imported-max-height"));
+    console.log("[asset-pull] placement", JSON.stringify({ gap, height }));
+    expect(gap).toBeGreaterThan(0);
+    expect(height).toBeGreaterThan(0.1);
+    expect(height).toBeLessThanOrEqual(0.3);
     await page.waitForTimeout(2_500);
-    if (EVIDENCE_DIR) await page.screenshot({ path: join(EVIDENCE_DIR, "after.png") });
+    if (EVIDENCE_DIR) await page.screenshot({ path: join(EVIDENCE_DIR, process.env.GODESK_AFTER_SHOT ?? "after.png") });
   });
 });
