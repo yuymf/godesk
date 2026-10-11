@@ -12,6 +12,7 @@ import { TabletopStage } from "./TabletopStage";
 import { lazy, Suspense } from "react";
 
 /** step3：RenderSpec.chrome = "wood" 时的木框全屏外壳（懒加载，含 tidewell-game-screen.css）。 */
+import { actionCardArt, seatPortrait } from "./tabletop-hud-art";
 const LazyTabletopGameScreen = lazy(() => import("./TabletopGameScreen"));
 
 export type NetworkRouteBoardState = {
@@ -263,6 +264,7 @@ export function NetworkRouteBoard({
             isActive: status === "active" && seat === activeSeat,
             isYou: seat === viewerSeat,
             isAi: aiSeats.includes(seat),
+            portrait: seatPortrait(render.hud, seat),
             badge: status === "active" && seat === activeSeat
               ? seat === viewerSeat ? copy.yourTurn : aiSeats.includes(seat) ? (zh ? "电脑思考中" : "Thinking") : copy.waiting
               : status === "complete" && winnerSeat === seat ? copy.winner : null,
@@ -282,10 +284,10 @@ export function NetworkRouteBoard({
           chronicle={chronicle}
           dockLabel={zh ? "你的铁路" : "Your railway"}
           tiles={[
-            { key: "mine", label: zh ? "我的铁轨" : "My track", value: viewerSeat === null ? "—" : viewerSeat === 0 ? count0 : count1, color: color(viewerSeat ?? 0), glyph: "轨" },
-            { key: "rival", label: zh ? "对手铁轨" : "Rival track", value: viewerSeat === null ? "—" : viewerSeat === 0 ? count1 : count0, color: color(viewerSeat === null ? 1 : 1 - viewerSeat), glyph: "敌" },
-            { key: "open", label: zh ? "剩余路线" : "Open", value: open, glyph: "路" },
-            { key: "goal", label: zh ? "连通" : "Linked", value: viewerSeat === null ? "—" : linked[viewerSeat] ? "✓" : "✗", glyph: "枢" },
+            { key: "mine", label: zh ? "我的铁轨" : "My track", value: viewerSeat === null ? "—" : viewerSeat === 0 ? count0 : count1, color: color(viewerSeat ?? 0), glyph: "轨", art: seatPortrait(render.hud, viewerSeat ?? 0) },
+            { key: "rival", label: zh ? "对手铁轨" : "Rival track", value: viewerSeat === null ? "—" : viewerSeat === 0 ? count1 : count0, color: color(viewerSeat === null ? 1 : 1 - viewerSeat), glyph: "敌", art: seatPortrait(render.hud, viewerSeat === null ? 1 : 1 - viewerSeat) },
+            { key: "open", label: zh ? "剩余路线" : "Open", value: open, glyph: "路", art: actionCardArt(render.hud, "open-routes") },
+            { key: "goal", label: zh ? "连通" : "Linked", value: viewerSeat === null ? "—" : linked[viewerSeat] ? "✓" : "✗", glyph: "枢", art: actionCardArt(render.hud, "terminals") },
           ]}
           actionsLabel={zh ? "可铺路线" : "Claimable"}
           actions={networkRoute.edges
@@ -296,6 +298,7 @@ export function NetworkRouteBoard({
               detail: `${copy.claim} · ${edge.from}–${edge.to}`,
               enabled: showLegal && legalEdges.has(edge.id),
               onClick: () => onAct?.("claim", { edgeId: edge.id }),
+              art: actionCardArt(render.hud, edge.id),
             }))}
           emptyActions={copy.noLast}
         />

@@ -94,7 +94,7 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
     expect(JSON.stringify(sessionInput)).toContain("aiSeats");
     // step3: configure_render exposes the Tidewell-quality knobs (ortho camera, wood chrome, decor, track kit).
     const patchSchema = JSON.stringify(payload.result.tools.find((tool) => tool.name === "apply_project_patch")?.inputSchema);
-    for (const knob of ["projection", "chrome", "decor", "rail-track", "station"]) expect(patchSchema).toContain(knob);
+    for (const knob of ["projection", "chrome", "decor", "rail-track", "station", "surround", "portraits", "cardArt"]) expect(patchSchema).toContain(knob);
     const mutationOutputSchema = payload.result.tools.find(
       (tool) => tool.name === "apply_project_patch",
     )?.outputSchema;

@@ -49,10 +49,29 @@ const DEFAULT_SPEC: TideWaterSpec = {
   foam: 1.0,
 };
 
+/** 矩形陆地 → 圆盘样本（间距 ≤ 半径，外沿圆弧形成柔和的岸线）。 */
+export function rectCoast(cx: number, cz: number, width: number, depth: number): CoastSample[] {
+  const r = 0.45;
+  const out: CoastSample[] = [];
+  const nx = Math.max(1, Math.ceil((width - 2 * r) / r));
+  const nz = Math.max(1, Math.ceil((depth - 2 * r) / r));
+  for (let i = 0; i <= nx; i += 1) {
+    for (let j = 0; j <= nz; j += 1) {
+      out.push({ x: cx - width / 2 + r + ((width - 2 * r) * i) / nx, z: cz - depth / 2 + r + ((depth - 2 * r) * j) / nz, radius: r });
+    }
+  }
+  return out;
+}
+
 function coastsFromModel(model: SceneModel | null): CoastSample[] {
   if (!model) return [{ x: 0, z: 0, radius: TILE_RADIUS }];
   const tiles = model.nodes.filter((n) => n.kind === "tile");
-  if (tiles.length === 0) return [{ x: 0, z: 0, radius: TILE_RADIUS }];
+  if (tiles.length === 0) {
+    // step3 R2：通用桌面（surround = sea）用岸台 / 底板矩形当陆地：内铺圆盘，海岸线略带起伏。
+    const land = model.nodes.find((n) => n.id === "shore") ?? model.nodes.find((n) => n.id === "board");
+    if (land?.scale) return rectCoast(land.position[0], land.position[2], land.scale[0], land.scale[2]);
+    return [{ x: 0, z: 0, radius: TILE_RADIUS }];
+  }
   return tiles.map((n) => ({ x: n.position[0], z: n.position[2], radius: TILE_RADIUS }));
 }
 

@@ -1522,6 +1522,41 @@ export function SceneHost({
     modelRef.current = reconcileScene(host, modelRef.current, adapter.model, registryRef.current);
     const container = containerRef.current;
     if (container) container.dataset.sceneNodes = String(adapter.model.nodes.length);
+    // step3 R2：surround = sea 的通用桌面也挂 G3D-08 潮水（岸台矩形当海岸），挂上后隐藏兜底水面板。
+    const seaTable = adapter.model.nodes.find((n) => n.id === "table" && n.tag === "sea");
+    if (seaTable && !waterRef.current && !waterMountingRef.current) {
+      waterMountingRef.current = true;
+      const signal = waterAbortRef.current?.signal;
+      const model = adapter.model;
+      void import("./water")
+        .then(async ({ createWaterController }) => {
+          const renderer = rendererRef.current;
+          const root = contentRootRef.current;
+          if (!renderer || !root || !waterAliveRef.current || waterRef.current) return;
+          const tierAttr = containerRef.current?.dataset.tier;
+          const tier = tierAttr === "high" || tierAttr === "medium" || tierAttr === "low" ? tierAttr : "medium";
+          const water = await createWaterController({ renderer, parent: root, model, tier, signal });
+          if (!waterAliveRef.current || signal?.aborted || waterRef.current) {
+            water.dispose();
+            return;
+          }
+          waterRef.current = water;
+          const table = registryRef.current.get("table");
+          if (table) table.visible = false;
+          const el = containerRef.current;
+          if (el) el.dataset.water = "on";
+          markShadowsDirtyRef.current();
+        })
+        .catch((error) => {
+          if (!(error instanceof DOMException && error.name === "AbortError")) console.warn("[godesk.water] tabletop mount failed", error);
+        })
+        .finally(() => {
+          waterMountingRef.current = false;
+        });
+    } else if (seaTable && waterRef.current) {
+      const table = registryRef.current.get("table");
+      if (table) table.visible = false;
+    }
     const bounds = adapter.bounds;
     if (bounds && adapter.layoutKey !== layoutKeyRef.current) {
       layoutKeyRef.current = adapter.layoutKey ?? null;
@@ -1543,7 +1578,8 @@ export function SceneHost({
           const w = Math.max(el?.clientWidth ?? 1, 1);
           const h = Math.max(el?.clientHeight ?? 1, 1);
           const nodes = modelRef.current?.nodes ?? [];
-          const board = nodes.find((n) => n.id === "board");
+          // step3 R2：有岸台（surround）时按岸台取景，底板像岛一样浮在海 / 原野中央。
+          const board = nodes.find((n) => n.id === "shore") ?? nodes.find((n) => n.id === "board");
           const points = board?.scale
             ? boxCorners(board.position, board.scale)
             : nodes.filter((n) => n.kind !== "table").map((n) => n.position);

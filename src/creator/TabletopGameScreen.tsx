@@ -19,10 +19,12 @@ export type TabletopScreenSeat = {
   isYou: boolean;
   isAi: boolean;
   badge?: string | null;
+  /** step3 R2：肖像图（RenderSpec.hud.portraits）；缺省为座位色蜡封。 */
+  portrait?: string | null;
 };
 
-export type TabletopScreenTile = { key: string; label: string; value: string | number; color?: string; glyph?: string };
-export type TabletopScreenAction = { key: string; label: string; detail?: string; enabled: boolean; onClick: () => void };
+export type TabletopScreenTile = { key: string; label: string; value: string | number; color?: string; glyph?: string; art?: string | null };
+export type TabletopScreenAction = { key: string; label: string; detail?: string; enabled: boolean; onClick: () => void; art?: string | null };
 
 export type TabletopGameScreenProps = {
   locale: "zh" | "en";
@@ -134,9 +136,16 @@ export default function TabletopGameScreen(props: TabletopGameScreenProps) {
                 key={seat.seat}
                 style={{ "--seat-color": seat.color } as CSSProperties}
               >
-                <div className="tidewell-player-avatar tidewell-medallion tabletop-seal" aria-hidden="true">
-                  <span className="tabletop-seal-mark">{seat.seat + 1}</span>
-                </div>
+                {seat.portrait ? (
+                  <div className="tidewell-player-avatar tidewell-medallion tabletop-portrait" aria-hidden="true">
+                    <img alt="" decoding="async" src={seat.portrait} />
+                    <span className="tabletop-portrait-pip">{seat.seat + 1}</span>
+                  </div>
+                ) : (
+                  <div className="tidewell-player-avatar tidewell-medallion tabletop-seal" aria-hidden="true">
+                    <span className="tabletop-seal-mark">{seat.seat + 1}</span>
+                  </div>
+                )}
                 <div className="tidewell-player-meta">
                   <b>{seat.name}</b>
                   <span className="tidewell-house-name">{seat.subtitle}</span>
@@ -200,9 +209,16 @@ export default function TabletopGameScreen(props: TabletopGameScreenProps) {
         <div className="tidewell-hand">
           {props.tiles.map((tile) => (
             <div className="tidewell-resource-tile tabletop-tile" key={tile.key} style={{ "--seat-color": tile.color ?? "#8a6a14" } as CSSProperties}>
-              <div className="tidewell-resource-art is-fallback tabletop-tile-art" aria-hidden="true">
-                <span>{tile.glyph ?? "◆"}</span>
-              </div>
+              {tile.art ? (
+                <div className="tidewell-resource-art tabletop-tile-art has-art" aria-hidden="true">
+                  <img alt="" decoding="async" src={tile.art} />
+                  {tile.glyph ? <span className="tabletop-tile-glyph">{tile.glyph}</span> : null}
+                </div>
+              ) : (
+                <div className="tidewell-resource-art is-fallback tabletop-tile-art" aria-hidden="true">
+                  <span>{tile.glyph ?? "◆"}</span>
+                </div>
+              )}
               <span className="tidewell-resource-name">{tile.label}</span>
               <b className="tidewell-resource-count">{tile.value}</b>
             </div>
@@ -215,12 +231,14 @@ export default function TabletopGameScreen(props: TabletopGameScreenProps) {
         <div className="tidewell-build-row tabletop-action-row" role="group" aria-label={props.actionsLabel}>
           {props.actions.length ? props.actions.map((action) => (
             <button
-              className={`tidewell-build-btn${action.enabled ? "" : " is-disabled"}`}
+              className={`tidewell-build-btn${action.enabled ? "" : " is-disabled"}${action.art ? " tabletop-card" : ""}`}
               disabled={!action.enabled}
               key={action.key}
               onClick={action.onClick}
+              title={action.detail ? `${action.label} · ${action.detail}` : action.label}
               type="button"
             >
+              {action.art ? <img alt="" aria-hidden="true" className="tabletop-card-art" decoding="async" src={action.art} /> : null}
               <span className="tidewell-build-label">{action.label}</span>
               {action.detail ? <span className="tidewell-build-cost">{action.detail}</span> : null}
             </button>

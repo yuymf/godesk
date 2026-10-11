@@ -63,6 +63,25 @@ export const renderSpecSchema = z.strictObject({
     rocks: z.number().int().min(0).max(60),
     seed: z.number().int().min(0).max(1_000_000),
   }).optional(),
+  /**
+   * step3 R2 · what surrounds the board so the table reads as a place, not a slab on wood:
+   * `sea` = Tidewell tide-water shader around a sandy shore rim; `meadow` = grass field with a
+   * tree belt. `shore` = rim width in world units (0 = no rim). Generic for any tabletop kernel.
+   */
+  surround: z.strictObject({
+    kind: z.enum(["none", "sea", "meadow"]),
+    shore: z.number().min(0).max(3),
+    seed: z.number().int().min(0).max(1_000_000).optional(),
+  }).optional(),
+  /**
+   * step3 R2 · HUD art for the generic wood shell: `portraits` = seat portrait pack,
+   * `cardArt` = illustrated action cards (vignette per action key). Packs live in
+   * assets/illustrations/tabletop/ and are registered in assets/LICENSES.md.
+   */
+  hud: z.strictObject({
+    portraits: z.enum(["none", "travelers"]).optional(),
+    cardArt: z.enum(["none", "landscape"]).optional(),
+  }).optional(),
   lighting: z.strictObject({
     sun: z.strictObject({
       azimuthDeg: z.number().min(0).max(360),
@@ -466,6 +485,8 @@ export const renderPatchSchema = z.strictObject({
   camera: renderShape.camera.partial().optional(),
   chrome: renderShape.chrome,
   decor: renderShape.decor,
+  surround: renderShape.surround,
+  hud: renderShape.hud,
   lighting: z.strictObject({
     sun: lightingShape.sun.partial().optional(),
     hemisphere: lightingShape.hemisphere.partial().optional(),
@@ -502,6 +523,8 @@ export function applyRenderPatch(render: RenderSpec, patch: RenderPatch): Render
   if (patch.camera) Object.assign(next.camera, definedEntries(patch.camera));
   if (patch.chrome) next.chrome = patch.chrome;
   if (patch.decor) next.decor = { ...patch.decor };
+  if (patch.surround) next.surround = { ...patch.surround };
+  if (patch.hud) next.hud = { ...next.hud, ...definedEntries(patch.hud) };
   if (patch.lighting) {
     if (patch.lighting.sun) Object.assign(next.lighting.sun, definedEntries(patch.lighting.sun));
     if (patch.lighting.hemisphere) Object.assign(next.lighting.hemisphere, definedEntries(patch.lighting.hemisphere));

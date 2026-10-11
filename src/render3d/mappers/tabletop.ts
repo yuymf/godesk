@@ -25,6 +25,8 @@ export type TabletopRenderInput = {
   };
   /** step3：盘面散布景物（树 / 石），确定性、避开连线 / 棋子 / 格位。 */
   decor?: { trees: number; rocks: number; seed: number };
+  /** step3 R2：盘外环境（海 / 草原）+ 岸边宽度。 */
+  surround?: { kind: "none" | "sea" | "meadow"; shore: number; seed?: number };
   lighting: LightingSpec;
   water: { enabled: boolean; shallow: string; deep: string };
   materials: Record<string, {
@@ -260,6 +262,62 @@ export function scatterDecor(layout: TabletopLayout, decor: NonNullable<Tabletop
   return out;
 }
 
+/**
+ * step3 R2 · 盘外景物：岸边碎石 / 灌木 + （草原）外圈林带。确定性，只落在底板之外，
+ * 让正交画面里底板四周不再是空桌面。任何空间 Kernel 可用（RenderSpec.surround）。
+ */
+export function scatterSurround(
+  layout: TabletopLayout,
+  surround: NonNullable<TabletopRenderInput["surround"]>,
+  shoreTop: number,
+): TabletopPiece[] {
+  const random = rng((surround.seed ?? 7) + 101);
+  const out: TabletopPiece[] = [];
+  const bw = layout.board.width / 2;
+  const bd = layout.board.depth / 2;
+  const s = surround.shore;
+  const insideBoard = (x: number, z: number, pad: number) => Math.abs(x) < bw + pad && Math.abs(z) < bd + pad;
+  const push = (kind: "decor-tree" | "decor-rock", x: number, z: number, size: number, y: number) => {
+    if (out.some((o) => Math.hypot(o.x - x, o.z - z) < (o.size + size) * 0.45)) return;
+    out.push({ id: `${kind}:s${out.length}`, objectKind: kind, materialKey: kind === "decor-tree" ? "foliage" : "rock", x: round(x), z: round(z), y: round(y), size: round(size), rotationY: round(random() * Math.PI * 2) });
+  };
+  if (s > 0) {
+    // 岸带：沿四边撒石块（海）或灌木（草原），均匀分布 + 抖动。
+    const perimeter = 2 * (layout.board.width + layout.board.depth + 4 * s);
+    const count = Math.round(perimeter / (surround.kind === "sea" ? 1.1 : 0.7));
+    for (let i = 0; i < count; i += 1) {
+      const t = (i + random() * 0.6) / count;
+      const along = t * perimeter;
+      const w = layout.board.width + 2 * s;
+      const d = layout.board.depth + 2 * s;
+      let x: number, z: number;
+      if (along < w) { x = -w / 2 + along; z = -d / 2; }
+      else if (along < w + d) { x = w / 2; z = -d / 2 + (along - w); }
+      else if (along < 2 * w + d) { x = w / 2 - (along - w - d); z = d / 2; }
+      else { x = -w / 2; z = d / 2 - (along - 2 * w - d); }
+      // 向内收到岸带中间（避开底板边与水线）。
+      const inset = s * (0.25 + random() * 0.45);
+      x -= Math.sign(x) * (Math.abs(x) >= w / 2 - 1e-6 ? inset : 0);
+      z -= Math.sign(z) * (Math.abs(z) >= d / 2 - 1e-6 ? inset : 0);
+      if (insideBoard(x, z, 0.12)) continue;
+      const rockish = surround.kind === "sea" ? random() < 0.45 : random() < 0.25;
+      push(rockish ? "decor-rock" : "decor-tree", x, z, rockish ? 0.16 + random() * 0.22 : 0.3 + random() * 0.25, shoreTop);
+    }
+  }
+  if (surround.kind === "meadow") {
+    // 外圈林带：底板 + 岸之外再撒成簇的树，铺满画面左右空档。
+    const reachX = bw + s + Math.max(3, layout.board.width * 0.9);
+    const reachZ = bd + s + Math.max(1.5, layout.board.depth * 0.35);
+    for (let attempt = 0; attempt < 900 && out.length < 220; attempt += 1) {
+      const x = (random() * 2 - 1) * reachX;
+      const z = (random() * 2 - 1) * reachZ;
+      if (insideBoard(x, z, s + 0.2)) continue;
+      push("decor-tree", x, z, 0.36 + random() * 0.34, TABLE_Y + 0.05);
+    }
+  }
+  return out;
+}
+
 /** 布局 + RenderSpec → SceneModel（纯函数，可单测）。 */
 export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRenderInput): TabletopScene {
   const materials: Record<string, MaterialToken> = {};
@@ -281,18 +339,40 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
   const boardTop = BOARD_THICKNESS;
 
   // 桌面：开启 water 时为一片水面色的平面（简化表现，非 G3D-08 水体 shader），否则为木桌。
-  const tableSize = Math.max(board.width, board.depth) * 1.9;
+  // step3 R2：surround = sea → 标记 tag "sea"（SceneHost 挂 G3D-08 潮水 shader 后隐藏它，之前作兜底）；
+  // meadow → 草地桌面。两者都放大到铺满正交画面，不再露出木纹。
+  const surround = render.surround && render.surround.kind !== "none" ? render.surround : null;
+  const tableSize = Math.max(board.width, board.depth) * (surround ? 6 : 1.9);
+  const sea = surround?.kind === "sea" || (!surround && render.water.enabled);
   nodes.push({
     id: "table",
     kind: "table",
     mesh: "tile-square",
     position: [0, TABLE_Y, 0],
     scale: [tableSize, 0.1, tableSize],
-    tag: render.water.enabled ? "water" : "wood",
-    material: render.water.enabled
+    tag: surround?.kind === "sea" ? "sea" : sea ? "water" : surround?.kind === "meadow" ? "meadow" : "wood",
+    material: sea
       ? libraryKey("water", { base: render.water.shallow, roughness: 0.32, metalness: 0, pattern: "none" })
-      : libraryKey("table"),
+      : surround?.kind === "meadow"
+        ? libraryKey("meadow", render.materials.meadow ?? { base: "#6f9a4c", roughness: 0.96, metalness: 0, pattern: "grass" }, tableSize)
+        : libraryKey("table"),
   });
+  const shore = surround ? surround.shore : 0;
+  const shoreTop = boardTop - 0.07;
+  if (surround && shore > 0) {
+    // 岸：比底板大一圈、略低的台地（海 = 沙滩，草原 = 土坡），底板像被放在岛上 / 原野中。
+    nodes.push({
+      id: "shore",
+      kind: "cell",
+      mesh: "tile-square",
+      tag: surround.kind,
+      position: [0, round((shoreTop + TABLE_Y) / 2), 0],
+      scale: [round(board.width + shore * 2), round(shoreTop - TABLE_Y), round(board.depth + shore * 2)],
+      material: surround.kind === "sea"
+        ? libraryKey("shore", render.materials.shore ?? { base: "#e6d3a0", roughness: 0.97, metalness: 0, pattern: "sand" }, board.width + shore * 2)
+        : libraryKey("shore", render.materials.shore ?? { base: "#7c9a4e", roughness: 0.97, metalness: 0, pattern: "grass" }, board.width + shore * 2),
+    });
+  }
 
   const boardBinding = bindingFor(render, board.objectKind);
   nodes.push({
@@ -337,7 +417,10 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
     if (cell.action) actions[id] = cell.action;
   }
 
-  const decorPieces = render.decor ? scatterDecor(layout, render.decor) : [];
+  const decorPieces = [
+    ...(render.decor ? scatterDecor(layout, render.decor) : []),
+    ...(surround ? scatterSurround(layout, surround, shoreTop) : []),
+  ];
   for (const piece of layout.pieces) {
     if (!piece.label) continue;
     // 名牌：平放在棋子南侧（朝向默认机位），羊皮纸底 + 墨字（tabletop-objects `label` 网格）。

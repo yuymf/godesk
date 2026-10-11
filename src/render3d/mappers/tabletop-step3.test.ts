@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { applyRenderPatch, defaultRenderSpec, renderPatchSchema, renderSpecSchema } from "../../creator/render-spec";
 import { DEFAULT_NETWORK_CITIES, DEFAULT_NETWORK_EDGES } from "../../runtime/adapters/network-route";
-import { mapTabletopToScene, scatterDecor, type TabletopRenderInput } from "./tabletop";
+import { mapTabletopToScene, scatterDecor, scatterSurround, type TabletopRenderInput } from "./tabletop";
+import { rectCoast } from "../water/mesh";
+import { actionCardArt, seatPortrait } from "../../creator/tabletop-hud-art";
 import { networkRouteLayout } from "./tabletop-kernels";
 
 const PATCH = {
@@ -78,5 +80,43 @@ describe("step3 · configure_render: ortho camera / wood chrome / decor / track 
     const scene = mapTabletopToScene(layout(), spec);
     const board = scene.model.nodes.find((n) => n.id === "board")!;
     expect(scene.materials[board.material!]!.pbrRepeat).toBeGreaterThan(2);
+  });
+
+  it("R2 surround=sea: tags the table as sea, adds a shore rim the board sits on, rocks only outside the board", () => {
+    const spec = { ...render(), surround: { kind: "sea" as const, shore: 0.9, seed: 5 } };
+    const scene = mapTabletopToScene(layout(), spec);
+    const table = scene.model.nodes.find((n) => n.id === "table")!;
+    const shore = scene.model.nodes.find((n) => n.id === "shore")!;
+    const board = scene.model.nodes.find((n) => n.id === "board")!;
+    expect(table.tag).toBe("sea");
+    expect(shore.scale![0]).toBeCloseTo(board.scale![0] + 1.8, 5);
+    expect(shore.position[1] + shore.scale![1] / 2).toBeLessThan(board.position[1] + board.scale![1] / 2);
+    const { board: b } = layout();
+    const rim = scatterSurround(layout(), spec.surround, 0.17);
+    expect(rim.length).toBeGreaterThan(10);
+    for (const p of rim) expect(Math.abs(p.x) > b.width / 2 || Math.abs(p.z) > b.depth / 2).toBe(true);
+    expect(scatterSurround(layout({ "A|B": 0 }), spec.surround, 0.17)).toEqual(rim);
+  });
+
+  it("R2 surround=meadow: grass table + tree belt; rect coast covers the shore for the tide shader", () => {
+    const spec = { ...render(), surround: { kind: "meadow" as const, shore: 0.6 } };
+    const scene = mapTabletopToScene(layout(), spec);
+    expect(scene.model.nodes.find((n) => n.id === "table")!.tag).toBe("meadow");
+    expect(scatterSurround(layout(), spec.surround, 0.17).filter((p) => p.objectKind === "decor-tree").length).toBeGreaterThan(40);
+    const coast = rectCoast(0, 0, 10, 6);
+    const xs = coast.map((c) => c.x);
+    expect(Math.min(...xs) - 0.45).toBeCloseTo(-5, 5);
+    expect(Math.max(...xs) + 0.45).toBeCloseTo(5, 5);
+  });
+
+  it("R2 hud art packs: portraits per seat and stable card art per action key; none = no art", () => {
+    const patch = renderPatchSchema.parse({ hud: { portraits: "travelers", cardArt: "landscape" }, surround: { kind: "sea", shore: 1 } });
+    const merged = applyRenderPatch(defaultRenderSpec("network-route-v1", "table")!, patch);
+    expect(renderSpecSchema.parse(merged).hud).toEqual({ portraits: "travelers", cardArt: "landscape" });
+    expect(seatPortrait(merged.hud, 0)).not.toBe(seatPortrait(merged.hud, 1));
+    expect(actionCardArt(merged.hud, "A|B")).toBe(actionCardArt(merged.hud, "A|B"));
+    expect(seatPortrait({ portraits: "none" }, 0)).toBeNull();
+    expect(actionCardArt(undefined, "A|B")).toBeNull();
+    expect(renderPatchSchema.safeParse({ surround: { kind: "lava", shore: 1 } }).success).toBe(false);
   });
 });

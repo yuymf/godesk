@@ -3058,3 +3058,86 @@ body:has(.room-view-tidewell-immersive) {
 }
 .tabletop-game-screen .tabletop-action-empty { color: #e8d3a2; margin: 0 12px; }
 .tabletop-game-screen .tabletop-stage { height: 100%; min-height: 0; margin: 0; }
+
+/* —— step3 R2 · HUD art packs (RenderSpec.hud): seat portraits, illustrated tiles + route cards —— */
+.tabletop-game-screen .tabletop-portrait {
+  position: relative;
+  padding: 0;
+  overflow: visible;
+  background: var(--seat-color);
+  box-shadow: 0 0 0 3px var(--seat-color), 0 0 0 5px var(--tw-gold-mid, #c9a227), 0 3px 8px rgba(0, 0, 0, 0.45);
+}
+.tabletop-game-screen .tabletop-portrait img { width: 100%; height: 100%; border-radius: 50%; display: block; }
+.tabletop-game-screen .tabletop-portrait-pip {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--seat-color);
+  border: 2px solid #f3dc8c;
+  font: 800 11px/1 "Noto Serif CJK SC", serif;
+  color: #fff8e4;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+.tabletop-game-screen .tabletop-tile-art.has-art { position: relative; padding: 0; overflow: hidden; }
+.tabletop-game-screen .tabletop-tile-art.has-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tabletop-game-screen .tabletop-tile-glyph {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(248, 236, 208, 0.92);
+  border: 1.5px solid var(--seat-color);
+  font: 800 13px/1 "Noto Serif CJK SC", serif !important;
+  color: var(--seat-color) !important;
+  text-shadow: none !important;
+}
+.tabletop-game-screen .tabletop-action-row .tidewell-build-btn.tabletop-card {
+  position: relative !important;
+  justify-content: flex-end !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+.tabletop-game-screen .tabletop-card .tabletop-card-art {
+  position: absolute;
+  inset: 3px;
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  object-fit: cover;
+  border-radius: 5px;
+  z-index: 0;
+}
+.tabletop-game-screen .tabletop-action-row .tabletop-card .tidewell-build-label {
+  position: relative !important;
+  z-index: 3;
+  width: calc(100% - 6px);
+  margin: 0 3px;
+  margin-bottom: 3px;
+  padding: 1px 4px 2px;
+  border-radius: 0 0 5px 5px;
+  font-size: 12px !important;
+  color: #3a2a1c !important;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(248, 236, 208, 0.9), rgba(239, 224, 187, 0.97)), var(--tw-tex-parchment);
+  border-top: 1.5px solid var(--tw-gold-mid, #c9a227);
+}
+.tabletop-game-screen .tabletop-action-row .tabletop-card .tidewell-build-cost {
+  display: none !important;
+  position: relative !important;
+  z-index: 3;
+  width: calc(100% - 6px);
+  margin: 0 3px 3px;
+  padding: 0 4px 2px;
+  text-align: center;
+  color: #7a4f1c !important;
+  background: rgba(239, 224, 187, 0.97);
+  border-radius: 0 0 5px 5px;
+}
