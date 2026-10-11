@@ -18,6 +18,12 @@ const builtInMesh = z.enum([
   "card",
   "die",
   "ship",
+  // step3 · generic track / map kit (any spatial kernel may bind these).
+  "rail-track",
+  "station",
+  "tree",
+  "rock",
+  "shore-natural",
 ]);
 
 export const materialSchema = z.strictObject({
@@ -40,7 +46,49 @@ export const renderSpecSchema = z.strictObject({
     minPolarDeg: z.number().min(10).max(80),
     maxPolarDeg: z.number().min(20).max(85),
     pan: z.boolean(),
+    /**
+     * step3 · Tidewell-quality framing for any tabletop surface: `orthographic` uses the same
+     * ortho play camera as 汐屿 (polar 54° / azimuth 12° / fill 0.945 inside HUD insets).
+     * Omitted = legacy perspective orbit (fovDeg / distance).
+     */
+    projection: z.enum(["perspective", "orthographic"]).optional(),
+    polarDeg: z.number().min(10).max(80).optional(),
+    azimuthDeg: z.number().min(-45).max(45).optional(),
+    fill: z.number().min(0.5).max(1).optional(),
   }),
+  /** step3 · Room chrome: `wood` = full-viewport carved-wood game screen (汐屿 shell, generic). */
+  chrome: z.enum(["plain", "wood"]).optional(),
+  /** step3 · deterministic scenery scattered on the board, clear of routes / pieces / cells. */
+  decor: z.strictObject({
+    trees: z.number().int().min(0).max(120),
+    rocks: z.number().int().min(0).max(60),
+    seed: z.number().int().min(0).max(1_000_000),
+    /** step3 R5 · `varied` = dirt route beds + darker grass patches + gentle mounds instead of one flat grass. */
+    ground: z.enum(["flat", "varied"]).optional(),
+    /** step3 R5 · `clustered` = pine/broadleaf groves densified along routes and the shore rim. */
+    forest: z.enum(["sparse", "clustered"]).optional(),
+  }).optional(),
+  /**
+   * step3 R2 · what surrounds the board so the table reads as a place, not a slab on wood:
+   * `sea` = Tidewell tide-water shader around a sandy shore rim; `meadow` = grass field with a
+   * tree belt. `shore` = rim width in world units (0 = no rim). Generic for any tabletop kernel.
+   */
+  surround: z.strictObject({
+    kind: z.enum(["none", "sea", "meadow"]),
+    shore: z.number().min(0).max(3),
+    /** step3 R3 · coast outline: `natural` = undulating island rim (breaks hard right angles); `rect` = sharp slab. */
+    coast: z.enum(["rect", "natural"]).optional(),
+    seed: z.number().int().min(0).max(1_000_000).optional(),
+  }).optional(),
+  /**
+   * step3 R2 · HUD art for the generic wood shell: `portraits` = seat portrait pack,
+   * `cardArt` = illustrated action cards (vignette per action key). Packs live in
+   * assets/illustrations/tabletop/ and are registered in assets/LICENSES.md.
+   */
+  hud: z.strictObject({
+    portraits: z.enum(["none", "travelers"]).optional(),
+    cardArt: z.enum(["none", "landscape"]).optional(),
+  }).optional(),
   lighting: z.strictObject({
     sun: z.strictObject({
       azimuthDeg: z.number().min(0).max(360),
@@ -442,6 +490,10 @@ const lightingShape = renderShape.lighting.shape;
 export const renderPatchSchema = z.strictObject({
   preset: renderShape.preset.optional(),
   camera: renderShape.camera.partial().optional(),
+  chrome: renderShape.chrome,
+  decor: renderShape.decor,
+  surround: renderShape.surround,
+  hud: renderShape.hud,
   lighting: z.strictObject({
     sun: lightingShape.sun.partial().optional(),
     hemisphere: lightingShape.hemisphere.partial().optional(),
@@ -476,6 +528,10 @@ export function applyRenderPatch(render: RenderSpec, patch: RenderPatch): Render
   const next = structuredClone(render);
   if (patch.preset) next.preset = patch.preset;
   if (patch.camera) Object.assign(next.camera, definedEntries(patch.camera));
+  if (patch.chrome) next.chrome = patch.chrome;
+  if (patch.decor) next.decor = { ...patch.decor };
+  if (patch.surround) next.surround = { ...patch.surround };
+  if (patch.hud) next.hud = { ...next.hud, ...definedEntries(patch.hud) };
   if (patch.lighting) {
     if (patch.lighting.sun) Object.assign(next.lighting.sun, definedEntries(patch.lighting.sun));
     if (patch.lighting.hemisphere) Object.assign(next.lighting.hemisphere, definedEntries(patch.lighting.hemisphere));

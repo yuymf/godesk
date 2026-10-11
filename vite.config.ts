@@ -60,6 +60,10 @@ export default defineConfig({
           if (normalized.endsWith("/src/render3d/camera-rig.ts")) {
             return "g3d-hexkit";
           }
+          // step3: shared tabletop ortho framing — own chunk (not render3d-*), SceneHost still sync-imports it.
+          if (normalized.endsWith("/src/render3d/tabletop-camera.ts")) {
+            return "g3d-tabletop-cam";
+          }
           if (normalized.includes("/node_modules/three/")) {
             return "render3d";
           }
@@ -100,6 +104,9 @@ export default defineConfig({
           // 与 GLB 并行懒加载，通用桌面不加载；单列 chunk + 独立预算（scripts/check-size-budgets.mjs）。
           if (chunkInfo.name === "g3d-hexkit" || facade.includes("/src/render3d/hex-kit")) {
             return "assets/g3d-hexkit-[hash].js";
+          }
+          if (chunkInfo.name === "g3d-tabletop-cam") {
+            return "assets/g3d-tabletop-cam-[hash].js";
           }
           // `?judge=1` 评审机位（dev-only）懒加载，不进生产渲染核心。
           if (facade.includes("/src/render3d/judge-camera")) {

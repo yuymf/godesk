@@ -21,6 +21,8 @@ export type TabletopStageProps = {
   render?: RenderSpec;
   /** 缺省（undefined）时只读：3D 拾取不发动作。 */
   onAct?: (actionId: string, payload?: Record<string, unknown>) => void;
+  /** GoDesk ②：项目导入的 CC0 GLB（Room 透传）。 */
+  importedModels?: ReadonlyArray<{ id: string; url: string; title?: string }>;
 };
 
 const LazyTabletopScene3D = lazy(() => import("./TabletopScene3D"));

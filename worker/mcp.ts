@@ -1269,12 +1269,15 @@ export function createGodeskMcpServer(
     {
       title: "Create an authoritative GoDesk Shared Session",
       description:
-        "Create a reconnectable Shared Session from one immutable executable Build only after Presentation and Playability Floors pass. Return its sessionUrl with share= for others to join — paste that exact URL and stop; never invent invite copy without the URL. If track_job on generate-rule-system already returned result.session.sessionUrl, paste that URL and do not call this again. Otherwise call with result.build.id (do not invent ids). If generationPlan is still pending, approve_generation_plan via apply_project_patch before compiling; Studio iteration cannot invent a kernel (iteration_unsupported).",
+        "Create a reconnectable Shared Session from one immutable executable Build only after Presentation and Playability Floors pass. Return its sessionUrl with share= for others to join — paste that exact URL and stop; never invent invite copy without the URL. If track_job on generate-rule-system already returned result.session.sessionUrl, paste that URL and do not call this again. Otherwise call with result.build.id (do not invent ids). If generationPlan is still pending, approve_generation_plan via apply_project_patch before compiling; Studio iteration cannot invent a kernel (iteration_unsupported). Pass aiSeats (e.g. [1]) to seat the built-in computer player in those seats.",
       inputSchema: z.object({
         buildId: z.string().min(1),
         seed: z.number().int(),
         idempotencyKey: z.string().min(1).max(200),
         hypothesisId: z.string().min(1).optional(),
+        // step3: same `aiSeats` option the Web lobby's 「和电脑对战」 uses, so a plugin can open a
+        // vs-computer room. The Durable Object validates seats and kernel bot support (ai_seat_unsupported).
+        aiSeats: z.array(z.number().int().min(0).max(19)).max(19).optional(),
       }),
       outputSchema: sharedSessionSchema,
       annotations: {

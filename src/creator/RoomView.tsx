@@ -391,6 +391,9 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   const networkRouteState = room.state.networkRoute;
   const networkRoute =
     isNetworkRoute(build.ruleSystem) && Boolean(networkRouteState);
+  /** step3：RenderSpec.chrome = "wood" 的空间 Kernel 走汐屿同款全屏木框外壳（目前接入 network-route-v1）。 */
+  const woodChrome = networkRoute && build.ruleSystem.presentation.render?.chrome === "wood";
+  const immersive = hexSettlement || woodChrome;
   const auctionState = room.state.auctionBidding;
   const auction = isAuctionBidding(build.ruleSystem) && Boolean(auctionState);
   const gameName = build.ruleSystem.name;
@@ -454,7 +457,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       : copy.points;
 
   return (
-    <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute || auction ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-hex-island room-view-tidewell-immersive" : ""} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
+    <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute || auction ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-hex-island room-view-tidewell-immersive" : ""} ${woodChrome ? "room-view-tidewell-immersive room-view-tabletop-immersive" : ""} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
       <header className="room-shell-header">
         <div className="room-title-block">
           <span className="room-brand-mark" aria-hidden="true"><GameMark /></span>
@@ -482,7 +485,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         </div>
       </header>
 
-{!hexSettlement ? (
+{!immersive ? (
             <section aria-label={copy.invitation} className="room-invitation room-invitation-rich">
         <div className="invitation-heading">
           <span className="room-kicker">{copy.invitation}</span>
@@ -580,7 +583,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       </section>
       ) : null}
 
-      {!hexSettlement &&
+      {!immersive &&
         room.state.status === "active" &&
         room.seats.length + (room.aiSeats?.length ?? 0) < room.state.scores.length && (
         <section aria-live="polite" className="room-waiting-empty">
@@ -592,7 +595,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         </section>
       )}
 
-      {!hexSettlement && room.experiment && (
+      {!immersive && room.experiment && (
         <section
           aria-labelledby="experiment-brief-title"
           className="room-experiment-brief"
@@ -668,6 +671,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         </Suspense>
       ) : networkRoute && networkRouteState ? (
         <NetworkRouteBoard render={build.ruleSystem.presentation.render}
+          importedModels={importedModels}
           activeSeat={activeSeat}
           busy={busy}
           enabled={isMyTurn}
@@ -676,6 +680,13 @@ export function RoomView({ sessionId }: { sessionId: string }) {
           onAct={(actionId, payload) => {
             void act(actionId, -1, payload);
           }}
+          title={gameName}
+          aiSeats={room.aiSeats}
+          onClaimSeat={(next) => {
+            void claimSeat(next);
+          }}
+          replayUrl={room.replayUrl}
+          homeHref={href("/games")}
           status={room.state.status}
           viewerSeat={seat}
           winnerSeat={room.state.winnerSeat}
@@ -991,7 +1002,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         </section>
       )}
 
-{hexSettlement ? (
+{immersive ? (
         <details className="room-feedback-drawer" id="room-feedback-drawer">
           <summary>{copy.feedbackTitle}</summary>
                 <section aria-label={copy.feedbackTitle} className="room-feedback-panel">

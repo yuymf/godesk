@@ -5,3 +5,5 @@ export { createWaterController, WATER_HALF_EXTENT, WATER_SEA_HALF_EXTENT, WATER_
 export type { WaterController } from "./mesh";
 export { waterFeaturesFor } from "./tiers";
 export type { WaterTierFeatures } from "./tiers";
+
+export { mountTabletopSea } from "./tabletop-mount";

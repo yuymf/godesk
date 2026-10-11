@@ -3,6 +3,8 @@
  * G3D-JUDGE 左右对照图（dev tooling；输出不入库）。左 = 参考（settlecoast.com），右 = 汐屿。
  *
  *   node scripts/judge-compose.mjs <round> [--variant page|canvas|both]
+ *     [--ref-dir DIR] [--shots-dir DIR] [--out-dir DIR] [--left-label 文本] [--right-label 文本] [--views a,b,d]
+ *   step3：可把任意两套截图并排（如 左 = 汐屿、右 = 插件新做的游戏）；缺省行为不变。
  *
  * 默认 page：桌面汐屿用 1440×900 整页截图（参照图是 1280×800 含浏览器框的整屏，比的是观感不是像素）。
  * 每个参照变体（a3 / b2 / b3 / e-road / f2 / g-trade …）各出一张，配同一视图字母的汐屿截图。
@@ -27,9 +29,16 @@ if (!round) {
 const vi = args.indexOf("--variant");
 const VARIANT = vi >= 0 ? args[vi + 1] : "page";
 const ROOT = process.env.JUDGE_ROOT || "/workspace/g3d-evidence/judge";
-const REF = path.join(ROOT, "ref");
-const SHOTS = path.join(ROOT, `round-${round}`, "tidewell");
-const OUT = path.join(ROOT, `round-${round}`, "compare");
+const flag = (name) => {
+  const i = args.indexOf(`--${name}`);
+  return i >= 0 ? args[i + 1] : undefined;
+};
+const REF = flag("ref-dir") ?? path.join(ROOT, "ref");
+const SHOTS = flag("shots-dir") ?? path.join(ROOT, `round-${round}`, "tidewell");
+const OUT = flag("out-dir") ?? path.join(ROOT, `round-${round}`, "compare");
+const LEFT_LABEL = flag("left-label") ?? "参照 settlecoast";
+const RIGHT_LABEL = flag("right-label") ?? "汐屿";
+const ONLY_VIEWS = flag("views")?.split(",") ?? null;
 const VIEWS = [
   ["a", "a-default", "默认整盘"],
   ["a3", "a3-topdown", "俯视整岛"],
@@ -80,6 +89,7 @@ async function main() {
   const variants = VARIANT === "both" ? ["page", "canvas"] : [VARIANT];
   for (const vp of ["desktop", "iphone"]) {
     for (const [letter, id, title] of VIEWS) {
+      if (ONLY_VIEWS && !ONLY_VIEWS.includes(letter)) continue;
       const matched = findRefs(refs, vp, letter, id);
       for (const refName of matched.length ? matched : [null]) {
       for (const variant of variants) {
@@ -145,10 +155,10 @@ async function main() {
             ref: refName ? await dataUrl(path.join(REF, refName)) : null,
             shot: await dataUrl(path.join(SHOTS, shotName)),
             labels: {
-              left: `参照 settlecoast · ${vp} · ${letter} ${title}`,
-              right: `汐屿 · round-${round} · ${vp} · ${letter} ${title}`,
-              leftFile: refName ? `ref/${refName}` : "ref/（缺失）",
-              rightFile: `round-${round}/tidewell/${shotName}`,
+              left: `${LEFT_LABEL} · ${vp} · ${letter} ${title}`,
+              right: `${RIGHT_LABEL} · round-${round} · ${vp} · ${letter} ${title}`,
+              leftFile: refName ? `${path.basename(REF)}/${refName}` : "ref/（缺失）",
+              rightFile: `${path.basename(SHOTS)}/${shotName}`,
             },
             height: vp === "iphone" ? 1400 : 900, // 全高：桌面 900（参照 800 放大到同高）
           },

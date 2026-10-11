@@ -2610,5 +2610,185 @@ export const ASSET_MANIFEST = Object.freeze([
       "status": "cleared",
       "legalReview": "pending-G3D-17"
     }
+  },
+{
+  "id": "ui/tabletop-portrait-traveler-0",
+  "file": "assets/illustrations/tabletop/portrait-traveler-0.svg",
+  "kind": "illustration",
+  "bytes": 1871,
+  "tier": "all",
+  "source": "procedural",
+  "license": {
+    "spdx": "LicenseRef-GoDesk-Original",
+    "sourceUrl": "scripts/gen-tabletop-hud-art.py",
+    "author": "GoDesk step3",
+    "obtainedAt": "2026-10-11",
+    "modified": false,
+    "modificationNote": "无",
+    "orderRef": "n/a",
+    "status": "cleared"
   }
+},
+{
+  "id": "ui/tabletop-portrait-traveler-1",
+  "file": "assets/illustrations/tabletop/portrait-traveler-1.svg",
+  "kind": "illustration",
+  "bytes": 1740,
+  "tier": "all",
+  "source": "procedural",
+  "license": {
+    "spdx": "LicenseRef-GoDesk-Original",
+    "sourceUrl": "scripts/gen-tabletop-hud-art.py",
+    "author": "GoDesk step3",
+    "obtainedAt": "2026-10-11",
+    "modified": false,
+    "modificationNote": "无",
+    "orderRef": "n/a",
+    "status": "cleared"
+  }
+},
+{
+  "id": "ui/tabletop-portrait-traveler-2",
+  "file": "assets/illustrations/tabletop/portrait-traveler-2.svg",
+  "kind": "illustration",
+  "bytes": 1724,
+  "tier": "all",
+  "source": "procedural",
+  "license": {
+    "spdx": "LicenseRef-GoDesk-Original",
+    "sourceUrl": "scripts/gen-tabletop-hud-art.py",
+    "author": "GoDesk step3",
+    "obtainedAt": "2026-10-11",
+    "modified": false,
+    "modificationNote": "无",
+    "orderRef": "n/a",
+    "status": "cleared"
+  }
+},
+{
+  "id": "ui/tabletop-portrait-traveler-3",
+  "file": "assets/illustrations/tabletop/portrait-traveler-3.svg",
+  "kind": "illustration",
+  "bytes": 1704,
+  "tier": "all",
+  "source": "procedural",
+  "license": {
+    "spdx": "LicenseRef-GoDesk-Original",
+    "sourceUrl": "scripts/gen-tabletop-hud-art.py",
+    "author": "GoDesk step3",
+    "obtainedAt": "2026-10-11",
+    "modified": false,
+    "modificationNote": "无",
+    "orderRef": "n/a",
+    "status": "cleared"
+  }
+},
+{
+  "id": "ui/tabletop-card-landscape-0",
+  "file": "assets/illustrations/tabletop/card-landscape-0.svg",
+  "kind": "illustration",
+  "bytes": 1157,
+  "tier": "all",
+  "source": "procedural",
+  "license": {
+    "spdx": "LicenseRef-GoDesk-Original",
+    "sourceUrl": "scripts/gen-tabletop-hud-art.py",
+    "author": "GoDesk step3",
+    "obtainedAt": "2026-10-11",
+    "modified": false,
+    "modificationNote": "无",
+    "orderRef": "n/a",
+    "status": "cleared"
+  }
+},
+{
+  "id": "ui/tabletop-card-landscape-1",
+  "file": "assets/illustrations/tabletop/card-landscape-1.svg",
+  "kind": "illustration",
+  "bytes": 1246,
+  "tier": "all",
+  "source": "procedural",
+  "license": {
+    "spdx": "LicenseRef-GoDesk-Original",
+    "sourceUrl": "scripts/gen-tabletop-hud-art.py",
+    "author": "GoDesk step3",
+    "obtainedAt": "2026-10-11",
+    "modified": false,
+    "modificationNote": "无",
+    "orderRef": "n/a",
+    "status": "cleared"
+  }
+},
+{
+  "id": "ui/tabletop-card-landscape-2",
+  "file": "assets/illustrations/tabletop/card-landscape-2.svg",
+  "kind": "illustration",
+  "bytes": 1175,
+  "tier": "all",
+  "source": "procedural",
+  "license": {
+    "spdx": "LicenseRef-GoDesk-Original",
+    "sourceUrl": "scripts/gen-tabletop-hud-art.py",
+    "author": "GoDesk step3",
+    "obtainedAt": "2026-10-11",
+    "modified": false,
+    "modificationNote": "无",
+    "orderRef": "n/a",
+    "status": "cleared"
+  }
+},
+{
+  "id": "ui/tabletop-card-landscape-3",
+  "file": "assets/illustrations/tabletop/card-landscape-3.svg",
+  "kind": "illustration",
+  "bytes": 1986,
+  "tier": "all",
+  "source": "procedural",
+  "license": {
+    "spdx": "LicenseRef-GoDesk-Original",
+    "sourceUrl": "scripts/gen-tabletop-hud-art.py",
+    "author": "GoDesk step3",
+    "obtainedAt": "2026-10-11",
+    "modified": false,
+    "modificationNote": "无",
+    "orderRef": "n/a",
+    "status": "cleared"
+  }
+},
+{
+  "id": "ui/tabletop-card-landscape-4",
+  "file": "assets/illustrations/tabletop/card-landscape-4.svg",
+  "kind": "illustration",
+  "bytes": 2345,
+  "tier": "all",
+  "source": "procedural",
+  "license": {
+    "spdx": "LicenseRef-GoDesk-Original",
+    "sourceUrl": "scripts/gen-tabletop-hud-art.py",
+    "author": "GoDesk step3",
+    "obtainedAt": "2026-10-11",
+    "modified": false,
+    "modificationNote": "无",
+    "orderRef": "n/a",
+    "status": "cleared"
+  }
+},
+{
+  "id": "ui/tabletop-card-landscape-5",
+  "file": "assets/illustrations/tabletop/card-landscape-5.svg",
+  "kind": "illustration",
+  "bytes": 1207,
+  "tier": "all",
+  "source": "procedural",
+  "license": {
+    "spdx": "LicenseRef-GoDesk-Original",
+    "sourceUrl": "scripts/gen-tabletop-hud-art.py",
+    "author": "GoDesk step3",
+    "obtainedAt": "2026-10-11",
+    "modified": false,
+    "modificationNote": "无",
+    "orderRef": "n/a",
+    "status": "cleared"
+  }
+}
 ]);

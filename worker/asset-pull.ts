@@ -12,6 +12,8 @@ import { toGlb } from "./gltf-zip-to-glb";
 const ZH_TERMS: Array<[RegExp, string]> = [
   [/木?桶/, "barrel"],
   [/箱/, "crate"],
+  [/树桩|树墩/, "stump"],
+  [/松树|冷杉|枞/, "pine"],
   [/树/, "tree"],
   [/石|岩/, "rock"],
   [/椅/, "chair"],
@@ -21,6 +23,9 @@ const ZH_TERMS: Array<[RegExp, string]> = [
   [/花/, "flower"],
   [/草/, "grass"],
   [/锚/, "anchor"],
+  [/车站|站台|站房|小屋|木屋|屋/, "cabin"],
+  [/铁轨|轨道|铁路|枕木/, "rail"],
+  [/火车/, "train"],
 ];
 
 const STOP_WORDS = new Set([
@@ -90,10 +95,24 @@ export async function pullCc0GlbFromPrompt(
     const detail = reason instanceof Error ? reason.message : "unknown";
     throw new Error(`3D 资产服务不可用（${baseUrl}），见 docs/asset-server.md（${detail}）。`);
   }
-  const candidates = (search.results ?? []).filter(isCc0ModelCandidate);
+  const qTokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const titleScore = (asset: AssetServerAsset) => {
+    const title = `${asset.title} ${asset.nativeId}`.toLowerCase();
+    return qTokens.reduce((n, t) => n + (title.includes(t) ? 1 : 0), 0);
+  };
+  const candidates = (search.results ?? []).filter(isCc0ModelCandidate)
+    .slice()
+    .sort((a, b) => {
+      const ts = titleScore(b) - titleScore(a);
+      if (ts) return ts;
+      const ag = a.formats?.includes("glb") ? 0 : 1;
+      const bg = b.formats?.includes("glb") ? 0 : 1;
+      if (ag !== bg) return ag - bg;
+      return (a.polyCount ?? 9e9) - (b.polyCount ?? 9e9);
+    });
   if (candidates.length === 0) throw new Error(`没有找到「${query}」的 CC0 可直链 glTF/GLB 模型。`);
   let lastError = "";
-  for (const asset of candidates.slice(0, 4)) {
+  for (const asset of candidates.slice(0, 8)) {
     const format = asset.formats?.includes("glb") ? "glb" : "gltf";
     const resolution = asset.resolutions?.includes("1k") ? "1k" : undefined;
     try {

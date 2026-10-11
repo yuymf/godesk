@@ -9,7 +9,7 @@ import { createTabletopObject, updateTabletopObject } from "../render3d/tabletop
 import { fallbackTabletopRender, layoutForStage } from "./tabletop-stage-layout";
 import type { TabletopStageProps } from "./TabletopStage";
 
-export default function TabletopScene3D({ kernel, state, legal, render, onAct }: TabletopStageProps) {
+export default function TabletopScene3D({ kernel, state, legal, render, onAct, importedModels }: TabletopStageProps) {
   const renderKey = render ? JSON.stringify(render) : "";
   const resolvedRender = useMemo(
     () => (render as TabletopRenderInput | undefined) ?? fallbackTabletopRender(kernel),
@@ -43,9 +43,12 @@ export default function TabletopScene3D({ kernel, state, legal, render, onAct }:
       style={{ display: "contents" }}
     >
       <SceneHost
+        // step3：相机类型（透视 / 正交）挂载时决定，切换 projection 时重挂载。
+        key={resolvedRender.camera.projection ?? "perspective"}
         ariaLabel="3D 桌面"
         interactive={interactive}
         lighting={resolvedRender.lighting}
+        importedModels={importedModels}
         onPick={(action) => onAct?.(action.type, action.payload)}
         scene={adapter}
       />

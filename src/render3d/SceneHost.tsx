@@ -35,6 +35,7 @@ import type { JudgePreset } from "./judge-camera";
 import { REPLACED_NODE_KINDS } from "./dressing-kinds";
 import type { HexDressing } from "./hex-dressing";
 import { DEFAULT_DESKTOP_FRAME, framePose, type ViewportFrame } from "./viewport-frame";
+import { boxCorners, densestCluster, tabletopHudInsets, tabletopOrthoFrame } from "./tabletop-camera";
 import type { SceneModel, SceneNode } from "./scene-model";
 import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
 import { markInteractive, perfModeEnabled } from "./perf-mark";
@@ -101,7 +102,18 @@ export type SceneAdapter = {
   /** 布局摘要：变化时重算阴影相机与机位。 */
   layoutKey?: string;
   /** RenderSpec.camera。 */
-  camera?: { fovDeg: number; distance: number; minPolarDeg: number; maxPolarDeg: number; pan: boolean };
+  camera?: {
+    fovDeg: number;
+    distance: number;
+    minPolarDeg: number;
+    maxPolarDeg: number;
+    pan: boolean;
+    /** step3：`orthographic` = 汐屿同款正交取景（tabletop-camera.ts）。挂载时决定相机类型。 */
+    projection?: "perspective" | "orthographic";
+    polarDeg?: number;
+    azimuthDeg?: number;
+    fill?: number;
+  };
 };
 
 export type SceneHostProps = {
@@ -505,6 +517,11 @@ export function SceneHost({
   const bootRevealedRef = useRef(false);
   const bootHexRef = useRef(false);
   bootHexRef.current = Boolean(hexSettlement);
+  /** step3：通用桌面声明 orthographic 时同样用正交相机（相机类型挂载时定；切换由调用方 remount）。 */
+  const bootOrthoRef = useRef(false);
+  bootOrthoRef.current = Boolean(hexSettlement) || adapter?.camera?.projection === "orthographic";
+  /** step3：正交桌面的近景（judge b-terrain）：zoom + 焦点；null = 整盘。 */
+  const tabletopZoomRef = useRef<{ zoom: number; focus: [number, number, number] } | null>(null);
   const [unsupported, setUnsupported] = useState(false);
   const [ready, setReady] = useState(false);
   const modelRef = useRef<SceneModel | null>(null);
@@ -649,7 +666,7 @@ export function SceneHost({
 
     // R25: Tidewell / hex harbor play uses OrthographicCamera (settlecoast-like).
     // Tabletop adapter path (othello etc.) keeps PerspectiveCamera + RenderSpec FOV.
-    const camera: PlayCamera = bootHexRef.current
+    const camera: PlayCamera = bootOrthoRef.current
       ? new OrthographicCamera(-7, 7, 5.7, -5.7, 0.1, 120)
       : new PerspectiveCamera(40, 1, 0.1, 100);
     camera.position.set(0, 9, 12);
@@ -786,6 +803,18 @@ export function SceneHost({
           const aspect = isOrthographicCamera(cam)
             ? Math.max((el?.clientWidth ?? 1) / Math.max(el?.clientHeight ?? 1, 1), 1e-3)
             : cam.aspect;
+          if (!director && isOrthographicCamera(cam) && adapterRef.current) {
+            // step3 · 通用正交桌面：a-default / d = 整盘取景；b-terrain = 棋子最密一簇的 2.6× 近景。
+            const pieces = (model?.nodes ?? []).filter((n) => n.kind === "piece" || n.kind === "link").map((n) => n.position);
+            const focus = densestCluster(pieces);
+            tabletopZoomRef.current = (preset === "b-terrain" || preset === "b-robber") && focus
+              ? { zoom: 2.6, focus: [focus[0], focus[1], focus[2]] }
+              : null;
+            fitCameraRef.current();
+            motion.noteUserDrag(Number.POSITIVE_INFINITY);
+            markShadowsDirtyRef.current();
+            return true;
+          }
           const pose = judgeCamera(preset, [...(model?.nodes ?? []), ...(dressingRef.current?.portNodes() ?? [])], aspect);
           // Perspective only: lock FOV before pin/refit. Ortho framing ignores FOV.
           if (!isOrthographicCamera(cam)) {
@@ -1320,7 +1349,9 @@ export function SceneHost({
     let dispose: (() => void) | null = null;
     let cancelled = false;
     container.dataset.importedModels = "0";
-    const nodes = hexSettlement && hexKit ? hexKit.mapHexSettlementToScene(hexSettlement).nodes : [];
+    const nodes =
+      (modelRef.current?.nodes?.length ? modelRef.current.nodes : null) ??
+      (hexSettlement && hexKit ? hexKit.mapHexSettlementToScene(hexSettlement).nodes : []);
     void import("./imported-props").then(({ mountImportedProps }) => {
       if (cancelled) return;
       dispose = mountImportedProps({
@@ -1493,6 +1524,23 @@ export function SceneHost({
     modelRef.current = reconcileScene(host, modelRef.current, adapter.model, registryRef.current);
     const container = containerRef.current;
     if (container) container.dataset.sceneNodes = String(adapter.model.nodes.length);
+    if (adapter.model.nodes.some((n) => n.id === "table" && n.tag === "sea") && !waterRef.current && !waterMountingRef.current) {
+      waterMountingRef.current = true;
+      const signal = waterAbortRef.current?.signal, model = adapter.model;
+      void import("./water").then(({ createWaterController }) =>
+        createWaterController({
+          renderer: rendererRef.current!, parent: contentRootRef.current!, model, tier: "medium", signal,
+        }).then((water) => {
+          if (!waterAliveRef.current || signal?.aborted || waterRef.current) { water.dispose(); return; }
+          waterRef.current = water;
+          const table = registryRef.current.get("table");
+          if (table) table.visible = false;
+          if (containerRef.current) containerRef.current.dataset.water = "on";
+          markShadowsDirtyRef.current();
+        }).catch((e) => {
+          if (!(e instanceof DOMException && e.name === "AbortError")) console.warn("[godesk.water] tabletop mount failed", e);
+        }).finally(() => { waterMountingRef.current = false; })).catch(() => { waterMountingRef.current = false; });
+    }
     const bounds = adapter.bounds;
     if (bounds && adapter.layoutKey !== layoutKeyRef.current) {
       layoutKeyRef.current = adapter.layoutKey ?? null;
@@ -1508,6 +1556,42 @@ export function SceneHost({
       const radius = bounds?.radius ?? 7.5;
       const center = bounds?.center ?? [0, 0, 0];
       fitCameraRef.current = () => {
+        const cam0 = cameraRef.current;
+        if (cam0 && isOrthographicCamera(cam0) && spec.projection === "orthographic") {
+          const el = containerRef.current;
+          const w = Math.max(el?.clientWidth ?? 1, 1);
+          const h = Math.max(el?.clientHeight ?? 1, 1);
+          const nodes = modelRef.current?.nodes ?? [];
+          // step3 R2：有岸台（surround）时按岸台取景，底板像岛一样浮在海 / 原野中央。
+          const board = nodes.find((n) => n.id === "shore") ?? nodes.find((n) => n.id === "board");
+          const points = board?.scale
+            ? boxCorners(board.position, board.scale)
+            : nodes.filter((n) => n.kind !== "table").map((n) => n.position);
+          const close = tabletopZoomRef.current;
+          const frame = tabletopOrthoFrame({
+            points,
+            polarDeg: spec.polarDeg ?? DEFAULT_DESKTOP_FRAME.polarDeg,
+            azimuthDeg: spec.azimuthDeg ?? DEFAULT_DESKTOP_FRAME.azimuthDeg,
+            canvasWidth: w,
+            canvasHeight: h,
+            insets: tabletopHudInsets(w, h),
+            fill: spec.fill ?? DEFAULT_DESKTOP_FRAME.fill,
+            ...(close ? { zoom: close.zoom, focus: close.focus } : {}),
+          });
+          cam0.left = frame.left;
+          cam0.right = frame.right;
+          cam0.top = frame.top;
+          cam0.bottom = frame.bottom;
+          cam0.zoom = close?.zoom ?? 1;
+          cam0.position.set(...frame.position);
+          cam0.updateProjectionMatrix();
+          controls.target.set(...frame.target);
+          controls.minZoom = 0.8;
+          controls.maxZoom = 3.2;
+          controls.update();
+          if (el) el.dataset.tabletopCamera = `ortho:${(spec.polarDeg ?? DEFAULT_DESKTOP_FRAME.polarDeg)}:${(spec.azimuthDeg ?? DEFAULT_DESKTOP_FRAME.azimuthDeg)}:${spec.fill ?? DEFAULT_DESKTOP_FRAME.fill}`;
+          return;
+        }
         const fr = viewportFrameRef.current;
         if (fr) {
           const tiles = modelRef.current?.nodes.filter((n) => n.kind === "tile") ?? [];
@@ -1548,6 +1632,11 @@ export function SceneHost({
       controls.minPolarAngle = minPolar;
       controls.maxPolarAngle = maxPolar;
       controls.enablePan = spec.pan;
+      if (spec.projection === "orthographic") {
+        const preferred = ((spec.polarDeg ?? DEFAULT_DESKTOP_FRAME.polarDeg) * Math.PI) / 180;
+        controls.minPolarAngle = Math.min(minPolar, preferred);
+        controls.maxPolarAngle = Math.max(maxPolar, preferred);
+      }
       fitCameraRef.current();
     }
     markShadowsDirtyRef.current();
