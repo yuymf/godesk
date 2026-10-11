@@ -52,10 +52,10 @@ export default defineConfig({
           if (normalized.endsWith("/src/render3d/imported-props.ts")) {
             return "imported-props";
           }
-          // `?perf=1` HUD + recorder 懒加载，不进 render3d 核心。
-          if (/\/src\/render3d\/(PerfOverlay\.tsx|perf\.ts)$/.test(normalized)) {
-            return "perf-overlay";
-          }
+          // NOTE: do NOT manualChunk PerfOverlay/perf.ts — forcing them into a shared
+          // chunk pulls React/jsx into it and makes every route statically load it
+          // (breaks firstGameRequests + Room Lighthouse). Dynamic import() alone
+          // keeps them out of render3d core.
           // R25: CameraDirector + ortho framing is hex/Tidewell-only; keep out of render3d core 210KB.
           if (normalized.endsWith("/src/render3d/camera-rig.ts")) {
             return "g3d-hexkit";
@@ -80,7 +80,13 @@ export default defineConfig({
           if (chunkInfo.name === "imported-props") {
             return "assets/imported-props-[hash].js";
           }
-          if (chunkInfo.name === "perf-overlay") {
+          // Async ?perf=1 chunk (named via dynamic import entry / facade).
+          if (
+            chunkInfo.name === "perf-overlay" ||
+            facade.includes("/src/render3d/PerfOverlay") ||
+            facade.endsWith("/src/render3d/perf.ts") ||
+            facade.includes("/src/render3d/perf-chunk")
+          ) {
             return "assets/perf-overlay-[hash].js";
           }
           if (chunkInfo.name === "board-dressing") {

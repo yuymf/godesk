@@ -54,7 +54,7 @@ type HexKit = typeof import("./hex-kit");
 let hexKit: HexKit | null = null;
 /** Toolbar is UI chrome, not render core: its own lazy chunk (keeps render3d core ≤ 210 KB). */
 const CameraToolbar = lazy(async () => ({ default: (await import("./overlay/CameraToolbar")).CameraToolbar }));
-/** `?perf=1` 才用的 HUD：懒加载，不进 render3d 核心。 */
+/** `?perf=1` HUD：懒加载，不进 render3d 核心。Recorder 同样动态 import，采样等 PBR/dressing 就绪。 */
 const PerfOverlay = lazy(() => import("./PerfOverlay").then((m) => ({ default: m.PerfOverlay })));
 import {
   configureRenderer,
@@ -548,8 +548,8 @@ export function SceneHost({
   const dressingRef = useRef<HexDressing | null>(null);
   const dressingModRef = useRef<typeof import("./hex-dressing") | null>(null);
   const dressingLoadingRef = useRef(false);
-  /** 汐屿盘面的道具层在懒加载中：性能采样等它就位。 */
-  const dressingPendingRef = useRef(false);
+  /** 汐屿盘面的道具层在懒加载中：性能采样等它就位（hex 开局即为 true，避免首帧把空场景记成 memoryOnMount）。 */
+  const dressingPendingRef = useRef(Boolean(hexSettlement));
   const [dressingReady, setDressingReady] = useState(0);
 
   const activeSeatRef = useRef(activeSeat);
@@ -655,6 +655,8 @@ export function SceneHost({
     camera.position.set(0, 9, 12);
 
     setPbrState("pending");
+    // Sync DOM before the next rAF so remount leak samples cannot see the previous mount's "512".
+    container.dataset.pbr = "pending";
     const env = detectEnvFromBrowser();
     let resolution = resolveTier({ env, runtimeFloor: runtimeFloorRef.current });
     let caps = resolution.caps;
@@ -878,6 +880,7 @@ export function SceneHost({
     };
     renderer.domElement.addEventListener("pointerup", onPointerUp);
     // `?perf=1` only: recorder + harness load lazily (out of the render3d core bundle).
+    // Leak samples wait for dressing + PBR ready (see tick) so lazy attach is safe.
     let perf: PerfRecorder | null = null;
     let detachPerf: (() => void) | undefined;
     let perfDisposed = false;
@@ -893,6 +896,7 @@ export function SceneHost({
         });
       });
     }
+    if (hexSettlement) dressingPendingRef.current = true;
 
     // Fallback test cube when no hex state yet (G3D-02 smoke path).
     if (!hexSettlement && !adapterRef.current) {
@@ -1003,6 +1007,7 @@ export function SceneHost({
       const resolutionPx = pbrResolutionFor(caps.id);
       if (new URLSearchParams(window.location.search).get("pbr") === "0") {
         setPbrState("off");
+        container.dataset.pbr = "off";
         return;
       }
       pbrTimer = window.setTimeout(() => {
@@ -1031,7 +1036,9 @@ export function SceneHost({
             pbr.dispose();
             streamer = null;
             if (!disposed) {
-              setPbrState(resolutionPx === 512 ? "512" : "256");
+              const next = resolutionPx === 512 ? "512" : "256";
+              setPbrState(next);
+              container.dataset.pbr = next;
               markShadowsDirty();
             }
           })
@@ -1039,6 +1046,7 @@ export function SceneHost({
             if (disposed) return;
             console.warn("[godesk.pbr] texture streaming failed", error);
             setPbrState("error");
+            container.dataset.pbr = "error";
           });
       }, PBR_STREAM_DELAY_MS);
     };
@@ -1140,7 +1148,13 @@ export function SceneHost({
         // R19: PBR streams only after the boot reveal so it never competes with the sea KTX2.
         if (!pbrRequested && container.dataset.boot !== "pending") startPbrStreaming();
       }
-      perf?.frame(renderer, now, hasContent && !dressingPendingRef.current);
+      // Wait for PBR + hex dressing/water so remount leak samples share geometry/texture counts.
+      const pbr = container.dataset.pbr;
+      const pbrReady = pbr === "off" || pbr === "512" || pbr === "256" || pbr === "error";
+      const hexDressed =
+        !hexSettlement ||
+        (container.dataset.terrainProps !== undefined && container.dataset.water === "on");
+      perf?.frame(renderer, now, hasContent && !dressingPendingRef.current && pbrReady && hexDressed);
     };
     frameId = window.requestAnimationFrame(tick);
 
@@ -1220,6 +1234,7 @@ export function SceneHost({
       if (renderer.domElement.parentElement === container) {
         container.removeChild(renderer.domElement);
       }
+      dressingPendingRef.current = Boolean(hexSettlement);
       contentRootRef.current = null;
       reconcileHostRef.current = null;
       hitRootRef.current = null;

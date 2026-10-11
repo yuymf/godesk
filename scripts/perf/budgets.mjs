@@ -12,6 +12,7 @@ export const TIER_BUDGETS = {
 /** Transfer budgets shared by every profile (§4.6.3). */
 export const TRANSFER_BUDGETS = {
   interactiveBytes: 1.4 * MB,
+  /** Real network requests only (perf-emulate drops data:/blob:). */
   firstGameRequests: 80,
   /** Window after navigation in which "首局总传输" is counted. */
   firstGameWindowMs: 30_000,

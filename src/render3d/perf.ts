@@ -190,6 +190,8 @@ class PerfRecorder {
     memoryOnMount: [] as Array<{ geometries: number; textures: number; tier?: string }>,
   };
   private memoryPending = false;
+  private memorySettleFrames = 0;
+  private memorySettleLast: { geometries: number; textures: number } | null = null;
   private peak = { calls: 0, triangles: 0 };
   private lastRenderer: RendererInfoSnapshot = {
     calls: 0, triangles: 0, points: 0, lines: 0, geometries: 0, textures: 0, programs: 0,
@@ -200,6 +202,8 @@ class PerfRecorder {
     this.lifecycle.mounts += 1;
     this.lifecycle.activeHosts += 1;
     this.memoryPending = true;
+    this.memorySettleFrames = 0;
+    this.memorySettleLast = null;
     this.lastFrameAt = null;
     this.peak = { calls: 0, triangles: 0 };
     const canvas = handle.renderer.domElement;
@@ -257,9 +261,27 @@ class PerfRecorder {
       textures: info.memory.textures,
       programs: info.programs?.length ?? 0,
     };
-    if (hasContent && this.memoryPending && info.render.calls > 0) {
-      this.memoryPending = false;
-      this.lifecycle.memoryOnMount.push({ ...memoryOf(renderer), tier: this.host?.tier?.() });
+    if (hasContent && this.memoryPending && info.render.calls > 0 && info.memory.geometries >= 8) {
+      // Skip the bare host (sky / empty root ≈ 3 geometries). Require stable
+      // geometry/texture counts across frames so late-arriving dressing/PBR/labels
+      // do not create a 1-count remount drift.
+      const mem = memoryOf(renderer);
+      const last = this.memorySettleLast;
+      if (last && last.geometries === mem.geometries && last.textures === mem.textures) {
+        this.memorySettleFrames += 1;
+      } else {
+        this.memorySettleLast = mem;
+        this.memorySettleFrames = 0;
+      }
+      if (this.memorySettleFrames >= 15) {
+        this.memoryPending = false;
+        this.memorySettleFrames = 0;
+        this.memorySettleLast = null;
+        this.lifecycle.memoryOnMount.push({ ...mem, tier: this.host?.tier?.() });
+      }
+    } else if (!hasContent) {
+      this.memorySettleFrames = 0;
+      this.memorySettleLast = null;
     }
     if (this.rebuildPending && info.render.calls > 0 && this.lostAt !== null) {
       this.rebuildPending = false;
