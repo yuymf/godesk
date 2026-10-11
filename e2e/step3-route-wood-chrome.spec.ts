@@ -59,6 +59,8 @@ test("step3: plugin chain → rail game in Tidewell-quality wood chrome + ortho 
       camera: { projection: "orthographic", polarDeg: 54, azimuthDeg: 12, fill: 0.945 },
       chrome: "wood",
       decor: { trees: 30, rocks: 8, seed: 3 },
+      surround: { kind: "sea", shore: 0.9, seed: 5 },
+      hud: { portraits: "travelers", cardArt: "landscape" },
       materials: { map: { base: "#8fb865", roughness: 0.95, metalness: 0, pattern: "grass" } },
       bindings: [
         { objectKind: "station", mesh: "station", material: "ink", scale: 1.25 },
@@ -79,6 +81,10 @@ test("step3: plugin chain → rail game in Tidewell-quality wood chrome + ortho 
   await expect(page.locator(".room-invitation")).toHaveCount(0);
   const host = page.getByTestId("g3d-scene-host").first();
   await expect(host).toHaveAttribute("data-tabletop-camera", "ortho:54:12:0.945", { timeout: 60_000 });
+  // R2：盘外潮水 shader（岸台当海岸）+ 座位肖像 + 插画行动卡。
+  await expect(host).toHaveAttribute("data-water", "on", { timeout: 60_000 });
+  await expect(page.locator(".tabletop-portrait img")).toHaveCount(2);
+  await expect.poll(async () => page.locator(".tabletop-action-row .tabletop-card-art").count()).toBeGreaterThan(0);
 
   const menu = page.locator("details.tidewell-menu");
   await menu.locator("summary").click();
