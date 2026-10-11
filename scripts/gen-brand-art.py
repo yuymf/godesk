@@ -160,14 +160,6 @@ def loading() -> Image.Image:
 
 
 results = []
-for i in range(4):
-    img = seat_badge(i)
-    rel = f"assets/illustrations/brand/seat-{i}.webp"
-    sz = save_webp(img, ROOT / rel, 20)
-    img.save(EV / f"seat-{i}.png")
-    print("seat", i, sz)
-    results.append((f"illustration/seat-{i}", rel, sz))
-
 img = flourish()
 rel = "assets/illustrations/brand/island-flourish.webp"
 sz = save_webp(img, ROOT / rel, 30)

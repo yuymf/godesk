@@ -35,11 +35,6 @@ TEXTURES = {
     "t08-wood": ("T8-harbor-planks.jpg", 0.85, 1.8),
 }
 CARDS = {  # 文件名 → (raw, 目标尺寸)
-    "resource-wood": ("C1-resource-wood.jpg", (384, 512)),
-    "resource-brick": ("C2-resource-brick.jpg", (384, 512)),
-    "resource-sheep": ("C3-resource-sheep.jpg", (384, 512)),
-    "resource-wheat": ("C4-resource-wheat.jpg", (384, 512)),
-    "resource-ore": ("C5-resource-ore.jpg", (384, 512)),
     "dev-fog-signal": ("C6-dev-fog-signal.jpg", (512, 768)),
 }
 # 调色（后处理）：码头木板原图偏青灰，会被 wood token 的暖棕底色乘成暗橄榄色 → 去饱和并提亮成浅漂流木灰，

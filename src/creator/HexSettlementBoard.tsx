@@ -12,6 +12,8 @@ import {
   ISLAND_FLOURISH_URL,
   PARCHMENT_GRAIN_URL,
   RESOURCE_AI_ICON_URL,
+  DEV_CARD_KINDS,
+  DEV_CARD_URL,
   RESOURCE_CARD_URL,
   RESOURCE_ICON_ID,
   WOOD_GRAIN_URL,
@@ -90,6 +92,9 @@ const COPY = {
     trades: "贸易",
     yourHand: "手牌",
     devCards: "发展卡",
+    devKnight: "雾灯令（骑士）",
+    devRoadBuilding: "商港特许（道路建设）",
+    devVictory: "丰潮（胜利点）",
     buildRoad: "栈道",
     buildSettlement: "渔村",
     buildCity: "港镇",
@@ -160,6 +165,9 @@ const COPY = {
     trades: "Trades",
     yourHand: "Hand",
     devCards: "Development cards",
+    devKnight: "Fog signal (knight)",
+    devRoadBuilding: "Harbor charter (road building)",
+    devVictory: "Tide plenty (victory point)",
     buildRoad: "Road",
     buildSettlement: "Settlement",
     buildCity: "City",
@@ -937,10 +945,7 @@ export function HexSettlementBoard({
           })}
         </div>
 
-        <div className="tidewell-dev-slot">
-          <span className="hex-island-kicker">{copy.devCards}</span>
-          <strong>{viewer?.devCards.length ?? 0}</strong>
-        </div>
+        <DevCardSlot cards={viewer?.devCards ?? []} copy={copy} />
 
         <div className="tidewell-build-row" role="group" aria-label={copy.primary}>
           {BUILD_COSTS.map((build) => {
@@ -1066,10 +1071,7 @@ export function HexSettlementBoard({
           })}
         </div>
 
-        <div className="tidewell-dev-slot">
-          <span className="hex-island-kicker">{copy.devCards}</span>
-          <strong>{viewer?.devCards.length ?? 0}</strong>
-        </div>
+        <DevCardSlot cards={viewer?.devCards ?? []} copy={copy} />
 
         <div className="tidewell-build-row" role="group" aria-label={copy.primary}>
           {BUILD_COSTS.map((build) => {
@@ -1157,6 +1159,38 @@ export function HexSettlementBoard({
             </ul>
           </details>
         )}
+      </div>
+    </div>
+  );
+}
+
+/** G3D-24 development-card faces: one card per kind, count badge, dimmed when not held. */
+function DevCardSlot({
+  cards,
+  copy,
+}: {
+  cards: readonly string[];
+  copy: { devCards: string; devKnight: string; devRoadBuilding: string; devVictory: string };
+}) {
+  const label = { knight: copy.devKnight, road_building: copy.devRoadBuilding, victory: copy.devVictory };
+  return (
+    <div aria-label={`${copy.devCards} ${cards.length}`} className="tidewell-dev-slot" role="group">
+      <span className="hex-island-kicker">{copy.devCards}</span>
+      <div className="tidewell-dev-fan">
+        {DEV_CARD_KINDS.map((kind) => {
+          const n = cards.filter((card) => card === kind).length;
+          return (
+            <span
+              className={`tidewell-dev-card${n > 0 ? " is-held" : ""}`}
+              data-dev-kind={kind}
+              key={kind}
+              title={`${label[kind]} ×${n}`}
+            >
+              <img alt={label[kind]} height={48} src={DEV_CARD_URL[kind]} width={32} />
+              <b>{n}</b>
+            </span>
+          );
+        })}
       </div>
     </div>
   );
