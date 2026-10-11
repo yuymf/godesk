@@ -58,7 +58,7 @@ test("step3: plugin chain → rail game in Tidewell-quality wood chrome + ortho 
     operations: [{ op: "configure_render", patch: {
       camera: { projection: "orthographic", polarDeg: 54, azimuthDeg: 12, fill: 0.945 },
       chrome: "wood",
-      decor: { trees: 30, rocks: 8, seed: 3 },
+      decor: { trees: 30, rocks: 8, seed: 3, ground: "varied", forest: "clustered" },
       surround: { kind: "sea", shore: 0.9, coast: "natural", seed: 5 },
       hud: { portraits: "travelers", cardArt: "landscape" },
       materials: { map: { base: "#8fb865", roughness: 0.95, metalness: 0, pattern: "grass" } },

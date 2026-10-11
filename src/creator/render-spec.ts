@@ -63,6 +63,10 @@ export const renderSpecSchema = z.strictObject({
     trees: z.number().int().min(0).max(120),
     rocks: z.number().int().min(0).max(60),
     seed: z.number().int().min(0).max(1_000_000),
+    /** step3 R5 · `varied` = dirt route beds + darker grass patches + gentle mounds instead of one flat grass. */
+    ground: z.enum(["flat", "varied"]).optional(),
+    /** step3 R5 · `clustered` = pine/broadleaf groves densified along routes and the shore rim. */
+    forest: z.enum(["sparse", "clustered"]).optional(),
   }).optional(),
   /**
    * step3 R2 · what surrounds the board so the table reads as a place, not a slab on wood:

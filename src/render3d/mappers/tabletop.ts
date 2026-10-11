@@ -24,7 +24,7 @@ export type TabletopRenderInput = {
     fill?: number;
   };
   /** step3：盘面散布景物（树 / 石），确定性、避开连线 / 棋子 / 格位。 */
-  decor?: { trees: number; rocks: number; seed: number };
+  decor?: { trees: number; rocks: number; seed: number; ground?: "flat" | "varied"; forest?: "sparse" | "clustered" };
   /** step3 R2：盘外环境（海 / 草原）+ 岸边宽度。 */
   surround?: { kind: "none" | "sea" | "meadow"; shore: number; coast?: "rect" | "natural"; seed?: number };
   lighting: LightingSpec;
@@ -135,6 +135,7 @@ const FALLBACK_MESH: Record<string, string> = {
   claim: "road-bar",
   "decor-tree": "tree",
   "decor-rock": "rock",
+  "decor-broadleaf": "broadleaf",
   card: "card",
   die: "die",
 };
@@ -192,6 +193,12 @@ const DEFAULT_MATERIAL = { base: "#f4efe6", roughness: 0.5, metalness: 0, patter
 const NAMED_DEFAULTS: Record<string, TabletopRenderInput["materials"][string]> = {
   foliage: { base: "#3d7a3a", roughness: 0.82, metalness: 0, pattern: "none" },
   rock: { base: "#8d8678", roughness: 0.92, metalness: 0, pattern: "stone" },
+  "foliage-dark": { base: "#2c5a30", roughness: 0.85, metalness: 0, pattern: "none" },
+  "foliage-broad": { base: "#5f8f3c", roughness: 0.8, metalness: 0, pattern: "none" },
+  "ground-dirt": { base: "#8a6b48", roughness: 1, metalness: 0, pattern: "none" },
+  "ground-dark": { base: "#4e7034", roughness: 0.97, metalness: 0, pattern: "grass" },
+  "ground-mound": { base: "#6f8f45", roughness: 0.97, metalness: 0, pattern: "grass" },
+  "ground-sand": { base: "#dcc896", roughness: 0.98, metalness: 0, pattern: "sand" },
 };
 
 function round(value: number): number {
@@ -257,9 +264,64 @@ export function scatterDecor(layout: TabletopLayout, decor: NonNullable<Tabletop
       }
     }
   };
+  if (decor.forest === "clustered") {
+    // R5：沿线林带 + 岸边林缘，成簇松树 / 阔叶树混种。
+    const grove = (cx: number, cz: number, n: number) => {
+      for (let k = 0; k < n; k += 1) {
+        const x = cx + (random() - 0.5) * 0.7;
+        const z = cz + (random() - 0.5) * 0.7;
+        if (Math.abs(x) > halfW + 0.2 || z > halfD + 0.2 || z < zMin) continue;
+        if (!clear(x, z, 0.14)) continue;
+        const broad = random() < 0.4;
+        out.push({ id: `decor-${broad ? "broadleaf" : "tree"}:${out.length}`, objectKind: broad ? "decor-broadleaf" : "decor-tree", materialKey: broad ? "foliage-broad" : random() < 0.5 ? "foliage-dark" : "foliage", x: round(x), z: round(z), size: round(0.26 + random() * 0.24), rotationY: round(random() * Math.PI * 2) });
+      }
+    };
+    for (const link of layout.links) {
+      const dx = link.to[0] - link.from[0], dz = link.to[1] - link.from[1];
+      const len = Math.hypot(dx, dz) || 1;
+      for (let t = 0.25; t < 0.8; t += 0.5) {
+        const side = random() < 0.5 ? -1 : 1, off = 0.55 + random() * 0.35;
+        grove(link.from[0] + dx * t - (dz / len) * off * side, link.from[1] + dz * t + (dx / len) * off * side, 3);
+      }
+    }
+    for (let i = 0; i < 18; i += 1) {
+      const t = (i / 18) * Math.PI * 2;
+      grove(Math.cos(t) * halfW * 0.95, Math.sin(t) * halfD * 0.95, 2);
+    }
+  }
   place(decor.trees, "decor-tree", 0.34, 0.26);
   place(decor.rocks, "decor-rock", 0.18, 0.16);
   return out;
+}
+
+/** step3 R5 · 地面变化：线路土路基、深色草斑、缓坡土丘，以及（海岛）盘缘沙带过渡。 */
+export function groundVariation(layout: TabletopLayout, seed: number, top: number, sandEdge: boolean): Array<{ id: string; mesh: string; key: string; x: number; y: number; z: number; sx: number; sy: number; sz: number; r: number }> {
+  const random = rng(seed + 313);
+  const out: Array<{ id: string; mesh: string; key: string; x: number; y: number; z: number; sx: number; sy: number; sz: number; r: number }> = [];
+  const hw = layout.board.width / 2, hd = layout.board.depth / 2;
+  layout.links.forEach((link, i) => {
+    const dx = link.to[0] - link.from[0], dz = link.to[1] - link.from[1];
+    out.push({ id: `ground:path:${i}`, mesh: "patch", key: "ground-dirt", x: (link.from[0] + link.to[0]) / 2, y: top + 0.003, z: (link.from[1] + link.to[1]) / 2, sx: Math.hypot(dx, dz) * 0.95, sy: 1, sz: 0.4, r: -Math.atan2(dz, dx) });
+  });
+  for (let i = 0; i < 14; i += 1) {
+    out.push({ id: `ground:dark:${i}`, mesh: "patch", key: "ground-dark", x: (random() * 2 - 1) * hw * 0.85, y: top + 0.002, z: (random() * 2 - 1) * hd * 0.85, sx: 0.9 + random() * 1.6, sy: 1, sz: 0.7 + random() * 1.2, r: random() * Math.PI });
+  }
+  for (let i = 0; i < 6; i += 1) {
+    const x = (random() * 2 - 1) * hw * 0.8, z = (random() * 2 - 1) * hd * 0.8;
+    if (layout.links.some((l) => segmentDistance(x, z, l.from, l.to) < 0.7) || layout.pieces.some((p) => Math.hypot(p.x - x, p.z - z) < 0.8)) continue;
+    out.push({ id: `ground:mound:${i}`, mesh: "mound", key: "ground-mound", x, y: top, z, sx: 0.9 + random() * 0.9, sy: 0.12 + random() * 0.1, sz: 0.7 + random() * 0.7, r: random() * Math.PI });
+  }
+  if (sandEdge) {
+    const n = Math.round((layout.board.width + layout.board.depth) * 1.5);
+    for (let i = 0; i < n; i += 1) {
+      const t = (i / n) * Math.PI * 2;
+      const ux = Math.cos(t), uz = Math.sin(t);
+      const sq = Math.pow(Math.abs(ux) ** 4 + Math.abs(uz) ** 4, -0.25);
+      const f = 0.99 - random() * 0.03;
+      out.push({ id: `ground:sand:${i}`, mesh: "patch", key: "ground-sand", x: Math.max(-hw + 0.2, Math.min(hw - 0.2, ux * sq * hw * f)), y: top + 0.005, z: Math.max(-hd + 0.2, Math.min(hd - 0.2, uz * sq * hd * f)), sx: 0.45 + random() * 0.5, sy: 1, sz: 0.22 + random() * 0.3, r: -t + Math.PI / 2 });
+    }
+  }
+  return out.map((g) => ({ ...g, x: round(g.x), y: round(g.y), z: round(g.z), sx: round(g.sx), sy: round(g.sy), sz: round(g.sz), r: round(g.r) }));
 }
 
 /**
@@ -429,6 +491,11 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
     if (cell.action) actions[id] = cell.action;
   }
 
+  if (render.decor?.ground === "varied") {
+    for (const g of groundVariation(layout, render.decor.seed || 1, boardTop, surround?.kind === "sea")) {
+      nodes.push({ id: g.id, kind: "piece", mesh: g.mesh, position: [g.x, g.y, g.z], rotationY: g.r, scale: [g.sx, g.sy, g.sz], material: libraryKey(g.key) });
+    }
+  }
   const decorPieces = [
     ...(render.decor ? scatterDecor(layout, render.decor) : []),
     ...(surround ? scatterSurround(layout, surround, shoreTop) : []),

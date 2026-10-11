@@ -23,6 +23,9 @@ import {
   CanvasTexture,
   ConeGeometry,
   DodecahedronGeometry,
+  IcosahedronGeometry,
+  ShapeGeometry,
+  SphereGeometry,
   Group,
   PlaneGeometry,
   SRGBColorSpace,
@@ -111,6 +114,33 @@ function tree(): Geometry {
   return merged;
 }
 
+/** step3 R5 · 阔叶树：短干 + 两团低多边形树冠。 */
+function broadleaf(): Geometry {
+  const trunk = new CylinderGeometry(0.05, 0.07, 0.3, 6);
+  trunk.translate(0, 0.15, 0);
+  const a = new IcosahedronGeometry(0.3, 0);
+  a.translate(0, 0.52, 0);
+  const b = new IcosahedronGeometry(0.22, 0);
+  b.translate(0.12, 0.68, 0.06);
+  const merged = mergeGeometries([trunk.toNonIndexed(), a.toNonIndexed(), b.toNonIndexed()]) ?? a;
+  merged.computeVertexNormals();
+  return merged;
+}
+
+/** step3 R5 · 地面斑块：不规则扁平圆片（单位直径）。 */
+function patch(): Geometry {
+  const shape = new Shape();
+  for (let i = 0; i <= 14; i += 1) {
+    const t = (i / 14) * Math.PI * 2;
+    const r = 0.5 * (1 + 0.14 * Math.sin(t * 3) + 0.08 * Math.cos(t * 5));
+    if (i === 0) shape.moveTo(Math.cos(t) * r, Math.sin(t) * r);
+    else shape.lineTo(Math.cos(t) * r, Math.sin(t) * r);
+  }
+  const geom = new ShapeGeometry(shape);
+  geom.rotateX(-Math.PI / 2);
+  return geom;
+}
+
 function rock(): Geometry {
   const geom = new DodecahedronGeometry(0.5, 0);
   geom.scale(1, 0.55, 0.8);
@@ -146,6 +176,14 @@ function geometryFor(mesh: string): Geometry {
       return tree();
     case "rock":
       return rock();
+    case "broadleaf":
+      return broadleaf();
+    case "patch":
+      return patch();
+    case "mound": {
+      const g = new SphereGeometry(0.5, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2);
+      return g;
+    }
     case "pawn":
     default:
       return pawn();
@@ -173,9 +211,9 @@ function gridLines(tag: string | undefined): BufferGeometry {
  * 超过 low 档 ≤ 60。`disc` 节点改为不渲染的代理 Object3D（位姿 / 动效 / 拾取语义不变），
  * 同一共享材质的代理合进同一个 InstancedMesh：满盘只剩每个座位材质 1 次 draw call。
  */
-export const INSTANCED_MESHES: ReadonlySet<string> = new Set(["disc", "tree", "rock"]);
+export const INSTANCED_MESHES: ReadonlySet<string> = new Set(["disc", "tree", "rock", "broadleaf", "patch", "mound"]);
 /** 立体景物合批仍投影（树 / 石的影子是桌面体积感的主要来源）。 */
-const INSTANCED_CAST: ReadonlySet<string> = new Set(["tree", "rock"]);
+const INSTANCED_CAST: ReadonlySet<string> = new Set(["tree", "rock", "broadleaf"]);
 
 type InstanceBatch = { key: string; mesh: InstancedMesh; proxies: Object3D[] };
 
