@@ -65,6 +65,9 @@ import {
   writeStoredSeatClaim,
 } from "./studio-utils";
 
+/** G3D-25 汐屿 loading art, shown while the lazy HexSettlementBoard chunk loads. */
+const TIDEWELL_LOADING_ART_URL = new URL("../../assets/illustrations/brand/loading-tidewell.webp", import.meta.url).href;
+
 
 // G3D-10：音效（howler core）只在 3D 六角岛房间懒加载。
 const LazyRoomAudio = lazy(() => import("../render3d/audio/RoomAudio"));
@@ -622,6 +625,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
             <div aria-busy="true" className="hex-island-board hex-settlement-board hex-settlement-board-loading">
               <div aria-hidden="true" className="hex-island-hud hex-settlement-hud-placeholder" />
               <div className="g3d-stage">
+                <img alt="" className="hex-settlement-loading-art" decoding="async" src={TIDEWELL_LOADING_ART_URL} />
                 <span className="sr-only">加载 3D 盘面…</span>
               </div>
             </div>

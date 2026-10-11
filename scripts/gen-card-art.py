@@ -213,14 +213,6 @@ def draw_dev(kind: str, w=512, h=768) -> Image.Image:
 
 
 manifest = []
-for kind in TERRAIN:
-    img = draw_resource(kind)
-    rel = f"assets/illustrations/cards/resource-{kind}.webp"
-    sz = save_webp(img, ROOT / rel, 40)
-    img.save(EV / f"resource-{kind}.png")
-    print(f"resource-{kind}: {sz} B")
-    manifest.append(("illustration/resource-" + kind, rel, sz))
-
 for kind in DEV:
     img = draw_dev(kind)
     rel = f"assets/illustrations/cards/dev-{kind}.webp"

@@ -28,9 +28,7 @@ const TEX = {
   "t08-wood": ["T8", "码头木板"], "t11-parchment": ["N1", "点数筹码面"],
 };
 const CARDS = {
-  "resource-wood": ["C1", "资源卡·松林"], "resource-brick": ["C2", "资源卡·赭土"],
-  "resource-sheep": ["C3", "资源卡·盐草"], "resource-wheat": ["C4", "资源卡·麦垄"],
-  "resource-ore": ["C5", "资源卡·礁岩"], "dev-fog-signal": ["C6", "发展卡·雾灯令"],
+  "dev-fog-signal": ["C6", "发展卡·雾灯令"],
 };
 const ICON_NAMES = { wood: "木材", brick: "砖", sheep: "羊毛", wheat: "麦", ore: "矿" };
 
