@@ -82,7 +82,7 @@ export function networkRouteLayout(
   const pieces: TabletopPiece[] = state.cities.map((city) => {
     const [x, z] = position.get(city.id)!;
     const terminal = city.id === state.terminalFrom || city.id === state.terminalTo;
-    return { id: city.id, objectKind: "station", x, z, size: terminal ? 0.62 : 0.42 };
+    return { id: city.id, objectKind: "station", x, z, size: terminal ? 0.62 : 0.42, label: city.name, ...(terminal ? { emphasis: true } : {}) };
   });
   const links: TabletopLink[] = [];
   const hints: TabletopHint[] = [];

@@ -87,6 +87,14 @@ describe("Game Project HTTP seam — MCP surface, kernels, hobbyist flows", () =
       (tool) => tool.name === "submit_job",
     )?.inputSchema;
     expect(JSON.stringify(submitJobSchema)).not.toContain("render-preview");
+    // step3: plugins can open a vs-computer room (same aiSeats option as the Web lobby).
+    const sessionInput = payload.result.tools.find(
+      (tool) => tool.name === "create_shared_session",
+    )?.inputSchema;
+    expect(JSON.stringify(sessionInput)).toContain("aiSeats");
+    // step3: configure_render exposes the Tidewell-quality knobs (ortho camera, wood chrome, decor, track kit).
+    const patchSchema = JSON.stringify(payload.result.tools.find((tool) => tool.name === "apply_project_patch")?.inputSchema);
+    for (const knob of ["projection", "chrome", "decor", "rail-track", "station"]) expect(patchSchema).toContain(knob);
     const mutationOutputSchema = payload.result.tools.find(
       (tool) => tool.name === "apply_project_patch",
     )?.outputSchema;

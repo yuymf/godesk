@@ -2,7 +2,7 @@
    Own wood/parchment/wax look — no settlecoast assets. Round 2h2: true 100vw×100dvh. */
 
 /* —— Immersive room shell: game IS the viewport —— */
-.room-view-hex-island.room-view-tidewell-immersive {
+.room-view-tidewell-immersive {
   --tw-wood: #4a2f1c;
   --tw-wood-edge: #2c1a10;
   --tw-parchment: #f3e7c9;
@@ -1921,7 +1921,7 @@ body:has(.room-view-tidewell-immersive) {
 /* ==== R27 画布嵌木框 · chrome 一体（settlecoast「桌面嵌在木框里」同构）====
    Sea bands hold chrome (PLAY_SEA_CLEAR); continuous timber top/sides/dock;
    stage reads as tray carved into one wood desk — not floating parchment plates. */
-.room-view-hex-island.room-view-tidewell-immersive {
+.room-view-tidewell-immersive {
   /* Match SceneHost PLAY_SEA_CLEAR so wood→sea edge has no cream/beige void */
   --tw-sea: #5a8a88;
   --tw-wood: #4a2f1c;
@@ -2319,7 +2319,7 @@ body:has(.room-view-tidewell-immersive) {
    Raise value / warmer hue toward settlecoast oak-gold midtones; keep gold carve readable.
    Do NOT thicken bezel. Locks: fill 0.945 · ortho φ54/az12 · deep #0a6c74/0.96 · HUD insets · cream off. */
 
-.room-view-hex-island.room-view-tidewell-immersive {
+.room-view-tidewell-immersive {
   --tw-wood: #5c3c22;
   --tw-wood-edge: #3a2414;
   --tw-carve-outer: #24180e;
@@ -2460,7 +2460,7 @@ body:has(.room-view-tidewell-immersive) {
    Locks: fill 0.945 · ortho φ54/az12 · deep #0a6c74/0.96 · HUD insets ·
           bezel thickness · log well size · wood base #5c3c22 family · cream off. */
 
-.room-view-hex-island.room-view-tidewell-immersive {
+.room-view-tidewell-immersive {
   /* Edge-carve tokens only — base --tw-wood / --tw-wood-edge stay R29 locked */
   --tw-gold-bright: #f0d070;
   --tw-gold-mid: #d4a93a;
@@ -2995,3 +2995,66 @@ body:has(.room-view-tidewell-immersive) {
   box-sizing: border-box;
 }
 .tidewell-table-sheet .tidewell-dev-slot { flex-direction: row; }
+/* —— step3 · generic wood game screen (TabletopGameScreen, RenderSpec.chrome = "wood") ——
+   Same shell as 汐屿; no Tidewell portraits / card art: wax-seal seat medallions + text tiles. */
+.tabletop-game-screen .tabletop-seal {
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--seat-color) 70%, #fff 30%), var(--seat-color) 55%, color-mix(in srgb, var(--seat-color) 60%, #000 40%));
+  box-shadow: inset 0 -3px 6px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+.tabletop-game-screen .tabletop-seal-mark {
+  font: 800 26px/1 "Noto Serif CJK SC", "Songti SC", serif;
+  color: #f8ecd0;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+}
+.tabletop-game-screen .tabletop-tile { width: 76px; }
+.tabletop-game-screen .tabletop-tile-art {
+  width: 70px;
+  height: 78px;
+  background:
+    linear-gradient(180deg, rgba(255, 250, 236, 0.5), rgba(232, 211, 162, 0.2)),
+    var(--tw-tex-parchment),
+    #efe0bb;
+  background-size: auto, 200px 200px, auto;
+  border-color: var(--tw-gold-mid, #c9a227);
+}
+.tabletop-game-screen .tabletop-tile-art span {
+  font: 800 28px/1 "Noto Serif CJK SC", "Songti SC", serif;
+  color: var(--seat-color);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.tabletop-game-screen .tabletop-tile .tidewell-resource-name { font-size: 11px; white-space: nowrap; }
+.tabletop-game-screen .tabletop-action-row .tidewell-build-btn {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  min-width: 128px !important;
+  width: 128px !important;
+  padding: 6px 8px !important;
+  border: 2px solid var(--tw-gold-mid, #c9a227) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 220, 140, 0.16), rgba(0, 0, 0, 0.25)),
+    var(--tw-tex-wood),
+    radial-gradient(circle at 50% 20%, #6b4428, #2c1a10 75%) !important;
+  background-size: auto, 200px 200px, auto !important;
+  box-shadow: var(--tw-carve-gold, none), inset 0 1px 0 rgba(255, 220, 140, 0.25) !important;
+  color: #f3e7c9 !important;
+}
+.tabletop-game-screen .tabletop-action-row .tidewell-build-label {
+  display: block !important;
+  position: static !important;
+  font: 700 15px/1.2 "Noto Serif CJK SC", "Songti SC", serif !important;
+  color: #f8ecd0 !important;
+  white-space: nowrap;
+}
+.tabletop-game-screen .tabletop-action-row .tidewell-build-cost {
+  display: block !important;
+  position: static !important;
+  font-size: 11px !important;
+  color: #e8c85a !important;
+}
+.tabletop-game-screen .tabletop-action-empty { color: #e8d3a2; margin: 0 12px; }
+.tabletop-game-screen .tabletop-stage { height: 100%; min-height: 0; margin: 0; }

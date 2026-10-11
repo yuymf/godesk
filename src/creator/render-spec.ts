@@ -18,6 +18,11 @@ const builtInMesh = z.enum([
   "card",
   "die",
   "ship",
+  // step3 · generic track / map kit (any spatial kernel may bind these).
+  "rail-track",
+  "station",
+  "tree",
+  "rock",
 ]);
 
 export const materialSchema = z.strictObject({
@@ -40,7 +45,24 @@ export const renderSpecSchema = z.strictObject({
     minPolarDeg: z.number().min(10).max(80),
     maxPolarDeg: z.number().min(20).max(85),
     pan: z.boolean(),
+    /**
+     * step3 · Tidewell-quality framing for any tabletop surface: `orthographic` uses the same
+     * ortho play camera as 汐屿 (polar 54° / azimuth 12° / fill 0.945 inside HUD insets).
+     * Omitted = legacy perspective orbit (fovDeg / distance).
+     */
+    projection: z.enum(["perspective", "orthographic"]).optional(),
+    polarDeg: z.number().min(10).max(80).optional(),
+    azimuthDeg: z.number().min(-45).max(45).optional(),
+    fill: z.number().min(0.5).max(1).optional(),
   }),
+  /** step3 · Room chrome: `wood` = full-viewport carved-wood game screen (汐屿 shell, generic). */
+  chrome: z.enum(["plain", "wood"]).optional(),
+  /** step3 · deterministic scenery scattered on the board, clear of routes / pieces / cells. */
+  decor: z.strictObject({
+    trees: z.number().int().min(0).max(120),
+    rocks: z.number().int().min(0).max(60),
+    seed: z.number().int().min(0).max(1_000_000),
+  }).optional(),
   lighting: z.strictObject({
     sun: z.strictObject({
       azimuthDeg: z.number().min(0).max(360),
@@ -442,6 +464,8 @@ const lightingShape = renderShape.lighting.shape;
 export const renderPatchSchema = z.strictObject({
   preset: renderShape.preset.optional(),
   camera: renderShape.camera.partial().optional(),
+  chrome: renderShape.chrome,
+  decor: renderShape.decor,
   lighting: z.strictObject({
     sun: lightingShape.sun.partial().optional(),
     hemisphere: lightingShape.hemisphere.partial().optional(),
@@ -476,6 +500,8 @@ export function applyRenderPatch(render: RenderSpec, patch: RenderPatch): Render
   const next = structuredClone(render);
   if (patch.preset) next.preset = patch.preset;
   if (patch.camera) Object.assign(next.camera, definedEntries(patch.camera));
+  if (patch.chrome) next.chrome = patch.chrome;
+  if (patch.decor) next.decor = { ...patch.decor };
   if (patch.lighting) {
     if (patch.lighting.sun) Object.assign(next.lighting.sun, definedEntries(patch.lighting.sun));
     if (patch.lighting.hemisphere) Object.assign(next.lighting.hemisphere, definedEntries(patch.lighting.hemisphere));

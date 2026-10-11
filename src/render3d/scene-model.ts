@@ -18,7 +18,9 @@ export type SceneNodeKind =
   | "piece"
   | "link"
   | "hint"
-  | "table";
+  | "table"
+  // step3：平放名牌（tabletop-objects `label`）。
+  | "label";
 
 export type SceneNode = {
   id: string;

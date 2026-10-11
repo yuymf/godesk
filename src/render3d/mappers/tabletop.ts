@@ -12,7 +12,19 @@ export type TabletopAction = { type: string; payload?: Record<string, unknown> }
 
 /** RenderSpec 中 mapper 用到的部分（与 creator `RenderSpec` 结构兼容）。 */
 export type TabletopRenderInput = {
-  camera: { fovDeg: number; distance: number; minPolarDeg: number; maxPolarDeg: number; pan: boolean };
+  camera: {
+    fovDeg: number;
+    distance: number;
+    minPolarDeg: number;
+    maxPolarDeg: number;
+    pan: boolean;
+    projection?: "perspective" | "orthographic";
+    polarDeg?: number;
+    azimuthDeg?: number;
+    fill?: number;
+  };
+  /** step3：盘面散布景物（树 / 石），确定性、避开连线 / 棋子 / 格位。 */
+  decor?: { trees: number; rocks: number; seed: number };
   lighting: LightingSpec;
   water: { enabled: boolean; shallow: string; deep: string };
   materials: Record<string, {
@@ -51,6 +63,10 @@ export type TabletopPiece = {
   tint?: string;
   rotationY?: number;
   action?: TabletopAction;
+  /** step3：平放在棋子前方的名牌（城市名等）。 */
+  label?: string;
+  /** step3：重点对象（枢纽 / 终点），网格可据此加细节（`tag: "major"`）。 */
+  emphasis?: boolean;
 };
 
 export type TabletopLink = {
@@ -115,6 +131,8 @@ const FALLBACK_MESH: Record<string, string> = {
   ship: "ship",
   route: "road-bar",
   claim: "road-bar",
+  "decor-tree": "tree",
+  "decor-rock": "rock",
   card: "card",
   die: "die",
 };
@@ -168,16 +186,88 @@ function bindingFor(render: TabletopRenderInput, objectKind: string): Resolved {
 
 const DEFAULT_MATERIAL = { base: "#f4efe6", roughness: 0.5, metalness: 0, pattern: "none" as MaterialPattern };
 
+/** step3：景物材质缺省（作者可用 configure_render materials.foliage / rock 覆盖）。 */
+const NAMED_DEFAULTS: Record<string, TabletopRenderInput["materials"][string]> = {
+  foliage: { base: "#3d7a3a", roughness: 0.82, metalness: 0, pattern: "none" },
+  rock: { base: "#8d8678", roughness: 0.92, metalness: 0, pattern: "stone" },
+};
+
 function round(value: number): number {
   return Math.round(value * 1000) / 1000;
+}
+
+/** 可作为连线绑定的网格（其余网格绑定到连线时回退 road-bar）。 */
+const LINK_MESHES: ReadonlySet<string> = new Set(["road-bar", "rail-track"]);
+
+/** 确定性 PRNG（mulberry32）。 */
+function rng(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function segmentDistance(px: number, pz: number, a: readonly [number, number], b: readonly [number, number]): number {
+  const dx = b[0] - a[0];
+  const dz = b[1] - a[1];
+  const len2 = dx * dx + dz * dz || 1;
+  const t = Math.max(0, Math.min(1, ((px - a[0]) * dx + (pz - a[1]) * dz) / len2));
+  return Math.hypot(px - (a[0] + t * dx), pz - (a[1] + t * dz));
+}
+
+/**
+ * step3 · 通用盘面景物：在底板内确定性撒树 / 石，避开连线、棋子、格位与名牌。
+ * 任何空间 Kernel 都可用（RenderSpec.decor），不认识具体游戏。
+ */
+export function scatterDecor(layout: TabletopLayout, decor: NonNullable<TabletopRenderInput["decor"]>): TabletopPiece[] {
+  const random = rng(decor.seed || 1);
+  // 远边多留一点：斜视下靠远边的树会探出底板轮廓。
+  const halfW = layout.board.width / 2 - 0.45;
+  const halfD = layout.board.depth / 2 - 0.45;
+  const zMin = -halfD + 0.25;
+  const out: TabletopPiece[] = [];
+  const clear = (x: number, z: number, margin: number) =>
+    // 连线留白按固定 0.18（不随占领后线宽变化），景物位置在整局中保持不变。
+    layout.links.every((link) => segmentDistance(x, z, link.from, link.to) > 0.18 + margin) &&
+    layout.pieces.every((piece) => Math.hypot(piece.x - x, piece.z - z) > piece.size * 0.8 + margin &&
+      (!piece.label || Math.abs(piece.x - x) > piece.label.length * 0.16 + 0.25 || Math.abs(piece.z + piece.size * 0.9 + 0.3 - z) > 0.4)) &&
+    layout.cells.every((cell) => Math.abs(cell.x - x) > cell.width / 2 + margin || Math.abs(cell.z - z) > cell.depth / 2 + margin) &&
+    out.every((other) => Math.hypot(other.x - x, other.z - z) > (other.size + 0.1) * 0.55);
+  const place = (count: number, kind: "decor-tree" | "decor-rock", min: number, span: number) => {
+    let placed = 0;
+    // 成簇：先选簇心，再在簇心附近撒点（比均匀撒点更像林地 / 碎石滩）。
+    for (let attempt = 0; attempt < count * 40 && placed < count; attempt += 1) {
+      const cx = (random() * 2 - 1) * halfW;
+      const cz = (random() * 2 - 1) * halfD;
+      const cluster = 1 + Math.floor(random() * (kind === "decor-tree" ? 5 : 3));
+      for (let k = 0; k < cluster && placed < count; k += 1) {
+        const x = cx + (random() - 0.5) * 0.9;
+        const z = cz + (random() - 0.5) * 0.9;
+        if (Math.abs(x) > halfW || z > halfD || z < zMin) continue;
+        const size = min + random() * span;
+        if (!clear(x, z, 0.22)) continue;
+        out.push({ id: `${kind}:${out.length}`, objectKind: kind, materialKey: kind === "decor-tree" ? "foliage" : "rock", x: round(x), z: round(z), size: round(size), rotationY: round(random() * Math.PI * 2) });
+        placed += 1;
+      }
+    }
+  };
+  place(decor.trees, "decor-tree", 0.34, 0.26);
+  place(decor.rocks, "decor-rock", 0.18, 0.16);
+  return out;
 }
 
 /** 布局 + RenderSpec → SceneModel（纯函数，可单测）。 */
 export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRenderInput): TabletopScene {
   const materials: Record<string, MaterialToken> = {};
-  const libraryKey = (key: string, override?: TabletopRenderInput["materials"][string]): string => {
-    const source = override ?? render.materials[key] ?? DEFAULT_MATERIAL;
-    const token = tokenForRenderMaterial(key, source);
+  const libraryKey = (key: string, override?: TabletopRenderInput["materials"][string], span?: number): string => {
+    const source = override ?? render.materials[key] ?? NAMED_DEFAULTS[key] ?? DEFAULT_MATERIAL;
+    let token = tokenForRenderMaterial(key, source);
+    // step3：大底板按世界尺寸加密贴图重复（盒子 UV 按面归一，固定 0.5 会把整块草地 / 石面放大成糊块）。
+    if (span && token.pbrSet && key !== "table") token = { ...token, pbrRepeat: round(Math.max(token.pbrRepeat ?? 0.5, span / 3.2)) };
     const id = `tt-${key}-${hashString(JSON.stringify(token))}`;
     materials[id] ??= token;
     return id;
@@ -211,7 +301,7 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
     mesh: "tile-square",
     position: [0, boardTop / 2, 0],
     scale: [round(board.width), BOARD_THICKNESS, round(board.depth)],
-    material: libraryKey(board.materialKey ?? boardBinding.materialKey),
+    material: libraryKey(board.materialKey ?? boardBinding.materialKey, undefined, Math.max(board.width, board.depth)),
   });
 
   let grid: TabletopScene["grid"] = null;
@@ -247,7 +337,20 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
     if (cell.action) actions[id] = cell.action;
   }
 
+  const decorPieces = render.decor ? scatterDecor(layout, render.decor) : [];
   for (const piece of layout.pieces) {
+    if (!piece.label) continue;
+    // 名牌：平放在棋子南侧（朝向默认机位），羊皮纸底 + 墨字（tabletop-objects `label` 网格）。
+    nodes.push({
+      id: `label:${piece.id}`,
+      kind: "label",
+      mesh: "label",
+      tag: piece.label,
+      position: [round(piece.x), boardTop + 0.02, round(piece.z + piece.size * 0.9 + 0.3)],
+      scale: [1, 1, 1],
+    });
+  }
+  for (const piece of [...layout.pieces, ...decorPieces]) {
     const resolved = bindingFor(render, piece.objectKind);
     const size = round(piece.size * resolved.scale);
     const id = `piece:${resolved.mesh}:${piece.id}`;
@@ -259,6 +362,7 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
       kind: "piece",
       mesh: resolved.mesh,
       position: [round(piece.x), round(baseY), round(piece.z)],
+      ...(piece.emphasis ? { tag: "major" } : {}),
       ...(piece.rotationY ? { rotationY: round(piece.rotationY) } : {}),
       scale: [size, size, size],
       ...(piece.seat !== null && piece.seat !== undefined ? { seat: piece.seat } : {}),
@@ -277,15 +381,21 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
     const dx = link.to[0] - link.from[0];
     const dz = link.to[1] - link.from[1];
     const length = Math.hypot(dx, dz);
-    const id = `link:${link.id}`;
+    const linkMesh = LINK_MESHES.has(resolved.mesh) ? resolved.mesh : "road-bar";
+    // 网格类型进 id：route → claim 换网格时重建对象。
+    const claimedLink = link.seat !== null && link.seat !== undefined;
+    const id = linkMesh === "road-bar" ? `link:${link.id}` : `link:${linkMesh}:${claimedLink ? "c" : "o"}:${link.id}`;
     const width = link.width * resolved.scale;
+    const track = linkMesh === "rail-track";
     nodes.push({
       id,
       kind: "link",
-      mesh: "road-bar",
-      position: [round((link.from[0] + link.to[0]) / 2), round(boardTop + width * 0.3), round((link.from[1] + link.to[1]) / 2)],
+      mesh: linkMesh,
+      // rail-track：几何按长度生成（枕木间距不随缩放拉伸），tag 带长度 / 轨距，scale 保持 1。
+      ...(track ? { tag: `${round(length)}:${round(width)}` } : {}),
+      position: [round((link.from[0] + link.to[0]) / 2), round(track ? boardTop : boardTop + width * 0.3), round((link.from[1] + link.to[1]) / 2)],
       rotationY: round(-Math.atan2(dz, dx)),
-      scale: [round(length), round(width * 0.6), round(width)],
+      scale: track ? [1, 1, 1] : [round(length), round(width * 0.6), round(width)],
       ...(link.seat !== null && link.seat !== undefined ? { seat: link.seat } : {}),
       material: libraryKey(link.materialKey ?? seatKey(link.seat, resolved.materialKey)),
     });

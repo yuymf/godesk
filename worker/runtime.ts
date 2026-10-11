@@ -1100,7 +1100,8 @@ export interface BotIntent {
  * for free; the Executable Kernel stays the sole authority via acceptIntent.
  */
 export function runtimeSupportsBotSeat(runtime: ExecutableRuntime): boolean {
-  return runtime.kernel.type === "hex-settlement-v1";
+  // step3: network-route-v1 reuses the same bot as fixed-seed bot-playtest (pickNetworkRouteBotAction).
+  return runtime.kernel.type === "hex-settlement-v1" || runtime.kernel.type === "network-route-v1";
 }
 
 /**
@@ -1132,6 +1133,40 @@ export function pickBotIntent(
       genre: sessionHexIslandToGenre(state.hexIsland),
     };
     const bot = pickHexIslandBotAction(playState, kernelConfig, seed, state.turn + 1);
+    if (!bot) return null;
+    return {
+      seat: state.activeSeat,
+      actionId: bot.type,
+      ...(bot.payload ? { payload: bot.payload as Record<string, unknown> } : {}),
+    };
+  }
+  if (runtime.kernel.type === "network-route-v1") {
+    if (!state.networkRoute) return null;
+    const kernelConfig = bindNetworkRouteFromRuntimeKernel({
+      playerCount: runtime.kernel.playerCount,
+      terminalFrom: runtime.kernel.terminalFrom,
+      terminalTo: runtime.kernel.terminalTo,
+    });
+    const playState = {
+      seed,
+      sequence: state.turn,
+      phase: "play" as const,
+      activePlayerId: state.activeSeat,
+      playerCount: runtime.kernel.playerCount,
+      status: state.status,
+      winnerId: state.winnerSeat,
+      events: [] as const,
+      genre: {
+        cities: state.networkRoute.cities.map((city) => ({ ...city })),
+        edges: state.networkRoute.edges.map((edge) => ({ ...edge })),
+        claims: { ...state.networkRoute.claims },
+        terminalFrom: state.networkRoute.terminalFrom,
+        terminalTo: state.networkRoute.terminalTo,
+        lastClaim: state.networkRoute.lastClaim ? { ...state.networkRoute.lastClaim } : null,
+        routeCounts: [...state.networkRoute.routeCounts] as [number, number],
+      } satisfies NetworkRouteGenre,
+    };
+    const bot = pickNetworkRouteBotAction(playState, kernelConfig, seed, state.turn + 1);
     if (!bot) return null;
     return {
       seat: state.activeSeat,

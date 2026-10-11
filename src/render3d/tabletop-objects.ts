@@ -20,10 +20,17 @@ import {
   Object3D,
   RingGeometry,
   Shape,
+  CanvasTexture,
+  ConeGeometry,
+  DodecahedronGeometry,
+  Group,
+  PlaneGeometry,
+  SRGBColorSpace,
   Vector2,
   type BufferGeometry as Geometry,
   type Material,
 } from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { MaterialLibrary } from "./materials";
 import type { SceneNode } from "./scene-model";
 import type { MaterialToken } from "./tokens";
@@ -91,6 +98,26 @@ function ship(): Geometry {
   return geom;
 }
 
+/** step3 · 低多边形针叶树：两层锥冠 + 树干（单几何，便于实例化合批）。 */
+function tree(): Geometry {
+  const trunk = new CylinderGeometry(0.05, 0.07, 0.22, 6);
+  trunk.translate(0, 0.11, 0);
+  const low = new ConeGeometry(0.34, 0.5, 7);
+  low.translate(0, 0.42, 0);
+  const high = new ConeGeometry(0.25, 0.42, 7);
+  high.translate(0, 0.7, 0);
+  const merged = mergeGeometries([trunk.toNonIndexed(), low.toNonIndexed(), high.toNonIndexed()]) ?? low;
+  merged.computeVertexNormals();
+  return merged;
+}
+
+function rock(): Geometry {
+  const geom = new DodecahedronGeometry(0.5, 0);
+  geom.scale(1, 0.55, 0.8);
+  geom.translate(0, 0.2, 0);
+  return geom;
+}
+
 function translated(geom: Geometry, y: number): Geometry {
   geom.translate(0, y, 0);
   return geom;
@@ -115,6 +142,10 @@ function geometryFor(mesh: string): Geometry {
       return translated(new BoxGeometry(0.5, 0.5, 0.5), 0.25);
     case "ship":
       return ship();
+    case "tree":
+      return tree();
+    case "rock":
+      return rock();
     case "pawn":
     default:
       return pawn();
@@ -142,7 +173,9 @@ function gridLines(tag: string | undefined): BufferGeometry {
  * 超过 low 档 ≤ 60。`disc` 节点改为不渲染的代理 Object3D（位姿 / 动效 / 拾取语义不变），
  * 同一共享材质的代理合进同一个 InstancedMesh：满盘只剩每个座位材质 1 次 draw call。
  */
-export const INSTANCED_MESHES: ReadonlySet<string> = new Set(["disc"]);
+export const INSTANCED_MESHES: ReadonlySet<string> = new Set(["disc", "tree", "rock"]);
+/** 立体景物合批仍投影（树 / 石的影子是桌面体积感的主要来源）。 */
+const INSTANCED_CAST: ReadonlySet<string> = new Set(["tree", "rock"]);
 
 type InstanceBatch = { key: string; mesh: InstancedMesh; proxies: Object3D[] };
 
@@ -166,7 +199,7 @@ function createBatch(parent: Object3D, key: string, geometryKey: string, materia
   mesh.count = 0;
   // 实例遍布整个盘面；包围球按单个几何体算会被错误剔除。
   mesh.frustumCulled = false;
-  mesh.castShadow = false;
+  mesh.castShadow = INSTANCED_CAST.has(geometryKey);
   mesh.receiveShadow = true;
   // 拾取穿过棋子落到盘面（翻转棋已有子的格不是合法目标）。
   mesh.raycast = () => {};
@@ -259,6 +292,143 @@ function pose(object: Object3D, node: SceneNode): void {
   else object.scale.set(1, 1, 1);
 }
 
+const STEEL: MaterialToken = { base: "#9aa1a6", roughness: 0.32, metalness: 0.85, pattern: "none" };
+const SLEEPER: MaterialToken = { base: "#5a3b22", roughness: 0.86, metalness: 0, pattern: "grain" };
+const STONE: MaterialToken = { base: "#b8ab92", roughness: 0.9, metalness: 0, pattern: "stone" };
+const WALL: MaterialToken = { base: "#efe2c4", roughness: 0.8, metalness: 0, pattern: "none" };
+const ROOF: MaterialToken = { base: "#8e3b2c", roughness: 0.7, metalness: 0, pattern: "none" };
+
+function boxAt(w: number, h: number, d: number, x: number, y: number, z: number): Geometry {
+  const geom = new BoxGeometry(w, h, d);
+  geom.translate(x, y, z);
+  return geom.toNonIndexed();
+}
+
+/**
+ * step3 · 铁轨（沿 +X，中心在原点，底面 y=0）。tag = `长度:轨距`。
+ * 已占领（node.seat 有值）：座位色道床 + 木枕 + 钢轨（立体）；未占领：印在图上的墨色枕木虚线。
+ */
+function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
+  const [lengthRaw, widthRaw] = (node.tag ?? "1:0.2").split(":").map(Number);
+  const length = Math.max(0.2, lengthRaw || 1);
+  const gauge = Math.max(0.08, widthRaw || 0.2);
+  const claimed = node.seat !== undefined;
+  const group = new Group();
+  const usable = length - 0.5; // 两端让出车站
+  const step = 0.19;
+  const count = Math.max(1, Math.floor(usable / step));
+  const start = -((count - 1) * step) / 2;
+  if (!claimed) {
+    const ties: Geometry[] = [];
+    for (let i = 0; i < count; i += 1) ties.push(boxAt(0.06, 0.012, gauge * 0.9, start + i * step, 0.006, 0));
+    const printed = new Mesh(mergeGeometries(ties) ?? ties[0]!, materialFor(node, ctx));
+    printed.receiveShadow = true;
+    group.add(printed);
+    // 拾取带：透明命中盒，比墨线粗，便于点中。
+    const hit = new Mesh(new BoxGeometry(usable, 0.06, gauge * 1.6), new MeshBasicMaterial({ visible: false }));
+    hit.position.y = 0.03;
+    group.add(hit);
+    return group;
+  }
+  const bed = new Mesh(boxAt(usable + 0.1, 0.05, gauge * 1.15, 0, 0.025, 0), materialFor(node, ctx));
+  bed.receiveShadow = true;
+  bed.castShadow = true;
+  const ties: Geometry[] = [];
+  for (let i = 0; i < count; i += 1) ties.push(boxAt(0.07, 0.03, gauge * 0.95, start + i * step, 0.065, 0));
+  const sleepers = new Mesh(mergeGeometries(ties) ?? ties[0]!, ctx.library.get("tt-sleeper", SLEEPER));
+  sleepers.castShadow = true;
+  sleepers.receiveShadow = true;
+  const rails = new Mesh(
+    mergeGeometries([
+      boxAt(usable, 0.035, 0.026, 0, 0.097, gauge * 0.28),
+      boxAt(usable, 0.035, 0.026, 0, 0.097, -gauge * 0.28),
+    ]) ?? new BoxGeometry(usable, 0.03, 0.02),
+    ctx.library.get("tt-steel", STEEL),
+  );
+  rails.castShadow = true;
+  group.add(bed, sleepers, rails);
+  return group;
+}
+
+/** step3 · 车站：石台 + 站房 + 坡顶；枢纽（scale 大）加钟楼。底面 y=0、单位尺寸。 */
+function station(node: SceneNode, ctx: TabletopObjectContext): Object3D {
+  const group = new Group();
+  const plinth = new Mesh(translated(new CylinderGeometry(0.5, 0.54, 0.1, 24), 0.05), ctx.library.get("tt-stone", STONE));
+  plinth.receiveShadow = true;
+  plinth.castShadow = true;
+  const accent = new Mesh(translated(new CylinderGeometry(0.47, 0.47, 0.03, 24), 0.115), materialFor(node, ctx));
+  accent.receiveShadow = true;
+  const walls = new Mesh(boxAt(0.52, 0.26, 0.32, 0, 0.26, 0), ctx.library.get("tt-wall", WALL));
+  walls.castShadow = true;
+  walls.receiveShadow = true;
+  const roofShape = new Shape();
+  roofShape.moveTo(-0.32, 0);
+  roofShape.lineTo(0.32, 0);
+  roofShape.lineTo(0, 0.2);
+  roofShape.closePath();
+  const roofGeom = new ExtrudeGeometry(roofShape, { depth: 0.4, bevelEnabled: false });
+  roofGeom.translate(0, 0.39, -0.2);
+  const roof = new Mesh(roofGeom, ctx.library.get("tt-roof", ROOF));
+  roof.castShadow = true;
+  group.add(plinth, accent, walls, roof);
+  if (node.tag === "major") {
+    const tower = new Mesh(boxAt(0.14, 0.42, 0.14, 0.2, 0.34, 0.12), ctx.library.get("tt-wall", WALL));
+    tower.castShadow = true;
+    const cap = new Mesh(translated(new ConeGeometry(0.12, 0.14, 4), 0.62), ctx.library.get("tt-roof", ROOF));
+    cap.position.set(0.2, 0, 0.12);
+    cap.rotation.y = Math.PI / 4;
+    cap.castShadow = true;
+    group.add(tower, cap);
+  }
+  return group;
+}
+
+/** step3 · 平放名牌：羊皮纸签 + 墨字（CanvasTexture；中文走系统 CJK 字体）。 */
+function label(node: SceneNode): Object3D {
+  const text = node.tag ?? "";
+  const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
+  const pxPerChar = 56;
+  const w = Math.max(2, text.length) * pxPerChar + 48;
+  const h = 84;
+  if (canvas) {
+    canvas.width = w;
+    canvas.height = h;
+    const g = canvas.getContext("2d");
+    if (g) {
+      g.fillStyle = "rgba(243,231,201,0.96)";
+      g.strokeStyle = "rgba(74,47,28,0.9)";
+      g.lineWidth = 5;
+      const r = 18;
+      g.beginPath();
+      g.moveTo(r, 3); g.lineTo(w - r, 3); g.quadraticCurveTo(w - 3, 3, w - 3, r);
+      g.lineTo(w - 3, h - r); g.quadraticCurveTo(w - 3, h - 3, w - r, h - 3);
+      g.lineTo(r, h - 3); g.quadraticCurveTo(3, h - 3, 3, h - r);
+      g.lineTo(3, r); g.quadraticCurveTo(3, 3, r, 3);
+      g.closePath();
+      g.fill();
+      g.stroke();
+      g.fillStyle = "#2a1c12";
+      g.font = `700 ${Math.round(h * 0.56)}px "Noto Serif CJK SC","Songti SC","Noto Sans CJK SC",serif`;
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillText(text, w / 2, h / 2 + 3);
+    }
+  }
+  const worldH = 0.4;
+  const geom = new PlaneGeometry((w / h) * worldH, worldH);
+  geom.rotateX(-Math.PI / 2);
+  const texture = canvas ? new CanvasTexture(canvas) : null;
+  if (texture) {
+    texture.colorSpace = SRGBColorSpace;
+    texture.anisotropy = 4;
+  }
+  // 名牌永远压在铁轨 / 景物之上（只读标注，不参与深度）。
+  const mesh = new Mesh(geom, new MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false, depthTest: false, toneMapped: false }));
+  mesh.raycast = () => {};
+  mesh.renderOrder = 10;
+  return mesh;
+}
+
 export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const mesh = node.mesh ?? "pawn";
   let object: Object3D;
@@ -274,6 +444,12 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     // 合法目标提示：每个提示独立（非共享）材质，随节点释放。
     const hint = new Mesh(geom, new MeshBasicMaterial({ color: HINT_COLOR, transparent: true, opacity: 0.85, side: DoubleSide, depthWrite: false }));
     object = hint;
+  } else if (mesh === "rail-track") {
+    object = railTrack(node, ctx);
+  } else if (mesh === "station") {
+    object = station(node, ctx);
+  } else if (mesh === "label") {
+    object = label(node);
   } else if (INSTANCED_MESHES.has(mesh)) {
     object = createInstanceProxy(mesh, node, ctx);
   } else {

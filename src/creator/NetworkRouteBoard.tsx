@@ -9,6 +9,10 @@ import type { PlayState } from "../runtime/play-kernel";
 import type { RoomLocale } from "./room-presentation";
 import type { RenderSpec } from "./render-spec";
 import { TabletopStage } from "./TabletopStage";
+import { lazy, Suspense } from "react";
+
+/** step3：RenderSpec.chrome = "wood" 时的木框全屏外壳（懒加载，含 tidewell-game-screen.css）。 */
+const LazyTabletopGameScreen = lazy(() => import("./TabletopGameScreen"));
 
 export type NetworkRouteBoardState = {
   cities: Array<{ id: string; name: string; x: number; y: number }>;
@@ -132,6 +136,11 @@ export function NetworkRouteBoard({
   busy = false,
   onAct,
   render,
+  title,
+  aiSeats = [],
+  onClaimSeat,
+  replayUrl,
+  homeHref = "/games",
 }: {
   networkRoute: NetworkRouteBoardState;
   activeSeat: number;
@@ -145,6 +154,12 @@ export function NetworkRouteBoard({
   onAct?: (actionId: string, payload?: Record<string, unknown>) => void;
   /** G3D-14：build.ruleSystem.presentation.render（缺省用平台默认）。 */
   render?: RenderSpec;
+  /** step3（wood chrome）：标题、AI 席位、入座、回放与首页链接。 */
+  title?: string;
+  aiSeats?: readonly number[];
+  onClaimSeat?: (seat: number) => void;
+  replayUrl?: string;
+  homeHref?: string;
 }) {
   const copy = COPY[locale];
   const interactive =
@@ -207,6 +222,86 @@ export function NetworkRouteBoard({
 
   const width = 400;
   const height = 360;
+
+  if (render?.chrome === "wood") {
+    const cityName = (id: string) => cityById(networkRoute.cities, id)?.name ?? id;
+    const edgeName = (edgeId: string) => {
+      const edge = networkRoute.edges.find((entry) => entry.id === edgeId);
+      return edge ? `${cityName(edge.from)}—${cityName(edge.to)}` : edgeId;
+    };
+    const zh = locale === "zh";
+    const open = networkRoute.edges.filter((edge) => networkRoute.claims[edge.id] === null || networkRoute.claims[edge.id] === undefined).length;
+    const seatName = (seat: number) =>
+      seat === viewerSeat ? (zh ? "你" : "You") : aiSeats.includes(seat) ? (zh ? "电脑" : "Computer") : `${copy.seat} ${seat}`;
+    const COMPANY = zh ? ["赤轨公司", "青岚铁路"] : ["Crimson Line", "Azure Rail"];
+    const color = (seat: number) => render.materials[`seat${seat}`]?.base ?? SEAT_COLOR[seat] ?? "#888";
+    const linked = [linked0, linked1];
+    const chronicle = [
+      statusLine,
+      lastLine,
+      `${copy.routes} · ${seatName(0)} ${count0} · ${seatName(1)} ${count1}`,
+      terminalsLine,
+      goalLine,
+    ];
+    return (
+      <Suspense fallback={<div aria-busy="true" className="network-route-board" />}>
+        <LazyTabletopGameScreen
+          locale={locale}
+          boardLabel={copy.board}
+          title={title ?? copy.board}
+          statusLine={statusLine}
+          homeHref={homeHref}
+          replayUrl={replayUrl}
+          hudLabel={copy.hud}
+          playersTitle={zh ? "铁路公司" : "Rail companies"}
+          seats={[0, 1].map((seat) => ({
+            seat,
+            name: seatName(seat),
+            subtitle: COMPANY[seat] ?? "",
+            stat: `${zh ? "铁轨" : "Track"} ${seat === 0 ? count0 : count1} · ${linked[seat] ? copy.linked : copy.unlinked}`,
+            color: color(seat),
+            isActive: status === "active" && seat === activeSeat,
+            isYou: seat === viewerSeat,
+            isAi: aiSeats.includes(seat),
+            badge: status === "active" && seat === activeSeat
+              ? seat === viewerSeat ? copy.yourTurn : aiSeats.includes(seat) ? (zh ? "电脑思考中" : "Thinking") : copy.waiting
+              : status === "complete" && winnerSeat === seat ? copy.winner : null,
+          }))}
+          viewerSeat={viewerSeat}
+          onClaimSeat={onClaimSeat}
+          awards={[
+            { label: copy.terminals, value: `${fromHub?.name ?? networkRoute.terminalFrom} ↔ ${toHub?.name ?? networkRoute.terminalTo}` },
+            { label: zh ? "剩余路线" : "Open routes", value: String(open) },
+          ]}
+          stage={<TabletopStage kernel="network-route-v1" legal={[...legalEdges]} onAct={showLegal ? onAct : undefined} render={render} state={networkRoute} />}
+          turnTitle={zh ? "本回合" : "This turn"}
+          turnBlurb={statusLine}
+          turnDetail={copy.connectHint}
+          primary={null}
+          idleLine={showLegal ? (zh ? "点地图上的虚线路段，或在下方选一段铺设。" : "Tap a dashed route on the map, or pick one below.") : copy.waiting}
+          chronicle={chronicle}
+          dockLabel={zh ? "你的铁路" : "Your railway"}
+          tiles={[
+            { key: "mine", label: zh ? "我的铁轨" : "My track", value: viewerSeat === null ? "—" : viewerSeat === 0 ? count0 : count1, color: color(viewerSeat ?? 0), glyph: "轨" },
+            { key: "rival", label: zh ? "对手铁轨" : "Rival track", value: viewerSeat === null ? "—" : viewerSeat === 0 ? count1 : count0, color: color(viewerSeat === null ? 1 : 1 - viewerSeat), glyph: "敌" },
+            { key: "open", label: zh ? "剩余路线" : "Open", value: open, glyph: "路" },
+            { key: "goal", label: zh ? "连通" : "Linked", value: viewerSeat === null ? "—" : linked[viewerSeat] ? "✓" : "✗", glyph: "枢" },
+          ]}
+          actionsLabel={zh ? "可铺路线" : "Claimable"}
+          actions={networkRoute.edges
+            .filter((edge) => networkRoute.claims[edge.id] === null || networkRoute.claims[edge.id] === undefined)
+            .map((edge) => ({
+              key: edge.id,
+              label: edgeName(edge.id),
+              detail: `${copy.claim} · ${edge.from}–${edge.to}`,
+              enabled: showLegal && legalEdges.has(edge.id),
+              onClick: () => onAct?.("claim", { edgeId: edge.id }),
+            }))}
+          emptyActions={copy.noLast}
+        />
+      </Suspense>
+    );
+  }
 
   return (
     <div

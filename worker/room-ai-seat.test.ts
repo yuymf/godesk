@@ -46,12 +46,12 @@ async function waitForJob(id: string) {
   throw new Error(`job ${id} did not finish`);
 }
 
-async function hexIslandBuild(key: string) {
+async function hexIslandBuild(key: string, idea: string = BASELINE_PROMPTS[0]) {
   const { project } = await (await post("/api/projects", { name: `AI seat ${key}` })).json<{ project: GameProject }>();
   const queued = await (await post(`/api/projects/${project.id}/jobs`, {
     kind: "generate-rule-system",
     expectedVersion: project.version,
-    idea: BASELINE_PROMPTS[0],
+    idea,
     idempotencyKey: `ai-seat-gen-${key}`,
   })).json<{ id: string }>();
   expect((await waitForJob(queued.id)).status).toBe("succeeded");
@@ -247,4 +247,25 @@ describe("Room AI seat (G3D-04b)", () => {
     expect(aiKinds.has("roll_dice")).toBe(true);
     expect(aiKinds.has("end_turn")).toBe(true);
   }, 420_000);
+
+  it("step3: seats the computer in a network-route-v1 room and plays it to game over with the bot-playtest picker", async () => {
+    const { build, ruleSystem } = await hexIslandBuild("route", "两人铺设路线、连接城市的铁路线路网络游戏：先连通北港和南站者胜");
+    expect(executableRuntime(ruleSystem)?.kernel.type).toBe("network-route-v1");
+    const created = await createRoom(build.id, { seed: 7, aiSeats: [1], aiThinkMs: 0 });
+    expect(created.status, await created.clone().text()).toBe(201);
+    const room = await created.json<{ id: string }>();
+    const { seatToken } = await claimSeat(room.id, 0);
+    let snapshot = await readRoom(room.id);
+    for (let guard = 0; guard < 400 && snapshot.room.state.status === "active"; guard += 1) {
+      if (snapshot.room.state.activeSeat === 0) await humanMove(room.id, seatToken!);
+      else await new Promise((resolve) => setTimeout(resolve, 5));
+      snapshot = await readRoom(room.id);
+    }
+    expect(snapshot.room.state.status).toBe("complete");
+    const actions = snapshot.room.acceptedActions;
+    expect(actions.some((action) => action.seat === 1 && action.intentId === `ai_${action.sequence}`)).toBe(true);
+    const simulation = runBotSimulation(ruleSystem, 7);
+    expect(actions.map((action) => [action.seat, action.actionId, action.payload ?? null]))
+      .toEqual(simulation.acceptedActions.map((action) => [action.seat, action.actionId, action.payload ?? null]));
+  }, 120_000);
 });
