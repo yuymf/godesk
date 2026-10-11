@@ -23,6 +23,7 @@ const builtInMesh = z.enum([
   "station",
   "tree",
   "rock",
+  "shore-natural",
 ]);
 
 export const materialSchema = z.strictObject({
@@ -71,6 +72,8 @@ export const renderSpecSchema = z.strictObject({
   surround: z.strictObject({
     kind: z.enum(["none", "sea", "meadow"]),
     shore: z.number().min(0).max(3),
+    /** step3 R3 · coast outline: `natural` = undulating island rim (breaks hard right angles); `rect` = sharp slab. */
+    coast: z.enum(["rect", "natural"]).optional(),
     seed: z.number().int().min(0).max(1_000_000).optional(),
   }).optional(),
   /**

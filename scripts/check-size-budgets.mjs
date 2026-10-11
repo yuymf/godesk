@@ -2,7 +2,7 @@
 /**
  * G3D size budgets with correct disambiguation:
  * - index-*.js ≤ 170 KB gzip (homepage)
- * - render3d-*.js excluding render3d-assets-* ≤ 207 KB gzip (sum)
+ * - render3d-*.js excluding render3d-assets-* ≤ 208 KB gzip (sum; step3 tabletop sea/import wiring +0.5KB)
  * - render3d-assets-*.js ≤ 60 KB gzip
  * - board-dressing-*.js ≤ 30 KB gzip（G3D-ISLAND / PROPS，懒加载）
  * - TabletopScene3D-*.js ≤ 12 KB gzip（G3D-14 通用桌面 mapper + 网格工厂，懒加载，不计入核心）
@@ -44,7 +44,7 @@ const judgeMotion = files.filter((f) => /^(g3d-judge-|motion-demo-).*\.js$/.test
 
 let ok = true;
 ok = check("homepage index JS", index, 170) && ok;
-ok = check("render3d core (excl. assets)", render3d, 207) && ok;
+ok = check("render3d core (excl. assets)", render3d, 208) && ok;
 if (judgeMotion.length) {
   ok = check("g3d-judge-motion (lazy, judge=1)", judgeMotion, 12) && ok;
 }

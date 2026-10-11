@@ -429,6 +429,43 @@ function label(node: SceneNode): Object3D {
   return mesh;
 }
 
+
+/** step3 R3 · undulating island rim (unit 1×1 footprint, posed by node.scale). */
+function shoreNatural(node: SceneNode, ctx: TabletopObjectContext): Object3D {
+  const seed = Number((node.tag ?? "7").split(":")[0]) || 7;
+  let a = (seed >>> 0) || 1;
+  const rnd = () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const shape = new Shape();
+  const steps = 48;
+  for (let i = 0; i <= steps; i += 1) {
+    const t = (i / steps) * Math.PI * 2;
+    const ux = Math.cos(t);
+    const uz = Math.sin(t);
+    const squircle = Math.pow(Math.abs(ux) ** 4 + Math.abs(uz) ** 4, -0.25);
+    const wobble = 1 + 0.12 * Math.sin(t * 3 + seed) + 0.08 * Math.sin(t * 5 - seed * 0.3) + (rnd() - 0.5) * 0.04;
+    const r = 0.5 * squircle * wobble;
+    const x = ux * r;
+    const y = uz * r;
+    if (i === 0) shape.moveTo(x, y);
+    else shape.lineTo(x, y);
+  }
+  shape.closePath();
+  const geom = new ExtrudeGeometry(shape, { depth: 1, bevelEnabled: false, steps: 1, curveSegments: 1 });
+  geom.rotateX(-Math.PI / 2);
+  geom.translate(0, -0.5, 0);
+  geom.computeVertexNormals();
+  const mesh = new Mesh(geom, materialFor(node, ctx));
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
 export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const mesh = node.mesh ?? "pawn";
   let object: Object3D;
@@ -448,6 +485,8 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = railTrack(node, ctx);
   } else if (mesh === "station") {
     object = station(node, ctx);
+  } else if (mesh === "shore-natural") {
+    object = shoreNatural(node, ctx);
   } else if (mesh === "label") {
     object = label(node);
   } else if (INSTANCED_MESHES.has(mesh)) {

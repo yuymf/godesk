@@ -39,6 +39,30 @@ export function tileGap(point: XZ, tiles: readonly XZ[]): number {
  * 为 count 个道具挑选岛外空位（半径 propRadius）。
  * 先试每个港口外侧左右两个泊位，再按 10° 步长扫海岸外环。
  */
+
+/** Infer prop role from asset title / id (plugin pull prompts + provider names). */
+export function roleFromModel(model: ImportedSceneModel): "tree" | "station" | "rail" | "prop" {
+  const t = `${model.title ?? ""} ${model.id}`.toLowerCase();
+  if (/tree|pine|fir|oak|foliage|palm|bush|stump|trunk|fern|plant|树|松|杉|桩|蕨/.test(t)) return "tree";
+  if (/cabin|house|station|cottage|building|hut|shed|home|cabinet|车站|站房|木屋|小屋|柜/.test(t)) return "station";
+  if (/rail|track|train|sleeper|铁轨|轨道|铁路/.test(t)) return "rail";
+  return "prop";
+}
+
+/** Tabletop land footprint when no hex tiles (shore / board). */
+export function tabletopLandFromNodes(nodes: readonly SceneNode[]): { cx: number; cz: number; halfW: number; halfD: number; natural: boolean; seed: number } | null {
+  const land = nodes.find((n) => n.id === "shore") ?? nodes.find((n) => n.id === "board");
+  if (!land?.scale) return null;
+  return {
+    cx: land.position[0],
+    cz: land.position[2],
+    halfW: land.scale[0] / 2,
+    halfD: land.scale[2] / 2,
+    natural: (land.tag ?? "").includes(":natural") || land.mesh === "shore-natural",
+    seed: Number((land.tag ?? "7").split(":")[0]) || 7,
+  };
+}
+
 export function placeImportedProps(
   input: { tiles: readonly XZ[]; ports?: readonly XZ[]; obstacles?: readonly XZ[] },
   count: number,
@@ -101,6 +125,10 @@ export function mountImportedProps(opts: {
   nodes: readonly SceneNode[];
   /** 每成功一个回调一次：已载数量 + 全部已摆道具离最近六角格的最小间隙 / 最大高度（世界单位）。 */
   onLoaded: (count: number, info: { minTileGap: number; maxHeight: number }) => void;
+  /** Hide procedural nodes replaced by imported GLBs (stations / trees). */
+  hideNode?: (id: string) => void;
+  /** Live scene nodes (tabletop board/shore/stations); preferred over the hex snapshot when non-empty. */
+  getNodes?: () => readonly SceneNode[];
 }): () => void {
   let cancelled = false;
   const group = new Group();
@@ -109,9 +137,20 @@ export function mountImportedProps(opts: {
   void (async () => {
     const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
     const loader = new GLTFLoader();
-    const layout = layoutFromNodes(opts.nodes);
+    const live = opts.getNodes?.() ?? [];
+    const nodes = live.length ? live : opts.nodes;
+    const layout = layoutFromNodes(nodes);
+    const land = tabletopLandFromNodes(nodes);
+    const hexMode = layout.tiles.length > 0;
     if (!layout.tiles.length) layout.tiles = [{ x: 0, z: 0 }];
-    const spots = placeImportedProps(layout, opts.models.length);
+    const stationSpots = nodes.filter((n) => n.mesh === "station").map((n) => ({ x: n.position[0], z: n.position[2], id: n.id }));
+    const treeSpots = nodes.filter((n) => n.mesh === "tree").map((n) => ({ x: n.position[0], z: n.position[2], id: n.id }));
+    const linkMids = nodes.filter((n) => n.kind === "link").map((n) => ({ x: n.position[0], z: n.position[2], id: n.id }));
+    const shoreSpots = placeImportedProps(layout, Math.max(opts.models.length, 4));
+    const usedStation = new Set<string>();
+    const usedTree = new Set<string>();
+    const usedLink = new Set<string>();
+    const hideIds: string[] = [];
     let loaded = 0;
     let minTileGap = Infinity;
     let maxHeight = 0;
@@ -122,24 +161,72 @@ export function mountImportedProps(opts: {
         const object = gltf.scene;
         const box = new Box3().setFromObject(object);
         const size = box.getSize(new Vector3());
-        const scale = normalizePropScale(size);
+        const role = roleFromModel(model);
+        // Tabletop replacements: stations / trees can be slightly larger than hex settlement props.
+        const scale = !hexMode && (role === "station" || role === "tree")
+          ? Math.min((role === "station" ? 0.55 : 0.42) / Math.max(size.y, 1e-3), (role === "station" ? 0.7 : 0.45) / Math.max(size.x, size.z, 1e-3))
+          : normalizePropScale(size);
         object.scale.setScalar(scale);
         const center = box.getCenter(new Vector3());
-        const spot = spots[index]!;
-        object.position.set(spot.x - center.x * scale, -box.min.y * scale + 0.02, spot.z - center.z * scale);
+        let spot: XZ = shoreSpots[index] ?? shoreSpots[shoreSpots.length - 1]!;
+        let yLift = 0.02;
+        if (!hexMode) {
+          if (role === "station") {
+            const next = stationSpots.find((p) => !usedStation.has(p.id));
+            if (next) { usedStation.add(next.id); hideIds.push(next.id); spot = next; yLift = 0.04; }
+          } else if (role === "tree") {
+            const next = treeSpots.find((p) => !usedTree.has(p.id));
+            if (next) { usedTree.add(next.id); hideIds.push(next.id); spot = next; }
+            else if (land) {
+              const t = (index * 2.4 + land.seed) % (Math.PI * 2);
+              const ux = Math.cos(t); const uz = Math.sin(t);
+              const squircle = Math.pow(Math.abs(ux) ** 4 + Math.abs(uz) ** 4, -0.25);
+              spot = { x: land.cx + ux * land.halfW * squircle * 0.78, z: land.cz + uz * land.halfD * squircle * 0.78 };
+            }
+          } else if (role === "rail") {
+            const next = linkMids.find((p) => !usedLink.has(p.id));
+            if (next) { usedLink.add(next.id); spot = next; yLift = 0.03; }
+          } else if (land) {
+            const t = (index * 1.7 + 0.4) % (Math.PI * 2);
+            const ux = Math.cos(t); const uz = Math.sin(t);
+            const squircle = Math.pow(Math.abs(ux) ** 4 + Math.abs(uz) ** 4, -0.25);
+            const rim = 1.02 + (index % 3) * 0.04;
+            spot = { x: land.cx + ux * land.halfW * squircle * rim, z: land.cz + uz * land.halfD * squircle * rim };
+          }
+        }
+        object.position.set(spot.x - center.x * scale, -box.min.y * scale + yLift, spot.z - center.z * scale);
         object.name = `imported:${model.id}`;
         object.userData.importedSpot = spot;
+        object.userData.importedRole = role;
         object.traverse((child) => {
           child.castShadow = true;
           child.receiveShadow = true;
         });
         group.add(object);
         loaded += 1;
-        // 实测：缩放后包围盒的水平外接半径也必须在所有格子之外。
+        const placeClone = (at: XZ, lift: number) => {
+          const clone = object.clone(true);
+          clone.position.set(at.x - center.x * scale, -box.min.y * scale + lift, at.z - center.z * scale);
+          clone.name = `${object.name}:c${group.children.length}`;
+          group.add(clone);
+        };
+        if (!hexMode && role === "tree") {
+          for (const next of treeSpots) {
+            if (usedTree.has(next.id)) continue;
+            usedTree.add(next.id); hideIds.push(next.id); placeClone(next, 0.02);
+          }
+        }
+        if (!hexMode && role === "station") {
+          for (const next of stationSpots) {
+            if (usedStation.has(next.id)) continue;
+            usedStation.add(next.id); hideIds.push(next.id); placeClone(next, 0.04);
+          }
+        }
         const placed = new Box3().setFromObject(object);
         const half = Math.hypot(placed.max.x - placed.min.x, placed.max.z - placed.min.z) / 2;
         minTileGap = Math.min(minTileGap, tileGap(spot, layout.tiles) - half);
         maxHeight = Math.max(maxHeight, placed.max.y - placed.min.y);
+        for (const id of hideIds) opts.hideNode?.(id);
         opts.onLoaded(loaded, { minTileGap, maxHeight });
       } catch (reason) {
         console.warn("[godesk] imported GLB failed", model.url, reason);

@@ -26,7 +26,7 @@ export type TabletopRenderInput = {
   /** step3：盘面散布景物（树 / 石），确定性、避开连线 / 棋子 / 格位。 */
   decor?: { trees: number; rocks: number; seed: number };
   /** step3 R2：盘外环境（海 / 草原）+ 岸边宽度。 */
-  surround?: { kind: "none" | "sea" | "meadow"; shore: number; seed?: number };
+  surround?: { kind: "none" | "sea" | "meadow"; shore: number; coast?: "rect" | "natural"; seed?: number };
   lighting: LightingSpec;
   water: { enabled: boolean; shallow: string; deep: string };
   materials: Record<string, {
@@ -282,23 +282,33 @@ export function scatterSurround(
     out.push({ id: `${kind}:s${out.length}`, objectKind: kind, materialKey: kind === "decor-tree" ? "foliage" : "rock", x: round(x), z: round(z), y: round(y), size: round(size), rotationY: round(random() * Math.PI * 2) });
   };
   if (s > 0) {
-    // 岸带：沿四边撒石块（海）或灌木（草原），均匀分布 + 抖动。
-    const perimeter = 2 * (layout.board.width + layout.board.depth + 4 * s);
-    const count = Math.round(perimeter / (surround.kind === "sea" ? 1.1 : 0.7));
+    const natural = (surround.coast ?? "natural") === "natural";
+    const count = Math.round((2 * (layout.board.width + layout.board.depth + 4 * s)) / (surround.kind === "sea" ? 1.1 : 0.7));
+    const w = layout.board.width + 2 * s;
+    const d = layout.board.depth + 2 * s;
     for (let i = 0; i < count; i += 1) {
-      const t = (i + random() * 0.6) / count;
-      const along = t * perimeter;
-      const w = layout.board.width + 2 * s;
-      const d = layout.board.depth + 2 * s;
       let x: number, z: number;
-      if (along < w) { x = -w / 2 + along; z = -d / 2; }
-      else if (along < w + d) { x = w / 2; z = -d / 2 + (along - w); }
-      else if (along < 2 * w + d) { x = w / 2 - (along - w - d); z = d / 2; }
-      else { x = -w / 2; z = d / 2 - (along - 2 * w - d); }
-      // 向内收到岸带中间（避开底板边与水线）。
-      const inset = s * (0.25 + random() * 0.45);
-      x -= Math.sign(x) * (Math.abs(x) >= w / 2 - 1e-6 ? inset : 0);
-      z -= Math.sign(z) * (Math.abs(z) >= d / 2 - 1e-6 ? inset : 0);
+      if (natural) {
+        const t = ((i + random() * 0.4) / count) * Math.PI * 2;
+        const ux = Math.cos(t);
+        const uz = Math.sin(t);
+        const squircle = Math.pow(Math.abs(ux) ** 4 + Math.abs(uz) ** 4, -0.25);
+        const wobble = 1 + 0.12 * Math.sin(t * 3 + (surround.seed ?? 7)) + 0.08 * Math.sin(t * 5);
+        const rx = (w / 2) * squircle * wobble * (0.72 + random() * 0.18);
+        const rz = (d / 2) * squircle * wobble * (0.72 + random() * 0.18);
+        x = ux * rx;
+        z = uz * rz;
+      } else {
+        const perimeter = 2 * (w + d);
+        const along = ((i + random() * 0.6) / count) * perimeter;
+        if (along < w) { x = -w / 2 + along; z = -d / 2; }
+        else if (along < w + d) { x = w / 2; z = -d / 2 + (along - w); }
+        else if (along < 2 * w + d) { x = w / 2 - (along - w - d); z = d / 2; }
+        else { x = -w / 2; z = d / 2 - (along - 2 * w - d); }
+        const inset = s * (0.25 + random() * 0.45);
+        x -= Math.sign(x) * (Math.abs(x) >= w / 2 - 1e-6 ? inset : 0);
+        z -= Math.sign(z) * (Math.abs(z) >= d / 2 - 1e-6 ? inset : 0);
+      }
       if (insideBoard(x, z, 0.12)) continue;
       const rockish = surround.kind === "sea" ? random() < 0.45 : random() < 0.25;
       push(rockish ? "decor-rock" : "decor-tree", x, z, rockish ? 0.16 + random() * 0.22 : 0.3 + random() * 0.25, shoreTop);
@@ -360,17 +370,19 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
   const shore = surround ? surround.shore : 0;
   const shoreTop = boardTop - 0.07;
   if (surround && shore > 0) {
-    // 岸：比底板大一圈、略低的台地（海 = 沙滩，草原 = 土坡），底板像被放在岛上 / 原野中。
+    // 岸：比底板大一圈、略低的台地。R3：coast=natural（默认）用起伏岛缘，打破直角硬边。
+    const coast = surround.coast ?? "natural";
+    const shoreMat = surround.kind === "sea"
+      ? libraryKey("shore", render.materials.shore ?? { base: "#e6d3a0", roughness: 0.97, metalness: 0, pattern: "sand" }, board.width + shore * 2)
+      : libraryKey("shore", render.materials.shore ?? { base: "#7c9a4e", roughness: 0.97, metalness: 0, pattern: "grass" }, board.width + shore * 2);
     nodes.push({
       id: "shore",
       kind: "cell",
-      mesh: "tile-square",
-      tag: surround.kind,
+      mesh: coast === "natural" ? "shore-natural" : "tile-square",
+      tag: `${surround.seed ?? 7}:${surround.kind}:${coast}`,
       position: [0, round((shoreTop + TABLE_Y) / 2), 0],
       scale: [round(board.width + shore * 2), round(shoreTop - TABLE_Y), round(board.depth + shore * 2)],
-      material: surround.kind === "sea"
-        ? libraryKey("shore", render.materials.shore ?? { base: "#e6d3a0", roughness: 0.97, metalness: 0, pattern: "sand" }, board.width + shore * 2)
-        : libraryKey("shore", render.materials.shore ?? { base: "#7c9a4e", roughness: 0.97, metalness: 0, pattern: "grass" }, board.width + shore * 2),
+      material: shoreMat,
     });
   }
 

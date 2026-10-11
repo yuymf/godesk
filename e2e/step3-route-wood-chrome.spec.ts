@@ -59,7 +59,7 @@ test("step3: plugin chain → rail game in Tidewell-quality wood chrome + ortho 
       camera: { projection: "orthographic", polarDeg: 54, azimuthDeg: 12, fill: 0.945 },
       chrome: "wood",
       decor: { trees: 30, rocks: 8, seed: 3 },
-      surround: { kind: "sea", shore: 0.9, seed: 5 },
+      surround: { kind: "sea", shore: 0.9, coast: "natural", seed: 5 },
       hud: { portraits: "travelers", cardArt: "landscape" },
       materials: { map: { base: "#8fb865", roughness: 0.95, metalness: 0, pattern: "grass" } },
       bindings: [
@@ -75,6 +75,25 @@ test("step3: plugin chain → rail game in Tidewell-quality wood chrome + ortho 
   const session = await mcp(page, 12, "create_shared_session", { buildId: built.result.build.id, seed: 7, idempotencyKey: `step3-session-${project.id}`, aiSeats: [1] });
   expect(session.sessionUrl).toContain("share=");
 
+  // R3：插件链 pull_project_asset（CC0 GLB）。无 sidecar 时跳过，有则断言 Room 挂上导入模型。
+  let pulled = 0;
+  for (const [i, prompt] of [
+    "add a fern plant",
+    "add a gothic cabinet",
+    "add a barrel",
+  ].entries()) {
+    try {
+      const res = await page.request.post("/mcp", {
+        headers: { accept: "application/json, text/event-stream", "content-type": "application/json" },
+        data: { jsonrpc: "2.0", id: 20 + i, method: "tools/call", params: { name: "pull_project_asset", arguments: { projectId: project.id, prompt, idempotencyKey: `step3-pull-${i}-${project.id}` } } },
+      });
+      const text = await res.text();
+      const line = (res.headers()["content-type"] ?? "").includes("application/json") ? text : text.split("\n").find((e) => e.startsWith("data: "))?.slice(6);
+      const payload = JSON.parse(line!);
+      if (!payload.result?.isError) pulled += 1;
+    } catch { /* sidecar optional in CI */ }
+  }
+
   await page.goto(`${session.sessionUrl}&judge=1`);
   await expect(page.locator(".tabletop-game-screen")).toBeVisible({ timeout: 30_000 });
   await expect(page.locator("main.room-view-tidewell-immersive")).toBeVisible();
@@ -83,6 +102,9 @@ test("step3: plugin chain → rail game in Tidewell-quality wood chrome + ortho 
   await expect(host).toHaveAttribute("data-tabletop-camera", "ortho:54:12:0.945", { timeout: 60_000 });
   // R2：盘外潮水 shader（岸台当海岸）+ 座位肖像 + 插画行动卡。
   await expect(host).toHaveAttribute("data-water", "on", { timeout: 60_000 });
+  if (pulled > 0) {
+    await expect(host).toHaveAttribute("data-imported-models", String(pulled), { timeout: 90_000 });
+  }
   await expect(page.locator(".tabletop-portrait img")).toHaveCount(2);
   await expect.poll(async () => page.locator(".tabletop-action-row .tabletop-card-art").count()).toBeGreaterThan(0);
 

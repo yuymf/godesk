@@ -142,6 +142,7 @@ export function NetworkRouteBoard({
   onClaimSeat,
   replayUrl,
   homeHref = "/games",
+  importedModels,
 }: {
   networkRoute: NetworkRouteBoardState;
   activeSeat: number;
@@ -161,6 +162,7 @@ export function NetworkRouteBoard({
   onClaimSeat?: (seat: number) => void;
   replayUrl?: string;
   homeHref?: string;
+  importedModels?: ReadonlyArray<{ id: string; url: string; title?: string }>;
 }) {
   const copy = COPY[locale];
   const interactive =
@@ -275,7 +277,7 @@ export function NetworkRouteBoard({
             { label: copy.terminals, value: `${fromHub?.name ?? networkRoute.terminalFrom} ↔ ${toHub?.name ?? networkRoute.terminalTo}` },
             { label: zh ? "剩余路线" : "Open routes", value: String(open) },
           ]}
-          stage={<TabletopStage kernel="network-route-v1" legal={[...legalEdges]} onAct={showLegal ? onAct : undefined} render={render} state={networkRoute} />}
+          stage={<TabletopStage kernel="network-route-v1" legal={[...legalEdges]} onAct={showLegal ? onAct : undefined} render={render} state={networkRoute} importedModels={importedModels} />}
           turnTitle={zh ? "本回合" : "This turn"}
           turnBlurb={statusLine}
           turnDetail={copy.connectHint}
@@ -353,7 +355,7 @@ export function NetworkRouteBoard({
         </p>
       </section>
 
-      <TabletopStage kernel="network-route-v1" legal={[...legalEdges]} onAct={showLegal ? onAct : undefined} render={render} state={networkRoute} />
+      <TabletopStage kernel="network-route-v1" legal={[...legalEdges]} onAct={showLegal ? onAct : undefined} render={render} state={networkRoute} importedModels={importedModels} />
 
       <svg
         aria-label={copy.board}

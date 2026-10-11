@@ -671,6 +671,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         </Suspense>
       ) : networkRoute && networkRouteState ? (
         <NetworkRouteBoard render={build.ruleSystem.presentation.render}
+          importedModels={importedModels}
           activeSeat={activeSeat}
           busy={busy}
           enabled={isMyTurn}

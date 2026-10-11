@@ -50,6 +50,25 @@ const DEFAULT_SPEC: TideWaterSpec = {
 };
 
 /** 矩形陆地 → 圆盘样本（间距 ≤ 半径，外沿圆弧形成柔和的岸线）。 */
+/** step3 R3 · undulating island coast samples (matches shore-natural silhouette). */
+export function naturalCoast(cx: number, cz: number, width: number, depth: number, seed = 7): CoastSample[] {
+  const out: CoastSample[] = [];
+  const r = 0.42;
+  for (let i = 0; i < 64; i += 1) {
+    const t = (i / 64) * Math.PI * 2;
+    const ux = Math.cos(t);
+    const uz = Math.sin(t);
+    const squircle = Math.pow(Math.abs(ux) ** 4 + Math.abs(uz) ** 4, -0.25);
+    const wobble = 1 + 0.12 * Math.sin(t * 3 + seed) + 0.08 * Math.sin(t * 5 - seed * 0.3);
+    const rx = (width / 2) * squircle * wobble * 0.92;
+    const rz = (depth / 2) * squircle * wobble * 0.92;
+    out.push({ x: cx + ux * rx, z: cz + uz * rz, radius: r });
+    if (i % 4 === 0) out.push({ x: cx + ux * rx * 0.55, z: cz + uz * rz * 0.55, radius: r * 1.2 });
+  }
+  out.push({ x: cx, z: cz, radius: Math.min(width, depth) * 0.22 });
+  return out;
+}
+
 export function rectCoast(cx: number, cz: number, width: number, depth: number): CoastSample[] {
   const r = 0.45;
   const out: CoastSample[] = [];
@@ -67,9 +86,14 @@ function coastsFromModel(model: SceneModel | null): CoastSample[] {
   if (!model) return [{ x: 0, z: 0, radius: TILE_RADIUS }];
   const tiles = model.nodes.filter((n) => n.kind === "tile");
   if (tiles.length === 0) {
-    // step3 R2：通用桌面（surround = sea）用岸台 / 底板矩形当陆地：内铺圆盘，海岸线略带起伏。
+    // step3 R2/R3：通用桌面 surround=sea —— 岸台当陆地；natural 岸用起伏轮廓采样。
     const land = model.nodes.find((n) => n.id === "shore") ?? model.nodes.find((n) => n.id === "board");
-    if (land?.scale) return rectCoast(land.position[0], land.position[2], land.scale[0], land.scale[2]);
+    if (land?.scale) {
+      const natural = (land.tag ?? "").includes(":natural") || land.mesh === "shore-natural";
+      return natural
+        ? naturalCoast(land.position[0], land.position[2], land.scale[0], land.scale[2], Number((land.tag ?? "7").split(":")[0]) || 7)
+        : rectCoast(land.position[0], land.position[2], land.scale[0], land.scale[2]);
+    }
     return [{ x: 0, z: 0, radius: TILE_RADIUS }];
   }
   return tiles.map((n) => ({ x: n.position[0], z: n.position[2], radius: TILE_RADIUS }));
