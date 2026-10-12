@@ -1,11 +1,16 @@
-import { createHash } from "node:crypto";
-import { appendFileSync } from "node:fs";
 import type { BufferAttribute, BufferGeometry, InstancedMesh } from "three";
 import { describe, expect, it } from "vitest";
 import { dressingInputs } from "./hex-dressing";
 import { beginnerSceneInput } from "./terrain-dressing.fixture";
 import { createTerrainPropLayer } from "./terrain-props";
 import type { RenderTierId } from "./tiers";
+
+// tsconfig has no @types/node (browser lib only); load node builtins untyped at runtime.
+type NodeHash = { update(data: string | Uint8Array): NodeHash; digest(enc: "hex"): string };
+declare const process: { env: Record<string, string | undefined> };
+const nodeId = (name: string) => `node:${name}`;
+const { createHash } = (await import(/* @vite-ignore */ nodeId("crypto"))) as { createHash(alg: string): NodeHash };
+const { appendFileSync } = (await import(/* @vite-ignore */ nodeId("fs"))) as { appendFileSync(path: string, data: string): void };
 
 /**
  * LOD-high: medium / low prop meshes must stay byte-identical to the pre-LOD build (0914ebf).
@@ -31,11 +36,11 @@ function digestLayer(tier: RenderTierId, castShadow: boolean): string {
     for (const name of Object.keys(geometry.attributes).sort()) {
       const attr = geometry.attributes[name] as BufferAttribute;
       hash.update(`${name}:${attr.itemSize}:`);
-      hash.update(Buffer.from((attr.array as Float32Array).buffer.slice(0)));
+      hash.update(new Uint8Array((attr.array as Float32Array).buffer.slice(0)));
     }
-    if (geometry.index) hash.update(Buffer.from((geometry.index.array as Uint16Array).buffer.slice(0)));
-    hash.update(Buffer.from(mesh.instanceMatrix.array.buffer.slice(0)));
-    if (mesh.instanceColor) hash.update(Buffer.from(mesh.instanceColor.array.buffer.slice(0)));
+    if (geometry.index) hash.update(new Uint8Array((geometry.index.array as Uint16Array).buffer.slice(0)));
+    hash.update(new Uint8Array(mesh.instanceMatrix.array.buffer.slice(0)));
+    if (mesh.instanceColor) hash.update(new Uint8Array(mesh.instanceColor.array.buffer.slice(0)));
   }
   layer.dispose();
   return hash.digest("hex");
