@@ -3,7 +3,7 @@
  * LicenseRef-GoDesk-Original）。取代 #138 的灰色平石板（cliff 节点）、灰盒港口（port）与船（ship）。
  *
  * draw call（不含阴影 pass）：岩壁 1 + 岸石 1 + 码头 1 + 港口牌 1 + 帆船 1 = 5，与档位无关
- * （low 档岸石减半、帆船保留但不投影）。high 在同岸石 InstancedMesh 内加断续礁石簇 + 簇间贴崖稀疏立石；崖脚湿暗加深（无额外 draw call）。
+ * （low 档岸石减半、帆船保留但不投影）。high 在同岸石 InstancedMesh 内加断续礁石簇 + 簇间贴崖稀疏立石；崖脚湿暗加深；码头桩柱水线湿脚（无额外 draw call）。
  */
 import {
   BufferAttribute,
@@ -482,7 +482,11 @@ function shoreStoneGeometry(): BufferGeometry {
 }
 
 /** 码头：木栈板 + 横梁 + 4 根桩 + 牌柱（沿 +Z 伸出，原点在岸边）。 */
-function dockGeometry(length = 0.62): BufferGeometry {
+/**
+ * 木码头：甲板 + 梁 + 四桩 + 牌柱。wetFoot（0..1）只加深水线附近桩柱顶点色（码头 base y=0.1，
+ * 水面 WATER_Y），不改几何外形；high=1 · medium≈0.32 · low=0。
+ */
+export function dockGeometry(length = 0.62, wetFoot = 0): BufferGeometry {
   const parts: BufferGeometry[] = [];
   const planks = 6;
   for (let i = 0; i < planks; i += 1) {
@@ -496,7 +500,27 @@ function dockGeometry(length = 0.62): BufferGeometry {
   }
   // 牌柱（牌面本身是单独的广告牌 InstancedMesh）。
   parts.push(paint(place(new CylinderGeometry(0.016, 0.018, 0.36, 6), 0.1, 0.17, length - 0.02), "#4f3824"));
-  return merged(parts);
+  const g = merged(parts);
+  if (wetFoot > 0) applyPierWetFoot(g, wetFoot);
+  return g;
+}
+
+/** Darken pier post verts near / below waterline only (deck & beams stay dry). */
+function applyPierWetFoot(g: BufferGeometry, strength: number): void {
+  const waterLocal = WATER_Y - 0.1; // docksFor base[1] === 0.1
+  const dryAbove = -0.05; // deck / beams / sign post sit above this
+  const pos = g.getAttribute("position");
+  const col = g.getAttribute("color");
+  if (!pos || !col) return;
+  for (let i = 0; i < pos.count; i += 1) {
+    const y = pos.getY(i);
+    if (y > dryAbove) continue;
+    // 0 at dryAbove, 1 around waterLocal − 0.06 (submerged foot)
+    const t = Math.min(1, Math.max(0, (dryAbove - y) / (dryAbove - (waterLocal - 0.06))));
+    const k = 1 - strength * (0.28 + 0.42 * t);
+    col.setXYZ(i, col.getX(i) * k, col.getY(i) * k, col.getZ(i) * (0.96 + 0.04 * k));
+  }
+  col.needsUpdate = true;
 }
 
 /** 小帆船：船体 + 甲板 + 桅杆 + 三角帆 + 小旗（船头朝 +Z）。 */
@@ -565,7 +589,9 @@ export function createIslandLayer(): IslandLayer {
       );
   };
   const stoneGeom = shoreStoneGeometry();
-  const dockGeom = dockGeometry();
+  const dockGeomDry = dockGeometry(0.62, 0);
+  const dockGeomMed = dockGeometry(0.62, 0.32);
+  const dockGeomHigh = dockGeometry(0.62, 1);
   const boatGeom = boatGeometry();
   const signGeom = new CircleGeometry(SIGN_RADIUS, 28);
   const m = new Matrix4();
@@ -697,6 +723,7 @@ export function createIslandLayer(): IslandLayer {
       // 码头 + 港口牌。
       dockList = docksFor(ports);
       if (dockList.length > 0) {
+        const dockGeom = tier === "high" ? dockGeomHigh : tier === "medium" ? dockGeomMed : dockGeomDry;
         const docks = new InstancedMesh(dockGeom, vertexMat, dockList.length);
         const sg = signGeom.clone();
         const cells = new Float32Array(dockList.length * 2);
@@ -756,7 +783,7 @@ export function createIslandLayer(): IslandLayer {
     },
     dispose() {
       clear();
-      for (const g of [stoneGeom, dockGeom, boatGeom, signGeom]) g.dispose();
+      for (const g of [stoneGeom, dockGeomDry, dockGeomMed, dockGeomHigh, boatGeom, signGeom]) g.dispose();
       wallGeom?.dispose();
       wallGeom = null;
       for (const mat of [vertexMat, rockMat, signMat]) mat.dispose();
