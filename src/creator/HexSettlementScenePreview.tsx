@@ -8,13 +8,16 @@ const LazySceneHost = lazy(async () => {
 
 /**
  * Non-interactive 3D hex island for PlayablePreview / ReplayView (G3D-18).
+ * Passes through importedModels so /play shows project-imported GLBs (#160 follow-up).
  */
 export function HexSettlementScenePreview({
   hexIsland,
   ariaLabel = "汐屿六角岛",
+  importedModels,
 }: {
   hexIsland: HexSettlementBoardState;
   ariaLabel?: string;
+  importedModels?: ReadonlyArray<{ id: string; url: string; title?: string }>;
 }) {
   return (
     <div
@@ -28,6 +31,7 @@ export function HexSettlementScenePreview({
             ariaLabel={ariaLabel}
             className="room-g3d-scene-host"
             hexSettlement={hexIsland}
+            importedModels={importedModels}
             interactive={false}
           />
         </Suspense>

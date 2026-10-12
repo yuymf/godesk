@@ -289,9 +289,25 @@ export function isPublicSharePage(url: URL) {
 export function isPublicShareApi(request: Request) {
   const url = new URL(request.url);
   if (request.method === "GET") {
+    if (
+      /^\/api\/projects\/[^/]+$/.test(url.pathname) &&
+      (url.searchParams.get("view") === "imported-assets" ||
+        url.searchParams.get("view") === "imported-blob")
+    ) {
+      return true;
+    }
     return /^\/api\/(?:builds|sessions|replays)\/[^/]+$/.test(url.pathname) ||
       /^\/api\/sessions\/[^/]+\/events$/.test(url.pathname);
   }
   return /^\/api\/sessions\/[^/]+\/(?:seats|intents|feedback)$/.test(url.pathname) &&
     request.method === "POST";
+}
+
+/** Guest-readable imported asset views (metadata list + GLB blob). */
+export function isImportedProjectShareApi(request: Request) {
+  if (request.method !== "GET") return false;
+  const url = new URL(request.url);
+  if (!/^\/api\/projects\/[^/]+$/.test(url.pathname)) return false;
+  const view = url.searchParams.get("view");
+  return view === "imported-assets" || view === "imported-blob";
 }

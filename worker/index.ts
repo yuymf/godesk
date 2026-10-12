@@ -17,8 +17,9 @@ import {
   shareSecret,
   shareTokenFromUrl,
   verifyShareToken,
+  type ShareCapability,
 } from "./share-capability";
-import { projectApi, isPublicShareApi, isPublicSharePage } from "./project-routes";
+import { projectApi, isPublicShareApi, isPublicSharePage, isImportedProjectShareApi } from "./project-routes";
 import { assetServerApi, isAssetServerApi } from "./asset-server";
 import { error, type StoredPlaytestLink } from "./project-operations";
 
@@ -47,6 +48,36 @@ async function mcpScopes(request: Request) {
   return mutates ? ["godesk:read", "godesk:write"] : ["godesk:read"];
 }
 
+
+async function shareAllowsImportedProject(
+  env: Env,
+  capability: ShareCapability,
+  projectId: string,
+  alreadyMatched: boolean,
+) {
+  if (alreadyMatched || capability.project === projectId) return true;
+  const stub = env.CREATOR_PROJECTS.getByName(capability.c);
+  if (capability.room) {
+    const response = await stub.fetch(
+      `https://projects.internal/sessions/${capability.room}`,
+    );
+    if (response.ok) {
+      const session = await response.json<{ projectId?: string }>();
+      if (session.projectId === projectId) return true;
+    }
+  }
+  if (capability.build) {
+    const response = await stub.fetch(
+      `https://projects.internal/builds/${capability.build}`,
+    );
+    if (response.ok) {
+      const build = await response.json<{ projectId?: string }>();
+      if (build.projectId === projectId) return true;
+    }
+  }
+  return false;
+}
+
 export default {
   async fetch(request, env, ctx) {
     const incoming = new URL(request.url);
@@ -60,7 +91,7 @@ export default {
     const shareCapability = shareToken
       ? await verifyShareToken(shareToken, shareSecret(env, url.hostname))
       : null;
-    const shareResource = resourceKindFromPath(url.pathname);
+    const shareResource = resourceKindFromPath(url.pathname, url.searchParams);
     const validShare = Boolean(
       shareCapability &&
       shareResource &&
@@ -81,6 +112,23 @@ export default {
         publicShareUrl(`/room/${playtestLink.sessionId}`, url.origin, shareToken!, mount),
         302,
       );
+    }
+    // Share guests: imported GLB list/blob for the bound project (GoDesk ② #160 follow-up).
+    // New tokens carry `project`; legacy room/build tokens resolve projectId via DO lookup.
+    if (shareCapability && shareToken && isImportedProjectShareApi(routed)) {
+      const projectId = url.pathname.match(/^\/api\/projects\/([^/]+)$/)?.[1];
+      if (projectId) {
+        const allowed = await shareAllowsImportedProject(
+          env,
+          shareCapability,
+          projectId,
+          validShare && shareResource?.kind === "project" && shareResource.resourceId === projectId,
+        );
+        if (allowed) {
+          return projectApi(routed, env, shareCapability.c, "oauth");
+        }
+        return error("分享链接无效或已失效，无法打开这个导入资产。", 401);
+      }
     }
     // Valid share= → public guest access (ADR 0010).
     if (

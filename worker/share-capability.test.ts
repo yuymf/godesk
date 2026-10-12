@@ -62,6 +62,18 @@ describe("share capability", () => {
       kind: "try",
       resourceId: "project_1",
     });
+    const importedParams = new URLSearchParams("view=imported-assets");
+    expect(resourceKindFromPath("/api/projects/project_1", importedParams)).toEqual({
+      kind: "project",
+      resourceId: "project_1",
+    });
+    expect(resourceKindFromPath("/api/projects/project_1", new URLSearchParams("view=sources"))).toBeNull();
+    expect(capabilityMatches({
+      v: 1,
+      c: "creator-a",
+      project: "project_1",
+      room: "room_1",
+    }, "project", "project_1")).toBe(true);
   });
 });
 

@@ -15,12 +15,13 @@ export type StoredSharedSession = Omit<SharedSession, "sessionUrl" | "replayUrl"
 };
 export type StoredPlaytestLink = Omit<PlaytestLink, "url">;
 
-type BuildLike = { id: string };
+type BuildLike = { id: string; projectId?: string };
 type PlaytestLike = { replayId: string };
 type SessionLike = {
   id: string;
   buildId: string;
   replayId: string;
+  projectId?: string;
   seats?: Array<{ seat: number; displayName?: string }>;
 };
 type PlaytestLinkLike = {
@@ -59,7 +60,10 @@ export async function publicBuild<T extends BuildLike>(
     }
   }
   const token = creatorId && secret
-    ? await signedShareToken(secret, creatorId, { build: build.id })
+    ? await signedShareToken(secret, creatorId, {
+        build: build.id,
+        ...(build.projectId ? { project: build.projectId } : {}),
+      })
     : null;
   return {
     ...build,
@@ -98,6 +102,7 @@ export async function publicSession<T extends SessionLike>(
     room: session.id,
     build: session.buildId,
     replay: session.replayId,
+    ...(session.projectId ? { project: session.projectId } : {}),
   });
   return {
     ...session,

@@ -3,7 +3,7 @@ import { base64UrlToBytes, bytesToBase64Url } from "./base64url";
 
 const encoder = new TextEncoder();
 
-type ShareResourceKind = "room" | "build" | "replay" | "try";
+type ShareResourceKind = "room" | "build" | "replay" | "try" | "project";
 
 export interface ShareCapability {
   v: 1;
@@ -95,20 +95,40 @@ export function capabilityMatches(
   if (kind === "room") return capability.room === resourceId;
   if (kind === "build") return capability.build === resourceId;
   if (kind === "replay") return capability.replay === resourceId;
+  // "try" (playtest link) and "project" (imported-assets/blob) bind to capability.project
   return capability.project === resourceId;
 }
 
-export function resourceKindFromPath(pathname: string): {
+export function resourceKindFromPath(
+  pathname: string,
+  searchParams?: URLSearchParams,
+): {
   kind: ShareResourceKind;
   resourceId: string;
 } | null {
   const room = pathname.match(/^\/(?:room|api\/sessions)\/([^/]+)(?:\/.*)?$/);
-  if (room) return { kind: "room", resourceId: room[1] };
+  if (room) return { kind: "room", resourceId: room[1]! };
   const build = pathname.match(/^\/(?:play|api\/builds)\/([^/]+)$/);
-  if (build) return { kind: "build", resourceId: build[1] };
+  if (build) return { kind: "build", resourceId: build[1]! };
   const replay = pathname.match(/^\/(?:replay|api\/replays)\/([^/]+)$/);
-  if (replay) return { kind: "replay", resourceId: replay[1] };
+  if (replay) return { kind: "replay", resourceId: replay[1]! };
   const project = pathname.match(/^\/try\/([^/]+)$/);
-  if (project) return { kind: "try", resourceId: project[1] };
+  if (project) return { kind: "try", resourceId: project[1]! };
+  // Share guests may read imported GLB metadata/blobs for the bound project only.
+  const imported = pathname.match(/^\/api\/projects\/([^/]+)$/);
+  if (imported) {
+    const view = searchParams?.get("view");
+    if (view === "imported-assets" || view === "imported-blob") {
+      return { kind: "project", resourceId: imported[1]! };
+    }
+  }
   return null;
+}
+
+/** True when a share capability is allowed to read imported assets for projectId. */
+export function capabilityAllowsProject(
+  capability: ShareCapability,
+  projectId: string,
+) {
+  return capability.project === projectId;
 }
