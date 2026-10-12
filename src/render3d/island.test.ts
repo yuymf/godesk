@@ -2,7 +2,7 @@ import { PerspectiveCamera } from "three";
 import { describe, expect, it } from "vitest";
 import { dressingInputs, tileCenter, vertexWorld, withoutReplacedNodes } from "./hex-dressing";
 import { mapHexSettlementToScene } from "./mappers/hex-settlement";
-import { SIGN_KINDS, SKIRT_BOTTOM_Y, SKIRT_TOP_Y, coastEdges, coastWallGeometry, createIslandLayer, docksFor, outerTiles, signCell } from "./island";
+import { HEX_LAYOUT_RADIUS, SIGN_KINDS, SKIRT_BOTTOM_Y, SKIRT_TOP_Y, WATER_Y, coastBeachStepsGeometry, coastEdges, coastWallGeometry, createIslandLayer, docksFor, outerTiles, signCell } from "./island";
 import { beginnerSceneInput } from "./terrain-dressing.fixture";
 
 const input = beginnerSceneInput();
@@ -39,6 +39,26 @@ describe("G3D-ISLAND island + coast", () => {
     geom.dispose();
   });
 
+
+  it("builds shallow beach step shelves along the coast (2 tiers, above/near waterline)", () => {
+    const geom = coastBeachStepsGeometry(tiles);
+    const pos = geom.getAttribute("position");
+    // 30 edges × 3–4 segs × 2 tiers × 2 faces × 6 verts
+    expect(pos.count).toBeGreaterThanOrEqual(30 * 3 * 2 * 2 * 6);
+    expect(pos.count).toBeLessThanOrEqual(30 * 4 * 2 * 2 * 6);
+    let minY = Infinity, maxY = -Infinity, maxR = 0;
+    for (let i = 0; i < pos.count; i += 1) {
+      minY = Math.min(minY, pos.getY(i));
+      maxY = Math.max(maxY, pos.getY(i));
+      maxR = Math.max(maxR, Math.hypot(pos.getX(i), pos.getZ(i)));
+    }
+    expect(maxY).toBeGreaterThan(WATER_Y);
+    expect(minY).toBeLessThan(WATER_Y);
+    expect(maxY).toBeLessThan(SKIRT_TOP_Y);
+    expect(maxR).toBeGreaterThan(HEX_LAYOUT_RADIUS); // extends past hex rim
+    geom.dispose();
+  });
+
   it("docks point outward from the island, one per port", () => {
     const docks = docksFor(ports);
     expect(docks).toHaveLength(ports.length);
@@ -63,7 +83,12 @@ describe("G3D-ISLAND island + coast", () => {
     const layer = createIslandLayer();
     layer.sync(tiles, ports, "high", true);
     const stats = layer.stats();
-    expect(stats.meshes).toBeLessThanOrEqual(6);
+    expect(stats.meshes).toBeLessThanOrEqual(7);
+    expect(layer.group.children.some((c) => c.name === "island:beach-steps")).toBe(true);
+    layer.sync(tiles, ports, "medium", true);
+    expect(layer.group.children.some((c) => c.name === "island:beach-steps")).toBe(false);
+    layer.sync(tiles, ports, "high", true);
+
     expect(layer.docks()).toHaveLength(ports.length);
     const camera = new PerspectiveCamera();
     camera.position.set(0, 9, 12);
