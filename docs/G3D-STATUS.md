@@ -13,7 +13,7 @@
 | 任务范围 | G3D-01 至 G3D-27；里程碑 M0–M5；人日上限 91 |
 | 代码基线 | `yuymf/godesk` `main` @ `f3ea418`（#148 G3D-JUDGE `f3ea418`；#153 资产搜索 `1d1f45b`；#145 G3D-ART-3 `5b585ec`；#143 `0526d16`；#144 G3D-17 预备 `1884e19`；#141 G3D-04c `0bda43e`；#138 G3D-13 `19f212d`；#147 CI 瘦身 `45cd590`；#150 公开前清理 `f79fcc7`；#142 G3D-ART-2 `45a5a1c`） |
 | 状态文件维护人 | 劳埃德(工程) / Track B（素材） |
-| 最近更新 | 2026-10-13（Asia/Shanghai）· pier-wet-foot #173：码头水线湿脚（draft，叠 #172） |
+| 最近更新 | 2026-10-13（Asia/Shanghai）· cliff-midband：崖壁中段岩色（draft，叠 #173） |
 
 ## 硬约束（三条）
 
@@ -100,6 +100,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | shore-foam（岸线白沫） | Track C | `feat/shore-foam` [#171](https://github.com/yuymf/godesk/pull/171)（叠 #170） | 水着色器岸线白沫 fringe（high；medium 淡；low 关）；无 +drawCall；**draft，不合入** |
 | shore-wave-ridge（近岸 swell） | Track C | `feat/shore-wave-ridge` [#172](https://github.com/yuymf/godesk/pull/172)（叠 #171） | 距离场门控近岸 swell / soft ridge；shader-only；**draft，不合入** |
 | pier-wet-foot（码头湿脚） | Track C | `feat/pier-wet-foot` [#173](https://github.com/yuymf/godesk/pull/173)（叠 #172） | 码头桩柱水线湿脚（high；medium 淡；low 关）；无 +drawCall；**draft，不合入** |
+| cliff-midband（崖壁中段） | Track C | `feat/cliff-midband`（叠 #173） | 崖壁中段岩色加深（high；medium 淡；low 关）；无新 mesh / drawCall；**draft，不合入** |
 
 ## 已知限制
 
@@ -148,6 +149,7 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
+| `feat/cliff-midband` | （待开 draft） | 崖壁中段岩色；base=`feat/pier-wet-foot` @6392ee4 | draft · 不合入 |
 | `feat/pier-wet-foot` | [#173](https://github.com/yuymf/godesk/pull/173) | 码头桩柱水线湿脚；base=`feat/shore-wave-ridge` @86e8eca | draft · 不合入 |
 | `feat/shore-wave-ridge` | [#172](https://github.com/yuymf/godesk/pull/172) | 近岸 swell / soft ridge（shader-only）；base=`feat/shore-foam` @1f875ce | draft · 不合入 |
 | `feat/shore-foam` | [#171](https://github.com/yuymf/godesk/pull/171) | 岸线白沫 fringe（shader-only）；base=`feat/shore-steps` @af9314b | draft · 不合入 |
@@ -231,3 +233,4 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 | 2026-10-11 | STATUS 对账 gh：基线 → `f3ea418`；回填 #138 `19f212d` / #141 `0bda43e` / #144 `1884e19` / #145 `5b585ec` / #148 `f3ea418` / #153 `1d1f45b`；删除 #139 / #142 重复行；进行中、开着的 PR 清空；阻塞移除 G3D-13；仓库公开项勾选（#150 `f79fcc7`，PUBLIC）；记 #146 closed 未合入 | 劳埃德(工程) |
 | 2026-10-11 | **step3 同品质 达标**：铁脉（network-route-v1 铁路，插件链从零生成）R5 ≈ 9.1，大主管裁定 ≥ 9；#161 转 ready（不合入）。非阻塞差距：底板侧面到岸仍有一级小台阶；地面斑块为平贴片。公开证据：[#161 评论](https://github.com/yuymf/godesk/pull/161#issuecomment-6108003334) | step3 |
 | 2026-10-12 | shore-wave-ridge #172 draft：近岸 swell / soft ridge（距离场门控；shader-only；叠 #171）；证据 `/workspace/g3d-evidence/godesk-2026-10-12/shore-wave-ridge/`；不合入 | Track C |
+| 2026-10-13 | cliff-midband draft：崖壁中段岩色加深（叠 #173）；证据 `/workspace/g3d-evidence/godesk-2026-10-12/cliff-midband/`；不合入 | Track C |
