@@ -467,16 +467,17 @@ export function coastBeachStepsGeometry(tiles: readonly IslandTile[]): BufferGeo
   const colors: number[] = [];
   const hash01 = (n: number) => ((Math.sin(n * 12.9898 + 78.233) * 43758.5453) % 1 + 1) % 1;
   // 两级台阶：上 = 近崖干沙滩；下 = 入水湿浅滩。y 相对 WATER_Y。
+  // 起点必须在崖脚 flare 之外（水线处 cliff out ≈0.05–0.2），否则台阶被岩壁吞掉。
   const tiers = [
-    { y: WATER_Y + 0.055, in0: 0.02, out1: 0.20, rise: 0.055, dry: 1 },
-    { y: WATER_Y - 0.02, in0: 0.18, out1: 0.42, rise: 0.05, dry: 0 },
+    { y: WATER_Y + 0.11, in0: 0.22, out1: 0.42, rise: 0.09, dry: 1 },
+    { y: WATER_Y + 0.03, in0: 0.40, out1: 0.68, rise: 0.07, dry: 0.35 },
   ] as const;
   const pushVert = (x: number, y: number, z: number, dry: number, shade: number) => {
     positions.push(x, y, z);
     // 干沙偏暖米，湿沙偏褐灰青；shade 0..1 从内到外略暗。
-    const r = (0.78 + dry * 0.1 - shade * 0.08) * (0.92 + dry * 0.08);
-    const g = (0.68 + dry * 0.08 - shade * 0.06) * (0.9 + dry * 0.06);
-    const b = (0.48 + dry * 0.04 - shade * 0.02 + (1 - dry) * 0.06) * 0.9;
+    const r = 0.82 + dry * 0.12 - shade * 0.1;
+    const g = 0.70 + dry * 0.1 - shade * 0.08;
+    const b = 0.48 + dry * 0.06 - shade * 0.04 + (1 - dry) * 0.08;
     colors.push(r, g, b);
   };
   const quad = (
