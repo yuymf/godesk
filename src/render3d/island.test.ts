@@ -2,7 +2,7 @@ import { InstancedMesh, Matrix4, PerspectiveCamera, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 import { dressingInputs, tileCenter, vertexWorld, withoutReplacedNodes } from "./hex-dressing";
 import { mapHexSettlementToScene } from "./mappers/hex-settlement";
-import { HEX_LAYOUT_RADIUS, SIGN_KINDS, SKIRT_BOTTOM_Y, SKIRT_TOP_Y, WATER_Y, coastEdges, coastWallGeometry, createIslandLayer, docksFor, outerTiles, reefClusterSize, reefEdgeMask, signCell } from "./island";
+import { SIGN_KINDS, SKIRT_BOTTOM_Y, SKIRT_TOP_Y, WATER_Y, coastEdges, coastWallGeometry, createIslandLayer, docksFor, outerTiles, reefClusterSize, reefEdgeMask, signCell } from "./island";
 import { beginnerSceneInput } from "./terrain-dressing.fixture";
 
 const input = beginnerSceneInput();
