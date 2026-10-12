@@ -20,7 +20,8 @@ export function ExampleArtwork({ exampleId }: { exampleId: DefaultExampleId }) {
           <source srcSet="/lobby/tidewell-hero-1200.webp" type="image/webp" />
           <img
             alt=""
-            decoding="async"
+            // No decoding="async": Chromium then defers decoding an off-viewport poster until it nears
+            // the viewport, so `?examples=all` (poster below the fold) painted the #1a4a6e placeholder.
             fetchPriority="high"
             height={675}
             src="/lobby/tidewell-hero-1200.webp"

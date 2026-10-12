@@ -22,6 +22,31 @@ test.describe("G3D-17 Tidewell homepage showcase (default on)", () => {
     expect(src).toMatch(/tidewell-hero-\d+\.webp$/);
   });
 
+  test("更多示例 lists 汐屿 first and its poster paints in a full-page capture", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/?examples=all");
+    const gallery = page.getByRole("region", { name: "先玩一局现成的" });
+    await expect(gallery.getByRole("button", { name: "先玩这一局" })).toHaveCount(4);
+    await expect(gallery.locator("article h3").first()).toHaveText("汐屿");
+    const poster = gallery.locator(".example-artwork-tidewell-isles img");
+    await expect.poll(() => poster.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+    // Regression: decoding="async" left the below-fold poster undecoded in full-page captures.
+    expect(await poster.getAttribute("decoding")).not.toBe("async");
+    await page.waitForLoadState("networkidle");
+    const shot = await page.screenshot({ fullPage: true, clip: (await poster.boundingBox())! });
+    const colours = await page.evaluate(async (b64) => {
+      const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
+      const canvas = new OffscreenCanvas(48, 27);
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(bmp, 0, 0, 48, 27);
+      const data = ctx.getImageData(0, 0, 48, 27).data;
+      const set = new Set<string>();
+      for (let i = 0; i < data.length; i += 4) set.add(`${data[i] >> 3},${data[i + 1] >> 3},${data[i + 2] >> 3}`);
+      return set.size;
+    }, shot.toString("base64"));
+    expect(colours).toBeGreaterThan(50);
+  });
+
   test("desktop + iPhone full-chrome evidence screenshots", async ({ page }, testInfo) => {
     test.skip(!evidenceDir, "set GODESK_E2E_EVIDENCE_DIR to capture evidence");
     await mkdir(evidenceDir!, { recursive: true });

@@ -73,6 +73,12 @@ export function isDefaultExampleId(value: unknown): value is DefaultExampleId {
 }
 
 /** Production homepage always shows the 汐屿 showcase (G3D-17). */
+/** 「更多示例」(`?examples=all`): homepage showcase (汐屿) first, then the rest in catalogue order. */
+export function examplesForAll(): DefaultExample[] {
+  const first = examplesForHomepage();
+  return [...first, ...DEFAULT_EXAMPLES.filter((example) => !first.includes(example))];
+}
+
 export function examplesForHomepage(): DefaultExample[] {
   return HOMEPAGE_SHOWCASE
     .map((id) => DEFAULT_EXAMPLES.find((example) => example.id === id))

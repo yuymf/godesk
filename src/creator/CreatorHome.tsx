@@ -17,6 +17,7 @@ import {
 } from "./composer-draft";
 import {
   DEFAULT_EXAMPLES,
+  examplesForAll,
   examplesForHomepage,
   type DefaultExampleId,
 } from "./default-examples";
@@ -53,7 +54,7 @@ export function CreatorHome() {
   // G3D-17: homepage stays 汐屿-only; `?examples=all`（「更多示例」）lists every sample on the same page.
   const showAllExamples =
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("examples") === "all";
-  const visibleExamples = showAllExamples ? DEFAULT_EXAMPLES : examplesForHomepage();
+  const visibleExamples = showAllExamples ? examplesForAll() : examplesForHomepage();
 
   useEffect(() => {
     listProjects().then(setProjects).catch((reason: Error) => {
