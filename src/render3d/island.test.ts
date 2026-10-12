@@ -96,6 +96,39 @@ describe("G3D-ISLAND island + coast", () => {
     plain.dispose(); wet.dispose();
   });
 
+  it("midBandDark darkens cliff mid verts; top rim stays brighter", () => {
+    const plain = coastWallGeometry(tiles, { wetFootDark: true });
+    const mid = coastWallGeometry(tiles, { wetFootDark: true, midBandDark: 1 });
+    const faint = coastWallGeometry(tiles, { wetFootDark: true, midBandDark: 0.34 });
+    const y0 = plain.getAttribute("position");
+    const c0 = plain.getAttribute("color");
+    const c1 = mid.getAttribute("color");
+    const c2 = faint.getAttribute("color");
+    const tOf = (i: number) => {
+      const y = y0.getY(i);
+      return (SKIRT_TOP_Y - y) / (SKIRT_TOP_Y - SKIRT_BOTTOM_Y);
+    };
+    let mid0 = 0, mid1 = 0, mid2 = 0, midN = 0;
+    let rim0 = 0, rim1 = 0, rimN = 0;
+    for (let i = 0; i < y0.count; i += 1) {
+      const t = tOf(i);
+      const s0 = c0.getX(i) + c0.getY(i) + c0.getZ(i);
+      const s1 = c1.getX(i) + c1.getY(i) + c1.getZ(i);
+      const s2 = c2.getX(i) + c2.getY(i) + c2.getZ(i);
+      if (t > 0.10 && t < 0.30) { mid0 += s0; mid1 += s1; mid2 += s2; midN += 1; }
+      if (t < 0.05) { rim0 += s0; rim1 += s1; rimN += 1; }
+    }
+    expect(midN).toBeGreaterThan(50);
+    expect(rimN).toBeGreaterThan(20);
+    expect(mid1 / midN).toBeLessThan(mid0 / midN);
+    expect(mid2 / midN).toBeGreaterThan(mid1 / midN);
+    expect(mid2 / midN).toBeLessThan(mid0 / midN);
+    // Rim largely unchanged (mid band gate starts ~0.06).
+    expect(Math.abs(rim1 / rimN - rim0 / rimN)).toBeLessThan(0.05);
+    expect(plain.getAttribute("position").count).toBe(mid.getAttribute("position").count);
+    plain.dispose(); mid.dispose(); faint.dispose();
+  });
+
   it("pier wetFoot darkens post verts near waterline; deck stays dry", () => {
     const dry = dockGeometry(0.62, 0);
     const wet = dockGeometry(0.62, 1);
