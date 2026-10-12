@@ -153,6 +153,19 @@ export function playabilityFloor(ruleSystem: RuleSystem): PlayabilityFloorReadin
       return { status: "failed", reason: "auction-bidding-v1 需要双人桌面与出价/放弃动作。", genre, kernelType };
     }
   }
+  if (ruleSystem.generation?.requestedMechanics?.includes("auto-battler") &&
+      kernelType !== "auto-battler-v1") {
+    return { status: "failed", reason: "潮阵/自走棋来源需要 auto-battler-v1 的商店买入与自动战斗环。", genre, kernelType };
+  }
+  if (kernelType === "auto-battler-v1") {
+    const hasShop = ruleSystem.actions.some((action) => action.id === "buy") &&
+      ruleSystem.actions.some((action) => action.id === "ready_place");
+    if (ruleSystem.playSurface.kind !== "table" || !hasShop ||
+        ruleSystem.runtimeSupport.kernel.playerCount !== 2) {
+      return { status: "failed", reason: "auto-battler-v1 需要双人桌面与购买/锁定阵容动作。", genre, kernelType };
+    }
+    // Intentionally NOT in SHAREABLE_KERNELS yet — decision-density share gate TBD.
+  }
   const required = genre === "generic" ? null : GENRE_KERNEL[genre];
   if (required) {
     const allowed = typeof required === "string" ? [required] : required;

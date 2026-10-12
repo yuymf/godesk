@@ -382,6 +382,9 @@ type RuntimeConfiguration =
     }
   | Extract<ProjectChangeOperation, { op: "configure_auction_bidding" }> & {
       op: "configure_auction_bidding";
+    }
+  | Extract<ProjectChangeOperation, { op: "configure_auto_battler" }> & {
+      op: "configure_auto_battler";
     };
 
 function configureDedicatedKernel(
@@ -389,7 +392,7 @@ function configureDedicatedKernel(
   op: string,
   kernel: Extract<
     Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
-    { type: "harbor-voyage-v1" | "worker-placement-v1" | "hidden-role-v1" | "hand-play-v1" | "conversation-relay-v1" | "disc-flipping-v1" | "hex-settlement-v1" | "network-route-v1" | "auction-bidding-v1" }
+    { type: "harbor-voyage-v1" | "worker-placement-v1" | "hidden-role-v1" | "hand-play-v1" | "conversation-relay-v1" | "disc-flipping-v1" | "hex-settlement-v1" | "network-route-v1" | "auction-bidding-v1" | "auto-battler-v1" }
   >,
   unsupported: string[],
   config: unknown,
@@ -554,6 +557,24 @@ function configureDedicatedKernel(
       playSurface: { kind: "table" as const, layout: "auction-table", regions: [{ id: "lot", name: "拍品", description: "公开叫价与筹码" }] },
       stages: [{ id: "bidding", name: "竞价" }, { id: "ended", name: "结算" }],
       outcomes: [{ id: "award", name: "最高有效出价获得拍品" }, { id: "unsold", name: "无人出价则流拍" }],
+    } : kernel.type === "auto-battler-v1" ? {
+      actions: [
+        { id: "buy", label: "购买", description: "从商店购买单位到备战席。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "sell", label: "出售", description: "出售备战席单位换取金币。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "refresh", label: "刷新商店", description: "支付费用刷新商店。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "ready_shop", label: "准备完毕", description: "结束购买阶段。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "place", label: "上阵", description: "从备战席放到己方半场。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "recall", label: "撤回", description: "从棋盘撤回备战席。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "ready_place", label: "锁定阵容", description: "锁定后进入自动战斗。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+      ],
+      participants: { ...record.ruleSystem.participants, min: 2, max: 2, default: 2 },
+      playSurface: { kind: "table" as const, layout: "tide-arena", regions: [
+        { id: "shop", name: "商店", description: "购买单位" },
+        { id: "bench", name: "备战席", description: "未上阵单位" },
+        { id: "board", name: "战场", description: "己方半场上阵" },
+      ] },
+      stages: [{ id: "shop", name: "商店" }, { id: "place", name: "布阵" }, { id: "ended", name: "终局" }],
+      outcomes: [{ id: "hp", name: "对手生命值耗尽者获胜" }],
     } : kernel.type === "network-route-v1" ? {
       actions: [
         {
@@ -704,6 +725,12 @@ function configureRuntimeKernel(
   if (configuration.op === "configure_auction_bidding") {
     configureDedicatedKernel(record, configuration.op, {
       type: "auction-bidding-v1", playerCount: configuration.config.playerCount,
+    }, configuration.config.unsupported?.map((item) => item.trim()) ?? [], configuration.config, affectedEntities);
+    return;
+  }
+  if (configuration.op === "configure_auto_battler") {
+    configureDedicatedKernel(record, configuration.op, {
+      type: "auto-battler-v1", playerCount: configuration.config.playerCount,
     }, configuration.config.unsupported?.map((item) => item.trim()) ?? [], configuration.config, affectedEntities);
     return;
   }
@@ -1577,6 +1604,10 @@ const RUNTIME_HANDLERS: {
       validUnsupported(config.unsupported),
   },
   configure_auction_bidding: {
+    validate: (config) => Boolean(config) && typeof config === "object" &&
+      config.playerCount === 2 && validUnsupported(config.unsupported),
+  },
+  configure_auto_battler: {
     validate: (config) => Boolean(config) && typeof config === "object" &&
       config.playerCount === 2 && validUnsupported(config.unsupported),
   },

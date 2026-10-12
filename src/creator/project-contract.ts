@@ -276,6 +276,10 @@ export interface RuleSystem {
           | {
               type: "auction-bidding-v1";
               playerCount: number;
+            }
+          | {
+              type: "auto-battler-v1";
+              playerCount: number;
             };
   };
 }
@@ -624,6 +628,10 @@ export type ProjectChangeOperation =
       config: { playerCount: number; unsupported?: string[] };
     }
   | {
+      op: "configure_auto_battler";
+      config: { playerCount: number; unsupported?: string[] };
+    }
+  | {
       /** G3D-15: partial patch over `presentation.render` (spatial surfaces only). */
       op: "configure_render";
       patch: RenderPatch;
@@ -939,6 +947,62 @@ export interface SessionState {
     passedWithoutBid: number;
     awardedTo: number | null;
     seatOrder: [number, number];
+  };
+  /** Present when the build kernel is auto-battler-v1 (Tide Arena / 潮阵). */
+  autoBattler?: {
+    phase: "shop" | "place" | "ended";
+    round: number;
+    seats: [
+      {
+        gold: number;
+        hp: number;
+        shop: string[];
+        bench: Array<{
+          uid: string;
+          unitId: string;
+          owner: number;
+          atk: number;
+          hp: number;
+          maxHp: number;
+        } | null>;
+        board: Array<{
+          uid: string;
+          unitId: string;
+          owner: number;
+          atk: number;
+          hp: number;
+          maxHp: number;
+        } | null>;
+        ready: boolean;
+        synergies: Array<{ trait: string; count: number; label: string }>;
+      },
+      {
+        gold: number;
+        hp: number;
+        shop: string[];
+        bench: Array<{
+          uid: string;
+          unitId: string;
+          owner: number;
+          atk: number;
+          hp: number;
+          maxHp: number;
+        } | null>;
+        board: Array<{
+          uid: string;
+          unitId: string;
+          owner: number;
+          atk: number;
+          hp: number;
+          maxHp: number;
+        } | null>;
+        ready: boolean;
+        synergies: Array<{ trait: string; count: number; label: string }>;
+      },
+    ];
+    combatLog: Array<Record<string, unknown>>;
+    lastCombat: { winnerSeat: number | null; damage: number } | null;
+    nextUid: number;
   };
 }
 

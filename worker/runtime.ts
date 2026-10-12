@@ -76,6 +76,15 @@ import {
   bindAuctionBiddingFromRuntimeKernel, pickAuctionBiddingBotAction,
   playActionFromAuctionBiddingIntent, type AuctionBiddingGenre,
 } from "../src/runtime/adapters/auction-bidding";
+import {
+  autoBattlerAdapter,
+  autoBattlerToSessionFields,
+  bindAutoBattlerFromRuntimeKernel,
+  pickAutoBattlerBotAction,
+  playActionFromAutoBattlerIntent,
+  sessionAutoBattlerToGenre,
+  type AutoBattlerGenre,
+} from "../src/runtime/adapters/auto-battler";
 
 export type ExecutableRuntime = Extract<
   RuleSystem["runtimeSupport"],
@@ -355,6 +364,14 @@ export function initialSessionState(
     const play = createInitialState(auctionBiddingAdapter,
       bindAuctionBiddingFromRuntimeKernel({ playerCount: runtime.kernel.playerCount }), _seed);
     return auctionBiddingToSessionFields(play);
+  }
+  if (runtime?.kernel.type === "auto-battler-v1") {
+    const play = createInitialState(
+      autoBattlerAdapter,
+      bindAutoBattlerFromRuntimeKernel({ playerCount: runtime.kernel.playerCount }),
+      _seed,
+    );
+    return autoBattlerToSessionFields(play);
   }
   return {
     turn: 0,
@@ -1009,6 +1026,38 @@ export function acceptIntent(
     };
   }
 
+  if (runtime.kernel.type === "auto-battler-v1") {
+    if (state.status !== "active" || !state.autoBattler || intent.seat !== state.activeSeat) return null;
+    const kernelConfig = bindAutoBattlerFromRuntimeKernel({ playerCount: runtime.kernel.playerCount });
+    const playState = {
+      seed,
+      sequence: state.turn,
+      phase: state.autoBattler.phase,
+      activePlayerId: state.activeSeat,
+      playerCount: runtime.kernel.playerCount,
+      status: state.status,
+      winnerId: state.winnerSeat,
+      events: [] as const,
+      genre: sessionAutoBattlerToGenre(state.autoBattler) satisfies AutoBattlerGenre,
+    };
+    const result = applyAction(
+      autoBattlerAdapter,
+      playState,
+      playActionFromAutoBattlerIntent(intent.seat, intent.actionId, intent.payload),
+      kernelConfig,
+    );
+    if (!result.ok) return null;
+    return {
+      sequence,
+      intentId: intent.intentId,
+      seat: intent.seat,
+      actionId: intent.actionId,
+      points: 0,
+      payload: intent.payload,
+      state: autoBattlerToSessionFields(result.state),
+    };
+  }
+
 
   const raceKernel = runtime.kernel;
   const action = raceKernel.actions.find(
@@ -1101,7 +1150,11 @@ export interface BotIntent {
  */
 export function runtimeSupportsBotSeat(runtime: ExecutableRuntime): boolean {
   // step3: network-route-v1 reuses the same bot as fixed-seed bot-playtest (pickNetworkRouteBotAction).
-  return runtime.kernel.type === "hex-settlement-v1" || runtime.kernel.type === "network-route-v1";
+  return (
+    runtime.kernel.type === "hex-settlement-v1" ||
+    runtime.kernel.type === "network-route-v1" ||
+    runtime.kernel.type === "auto-battler-v1"
+  );
 }
 
 /**
@@ -1174,6 +1227,28 @@ export function pickBotIntent(
       ...(bot.payload ? { payload: bot.payload as Record<string, unknown> } : {}),
     };
   }
+  
+  if (runtime.kernel.type === "auto-battler-v1") {
+    if (!state.autoBattler) return null;
+    const playState = {
+      seed,
+      sequence: state.turn,
+      phase: state.autoBattler.phase,
+      activePlayerId: state.activeSeat,
+      playerCount: runtime.kernel.playerCount,
+      status: state.status,
+      winnerId: state.winnerSeat,
+      events: [] as const,
+      genre: sessionAutoBattlerToGenre(state.autoBattler),
+    };
+    const bot = pickAutoBattlerBotAction(playState, seed);
+    return {
+      seat: state.activeSeat,
+      actionId: bot.type,
+      ...(bot.payload ? { payload: bot.payload as Record<string, unknown> } : {}),
+    };
+  }
+
   return null;
 }
 
@@ -1295,6 +1370,36 @@ export function runBotSimulation(
       const accepted = acceptIntent(state, runtime, {
         intentId: `bot_${acceptedActions.length + 1}`, seat: state.activeSeat,
         actionId: bot.type, payload: bot.payload,
+      }, acceptedActions.length + 1, seed);
+      if (!accepted) throw new Error("bot_action_rejected");
+      acceptedActions.push(accepted);
+      state = accepted.state;
+    }
+    if (state.status !== "complete") throw new Error("bot_action_limit");
+    return { initialState, acceptedActions, finalState: state, terminalStatus: "complete" as const };
+  }
+
+  if (runtime.kernel.type === "auto-battler-v1") {
+    let guard = 0;
+    while (state.status === "active" && state.autoBattler && guard < 400) {
+      guard += 1;
+      const playState = {
+        seed,
+        sequence: state.turn,
+        phase: state.autoBattler.phase,
+        activePlayerId: state.activeSeat,
+        playerCount: runtime.kernel.playerCount,
+        status: state.status,
+        winnerId: state.winnerSeat,
+        events: [] as const,
+        genre: sessionAutoBattlerToGenre(state.autoBattler),
+      };
+      const bot = pickAutoBattlerBotAction(playState, seed);
+      const accepted = acceptIntent(state, runtime, {
+        intentId: `bot_${acceptedActions.length + 1}`,
+        seat: state.activeSeat,
+        actionId: bot.type,
+        payload: bot.payload,
       }, acceptedActions.length + 1, seed);
       if (!accepted) throw new Error("bot_action_rejected");
       acceptedActions.push(accepted);

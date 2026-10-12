@@ -267,11 +267,17 @@ export async function runCreatorJob(
         isNonScoreHandLoopCorpus(authoredMaterial);
       // Finite shuffled draw-and-score wins over hand-play genre cues (W4-05).
       // PR12: also bind when requestedMechanics declares hand-play (card/area-control).
+      const autoBattlerRuntimeConfigured =
+        requestedMechanics.includes("auto-battler") &&
+        !requestedMechanics.some((mechanic) =>
+          ["hex-settlement", "disc-flipping", "route-network"].includes(mechanic),
+        );
       const handPlayRuntimeConfigured =
         (sourceGenre === "hand-play" ||
           requestedMechanics.includes("hand-play")) &&
         drawAndScoreRule === null &&
-        !nonScoreHandLoopRefused;
+        !nonScoreHandLoopRefused &&
+        !autoBattlerRuntimeConfigured;
       const harborLikePlacement =
         sourceGenre === "placement" && isHarborLikeCorpus(authoredMaterial);
       const workerPlacementRuntimeConfigured =
@@ -293,6 +299,7 @@ export async function runCreatorJob(
         !requestedMechanics.includes("disc-flipping");
       const auctionBiddingRuntimeConfigured =
         requestedMechanics.includes("auction-bidding") &&
+        !autoBattlerRuntimeConfigured &&
         !requestedMechanics.some((mechanic) => ["hex-settlement", "disc-flipping", "route-network", "hand-play"].includes(mechanic));
       weakGenreScoreRaceRefused =
         sourceGenre === "generic" &&
@@ -354,6 +361,7 @@ export async function runCreatorJob(
         hexSettlementRuntimeConfigured ||
         discFlippingRuntimeConfigured ||
         networkRouteRuntimeConfigured ||
+        autoBattlerRuntimeConfigured ||
         auctionBiddingRuntimeConfigured ||
         hiddenRoleRuntimeConfigured ||
         handPlayRuntimeConfigured ||
@@ -416,6 +424,16 @@ export async function runCreatorJob(
               playerCount: 2,
               unsupported: [
                 "network-route-v1 executes a fixed city graph with alternate-turn route claims and first-to-connect terminal hubs on the public play-kernel; a minimal original route game (no tickets deck / multi-color routes / scoring table).",
+              ],
+            },
+          }
+        : autoBattlerRuntimeConfigured
+        ? {
+            op: "configure_auto_battler" as const,
+            config: {
+              playerCount: 2,
+              unsupported: [
+                "auto-battler-v1 (Tide Arena / 潮阵) runs 2-seat shop→place→seeded combat→HP resolve on the public play-kernel; ★2 merge, multi-player lobbies beyond 2, and sealed/hidden shop economy are unsupported.",
               ],
             },
           }
@@ -958,6 +976,8 @@ export async function runCreatorJob(
           ? "规则结构来自体裁识别；方格翻子、八方向翻转、强制跳过与终盘计分将在批准 Generation Plan 后配置为 disc-flipping-v1（公共 play-kernel 适配器）。"
           : proposedRuntime?.op === "configure_network_route"
           ? "规则结构来自体裁识别；城市图铺线、交替占领路线与连通枢纽获胜将在批准 Generation Plan 后配置为 network-route-v1（公共 play-kernel 适配器；最小原创铺线规则）。"
+          : proposedRuntime?.op === "configure_auto_battler"
+          ? "规则结构来自体裁识别；潮阵两人商店买棋、备战上阵与自动战斗将在批准 Generation Plan 后配置为 auto-battler-v1。"
           : proposedRuntime?.op === "configure_auction_bidding"
           ? "规则结构来自体裁识别；两人公开轮流出价或放弃，最高有效出价获得拍品，将在批准 Generation Plan 后配置为 auction-bidding-v1。"
           : proposedRuntime?.op === "configure_hidden_role"

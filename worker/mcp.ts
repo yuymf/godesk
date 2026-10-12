@@ -690,6 +690,13 @@ const operationSchema = z.discriminatedUnion("op", [
       unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
     }),
   }),
+    z.object({
+    op: z.literal("configure_auto_battler"),
+    config: z.object({
+      playerCount: z.literal(2),
+      unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
+    }),
+  }),
   z.object({
     // G3D-15: partial 3D render patch (preset, camera, lighting, water, materials, bindings, motion, audio).
     op: z.literal("configure_render"),
