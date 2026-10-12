@@ -154,7 +154,7 @@ export function docksFor(ports: readonly IslandPort[], length = 0.62): Dock[] {
  * 其上以减弱透明度叠回 R14 程序岩层 / 竖缝，湿暗崖脚带与顶部苔斑保持原强度（海岸读感不变）。
  * 图片异步到达前先画纯程序版本。
  */
-function drawRock(x: CanvasRenderingContext2D, img: HTMLImageElement | null): void {
+function drawRock(x: CanvasRenderingContext2D, img: HTMLImageElement | null, midBandDark = 0): void {
   const k = img ? 0.35 : 1;
   const rand = mulberry32(1337);
   // R14：手绘岸崖体块群 — 不规则岩层带宽 + 湿暗分层 + 疏密竖缝，少同心环读感。
@@ -215,6 +215,34 @@ function drawRock(x: CanvasRenderingContext2D, img: HTMLImageElement | null): vo
     x.fillStyle = `rgba(${v},${v - 4 < 0 ? 0 : v - 4},${v - 8 < 0 ? 0 : v - 8},${0.32 * k})`;
     x.fillRect(rand() * 512, rand() * 256, 1 + rand() * 3, 1 + rand() * 3);
   }
+  // Mid-band continuous dark rock (settlecoast): above wet foot (~y150), below mossy rim (~y28).
+  // Texture-driven so it reads under the albedo map (vertex tint alone was too faint in screenshots).
+  if (midBandDark > 0) {
+    const s = midBandDark;
+    x.fillStyle = `rgba(32, 34, 38, ${0.20 * s})`;
+    x.fillRect(0, 28, 512, 36);
+    x.fillStyle = `rgba(18, 20, 24, ${0.36 * s})`;
+    x.fillRect(0, 52, 512, 78);
+    x.fillStyle = `rgba(22, 24, 28, ${0.24 * s})`;
+    x.fillRect(0, 118, 512, 36);
+    for (let i = 0; i < Math.floor(520 * s); i += 1) {
+      const yy = 30 + rand() * 125;
+      const v = 8 + Math.floor(rand() * 22);
+      x.fillStyle = `rgba(${v},${v + 1},${v + 3},${(0.12 + rand() * 0.28) * s})`;
+      x.fillRect(rand() * 512, yy, 3 + rand() * 20, 2 + rand() * 14);
+    }
+    // Soft vertical seam darken — rock slabs, not a flat wash.
+    x.strokeStyle = `rgba(8, 10, 12, ${0.35 * s})`;
+    let sx = 6 + rand() * 20;
+    while (sx < 506) {
+      x.lineWidth = 1 + rand() * 2.8;
+      x.beginPath();
+      x.moveTo(sx, 30 + rand() * 10);
+      x.lineTo(sx + (rand() - 0.5) * 10, 145 + rand() * 10);
+      x.stroke();
+      sx += 14 + rand() * 36;
+    }
+  }
   // 顶部苔斑（接地块边缘）。
   for (let i = 0; i < 280; i += 1) {
     x.fillStyle = `rgba(${70 + rand() * 30},${95 + rand() * 30},${55 + rand() * 20},${0.35 + rand() * 0.4})`;
@@ -224,14 +252,14 @@ function drawRock(x: CanvasRenderingContext2D, img: HTMLImageElement | null): vo
   }
 }
 
-function rockTexture(): Texture | null {
+function rockTexture(midBandDark = 0): Texture | null {
   if (typeof document === "undefined") return null;
   const c = document.createElement("canvas");
   c.width = 512;
   c.height = 256;
   const x = c.getContext("2d");
   if (!x) return null;
-  drawRock(x, null);
+  drawRock(x, null, midBandDark);
   const tex = new CanvasTexture(c);
   tex.colorSpace = SRGBColorSpace;
   tex.wrapS = RepeatWrapping;
@@ -239,7 +267,7 @@ function rockTexture(): Texture | null {
   tex.repeat.set(3, 1);
   tex.anisotropy = 4;
   whenImage(cliffRockUrl, (img) => {
-    drawRock(x, img);
+    drawRock(x, img, midBandDark);
     tex.needsUpdate = true;
   });
   return tex;
@@ -435,14 +463,14 @@ export function coastWallGeometry(tiles: readonly IslandTile[], opts: { wetFootD
           // t=0 top rim, t=1 bottom. midBandDark 0=off(low) · faint medium · 1=high.
           const mb = opts.midBandDark ?? 0;
           let peak = 0;
-          if (mb > 0 && t0 > 0.06 && t0 < 0.38) {
-            peak = t0 < 0.16 ? (t0 - 0.06) / 0.10 : t0 < 0.30 ? 1 : Math.max(0, (0.38 - t0) / 0.08);
+          if (mb > 0 && t0 > 0.05 && t0 < 0.48) {
+            peak = t0 < 0.14 ? (t0 - 0.05) / 0.09 : t0 < 0.34 ? 1 : Math.max(0, (0.48 - t0) / 0.14);
           }
-          const blotch = peak > 0 ? 0.78 + 0.44 * hash01(panel * 13.7 + t0 * 51.3 + sgi * 2.1) : 1;
-          const dark = mb * peak * 0.48 * blotch; // luminance cut
-          const cool = mb * peak * 0.55; // blend toward gray rock
+          const blotch = peak > 0 ? 0.72 + 0.55 * hash01(panel * 13.7 + t0 * 51.3 + sgi * 2.1) : 1;
+          const dark = mb * peak * 0.58 * blotch;
+          const cool = mb * peak * 0.72;
           const baseR = 0.92, baseG = 0.90, baseB = 0.86 * (0.92 + 0.08 * (1 - t0));
-          const rockR = 0.52, rockG = 0.50, rockB = 0.46;
+          const rockR = 0.42, rockG = 0.40, rockB = 0.38;
           const r = (baseR * (1 - cool) + rockR * cool) * w * foot * (1 - dark);
           const g = (baseG * (1 - cool) + rockG * cool) * w * foot * (1 - dark);
           const b = (baseB * (1 - cool) + rockB * cool) * w * foot * (1 - dark);
@@ -605,9 +633,11 @@ export function createIslandLayer(): IslandLayer {
   const group = new Group();
   group.name = "island";
   const vertexMat = new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85 });
-  const rockMap = rockTexture();
-  const rockMat = new MeshStandardMaterial({ color: "#ffffff", map: rockMap, vertexColors: true, roughness: 0.97, metalness: 0, flatShading: true });
-  if (!rockMap) rockMat.color.set("#5a5149");
+  const rockMapHigh = rockTexture(1);
+  const rockMapMed = rockTexture(0.34);
+  const rockMapLow = rockTexture(0);
+  const rockMat = new MeshStandardMaterial({ color: "#ffffff", map: rockMapHigh, vertexColors: true, roughness: 0.97, metalness: 0, flatShading: true });
+  if (!rockMapHigh) rockMat.color.set("#5a5149");
   const signMap = signAtlas();
   const signMat = new MeshStandardMaterial({ map: signMap, transparent: true, alphaTest: 0.4, roughness: 0.8 });
   signMat.onBeforeCompile = (shader) => {
@@ -673,6 +703,8 @@ export function createIslandLayer(): IslandLayer {
         wetFootDark: tier === "high",
         midBandDark: tier === "high" ? 1 : tier === "medium" ? 0.34 : 0,
       });
+      rockMat.map = tier === "high" ? rockMapHigh : tier === "medium" ? rockMapMed : rockMapLow;
+      rockMat.needsUpdate = true;
       const wall = new Mesh(wallGeom, rockMat);
       wall.name = "island:cliff";
       wall.castShadow = castShadow;
@@ -819,8 +851,8 @@ export function createIslandLayer(): IslandLayer {
       for (const g of [stoneGeom, dockGeomDry, dockGeomMed, dockGeomHigh, boatGeom, signGeom]) g.dispose();
       wallGeom?.dispose();
       wallGeom = null;
+      for (const tex of [rockMapHigh, rockMapMed, rockMapLow]) tex?.dispose();
       for (const mat of [vertexMat, rockMat, signMat]) mat.dispose();
-      rockMap?.dispose();
       signMap?.dispose();
       layoutKey = "";
     },
