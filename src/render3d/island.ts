@@ -501,19 +501,17 @@ export function dockGeometry(length = 0.62, wetFoot = 0): BufferGeometry {
   }
   // 牌柱（牌面本身是单独的广告牌 InstancedMesh）。
   parts.push(paint(place(new CylinderGeometry(0.016, 0.018, 0.36, 6), 0.1, 0.17, length - 0.02), "#4f3824"));
-  // Wet skirt at water contact (visible ABOVE opaque water). Color rings only — no whole-pier reshape.
+  // Wet skirt at water contact (visible ABOVE opaque water). One cheap band/post — no whole-pier reshape.
+  // Budget: InstancedMesh × ports multiplies tris; keep ≤1 open 4-seg cylinder per post (~8 tris).
   // docksFor base y=0.1 → local waterline = WATER_Y - 0.1.
   if (wetFoot > 0) {
     const waterLocal = WATER_Y - 0.1;
-    const skirtH = 0.055 + 0.025 * wetFoot;
-    const skirtR = 0.030 + 0.008 * wetFoot;
-    const wetHex = wetFoot > 0.55 ? "#1a1510" : "#2c2218";
-    const dampHex = wetFoot > 0.55 ? "#2e2418" : "#3d3024";
+    const skirtH = 0.06 + 0.03 * wetFoot;
+    const skirtR = 0.032 + 0.01 * wetFoot;
+    const wetHex = wetFoot > 0.55 ? "#16120e" : "#2a2118";
     for (const [px, pz] of postXZ) {
-      // Dark collar just above waterline (readable wet foot).
-      parts.push(paint(place(new CylinderGeometry(skirtR, skirtR * 1.08, skirtH, 6), px, waterLocal + skirtH * 0.35, pz), wetHex));
-      // Slightly taller damp fade up the post (still post-local, not deck).
-      parts.push(paint(place(new CylinderGeometry(skirtR * 0.92, skirtR * 0.98, skirtH * 1.15, 6), px, waterLocal + skirtH * 1.15, pz), dampHex));
+      const ring = new CylinderGeometry(skirtR, skirtR * 1.06, skirtH, 4, 1, true);
+      parts.push(paint(place(ring, px, waterLocal + skirtH * 0.4, pz), wetHex));
     }
   }
   const g = merged(parts);
