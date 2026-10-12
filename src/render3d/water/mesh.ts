@@ -254,7 +254,7 @@ export async function createWaterController(options: {
       uniforms.uTideShoreWave.value = features.shoreWave;
       waveHeightBase = features.waveCount === 0 ? 0 : spec.waveHeight;
       material.customProgramCacheKey = () =>
-        `tide-r23-sw${features.shoreWave}-sf${features.shoreFoam}-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
+        `tide-r23b-sw${features.shoreWave}-sf${features.shoreFoam}-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
       material.needsUpdate = true;
     },
     rebuildDistance,
