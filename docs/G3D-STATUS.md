@@ -13,7 +13,7 @@
 | 任务范围 | G3D-01 至 G3D-27；里程碑 M0–M5；人日上限 91 |
 | 代码基线 | `yuymf/godesk` `main` @ `f3ea418`（#148 G3D-JUDGE `f3ea418`；#153 资产搜索 `1d1f45b`；#145 G3D-ART-3 `5b585ec`；#143 `0526d16`；#144 G3D-17 预备 `1884e19`；#141 G3D-04c `0bda43e`；#138 G3D-13 `19f212d`；#147 CI 瘦身 `45cd590`；#150 公开前清理 `f79fcc7`；#142 G3D-ART-2 `45a5a1c`） |
 | 状态文件维护人 | 劳埃德(工程) / Track B（素材） |
-| 最近更新 | 2026-10-11（Asia/Shanghai；按 `gh pr list --state all` 与 `git log origin/main` 核对） |
+| 最近更新 | 2026-10-12（Asia/Shanghai）· G3D-16 首页 showcase 重开（base=main） |
 
 ## 硬约束（三条）
 
@@ -93,7 +93,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
-| （无） | — | — | 2026-10-11 核对：`gh pr list --state open` 为 0；远端只有 `main` 分支 |
+| G3D-16 首页汐屿 showcase | Track B | `feat/g3d-16-homepage-v2` [#163](https://github.com/yuymf/godesk/pull/163)（base=`main` @ `22fb514`；#146 重开） | 海报 + 缩略图 + 上线开关 `GODESK_FEATURE_TIDEWELL` 默认关；**draft，不合入**；待大主管评分 |
 
 ## 已知限制
 
@@ -108,7 +108,7 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 | 项 | 原因 | 解除条件 |
 | --- | --- | --- |
 | box Codex 用量上限 | 至 2026-11-05 02:04 Asia/Shanghai；用户 2026-10-11 定：禁用 Cloud Agent，一律在本地仓库手写 | 用量恢复 |
-| GitHub Actions | 仓库 visibility = PUBLIC（`gh repo view`，2026-10-11）。main 最近一次 run：2026-10-09 22:46 `f3ea418` success；同时刻 `8fb6d19` 两次 run failure（未查原因）。仍禁无绿合入、禁循环 rerun | 每个 PR CI 绿后再合 |
+| GitHub Actions | 仓库 visibility = PUBLIC（`gh repo view`，2026-10-11）。仍禁无绿合入、禁循环 rerun | 每个 PR CI 绿后再合 |
 
 ## 下一刀
 
@@ -124,7 +124,7 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 > Track A：拥有 **18（已合）/ 09**；G3D-06 → Track B（已合 #122）、G3D-07 → Track C（2026-10-06 再平衡）。Track C：**05 / 10 / 15 / 07 / 14**。Track B 素材轨 **G3D-11、19–27 已全部合入**。
 
-1. Track C：G3D-17 预备 #144 已合入 `1884e19`（warning 模式）；G3D-16 首页示例：#146（base `feat/g3d-13-tidewell`）已 closed 未合入，需重新开刀（依赖 G3D-13 #138 已满足）。
+1. Track C：G3D-17 预备 #144 已合入 `1884e19`（warning 模式）；**G3D-16** 首页示例：#146 closed 未合入后，本刀 `feat/g3d-16-homepage-v2` 基于 `main` 重开（依赖 G3D-13 #138 已满足）。
 2. Track A：G3D-09 / G3D-04b / G3D-04c（#141）已合入；队列清空。
 3. Track B：G3D-08 #131 `e8b59e8` / G3D-13 #138 `19f212d` 已合入；G3D-ART 已由 Track D 用 AI 生图完成（#137 `902075e`）。Track D：G3D-JUDGE #148 `f3ea418` 已合入（汐屿视觉 R33 由大主管评定达标；R33 记录见 [#148 评论](https://github.com/yuymf/godesk/pull/148#issuecomment-6106295330)）。
 
@@ -139,12 +139,17 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 ## 开着的 PR / 分支
 
-2026-10-11 核对：open PR 0 个；远端分支只有 `main`。最近 closed 未合入：#146 G3D-16 首页示例（draft，base `feat/g3d-13-tidewell`）、#154 CI probe（draft）。
+| 分支 | PR | 范围 | 状态 |
+| --- | --- | --- | --- |
+| `feat/g3d-16-homepage-v2` | [#163](https://github.com/yuymf/godesk/pull/163) | G3D-16 首页汐屿 showcase；base=`main`；#146 重开 | draft · 不合入，待大主管评分 |
+
 
 ## 修订记录
 
 | 日期 | 变更 | 作者 |
 | --- | --- | --- |
+| 2026-10-12 | G3D-16 重开：`feat/g3d-16-homepage-v2` base=`main`（#146 closed 未合入）；海报/缩略图/上线开关；轨迹 `docs/prompt-trace/2026-10-06-g3d-16.md` | Track B |
+| 2026-10-06 | G3D-16 开工（#146，base=`feat/g3d-13-tidewell`，后 closed 未合入） | Track B |
 | 2026-10-05 | 初创：硬约束三条、M0 未开始、bootstrap 进行中、C2C bridge 阻塞行、下一刀指向 G3D-01 | 劳埃德(工程) |
 | 2026-10-05 | 回填开着的 PR：#102 | 劳埃德(工程) |
 | 2026-10-06 | G3D-01 开工；回填 #103；#102/#103 合入；G3D-02 开工；Codex 用量上限 | 劳埃德(工程) |

@@ -13,7 +13,9 @@ import react from "@vitejs/plugin-react";
  */
 export default defineConfig({
   plugins: [react()],
-  publicDir: false,
+  // G3D-16: serve public/lobby posters; expose GODESK_FEATURE_TIDEWELL to the client.
+  publicDir: "public",
+  envPrefix: ["VITE_", "GODESK_"],
   build: {
     rollupOptions: {
       preserveEntrySignatures: "strict",
@@ -111,6 +113,10 @@ export default defineConfig({
           // `?judge=1` 评审机位（dev-only）懒加载，不进生产渲染核心。
           if (facade.includes("/src/render3d/judge-camera")) {
             return "assets/g3d-judge-[hash].js";
+          }
+          // G3D-16: ?poster=1 offline hero capture — lazy, not render3d core.
+          if (facade.includes("/src/render3d/poster-capture")) {
+            return "assets/g3d-poster-[hash].js";
           }
           // G3D-14：SceneHost 被 hex 盘与通用桌面（TabletopScene3D）共享后成为无 facade 的共享 chunk，
           // 按内容判定：只含 src/render3d、three 与 tween 模块的 chunk 计入 render3d 核心预算。

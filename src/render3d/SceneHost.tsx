@@ -92,6 +92,7 @@ import {
  * G3D-14：通用场景适配器。提供时 SceneHost 不走 hex mapper，而是 reconcile `model`，
  * 用 `create` / `update` 构建对象（工厂在调用方的懒加载 chunk 里），拾取经 `resolvePick` 映射为动作。
  */
+
 export type SceneAdapter = {
   model: SceneModel;
   create: (node: SceneNode, ctx: { library: MaterialLibrary; caps: TierCaps }) => Object3D;
@@ -1642,6 +1643,27 @@ export function SceneHost({
     markShadowsDirtyRef.current();
   }, [adapter, ready, hostEpoch]);
 
+  // G3D-16: ?poster=1 offline hero — lazy chunk (not render3d core).
+  useEffect(() => {
+    if (!ready || typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).get("poster") !== "1") return;
+    let disposed = false;
+    let cleanup: (() => void) | undefined;
+    void import("./poster-capture").then(({ mountPosterCapture }) => {
+      if (disposed) return;
+      cleanup = mountPosterCapture(() => ({
+        camera: cameraRef.current,
+        controls: controlsRef.current,
+        model: modelRef.current,
+        markShadowsDirty: () => markShadowsDirtyRef.current(),
+      }));
+    });
+    return () => {
+      disposed = true;
+      cleanup?.();
+    };
+  }, [ready, hostEpoch]);
+
   // G3D-09 / G3D-JUDGE-PIECES turn camera: local turn → tilted "play", others → top-down "overview".
   useEffect(() => {
     const director = directorRef.current;
@@ -1691,6 +1713,8 @@ export function SceneHost({
       hitRoot.remove(child);
       kit?.disposeHitOverlay(child);
     }
+    // G3D-16 poster capture: never show pick overlays in the hero frame.
+    if (typeof document !== "undefined" && document.documentElement.dataset.g3dPoster === "1") return;
     if (!interactive || legalActions.length === 0 || adapterRef.current || !kit) return;
     for (const overlay of kit.buildLegalHitOverlays(legalActions)) {
       hitRoot.add(overlay);

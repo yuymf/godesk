@@ -339,6 +339,167 @@ export function instantiateDefaultExample(
     };
   }
 
+  if (exampleId === "tidewell-isles") {
+    const sourceId = "source_tidewell_isles_original_brief";
+    return {
+      sources: [
+        source(
+          sourceId,
+          "汐屿原创玩法简述",
+          "两人在潮汐环绕的六角岛上开拓：铺设栈道、建造渔村与港镇，掷骰生产资源，处理强盗与发展卡，先到 10 分者获胜。座位 1 可由房间电脑对手驱动。",
+          createdAt,
+        ),
+      ],
+      ruleSystem: {
+        id: ruleSystemId,
+        version: 1,
+        name: "汐屿",
+        pitch: "在潮汐环绕的六角岛上铺设栈道、建造渔村与港镇，和电脑对战一局完整开拓。",
+        participants: { min: 2, max: 4, default: 2, roles: [] },
+        durationMinutes: 45,
+        rules: [
+          {
+            id: "rule_tidewell_place",
+            text: "开局轮流放置渔村与栈道；此后每回合掷骰生产、可建造、可交易、可打出发展卡。",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+          {
+            id: "rule_tidewell_robber",
+            text: "掷出 7 时移动强盗并按规则弃牌；强盗所在地形不生产。",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+          {
+            id: "rule_tidewell_win",
+            text: "先达到 10 胜利点数的玩家获胜。",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+        ],
+        constraints: [
+          {
+            id: "constraint_tidewell_connect",
+            text: "新建渔村与栈道必须与己方已有建筑连通。",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+        ],
+        entities: [
+          {
+            id: "entity_tidewell_settlement",
+            name: "渔村",
+            kind: "token",
+            quantity: 10,
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+          {
+            id: "entity_tidewell_road",
+            name: "栈道",
+            kind: "token",
+            quantity: 30,
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+          {
+            id: "entity_tidewell_city",
+            name: "港镇",
+            kind: "token",
+            quantity: 8,
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+        ],
+        setup: [
+          "使用初学者岛固定地形与点数。",
+          "两名玩家各放置两个渔村与两条栈道；第二渔村收取相邻资源。",
+        ],
+        actions: [
+          {
+            id: "place_settlement",
+            label: "建造渔村",
+            description: "在合法顶点建造渔村。",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+          {
+            id: "place_road",
+            label: "铺设栈道",
+            description: "在合法边上铺设栈道。",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+          {
+            id: "place_city",
+            label: "升级港镇",
+            description: "将己方渔村升级为港镇。",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+          {
+            id: "roll_dice",
+            label: "掷骰",
+            description: "掷生产骰并结算资源。",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+          {
+            id: "end_turn",
+            label: "结束回合",
+            description: "结束当前回合。",
+            sourceId,
+            provenance: "source-anchored",
+            confidence: 1,
+          },
+        ],
+        playSurface: {
+          kind: "table",
+          layout: "hex-radius-2",
+          regions: [
+            { id: "island", name: "汐屿", description: "潮汐环绕的六角开拓岛。" },
+          ],
+        },
+        stages: [
+          { id: "setup", name: "开局放置" },
+          { id: "roll", name: "掷骰" },
+          { id: "main", name: "主阶段" },
+          { id: "ended", name: "终局" },
+        ],
+        outcomes: [{ id: "vp", name: "先到 10 胜利点数者获胜" }],
+        presentation: {
+          render: defaultRenderSpec("hex-settlement-v1", "table"),
+          visuals: [{
+            provenance: "kit",
+            label: "Tidewell Isles 3D presentation kit",
+          }],
+        },
+        runtimeSupport: {
+          status: "executable",
+          unsupported: [
+            "hex-settlement-v1 executes beginner-board Tidewell basics (placement, production, robber/discard, build+connectivity, bank/port + simple player trade, development cards, VP win) on the public play-kernel; full negotiated multi-resource trades remain out of scope.",
+          ],
+          kernel: {
+            type: "hex-settlement-v1",
+            playerCount: 2,
+            victoryPointsToWin: 10,
+          },
+        },
+      },
+    };
+  }
+
   const sourceId = "source_mistpeak_lodge_original_brief";
   return {
     sources: [
