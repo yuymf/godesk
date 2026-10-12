@@ -8,7 +8,7 @@ const LazySceneHost = lazy(async () => {
 
 /**
  * Non-interactive 3D hex island for PlayablePreview / ReplayView (G3D-18).
- * Passes through importedModels so /play shows project-imported GLBs (#160 follow-up).
+ * Passes through importedModels so /play and /replay show project-imported GLBs (#160 follow-ups).
  */
 export function HexSettlementScenePreview({
   hexIsland,
