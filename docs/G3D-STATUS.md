@@ -13,7 +13,7 @@
 | 任务范围 | G3D-01 至 G3D-27；里程碑 M0–M5；人日上限 91 |
 | 代码基线 | `yuymf/godesk` `main` @ `f3ea418`（#148 G3D-JUDGE `f3ea418`；#153 资产搜索 `1d1f45b`；#145 G3D-ART-3 `5b585ec`；#143 `0526d16`；#144 G3D-17 预备 `1884e19`；#141 G3D-04c `0bda43e`；#138 G3D-13 `19f212d`；#147 CI 瘦身 `45cd590`；#150 公开前清理 `f79fcc7`；#142 G3D-ART-2 `45a5a1c`） |
 | 状态文件维护人 | 劳埃德(工程) / Track B（素材） |
-| 最近更新 | 2026-10-12（Asia/Shanghai）· shore-wave-ridge：近岸 swell（draft，叠 #171） |
+| 最近更新 | 2026-10-12（Asia/Shanghai）· shore-wave-ridge #172：近岸 swell（draft，叠 #171） |
 
 ## 硬约束（三条）
 
@@ -98,7 +98,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | LOD-high（triangles） | Track C | `feat/lod-high` [#169](https://github.com/yuymf/godesk/pull/169)（叠 #168） | pine 内部面剔除 + shadow proxy；triangles(high) 415926→295310；medium/low 字节+像素恒等；**draft，不合入**；待大主管评分 |
 | shore-steps（浅滩台阶） | Track C | `feat/shore-steps` [#170](https://github.com/yuymf/godesk/pull/170)（叠 #169） | 汐屿海岸断续礁石 + 簇间贴崖立石 + 湿暗崖脚（high only，r3）；**draft，不合入**；待大主管评分 |
 | shore-foam（岸线白沫） | Track C | `feat/shore-foam` [#171](https://github.com/yuymf/godesk/pull/171)（叠 #170） | 水着色器岸线白沫 fringe（high；medium 淡；low 关）；无 +drawCall；**draft，不合入** |
-| shore-wave-ridge（近岸 swell） | Track C | `feat/shore-wave-ridge`（叠 #171） | 距离场门控近岸 swell / soft ridge；shader-only；**draft，不合入** |
+| shore-wave-ridge（近岸 swell） | Track C | `feat/shore-wave-ridge` [#172](https://github.com/yuymf/godesk/pull/172)（叠 #171） | 距离场门控近岸 swell / soft ridge；shader-only；**draft，不合入** |
 
 ## 已知限制
 
@@ -147,7 +147,7 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
-| `feat/shore-wave-ridge` | （待开 draft） | 近岸 swell / soft ridge（shader-only）；base=`feat/shore-foam` @1f875ce | draft · 不合入 |
+| `feat/shore-wave-ridge` | [#172](https://github.com/yuymf/godesk/pull/172) | 近岸 swell / soft ridge（shader-only）；base=`feat/shore-foam` @1f875ce | draft · 不合入 |
 | `feat/shore-foam` | [#171](https://github.com/yuymf/godesk/pull/171) | 岸线白沫 fringe（shader-only）；base=`feat/shore-steps` @af9314b | draft · 不合入 |
 | `feat/shore-steps` | [#170](https://github.com/yuymf/godesk/pull/170) | 汐屿浅滩 3 级沙滩台阶（high only）；base=`feat/lod-high` @8d64137 | draft · 不合入，待大主管评分 |
 | `feat/lod-high` | [#169](https://github.com/yuymf/godesk/pull/169) | LOD-high：pine interior cull + shadow proxy；triangles(high) 415926→295310；base=`feat/launch-gate-block` @0914ebf | draft · 不合入，待大主管评分 |
@@ -228,3 +228,4 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 | 2026-10-08 | G3D-JUDGE round-22（#148）：软边带 45%→25% + 顶面相接去 1px 暗线（shader 画浅色发丝缝）+ 麦田金黄重烘焙与麦浪（走向 / 高低起伏）+ 六资源色拉开（主光去橙、去 R19 去饱和、沙 / 牧重烘焙）+ 去林冠浅绿雾；轨迹 [`docs/prompt-trace/2026-10-08-g3d-judge-r22.md`](./prompt-trace/2026-10-08-g3d-judge-r22.md)；未达标（自评），不合入 | Track D |
 | 2026-10-11 | STATUS 对账 gh：基线 → `f3ea418`；回填 #138 `19f212d` / #141 `0bda43e` / #144 `1884e19` / #145 `5b585ec` / #148 `f3ea418` / #153 `1d1f45b`；删除 #139 / #142 重复行；进行中、开着的 PR 清空；阻塞移除 G3D-13；仓库公开项勾选（#150 `f79fcc7`，PUBLIC）；记 #146 closed 未合入 | 劳埃德(工程) |
 | 2026-10-11 | **step3 同品质 达标**：铁脉（network-route-v1 铁路，插件链从零生成）R5 ≈ 9.1，大主管裁定 ≥ 9；#161 转 ready（不合入）。非阻塞差距：底板侧面到岸仍有一级小台阶；地面斑块为平贴片。公开证据：[#161 评论](https://github.com/yuymf/godesk/pull/161#issuecomment-6108003334) | step3 |
+| 2026-10-12 | shore-wave-ridge #172 draft：近岸 swell / soft ridge（距离场门控；shader-only；叠 #171）；证据 `/workspace/g3d-evidence/godesk-2026-10-12/shore-wave-ridge/`；不合入 | Track C |
