@@ -150,6 +150,7 @@ export function OthelloBoard({
   busy = false,
   onAct,
   render,
+  importedModels,
 }: {
   othello: OthelloBoardState;
   activeSeat: number;
@@ -163,6 +164,8 @@ export function OthelloBoard({
   onAct?: (actionId: string, payload?: Record<string, unknown>) => void;
   /** G3D-14：build.ruleSystem.presentation.render（缺省用平台默认）。 */
   render?: RenderSpec;
+  /** GoDesk ②：项目导入的 CC0 GLB（guest/play/replay 透传 → TabletopStage）。 */
+  importedModels?: ReadonlyArray<{ id: string; url: string; title?: string }>;
 }) {
   const copy = COPY[locale];
   const interactive =
@@ -255,7 +258,7 @@ export function OthelloBoard({
         <p className="othello-hud-last">{lastLine}</p>
       </section>
 
-      <TabletopStage kernel="disc-flipping-v1" legal={legalActions} onAct={showLegal ? onAct : undefined} render={render} state={othello} />
+      <TabletopStage kernel="disc-flipping-v1" legal={legalActions} onAct={showLegal ? onAct : undefined} render={render} state={othello} importedModels={importedModels} />
 
       <div
         aria-label={copy.board}

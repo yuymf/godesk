@@ -49,6 +49,7 @@ export function HarborVoyageBoard({
   onAct,
   readOnly = false,
   render,
+  importedModels,
 }: {
   voyage: HarborVoyageState;
   busy?: boolean;
@@ -56,6 +57,8 @@ export function HarborVoyageBoard({
   readOnly?: boolean;
   /** G3D-14：build.ruleSystem.presentation.render（缺省用平台默认）。 */
   render?: RenderSpec;
+  /** GoDesk ②：项目导入的 CC0 GLB（guest/play/replay 透传 → TabletopStage）。 */
+  importedModels?: ReadonlyArray<{ id: string; url: string; title?: string }>;
 }) {
   const [selectedPilot, setSelectedPilot] = useState<HarborCargoId>("cedar");
   const active = voyage.players.find((player) => player.seat === voyage.activeSeat);
@@ -88,7 +91,7 @@ export function HarborVoyageBoard({
         <p className="harbor-instruction">{harborInstruction(voyage)}</p>
       </header>
 
-      <TabletopStage kernel="harbor-voyage-v1" onAct={interactive && !busy ? onAct : undefined} render={render} state={voyage} />
+      <TabletopStage kernel="harbor-voyage-v1" onAct={interactive && !busy ? onAct : undefined} render={render} state={voyage} importedModels={importedModels} />
 
       <div
         className="sea-chart"

@@ -12,6 +12,7 @@ export function WorkerPlacementBoard({
   onAct,
   readOnly = false,
   render,
+  importedModels,
 }: {
   board: WorkerPlacementState;
   busy?: boolean;
@@ -19,6 +20,8 @@ export function WorkerPlacementBoard({
   readOnly?: boolean;
   /** G3D-14：build.ruleSystem.presentation.render（缺省用平台默认）。 */
   render?: RenderSpec;
+  /** GoDesk ②：项目导入的 CC0 GLB（guest/play/replay 透传 → TabletopStage）。 */
+  importedModels?: ReadonlyArray<{ id: string; url: string; title?: string }>;
 }) {
   const interactive = !readOnly && Boolean(onAct) && board.phase !== "resolved";
 
@@ -27,7 +30,7 @@ export function WorkerPlacementBoard({
       <p className="worker-placement-instruction">
         {workerPlacementInstruction(board)}
       </p>
-      <TabletopStage kernel="worker-placement-v1" onAct={interactive && !busy ? onAct : undefined} render={render} state={board} />
+      <TabletopStage kernel="worker-placement-v1" onAct={interactive && !busy ? onAct : undefined} render={render} state={board} importedModels={importedModels} />
       <div className="worker-placement-regions" role="list">
         {board.regions.map((region) => {
           const occupied = board.placements.filter(
