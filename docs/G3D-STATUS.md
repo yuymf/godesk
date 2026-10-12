@@ -94,7 +94,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
-| G3D-17 上线闸门 | Track C | `feat/g3d-17-tidewell-launch` | 删除 `GODESK_FEATURE_TIDEWELL`（首页默认汐屿）；`GODESK_LAUNCH_GATE_BLOCK=asset-legal,hud-raw-action-ids`；Lighthouse / draw-calls / size 仍 warn；**draft，不合入**；待大主管评分 |
+| G3D-17 上线闸门 | Track C | `feat/g3d-17-tidewell-launch` | 删除 `GODESK_FEATURE_TIDEWELL`（首页默认汐屿）；`GODESK_LAUNCH_GATE_BLOCK=asset-legal,hud-raw-action-ids,draw-calls`；Lighthouse / draw-calls / size 仍 warn；**draft，不合入**；待大主管评分 |
 
 ## 已知限制
 
@@ -125,7 +125,7 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 > Track A：拥有 **18（已合）/ 09**；G3D-06 → Track B（已合 #122）、G3D-07 → Track C（2026-10-06 再平衡）。Track C：**05 / 10 / 15 / 07 / 14**。Track B 素材轨 **G3D-11、19–27 已全部合入**。
 
-1. Track C：**G3D-17** 本刀删开关 + 逐项转正；下一刀候选：① 首页 size 余量 ≥ 2% 后把 `size-budgets` 入 BLOCK；② Lighthouse LCP/TBT 优化后改 error 并把 `lighthouse` 入 BLOCK（或 GPU 机模拟画像终验）。
+1. Track C：**G3D-17** 本刀删开关 + 逐项转正；下一刀候选：① Harbor/Worker/Othello `importedModels` 与 #164/#165 访客/Replay 对齐；② render3d core size 余量 ≥ 2% + Lighthouse LCP/TBT→error 后全量 `GODESK_LAUNCH_GATE=block`。
 2. Track A：G3D-09 / G3D-04b / G3D-04c（#141）已合入；队列清空。
 3. Track B：G3D-08 #131 `e8b59e8` / G3D-13 #138 `19f212d` 已合入；G3D-ART 已由 Track D 用 AI 生图完成（#137 `902075e`）。Track D：G3D-JUDGE #148 `f3ea418` 已合入（汐屿视觉 R33 由大主管评定达标；R33 记录见 [#148 评论](https://github.com/yuymf/godesk/pull/148#issuecomment-6106295330)）。
 
@@ -135,7 +135,7 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 - [~] ~~法务审查：`LicenseRef-AI-Generated` 逐行过审后才能上线~~ — **用户 2026-10-06 19:16 豁免**（站点暂不上线）：允许 AI 生成的贴图 / 模型 / 音效和免费素材，**不再作为闸门**；来源仍须登记在 `assets/LICENSES.md`。G3D-17：LICENSES 标记改为「已豁免 2026-10-06」、manifest `legalReview=cleared`；`asset-legal` **已入** `GODESK_LAUNCH_GATE_BLOCK`。不得复制 settlecoast 的原始素材或代码。
 - [x] **删除 `GODESK_FEATURE_TIDEWELL`**：生产首页默认汐屿 showcase（无需 `?tidewell=1`）。
 - [ ] G3D-05 备注 ⑤：Lighthouse LCP / TBT 由 warn 改为 error（见上）——本刀**未**改 `lighthouserc.json`（诚实缺口）。
-- [~] **自动化清单转阻断**：`GODESK_LAUNCH_GATE` 仍为 `warn`；`GODESK_LAUNCH_GATE_BLOCK=asset-legal,hud-raw-action-ids`（HUD aria-label 去掉坐标键）。**仍 warn、未阻断**：`size-budgets`、`lighthouse`、`draw-calls`。步骤见 [`docs/perf/launch-checklist.md`](./perf/launch-checklist.md)。
+- [~] **自动化清单转阻断**：`GODESK_LAUNCH_GATE` 仍为 `warn`；`GODESK_LAUNCH_GATE_BLOCK=asset-legal,hud-raw-action-ids,draw-calls`（HUD aria-label 去掉坐标键）。**仍 warn、未阻断**：`size-budgets`、`lighthouse`。`draw-calls` 本刀已入 BLOCK（high 47/47、medium 32/47、low 23/24）。步骤见 [`docs/perf/launch-checklist.md`](./perf/launch-checklist.md)。
 - [x] **仓库公开**：公开前清理 #150 squash `f79fcc7` 已合入；`gh repo view` visibility = PUBLIC（2026-10-11 核对）。
 
 
@@ -150,7 +150,7 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 | 日期 | 变更 | 作者 |
 | --- | --- | --- |
-| 2026-10-12 | G3D-17：删除 Tidewell 首页开关；法务豁免落账；`GODESK_LAUNCH_GATE_BLOCK=asset-legal,hud-raw-action-ids`；轨迹 `docs/prompt-trace/2026-10-12-g3d-17.md` | Track C |
+| 2026-10-12 | G3D-17：删除 Tidewell 首页开关；法务豁免落账；`GODESK_LAUNCH_GATE_BLOCK=asset-legal,hud-raw-action-ids,draw-calls`；轨迹 `docs/prompt-trace/2026-10-12-g3d-17.md` | Track C |
 | 2026-10-12 | G3D-16 重开：`feat/g3d-16-homepage-v2` base=`main`（#146 closed 未合入）；海报/缩略图/上线开关；轨迹 `docs/prompt-trace/2026-10-06-g3d-16.md` | Track B |
 | 2026-10-06 | G3D-16 开工（#146，base=`feat/g3d-13-tidewell`，后 closed 未合入） | Track B |
 | 2026-10-05 | 初创：硬约束三条、M0 未开始、bootstrap 进行中、C2C bridge 阻塞行、下一刀指向 G3D-01 | 劳埃德(工程) |

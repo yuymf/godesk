@@ -106,7 +106,7 @@ jobs:
         if: always() && env.FULL_E2E == 'true'
         env:
           GODESK_LAUNCH_GATE: warn
-          GODESK_LAUNCH_GATE_BLOCK: "asset-legal,hud-raw-action-ids"
+          GODESK_LAUNCH_GATE_BLOCK: "asset-legal,hud-raw-action-ids,draw-calls"
         run: node scripts/launch-checklist.mjs --only asset-legal,size-budgets,draw-calls,hud-raw-action-ids --perf perf-results/ci-budgets.json --out perf-results/launch-checklist.json
       - name: Upload CI render budget report
         if: always() && env.FULL_E2E == 'true'
