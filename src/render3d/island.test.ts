@@ -169,10 +169,10 @@ describe("G3D-ISLAND island + coast", () => {
     dry.dispose(); wet.dispose(); faint.dispose();
   });
 
-  it("boat wetLine darkens hull near waterline; sail stays bright", () => {
-    const dry = boatGeometry(0);
-    const wet = boatGeometry(1);
-    const faint = boatGeometry(0.32);
+  it("boat wetLine darkens hull near waterline; sail cloth stays dry/bright", () => {
+    const dry = boatGeometry({ wetLine: 0, sail: 1 });
+    const wet = boatGeometry({ wetLine: 1, sail: 1 });
+    const faint = boatGeometry({ wetLine: 0.32, sail: 1 });
     const meanBand = (g: ReturnType<typeof boatGeometry>, lo: number, hi: number) => {
       const p = g.getAttribute("position");
       const c = g.getAttribute("color");
@@ -198,6 +198,38 @@ describe("G3D-ISLAND island + coast", () => {
     expect(Math.abs(sailWet.mean - sailDry.mean)).toBeLessThan(0.05);
     expect(wet.getAttribute("position").count).toBeGreaterThan(dry.getAttribute("position").count);
     dry.dispose(); wet.dispose(); faint.dispose();
+  });
+
+  it("high sail adds bright cloth verts; low omits sail", () => {
+    const low = boatGeometry({ wetLine: 0, sail: 0 });
+    const med = boatGeometry({ wetLine: 0.32, sail: 0.4 });
+    const high = boatGeometry({ wetLine: 1, sail: 1 });
+    const clothVerts = (g: ReturnType<typeof boatGeometry>) => {
+      const p = g.getAttribute("position");
+      const c = g.getAttribute("color");
+      let n = 0;
+      for (let i = 0; i < p.count; i += 1) {
+        const y = p.getY(i);
+        if (y < 0.09 || y > 0.52) continue; // between deck and flag
+        // off-white cloth (not brown mast)
+        if (c.getX(i) > 0.85 && c.getY(i) > 0.80 && c.getZ(i) > 0.72) n += 1;
+      }
+      return n;
+    };
+    expect(clothVerts(low)).toBe(0);
+    expect(clothVerts(med)).toBeGreaterThan(0);
+    expect(clothVerts(high)).toBeGreaterThan(clothVerts(med));
+    expect(high.getAttribute("position").count).toBeGreaterThan(low.getAttribute("position").count);
+    // sail has +X belly (not a zero-thickness YZ plane)
+    const pos = high.getAttribute("position");
+    let maxX = 0;
+    for (let i = 0; i < pos.count; i += 1) {
+      const y = pos.getY(i);
+      if (y < 0.09 || y > 0.52) continue;
+      maxX = Math.max(maxX, Math.abs(pos.getX(i)));
+    }
+    expect(maxX).toBeGreaterThan(0.03);
+    low.dispose(); med.dispose(); high.dispose();
   });
 
   it("docks point outward from the island, one per port", () => {

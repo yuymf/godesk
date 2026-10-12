@@ -3,7 +3,7 @@
  * LicenseRef-GoDesk-Original）。取代 #138 的灰色平石板（cliff 节点）、灰盒港口（port）与船（ship）。
  *
  * draw call（不含阴影 pass）：岩壁 1 + 岸石 1 + 码头 1 + 港口牌 1 + 帆船 1 = 5，与档位无关
- * （low 档岸石减半、帆船保留但不投影）。high 在同岸石 InstancedMesh 内加断续礁石簇 + 簇间贴崖稀疏立石；崖脚湿暗加深；中段岩色加深；码头桩柱水线湿脚；帆船船体水线湿带（无额外 draw call）。
+ * （low 档岸石减半、帆船保留但不投影）。high 在同岸石 InstancedMesh 内加断续礁石簇 + 簇间贴崖稀疏立石；崖脚湿暗加深；中段岩色加深；码头桩柱水线湿脚；帆船船体水线湿带；高档三角帆布（无额外 draw call）。
  */
 import {
   BufferAttribute,
@@ -588,32 +588,57 @@ function applyPierWetFoot(g: BufferGeometry, strength: number): void {
 }
 
 /** 小帆船：船体 + 甲板 + 桅杆 + 三角帆 + 小旗（船头朝 +Z）。 */
+export type BoatGeomOpts = { wetLine?: number; sail?: number };
+
 /**
- * 帆船：船体 + 甲板 + 桅帆。wetLine（0..1）只加深水线一带船体色 + 一条细湿环，
- * 不改整体外形 / 不加复杂索具。boat origin ≈ WATER_Y+0.02 → 局部水线 ≈ -0.012。
- * high=1 · medium≈0.32 · low=0。
+ * 帆船：船体 + 甲板 + 桅杆；可选三角帆布 + 水线湿带。
+ * wetLine（0..1）：只加深水线一带船体（不改外形）。
+ * sail（0..1）：白/米白三角帆挂在桅上（轻微鼓肚，避免贴面看不见）；high=1 · medium≈0.4 · low=0。
+ * 不加复杂索具；不改船体外形。boat origin ≈ WATER_Y+0.02。
  */
-export function boatGeometry(wetLine = 0): BufferGeometry {
+export function boatGeometry(wetLineOrOpts: number | BoatGeomOpts = 0): BufferGeometry {
+  const opts: BoatGeomOpts = typeof wetLineOrOpts === "number"
+    ? { wetLine: wetLineOrOpts, sail: 1 }
+    : wetLineOrOpts;
+  const wetLine = opts.wetLine ?? 0;
+  const sailAmt = opts.sail ?? 0;
   const hull = new CylinderGeometry(0.11, 0.06, 0.09, 8, 1, false);
   hull.scale(1, 1, 2.6);
-  const sail = new BufferGeometry();
-  sail.setAttribute("position", new BufferAttribute(new Float32Array([
-    0, 0.08, -0.12, 0, 0.5, -0.02, 0, 0.08, 0.16,
-    0, 0.08, 0.16, 0, 0.5, -0.02, 0, 0.08, -0.12,
-  ]), 3));
-  const jib = new BufferGeometry();
-  jib.setAttribute("position", new BufferAttribute(new Float32Array([
-    0, 0.1, 0.2, 0, 0.42, 0.01, 0, 0.1, 0.34,
-    0, 0.1, 0.34, 0, 0.42, 0.01, 0, 0.1, 0.2,
-  ]), 3));
   const parts: BufferGeometry[] = [
     paint(place(hull, 0, 0.0, 0), "#7a4e2c", 0.12),
     paint(place(new BoxGeometry(0.16, 0.012, 0.44), 0, 0.048, 0), "#b48a5a"),
     paint(place(new CylinderGeometry(0.008, 0.01, 0.5, 5), 0, 0.29, 0.01), "#4a3420"),
-    paint(sail, "#f1e8d4"),
-    paint(jib, "#e6dcc4"),
     paint(place(new BoxGeometry(0.004, 0.035, 0.06), 0, 0.54, -0.02), "#a3442a"),
   ];
+  if (sailAmt > 0) {
+    // Simple triangular cloth hung on mast (below flag). Slight +X belly so it never edge-on.
+    // Mast cylinder top ≈ y 0.54; keep peak under the flag.
+    const peakY = 0.46 + 0.02 * sailAmt;
+    const footY = 0.10;
+    const reach = 0.24 + 0.10 * sailAmt;
+    const belly = 0.05 + 0.025 * sailAmt;
+    const peak: [number, number, number] = [belly * 0.2, peakY, -0.01];
+    const tack: [number, number, number] = [belly * 0.25, footY, -0.05];
+    const clew: [number, number, number] = [belly, footY + 0.015, reach];
+    const sail = new BufferGeometry();
+    sail.setAttribute("position", new BufferAttribute(new Float32Array([
+      ...peak, ...tack, ...clew,
+      ...peak, ...clew, ...tack, // back face
+    ]), 3));
+    parts.push(paint(sail, sailAmt > 0.55 ? "#f8f4ea" : "#f0ebe0", 0));
+    // Small foresail on high only — still simple triangles, no rigging.
+    if (sailAmt > 0.7) {
+      const jib = new BufferGeometry();
+      const jp: [number, number, number] = [belly * 0.15, peakY * 0.88, 0.04];
+      const jt: [number, number, number] = [belly * 0.2, footY + 0.02, 0.10];
+      const jc: [number, number, number] = [belly * 0.75, footY + 0.02, reach * 0.5 + 0.14];
+      jib.setAttribute("position", new BufferAttribute(new Float32Array([
+        ...jp, ...jt, ...jc,
+        ...jp, ...jc, ...jt,
+      ]), 3));
+      parts.push(paint(jib, "#f5f0e6", 0));
+    }
+  }
   // Readable wet band ABOVE opaque water — one open 6-seg ring, Z-stretched with hull.
   if (wetLine > 0) {
     const waterLocal = -0.012;
@@ -693,9 +718,9 @@ export function createIslandLayer(): IslandLayer {
   const dockGeomDry = dockGeometry(0.62, 0);
   const dockGeomMed = dockGeometry(0.62, 0.32);
   const dockGeomHigh = dockGeometry(0.62, 1);
-  const boatGeomDry = boatGeometry(0);
-  const boatGeomMed = boatGeometry(0.32);
-  const boatGeomHigh = boatGeometry(1);
+  const boatGeomDry = boatGeometry({ wetLine: 0, sail: 0 });
+  const boatGeomMed = boatGeometry({ wetLine: 0.32, sail: 0.4 });
+  const boatGeomHigh = boatGeometry({ wetLine: 1, sail: 1 });
   const signGeom = new CircleGeometry(SIGN_RADIUS, 28);
   const m = new Matrix4();
   const q = new Quaternion();
