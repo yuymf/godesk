@@ -93,7 +93,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
-| G3D-16 首页汐屿 showcase | Track B | `feat/g3d-16-homepage-v2`（base=`main` @ `22fb514`；#146 重开） | 海报 + 缩略图 + 上线开关 `GODESK_FEATURE_TIDEWELL` 默认关；draft PR，不合入 |
+| G3D-16 首页汐屿 showcase | Track B | `feat/g3d-16-homepage-v2` [#163](https://github.com/yuymf/godesk/pull/163)（base=`main` @ `22fb514`；#146 重开） | 海报 + 缩略图 + 上线开关 `GODESK_FEATURE_TIDEWELL` 默认关；**draft，不合入**；待大主管评分 |
 
 ## 已知限制
 
@@ -141,7 +141,7 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
-| `feat/g3d-16-homepage-v2` | （本刀 draft） | G3D-16 首页汐屿 showcase；base=`main`；#146 重开 | draft · 不合入，待大主管评分 |
+| `feat/g3d-16-homepage-v2` | [#163](https://github.com/yuymf/godesk/pull/163) | G3D-16 首页汐屿 showcase；base=`main`；#146 重开 | draft · 不合入，待大主管评分 |
 
 
 ## 修订记录
