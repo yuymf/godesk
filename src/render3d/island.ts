@@ -3,7 +3,7 @@
  * LicenseRef-GoDesk-Original）。取代 #138 的灰色平石板（cliff 节点）、灰盒港口（port）与船（ship）。
  *
  * draw call（不含阴影 pass）：岩壁 1 + 岸石 1 + 码头 1 + 港口牌 1 + 帆船 1 = 5，与档位无关
- * （low 档岸石减半、帆船保留但不投影）。high 在同岸石 InstancedMesh 内加断续礁石浅滩簇（无额外 draw call）。
+ * （low 档岸石减半、帆船保留但不投影）。high 在同岸石 InstancedMesh 内加断续礁石簇 + 簇间贴崖稀疏立石；崖脚湿暗加深（无额外 draw call）。
  */
 import {
   BufferAttribute,
@@ -347,7 +347,7 @@ function signAtlas(): Texture | null {
  * （方向取离岛心的径向），相邻边共享的角点完全重合 → 没有接缝。另加每格一块六边形顶盖
  * （y = SKIRT_TOP_Y，半径 1.0）填满格子之间的缝。u 沿岛周角度连续，v 自上而下。
  */
-export function coastWallGeometry(tiles: readonly IslandTile[]): BufferGeometry {
+export function coastWallGeometry(tiles: readonly IslandTile[], opts: { wetFootDark?: boolean } = {}): BufferGeometry {
   // R14：不规则岸崖体块群外轮廓——变宽分面 + 错层高度 + 偶发巨块，压掉整圈程序分面/同心环。
   const ROWS = 4;
   const positions: number[] = [];
@@ -398,7 +398,9 @@ export function coastWallGeometry(tiles: readonly IslandTile[]): BufferGeometry 
     const wx = x + nx * out + tangX * sidePush;
     const wz = z + nz * out + tangZ * sidePush;
     const u = (Math.atan2(z, x) / (Math.PI * 2) + 0.5) * 26;
-    const wet = t < 0.35 ? 1 : Math.max(0.36, 1 - (t - 0.35) * 1.3);
+    let wet = t < 0.35 ? 1 : Math.max(0.36, 1 - (t - 0.35) * 1.3);
+    // high：水线附近加深湿暗崖脚（settlecoast 连续深色岩基），不另加整圈 mesh。
+    if (opts.wetFootDark && t > 0.28) wet *= Math.max(0.42, 1 - (t - 0.28) * 0.95);
     return [wx, y, wz, u, t, wet];
   };
   let edgeIdx = 0;
@@ -428,7 +430,8 @@ export function coastWallGeometry(tiles: readonly IslandTile[]): BufferGeometry 
           positions.push(pt[0], pt[1], pt[2]);
           uvs.push(u, 1 - pt[4]);
           const w = pt[5];
-          colors.push(0.92 * w, 0.9 * w, 0.86 * w * (0.92 + 0.08 * (1 - t0)));
+          const foot = opts.wetFootDark && t0 > 0.32 ? 0.82 : 1;
+          colors.push(0.92 * w * foot, 0.9 * w * foot, 0.86 * w * (0.92 + 0.08 * (1 - t0)) * foot);
         }
       }
     }
@@ -610,7 +613,7 @@ export function createIslandLayer(): IslandLayer {
 
       // 连续岩壁 + 顶盖（1 个 draw call，几何随地块集合重建）。
       wallGeom?.dispose();
-      wallGeom = coastWallGeometry(tiles);
+      wallGeom = coastWallGeometry(tiles, tier === "high" ? { wetFootDark: true } : {});
       const wall = new Mesh(wallGeom, rockMat);
       wall.name = "island:cliff";
       wall.castShadow = castShadow;
@@ -621,7 +624,7 @@ export function createIslandLayer(): IslandLayer {
       // 岸石：每条外圈海岸边常规圆石；high 另在部分边加断续扁平礁石浅滩簇（非整圈砂台）。
       const edges = coastEdges(tiles);
       const perEdge = tier === "low" ? 2 : 4;
-      const reefBudget = tier === "high" ? edges.length * 4 : 0;
+      const reefBudget = tier === "high" ? edges.length * 6 : 0; // clusters + gap wall-huggers
       const stones = new InstancedMesh(stoneGeom, vertexMat, Math.max(1, edges.length * perEdge + reefBudget));
       let n = 0;
       let edgeIdx = 0;
@@ -641,30 +644,49 @@ export function createIslandLayer(): IslandLayer {
           stones.setMatrixAt(n++, m);
         }
         // high only：断续礁石簇 — 约半数边留空，其余 2–4 块扁平错层外推（干露 / 半湿 / 入水）。
-        if (tier === "high" && reefEdgeMask(edgeIdx)) {
-          const cluster = reefClusterSize(edgeIdx);
+        if (tier === "high") {
           const ox0 = (a[0] + b[0]) / 2 - c[0];
           const oz0 = (a[2] + b[2]) / 2 - c[2];
           const ol0 = Math.hypot(ox0, oz0) || 1;
           const nx = ox0 / ol0;
           const nz = oz0 / ol0;
-          for (let j = 0; j < cluster; j += 1) {
-            const along = 0.18 + rand() * 0.64;
-            const ex = a[0] + (b[0] - a[0]) * along + (-nz) * (rand() - 0.5) * 0.12;
-            const ez = a[2] + (b[2] - a[2]) * along + nx * (rand() - 0.5) * 0.12;
-            // 错层：近岸略高（干），外推更低（湿）；故意不齐，打散「台阶环」。
-            const step = j + rand() * 0.7;
-            const out = 0.22 + step * 0.14 + rand() * 0.08;
-            const y = WATER_Y + 0.09 - step * 0.035 + (rand() - 0.5) * 0.02;
-            const sx = 1.55 + rand() * 1.1;
-            const sy = 0.22 + rand() * 0.28; // flat ledge
-            const sz = 1.15 + rand() * 0.9;
-            q.setFromAxisAngle(up, rand() * Math.PI * 2);
-            // 微倾，破水平台面感
-            const tip = new Quaternion().setFromAxisAngle(new Vector3(nx, 0, nz), (rand() - 0.5) * 0.35);
-            q.multiply(tip);
-            m.compose(p.set(ex + nx * out, y, ez + nz * out), q, s.set(sx, sy, sz));
-            stones.setMatrixAt(n++, m);
+          if (reefEdgeMask(edgeIdx)) {
+            // 断续礁石簇 — 约半数边；扁平错层外推。
+            const cluster = reefClusterSize(edgeIdx);
+            for (let j = 0; j < cluster; j += 1) {
+              const along = 0.18 + rand() * 0.64;
+              const ex = a[0] + (b[0] - a[0]) * along + (-nz) * (rand() - 0.5) * 0.12;
+              const ez = a[2] + (b[2] - a[2]) * along + nx * (rand() - 0.5) * 0.12;
+              const step = j + rand() * 0.7;
+              const out = 0.22 + step * 0.14 + rand() * 0.08;
+              const y = WATER_Y + 0.09 - step * 0.035 + (rand() - 0.5) * 0.02;
+              const sx = 1.55 + rand() * 1.1;
+              const sy = 0.22 + rand() * 0.28;
+              const sz = 1.15 + rand() * 0.9;
+              q.setFromAxisAngle(up, rand() * Math.PI * 2);
+              const tip = new Quaternion().setFromAxisAngle(new Vector3(nx, 0, nz), (rand() - 0.5) * 0.35);
+              q.multiply(tip);
+              m.compose(p.set(ex + nx * out, y, ez + nz * out), q, s.set(sx, sy, sz));
+              stones.setMatrixAt(n++, m);
+            }
+          } else {
+            // 簇间空档：贴崖稀疏立石，盖住褐色纸板状六角侧面（非整圈）。
+            const hug = 1 + Math.floor(rand() * 2); // 1–2
+            for (let j = 0; j < hug; j += 1) {
+              const along = 0.2 + rand() * 0.6;
+              const ex = a[0] + (b[0] - a[0]) * along + (-nz) * (rand() - 0.5) * 0.06;
+              const ez = a[2] + (b[2] - a[2]) * along + nx * (rand() - 0.5) * 0.06;
+              const out = 0.05 + rand() * 0.11; // wall-hugging
+              const y = WATER_Y + 0.03 + rand() * 0.08;
+              const sx = 0.95 + rand() * 0.85;
+              const sy = 0.55 + rand() * 0.55; // more vertical rock face
+              const sz = 0.85 + rand() * 0.7;
+              q.setFromAxisAngle(up, rand() * Math.PI * 2);
+              const tip = new Quaternion().setFromAxisAngle(new Vector3(nx, 0, nz), (rand() - 0.5) * 0.25);
+              q.multiply(tip);
+              m.compose(p.set(ex + nx * out, y, ez + nz * out), q, s.set(sx, sy, sz));
+              stones.setMatrixAt(n++, m);
+            }
           }
         }
         edgeIdx += 1;

@@ -2,7 +2,7 @@ import { InstancedMesh, Matrix4, PerspectiveCamera, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 import { dressingInputs, tileCenter, vertexWorld, withoutReplacedNodes } from "./hex-dressing";
 import { mapHexSettlementToScene } from "./mappers/hex-settlement";
-import { SIGN_KINDS, SKIRT_BOTTOM_Y, SKIRT_TOP_Y, WATER_Y, coastEdges, coastWallGeometry, createIslandLayer, docksFor, outerTiles, reefClusterSize, reefEdgeMask, signCell } from "./island";
+import { HEX_LAYOUT_RADIUS, SIGN_KINDS, SKIRT_BOTTOM_Y, SKIRT_TOP_Y, WATER_Y, coastEdges, coastWallGeometry, createIslandLayer, docksFor, outerTiles, reefClusterSize, reefEdgeMask, signCell } from "./island";
 import { beginnerSceneInput } from "./terrain-dressing.fixture";
 
 const input = beginnerSceneInput();
@@ -50,17 +50,16 @@ describe("G3D-ISLAND island + coast", () => {
     expect(reefClusterSize(0)).toBeLessThanOrEqual(4);
   });
 
-  it("high shore-stones include raised reef ledges; medium matches pre-reef count band", () => {
+  it("high shore-stones include reef clusters + gap wall-huggers; medium count unchanged", () => {
     const layer = createIslandLayer();
     layer.sync(tiles, ports, "medium", true);
     const mid = layer.group.children.find((c) => c.name === "island:shore-stones") as InstancedMesh;
     expect(mid.count).toBe(coastEdges(tiles).length * 4);
-    expect(layer.group.children.some((c) => c.name === "island:beach-steps")).toBe(false);
     layer.sync(tiles, ports, "high", true);
     const hi = layer.group.children.find((c) => c.name === "island:shore-stones") as InstancedMesh;
-    expect(hi.count).toBeGreaterThan(mid.count);
+    // base 120 + reef clusters on ~55% edges + 1–2 huggers on the rest
+    expect(hi.count).toBeGreaterThan(mid.count + 20);
     expect(layer.group.children.some((c) => c.name === "island:beach-steps")).toBe(false);
-    // at least some instances sit clearly above the quiet waterline (dry reef)
     const mm = new Matrix4();
     const pp = new Vector3();
     let raised = 0;
@@ -70,7 +69,31 @@ describe("G3D-ISLAND island + coast", () => {
       if (pp.y > WATER_Y + 0.04) raised += 1;
     }
     expect(raised).toBeGreaterThan(6);
+    // gap edges (~45%) each add 1–2 wall-huggers on top of reef clusters
+    const edges = coastEdges(tiles).length;
+    let gaps = 0;
+    for (let i = 0; i < edges; i += 1) if (!reefEdgeMask(i)) gaps += 1;
+    expect(hi.count).toBeGreaterThanOrEqual(mid.count + gaps);
     layer.dispose();
+  });
+
+
+  it("high cliff wetFootDark darkens the lower skirt vs default", () => {
+    const plain = coastWallGeometry(tiles);
+    const wet = coastWallGeometry(tiles, { wetFootDark: true });
+    const c0 = plain.getAttribute("color");
+    const c1 = wet.getAttribute("color");
+    const y0 = plain.getAttribute("position");
+    let sum0 = 0, sum1 = 0, n = 0;
+    for (let i = 0; i < y0.count; i += 1) {
+      if (y0.getY(i) > WATER_Y) continue;
+      sum0 += c0.getX(i) + c0.getY(i) + c0.getZ(i);
+      sum1 += c1.getX(i) + c1.getY(i) + c1.getZ(i);
+      n += 1;
+    }
+    expect(n).toBeGreaterThan(100);
+    expect(sum1 / n).toBeLessThan(sum0 / n);
+    plain.dispose(); wet.dispose();
   });
 
   it("docks point outward from the island, one per port", () => {
