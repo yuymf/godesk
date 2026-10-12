@@ -24,6 +24,7 @@ export type TideWaterUniforms = {
   uTideWaveS: IUniform<number>;
   uTideFoam: IUniform<number>;
   uTideShoreFoam: IUniform<number>;
+  uTideShoreWave: IUniform<number>;
   uTideWaves: IUniform<number>;
   uTideUseN: IUniform<number>;
   uTideNormal: IUniform<Texture | null>;
@@ -44,6 +45,8 @@ const VERT_PARS = [
   "uniform float uTideWaveS;",
   "uniform float uTideWaves;",
   "uniform float uTideHalf;",
+  "uniform float uTideShoreWave;",
+  "uniform sampler2D uTideDist;",
   "varying vec3 vTideWorld;",
   "vec3 tideGerstner(vec3 p, vec2 dir, float steep, float waveLen, float speed) {",
   "  float k = 6.2831853 / waveLen;",
@@ -59,16 +62,27 @@ const VERT_PARS = [
 ].join("\n");
 
 const VERT_MAIN = [
-  // G3D-ISLAND：外圈远海环（同材质、平面）与主水面无缝衔接 —— 波浪位移在主水面外缘淡出到 0。
+  // G3D-ISLAND：外圈远海环与主水面衔接；近岸（距离场）加强 swell，外海保持原幅。
   "vec3 tideRest = transformed;",
+  "vec3 tideWaved = tideRest;",
   "if (uTideWaves > 0.5 && uTideWaveH > 0.0001) {",
-  "  transformed = tideGerstner(transformed, normalize(vec2(1.0, 0.35)), 0.22, 2.4, 1.0);",
+  "  tideWaved = tideGerstner(tideRest, normalize(vec2(1.0, 0.35)), 0.22, 2.4, 1.0);",
   "  if (uTideWaves > 1.5) {",
-  "    transformed = tideGerstner(transformed, normalize(vec2(-0.55, 1.0)), 0.14, 1.5, 1.25);",
+  "    tideWaved = tideGerstner(tideWaved, normalize(vec2(-0.55, 1.0)), 0.14, 1.5, 1.25);",
+  "  }",
+  // high/medium：近岸多一道短波，只在岸带放大。
+  "  if (uTideShoreWave > 0.15) {",
+  "    tideWaved = tideGerstner(tideWaved, normalize(vec2(0.25, -0.95)), 0.11, 0.95, 1.55);",
   "  }",
   "}",
+  "vec2 tideWu = tideRest.xz / max(uTideHalf * 2.0, 0.001) + 0.5;",
+  "float dVert = texture2D(uTideDist, clamp(tideWu, 0.0, 1.0)).r;",
+  // near-shore swell band: past foam lip (~0.05) → mid shallows (~0.35); not open ocean.
+  "float nearBand = smoothstep(0.045, 0.13, dVert) * (1.0 - smoothstep(0.32, 0.58, dVert));",
+  "float waveAmp = 1.0 + nearBand * 1.75 * uTideShoreWave;",
+  "vec3 tideDisplaced = tideRest + (tideWaved - tideRest) * waveAmp;",
   "float tideEdge = 1.0 - smoothstep(uTideHalf * 0.7, uTideHalf * 0.97, max(abs(tideRest.x), abs(tideRest.z)));",
-  "transformed = mix(tideRest, transformed, tideEdge);",
+  "transformed = mix(tideRest, tideDisplaced, tideEdge);",
   "vTideWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;",
 ].join("\n");
 
@@ -79,6 +93,7 @@ const FRAG_PARS = [
   "uniform vec3 uTideDeep;",
   "uniform float uTideFoam;",
   "uniform float uTideShoreFoam;",
+  "uniform float uTideShoreWave;",
   "uniform float uTideTime;",
   "uniform float uTideWaveS;",
   "uniform float uTideUseN;",
@@ -105,6 +120,13 @@ const FRAG_COLOR = [
   "  waterCol = mix(waterCol, uTideDeep, smoothstep(0.24, 0.95, d));",
   "  float ringLip = exp(-pow((d - 0.125) / 0.018, 2.0));",
   "  waterCol = mix(waterCol, uTideShallow * 1.06, ringLip * 0.35);",
+  // Near-shore soft ridge rhythm (settlecoast swell): trough/crest in shallows only — not open ocean brighten.
+  "  float swellBand = smoothstep(0.055, 0.14, d) * (1.0 - smoothstep(0.30, 0.55, d));",
+  "  float swellPhase = vTideWorld.x * 1.85 + vTideWorld.z * 1.25 - uTideTime * 1.35 * uTideWaveS;",
+  "  float swell = sin(swellPhase) * sin(swellPhase * 0.53 + 1.7);",
+  "  float swellAmt = swellBand * uTideShoreWave * swell;",
+  "  waterCol *= 1.0 - max(0.0, -swellAmt) * 0.14;",
+  "  waterCol = mix(waterCol, waterCol * vec3(1.06, 1.09, 1.05), max(0.0, swellAmt) * 0.38);",
   // R14：在 R13 切向笔触上提高默认机位浪脊密度与节奏分段（自有算法，非抄 settlecoast）。
   "  vec2 fuv = vTideWorld.xz * 0.78 + vec2(uTideTime * 0.028 * uTideWaveS, uTideTime * -0.02 * uTideWaveS);",
   "  float foamN = texture2D(uTideFoamMap, fuv).r;",
@@ -174,6 +196,7 @@ export function createTideWaterMaterial(
     uTideWaveS: { value: spec.waveSpeed },
     uTideFoam: { value: features.foam ? spec.foam : 0 },
     uTideShoreFoam: { value: features.foam ? features.shoreFoam : 0 },
+    uTideShoreWave: { value: features.shoreWave },
     uTideWaves: { value: features.waveCount },
     uTideUseN: { value: features.normals ? 1 : 0 },
     uTideNormal: { value: null },
@@ -201,7 +224,7 @@ export function createTideWaterMaterial(
       .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>\n${FRAG_NORMAL}`);
   };
   material.customProgramCacheKey = () =>
-    `tide-r22b-sf${features.shoreFoam}-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
+    `tide-r23-sw${features.shoreWave}-sf${features.shoreFoam}-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
 
   return {
     material,
