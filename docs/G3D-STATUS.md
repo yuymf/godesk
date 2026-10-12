@@ -95,7 +95,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
 | G3D-17 上线闸门 | Track C | `feat/g3d-17-tidewell-launch` | 删除 `GODESK_FEATURE_TIDEWELL`（首页默认汐屿）；`GODESK_LAUNCH_GATE_BLOCK=asset-legal,hud-raw-action-ids,draw-calls`；Lighthouse / draw-calls / size 仍 warn；**draft，不合入**；待大主管评分 |
-| LOD-high（triangles） | Track C | `feat/lod-high`（叠 #168） | pine 内部面剔除 + shadow proxy；triangles(high) 415926→295310；medium/low 字节+像素恒等；**draft，不合入**；待大主管评分 |
+| LOD-high（triangles） | Track C | `feat/lod-high` [#169](https://github.com/yuymf/godesk/pull/169)（叠 #168） | pine 内部面剔除 + shadow proxy；triangles(high) 415926→295310；medium/low 字节+像素恒等；**draft，不合入**；待大主管评分 |
 
 ## 已知限制
 
@@ -144,7 +144,7 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
-| `feat/lod-high` | （待开 draft） | LOD-high：pine interior cull + shadow proxy；triangles(high) 415926→295310；base=`feat/launch-gate-block` @0914ebf | draft · 不合入，待大主管评分 |
+| `feat/lod-high` | [#169](https://github.com/yuymf/godesk/pull/169) | LOD-high：pine interior cull + shadow proxy；triangles(high) 415926→295310；base=`feat/launch-gate-block` @0914ebf | draft · 不合入，待大主管评分 |
 | `feat/launch-gate-block` | [#168](https://github.com/yuymf/godesk/pull/168) | launch gate block + core size / requests；base=`feat/g3d-17-tidewell-launch` | draft · 不合入 |
 | `feat/g3d-17-tidewell-launch` | [#166](https://github.com/yuymf/godesk/pull/166) | G3D-17：默认汐屿 + e2e/海报修复；base=`main` | draft · ~9.3 通过，**不合入（等用户令）** |
 
