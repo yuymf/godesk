@@ -183,7 +183,103 @@ function at(geom: BufferGeometry, x: number, y: number, z: number, sx = 1, sy = 
   return geom;
 }
 
-function merged(parts: BufferGeometry[]): BufferGeometry {
+/**
+ * LOD-high（仅 high 档）：剔除完全藏在其它闭合叶团内部的三角形。
+ * 叶团 = jag 过的二十面体（闭合、对其中心星形）；对中心取「各三角面所在平面到中心的最小距离」
+ * 作内切球半径 d —— 中心发出的任意射线都先穿过某个面，且距离 ≥ 该面平面距离 ≥ d，
+ * 所以半径 d 的球整个在叶团体内。三个顶点都落在别的叶团 0.98·d 球内的三角形（球是凸的 → 整个三角形在体内）
+ * 从外部任何视线 / 光线都被该叶团表面先挡住：主画面与阴影贴图的像素都不变，只少画三角形。
+ * medium / low 不走这里（几何字节不变）。
+ */
+let cullInteriorFaces = false;
+/** LOD-high 阴影代理：叶团用 0 级二十面体（20 面，略放大贴合 1 级体积），去掉笔触片 / 枝杈。 */
+let shadowProxyMode = false;
+const SHADOW_PROXY_SKIP = "gdShadowProxySkip";
+/** 0 级二十面体面心半径 ≈ 0.795；放大到 1 级（面心 ≈ 0.95）的平均体积。 */
+const SHADOW_PROXY_CLUMP_SCALE = 1.08;
+const CLOSED_CENTER = "gdClosedCenter";
+
+function triangleCount(g: BufferGeometry): number {
+  return (g.index ? g.index.count : g.getAttribute("position").count) / 3;
+}
+
+function vertexOf(g: BufferGeometry, tri: number, corner: number, out: Vector3): Vector3 {
+  const idx = g.index ? g.index.getX(tri * 3 + corner) : tri * 3 + corner;
+  return out.fromBufferAttribute(g.getAttribute("position") as BufferAttribute, idx);
+}
+
+function inscribedRadius(g: BufferGeometry, c: Vector3): number {
+  const a = new Vector3(), b = new Vector3(), d = new Vector3(), n = new Vector3(), e1 = new Vector3(), e2 = new Vector3();
+  let min = Infinity;
+  for (let t = 0; t < triangleCount(g); t += 1) {
+    vertexOf(g, t, 0, a); vertexOf(g, t, 1, b); vertexOf(g, t, 2, d);
+    n.crossVectors(e1.subVectors(b, a), e2.subVectors(d, a));
+    const len = n.length();
+    if (len === 0) continue;
+    n.divideScalar(len);
+    const dist = n.dot(e1.subVectors(a, c));
+    // 面必须背向中心（星形 + 外法向）；否则不作遮挡体。
+    if (Math.abs(dist) < 1e-9) return 0;
+    min = Math.min(min, Math.abs(dist));
+  }
+  return Number.isFinite(min) ? min : 0;
+}
+
+function keepTriangles(g: BufferGeometry, keep: boolean[]): BufferGeometry {
+  if (keep.every(Boolean)) return g;
+  if (g.index) {
+    const src = g.index;
+    const out: number[] = [];
+    keep.forEach((k, t) => { if (k) out.push(src.getX(t * 3), src.getX(t * 3 + 1), src.getX(t * 3 + 2)); });
+    g.setIndex(out);
+    return g;
+  }
+  const next = new BufferGeometry();
+  for (const [name, attr] of Object.entries(g.attributes)) {
+    const a = attr as BufferAttribute;
+    const size = a.itemSize;
+    const data = new (a.array.constructor as Float32ArrayConstructor)(keep.filter(Boolean).length * 3 * size);
+    let w = 0;
+    keep.forEach((k, t) => {
+      if (!k) return;
+      data.set(a.array.subarray(t * 3 * size, (t + 1) * 3 * size) as Float32Array, w);
+      w += 3 * size;
+    });
+    next.setAttribute(name, new BufferAttribute(data, size, a.normalized));
+  }
+  g.dispose();
+  return next;
+}
+
+/** Exported for tests: cull triangles fully inside another closed part's inscribed ball. */
+export function cullInterior(parts: BufferGeometry[]): BufferGeometry[] {
+  const balls = parts.map((g) => {
+    const c = g.userData[CLOSED_CENTER] as [number, number, number] | undefined;
+    if (!c) return null;
+    const center = new Vector3(...c);
+    const r = inscribedRadius(g, center) * 0.98;
+    return r > 0 ? { center, r2: r * r } : null;
+  });
+  const v = new Vector3();
+  return parts.map((g, j) => {
+    const keep: boolean[] = [];
+    for (let t = 0; t < triangleCount(g); t += 1) {
+      let hidden = false;
+      for (let i = 0; i < balls.length && !hidden; i += 1) {
+        const ball = balls[i];
+        if (!ball || i === j) continue;
+        hidden = [0, 1, 2].every((k) => vertexOf(g, t, k, v).distanceToSquared(ball.center) < ball.r2);
+      }
+      keep.push(!hidden);
+    }
+    return keepTriangles(g, keep);
+  });
+}
+
+function merged(input: BufferGeometry[]): BufferGeometry {
+  const kept = shadowProxyMode ? input.filter((g) => !g.userData[SHADOW_PROXY_SKIP]) : input;
+  for (const g of input) if (!kept.includes(g)) g.dispose();
+  const parts = cullInteriorFaces ? cullInterior(kept) : kept;
   const out = mergeGeometries(parts, false);
   if (!out) throw new Error("terrain-props: merge failed");
   for (const p of parts) p.dispose();
@@ -210,13 +306,17 @@ function brushCard(x: number, y: number, z: number, rx: number, rz: number, yaw:
   disc.rotateX(-Math.PI / 2);
   disc.rotateX(tilt); // slight tip toward camera/light for brush read
   const g = at(disc, x, y, z, rx, 1, rz, yaw);
+  g.userData[SHADOW_PROXY_SKIP] = true;
   return grad(g, bottom, top, y - 0.03, y + 0.04, 0.18);
 }
 
 /** R18 手绘叶团：单位球先 jag 出不规则块面再缩放；逐面明度抖动 = 笔触 dab（非光滑几何伞）。 */
 function clump(x: number, y: number, z: number, r: number, sy: number, bottom: string, top: string, seed: number, jagAmt = 0.2): BufferGeometry {
-  const g = jag(new IcosahedronGeometry(1, 1), jagAmt, seed);
+  const g = shadowProxyMode
+    ? jag(new IcosahedronGeometry(SHADOW_PROXY_CLUMP_SCALE, 0), jagAmt, seed)
+    : jag(new IcosahedronGeometry(1, 1), jagAmt, seed);
   at(g, x, y, z, r, r * sy, r, seed * 0.7);
+  g.userData[CLOSED_CENTER] = [x, y, z];
   return grad(g, bottom, top, y - r * sy, y + r * sy, 0.4);
 }
 
@@ -476,8 +576,41 @@ const BUILDERS: Record<PropKind, () => BufferGeometry> = {
   bricks: bricksGeometry, sheaf: sheafGeometry, wheatrow: wheatRowGeometry, dune: duneGeometry, pebble: pebbleGeometry, blobshadow: blobShadowGeometry,
 };
 
-export function buildPropGeometry(kind: PropKind): BufferGeometry {
-  return BUILDERS[kind]();
+export function buildPropGeometry(kind: PropKind, options: { cullInterior?: boolean; shadowProxy?: boolean } = {}): BufferGeometry {
+  cullInteriorFaces = options.cullInterior === true;
+  try {
+    const full = BUILDERS[kind]();
+    if (!options.shadowProxy) return full;
+    shadowProxyMode = true;
+    let proxy: BufferGeometry;
+    try {
+      proxy = BUILDERS[kind]();
+    } finally {
+      shadowProxyMode = false;
+    }
+    // [完整几何 | 阴影代理] 拼成一个缓冲：主画面 drawRange 只画前段，阴影 pass 只画后段（见 attachShadowProxy）。
+    const fullCount = full.getAttribute("position").count;
+    const proxyCount = proxy.getAttribute("position").count;
+    const out = mergeGeometries([full, proxy], false);
+    if (!out) throw new Error("terrain-props: shadow proxy merge failed");
+    full.dispose();
+    proxy.dispose();
+    out.userData.gdShadowProxy = { fullCount, proxyCount };
+    out.setDrawRange(0, fullCount);
+    out.computeBoundingSphere();
+    return out;
+  } finally {
+    cullInteriorFaces = false;
+  }
+}
+
+/** LOD-high：阴影 pass 改画代理段，画完恢复主画面段（同一 draw，无额外 draw call / 材质）。 */
+function attachShadowProxy(mesh: InstancedMesh): void {
+  const info = mesh.geometry.userData.gdShadowProxy as { fullCount: number; proxyCount: number } | undefined;
+  if (!info) return;
+  const geometry = mesh.geometry;
+  mesh.onBeforeShadow = () => geometry.setDrawRange(info.fullCount, info.proxyCount);
+  mesh.onAfterShadow = () => geometry.setDrawRange(0, info.fullCount);
 }
 
 // ── 确定性摆放 ─────────────────────────────────────────────────────────────
@@ -882,7 +1015,7 @@ export function createTerrainPropLayer(): TerrainPropLayer {
     transparent: true, opacity: 0.22,
   });
   shadowMaterial.depthWrite = false;
-  const geometries = new Map<PropKind, BufferGeometry>();
+  const geometries = new Map<string, BufferGeometry>();
   let key = "";
   let tier: RenderTierId | null = null;
   const matrix = new Matrix4();
@@ -908,15 +1041,19 @@ export function createTerrainPropLayer(): TerrainPropLayer {
       tier = nextTier;
       clear();
       for (const [kind, list] of layoutProps(tiles, nextTier)) {
-        let geom = geometries.get(kind);
+        // LOD-high: high 档用剔除了内部面的几何（像素等价）；medium / low 仍是原几何。
+        const lodKey = nextTier === "high" ? `${kind}|high` : kind;
+        let geom = geometries.get(lodKey);
         if (!geom) {
-          geom = buildPropGeometry(kind);
-          geometries.set(kind, geom);
+          const highPine = nextTier === "high" && isPine(kind);
+          geom = buildPropGeometry(kind, { cullInterior: highPine, shadowProxy: highPine });
+          geometries.set(lodKey, geom);
         }
         const mat = kind === "canopy" ? canopyMaterial : kind === "sheep" ? sheepMaterial : kind === "blobshadow" ? shadowMaterial : SMOOTH[kind] ? smoothMaterial : material;
         const mesh = new InstancedMesh(geom, mat, list.length);
         mesh.name = `prop:${kind}`;
         mesh.castShadow = castShadow && CASTS[kind];
+        if (nextTier === "high" && mesh.castShadow) attachShadowProxy(mesh);
         mesh.receiveShadow = true;
         list.forEach((p, i) => {
           quat.setFromAxisAngle(up, p.yaw);
