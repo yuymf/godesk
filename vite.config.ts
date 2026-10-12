@@ -44,6 +44,17 @@ export default defineConfig({
           ) {
             return "render3d-assets";
           }
+          // launch-gate-block: KTX2Loader's zstd / ktx-parse deps used to fall into render3d core
+          // (~19 KB gzip) though only the lazy asset loaders use them. Own chunk, own budget.
+          if (/\/examples\/jsm\/libs\/(zstddec|ktx-parse)/.test(normalized)) {
+            return "ktx2-libs";
+          }
+          // launch-gate-block: tokens.ts is shared by assets/pieces.ts and terrain-props.ts. Left
+          // unassigned, Rollup put it in board-dressing, creating board-dressing <-> render3d-assets.
+          // Pin it to render3d-assets (board-dressing already depends on that chunk).
+          if (normalized.endsWith("/src/render3d/tokens.ts")) {
+            return "render3d-assets";
+          }
           if (normalized.includes("/src/render3d/water/")) {
             return "tide-water";
           }
@@ -82,6 +93,9 @@ export default defineConfig({
           // G3D-08：水体必须先于 render3d 命名，避免被算进 210 KB 核心。
           if (chunkInfo.name === "tide-water" || facade.includes("/src/render3d/water/")) {
             return "assets/tide-water-[hash].js";
+          }
+          if (chunkInfo.name === "ktx2-libs") {
+            return "assets/ktx2-libs-[hash].js";
           }
           if (chunkInfo.name === "imported-props") {
             return "assets/imported-props-[hash].js";
@@ -127,7 +141,9 @@ export default defineConfig({
               return (
                 normalized.includes("/src/render3d/") ||
                 normalized.includes("/node_modules/three/") ||
-                normalized.includes("/node_modules/@tweenjs/")
+                normalized.includes("/node_modules/@tweenjs/") ||
+                // launch-gate-block: eager `?url` GLB strings from model-templates.ts live with SceneHost.
+                /\/assets\/models\/[^/]+\.glb\?url$/.test(normalized)
               );
             });
           if (chunkInfo.name === "render3d" || facade.includes("/src/render3d/") || render3dOnly) {

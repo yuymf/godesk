@@ -165,6 +165,15 @@ CI 上 Room 的 TBT 是 15 万毫秒级，原因是 SwiftShader 在 4× CPU 节�
 
 合入后以 `main` 的 CI 运行结果为准，复核这里和 `lighthouserc.json`。
 
+**2026-10-12 · G3D-17 launch-gate-block（用户指示：warn → error，按实测取现实阈值）** — 首页 LCP 3 800 与 Room TBT 200 000 为 **临时（TEMPORARY）** 阈值，待有 GPU 的机器复测后收紧。
+
+本机 box（Chromium 1243 / Playwright，mobile 预设，3 次中位数，`feat/launch-gate-block`）：首页 Performance 0.95、LCP 2 567 ms、TBT 2 ms、CLS 0；Room（`?tier=low`）Performance 0.53、TBT 16 387 ms（SwiftShader 持续渲染，非有效信号）、CLS 0.016。基线（#166 `c6a8aed`）同条件：首页 LCP 2 564 ms，Room TBT 17 049 ms、CLS 0.016。
+
+- **首页 LCP**：`error`，`maxNumericValue` **3 800 ms**（本机 2.57 s；CI 历史 3 499 ms + 约 10% 余量）。LCP 元素是 React 渲染后的 textarea 占位文本（render delay ≈ 2.1 s），未达 §4.6.3 的 2 500 ms 目标——**这是用户指示下放宽的阈值，2 500 目标仍是缺口**。
+- **Room TBT**：`error`，`maxNumericValue` **200 000 ms**。只是 SwiftShader 下的回归天花板（CI 历史 15 万毫秒级），不代表真实主线程阻塞；§4.6.3 的 600 ms 需有 GPU 的机器验证。PR 单次运行仍由 `lhci-warn-errors.mjs` 把 TBT 降级为 warn。
+- **Room CLS**：`error`，0.1 不变（本机 0.016）。
+
+
 ### 6.2 rebase 到 G3D-04 后的 Room 回归（2026-10-06）
 
 本 PR rebase 到含 G3D-04（#109）的 `main` 后，CI 的 Room Performance 中位数跌到 0.43，低于 0.52 的门槛（run 37379312782，CLS 0.275）。排查结论：

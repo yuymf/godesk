@@ -151,6 +151,9 @@ async function applyProfile(cdp, profile) {
 }
 
 /** Counts every request / encoded byte the page receives (CDP Network domain). */
+/** launch-gate-block: request list behind firstGameRequests, written next to ci-budgets.json. */
+let firstGameRequestUrls = [];
+
 function trackNetwork(cdp) {
   const started = new Map();
   const finished = [];
@@ -177,7 +180,7 @@ function trackNetwork(cdp) {
         if (start && /^(data:|blob:)/i.test(start.url)) return sum;
         return sum + entry.bytes;
       }, 0);
-      return { requests, bytes };
+      return { requests, bytes, urls: entries.map((entry) => entry.url) };
     },
   };
 }
@@ -453,6 +456,7 @@ async function runCi({ browser, roomUrl, outDir }) {
     const wait = TRANSFER_BUDGETS.firstGameWindowMs - (Date.now() - started);
     if (wait > 0) await delay(wait);
     const firstGame = network.within(TRANSFER_BUDGETS.firstGameWindowMs);
+    firstGameRequestUrls = firstGame.urls;
     results.push(
       check("interactiveBytes", interactive, TRANSFER_BUDGETS.interactiveBytes),
       check("firstGameBytes(high)", firstGame.bytes, tier.firstGameBytes),
@@ -618,6 +622,7 @@ async function runCi({ browser, roomUrl, outDir }) {
     capturedAt: new Date().toISOString(),
   };
   await writeFile(join(outDir, "ci-budgets.json"), `${JSON.stringify(report, null, 2)}\n`);
+  await writeFile(join(outDir, "first-game-requests.json"), `${JSON.stringify(firstGameRequestUrls.map((url) => url.replace(/([?&]share=)[^&]+/, "$1<redacted>")), null, 2)}\n`);
   return report;
 }
 
