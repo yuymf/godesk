@@ -3,7 +3,7 @@
  * LicenseRef-GoDesk-Original）。取代 #138 的灰色平石板（cliff 节点）、灰盒港口（port）与船（ship）。
  *
  * draw call（不含阴影 pass）：岩壁 1 + 岸石 1 + 码头 1 + 港口牌 1 + 帆船 1 = 5，与档位无关
- * （low 档岸石减半、帆船保留但不投影）。high 在同岸石 InstancedMesh 内加断续礁石簇 + 簇间贴崖稀疏立石；崖脚湿暗加深；码头桩柱水线湿脚（无额外 draw call）。
+ * （low 档岸石减半、帆船保留但不投影）。high 在同岸石 InstancedMesh 内加断续礁石簇 + 簇间贴崖稀疏立石；崖脚湿暗加深；中段岩色加深；码头桩柱水线湿脚（无额外 draw call）。
  */
 import {
   BufferAttribute,
@@ -347,7 +347,7 @@ function signAtlas(): Texture | null {
  * （方向取离岛心的径向），相邻边共享的角点完全重合 → 没有接缝。另加每格一块六边形顶盖
  * （y = SKIRT_TOP_Y，半径 1.0）填满格子之间的缝。u 沿岛周角度连续，v 自上而下。
  */
-export function coastWallGeometry(tiles: readonly IslandTile[], opts: { wetFootDark?: boolean } = {}): BufferGeometry {
+export function coastWallGeometry(tiles: readonly IslandTile[], opts: { wetFootDark?: boolean; midBandDark?: number } = {}): BufferGeometry {
   // R14：不规则岸崖体块群外轮廓——变宽分面 + 错层高度 + 偶发巨块，压掉整圈程序分面/同心环。
   const ROWS = 4;
   const positions: number[] = [];
@@ -431,7 +431,22 @@ export function coastWallGeometry(tiles: readonly IslandTile[], opts: { wetFootD
           uvs.push(u, 1 - pt[4]);
           const w = pt[5];
           const foot = opts.wetFootDark && t0 > 0.32 ? 0.82 : 1;
-          colors.push(0.92 * w * foot, 0.9 * w * foot, 0.86 * w * (0.92 + 0.08 * (1 - t0)) * foot);
+          // Mid-band rock (above wetFoot, below top rim): cool/darken cardboard brown → continuous dark cliff.
+          // t=0 top rim, t=1 bottom. midBandDark 0=off(low) · faint medium · 1=high.
+          const mb = opts.midBandDark ?? 0;
+          let peak = 0;
+          if (mb > 0 && t0 > 0.06 && t0 < 0.38) {
+            peak = t0 < 0.16 ? (t0 - 0.06) / 0.10 : t0 < 0.30 ? 1 : Math.max(0, (0.38 - t0) / 0.08);
+          }
+          const blotch = peak > 0 ? 0.78 + 0.44 * hash01(panel * 13.7 + t0 * 51.3 + sgi * 2.1) : 1;
+          const dark = mb * peak * 0.48 * blotch; // luminance cut
+          const cool = mb * peak * 0.55; // blend toward gray rock
+          const baseR = 0.92, baseG = 0.90, baseB = 0.86 * (0.92 + 0.08 * (1 - t0));
+          const rockR = 0.52, rockG = 0.50, rockB = 0.46;
+          const r = (baseR * (1 - cool) + rockR * cool) * w * foot * (1 - dark);
+          const g = (baseG * (1 - cool) + rockG * cool) * w * foot * (1 - dark);
+          const b = (baseB * (1 - cool) + rockB * cool) * w * foot * (1 - dark);
+          colors.push(r, g, b);
         }
       }
     }
@@ -654,7 +669,10 @@ export function createIslandLayer(): IslandLayer {
 
       // 连续岩壁 + 顶盖（1 个 draw call，几何随地块集合重建）。
       wallGeom?.dispose();
-      wallGeom = coastWallGeometry(tiles, tier === "high" ? { wetFootDark: true } : {});
+      wallGeom = coastWallGeometry(tiles, {
+        wetFootDark: tier === "high",
+        midBandDark: tier === "high" ? 1 : tier === "medium" ? 0.34 : 0,
+      });
       const wall = new Mesh(wallGeom, rockMat);
       wall.name = "island:cliff";
       wall.castShadow = castShadow;
