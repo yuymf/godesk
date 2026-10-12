@@ -192,6 +192,11 @@ function at(geom: BufferGeometry, x: number, y: number, z: number, sx = 1, sy = 
  * medium / low 不走这里（几何字节不变）。
  */
 let cullInteriorFaces = false;
+/** LOD-high 阴影代理：叶团用 0 级二十面体（20 面，略放大贴合 1 级体积），去掉笔触片 / 枝杈。 */
+let shadowProxyMode = false;
+const SHADOW_PROXY_SKIP = "gdShadowProxySkip";
+/** 0 级二十面体面心半径 ≈ 0.795；放大到 1 级（面心 ≈ 0.95）的平均体积。 */
+const SHADOW_PROXY_CLUMP_SCALE = 1.08;
 const CLOSED_CENTER = "gdClosedCenter";
 
 function triangleCount(g: BufferGeometry): number {
@@ -272,7 +277,9 @@ export function cullInterior(parts: BufferGeometry[]): BufferGeometry[] {
 }
 
 function merged(input: BufferGeometry[]): BufferGeometry {
-  const parts = cullInteriorFaces ? cullInterior(input) : input;
+  const kept = shadowProxyMode ? input.filter((g) => !g.userData[SHADOW_PROXY_SKIP]) : input;
+  for (const g of input) if (!kept.includes(g)) g.dispose();
+  const parts = cullInteriorFaces ? cullInterior(kept) : kept;
   const out = mergeGeometries(parts, false);
   if (!out) throw new Error("terrain-props: merge failed");
   for (const p of parts) p.dispose();
@@ -299,12 +306,15 @@ function brushCard(x: number, y: number, z: number, rx: number, rz: number, yaw:
   disc.rotateX(-Math.PI / 2);
   disc.rotateX(tilt); // slight tip toward camera/light for brush read
   const g = at(disc, x, y, z, rx, 1, rz, yaw);
+  g.userData[SHADOW_PROXY_SKIP] = true;
   return grad(g, bottom, top, y - 0.03, y + 0.04, 0.18);
 }
 
 /** R18 手绘叶团：单位球先 jag 出不规则块面再缩放；逐面明度抖动 = 笔触 dab（非光滑几何伞）。 */
 function clump(x: number, y: number, z: number, r: number, sy: number, bottom: string, top: string, seed: number, jagAmt = 0.2): BufferGeometry {
-  const g = jag(new IcosahedronGeometry(1, 1), jagAmt, seed);
+  const g = shadowProxyMode
+    ? jag(new IcosahedronGeometry(SHADOW_PROXY_CLUMP_SCALE, 0), jagAmt, seed)
+    : jag(new IcosahedronGeometry(1, 1), jagAmt, seed);
   at(g, x, y, z, r, r * sy, r, seed * 0.7);
   g.userData[CLOSED_CENTER] = [x, y, z];
   return grad(g, bottom, top, y - r * sy, y + r * sy, 0.4);
@@ -566,13 +576,41 @@ const BUILDERS: Record<PropKind, () => BufferGeometry> = {
   bricks: bricksGeometry, sheaf: sheafGeometry, wheatrow: wheatRowGeometry, dune: duneGeometry, pebble: pebbleGeometry, blobshadow: blobShadowGeometry,
 };
 
-export function buildPropGeometry(kind: PropKind, options: { cullInterior?: boolean } = {}): BufferGeometry {
+export function buildPropGeometry(kind: PropKind, options: { cullInterior?: boolean; shadowProxy?: boolean } = {}): BufferGeometry {
   cullInteriorFaces = options.cullInterior === true;
   try {
-    return BUILDERS[kind]();
+    const full = BUILDERS[kind]();
+    if (!options.shadowProxy) return full;
+    shadowProxyMode = true;
+    let proxy: BufferGeometry;
+    try {
+      proxy = BUILDERS[kind]();
+    } finally {
+      shadowProxyMode = false;
+    }
+    // [完整几何 | 阴影代理] 拼成一个缓冲：主画面 drawRange 只画前段，阴影 pass 只画后段（见 attachShadowProxy）。
+    const fullCount = full.getAttribute("position").count;
+    const proxyCount = proxy.getAttribute("position").count;
+    const out = mergeGeometries([full, proxy], false);
+    if (!out) throw new Error("terrain-props: shadow proxy merge failed");
+    full.dispose();
+    proxy.dispose();
+    out.userData.gdShadowProxy = { fullCount, proxyCount };
+    out.setDrawRange(0, fullCount);
+    out.computeBoundingSphere();
+    return out;
   } finally {
     cullInteriorFaces = false;
   }
+}
+
+/** LOD-high：阴影 pass 改画代理段，画完恢复主画面段（同一 draw，无额外 draw call / 材质）。 */
+function attachShadowProxy(mesh: InstancedMesh): void {
+  const info = mesh.geometry.userData.gdShadowProxy as { fullCount: number; proxyCount: number } | undefined;
+  if (!info) return;
+  const geometry = mesh.geometry;
+  mesh.onBeforeShadow = () => geometry.setDrawRange(info.fullCount, info.proxyCount);
+  mesh.onAfterShadow = () => geometry.setDrawRange(0, info.fullCount);
 }
 
 // ── 确定性摆放 ─────────────────────────────────────────────────────────────
@@ -1007,13 +1045,15 @@ export function createTerrainPropLayer(): TerrainPropLayer {
         const lodKey = nextTier === "high" ? `${kind}|high` : kind;
         let geom = geometries.get(lodKey);
         if (!geom) {
-          geom = buildPropGeometry(kind, { cullInterior: nextTier === "high" && isPine(kind) });
+          const highPine = nextTier === "high" && isPine(kind);
+          geom = buildPropGeometry(kind, { cullInterior: highPine, shadowProxy: highPine });
           geometries.set(lodKey, geom);
         }
         const mat = kind === "canopy" ? canopyMaterial : kind === "sheep" ? sheepMaterial : kind === "blobshadow" ? shadowMaterial : SMOOTH[kind] ? smoothMaterial : material;
         const mesh = new InstancedMesh(geom, mat, list.length);
         mesh.name = `prop:${kind}`;
         mesh.castShadow = castShadow && CASTS[kind];
+        if (nextTier === "high" && mesh.castShadow) attachShadowProxy(mesh);
         mesh.receiveShadow = true;
         list.forEach((p, i) => {
           quat.setFromAxisAngle(up, p.yaw);

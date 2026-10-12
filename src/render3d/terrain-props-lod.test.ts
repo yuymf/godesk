@@ -1,0 +1,77 @@
+import { createHash } from "node:crypto";
+import { appendFileSync } from "node:fs";
+import type { BufferAttribute, BufferGeometry, InstancedMesh } from "three";
+import { describe, expect, it } from "vitest";
+import { dressingInputs } from "./hex-dressing";
+import { beginnerSceneInput } from "./terrain-dressing.fixture";
+import { createTerrainPropLayer } from "./terrain-props";
+import type { RenderTierId } from "./tiers";
+
+/**
+ * LOD-high: medium / low prop meshes must stay byte-identical to the pre-LOD build (0914ebf).
+ * The digest covers every geometry attribute + index, draw range, instance matrices / colours,
+ * shadow flags and whether a shadow hook is installed. Baselines were produced at 0914ebf with
+ * this same file (see REPORT in g3d-evidence/…/lod-high).
+ */
+const BASELINE: Record<"medium" | "low", Record<"shadow" | "noshadow", string>> = {
+  medium: { shadow: "8558545257b7c66b216c9b705cd2ee323049665939dfc40cb5bccf5cddab083b", noshadow: "85e92b2f7bc14a3cb3334f6134d7de7a030ae36983d747efe8039764f9f0820e" },
+  low: { shadow: "8cd04aa93fad8514394b19aa9d70524a830d3a4cd9363664509b09ea246450c4", noshadow: "5cfc19a7f0486003fafc6ec978fba4fe70929566cf14869edb5e8280ce774b83" },
+};
+
+function digestLayer(tier: RenderTierId, castShadow: boolean): string {
+  const { tiles } = dressingInputs(beginnerSceneInput());
+  const layer = createTerrainPropLayer();
+  layer.sync(tiles, tier, castShadow);
+  const hash = createHash("sha256");
+  for (const child of layer.group.children) {
+    const mesh = child as InstancedMesh;
+    const geometry = mesh.geometry as BufferGeometry;
+    hash.update(`${mesh.name}|${mesh.count}|${mesh.castShadow}|${mesh.receiveShadow}|${geometry.drawRange.start}|${geometry.drawRange.count}|`);
+    hash.update(`hook:${Object.prototype.hasOwnProperty.call(mesh, "onBeforeShadow")}|`);
+    for (const name of Object.keys(geometry.attributes).sort()) {
+      const attr = geometry.attributes[name] as BufferAttribute;
+      hash.update(`${name}:${attr.itemSize}:`);
+      hash.update(Buffer.from((attr.array as Float32Array).buffer.slice(0)));
+    }
+    if (geometry.index) hash.update(Buffer.from((geometry.index.array as Uint16Array).buffer.slice(0)));
+    hash.update(Buffer.from(mesh.instanceMatrix.array.buffer.slice(0)));
+    if (mesh.instanceColor) hash.update(Buffer.from(mesh.instanceColor.array.buffer.slice(0)));
+  }
+  layer.dispose();
+  return hash.digest("hex");
+}
+
+function layerTriangles(tier: RenderTierId): { main: number; shadow: number } {
+  const { tiles } = dressingInputs(beginnerSceneInput());
+  const layer = createTerrainPropLayer();
+  layer.sync(tiles, tier, true);
+  let main = 0;
+  let shadow = 0;
+  for (const child of layer.group.children) {
+    const mesh = child as InstancedMesh;
+    const g = mesh.geometry;
+    const raw = g.index ? g.index.count : g.getAttribute("position").count;
+    const proxy = g.userData.gdShadowProxy as { fullCount: number; proxyCount: number } | undefined;
+    main += (Math.min(raw, g.drawRange.count) / 3) * mesh.count;
+    if (mesh.castShadow) shadow += ((proxy ? proxy.proxyCount : Math.min(raw, g.drawRange.count)) / 3) * mesh.count;
+  }
+  layer.dispose();
+  return { main, shadow };
+}
+
+describe("LOD-high terrain props", () => {
+  it.skipIf(!process.env.LOD_DIGEST_OUT)("writes digests (baseline helper, LOD_DIGEST_OUT=file)", () => {
+    const out = process.env.LOD_DIGEST_OUT!;
+    for (const tier of ["medium", "low", "high"] as const) {
+      for (const shadow of [true, false]) appendFileSync(out, `${tier} ${shadow} ${digestLayer(tier, shadow)}\n`);
+    }
+    for (const tier of ["high", "medium", "low"] as const) appendFileSync(out, `tri ${tier} ${JSON.stringify(layerTriangles(tier))}\n`);
+  });
+
+  it.skipIf(BASELINE.medium.shadow.startsWith("__"))("medium / low meshes are byte-identical to 0914ebf", () => {
+    for (const tier of ["medium", "low"] as const) {
+      expect(digestLayer(tier, true)).toBe(BASELINE[tier].shadow);
+      expect(digestLayer(tier, false)).toBe(BASELINE[tier].noshadow);
+    }
+  });
+});
