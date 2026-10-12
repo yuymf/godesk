@@ -495,30 +495,47 @@ export function dockGeometry(length = 0.62, wetFoot = 0): BufferGeometry {
   }
   parts.push(paint(place(new BoxGeometry(0.03, 0.03, length), -0.12, -0.022, length / 2 + 0.04), "#5e4128"));
   parts.push(paint(place(new BoxGeometry(0.03, 0.03, length), 0.12, -0.022, length / 2 + 0.04), "#5e4128"));
-  for (const [px, pz] of [[-0.13, 0.22], [0.13, 0.22], [-0.13, length], [0.13, length]] as const) {
+  const postXZ = [[-0.13, 0.22], [0.13, 0.22], [-0.13, length], [0.13, length]] as const;
+  for (const [px, pz] of postXZ) {
     parts.push(paint(place(new CylinderGeometry(0.022, 0.026, 0.34, 6), px, -0.15, pz), "#4f3824"));
   }
   // 牌柱（牌面本身是单独的广告牌 InstancedMesh）。
   parts.push(paint(place(new CylinderGeometry(0.016, 0.018, 0.36, 6), 0.1, 0.17, length - 0.02), "#4f3824"));
+  // Wet skirt at water contact (visible ABOVE opaque water). Color rings only — no whole-pier reshape.
+  // docksFor base y=0.1 → local waterline = WATER_Y - 0.1.
+  if (wetFoot > 0) {
+    const waterLocal = WATER_Y - 0.1;
+    const skirtH = 0.055 + 0.025 * wetFoot;
+    const skirtR = 0.030 + 0.008 * wetFoot;
+    const wetHex = wetFoot > 0.55 ? "#1a1510" : "#2c2218";
+    const dampHex = wetFoot > 0.55 ? "#2e2418" : "#3d3024";
+    for (const [px, pz] of postXZ) {
+      // Dark collar just above waterline (readable wet foot).
+      parts.push(paint(place(new CylinderGeometry(skirtR, skirtR * 1.08, skirtH, 6), px, waterLocal + skirtH * 0.35, pz), wetHex));
+      // Slightly taller damp fade up the post (still post-local, not deck).
+      parts.push(paint(place(new CylinderGeometry(skirtR * 0.92, skirtR * 0.98, skirtH * 1.15, 6), px, waterLocal + skirtH * 1.15, pz), dampHex));
+    }
+  }
   const g = merged(parts);
   if (wetFoot > 0) applyPierWetFoot(g, wetFoot);
   return g;
 }
 
-/** Darken pier post verts near / below waterline only (deck & beams stay dry). */
+/** Darken pier post verts in the above-water damp band + submerged stub; deck stays dry. */
 function applyPierWetFoot(g: BufferGeometry, strength: number): void {
   const waterLocal = WATER_Y - 0.1; // docksFor base[1] === 0.1
-  const dryAbove = -0.05; // deck / beams / sign post sit above this
+  // Opaque water hides submerged wood — damp band must start ABOVE waterline.
+  const dampTop = waterLocal + 0.14; // ~ splash / wet foot readable zone
   const pos = g.getAttribute("position");
   const col = g.getAttribute("color");
   if (!pos || !col) return;
   for (let i = 0; i < pos.count; i += 1) {
     const y = pos.getY(i);
-    if (y > dryAbove) continue;
-    // 0 at dryAbove, 1 around waterLocal − 0.06 (submerged foot)
-    const t = Math.min(1, Math.max(0, (dryAbove - y) / (dryAbove - (waterLocal - 0.06))));
-    const k = 1 - strength * (0.28 + 0.42 * t);
-    col.setXYZ(i, col.getX(i) * k, col.getY(i) * k, col.getZ(i) * (0.96 + 0.04 * k));
+    if (y > dampTop) continue; // deck / upper post / sign stay dry
+    if (y > 0.02) continue; // safety: never tint deck planks (y≈0)
+    const t = Math.min(1, Math.max(0, (dampTop - y) / (dampTop - (waterLocal - 0.08))));
+    const k = 1 - strength * (0.35 + 0.45 * t);
+    col.setXYZ(i, col.getX(i) * k, col.getY(i) * k, col.getZ(i) * (0.94 + 0.06 * k));
   }
   col.needsUpdate = true;
 }
