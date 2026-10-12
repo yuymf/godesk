@@ -121,23 +121,23 @@ const FRAG_COLOR = [
   "  strokeGate *= smoothstep(0.18, 0.6, foamN2);",
   // Shore foam fringe (settlecoast): white hug at wet-foot ↔ water only. uTideShoreFoam gates
   // intensity by tier (high strong / medium faint / low 0). Open-ocean lace stays dim.
-  "  float shoreMask = 1.0 - smoothstep(0.0, 0.042, d);",
-  "  float shoreBreak = mix(0.45, 1.0, foamN) * mix(0.55, 1.0, foamN2);",
+  "  float shoreMask = 1.0 - smoothstep(0.0, 0.055, d);",
+  "  float shoreBreak = mix(0.5, 1.0, foamN) * mix(0.6, 1.0, foamN2);",
   "  float shoreHug = shoreMask * uTideShoreFoam * shoreBreak;",
-  "  float foamSoft = (1.0 - smoothstep(0.0, 0.08, d)) * uTideFoam * (0.18 + 0.55 * uTideShoreFoam);",
-  "  float r1 = exp(-pow((d - 0.006) / 0.0052, 2.0));",
-  "  float r2 = exp(-pow((d - 0.018) / 0.0068, 2.0));",
-  "  float r3 = exp(-pow((d - 0.034) / 0.008, 2.0));",
-  "  float r4 = exp(-pow((d - 0.055) / 0.01, 2.0));",
-  "  float rLace = exp(-pow((d - 0.09) / 0.012, 2.0));",
-  "  float rSpray = exp(-pow((d - 0.12) / 0.014, 2.0));",
-  "  float ridges = (r1 * 1.05 + r2 * 0.85 + r3 * 0.55 + r4 * 0.28) * uTideFoam * mix(0.4, 0.95, strokeGate) * (0.55 + 0.7 * uTideShoreFoam);",
-  "  float lace = (rLace * 0.28 + rSpray * 0.12) * uTideFoam * strokeGate * (0.35 + 0.4 * foamN);",
-  "  float crest = r1 * mix(0.12, 0.75, strokeGate) * uTideFoam * (0.65 + 0.55 * uTideShoreFoam) * (0.7 + 0.3 * foamN3);",
-  "  waterCol = mix(waterCol, vec3(0.82, 0.91, 0.89), foamSoft);",
-  "  waterCol = mix(waterCol, vec3(0.94, 0.98, 0.97), clamp(shoreHug * 0.92, 0.0, 0.95));",
-  "  waterCol = mix(waterCol, vec3(0.9, 0.96, 0.94), clamp(ridges, 0.0, 0.9) * (0.55 + 0.45 * foamN));",
-  "  waterCol = mix(waterCol, vec3(0.95, 0.98, 0.97), clamp(crest, 0.0, 0.8));",
+  "  float foamSoft = (1.0 - smoothstep(0.0, 0.07, d)) * uTideFoam * (0.22 + 0.7 * uTideShoreFoam);",
+  "  float r1 = exp(-pow((d - 0.005) / 0.0048, 2.0));",
+  "  float r2 = exp(-pow((d - 0.016) / 0.0062, 2.0));",
+  "  float r3 = exp(-pow((d - 0.03) / 0.0075, 2.0));",
+  "  float r4 = exp(-pow((d - 0.048) / 0.009, 2.0));",
+  "  float rLace = exp(-pow((d - 0.085) / 0.011, 2.0));",
+  "  float rSpray = exp(-pow((d - 0.11) / 0.012, 2.0));",
+  "  float ridges = (r1 * 1.15 + r2 * 0.95 + r3 * 0.6 + r4 * 0.3) * uTideFoam * mix(0.45, 1.0, strokeGate) * (0.6 + 0.85 * uTideShoreFoam);",
+  "  float lace = (rLace * 0.22 + rSpray * 0.08) * uTideFoam * strokeGate * (0.3 + 0.35 * foamN);",
+  "  float crest = r1 * mix(0.2, 0.95, strokeGate) * uTideFoam * (0.75 + 0.7 * uTideShoreFoam) * (0.65 + 0.35 * foamN3);",
+  "  waterCol = mix(waterCol, vec3(0.85, 0.93, 0.91), foamSoft);",
+  "  waterCol = mix(waterCol, vec3(0.97, 0.99, 0.98), clamp(shoreHug * 1.15, 0.0, 1.0));",
+  "  waterCol = mix(waterCol, vec3(0.92, 0.97, 0.95), clamp(ridges, 0.0, 0.95) * (0.5 + 0.5 * foamN));",
+  "  waterCol = mix(waterCol, vec3(0.96, 0.99, 0.98), clamp(crest, 0.0, 0.9));",
   "  waterCol = mix(waterCol, vec3(0.86, 0.94, 0.92), lace);",
   "  diffuseColor.rgb = waterCol;",
   "}",
@@ -201,7 +201,7 @@ export function createTideWaterMaterial(
       .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>\n${FRAG_NORMAL}`);
   };
   material.customProgramCacheKey = () =>
-    `tide-r22-sf${features.shoreFoam}-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
+    `tide-r22b-sf${features.shoreFoam}-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
 
   return {
     material,
