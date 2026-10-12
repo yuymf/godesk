@@ -2,7 +2,7 @@ import { InstancedMesh, Matrix4, PerspectiveCamera, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 import { dressingInputs, tileCenter, vertexWorld, withoutReplacedNodes } from "./hex-dressing";
 import { mapHexSettlementToScene } from "./mappers/hex-settlement";
-import { SIGN_KINDS, SKIRT_BOTTOM_Y, SKIRT_TOP_Y, WATER_Y, coastEdges, coastWallGeometry, createIslandLayer, docksFor, outerTiles, reefClusterSize, reefEdgeMask, signCell } from "./island";
+import { SIGN_KINDS, SKIRT_BOTTOM_Y, SKIRT_TOP_Y, WATER_Y, coastEdges, coastWallGeometry, createIslandLayer, dockGeometry, docksFor, outerTiles, reefClusterSize, reefEdgeMask, signCell } from "./island";
 import { beginnerSceneInput } from "./terrain-dressing.fixture";
 
 const input = beginnerSceneInput();
@@ -94,6 +94,37 @@ describe("G3D-ISLAND island + coast", () => {
     expect(n).toBeGreaterThan(100);
     expect(sum1 / n).toBeLessThan(sum0 / n);
     plain.dispose(); wet.dispose();
+  });
+
+  it("pier wetFoot darkens post verts near waterline; deck stays dry", () => {
+    const dry = dockGeometry(0.62, 0);
+    const wet = dockGeometry(0.62, 1);
+    const faint = dockGeometry(0.62, 0.32);
+    const p0 = dry.getAttribute("position");
+    const c0 = dry.getAttribute("color");
+    const c1 = wet.getAttribute("color");
+    const c2 = faint.getAttribute("color");
+    let footDry = 0, footWet = 0, footFaint = 0, footN = 0;
+    let deckDry = 0, deckWet = 0, deckN = 0;
+    for (let i = 0; i < p0.count; i += 1) {
+      const y = p0.getY(i);
+      const s0 = c0.getX(i) + c0.getY(i) + c0.getZ(i);
+      const s1 = c1.getX(i) + c1.getY(i) + c1.getZ(i);
+      const s2 = c2.getX(i) + c2.getY(i) + c2.getZ(i);
+      if (y < -0.05) {
+        footDry += s0; footWet += s1; footFaint += s2; footN += 1;
+      } else if (y > -0.02) {
+        deckDry += s0; deckWet += s1; deckN += 1;
+      }
+    }
+    expect(footN).toBeGreaterThan(20);
+    expect(deckN).toBeGreaterThan(20);
+    expect(footWet / footN).toBeLessThan(footDry / footN);
+    expect(footFaint / footN).toBeGreaterThan(footWet / footN);
+    expect(footFaint / footN).toBeLessThan(footDry / footN);
+    expect(Math.abs(deckWet / deckN - deckDry / deckN)).toBeLessThan(1e-6);
+    expect(dry.getAttribute("position").count).toBe(wet.getAttribute("position").count);
+    dry.dispose(); wet.dispose(); faint.dispose();
   });
 
   it("docks point outward from the island, one per port", () => {
