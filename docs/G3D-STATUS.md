@@ -13,7 +13,7 @@
 | 任务范围 | G3D-01 至 G3D-27；里程碑 M0–M5；人日上限 91 |
 | 代码基线 | `yuymf/godesk` `main` @ `f3ea418`（#148 G3D-JUDGE `f3ea418`；#153 资产搜索 `1d1f45b`；#145 G3D-ART-3 `5b585ec`；#143 `0526d16`；#144 G3D-17 预备 `1884e19`；#141 G3D-04c `0bda43e`；#138 G3D-13 `19f212d`；#147 CI 瘦身 `45cd590`；#150 公开前清理 `f79fcc7`；#142 G3D-ART-2 `45a5a1c`） |
 | 状态文件维护人 | 劳埃德(工程) / Track B（素材） |
-| 最近更新 | 2026-10-12（Asia/Shanghai）· LOD-high：triangles(high) 415926→295310（draft，叠 #168） |
+| 最近更新 | 2026-10-12（Asia/Shanghai）· shore-steps：汐屿浅滩三级沙滩台阶（draft，叠 #169） |
 
 ## 硬约束（三条）
 
@@ -96,6 +96,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | --- | --- | --- | --- |
 | G3D-17 上线闸门 | Track C | `feat/g3d-17-tidewell-launch` | 删除 `GODESK_FEATURE_TIDEWELL`（首页默认汐屿）；`GODESK_LAUNCH_GATE_BLOCK=asset-legal,hud-raw-action-ids,draw-calls`；Lighthouse / draw-calls / size 仍 warn；**draft，不合入**；待大主管评分 |
 | LOD-high（triangles） | Track C | `feat/lod-high` [#169](https://github.com/yuymf/godesk/pull/169)（叠 #168） | pine 内部面剔除 + shadow proxy；triangles(high) 415926→295310；medium/low 字节+像素恒等；**draft，不合入**；待大主管评分 |
+| shore-steps（浅滩台阶） | Track C | `feat/shore-steps`（叠 #169） | 汐屿海岸 3 级沙滩台阶（high only）；压「崖切直入水」；**draft，不合入**；待大主管评分 |
 
 ## 已知限制
 
@@ -144,6 +145,7 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
+| `feat/shore-steps` | （待开 draft） | 汐屿浅滩 3 级沙滩台阶（high only）；base=`feat/lod-high` @8d64137 | draft · 不合入，待大主管评分 |
 | `feat/lod-high` | [#169](https://github.com/yuymf/godesk/pull/169) | LOD-high：pine interior cull + shadow proxy；triangles(high) 415926→295310；base=`feat/launch-gate-block` @0914ebf | draft · 不合入，待大主管评分 |
 | `feat/launch-gate-block` | [#168](https://github.com/yuymf/godesk/pull/168) | launch gate block + core size / requests；base=`feat/g3d-17-tidewell-launch` | draft · 不合入 |
 | `feat/g3d-17-tidewell-launch` | [#166](https://github.com/yuymf/godesk/pull/166) | G3D-17：默认汐屿 + e2e/海报修复；base=`main` | draft · ~9.3 通过，**不合入（等用户令）** |
@@ -153,6 +155,7 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 | 日期 | 变更 | 作者 |
 | --- | --- | --- |
+| 2026-10-12 | shore-steps（叠 #169）：汐屿海岸 high-only 三级沙滩台阶（干→湿）；medium/low 无 beach mesh；证据 `/workspace/g3d-evidence/godesk-2026-10-12/shore-steps/` | Track C |
 | 2026-10-12 | LOD-high（叠 #168）：pine 内部面剔除 + shadow proxy（icosa-0 drawRange）；perf:ci triangles(high) 415926→295310；medium/low digest+像素恒等；证据 `/workspace/g3d-evidence/godesk-2026-10-12/lod-high/` | Track C |
 | 2026-10-12 | G3D-17 launch-gate-block（stacked on #166）：render3d core 188.66 / 200 KB、循环 chunk 修复、Lighthouse 三条断言 error、`GODESK_LAUNCH_GATE=block`、firstGameRequests 78；**首页 LCP ≤ 3 800 ms 与 Room TBT ≤ 200 000 ms 为临时阈值，待有 GPU 的机器复测后收紧** | Track C |
 | 2026-10-12 | G3D-17 海报修复：`?examples=all` 汐屿排第一；海报去掉 `decoding="async"`（Chromium 推迟解码视口外图片，整页截图只剩 #1a4a6e 底色），e2e 加整页截图像素回归 | Track C |
