@@ -33,11 +33,16 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import type { SceneNode } from "./scene-model";
 
-const MODEL_URLS = import.meta.glob("../../assets/models/{pieces,decor,props}.glb", {
-  eager: false,
+// launch-gate-block: eager — the `?url` values are plain strings; lazy glob emitted three
+// ~60-byte stub chunks (pieces/decor/props-*.js) = 3 extra first-game requests.
+const MODEL_URL_STRINGS = import.meta.glob("../../assets/models/{pieces,decor,props}.glb", {
+  eager: true,
   query: "?url",
   import: "default",
-}) as Record<string, () => Promise<string>>;
+}) as Record<string, string>;
+const MODEL_URLS: Record<string, () => Promise<string>> = Object.fromEntries(
+  Object.entries(MODEL_URL_STRINGS).map(([path, url]) => [path, () => Promise.resolve(url)]),
+);
 
 /**
  * G3D-JUDGE round-3/4 knife ②: settlement / city / road / robber are hand-built

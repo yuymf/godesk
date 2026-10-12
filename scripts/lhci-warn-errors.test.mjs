@@ -10,7 +10,7 @@ describe("lhci-warn-errors", () => {
     expect(next.ci.assert.assertMatrix[0].assertions["total-blocking-time"][0]).toBe("warn");
     expect(next.ci.assert.assertMatrix[0].assertions["categories:performance"][0]).toBe("error");
     expect(next.ci.assert.assertMatrix[0].assertions["cumulative-layout-shift"][0]).toBe("error");
-    expect(next.ci.assert.assertMatrix[0].assertions["largest-contentful-paint"][0]).toBe("warn");
+    expect(next.ci.assert.assertMatrix[0].assertions["largest-contentful-paint"][0]).toBe("error");
     expect(next.ci.assert.assertMatrix[1].assertions["total-blocking-time"][0]).toBe("warn");
     expect(next.ci.assert.assertMatrix[1].assertions["categories:performance"][0]).toBe("warn");
     expect(rc.ci.assert.assertMatrix[1].assertions["categories:performance"][0]).toBe("error");

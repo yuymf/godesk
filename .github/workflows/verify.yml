@@ -100,12 +100,11 @@ jobs:
       - name: Render budgets (perf:ci)
         if: env.FULL_E2E == 'true'
         run: pnpm perf:ci --out perf-results
-      # G3D-17：整体仍 warn；已转正项经 GODESK_LAUNCH_GATE_BLOCK 阻断（见 docs/perf/launch-checklist.md）。
-      # 全量 block 仍待 Lighthouse LCP/TBT 与 draw-calls 达标后把 GODESK_LAUNCH_GATE 改为 block。
+      # G3D-17 launch-gate-block：全量 GODESK_LAUNCH_GATE=block（任一项非 pass 即失败，见 docs/perf/launch-checklist.md）。
       - name: G3D-17 launch checklist
         if: always() && env.FULL_E2E == 'true'
         env:
-          GODESK_LAUNCH_GATE: warn
+          GODESK_LAUNCH_GATE: block
           GODESK_LAUNCH_GATE_BLOCK: "asset-legal,hud-raw-action-ids,draw-calls"
         run: node scripts/launch-checklist.mjs --only asset-legal,size-budgets,draw-calls,hud-raw-action-ids --perf perf-results/ci-budgets.json --out perf-results/launch-checklist.json
       - name: Upload CI render budget report

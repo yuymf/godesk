@@ -99,12 +99,11 @@ jobs:
           pnpm exec lhci autorun --config="$CONFIG" --collect.numberOfRuns="$LHCI_RUNS" \
             --collect.url="$LHCI_HOME_URL" --collect.url="$LHCI_ROOM_URL"
 
-      # G3D-17 上线前清单 · Lighthouse 项：仍有 warn 级断言（首页 LCP、Room TBT/CLS），故本项保持 warn、不入 BLOCK。
-      # 断言改 error 且实测达标后，把 GODESK_LAUNCH_GATE_BLOCK 加上 lighthouse，或全量 GODESK_LAUNCH_GATE=block。
+      # G3D-17 上线前清单 · Lighthouse 项：首页 LCP、Room TBT/CLS 已改 error，全量 GODESK_LAUNCH_GATE=block。
       - name: G3D-17 launch checklist (Lighthouse)
         if: always()
         env:
-          GODESK_LAUNCH_GATE: warn
+          GODESK_LAUNCH_GATE: block
           GODESK_LAUNCH_GATE_BLOCK: ""
         run: node scripts/launch-checklist.mjs --only lighthouse --lighthouse .lighthouseci --out .lighthouseci/launch-checklist.json
 

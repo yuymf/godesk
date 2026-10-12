@@ -134,8 +134,8 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 - [~] ~~法务审查：`LicenseRef-AI-Generated` 逐行过审后才能上线~~ — **用户 2026-10-06 19:16 豁免**（站点暂不上线）：允许 AI 生成的贴图 / 模型 / 音效和免费素材，**不再作为闸门**；来源仍须登记在 `assets/LICENSES.md`。G3D-17：LICENSES 标记改为「已豁免 2026-10-06」、manifest `legalReview=cleared`；`asset-legal` **已入** `GODESK_LAUNCH_GATE_BLOCK`。不得复制 settlecoast 的原始素材或代码。
 - [x] **删除 `GODESK_FEATURE_TIDEWELL`**：生产首页默认汐屿 showcase（无需 `?tidewell=1`）。
-- [ ] G3D-05 备注 ⑤：Lighthouse LCP / TBT 由 warn 改为 error（见上）——本刀**未**改 `lighthouserc.json`（诚实缺口）。
-- [~] **自动化清单转阻断**：`GODESK_LAUNCH_GATE` 仍为 `warn`；`GODESK_LAUNCH_GATE_BLOCK=asset-legal,hud-raw-action-ids,draw-calls`（HUD aria-label 去掉坐标键）。**仍 warn、未阻断**：`size-budgets`、`lighthouse`。`draw-calls` 本刀已入 BLOCK（high 47/47、medium 32/47、low 23/24）。步骤见 [`docs/perf/launch-checklist.md`](./perf/launch-checklist.md)。
+- [x] G3D-05 备注 ⑤：Lighthouse 首页 LCP / Room TBT / Room CLS 已改 error（launch-gate-block，用户 2026-10-12 指示按实测取现实阈值：LCP ≤ 3 800、Room TBT ≤ 200 000 SwiftShader 天花板、CLS ≤ 0.1）。**LCP 3 800 / Room TBT 200 000 为临时阈值（TEMPORARY），待有 GPU 的机器复测后收紧。****缺口**：LCP 2 500 / TBT 600 的 §4.6.3 目标仍未达。
+- [x] **自动化清单转阻断（launch-gate-block）**：`GODESK_LAUNCH_GATE=block`（两个 workflow）。render3d core 207.95 → 188.66 KB（zstd/ktx-parse 移出核心至 `ktx2-libs-*`，预算 208 → 200）；修 board-dressing ↔ render3d-assets 循环 chunk（`tokens.ts` 固定到 render3d-assets）；perf:ci firstGameRequests 82 → 78（共享 KTX2Loader 去掉重复 basis 转码器请求、GLB url 改 eager 去掉 3 个桩 chunk）。仍失败：`triangles(high)` 415 926 > 300 000。上一刀：`GODESK_LAUNCH_GATE_BLOCK=asset-legal,hud-raw-action-ids,draw-calls`（HUD aria-label 去掉坐标键）。**仍 warn、未阻断**：`size-budgets`、`lighthouse`。`draw-calls` 本刀已入 BLOCK（high 47/47、medium 32/47、low 23/24）。步骤见 [`docs/perf/launch-checklist.md`](./perf/launch-checklist.md)。
 - [x] **仓库公开**：公开前清理 #150 squash `f79fcc7` 已合入；`gh repo view` visibility = PUBLIC（2026-10-11 核对）。
 
 
@@ -150,6 +150,7 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 | 日期 | 变更 | 作者 |
 | --- | --- | --- |
+| 2026-10-12 | G3D-17 launch-gate-block（stacked on #166）：render3d core 188.66 / 200 KB、循环 chunk 修复、Lighthouse 三条断言 error、`GODESK_LAUNCH_GATE=block`、firstGameRequests 78；**首页 LCP ≤ 3 800 ms 与 Room TBT ≤ 200 000 ms 为临时阈值，待有 GPU 的机器复测后收紧** | Track C |
 | 2026-10-12 | G3D-17 海报修复：`?examples=all` 汐屿排第一；海报去掉 `decoding="async"`（Chromium 推迟解码视口外图片，整页截图只剩 #1a4a6e 底色），e2e 加整页截图像素回归 | Track C |
 | 2026-10-12 | G3D-17 e2e 修复：首页保持汐屿-only，新增「更多示例」入口（`/?examples=all` 同页列出港口十三号 / 雾岭山庄 / 灵感接力 / 汐屿）；gallery / charter / tabletop 港口 spec 改走该入口；room-audio 初始放置正则适配去坐标 aria-label | Track C |
 | 2026-10-12 | G3D-17：删除 Tidewell 首页开关；法务豁免落账；`GODESK_LAUNCH_GATE_BLOCK=asset-legal,hud-raw-action-ids,draw-calls`；轨迹 `docs/prompt-trace/2026-10-12-g3d-17.md` | Track C |

@@ -3,6 +3,8 @@
  * G3D size budgets with correct disambiguation:
  * - index-*.js ≤ 170 KB gzip (homepage)
  * - render3d-*.js excluding render3d-assets-* ≤ 208 KB gzip (sum; R4: tabletop surround.sea boot in SceneHost +0.5KB — see REPORT)
+ * - render3d core ≤ 200 KB gzip (launch-gate-block: was 208; zstd/ktx-parse moved to ktx2-libs-*)
+ * - ktx2-libs-*.js ≤ 22 KB gzip（KTX2Loader 依赖，随 render3d-assets 加载）
  * - render3d-assets-*.js ≤ 60 KB gzip
  * - board-dressing-*.js ≤ 30 KB gzip（G3D-ISLAND / PROPS，懒加载）
  * - TabletopScene3D-*.js ≤ 12 KB gzip（G3D-14 通用桌面 mapper + 网格工厂，懒加载，不计入核心）
@@ -37,18 +39,23 @@ function check(label, names, limitKb) {
 const index = files.filter((f) => /^index-.*\.js$/.test(f));
 const assets = files.filter((f) => /^render3d-assets-.*\.js$/.test(f));
 const render3d = files.filter(
-  (f) => /^render3d-.*\.js$/.test(f) && !/^render3d-assets-/.test(f),
+  (f) =>
+    (/^render3d-.*\.js$/.test(f) && !/^render3d-assets-/.test(f)) ||
+    // launch-gate-block guard: SceneHost must never escape the core budget via chunk renaming.
+    /^SceneHost-.*\.js$/.test(f),
 );
 // Judge-only lazy demos (playMotionDemo) — not part of production render core.
 const judgeMotion = files.filter((f) => /^(g3d-judge-|motion-demo-).*\.js$/.test(f));
 
 let ok = true;
 ok = check("homepage index JS", index, 170) && ok;
-ok = check("render3d core (excl. assets)", render3d, 208) && ok;
+ok = check("render3d core (excl. assets)", render3d, 200) && ok;
 if (judgeMotion.length) {
   ok = check("g3d-judge-motion (lazy, judge=1)", judgeMotion, 12) && ok;
 }
 ok = check("render3d-assets", assets, 60) && ok;
+// launch-gate-block: KTX2Loader zstd/ktx-parse deps, loaded with render3d-assets (not core).
+ok = check("ktx2-libs (with assets)", files.filter((f) => /^ktx2-libs-.*\.js$/.test(f)), 22) && ok;
 const tideWater = files.filter((f) => /^tide-water-.*\.js$/.test(f));
 if (tideWater.length) {
   // Lazy water chunk (G3D-08); soft budget — fail only if absurdly large.
