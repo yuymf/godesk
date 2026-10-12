@@ -140,6 +140,7 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
       {harbor ? (
         <section className="preview-board" aria-label="航次可玩桌面">
           <HarborVoyageBoard render={build.ruleSystem.presentation.render}
+            importedModels={importedModels}
             readOnly
             voyage={createHarborVoyageState(
               build.ruleSystem.participants.default,
@@ -149,6 +150,7 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
       ) : workerPlacement ? (
         <section className="preview-board" aria-label="工人放置可玩桌面">
           <WorkerPlacementBoard render={build.ruleSystem.presentation.render}
+            importedModels={importedModels}
             readOnly
             board={createWorkerPlacementState({
               playerCount: workerPlacement.playerCount,
@@ -165,6 +167,7 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
           <OthelloBoard render={build.ruleSystem.presentation.render}
             activeSeat={0}
             enabled={false}
+            importedModels={importedModels}
             othello={createInitialOthelloSessionSlice(discKernel.rows, discKernel.cols)}
             readOnly
             status="active"

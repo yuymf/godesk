@@ -99,9 +99,10 @@ export function ReplayView({ replayId }: { replayId: string }) {
           {replay.acceptedActions.length} 次行动 · 打到第 {replay.finalState.turn} 回合
         </p>
         {replay.finalState.voyage ? (
-          <HarborVoyageBoard render={build?.ruleSystem.presentation.render} readOnly voyage={replay.finalState.voyage as HarborVoyageState} />
+          <HarborVoyageBoard render={build?.ruleSystem.presentation.render} importedModels={importedModels} readOnly voyage={replay.finalState.voyage as HarborVoyageState} />
         ) : replay.finalState.workerPlacement ? (
           <WorkerPlacementBoard render={build?.ruleSystem.presentation.render}
+            importedModels={importedModels}
             readOnly
             board={replay.finalState.workerPlacement as WorkerPlacementState}
           />
@@ -109,6 +110,7 @@ export function ReplayView({ replayId }: { replayId: string }) {
           <OthelloBoard render={build?.ruleSystem.presentation.render}
             activeSeat={replay.finalState.activeSeat}
             enabled={false}
+            importedModels={importedModels}
             othello={replay.finalState.othello}
             readOnly
             status={replay.finalState.status}

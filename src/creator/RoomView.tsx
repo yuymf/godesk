@@ -612,6 +612,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       {harbor ? (
         <HarborVoyageBoard render={build.ruleSystem.presentation.render}
           busy={busy}
+          importedModels={importedModels}
           onAct={act}
           voyage={voyage as HarborVoyageState}
         />
@@ -619,6 +620,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         <WorkerPlacementBoard render={build.ruleSystem.presentation.render}
           board={workerPlacementState as WorkerPlacementState}
           busy={busy}
+          importedModels={importedModels}
           onAct={act}
         />
       ) : discFlipping && othelloState ? (
@@ -626,6 +628,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
           activeSeat={activeSeat}
           busy={busy}
           enabled={isMyTurn}
+          importedModels={importedModels}
           locale={locale}
           othello={othelloState}
           onAct={(actionId, payload) => {
