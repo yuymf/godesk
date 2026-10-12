@@ -612,31 +612,31 @@ export function boatGeometry(wetLineOrOpts: number | BoatGeomOpts = 0): BufferGe
   ];
   if (sailAmt > 0) {
     // Simple triangular cloth hung on mast (below flag). Slight +X belly so it never edge-on.
-    // Mast cylinder top ≈ y 0.54; keep peak under the flag.
-    const peakY = 0.46 + 0.02 * sailAmt;
-    const footY = 0.10;
-    const reach = 0.24 + 0.10 * sailAmt;
-    const belly = 0.05 + 0.025 * sailAmt;
-    const peak: [number, number, number] = [belly * 0.2, peakY, -0.01];
-    const tack: [number, number, number] = [belly * 0.25, footY, -0.05];
-    const clew: [number, number, number] = [belly, footY + 0.015, reach];
+    // Sized to read at coast camera; mast top ≈ y 0.54.
+    const peakY = 0.50;
+    const footY = 0.09;
+    const reach = 0.38 + 0.14 * sailAmt; // long triangle aft
+    const belly = 0.07 + 0.04 * sailAmt;
+    const peak: [number, number, number] = [belly * 0.15, peakY, 0.0];
+    const tack: [number, number, number] = [belly * 0.2, footY, -0.04];
+    const clew: [number, number, number] = [belly, footY + 0.02, reach];
     const sail = new BufferGeometry();
     sail.setAttribute("position", new BufferAttribute(new Float32Array([
       ...peak, ...tack, ...clew,
       ...peak, ...clew, ...tack, // back face
     ]), 3));
-    parts.push(paint(sail, sailAmt > 0.55 ? "#f8f4ea" : "#f0ebe0", 0));
+    parts.push(paint(sail, sailAmt > 0.55 ? "#faf6ec" : "#f2ede3", 0));
     // Small foresail on high only — still simple triangles, no rigging.
     if (sailAmt > 0.7) {
       const jib = new BufferGeometry();
-      const jp: [number, number, number] = [belly * 0.15, peakY * 0.88, 0.04];
-      const jt: [number, number, number] = [belly * 0.2, footY + 0.02, 0.10];
-      const jc: [number, number, number] = [belly * 0.75, footY + 0.02, reach * 0.5 + 0.14];
+      const jp: [number, number, number] = [belly * 0.12, peakY * 0.9, 0.06];
+      const jt: [number, number, number] = [belly * 0.18, footY + 0.02, 0.14];
+      const jc: [number, number, number] = [belly * 0.7, footY + 0.02, reach * 0.45 + 0.16];
       jib.setAttribute("position", new BufferAttribute(new Float32Array([
         ...jp, ...jt, ...jc,
         ...jp, ...jc, ...jt,
       ]), 3));
-      parts.push(paint(jib, "#f5f0e6", 0));
+      parts.push(paint(jib, "#f6f1e7", 0));
     }
   }
   // Readable wet band ABOVE opaque water — one open 6-seg ring, Z-stretched with hull.
