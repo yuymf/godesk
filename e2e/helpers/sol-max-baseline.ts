@@ -9,6 +9,7 @@ export const NORTH_STAR_OTHELLO_ALT_PROMPT = "做一款翻转棋 othello";
 export const NETWORK_PROMPT = "做一款线路网络桌游，玩家铺设路线连接城市";
 export const CARD_AREA_PROMPT = "做一款卡牌区域控制游戏，玩家出牌争夺区域";
 export const AUCTION_PROMPT = "做一款拍卖竞价桌游";
+export const TIDE_ARENA_PROMPT = "做一款两人自走棋，商店买棋上阵自动打架";
 
 /** Off-corpus prompts — must never silent-bind hex-island or Othello. */
 export const UNSEEN_PROMPTS = [

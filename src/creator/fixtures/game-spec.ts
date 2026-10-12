@@ -150,3 +150,38 @@ export function executableAuctionBiddingSpecFixture(): RuleSystem {
   refreshGameSpec(rule);
   return rule;
 }
+
+
+/** Executable auto-battler RuleSystem for Tide Arena / 潮阵. */
+export function executableAutoBattlerSpecFixture(): RuleSystem {
+  const rule: RuleSystem = {
+    id: "rule-system-auto-battler-fixture", version: 1, name: "潮阵", pitch: "商店买棋上阵，自动战斗",
+    generation: { generatorVersion: GENERATOR_VERSION, rulesVersion: RULES_VERSION,
+      sourcePrompt: "做一款两人自走棋，商店买棋上阵自动打架", assumptions: ["双人潮阵"],
+      seed: 42, requestedMechanics: ["auto-battler"] },
+    participants: { min: 2, max: 2, default: 2, roles: [] }, durationMinutes: 20,
+    entities: [{ id: "unit", name: "棋子", kind: "token", sourceId: null, provenance: "source-anchored", confidence: 1 }],
+    rules: [{ id: "loop", text: "商店购买、备战上阵、自动战斗、扣减生命", sourceId: null, provenance: "source-anchored", confidence: 1 }],
+    constraints: [], setup: ["两席各 20 生命与起始金币"],
+    stages: [{ id: "shop", name: "商店" }, { id: "place", name: "布阵" }, { id: "ended", name: "终局" }],
+    outcomes: [{ id: "hp", name: "对手生命耗尽者获胜" }],
+    actions: [
+      { id: "buy", label: "购买", description: "购买单位", sourceId: null, provenance: "source-anchored", confidence: 1 },
+      { id: "sell", label: "出售", description: "出售备战", sourceId: null, provenance: "source-anchored", confidence: 1 },
+      { id: "refresh", label: "刷新商店", description: "刷新", sourceId: null, provenance: "source-anchored", confidence: 1 },
+      { id: "ready_shop", label: "准备完毕", description: "结束商店", sourceId: null, provenance: "source-anchored", confidence: 1 },
+      { id: "place", label: "上阵", description: "上阵", sourceId: null, provenance: "source-anchored", confidence: 1 },
+      { id: "recall", label: "撤回", description: "撤回", sourceId: null, provenance: "source-anchored", confidence: 1 },
+      { id: "ready_place", label: "锁定阵容", description: "锁定", sourceId: null, provenance: "source-anchored", confidence: 1 },
+    ],
+    playSurface: { kind: "table", layout: "tide-arena", regions: [
+      { id: "shop", name: "商店", description: "购买" },
+      { id: "bench", name: "备战席", description: "备战" },
+      { id: "board", name: "战场", description: "半场" },
+    ] },
+    presentation: {},
+    runtimeSupport: { status: "executable", unsupported: ["★2 merge unsupported"], kernel: { type: "auto-battler-v1", playerCount: 2 } },
+  };
+  refreshGameSpec(rule);
+  return rule;
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RuleSystem } from "../src/creator/project-contract";
-import { executableAuctionBiddingSpecFixture } from "../src/creator/fixtures/game-spec";
+import { executableAuctionBiddingSpecFixture, executableAutoBattlerSpecFixture } from "../src/creator/fixtures/game-spec";
 import {
   acceptIntent,
   executableRuntime,
@@ -854,5 +854,27 @@ describe("push-your-luck-v1 runtime", () => {
     expect(first.finalState.scores[first.finalState.winnerSeat!]).toBeGreaterThanOrEqual(20);
     expect(first.acceptedActions.some((action) => action.actionId === "roll")).toBe(true);
     expect(first.acceptedActions.some((action) => action.actionId === "bank")).toBe(true);
+  });
+});
+
+
+describe("auto-battler Shared Session runtime (Tide Arena)", () => {
+  it("initializes shop state and accepts buy/ready through combat resolve", () => {
+    const rule = executableAutoBattlerSpecFixture();
+    const runtime = executableRuntime(rule)!;
+    const initial = initialSessionState(rule, 42);
+    expect(initial.autoBattler?.phase).toBe("shop");
+    expect(initial.autoBattler?.seats[0].shop).toHaveLength(5);
+    const buy = acceptIntent(
+      initial,
+      runtime,
+      { intentId: "b1", seat: 0, actionId: "buy", payload: { shopIndex: 0 } },
+      1,
+      42,
+    );
+    expect(buy?.state.autoBattler?.seats[0].bench.some((p) => p !== null)).toBe(true);
+    const bot = runBotSimulation(rule, 42);
+    expect(bot.terminalStatus).toBe("complete");
+    expect(bot.finalState.autoBattler).toBeTruthy();
   });
 });
