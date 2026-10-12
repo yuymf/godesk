@@ -78,7 +78,11 @@ export type PerfHarnessApi = {
   /** Simulate GPU context loss / restore through `WEBGL_lose_context`. */
   loseContext: () => boolean;
   restoreContext: () => boolean;
+  /** LOD audit: visible mesh triangles grouped by name / geometry (instances multiplied). */
+  meshBreakdown: () => MeshTriangleRow[];
 };
+
+export type MeshTriangleRow = { key: string; meshes: number; instances: number; triangles: number; castShadow: boolean };
 
 declare global {
   interface Window {
@@ -196,6 +200,28 @@ class PerfRecorder {
   private lastRenderer: RendererInfoSnapshot = {
     calls: 0, triangles: 0, points: 0, lines: 0, geometries: 0, textures: 0, programs: 0,
   };
+
+  meshBreakdown(): MeshTriangleRow[] {
+    const scene = this.host?.scene;
+    if (!scene) return [];
+    const rows = new Map<string, MeshTriangleRow>();
+    scene.traverseVisible((object) => {
+      const mesh = object as unknown as { isMesh?: boolean; isInstancedMesh?: boolean; count?: number; geometry?: { index: { count: number } | null; attributes: { position?: { count: number } }; drawRange: { count: number }; name?: string }; castShadow: boolean; name: string; parent: { name: string } | null };
+      if (!mesh.isMesh || !mesh.geometry) return;
+      const geometry = mesh.geometry;
+      const raw = geometry.index ? geometry.index.count : geometry.attributes.position?.count ?? 0;
+      const drawn = Number.isFinite(geometry.drawRange.count) ? Math.min(raw, geometry.drawRange.count) : raw;
+      const instances = mesh.isInstancedMesh ? mesh.count ?? 0 : 1;
+      const key = `${mesh.name || mesh.parent?.name || "(unnamed)"}|${geometry.name || ""}`;
+      const row = rows.get(key) ?? { key, meshes: 0, instances: 0, triangles: 0, castShadow: false };
+      row.meshes += 1;
+      row.instances += instances;
+      row.triangles += Math.floor(drawn / 3) * instances;
+      row.castShadow ||= mesh.castShadow;
+      rows.set(key, row);
+    });
+    return [...rows.values()].sort((a, b) => b.triangles - a.triangles);
+  }
 
   attach(handle: HostHandle): () => void {
     this.host = handle;
@@ -381,6 +407,7 @@ export function perfRecorder(): PerfRecorder | null {
     remount: () => active.remount(),
     loseContext: () => active.loseContext(),
     restoreContext: () => active.restoreContext(),
+    meshBreakdown: () => active.meshBreakdown(),
   };
   return recorder;
 }
