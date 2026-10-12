@@ -17,10 +17,10 @@ import {
 } from "./composer-draft";
 import {
   DEFAULT_EXAMPLES,
+  examplesForAll,
   examplesForHomepage,
   type DefaultExampleId,
 } from "./default-examples";
-import { isTidewellHomepageEnabled } from "./tidewell-feature";
 import { HOBBYIST_STARTERS } from "./hobbyist-starters";
 import {
   extractRulebookText,
@@ -51,6 +51,10 @@ export function CreatorHome() {
   const resumeAfterLogin = useRef(restoredDraft?.resume ?? null);
   const resumeExampleId = useRef(restoredDraft?.exampleId);
   const submittingRef = useRef(false);
+  // G3D-17: homepage stays 汐屿-only; `?examples=all`（「更多示例」）lists every sample on the same page.
+  const showAllExamples =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("examples") === "all";
+  const visibleExamples = showAllExamples ? examplesForAll() : examplesForHomepage();
 
   useEffect(() => {
     listProjects().then(setProjects).catch((reason: Error) => {
@@ -426,14 +430,10 @@ export function CreatorHome() {
               <p>挑一款，开局后就能邀请朋友。</p>
             </header>
             <div
-              className={
-                isTidewellHomepageEnabled()
-                  ? "example-grid example-grid-showcase"
-                  : "example-grid"
-              }
-              data-homepage-showcase={isTidewellHomepageEnabled() ? "tidewell" : "classic"}
+              className="example-grid example-grid-showcase"
+              data-homepage-showcase={showAllExamples ? "all" : "tidewell"}
             >
-              {examplesForHomepage(isTidewellHomepageEnabled()).map((example) => (
+              {visibleExamples.map((example) => (
                 <article key={example.id}>
                   <ExampleArtwork exampleId={example.id} />
                   <div className="example-body">
@@ -455,6 +455,13 @@ export function CreatorHome() {
                 </article>
               ))}
             </div>
+            <p className="example-more">
+              {showAllExamples ? (
+                <a href={href("/")}>只看汐屿</a>
+              ) : (
+                <a data-testid="more-examples" href={`${href("/")}?examples=all`}>更多示例（港口十三号 · 雾岭山庄 · 灵感接力）</a>
+              )}
+            </p>
           </section>
         )}
         {projects.length > 0 && !showPipeline && (

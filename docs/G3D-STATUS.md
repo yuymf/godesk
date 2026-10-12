@@ -13,7 +13,7 @@
 | 任务范围 | G3D-01 至 G3D-27；里程碑 M0–M5；人日上限 91 |
 | 代码基线 | `yuymf/godesk` `main` @ `f3ea418`（#148 G3D-JUDGE `f3ea418`；#153 资产搜索 `1d1f45b`；#145 G3D-ART-3 `5b585ec`；#143 `0526d16`；#144 G3D-17 预备 `1884e19`；#141 G3D-04c `0bda43e`；#138 G3D-13 `19f212d`；#147 CI 瘦身 `45cd590`；#150 公开前清理 `f79fcc7`；#142 G3D-ART-2 `45a5a1c`） |
 | 状态文件维护人 | 劳埃德(工程) / Track B（素材） |
-| 最近更新 | 2026-10-12（Asia/Shanghai）· G3D-16 首页 showcase 重开（base=main） |
+| 最近更新 | 2026-10-12（Asia/Shanghai）· G3D-17 生产默认汐屿 + launch gate 逐项转正 |
 
 ## 硬约束（三条）
 
@@ -81,6 +81,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | G3D-ART-2 | Track D 跟进：`t04-wheat` 改用 T3b 不规则麦丛（无缝，2×2 平铺检查）；**点数筹码数字修复**（原先只有圆柱、没有数字网格；新增 `number-labels.ts` Canvas 图集合并网格 +1 draw call，6/8 赤陶色、羊皮纸筹码面，筹码放大 1.6×；e2e `hex-number-tokens.spec.ts` 桌面/iPhone 断言 18 个贴花可见且有墨色像素）。**地形 3D 小道具（第 3 步）等 #138 G3D-13 合入后基于 InstancePools 另开 PR**；main 上 medium/low draw calls（144/125）已超出 100/60 目标，待 #138 降低（2026-10-11：#138 `19f212d` 与地形道具 #148 `f3ea418` 均已合入 main） | PR [#142](https://github.com/yuymf/godesk/pull/142) squash `45a5a1c` |
 | G3D-ART-3 | Track D：**远处点数「12」看成「17」修复**。不是数据 bug：棋盘与贴花逐格一致，图集只收 2–12。原因是字形：`Georgia` 在无该字体的机器上落到 Gelasio 衬线体，远处筹码数字只有约 5px 高、又被俯视角纵向压缩约一半，「2」的细底横消失、斜笔读成「7」。改为粗无衬线等高数字，图集预先纵向拉伸 1.5×，1024 图集，各向异性 8；贴花 1.85r，筹码放大 1.8×。e2e 断言每个值都在 2..12（无 7）、是标准分布，且与 `__g3dBoardNumbers` 逐格一致；单测锁字体和范围。**地形道具暂缓**：#138 已合入，基于 InstancePools 另开 PR（low 档零道具） | PR [#145](https://github.com/yuymf/godesk/pull/145) squash `5b585ec` |
 | G3D-17 预备 | 上线前清单自动化 `scripts/launch-checklist.mjs`（warning 模式 + 转阻断开关，见 [`docs/perf/launch-checklist.md`](./perf/launch-checklist.md)）（Track C） | PR [#144](https://github.com/yuymf/godesk/pull/144) squash `1884e19` |
+| G3D-16 首页汐屿 showcase | Track B：`GODESK_FEATURE_TIDEWELL` 默认关 + 海报/缩略图；合入后由 G3D-17 删开关 | PR [#163](https://github.com/yuymf/godesk/pull/163) squash `6d7080e` |
 | Tidewell 资产搜索 | Creator Studio 资产搜索面板 + 仓外 3d-asset-server sidecar（默认 `127.0.0.1:8787`），见 [`docs/asset-server.md`](./asset-server.md)（Cloud Agent） | PR [#153](https://github.com/yuymf/godesk/pull/153) squash `1d1f45b` |
 | G3D-JUDGE | Track D：**新的停止条件（用户 19:16）**：持续迭代，直到汐屿视觉达到 settlecoast.com 的水准，由大主管按左右对照逐轮评判。评审工具（dev tooling，输出不入库）：`scripts/judge-capture.mjs <N>` 起 8844 本地汐屿对电脑房间（固定 prompt / seed，脚本化行动），拍 a 默认整盘 / b 地形近景 / c 海岸水面崖壁港口 / d 手牌 HUD / e 放置高亮 / f 掷骰 / g 中局，桌面 1440×900 + iPhone 12 Pro（390×844 DPR 3），输出到 `/workspace/g3d-evidence/judge/round-N/tidewell/`；`?judge=1` 才暴露调试机位（`src/render3d/judge-camera.ts`），评审图不带性能浮层。`scripts/judge-compose.mjs <N>` 生成左参考 / 右汐屿对照图到 `round-N/compare/`，缺参考图时画占位。分支 `feat/g3d-judge-r1` 叠在 #138 `29d9c03` 之上并合入 #145 | PR [#148](https://github.com/yuymf/godesk/pull/148) squash `f3ea418`（2026-10-09 22:46 合入 main；叠入的 #149 / #151 / #152 / #155 / #156 / #157 / #158 均以 base `feat/g3d-judge-r1` 合入，内容随 #148 进 main；其 squash SHA 不在 main 历史上） |
 | G3D-ISLAND / G3D-PROPS | Track D（judge round-2）：地形道具（`src/render3d/terrain-props.ts`：松 24 / 羊 9 + 水槽 / 灰岩 5 + 卵石 / 陶土丘 + 砖垛 / 麦束成行 16 / 沙丘 + 卵石；每类 1 个 InstancedMesh，medium 减量，low 为 0）；岛屿海岸（`src/render3d/island.ts`：外圈格岩壁台基、岸石、木码头 + canvas 2:1 / 3:1 港口牌、4 艘起伏帆船，`?judge=1` / 减少动态效果时冻结）；替换 #138 的灰石板 / 灰盒港口 / 船 / 地块中心装饰（`dressing-kinds.ts` 过滤，不改 mapper）；远海环 ±60 + 波浪边缘淡出，视野内无水面边界；筹码缩到 1.45；两层懒加载为 `board-dressing-*`（≤ 30 KB gzip，size 脚本已加预算）。draw call 峰值 high 52 / medium 52 / low 44（预算 150 / 100 / 60） | 随 PR [#148](https://github.com/yuymf/godesk/pull/148) `f3ea418` 合入 main |
@@ -93,7 +94,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
-| G3D-16 首页汐屿 showcase | Track B | `feat/g3d-16-homepage-v2` [#163](https://github.com/yuymf/godesk/pull/163)（base=`main` @ `22fb514`；#146 重开） | 海报 + 缩略图 + 上线开关 `GODESK_FEATURE_TIDEWELL` 默认关；**draft，不合入**；待大主管评分 |
+| G3D-17 上线闸门 | Track C | `feat/g3d-17-tidewell-launch` | 删除 `GODESK_FEATURE_TIDEWELL`（首页默认汐屿）；`GODESK_LAUNCH_GATE_BLOCK=asset-legal,hud-raw-action-ids,draw-calls`；Lighthouse / draw-calls / size 仍 warn；**draft，不合入**；待大主管评分 |
 
 ## 已知限制
 
@@ -124,16 +125,17 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 > Track A：拥有 **18（已合）/ 09**；G3D-06 → Track B（已合 #122）、G3D-07 → Track C（2026-10-06 再平衡）。Track C：**05 / 10 / 15 / 07 / 14**。Track B 素材轨 **G3D-11、19–27 已全部合入**。
 
-1. Track C：G3D-17 预备 #144 已合入 `1884e19`（warning 模式）；**G3D-16** 首页示例：#146 closed 未合入后，本刀 `feat/g3d-16-homepage-v2` 基于 `main` 重开（依赖 G3D-13 #138 已满足）。
+1. Track C：**G3D-17** 本刀删开关 + 逐项转正；下一刀候选：① Harbor/Worker/Othello `importedModels` 与 #164/#165 访客/Replay 对齐；② render3d core size 余量 ≥ 2% + Lighthouse LCP/TBT→error 后全量 `GODESK_LAUNCH_GATE=block`。
 2. Track A：G3D-09 / G3D-04b / G3D-04c（#141）已合入；队列清空。
 3. Track B：G3D-08 #131 `e8b59e8` / G3D-13 #138 `19f212d` 已合入；G3D-ART 已由 Track D 用 AI 生图完成（#137 `902075e`）。Track D：G3D-JUDGE #148 `f3ea418` 已合入（汐屿视觉 R33 由大主管评定达标；R33 记录见 [#148 评论](https://github.com/yuymf/godesk/pull/148#issuecomment-6106295330)）。
 
 
 ## G3D-17 上线前清单（发布闸门）
 
-- [~] ~~法务审查：`LicenseRef-AI-Generated` 逐行过审后才能上线~~ — **用户 2026-10-06 19:16 豁免**（站点暂不上线）：允许 AI 生成的贴图 / 模型 / 音效和免费素材，**不再作为闸门**；来源仍须登记在 `assets/LICENSES.md`（`verify:assets` 只给 warning）。不得复制 settlecoast 的原始素材或代码。
-- [ ] G3D-05 备注 ⑤：Lighthouse LCP / TBT 由 warn 改为 error（见上）。
-- [ ] **自动化清单转阻断**：`scripts/launch-checklist.mjs`（#144）在 Verify / Lighthouse CI 里以 warning 模式汇总 `asset-legal`（AI 待法务审查条数）、`size-budgets`（超限 / 余量 < 2%）、`lighthouse`（仍为 warn 级的断言）、`draw-calls`（high 150 / medium 100 / low 60，稳态与峰值取大）、`hud-raw-action-ids`（Room 可见文本 / aria-label 中的原始动作 id，桌面 + iPhone 12 Pro，入座 0）。全部 pass 后把两个 workflow 的 `GODESK_LAUNCH_GATE` 改为 `block`；可先用 `GODESK_LAUNCH_GATE_BLOCK` 逐项转正。步骤见 [`docs/perf/launch-checklist.md`](./perf/launch-checklist.md)。基线（2026-10-06，本地 SwiftShader）：asset-legal warn（68 项）；size-budgets warn（size-limit 首页 168.68 / 170 kB，余量 0.8%）；lighthouse warn（首页 LCP、Room TBT / CLS 仍为 warn 级）；draw-calls fail（high 140 / 140、medium 80 / 140、low 80 / 121，稳态 / 峰值）；hud-raw-action-ids warn（桌面 + iPhone 各 54 种顶点坐标键，如「放置定居点 · -100:-173」，等 G3D-13 HUD）。
+- [~] ~~法务审查：`LicenseRef-AI-Generated` 逐行过审后才能上线~~ — **用户 2026-10-06 19:16 豁免**（站点暂不上线）：允许 AI 生成的贴图 / 模型 / 音效和免费素材，**不再作为闸门**；来源仍须登记在 `assets/LICENSES.md`。G3D-17：LICENSES 标记改为「已豁免 2026-10-06」、manifest `legalReview=cleared`；`asset-legal` **已入** `GODESK_LAUNCH_GATE_BLOCK`。不得复制 settlecoast 的原始素材或代码。
+- [x] **删除 `GODESK_FEATURE_TIDEWELL`**：生产首页默认汐屿 showcase（无需 `?tidewell=1`）。
+- [ ] G3D-05 备注 ⑤：Lighthouse LCP / TBT 由 warn 改为 error（见上）——本刀**未**改 `lighthouserc.json`（诚实缺口）。
+- [~] **自动化清单转阻断**：`GODESK_LAUNCH_GATE` 仍为 `warn`；`GODESK_LAUNCH_GATE_BLOCK=asset-legal,hud-raw-action-ids,draw-calls`（HUD aria-label 去掉坐标键）。**仍 warn、未阻断**：`size-budgets`、`lighthouse`。`draw-calls` 本刀已入 BLOCK（high 47/47、medium 32/47、low 23/24）。步骤见 [`docs/perf/launch-checklist.md`](./perf/launch-checklist.md)。
 - [x] **仓库公开**：公开前清理 #150 squash `f79fcc7` 已合入；`gh repo view` visibility = PUBLIC（2026-10-11 核对）。
 
 
@@ -141,13 +143,16 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
-| `feat/g3d-16-homepage-v2` | [#163](https://github.com/yuymf/godesk/pull/163) | G3D-16 首页汐屿 showcase；base=`main`；#146 重开 | draft · 不合入，待大主管评分 |
+| `feat/g3d-17-tidewell-launch` | （本刀 draft） | G3D-17：默认汐屿 + launch gate 逐项转正；base=`main` @ `6d7080e` | draft · 不合入，待大主管评分 |
 
 
 ## 修订记录
 
 | 日期 | 变更 | 作者 |
 | --- | --- | --- |
+| 2026-10-12 | G3D-17 海报修复：`?examples=all` 汐屿排第一；海报去掉 `decoding="async"`（Chromium 推迟解码视口外图片，整页截图只剩 #1a4a6e 底色），e2e 加整页截图像素回归 | Track C |
+| 2026-10-12 | G3D-17 e2e 修复：首页保持汐屿-only，新增「更多示例」入口（`/?examples=all` 同页列出港口十三号 / 雾岭山庄 / 灵感接力 / 汐屿）；gallery / charter / tabletop 港口 spec 改走该入口；room-audio 初始放置正则适配去坐标 aria-label | Track C |
+| 2026-10-12 | G3D-17：删除 Tidewell 首页开关；法务豁免落账；`GODESK_LAUNCH_GATE_BLOCK=asset-legal,hud-raw-action-ids,draw-calls`；轨迹 `docs/prompt-trace/2026-10-12-g3d-17.md` | Track C |
 | 2026-10-12 | G3D-16 重开：`feat/g3d-16-homepage-v2` base=`main`（#146 closed 未合入）；海报/缩略图/上线开关；轨迹 `docs/prompt-trace/2026-10-06-g3d-16.md` | Track B |
 | 2026-10-06 | G3D-16 开工（#146，base=`feat/g3d-13-tidewell`，后 closed 未合入） | Track B |
 | 2026-10-05 | 初创：硬约束三条、M0 未开始、bootstrap 进行中、C2C bridge 阻塞行、下一刀指向 G3D-01 | 劳埃德(工程) |

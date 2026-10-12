@@ -100,7 +100,8 @@ test("hex-settlement room audio: cues from play events, touch unlock, settings p
 
     // 走完初始放置（2 人蛇形，余下 3 个定居点 + 3 条道路），再由座位 0 掷骰、结束回合：dice / turn（及可能的 gain）。
     const boards = [hostBoard, guestBoard];
-    const setupAction = /^(建造渔村|铺设栈道) · /;
+    // G3D-17 (hud-raw-action-ids): aria-labels no longer carry " · <坐标>" suffixes.
+    const setupAction = /^(建造渔村|铺设栈道)( · |$)/;
     for (let step = 0; step < 6; step += 1) {
       let active: Locator | null = null;
       await expect.poll(async () => {

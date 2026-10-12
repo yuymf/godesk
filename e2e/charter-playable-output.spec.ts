@@ -97,7 +97,9 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(idea).toHaveValue("");
     await expect(generate).toBeDisabled();
 
-    await expect(page.getByRole("button", { name: "先玩这一局" })).toHaveCount(3);
+    // G3D-17: homepage is 汐屿-only; the other samples sit behind 「更多示例」.
+    await expect(page.getByRole("button", { name: "先玩这一局" })).toHaveCount(1);
+    await expect(page.getByTestId("more-examples")).toBeVisible();
 
     await page.getByRole("button", { name: "3人剧本杀" }).click();
     await generate.click();
@@ -156,6 +158,8 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expect(page.locator("code", { hasText: "/chatgpt-plugin/mcp" })).toBeVisible();
     await page.getByRole("link", { name: "不用 Connector，直接做一局" }).click();
     await expect(page).toHaveURL(/\/chatgpt-plugin\/new$/);
+    await page.getByTestId("more-examples").click();
+    await page.waitForURL(/[?&]examples=all/);
     const ideaRelay = page.locator("article").filter({ hasText: "灵感接力" });
     await ideaRelay.getByRole("button", { name: "先玩这一局" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 90_000 });
@@ -354,7 +358,8 @@ test.describe("ChatCut charter: source in, playable game out", () => {
   }) => {
     await page.goto("/chatgpt-plugin/new");
     const harbor = page.locator("article").filter({ hasText: "港口十三号" });
-    await page.getByText("先玩一局现成的").click();
+    await page.getByTestId("more-examples").click();
+    await page.waitForURL(/[?&]examples=all/);
     await harbor.getByRole("button", { name: "先玩这一局" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 90_000 });
 
@@ -465,7 +470,8 @@ test.describe("ChatCut charter: source in, playable game out", () => {
 
     await page.goto("/chatgpt-plugin/new");
     const harbor = page.locator("article").filter({ hasText: "港口十三号" });
-    await page.getByText("先玩一局现成的").click();
+    await page.getByTestId("more-examples").click();
+    await page.waitForURL(/[?&]examples=all/);
     await harbor.getByRole("button", { name: "先玩这一局" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 90_000 });
 
@@ -590,7 +596,8 @@ test.describe("ChatCut charter: source in, playable game out", () => {
   test("雾岭山庄 speaks mid-game and Replay hides roles", async ({ page, browser }) => {
     await page.goto("/chatgpt-plugin/new");
     const lodge = page.locator("article").filter({ hasText: "雾岭山庄" });
-    await page.getByText("先玩一局现成的").click();
+    await page.getByTestId("more-examples").click();
+    await page.waitForURL(/[?&]examples=all/);
     await lodge.getByRole("button", { name: "先玩这一局" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 90_000 });
 

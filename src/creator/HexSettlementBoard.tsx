@@ -279,24 +279,16 @@ export function formatLastAction(
   return map[lastAction] ?? copy.noLast;
 }
 
-/** Unique accessible name (may include payload ids for disambiguation). */
+/**
+ * Accessible name without raw topology ids (G3D-17 · hud-raw-action-ids).
+ * Visible short labels already omit vertex/edge/hex keys; aria-label matches them.
+ */
 function labelForBoardAction(
   action: LegalAction,
   copy: (typeof COPY)[RoomLocale],
   resourceLabel: (typeof RESOURCE_LABEL)[RoomLocale],
 ): string {
-  switch (action.type) {
-    case "place_settlement":
-      return `${copy.placeSettlement} · ${String(action.payload?.vertexId ?? "")}`;
-    case "place_city":
-      return `${copy.placeCity} · ${String(action.payload?.vertexId ?? "")}`;
-    case "place_road":
-      return `${copy.placeRoad} · ${String(action.payload?.edgeId ?? "")}`;
-    case "move_robber":
-      return `${copy.moveRobber} · ${String(action.payload?.hex ?? "")}`;
-    default:
-      return shortLabelForAction(action, copy, resourceLabel);
-  }
+  return shortLabelForAction(action, copy, resourceLabel);
 }
 
 /**

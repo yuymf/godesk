@@ -13,7 +13,7 @@ import react from "@vitejs/plugin-react";
  */
 export default defineConfig({
   plugins: [react()],
-  // G3D-16: serve public/lobby posters; expose GODESK_FEATURE_TIDEWELL to the client.
+  // public/lobby posters (G3D-16); GODESK_ prefix kept for any client env (feature flag removed in G3D-17).
   publicDir: "public",
   envPrefix: ["VITE_", "GODESK_"],
   build: {
