@@ -150,6 +150,7 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 | 日期 | 变更 | 作者 |
 | --- | --- | --- |
+| 2026-10-12 | G3D-17 e2e 修复：首页保持汐屿-only，新增「更多示例」入口（`/?examples=all` 同页列出港口十三号 / 雾岭山庄 / 灵感接力 / 汐屿）；gallery / charter / tabletop 港口 spec 改走该入口；room-audio 初始放置正则适配去坐标 aria-label | Track C |
 | 2026-10-12 | G3D-17：删除 Tidewell 首页开关；法务豁免落账；`GODESK_LAUNCH_GATE_BLOCK=asset-legal,hud-raw-action-ids,draw-calls`；轨迹 `docs/prompt-trace/2026-10-12-g3d-17.md` | Track C |
 | 2026-10-12 | G3D-16 重开：`feat/g3d-16-homepage-v2` base=`main`（#146 closed 未合入）；海报/缩略图/上线开关；轨迹 `docs/prompt-trace/2026-10-06-g3d-16.md` | Track B |
 | 2026-10-06 | G3D-16 开工（#146，base=`feat/g3d-13-tidewell`，后 closed 未合入） | Track B |

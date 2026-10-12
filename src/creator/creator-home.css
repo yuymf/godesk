@@ -113,3 +113,9 @@
   .example-grid { gap: 32px; }
   .example-grid p { min-height: 0; }
 }
+.example-more {
+  margin: 16px 0 0;
+  font-size: 14px;
+  text-align: right;
+}
+.example-more a { color: var(--muted); }

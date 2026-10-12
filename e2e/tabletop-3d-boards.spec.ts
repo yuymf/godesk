@@ -126,7 +126,8 @@ test.describe("G3D-14 generic 3D tabletop", () => {
   test("港口十三号: 3D 舞台（水面桌 + 航道货船）", async ({ page }) => {
     test.setTimeout(120_000);
     await page.goto("/chatgpt-plugin/new");
-    await page.getByText("先玩一局现成的").click();
+    await page.getByTestId("more-examples").click();
+    await page.waitForURL(/[?&]examples=all/);
     await page.locator("article").filter({ hasText: "港口十三号" }).getByRole("button", { name: "先玩这一局" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 90_000 });
     await expect(page.getByTestId("harbor-voyage-board")).toBeVisible();

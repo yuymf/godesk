@@ -85,7 +85,8 @@ for (const viewport of [
     await page.getByRole("heading", { name: /把想法变成游戏，\s*邀请朋友一起玩。/ }).click();
 
     const gallery = page.getByRole("region", { name: "先玩一局现成的" });
-    await expect(gallery.getByRole("button", { name: "先玩这一局" })).toHaveCount(3);
+    // G3D-17: homepage gallery is 汐屿-only; 「更多示例」 leads to the full list (checked below).
+    await expect(gallery.getByRole("button", { name: "先玩这一局" })).toHaveCount(1);
     await expectDesignTokens(page);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -102,6 +103,9 @@ for (const viewport of [
     await page.locator(".shell-header").screenshot({ path: evidenceDir ? `${evidenceDir}/brand-${viewport.name}.png` : testInfo.outputPath("brand.png") });
     await page.screenshot({ path: evidenceDir ? `${evidenceDir}/home-${viewport.name}.png` : testInfo.outputPath("home.png"), fullPage: true });
 
+    await page.getByTestId("more-examples").click();
+    await page.waitForURL(/[?&]examples=all/);
+    await expect(gallery.getByRole("button", { name: "先玩这一局" })).toHaveCount(4);
     const example = gallery.locator("article").filter({ has: page.getByRole("heading", { name: "灵感接力", exact: true }) });
     const start = example.getByRole("button", { name: "先玩这一局" });
     await start.focus();
