@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { GameMark } from "./CreatorBrand";
-import { getBuild, getReplay } from "./project-api";
+import { getBuild, getImportedSceneModels, getReplay } from "./project-api";
 import type { GameReplay, PlayableBuild } from "./project-contract";
 import type { HarborVoyageState } from "../runtime/harbor-voyage";
 import type { WorkerPlacementState } from "../runtime/worker-placement";
@@ -23,6 +23,9 @@ export function ReplayView({ replayId }: { replayId: string }) {
   const [replay, setReplay] = useState<GameReplay>();
   const [build, setBuild] = useState<PlayableBuild>();
   const [error, setError] = useState("");
+  const [importedModels, setImportedModels] = useState<
+    Array<{ id: string; url: string; title?: string }>
+  >([]);
   const shareToken = readShareToken();
 
   useEffect(() => {
@@ -39,6 +42,18 @@ export function ReplayView({ replayId }: { replayId: string }) {
         setError(reason.message);
       });
   }, [replayId, shareToken]);
+
+  useEffect(() => {
+    const projectId = replay?.projectId ?? build?.projectId;
+    if (!projectId) return;
+    let cancelled = false;
+    void getImportedSceneModels(projectId, shareToken).then((models) => {
+      if (!cancelled) setImportedModels(models);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [replay?.projectId, build?.projectId, shareToken]);
 
   if (error) {
     return (
@@ -103,11 +118,13 @@ export function ReplayView({ replayId }: { replayId: string }) {
         ) : replay.finalState.hexIsland ? (
           <HexSettlementScenePreview
             hexIsland={replay.finalState.hexIsland as HexSettlementBoardState}
+            importedModels={importedModels}
           />
         ) : replay.finalState.networkRoute ? (
           <NetworkRouteBoard render={build?.ruleSystem.presentation.render}
             activeSeat={replay.finalState.activeSeat}
             enabled={false}
+            importedModels={importedModels}
             networkRoute={replay.finalState.networkRoute as NetworkRouteBoardState}
             readOnly
             status={replay.finalState.status}
