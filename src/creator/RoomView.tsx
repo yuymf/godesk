@@ -25,6 +25,7 @@ import {
   isHexSettlement,
   isNetworkRoute,
   isAuctionBidding,
+  isAutoBattler,
   isHarborVoyage,
   isWorkerPlacement,
   localizedRoomError,
@@ -56,6 +57,7 @@ const LazyHexSettlementBoard = lazy(async () => {
 });
 import { NetworkRouteBoard, type NetworkRouteBoardState } from "./NetworkRouteBoard";
 import { AuctionBiddingBoard } from "./AuctionBiddingBoard";
+import { TideArenaBoard } from "./TideArenaBoard";
 import { HandPlayBoard } from "./HandPlayBoard";
 import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import {
@@ -396,6 +398,8 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   const immersive = hexSettlement || woodChrome;
   const auctionState = room.state.auctionBidding;
   const auction = isAuctionBidding(build.ruleSystem) && Boolean(auctionState);
+  const autoBattlerState = room.state.autoBattler;
+  const autoBattler = isAutoBattler(build.ruleSystem) && Boolean(autoBattlerState);
   const gameName = build.ruleSystem.name;
   const activeSeat = room.state.activeSeat;
   const isMyTurn = room.state.status === "active" && seat === activeSeat;
@@ -457,7 +461,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       : copy.points;
 
   return (
-    <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute || auction ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-hex-island room-view-tidewell-immersive" : ""} ${woodChrome ? "room-view-tidewell-immersive room-view-tabletop-immersive" : ""} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
+    <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute || auction || autoBattler ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-hex-island room-view-tidewell-immersive" : ""} ${woodChrome ? "room-view-tidewell-immersive room-view-tabletop-immersive" : ""} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
       <header className="room-shell-header">
         <div className="room-title-block">
           <span className="room-brand-mark" aria-hidden="true"><GameMark /></span>
@@ -696,6 +700,10 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         />
       ) : auction && auctionState ? (
         <AuctionBiddingBoard auction={auctionState} activeSeat={activeSeat}
+          enabled={isMyTurn} busy={busy} status={room.state.status} viewerSeat={seat}
+          onAct={(actionId, payload) => { void act(actionId, -1, payload); }} />
+      ) : autoBattler && autoBattlerState ? (
+        <TideArenaBoard arena={autoBattlerState} activeSeat={activeSeat}
           enabled={isMyTurn} busy={busy} status={room.state.status} viewerSeat={seat}
           onAct={(actionId, payload) => { void act(actionId, -1, payload); }} />
       ) : (

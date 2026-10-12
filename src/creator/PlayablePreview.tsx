@@ -11,6 +11,7 @@ import {
   isHexSettlement,
   isNetworkRoute,
   isAuctionBidding,
+  isAutoBattler,
   isHarborVoyage,
   networkRouteKernel,
   workerPlacementKernel,
@@ -31,6 +32,8 @@ import { NetworkRouteBoard } from "./NetworkRouteBoard";
 import { createInitialNetworkRouteSessionSlice } from "./network-route-thumbnail";
 import { AuctionBiddingBoard } from "./AuctionBiddingBoard";
 import { auctionBiddingAdapter, createAuctionBiddingKernelConfig, auctionBiddingToSessionFields } from "../runtime/adapters/auction-bidding";
+import { TideArenaBoard } from "./TideArenaBoard";
+import { autoBattlerAdapter, createAutoBattlerKernelConfig, autoBattlerToSessionFields } from "../runtime/adapters/auto-battler";
 import { createInitialState } from "../runtime/play-kernel";
 import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import { href, readShareToken } from "./studio-utils";
@@ -92,6 +95,7 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
   const networkRoute = isNetworkRoute(build.ruleSystem);
   const networkKernel = networkRouteKernel(build.ruleSystem);
   const auction = isAuctionBidding(build.ruleSystem);
+  const autoBattler = isAutoBattler(build.ruleSystem);
   const scoreTrackSurface = usesScoreTrackSurface(build.ruleSystem);
   const runtimeValues = new Map(
     race?.actions.map((action) => [action.id, action.points]) ??
@@ -197,6 +201,13 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
         <section className="preview-board" aria-label="拍卖竞价可玩桌面">
           <AuctionBiddingBoard
             auction={auctionBiddingToSessionFields(createInitialState(auctionBiddingAdapter, createAuctionBiddingKernelConfig(), 42)).auctionBidding}
+            activeSeat={0} enabled={false} readOnly status="active" viewerSeat={null}
+          />
+        </section>
+      ) : autoBattler ? (
+        <section className="preview-board" aria-label="潮阵可玩桌面">
+          <TideArenaBoard
+            arena={autoBattlerToSessionFields(createInitialState(autoBattlerAdapter, createAutoBattlerKernelConfig(), 42)).autoBattler!}
             activeSeat={0} enabled={false} readOnly status="active" viewerSeat={null}
           />
         </section>

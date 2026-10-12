@@ -3,10 +3,12 @@ import { Brand, GameMark } from "./CreatorBrand";
 import { ExampleArtwork } from "./ExampleArtwork";
 import { createSharedSession, getBuilds, getSharedSessions, listProjects } from "./project-api";
 import type { GameProject, PlayableBuild, SharedSession } from "./project-contract";
-import { conversationRelayKernel, hiddenRoleKernel, isAuctionBidding, isDiscFlipping, isHandPlay, isHarborVoyage, hexSettlementKernel, isHexSettlement, isNetworkRoute } from "./room-presentation";
+import { conversationRelayKernel, hiddenRoleKernel, isAuctionBidding,
+  isAutoBattler, isDiscFlipping, isHandPlay, isHarborVoyage, hexSettlementKernel, isHexSettlement, isNetworkRoute } from "./room-presentation";
 import { othelloStartingBoardThumbnailDataUrl } from "./othello-thumbnail";
 import { networkRouteStartingBoardThumbnailDataUrl } from "./network-route-thumbnail";
 import { auctionBiddingThumbnailDataUrl } from "./auction-bidding-thumbnail";
+import { tideArenaThumbnailDataUrl } from "./tide-arena-thumbnail";
 import { handPlayStartingBoardThumbnailDataUrl } from "./hand-play-thumbnail";
 import { buildCanOpenSharedSession, href, latestStudioPlayTarget } from "./studio-utils";
 
@@ -133,6 +135,10 @@ export function GameLobby() {
                   ) : game.build && isAuctionBidding(game.build.ruleSystem) ? (
                     <div aria-hidden="true" className="lobby-card-mark" data-lobby-mark="auction">
                       <img alt="" src={auctionBiddingThumbnailDataUrl()} />
+                    </div>
+                  ) : game.build && isAutoBattler(game.build.ruleSystem) ? (
+                    <div aria-hidden="true" className="lobby-card-mark" data-lobby-mark="tide-arena">
+                      <img alt="" src={tideArenaThumbnailDataUrl()} />
                     </div>
                   ) : game.build && isHandPlay(game.build.ruleSystem) ? (
                     <div
