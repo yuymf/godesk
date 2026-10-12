@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getBuild } from "./project-api";
+import { getBuild, getImportedSceneModels } from "./project-api";
 import type { PlayableBuild } from "./project-contract";
 import { createHarborVoyageState } from "../runtime/harbor-voyage";
 import { createWorkerPlacementState } from "../runtime/worker-placement";
@@ -38,6 +38,9 @@ import { href, readShareToken } from "./studio-utils";
 export function PlayablePreview({ buildId }: { buildId: string }) {
   const [build, setBuild] = useState<PlayableBuild>();
   const [error, setError] = useState("");
+  const [importedModels, setImportedModels] = useState<
+    Array<{ id: string; url: string; title?: string }>
+  >([]);
   const shareToken = readShareToken();
 
   useEffect(() => {
@@ -45,6 +48,17 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
       setError(reason.message);
     });
   }, [buildId, shareToken]);
+
+  useEffect(() => {
+    if (!build?.projectId) return;
+    let cancelled = false;
+    void getImportedSceneModels(build.projectId, shareToken).then((models) => {
+      if (!cancelled) setImportedModels(models);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [build?.projectId, shareToken]);
 
   if (error) {
     return (
@@ -161,6 +175,7 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
         <section className="preview-board" aria-label="汐屿可玩桌面">
           <HexSettlementScenePreview
             hexIsland={createInitialHexIslandSessionSlice(hexKernel.playerCount)}
+            importedModels={importedModels}
           />
         </section>
       ) : networkRoute && networkKernel ? (
@@ -168,6 +183,7 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
           <NetworkRouteBoard render={build.ruleSystem.presentation.render}
             activeSeat={0}
             enabled={false}
+            importedModels={importedModels}
             networkRoute={createInitialNetworkRouteSessionSlice()}
             readOnly
             status="active"

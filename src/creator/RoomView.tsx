@@ -190,13 +190,13 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (!room?.projectId) return;
     let cancelled = false;
-    void getImportedSceneModels(room.projectId).then((models) => {
+    void getImportedSceneModels(room.projectId, shareToken).then((models) => {
       if (!cancelled) setImportedModels(models);
     });
     return () => {
       cancelled = true;
     };
-  }, [room?.projectId]);
+  }, [room?.projectId, shareToken]);
 
   async function claimSeat(nextSeat: number) {
     if (!room) return;

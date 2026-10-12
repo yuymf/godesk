@@ -403,12 +403,14 @@ export function listProjects() {
     .then((result) => result.projects);
 }
 
-/** GoDesk ②：项目导入的 GLB（Room 桌边渲染）。拿不到（分享访客无项目权限等）时返回空。 */
-export async function getImportedSceneModels(projectId: string) {
+/** GoDesk ②：项目导入的 GLB（Room /play 桌边渲染）。分享访客须带 share=；失败时返回空。 */
+export async function getImportedSceneModels(projectId: string, shareToken?: string) {
   try {
-    const response = await fetch(
-      apiPath(`/api/projects/${encodeURIComponent(projectId)}?view=imported-assets`),
+    const listPath = withShareToken(
+      `/api/projects/${encodeURIComponent(projectId)}?view=imported-assets`,
+      shareToken,
     );
+    const response = await fetch(apiPath(listPath));
     if (!response.ok) return [];
     const body = await response.json() as {
       assets?: Array<{ id: string; title?: string; path?: string; mimeType?: string }>;
@@ -419,7 +421,10 @@ export async function getImportedSceneModels(projectId: string) {
         id: asset.id,
         title: asset.title,
         url: apiPath(
-          `/api/projects/${encodeURIComponent(projectId)}?view=imported-blob&assetId=${encodeURIComponent(asset.id)}`,
+          withShareToken(
+            `/api/projects/${encodeURIComponent(projectId)}?view=imported-blob&assetId=${encodeURIComponent(asset.id)}`,
+            shareToken,
+          ),
         ),
       }));
   } catch {
