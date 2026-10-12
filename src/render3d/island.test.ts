@@ -40,12 +40,12 @@ describe("G3D-ISLAND island + coast", () => {
   });
 
 
-  it("builds shallow beach step shelves along the coast (2 tiers, above/near waterline)", () => {
+  it("builds shallow beach step shelves along the coast (3 tiers, above/near waterline)", () => {
     const geom = coastBeachStepsGeometry(tiles);
     const pos = geom.getAttribute("position");
-    // 30 edges × 3–4 segs × 2 tiers × 2 faces × 6 verts
-    expect(pos.count).toBeGreaterThanOrEqual(30 * 3 * 2 * 2 * 6);
-    expect(pos.count).toBeLessThanOrEqual(30 * 4 * 2 * 2 * 6);
+    // 30 edges × 3–4 segs × 3 tiers × 2 faces × 6 verts
+    expect(pos.count).toBeGreaterThanOrEqual(30 * 3 * 3 * 2 * 6);
+    expect(pos.count).toBeLessThanOrEqual(30 * 4 * 3 * 2 * 6);
     let minY = Infinity, maxY = -Infinity, maxR = 0;
     for (let i = 0; i < pos.count; i += 1) {
       minY = Math.min(minY, pos.getY(i));

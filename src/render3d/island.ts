@@ -458,8 +458,8 @@ export function coastWallGeometry(tiles: readonly IslandTile[]): BufferGeometry 
 }
 
 /**
- * 浅滩小阶：沿外圈海岸边挤出 2 级可读水平台（干沙滩台 + 湿浅滩台），把崖脚接到水面。
- * 只在 high 档挂上（medium/low 几何与 #169 恒等）。三角形约 30边×4段×2阶×4面×2三角 ≈ 2k，远低于 budget。
+ * 浅滩小阶：沿外圈海岸边挤出 3 级可读水平台（干沙滩 → 半干 → 湿浅滩），把崖脚接到水面。
+ * 只在 high 档挂上（medium/low 几何与 #169 恒等）。三角形约 30边×4段×3阶×2面×2三角 ≈ 3k，远低于 budget。
  * 候选来自 #161 时代「岸侧小台阶」差距；本刀落在汐屿六角海岸，不是 tabletop surround。
  */
 export function coastBeachStepsGeometry(tiles: readonly IslandTile[]): BufferGeometry {
@@ -469,8 +469,9 @@ export function coastBeachStepsGeometry(tiles: readonly IslandTile[]): BufferGeo
   // 两级台阶：上 = 近崖干沙滩；下 = 入水湿浅滩。y 相对 WATER_Y。
   // 起点必须在崖脚 flare 之外（水线处 cliff out ≈0.05–0.2），否则台阶被岩壁吞掉。
   const tiers = [
-    { y: WATER_Y + 0.11, in0: 0.22, out1: 0.42, rise: 0.09, dry: 1 },
-    { y: WATER_Y + 0.03, in0: 0.40, out1: 0.68, rise: 0.07, dry: 0.35 },
+    { y: WATER_Y + 0.14, in0: 0.20, out1: 0.38, rise: 0.10, dry: 1 },
+    { y: WATER_Y + 0.06, in0: 0.36, out1: 0.58, rise: 0.08, dry: 0.55 },
+    { y: WATER_Y + 0.01, in0: 0.55, out1: 0.82, rise: 0.06, dry: 0.15 },
   ] as const;
   const pushVert = (x: number, y: number, z: number, dry: number, shade: number) => {
     positions.push(x, y, z);
