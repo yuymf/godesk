@@ -216,31 +216,37 @@ function drawRock(x: CanvasRenderingContext2D, img: HTMLImageElement | null, mid
     x.fillRect(rand() * 512, rand() * 256, 1 + rand() * 3, 1 + rand() * 3);
   }
   // Mid-band continuous dark rock (settlecoast): above wet foot (~y150), below mossy rim (~y28).
-  // Texture-driven so it reads under the albedo map (vertex tint alone was too faint in screenshots).
+  // Multiply + overlay so AI albedo mid no longer reads light-brown cardboard.
   if (midBandDark > 0) {
     const s = midBandDark;
-    x.fillStyle = `rgba(32, 34, 38, ${0.20 * s})`;
-    x.fillRect(0, 28, 512, 36);
-    x.fillStyle = `rgba(18, 20, 24, ${0.36 * s})`;
-    x.fillRect(0, 52, 512, 78);
-    x.fillStyle = `rgba(22, 24, 28, ${0.24 * s})`;
-    x.fillRect(0, 118, 512, 36);
-    for (let i = 0; i < Math.floor(520 * s); i += 1) {
-      const yy = 30 + rand() * 125;
-      const v = 8 + Math.floor(rand() * 22);
-      x.fillStyle = `rgba(${v},${v + 1},${v + 3},${(0.12 + rand() * 0.28) * s})`;
-      x.fillRect(rand() * 512, yy, 3 + rand() * 20, 2 + rand() * 14);
+    x.save();
+    x.globalCompositeOperation = "multiply";
+    // Cool dark rock plate over mid face (keep rim + wet foot untouched).
+    const g = x.createLinearGradient(0, 28, 0, 148);
+    g.addColorStop(0, `rgba(255, 255, 255, 1)`); // no multiply at rim
+    g.addColorStop(0.12, `rgba(${Math.round(70 + 40 * (1 - s))}, ${Math.round(72 + 40 * (1 - s))}, ${Math.round(76 + 36 * (1 - s))}, 1)`);
+    g.addColorStop(0.45, `rgba(${Math.round(48 + 30 * (1 - s))}, ${Math.round(50 + 30 * (1 - s))}, ${Math.round(54 + 28 * (1 - s))}, 1)`);
+    g.addColorStop(0.85, `rgba(${Math.round(58 + 35 * (1 - s))}, ${Math.round(60 + 35 * (1 - s))}, ${Math.round(64 + 32 * (1 - s))}, 1)`);
+    g.addColorStop(1, `rgba(255, 255, 255, 1)`); // fade before wet foot
+    x.fillStyle = g;
+    x.fillRect(0, 28, 512, 120);
+    x.restore();
+    // Extra occluding blotches / seams for rock slab noise (source-over).
+    for (let i = 0; i < Math.floor(640 * s); i += 1) {
+      const yy = 34 + rand() * 110;
+      const v = 6 + Math.floor(rand() * 18);
+      x.fillStyle = `rgba(${v},${v + 1},${v + 2},${(0.18 + rand() * 0.32) * s})`;
+      x.fillRect(rand() * 512, yy, 4 + rand() * 22, 2 + rand() * 16);
     }
-    // Soft vertical seam darken — rock slabs, not a flat wash.
-    x.strokeStyle = `rgba(8, 10, 12, ${0.35 * s})`;
-    let sx = 6 + rand() * 20;
+    x.strokeStyle = `rgba(6, 8, 10, ${0.45 * s})`;
+    let sx = 6 + rand() * 18;
     while (sx < 506) {
-      x.lineWidth = 1 + rand() * 2.8;
+      x.lineWidth = 1.2 + rand() * 3.2;
       x.beginPath();
-      x.moveTo(sx, 30 + rand() * 10);
-      x.lineTo(sx + (rand() - 0.5) * 10, 145 + rand() * 10);
+      x.moveTo(sx, 32 + rand() * 12);
+      x.lineTo(sx + (rand() - 0.5) * 12, 140 + rand() * 12);
       x.stroke();
-      sx += 14 + rand() * 36;
+      sx += 12 + rand() * 32;
     }
   }
   // 顶部苔斑（接地块边缘）。
