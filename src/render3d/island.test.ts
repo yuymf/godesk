@@ -1,8 +1,8 @@
-import { PerspectiveCamera } from "three";
+import { InstancedMesh, Matrix4, PerspectiveCamera, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 import { dressingInputs, tileCenter, vertexWorld, withoutReplacedNodes } from "./hex-dressing";
 import { mapHexSettlementToScene } from "./mappers/hex-settlement";
-import { HEX_LAYOUT_RADIUS, SIGN_KINDS, SKIRT_BOTTOM_Y, SKIRT_TOP_Y, WATER_Y, coastBeachStepsGeometry, coastEdges, coastWallGeometry, createIslandLayer, docksFor, outerTiles, signCell } from "./island";
+import { SIGN_KINDS, SKIRT_BOTTOM_Y, SKIRT_TOP_Y, WATER_Y, coastEdges, coastWallGeometry, createIslandLayer, docksFor, outerTiles, reefClusterSize, reefEdgeMask, signCell } from "./island";
 import { beginnerSceneInput } from "./terrain-dressing.fixture";
 
 const input = beginnerSceneInput();
@@ -40,23 +40,37 @@ describe("G3D-ISLAND island + coast", () => {
   });
 
 
-  it("builds shallow beach step shelves along the coast (3 tiers, above/near waterline)", () => {
-    const geom = coastBeachStepsGeometry(tiles);
-    const pos = geom.getAttribute("position");
-    // 30 edges × 3–4 segs × 3 tiers × 2 faces × 6 verts
-    expect(pos.count).toBeGreaterThanOrEqual(30 * 3 * 3 * 2 * 6);
-    expect(pos.count).toBeLessThanOrEqual(30 * 4 * 3 * 2 * 6);
-    let minY = Infinity, maxY = -Infinity, maxR = 0;
-    for (let i = 0; i < pos.count; i += 1) {
-      minY = Math.min(minY, pos.getY(i));
-      maxY = Math.max(maxY, pos.getY(i));
-      maxR = Math.max(maxR, Math.hypot(pos.getX(i), pos.getZ(i)));
+  it("reef mask is discontinuous (not every coast edge) and clusters are small", () => {
+    const edges = coastEdges(tiles);
+    let on = 0;
+    for (let i = 0; i < edges.length; i += 1) if (reefEdgeMask(i)) on += 1;
+    expect(on).toBeGreaterThan(8);
+    expect(on).toBeLessThan(edges.length); // gaps → not a full ring
+    expect(reefClusterSize(0)).toBeGreaterThanOrEqual(2);
+    expect(reefClusterSize(0)).toBeLessThanOrEqual(4);
+  });
+
+  it("high shore-stones include raised reef ledges; medium matches pre-reef count band", () => {
+    const layer = createIslandLayer();
+    layer.sync(tiles, ports, "medium", true);
+    const mid = layer.group.children.find((c) => c.name === "island:shore-stones") as InstancedMesh;
+    expect(mid.count).toBe(coastEdges(tiles).length * 4);
+    expect(layer.group.children.some((c) => c.name === "island:beach-steps")).toBe(false);
+    layer.sync(tiles, ports, "high", true);
+    const hi = layer.group.children.find((c) => c.name === "island:shore-stones") as InstancedMesh;
+    expect(hi.count).toBeGreaterThan(mid.count);
+    expect(layer.group.children.some((c) => c.name === "island:beach-steps")).toBe(false);
+    // at least some instances sit clearly above the quiet waterline (dry reef)
+    const mm = new Matrix4();
+    const pp = new Vector3();
+    let raised = 0;
+    for (let i = 0; i < hi.count; i += 1) {
+      hi.getMatrixAt(i, mm);
+      pp.setFromMatrixPosition(mm);
+      if (pp.y > WATER_Y + 0.04) raised += 1;
     }
-    expect(maxY).toBeGreaterThan(WATER_Y);
-    expect(minY).toBeLessThan(WATER_Y);
-    expect(maxY).toBeLessThan(SKIRT_TOP_Y);
-    expect(maxR).toBeGreaterThan(HEX_LAYOUT_RADIUS); // extends past hex rim
-    geom.dispose();
+    expect(raised).toBeGreaterThan(6);
+    layer.dispose();
   });
 
   it("docks point outward from the island, one per port", () => {
@@ -83,11 +97,8 @@ describe("G3D-ISLAND island + coast", () => {
     const layer = createIslandLayer();
     layer.sync(tiles, ports, "high", true);
     const stats = layer.stats();
-    expect(stats.meshes).toBeLessThanOrEqual(7);
-    expect(layer.group.children.some((c) => c.name === "island:beach-steps")).toBe(true);
-    layer.sync(tiles, ports, "medium", true);
+    expect(stats.meshes).toBeLessThanOrEqual(6);
     expect(layer.group.children.some((c) => c.name === "island:beach-steps")).toBe(false);
-    layer.sync(tiles, ports, "high", true);
 
     expect(layer.docks()).toHaveLength(ports.length);
     const camera = new PerspectiveCamera();

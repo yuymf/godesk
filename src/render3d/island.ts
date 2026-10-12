@@ -3,7 +3,7 @@
  * LicenseRef-GoDesk-Original）。取代 #138 的灰色平石板（cliff 节点）、灰盒港口（port）与船（ship）。
  *
  * draw call（不含阴影 pass）：岩壁 1 + 岸石 1 + 码头 1 + 港口牌 1 + 帆船 1 = 5，与档位无关
- * （low 档岸石减半、帆船保留但不投影）。high 另加沙滩台阶 1（浅滩小阶，压「崖切直入水」玩具感）。
+ * （low 档岸石减半、帆船保留但不投影）。high 在同岸石 InstancedMesh 内加断续礁石浅滩簇（无额外 draw call）。
  */
 import {
   BufferAttribute,
@@ -458,88 +458,19 @@ export function coastWallGeometry(tiles: readonly IslandTile[]): BufferGeometry 
 }
 
 /**
- * 浅滩小阶：沿外圈海岸边挤出 3 级可读水平台（干沙滩 → 半干 → 湿浅滩），把崖脚接到水面。
- * 只在 high 档挂上（medium/low 几何与 #169 恒等）。三角形约 30边×4段×3阶×2面×2三角 ≈ 3k，远低于 budget。
- * 候选来自 #161 时代「岸侧小台阶」差距；本刀落在汐屿六角海岸，不是 tabletop surround。
+ * high 档断续礁石浅滩：不铺整圈沙滩台（大主管 #170 ~8.8：连砂环像玩具）。
+ * 复用岸石词汇 — 在部分海岸边（hash 留空档）放 2–4 块扁平礁石，高度错层（干/湿），外推入浅滩。
+ * 与常规岸石同一 InstancedMesh → drawCalls 回到 5（相对 #170 的 6 / 48 peak）。
  */
-export function coastBeachStepsGeometry(tiles: readonly IslandTile[]): BufferGeometry {
-  const positions: number[] = [];
-  const colors: number[] = [];
-  const hash01 = (n: number) => ((Math.sin(n * 12.9898 + 78.233) * 43758.5453) % 1 + 1) % 1;
-  // 两级台阶：上 = 近崖干沙滩；下 = 入水湿浅滩。y 相对 WATER_Y。
-  // 起点必须在崖脚 flare 之外（水线处 cliff out ≈0.05–0.2），否则台阶被岩壁吞掉。
-  const tiers = [
-    { y: WATER_Y + 0.14, in0: 0.20, out1: 0.38, rise: 0.10, dry: 1 },
-    { y: WATER_Y + 0.06, in0: 0.36, out1: 0.58, rise: 0.08, dry: 0.55 },
-    { y: WATER_Y + 0.01, in0: 0.55, out1: 0.82, rise: 0.06, dry: 0.15 },
-  ] as const;
-  const pushVert = (x: number, y: number, z: number, dry: number, shade: number) => {
-    positions.push(x, y, z);
-    // 干沙偏暖米，湿沙偏褐灰青；shade 0..1 从内到外略暗。
-    const r = 0.82 + dry * 0.12 - shade * 0.1;
-    const g = 0.70 + dry * 0.1 - shade * 0.08;
-    const b = 0.48 + dry * 0.06 - shade * 0.04 + (1 - dry) * 0.08;
-    colors.push(r, g, b);
-  };
-  const quad = (
-    ax: number, ay: number, az: number,
-    bx: number, by: number, bz: number,
-    cx: number, cy: number, cz: number,
-    dx: number, dy: number, dz: number,
-    dry: number, shadeA: number, shadeB: number,
-  ) => {
-    // a--b
-    // d--c   CCW from above for top; for riser order so normal faces out
-    pushVert(ax, ay, az, dry, shadeA);
-    pushVert(dx, dy, dz, dry, shadeA);
-    pushVert(bx, by, bz, dry, shadeB);
-    pushVert(bx, by, bz, dry, shadeB);
-    pushVert(dx, dy, dz, dry, shadeA);
-    pushVert(cx, cy, cz, dry, shadeB);
-  };
-  let edgeIdx = 0;
-  for (const [a, b, c] of coastEdges(tiles)) {
-    const nSeg = 3 + Math.floor(hash01(edgeIdx * 2.17) * 2); // 3–4
-    const ox = (a[0] + b[0]) / 2 - c[0];
-    const oz = (a[2] + b[2]) / 2 - c[2];
-    const ol = Math.hypot(ox, oz) || 1;
-    const nx = ox / ol;
-    const nz = oz / ol;
-    for (let s = 0; s < nSeg; s += 1) {
-      const t0 = s / nSeg;
-      const t1 = (s + 1) / nSeg;
-      // 段宽 jitter：破碎岸线，避免整圈等宽环。
-      const j0 = (hash01(edgeIdx * 11 + s) - 0.5) * 0.04;
-      const j1 = (hash01(edgeIdx * 11 + s + 0.5) - 0.5) * 0.04;
-      const ax = a[0] + (b[0] - a[0]) * t0;
-      const az = a[2] + (b[2] - a[2]) * t0;
-      const bx = a[0] + (b[0] - a[0]) * t1;
-      const bz = a[2] + (b[2] - a[2]) * t1;
-      for (const tier of tiers) {
-        const outJ = (hash01(edgeIdx * 7.3 + s + tier.dry) - 0.35) * 0.06;
-        const inR = tier.in0;
-        const outR = tier.out1 + outJ;
-        // 顶面：内沿 → 外沿
-        const aInX = ax + nx * inR + (-nz) * j0, aInZ = az + nz * inR + nx * j0;
-        const bInX = bx + nx * inR + (-nz) * j1, bInZ = bz + nz * inR + nx * j1;
-        const aOutX = ax + nx * outR + (-nz) * j0 * 1.4, aOutZ = az + nz * outR + nx * j0 * 1.4;
-        const bOutX = bx + nx * outR + (-nz) * j1 * 1.4, bOutZ = bz + nz * outR + nx * j1 * 1.4;
-        const yTop = tier.y + (hash01(edgeIdx * 3.1 + s) - 0.5) * 0.012;
-        const yBot = yTop - tier.rise;
-        // 顶面（法线朝上）
-        quad(aInX, yTop, aInZ, bInX, yTop, bInZ, bOutX, yTop, bOutZ, aOutX, yTop, aOutZ, tier.dry, 0.15, 0.55);
-        // 外立面（台阶前缘，法线朝外）
-        quad(aOutX, yTop, aOutZ, bOutX, yTop, bOutZ, bOutX, yBot, bOutZ, aOutX, yBot, aOutZ, tier.dry, 0.6, 0.85);
-      }
-    }
-    edgeIdx += 1;
-  }
-  const geom = new BufferGeometry();
-  geom.setAttribute("position", new BufferAttribute(new Float32Array(positions), 3));
-  geom.setAttribute("color", new BufferAttribute(new Float32Array(colors), 3));
-  geom.computeVertexNormals();
-  geom.computeBoundingSphere();
-  return geom;
+export function reefEdgeMask(edgeIdx: number): boolean {
+  // ~55% of edges get a reef cluster; rest stay bare → discontinuous, not a ring.
+  const h = ((Math.sin(edgeIdx * 12.9898 + 78.233) * 43758.5453) % 1 + 1) % 1;
+  return h > 0.45;
+}
+
+export function reefClusterSize(edgeIdx: number): number {
+  const h = ((Math.sin(edgeIdx * 4.17 + 2.3) * 43758.5453) % 1 + 1) % 1;
+  return 2 + Math.floor(h * 3); // 2–4
 }
 
 function shoreStoneGeometry(): BufferGeometry {
@@ -620,7 +551,6 @@ export function createIslandLayer(): IslandLayer {
   const rockMap = rockTexture();
   const rockMat = new MeshStandardMaterial({ color: "#ffffff", map: rockMap, vertexColors: true, roughness: 0.97, metalness: 0, flatShading: true });
   if (!rockMap) rockMat.color.set("#5a5149");
-  const sandMat = new MeshStandardMaterial({ color: "#ffffff", vertexColors: true, roughness: 0.96, metalness: 0, flatShading: true });
   const signMap = signAtlas();
   const signMat = new MeshStandardMaterial({ map: signMap, transparent: true, alphaTest: 0.4, roughness: 0.8 });
   signMat.onBeforeCompile = (shader) => {
@@ -650,11 +580,7 @@ export function createIslandLayer(): IslandLayer {
   function clear() {
     for (const child of [...group.children]) {
       group.remove(child);
-      if (child.name === "island:beach-steps") {
-        (child as Mesh).geometry.dispose();
-      } else {
-        (child as InstancedMesh).dispose?.();
-      }
+      (child as InstancedMesh).dispose?.();
     }
     // 港口牌几何每次 sync 克隆（带 aCell 实例属性），这里释放。
     if (signs) signs.geometry.dispose();
@@ -692,27 +618,18 @@ export function createIslandLayer(): IslandLayer {
       wall.userData.gdShared = true;
       group.add(wall);
 
-      // high only：浅滩小阶（干沙滩台 + 湿浅滩台）。medium/low 与 #169 几何恒等。
-      if (tier === "high") {
-        const beachGeom = coastBeachStepsGeometry(tiles);
-        const beach = new Mesh(beachGeom, sandMat);
-        beach.name = "island:beach-steps";
-        beach.castShadow = false;
-        beach.receiveShadow = true;
-        beach.userData.gdShared = true;
-        group.add(beach);
-      }
-
-      // 岸石：每条外圈海岸边 3–5 颗圆石，落在水线。
+      // 岸石：每条外圈海岸边常规圆石；high 另在部分边加断续扁平礁石浅滩簇（非整圈砂台）。
       const edges = coastEdges(tiles);
       const perEdge = tier === "low" ? 2 : 4;
-      const stones = new InstancedMesh(stoneGeom, vertexMat, Math.max(1, edges.length * perEdge));
+      const reefBudget = tier === "high" ? edges.length * 4 : 0;
+      const stones = new InstancedMesh(stoneGeom, vertexMat, Math.max(1, edges.length * perEdge + reefBudget));
       let n = 0;
+      let edgeIdx = 0;
       for (const [a, b, c] of edges) {
         for (let k = 0; k < perEdge; k += 1) {
-          const t = (k + 0.25 + rand() * 0.5) / perEdge;
-          const ex = a[0] + (b[0] - a[0]) * t;
-          const ez = a[2] + (b[2] - a[2]) * t;
+          const tt = (k + 0.25 + rand() * 0.5) / perEdge;
+          const ex = a[0] + (b[0] - a[0]) * tt;
+          const ez = a[2] + (b[2] - a[2]) * tt;
           const ox = ex - c[0];
           const oz = ez - c[2];
           const ol = Math.hypot(ox, oz) || 1;
@@ -723,6 +640,34 @@ export function createIslandLayer(): IslandLayer {
           m.compose(p.set(ex + (ox / ol) * out, WATER_Y + 0.015, ez + (oz / ol) * out), q, s.set(size * 1.3, size * 0.78, size));
           stones.setMatrixAt(n++, m);
         }
+        // high only：断续礁石簇 — 约半数边留空，其余 2–4 块扁平错层外推（干露 / 半湿 / 入水）。
+        if (tier === "high" && reefEdgeMask(edgeIdx)) {
+          const cluster = reefClusterSize(edgeIdx);
+          const ox0 = (a[0] + b[0]) / 2 - c[0];
+          const oz0 = (a[2] + b[2]) / 2 - c[2];
+          const ol0 = Math.hypot(ox0, oz0) || 1;
+          const nx = ox0 / ol0;
+          const nz = oz0 / ol0;
+          for (let j = 0; j < cluster; j += 1) {
+            const along = 0.18 + rand() * 0.64;
+            const ex = a[0] + (b[0] - a[0]) * along + (-nz) * (rand() - 0.5) * 0.12;
+            const ez = a[2] + (b[2] - a[2]) * along + nx * (rand() - 0.5) * 0.12;
+            // 错层：近岸略高（干），外推更低（湿）；故意不齐，打散「台阶环」。
+            const step = j + rand() * 0.7;
+            const out = 0.22 + step * 0.14 + rand() * 0.08;
+            const y = WATER_Y + 0.09 - step * 0.035 + (rand() - 0.5) * 0.02;
+            const sx = 1.55 + rand() * 1.1;
+            const sy = 0.22 + rand() * 0.28; // flat ledge
+            const sz = 1.15 + rand() * 0.9;
+            q.setFromAxisAngle(up, rand() * Math.PI * 2);
+            // 微倾，破水平台面感
+            const tip = new Quaternion().setFromAxisAngle(new Vector3(nx, 0, nz), (rand() - 0.5) * 0.35);
+            q.multiply(tip);
+            m.compose(p.set(ex + nx * out, y, ez + nz * out), q, s.set(sx, sy, sz));
+            stones.setMatrixAt(n++, m);
+          }
+        }
+        edgeIdx += 1;
       }
       stones.count = n;
       add(stones, "island:shore-stones", false);
@@ -792,7 +737,7 @@ export function createIslandLayer(): IslandLayer {
       for (const g of [stoneGeom, dockGeom, boatGeom, signGeom]) g.dispose();
       wallGeom?.dispose();
       wallGeom = null;
-      for (const mat of [vertexMat, rockMat, sandMat, signMat]) mat.dispose();
+      for (const mat of [vertexMat, rockMat, signMat]) mat.dispose();
       rockMap?.dispose();
       signMap?.dispose();
       layoutKey = "";
