@@ -23,6 +23,8 @@ export type TideWaterUniforms = {
   uTideWaveH: IUniform<number>;
   uTideWaveS: IUniform<number>;
   uTideFoam: IUniform<number>;
+  uTideShoreFoam: IUniform<number>;
+  uTideShoreWave: IUniform<number>;
   uTideWaves: IUniform<number>;
   uTideUseN: IUniform<number>;
   uTideNormal: IUniform<Texture | null>;
@@ -43,6 +45,8 @@ const VERT_PARS = [
   "uniform float uTideWaveS;",
   "uniform float uTideWaves;",
   "uniform float uTideHalf;",
+  "uniform float uTideShoreWave;",
+  "uniform sampler2D uTideDist;",
   "varying vec3 vTideWorld;",
   "vec3 tideGerstner(vec3 p, vec2 dir, float steep, float waveLen, float speed) {",
   "  float k = 6.2831853 / waveLen;",
@@ -58,16 +62,27 @@ const VERT_PARS = [
 ].join("\n");
 
 const VERT_MAIN = [
-  // G3D-ISLAND：外圈远海环（同材质、平面）与主水面无缝衔接 —— 波浪位移在主水面外缘淡出到 0。
+  // G3D-ISLAND：外圈远海环与主水面衔接；近岸（距离场）加强 swell，外海保持原幅。
   "vec3 tideRest = transformed;",
+  "vec3 tideWaved = tideRest;",
   "if (uTideWaves > 0.5 && uTideWaveH > 0.0001) {",
-  "  transformed = tideGerstner(transformed, normalize(vec2(1.0, 0.35)), 0.22, 2.4, 1.0);",
+  "  tideWaved = tideGerstner(tideRest, normalize(vec2(1.0, 0.35)), 0.22, 2.4, 1.0);",
   "  if (uTideWaves > 1.5) {",
-  "    transformed = tideGerstner(transformed, normalize(vec2(-0.55, 1.0)), 0.14, 1.5, 1.25);",
+  "    tideWaved = tideGerstner(tideWaved, normalize(vec2(-0.55, 1.0)), 0.14, 1.5, 1.25);",
+  "  }",
+  // high/medium：近岸多一道短波，只在岸带放大。
+  "  if (uTideShoreWave > 0.15) {",
+  "    tideWaved = tideGerstner(tideWaved, normalize(vec2(0.25, -0.95)), 0.11, 0.95, 1.55);",
   "  }",
   "}",
+  "vec2 tideWu = tideRest.xz / max(uTideHalf * 2.0, 0.001) + 0.5;",
+  "float dVert = texture2D(uTideDist, clamp(tideWu, 0.0, 1.0)).r;",
+  // near-shore swell band: past foam lip (~0.05) → mid shallows (~0.35); not open ocean.
+  "float nearBand = smoothstep(0.045, 0.13, dVert) * (1.0 - smoothstep(0.32, 0.58, dVert));",
+  "float waveAmp = 1.0 + nearBand * 2.15 * uTideShoreWave;",
+  "vec3 tideDisplaced = tideRest + (tideWaved - tideRest) * waveAmp;",
   "float tideEdge = 1.0 - smoothstep(uTideHalf * 0.7, uTideHalf * 0.97, max(abs(tideRest.x), abs(tideRest.z)));",
-  "transformed = mix(tideRest, transformed, tideEdge);",
+  "transformed = mix(tideRest, tideDisplaced, tideEdge);",
   "vTideWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;",
 ].join("\n");
 
@@ -77,6 +92,8 @@ const FRAG_PARS = [
   "uniform vec3 uTideShallow;",
   "uniform vec3 uTideDeep;",
   "uniform float uTideFoam;",
+  "uniform float uTideShoreFoam;",
+  "uniform float uTideShoreWave;",
   "uniform float uTideTime;",
   "uniform float uTideWaveS;",
   "uniform float uTideUseN;",
@@ -103,6 +120,13 @@ const FRAG_COLOR = [
   "  waterCol = mix(waterCol, uTideDeep, smoothstep(0.24, 0.95, d));",
   "  float ringLip = exp(-pow((d - 0.125) / 0.018, 2.0));",
   "  waterCol = mix(waterCol, uTideShallow * 1.06, ringLip * 0.35);",
+  // Near-shore soft ridge rhythm (settlecoast swell): trough/crest in shallows only — not open ocean brighten.
+  "  float swellBand = smoothstep(0.05, 0.13, d) * (1.0 - smoothstep(0.28, 0.52, d));",
+  "  float swellPhase = vTideWorld.x * 2.05 + vTideWorld.z * 1.4 - uTideTime * 1.45 * uTideWaveS;",
+  "  float swell = sin(swellPhase) * (0.65 + 0.35 * sin(swellPhase * 0.47 + 1.7));",
+  "  float swellAmt = swellBand * uTideShoreWave * swell;",
+  "  waterCol *= 1.0 - max(0.0, -swellAmt) * 0.22;",
+  "  waterCol = mix(waterCol, waterCol * vec3(1.1, 1.14, 1.08), max(0.0, swellAmt) * 0.55);",
   // R14：在 R13 切向笔触上提高默认机位浪脊密度与节奏分段（自有算法，非抄 settlecoast）。
   "  vec2 fuv = vTideWorld.xz * 0.78 + vec2(uTideTime * 0.028 * uTideWaveS, uTideTime * -0.02 * uTideWaveS);",
   "  float foamN = texture2D(uTideFoamMap, fuv).r;",
@@ -117,22 +141,25 @@ const FRAG_COLOR = [
   "  strokeRaw *= mix(0.55, 1.0, smoothstep(0.22, 0.62, strokeGap));",
   "  float strokeGate = smoothstep(0.32, 0.58, strokeRaw);",
   "  strokeGate *= smoothstep(0.18, 0.6, foamN2);",
-  // 极弱底 + 更多窄浪脊带（默认机位可读密度，非软晕宽带）。
-  // R21: less cliff-foot sparkle — a soft light surf band carries the shoreline; ridges/crest/lace are
-  // dimmer, lower-contrast and off-white instead of pure-white flecks gated by the fine stroke noise.
-  "  float foamSoft = (1.0 - smoothstep(0.0, 0.1, d)) * uTideFoam * 0.2;",
-  "  float r1 = exp(-pow((d - 0.008) / 0.0058, 2.0));",
-  "  float r2 = exp(-pow((d - 0.024) / 0.0075, 2.0));",
-  "  float r3 = exp(-pow((d - 0.046) / 0.009, 2.0));",
-  "  float r4 = exp(-pow((d - 0.074) / 0.011, 2.0));",
-  "  float rLace = exp(-pow((d - 0.108) / 0.014, 2.0));",
-  "  float rSpray = exp(-pow((d - 0.145) / 0.018, 2.0));",
-  "  float ridges = (r1 * 0.95 + r2 * 0.8 + r3 * 0.6 + r4 * 0.4) * uTideFoam * mix(0.35, 0.8, strokeGate);",
-  "  float lace = (rLace * 0.5 + rSpray * 0.3) * uTideFoam * strokeGate * (0.4 + 0.6 * foamN);",
-  "  float crest = r1 * mix(0.06, 0.5, strokeGate) * uTideFoam * (0.7 + 0.3 * foamN3);",
-  "  waterCol = mix(waterCol, vec3(0.8, 0.9, 0.88), foamSoft);",
-  "  waterCol = mix(waterCol, vec3(0.88, 0.95, 0.93), clamp(ridges, 0.0, 0.85) * (0.6 + 0.4 * foamN));",
-  "  waterCol = mix(waterCol, vec3(0.93, 0.97, 0.96), clamp(crest, 0.0, 0.7));",
+  // Shore foam fringe (settlecoast): white hug at wet-foot ↔ water only. uTideShoreFoam gates
+  // intensity by tier (high strong / medium faint / low 0). Open-ocean lace stays dim.
+  "  float shoreMask = 1.0 - smoothstep(0.0, 0.055, d);",
+  "  float shoreBreak = mix(0.5, 1.0, foamN) * mix(0.6, 1.0, foamN2);",
+  "  float shoreHug = shoreMask * uTideShoreFoam * shoreBreak;",
+  "  float foamSoft = (1.0 - smoothstep(0.0, 0.07, d)) * uTideFoam * (0.22 + 0.7 * uTideShoreFoam);",
+  "  float r1 = exp(-pow((d - 0.005) / 0.0048, 2.0));",
+  "  float r2 = exp(-pow((d - 0.016) / 0.0062, 2.0));",
+  "  float r3 = exp(-pow((d - 0.03) / 0.0075, 2.0));",
+  "  float r4 = exp(-pow((d - 0.048) / 0.009, 2.0));",
+  "  float rLace = exp(-pow((d - 0.085) / 0.011, 2.0));",
+  "  float rSpray = exp(-pow((d - 0.11) / 0.012, 2.0));",
+  "  float ridges = (r1 * 1.15 + r2 * 0.95 + r3 * 0.6 + r4 * 0.3) * uTideFoam * mix(0.45, 1.0, strokeGate) * (0.6 + 0.85 * uTideShoreFoam);",
+  "  float lace = (rLace * 0.22 + rSpray * 0.08) * uTideFoam * strokeGate * (0.3 + 0.35 * foamN);",
+  "  float crest = r1 * mix(0.2, 0.95, strokeGate) * uTideFoam * (0.75 + 0.7 * uTideShoreFoam) * (0.65 + 0.35 * foamN3);",
+  "  waterCol = mix(waterCol, vec3(0.85, 0.93, 0.91), foamSoft);",
+  "  waterCol = mix(waterCol, vec3(0.97, 0.99, 0.98), clamp(shoreHug * 1.15, 0.0, 1.0));",
+  "  waterCol = mix(waterCol, vec3(0.92, 0.97, 0.95), clamp(ridges, 0.0, 0.95) * (0.5 + 0.5 * foamN));",
+  "  waterCol = mix(waterCol, vec3(0.96, 0.99, 0.98), clamp(crest, 0.0, 0.9));",
   "  waterCol = mix(waterCol, vec3(0.86, 0.94, 0.92), lace);",
   "  diffuseColor.rgb = waterCol;",
   "}",
@@ -168,6 +195,8 @@ export function createTideWaterMaterial(
     uTideWaveH: { value: features.waveCount === 0 ? 0 : spec.waveHeight },
     uTideWaveS: { value: spec.waveSpeed },
     uTideFoam: { value: features.foam ? spec.foam : 0 },
+    uTideShoreFoam: { value: features.foam ? features.shoreFoam : 0 },
+    uTideShoreWave: { value: features.shoreWave },
     uTideWaves: { value: features.waveCount },
     uTideUseN: { value: features.normals ? 1 : 0 },
     uTideNormal: { value: null },
@@ -195,7 +224,7 @@ export function createTideWaterMaterial(
       .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>\n${FRAG_NORMAL}`);
   };
   material.customProgramCacheKey = () =>
-    `tide-r21-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
+    `tide-r23b-sw${features.shoreWave}-sf${features.shoreFoam}-w${features.waveCount}-n${features.normals ? 1 : 0}-f${features.foam ? 1 : 0}`;
 
   return {
     material,

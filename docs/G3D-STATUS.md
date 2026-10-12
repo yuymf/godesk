@@ -13,7 +13,7 @@
 | 任务范围 | G3D-01 至 G3D-27；里程碑 M0–M5；人日上限 91 |
 | 代码基线 | `yuymf/godesk` `main` @ `f3ea418`（#148 G3D-JUDGE `f3ea418`；#153 资产搜索 `1d1f45b`；#145 G3D-ART-3 `5b585ec`；#143 `0526d16`；#144 G3D-17 预备 `1884e19`；#141 G3D-04c `0bda43e`；#138 G3D-13 `19f212d`；#147 CI 瘦身 `45cd590`；#150 公开前清理 `f79fcc7`；#142 G3D-ART-2 `45a5a1c`） |
 | 状态文件维护人 | 劳埃德(工程) / Track B（素材） |
-| 最近更新 | 2026-10-12（Asia/Shanghai）· LOD-high：triangles(high) 415926→295310（draft，叠 #168） |
+| 最近更新 | 2026-10-13（Asia/Shanghai）· boat-sail #176：帆船三角帆布（draft，叠 #175） |
 
 ## 硬约束（三条）
 
@@ -96,6 +96,13 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | --- | --- | --- | --- |
 | G3D-17 上线闸门 | Track C | `feat/g3d-17-tidewell-launch` | 删除 `GODESK_FEATURE_TIDEWELL`（首页默认汐屿）；`GODESK_LAUNCH_GATE_BLOCK=asset-legal,hud-raw-action-ids,draw-calls`；Lighthouse / draw-calls / size 仍 warn；**draft，不合入**；待大主管评分 |
 | LOD-high（triangles） | Track C | `feat/lod-high` [#169](https://github.com/yuymf/godesk/pull/169)（叠 #168） | pine 内部面剔除 + shadow proxy；triangles(high) 415926→295310；medium/low 字节+像素恒等；**draft，不合入**；待大主管评分 |
+| shore-steps（浅滩台阶） | Track C | `feat/shore-steps` [#170](https://github.com/yuymf/godesk/pull/170)（叠 #169） | 汐屿海岸断续礁石 + 簇间贴崖立石 + 湿暗崖脚（high only，r3）；**draft，不合入**；待大主管评分 |
+| shore-foam（岸线白沫） | Track C | `feat/shore-foam` [#171](https://github.com/yuymf/godesk/pull/171)（叠 #170） | 水着色器岸线白沫 fringe（high；medium 淡；low 关）；无 +drawCall；**draft，不合入** |
+| shore-wave-ridge（近岸 swell） | Track C | `feat/shore-wave-ridge` [#172](https://github.com/yuymf/godesk/pull/172)（叠 #171） | 距离场门控近岸 swell / soft ridge；shader-only；**draft，不合入** |
+| pier-wet-foot（码头湿脚） | Track C | `feat/pier-wet-foot` [#173](https://github.com/yuymf/godesk/pull/173)（叠 #172） | 码头桩柱水线湿脚（high；medium 淡；low 关）；无 +drawCall；**draft，不合入** |
+| cliff-midband（崖壁中段） | Track C | `feat/cliff-midband` [#174](https://github.com/yuymf/godesk/pull/174)（叠 #173） | 崖壁中段岩色加深（high；medium 淡；low 关）；无新 mesh / drawCall；**draft，不合入** |
+| boat-wetline（帆船水线） | Track C | `feat/boat-wetline` [#175](https://github.com/yuymf/godesk/pull/175)（叠 #174） | 帆船船体水线湿带（high；medium 淡；low 关）；无 +drawCall；**draft，不合入** |
+| boat-sail（帆船帆布） | Track C | `feat/boat-sail` [#176](https://github.com/yuymf/godesk/pull/176)（叠 #175） | 桅上三角白帆（high；medium 缩小；low 关）；无 +drawCall；**draft，不合入** |
 
 ## 已知限制
 
@@ -144,6 +151,13 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
+| `feat/boat-sail` | [#176](https://github.com/yuymf/godesk/pull/176) | 桅上三角白帆；base=`feat/boat-wetline` @f274c97 | draft · 不合入 |
+| `feat/boat-wetline` | [#175](https://github.com/yuymf/godesk/pull/175) | 帆船船体水线湿带；base=`feat/cliff-midband` @3d8b26b | draft · 不合入 |
+| `feat/cliff-midband` | [#174](https://github.com/yuymf/godesk/pull/174) | 崖壁中段岩色；base=`feat/pier-wet-foot` @6392ee4 | draft · 不合入 |
+| `feat/pier-wet-foot` | [#173](https://github.com/yuymf/godesk/pull/173) | 码头桩柱水线湿脚；base=`feat/shore-wave-ridge` @86e8eca | draft · 不合入 |
+| `feat/shore-wave-ridge` | [#172](https://github.com/yuymf/godesk/pull/172) | 近岸 swell / soft ridge（shader-only）；base=`feat/shore-foam` @1f875ce | draft · 不合入 |
+| `feat/shore-foam` | [#171](https://github.com/yuymf/godesk/pull/171) | 岸线白沫 fringe（shader-only）；base=`feat/shore-steps` @af9314b | draft · 不合入 |
+| `feat/shore-steps` | [#170](https://github.com/yuymf/godesk/pull/170) | 汐屿浅滩 3 级沙滩台阶（high only）；base=`feat/lod-high` @8d64137 | draft · 不合入，待大主管评分 |
 | `feat/lod-high` | [#169](https://github.com/yuymf/godesk/pull/169) | LOD-high：pine interior cull + shadow proxy；triangles(high) 415926→295310；base=`feat/launch-gate-block` @0914ebf | draft · 不合入，待大主管评分 |
 | `feat/launch-gate-block` | [#168](https://github.com/yuymf/godesk/pull/168) | launch gate block + core size / requests；base=`feat/g3d-17-tidewell-launch` | draft · 不合入 |
 | `feat/g3d-17-tidewell-launch` | [#166](https://github.com/yuymf/godesk/pull/166) | G3D-17：默认汐屿 + e2e/海报修复；base=`main` | draft · ~9.3 通过，**不合入（等用户令）** |
@@ -153,6 +167,7 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 | 日期 | 变更 | 作者 |
 | --- | --- | --- |
+| 2026-10-12 | shore-steps（叠 #169）：汐屿海岸 high-only 三级沙滩台阶（干→湿）；medium/low 无 beach mesh；证据 `/workspace/g3d-evidence/godesk-2026-10-12/shore-steps/` | Track C |
 | 2026-10-12 | LOD-high（叠 #168）：pine 内部面剔除 + shadow proxy（icosa-0 drawRange）；perf:ci triangles(high) 415926→295310；medium/low digest+像素恒等；证据 `/workspace/g3d-evidence/godesk-2026-10-12/lod-high/` | Track C |
 | 2026-10-12 | G3D-17 launch-gate-block（stacked on #166）：render3d core 188.66 / 200 KB、循环 chunk 修复、Lighthouse 三条断言 error、`GODESK_LAUNCH_GATE=block`、firstGameRequests 78；**首页 LCP ≤ 3 800 ms 与 Room TBT ≤ 200 000 ms 为临时阈值，待有 GPU 的机器复测后收紧** | Track C |
 | 2026-10-12 | G3D-17 海报修复：`?examples=all` 汐屿排第一；海报去掉 `decoding="async"`（Chromium 推迟解码视口外图片，整页截图只剩 #1a4a6e 底色），e2e 加整页截图像素回归 | Track C |
@@ -221,3 +236,7 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 | 2026-10-08 | G3D-JUDGE round-22（#148）：软边带 45%→25% + 顶面相接去 1px 暗线（shader 画浅色发丝缝）+ 麦田金黄重烘焙与麦浪（走向 / 高低起伏）+ 六资源色拉开（主光去橙、去 R19 去饱和、沙 / 牧重烘焙）+ 去林冠浅绿雾；轨迹 [`docs/prompt-trace/2026-10-08-g3d-judge-r22.md`](./prompt-trace/2026-10-08-g3d-judge-r22.md)；未达标（自评），不合入 | Track D |
 | 2026-10-11 | STATUS 对账 gh：基线 → `f3ea418`；回填 #138 `19f212d` / #141 `0bda43e` / #144 `1884e19` / #145 `5b585ec` / #148 `f3ea418` / #153 `1d1f45b`；删除 #139 / #142 重复行；进行中、开着的 PR 清空；阻塞移除 G3D-13；仓库公开项勾选（#150 `f79fcc7`，PUBLIC）；记 #146 closed 未合入 | 劳埃德(工程) |
 | 2026-10-11 | **step3 同品质 达标**：铁脉（network-route-v1 铁路，插件链从零生成）R5 ≈ 9.1，大主管裁定 ≥ 9；#161 转 ready（不合入）。非阻塞差距：底板侧面到岸仍有一级小台阶；地面斑块为平贴片。公开证据：[#161 评论](https://github.com/yuymf/godesk/pull/161#issuecomment-6108003334) | step3 |
+| 2026-10-12 | shore-wave-ridge #172 draft：近岸 swell / soft ridge（距离场门控；shader-only；叠 #171）；证据 `/workspace/g3d-evidence/godesk-2026-10-12/shore-wave-ridge/`；不合入 | Track C |
+| 2026-10-13 | cliff-midband #174 draft：崖壁中段岩色加深（叠 #173）；证据 `/workspace/g3d-evidence/godesk-2026-10-12/cliff-midband/`；不合入 | Track C |
+| 2026-10-13 | boat-wetline #175 draft：帆船船体水线湿带（叠 #174）；证据 `/workspace/g3d-evidence/godesk-2026-10-12/boat-wetline/`；不合入 | Track C |
+| 2026-10-13 | boat-sail #176 draft：桅上三角白帆（叠 #175）；证据 `/workspace/g3d-evidence/godesk-2026-10-12/boat-sail/`；不合入 | Track C |

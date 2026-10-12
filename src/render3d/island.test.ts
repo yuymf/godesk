@@ -1,8 +1,8 @@
-import { PerspectiveCamera } from "three";
+import { InstancedMesh, Matrix4, PerspectiveCamera, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 import { dressingInputs, tileCenter, vertexWorld, withoutReplacedNodes } from "./hex-dressing";
 import { mapHexSettlementToScene } from "./mappers/hex-settlement";
-import { SIGN_KINDS, SKIRT_BOTTOM_Y, SKIRT_TOP_Y, coastEdges, coastWallGeometry, createIslandLayer, docksFor, outerTiles, signCell } from "./island";
+import { SIGN_KINDS, SKIRT_BOTTOM_Y, SKIRT_TOP_Y, WATER_Y, boatGeometry, coastEdges, coastWallGeometry, createIslandLayer, dockGeometry, docksFor, outerTiles, reefClusterSize, reefEdgeMask, signCell } from "./island";
 import { beginnerSceneInput } from "./terrain-dressing.fixture";
 
 const input = beginnerSceneInput();
@@ -39,6 +39,199 @@ describe("G3D-ISLAND island + coast", () => {
     geom.dispose();
   });
 
+
+  it("reef mask is discontinuous (not every coast edge) and clusters are small", () => {
+    const edges = coastEdges(tiles);
+    let on = 0;
+    for (let i = 0; i < edges.length; i += 1) if (reefEdgeMask(i)) on += 1;
+    expect(on).toBeGreaterThan(8);
+    expect(on).toBeLessThan(edges.length); // gaps → not a full ring
+    expect(reefClusterSize(0)).toBeGreaterThanOrEqual(2);
+    expect(reefClusterSize(0)).toBeLessThanOrEqual(4);
+  });
+
+  it("high shore-stones include reef clusters + gap wall-huggers; medium count unchanged", () => {
+    const layer = createIslandLayer();
+    layer.sync(tiles, ports, "medium", true);
+    const mid = layer.group.children.find((c) => c.name === "island:shore-stones") as InstancedMesh;
+    expect(mid.count).toBe(coastEdges(tiles).length * 4);
+    layer.sync(tiles, ports, "high", true);
+    const hi = layer.group.children.find((c) => c.name === "island:shore-stones") as InstancedMesh;
+    // base 120 + reef clusters on ~55% edges + 1–2 huggers on the rest
+    expect(hi.count).toBeGreaterThan(mid.count + 20);
+    expect(layer.group.children.some((c) => c.name === "island:beach-steps")).toBe(false);
+    const mm = new Matrix4();
+    const pp = new Vector3();
+    let raised = 0;
+    for (let i = 0; i < hi.count; i += 1) {
+      hi.getMatrixAt(i, mm);
+      pp.setFromMatrixPosition(mm);
+      if (pp.y > WATER_Y + 0.04) raised += 1;
+    }
+    expect(raised).toBeGreaterThan(6);
+    // gap edges (~45%) each add 1–2 wall-huggers on top of reef clusters
+    const edges = coastEdges(tiles).length;
+    let gaps = 0;
+    for (let i = 0; i < edges; i += 1) if (!reefEdgeMask(i)) gaps += 1;
+    expect(hi.count).toBeGreaterThanOrEqual(mid.count + gaps);
+    layer.dispose();
+  });
+
+
+  it("high cliff wetFootDark darkens the lower skirt vs default", () => {
+    const plain = coastWallGeometry(tiles);
+    const wet = coastWallGeometry(tiles, { wetFootDark: true });
+    const c0 = plain.getAttribute("color");
+    const c1 = wet.getAttribute("color");
+    const y0 = plain.getAttribute("position");
+    let sum0 = 0, sum1 = 0, n = 0;
+    for (let i = 0; i < y0.count; i += 1) {
+      if (y0.getY(i) > WATER_Y) continue;
+      sum0 += c0.getX(i) + c0.getY(i) + c0.getZ(i);
+      sum1 += c1.getX(i) + c1.getY(i) + c1.getZ(i);
+      n += 1;
+    }
+    expect(n).toBeGreaterThan(100);
+    expect(sum1 / n).toBeLessThan(sum0 / n);
+    plain.dispose(); wet.dispose();
+  });
+
+  it("midBandDark darkens cliff mid verts; top rim stays brighter", () => {
+    const plain = coastWallGeometry(tiles, { wetFootDark: true });
+    const mid = coastWallGeometry(tiles, { wetFootDark: true, midBandDark: 1 });
+    const faint = coastWallGeometry(tiles, { wetFootDark: true, midBandDark: 0.34 });
+    const y0 = plain.getAttribute("position");
+    const c0 = plain.getAttribute("color");
+    const c1 = mid.getAttribute("color");
+    const c2 = faint.getAttribute("color");
+    const tOf = (i: number) => {
+      const y = y0.getY(i);
+      return (SKIRT_TOP_Y - y) / (SKIRT_TOP_Y - SKIRT_BOTTOM_Y);
+    };
+    let mid0 = 0, mid1 = 0, mid2 = 0, midN = 0;
+    let rim0 = 0, rim1 = 0, rimN = 0;
+    for (let i = 0; i < y0.count; i += 1) {
+      const t = tOf(i);
+      const s0 = c0.getX(i) + c0.getY(i) + c0.getZ(i);
+      const s1 = c1.getX(i) + c1.getY(i) + c1.getZ(i);
+      const s2 = c2.getX(i) + c2.getY(i) + c2.getZ(i);
+      if (t > 0.10 && t < 0.30) { mid0 += s0; mid1 += s1; mid2 += s2; midN += 1; }
+      if (t < 0.05) { rim0 += s0; rim1 += s1; rimN += 1; }
+    }
+    expect(midN).toBeGreaterThan(50);
+    expect(rimN).toBeGreaterThan(20);
+    expect(mid1 / midN).toBeLessThan(mid0 / midN);
+    expect(mid2 / midN).toBeGreaterThan(mid1 / midN);
+    expect(mid2 / midN).toBeLessThan(mid0 / midN);
+    // Rim largely unchanged (mid band gate starts ~0.06).
+    expect(Math.abs(rim1 / rimN - rim0 / rimN)).toBeLessThan(0.05);
+    expect(plain.getAttribute("position").count).toBe(mid.getAttribute("position").count);
+    plain.dispose(); mid.dispose(); faint.dispose();
+  });
+
+  it("pier wetFoot darkens post verts near waterline; deck stays dry", () => {
+    const dry = dockGeometry(0.62, 0);
+    const wet = dockGeometry(0.62, 1);
+    const faint = dockGeometry(0.62, 0.32);
+    // Wet adds skirt rings → more verts than dry; compare colors on the shared post band via dry positions.
+    const pDry = dry.getAttribute("position");
+    const c0 = dry.getAttribute("color");
+    let footDry = 0, footN = 0, deckDry = 0, deckN = 0;
+    for (let i = 0; i < pDry.count; i += 1) {
+      const y = pDry.getY(i);
+      const s0 = c0.getX(i) + c0.getY(i) + c0.getZ(i);
+      if (y < -0.05) { footDry += s0; footN += 1; }
+      else if (y > 0.0) { deckDry += s0; deckN += 1; }
+    }
+    expect(footN).toBeGreaterThan(20);
+    expect(deckN).toBeGreaterThan(20);
+    // Wet/faint geometries include skirts; mean luminance of verts below waterline damp band should be darker.
+    const meanBelow = (g: ReturnType<typeof dockGeometry>) => {
+      const p = g.getAttribute("position");
+      const c = g.getAttribute("color");
+      let s = 0, n = 0;
+      for (let i = 0; i < p.count; i += 1) {
+        if (p.getY(i) > -0.04) continue;
+        s += c.getX(i) + c.getY(i) + c.getZ(i);
+        n += 1;
+      }
+      return s / n;
+    };
+    const mDry = meanBelow(dry);
+    const mWet = meanBelow(wet);
+    const mFaint = meanBelow(faint);
+    expect(mWet).toBeLessThan(mDry);
+    expect(mFaint).toBeGreaterThan(mWet);
+    expect(mFaint).toBeLessThan(mDry);
+    // Skirts add verts; deck planks on dry geom sit above dampTop and are not the wet target.
+    expect(wet.getAttribute("position").count).toBeGreaterThan(dry.getAttribute("position").count);
+    expect(faint.getAttribute("position").count).toBeGreaterThan(dry.getAttribute("position").count);
+    dry.dispose(); wet.dispose(); faint.dispose();
+  });
+
+  it("boat wetLine darkens hull near waterline; sail cloth stays dry/bright", () => {
+    const dry = boatGeometry({ wetLine: 0, sail: 1 });
+    const wet = boatGeometry({ wetLine: 1, sail: 1 });
+    const faint = boatGeometry({ wetLine: 0.32, sail: 1 });
+    const meanBand = (g: ReturnType<typeof boatGeometry>, lo: number, hi: number) => {
+      const p = g.getAttribute("position");
+      const c = g.getAttribute("color");
+      let s = 0, n = 0;
+      for (let i = 0; i < p.count; i += 1) {
+        const y = p.getY(i);
+        if (y < lo || y > hi) continue;
+        s += c.getX(i) + c.getY(i) + c.getZ(i);
+        n += 1;
+      }
+      return { mean: s / Math.max(1, n), n };
+    };
+    const hullDry = meanBand(dry, -0.05, 0.02);
+    const hullWet = meanBand(wet, -0.05, 0.02);
+    const hullFaint = meanBand(faint, -0.05, 0.02);
+    const sailDry = meanBand(dry, 0.15, 0.55);
+    const sailWet = meanBand(wet, 0.15, 0.55);
+    expect(hullDry.n).toBeGreaterThan(10);
+    expect(sailDry.n).toBeGreaterThan(4);
+    expect(hullWet.mean).toBeLessThan(hullDry.mean);
+    expect(hullFaint.mean).toBeGreaterThan(hullWet.mean);
+    expect(hullFaint.mean).toBeLessThan(hullDry.mean);
+    expect(Math.abs(sailWet.mean - sailDry.mean)).toBeLessThan(0.05);
+    expect(wet.getAttribute("position").count).toBeGreaterThan(dry.getAttribute("position").count);
+    dry.dispose(); wet.dispose(); faint.dispose();
+  });
+
+  it("high sail adds bright cloth verts; low omits sail", () => {
+    const low = boatGeometry({ wetLine: 0, sail: 0 });
+    const med = boatGeometry({ wetLine: 0.32, sail: 0.4 });
+    const high = boatGeometry({ wetLine: 1, sail: 1 });
+    const clothVerts = (g: ReturnType<typeof boatGeometry>) => {
+      const p = g.getAttribute("position");
+      const c = g.getAttribute("color");
+      let n = 0;
+      for (let i = 0; i < p.count; i += 1) {
+        const y = p.getY(i);
+        if (y < 0.09 || y > 0.52) continue; // between deck and flag
+        // off-white cloth (not brown mast)
+        if (c.getX(i) > 0.85 && c.getY(i) > 0.80 && c.getZ(i) > 0.72) n += 1;
+      }
+      return n;
+    };
+    expect(clothVerts(low)).toBe(0);
+    expect(clothVerts(med)).toBeGreaterThan(0);
+    expect(clothVerts(high)).toBeGreaterThan(clothVerts(med));
+    expect(high.getAttribute("position").count).toBeGreaterThan(low.getAttribute("position").count);
+    // sail has +X belly (not a zero-thickness YZ plane)
+    const pos = high.getAttribute("position");
+    let maxX = 0;
+    for (let i = 0; i < pos.count; i += 1) {
+      const y = pos.getY(i);
+      if (y < 0.09 || y > 0.52) continue;
+      maxX = Math.max(maxX, Math.abs(pos.getX(i)));
+    }
+    expect(maxX).toBeGreaterThan(0.03);
+    low.dispose(); med.dispose(); high.dispose();
+  });
+
   it("docks point outward from the island, one per port", () => {
     const docks = docksFor(ports);
     expect(docks).toHaveLength(ports.length);
@@ -64,6 +257,8 @@ describe("G3D-ISLAND island + coast", () => {
     layer.sync(tiles, ports, "high", true);
     const stats = layer.stats();
     expect(stats.meshes).toBeLessThanOrEqual(6);
+    expect(layer.group.children.some((c) => c.name === "island:beach-steps")).toBe(false);
+
     expect(layer.docks()).toHaveLength(ports.length);
     const camera = new PerspectiveCamera();
     camera.position.set(0, 9, 12);

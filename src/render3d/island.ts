@@ -3,7 +3,7 @@
  * LicenseRef-GoDesk-Original）。取代 #138 的灰色平石板（cliff 节点）、灰盒港口（port）与船（ship）。
  *
  * draw call（不含阴影 pass）：岩壁 1 + 岸石 1 + 码头 1 + 港口牌 1 + 帆船 1 = 5，与档位无关
- * （low 档岸石减半、帆船保留但不投影）。
+ * （low 档岸石减半、帆船保留但不投影）。high 在同岸石 InstancedMesh 内加断续礁石簇 + 簇间贴崖稀疏立石；崖脚湿暗加深；中段岩色加深；码头桩柱水线湿脚；帆船船体水线湿带；高档三角帆布（无额外 draw call）。
  */
 import {
   BufferAttribute,
@@ -154,7 +154,7 @@ export function docksFor(ports: readonly IslandPort[], length = 0.62): Dock[] {
  * 其上以减弱透明度叠回 R14 程序岩层 / 竖缝，湿暗崖脚带与顶部苔斑保持原强度（海岸读感不变）。
  * 图片异步到达前先画纯程序版本。
  */
-function drawRock(x: CanvasRenderingContext2D, img: HTMLImageElement | null): void {
+function drawRock(x: CanvasRenderingContext2D, img: HTMLImageElement | null, midBandDark = 0): void {
   const k = img ? 0.35 : 1;
   const rand = mulberry32(1337);
   // R14：手绘岸崖体块群 — 不规则岩层带宽 + 湿暗分层 + 疏密竖缝，少同心环读感。
@@ -215,6 +215,40 @@ function drawRock(x: CanvasRenderingContext2D, img: HTMLImageElement | null): vo
     x.fillStyle = `rgba(${v},${v - 4 < 0 ? 0 : v - 4},${v - 8 < 0 ? 0 : v - 8},${0.32 * k})`;
     x.fillRect(rand() * 512, rand() * 256, 1 + rand() * 3, 1 + rand() * 3);
   }
+  // Mid-band continuous dark rock (settlecoast): above wet foot (~y150), below mossy rim (~y28).
+  // Multiply + overlay so AI albedo mid no longer reads light-brown cardboard.
+  if (midBandDark > 0) {
+    const s = midBandDark;
+    x.save();
+    x.globalCompositeOperation = "multiply";
+    // Cool dark rock plate over mid face (keep rim + wet foot untouched).
+    const g = x.createLinearGradient(0, 28, 0, 148);
+    g.addColorStop(0, `rgba(255, 255, 255, 1)`); // no multiply at rim
+    g.addColorStop(0.12, `rgba(${Math.round(70 + 40 * (1 - s))}, ${Math.round(72 + 40 * (1 - s))}, ${Math.round(76 + 36 * (1 - s))}, 1)`);
+    g.addColorStop(0.45, `rgba(${Math.round(48 + 30 * (1 - s))}, ${Math.round(50 + 30 * (1 - s))}, ${Math.round(54 + 28 * (1 - s))}, 1)`);
+    g.addColorStop(0.85, `rgba(${Math.round(58 + 35 * (1 - s))}, ${Math.round(60 + 35 * (1 - s))}, ${Math.round(64 + 32 * (1 - s))}, 1)`);
+    g.addColorStop(1, `rgba(255, 255, 255, 1)`); // fade before wet foot
+    x.fillStyle = g;
+    x.fillRect(0, 28, 512, 120);
+    x.restore();
+    // Extra occluding blotches / seams for rock slab noise (source-over).
+    for (let i = 0; i < Math.floor(640 * s); i += 1) {
+      const yy = 34 + rand() * 110;
+      const v = 6 + Math.floor(rand() * 18);
+      x.fillStyle = `rgba(${v},${v + 1},${v + 2},${(0.18 + rand() * 0.32) * s})`;
+      x.fillRect(rand() * 512, yy, 4 + rand() * 22, 2 + rand() * 16);
+    }
+    x.strokeStyle = `rgba(6, 8, 10, ${0.45 * s})`;
+    let sx = 6 + rand() * 18;
+    while (sx < 506) {
+      x.lineWidth = 1.2 + rand() * 3.2;
+      x.beginPath();
+      x.moveTo(sx, 32 + rand() * 12);
+      x.lineTo(sx + (rand() - 0.5) * 12, 140 + rand() * 12);
+      x.stroke();
+      sx += 12 + rand() * 32;
+    }
+  }
   // 顶部苔斑（接地块边缘）。
   for (let i = 0; i < 280; i += 1) {
     x.fillStyle = `rgba(${70 + rand() * 30},${95 + rand() * 30},${55 + rand() * 20},${0.35 + rand() * 0.4})`;
@@ -224,14 +258,14 @@ function drawRock(x: CanvasRenderingContext2D, img: HTMLImageElement | null): vo
   }
 }
 
-function rockTexture(): Texture | null {
+function rockTexture(midBandDark = 0): Texture | null {
   if (typeof document === "undefined") return null;
   const c = document.createElement("canvas");
   c.width = 512;
   c.height = 256;
   const x = c.getContext("2d");
   if (!x) return null;
-  drawRock(x, null);
+  drawRock(x, null, midBandDark);
   const tex = new CanvasTexture(c);
   tex.colorSpace = SRGBColorSpace;
   tex.wrapS = RepeatWrapping;
@@ -239,7 +273,7 @@ function rockTexture(): Texture | null {
   tex.repeat.set(3, 1);
   tex.anisotropy = 4;
   whenImage(cliffRockUrl, (img) => {
-    drawRock(x, img);
+    drawRock(x, img, midBandDark);
     tex.needsUpdate = true;
   });
   return tex;
@@ -347,7 +381,7 @@ function signAtlas(): Texture | null {
  * （方向取离岛心的径向），相邻边共享的角点完全重合 → 没有接缝。另加每格一块六边形顶盖
  * （y = SKIRT_TOP_Y，半径 1.0）填满格子之间的缝。u 沿岛周角度连续，v 自上而下。
  */
-export function coastWallGeometry(tiles: readonly IslandTile[]): BufferGeometry {
+export function coastWallGeometry(tiles: readonly IslandTile[], opts: { wetFootDark?: boolean; midBandDark?: number } = {}): BufferGeometry {
   // R14：不规则岸崖体块群外轮廓——变宽分面 + 错层高度 + 偶发巨块，压掉整圈程序分面/同心环。
   const ROWS = 4;
   const positions: number[] = [];
@@ -398,7 +432,9 @@ export function coastWallGeometry(tiles: readonly IslandTile[]): BufferGeometry 
     const wx = x + nx * out + tangX * sidePush;
     const wz = z + nz * out + tangZ * sidePush;
     const u = (Math.atan2(z, x) / (Math.PI * 2) + 0.5) * 26;
-    const wet = t < 0.35 ? 1 : Math.max(0.36, 1 - (t - 0.35) * 1.3);
+    let wet = t < 0.35 ? 1 : Math.max(0.36, 1 - (t - 0.35) * 1.3);
+    // high：水线附近加深湿暗崖脚（settlecoast 连续深色岩基），不另加整圈 mesh。
+    if (opts.wetFootDark && t > 0.28) wet *= Math.max(0.42, 1 - (t - 0.28) * 0.95);
     return [wx, y, wz, u, t, wet];
   };
   let edgeIdx = 0;
@@ -428,7 +464,23 @@ export function coastWallGeometry(tiles: readonly IslandTile[]): BufferGeometry 
           positions.push(pt[0], pt[1], pt[2]);
           uvs.push(u, 1 - pt[4]);
           const w = pt[5];
-          colors.push(0.92 * w, 0.9 * w, 0.86 * w * (0.92 + 0.08 * (1 - t0)));
+          const foot = opts.wetFootDark && t0 > 0.32 ? 0.82 : 1;
+          // Mid-band rock (above wetFoot, below top rim): cool/darken cardboard brown → continuous dark cliff.
+          // t=0 top rim, t=1 bottom. midBandDark 0=off(low) · faint medium · 1=high.
+          const mb = opts.midBandDark ?? 0;
+          let peak = 0;
+          if (mb > 0 && t0 > 0.05 && t0 < 0.48) {
+            peak = t0 < 0.14 ? (t0 - 0.05) / 0.09 : t0 < 0.34 ? 1 : Math.max(0, (0.48 - t0) / 0.14);
+          }
+          const blotch = peak > 0 ? 0.72 + 0.55 * hash01(panel * 13.7 + t0 * 51.3 + sgi * 2.1) : 1;
+          const dark = mb * peak * 0.58 * blotch;
+          const cool = mb * peak * 0.72;
+          const baseR = 0.92, baseG = 0.90, baseB = 0.86 * (0.92 + 0.08 * (1 - t0));
+          const rockR = 0.42, rockG = 0.40, rockB = 0.38;
+          const r = (baseR * (1 - cool) + rockR * cool) * w * foot * (1 - dark);
+          const g = (baseG * (1 - cool) + rockG * cool) * w * foot * (1 - dark);
+          const b = (baseB * (1 - cool) + rockB * cool) * w * foot * (1 - dark);
+          colors.push(r, g, b);
         }
       }
     }
@@ -457,13 +509,33 @@ export function coastWallGeometry(tiles: readonly IslandTile[]): BufferGeometry 
   return geom;
 }
 
+/**
+ * high 档断续礁石浅滩：不铺整圈沙滩台（大主管 #170 ~8.8：连砂环像玩具）。
+ * 复用岸石词汇 — 在部分海岸边（hash 留空档）放 2–4 块扁平礁石，高度错层（干/湿），外推入浅滩。
+ * 与常规岸石同一 InstancedMesh → drawCalls 回到 5（相对 #170 的 6 / 48 peak）。
+ */
+export function reefEdgeMask(edgeIdx: number): boolean {
+  // ~55% of edges get a reef cluster; rest stay bare → discontinuous, not a ring.
+  const h = ((Math.sin(edgeIdx * 12.9898 + 78.233) * 43758.5453) % 1 + 1) % 1;
+  return h > 0.45;
+}
+
+export function reefClusterSize(edgeIdx: number): number {
+  const h = ((Math.sin(edgeIdx * 4.17 + 2.3) * 43758.5453) % 1 + 1) % 1;
+  return 2 + Math.floor(h * 3); // 2–4
+}
+
 function shoreStoneGeometry(): BufferGeometry {
   // R13：低模多面体岸石，强化崖脚体块剪影（非光滑鹅卵）。
   return paint(new IcosahedronGeometry(0.11, 0), "#45423e", 0.38);
 }
 
 /** 码头：木栈板 + 横梁 + 4 根桩 + 牌柱（沿 +Z 伸出，原点在岸边）。 */
-function dockGeometry(length = 0.62): BufferGeometry {
+/**
+ * 木码头：甲板 + 梁 + 四桩 + 牌柱。wetFoot（0..1）只加深水线附近桩柱顶点色（码头 base y=0.1，
+ * 水面 WATER_Y），不改几何外形；high=1 · medium≈0.32 · low=0。
+ */
+export function dockGeometry(length = 0.62, wetFoot = 0): BufferGeometry {
   const parts: BufferGeometry[] = [];
   const planks = 6;
   for (let i = 0; i < planks; i += 1) {
@@ -472,36 +544,131 @@ function dockGeometry(length = 0.62): BufferGeometry {
   }
   parts.push(paint(place(new BoxGeometry(0.03, 0.03, length), -0.12, -0.022, length / 2 + 0.04), "#5e4128"));
   parts.push(paint(place(new BoxGeometry(0.03, 0.03, length), 0.12, -0.022, length / 2 + 0.04), "#5e4128"));
-  for (const [px, pz] of [[-0.13, 0.22], [0.13, 0.22], [-0.13, length], [0.13, length]] as const) {
+  const postXZ = [[-0.13, 0.22], [0.13, 0.22], [-0.13, length], [0.13, length]] as const;
+  for (const [px, pz] of postXZ) {
     parts.push(paint(place(new CylinderGeometry(0.022, 0.026, 0.34, 6), px, -0.15, pz), "#4f3824"));
   }
   // 牌柱（牌面本身是单独的广告牌 InstancedMesh）。
   parts.push(paint(place(new CylinderGeometry(0.016, 0.018, 0.36, 6), 0.1, 0.17, length - 0.02), "#4f3824"));
-  return merged(parts);
+  // Wet skirt at water contact (visible ABOVE opaque water). One cheap band/post — no whole-pier reshape.
+  // Budget: InstancedMesh × ports multiplies tris; keep ≤1 open 4-seg cylinder per post (~8 tris).
+  // docksFor base y=0.1 → local waterline = WATER_Y - 0.1.
+  if (wetFoot > 0) {
+    const waterLocal = WATER_Y - 0.1;
+    const skirtH = 0.06 + 0.03 * wetFoot;
+    const skirtR = 0.032 + 0.01 * wetFoot;
+    const wetHex = wetFoot > 0.55 ? "#16120e" : "#2a2118";
+    for (const [px, pz] of postXZ) {
+      const ring = new CylinderGeometry(skirtR, skirtR * 1.06, skirtH, 4, 1, true);
+      parts.push(paint(place(ring, px, waterLocal + skirtH * 0.4, pz), wetHex));
+    }
+  }
+  const g = merged(parts);
+  if (wetFoot > 0) applyPierWetFoot(g, wetFoot);
+  return g;
+}
+
+/** Darken pier post verts in the above-water damp band + submerged stub; deck stays dry. */
+function applyPierWetFoot(g: BufferGeometry, strength: number): void {
+  const waterLocal = WATER_Y - 0.1; // docksFor base[1] === 0.1
+  // Opaque water hides submerged wood — damp band must start ABOVE waterline.
+  const dampTop = waterLocal + 0.14; // ~ splash / wet foot readable zone
+  const pos = g.getAttribute("position");
+  const col = g.getAttribute("color");
+  if (!pos || !col) return;
+  for (let i = 0; i < pos.count; i += 1) {
+    const y = pos.getY(i);
+    if (y > dampTop) continue; // deck / upper post / sign stay dry
+    if (y > 0.02) continue; // safety: never tint deck planks (y≈0)
+    const t = Math.min(1, Math.max(0, (dampTop - y) / (dampTop - (waterLocal - 0.08))));
+    const k = 1 - strength * (0.35 + 0.45 * t);
+    col.setXYZ(i, col.getX(i) * k, col.getY(i) * k, col.getZ(i) * (0.94 + 0.06 * k));
+  }
+  col.needsUpdate = true;
 }
 
 /** 小帆船：船体 + 甲板 + 桅杆 + 三角帆 + 小旗（船头朝 +Z）。 */
-function boatGeometry(): BufferGeometry {
+export type BoatGeomOpts = { wetLine?: number; sail?: number };
+
+/**
+ * 帆船：船体 + 甲板 + 桅杆；可选三角帆布 + 水线湿带。
+ * wetLine（0..1）：只加深水线一带船体（不改外形）。
+ * sail（0..1）：白/米白三角帆挂在桅上（轻微鼓肚，避免贴面看不见）；high=1 · medium≈0.4 · low=0。
+ * 不加复杂索具；不改船体外形。boat origin ≈ WATER_Y+0.02。
+ */
+export function boatGeometry(wetLineOrOpts: number | BoatGeomOpts = 0): BufferGeometry {
+  const opts: BoatGeomOpts = typeof wetLineOrOpts === "number"
+    ? { wetLine: wetLineOrOpts, sail: 1 }
+    : wetLineOrOpts;
+  const wetLine = opts.wetLine ?? 0;
+  const sailAmt = opts.sail ?? 0;
   const hull = new CylinderGeometry(0.11, 0.06, 0.09, 8, 1, false);
   hull.scale(1, 1, 2.6);
-  const sail = new BufferGeometry();
-  sail.setAttribute("position", new BufferAttribute(new Float32Array([
-    0, 0.08, -0.12, 0, 0.5, -0.02, 0, 0.08, 0.16,
-    0, 0.08, 0.16, 0, 0.5, -0.02, 0, 0.08, -0.12,
-  ]), 3));
-  const jib = new BufferGeometry();
-  jib.setAttribute("position", new BufferAttribute(new Float32Array([
-    0, 0.1, 0.2, 0, 0.42, 0.01, 0, 0.1, 0.34,
-    0, 0.1, 0.34, 0, 0.42, 0.01, 0, 0.1, 0.2,
-  ]), 3));
-  return merged([
+  const parts: BufferGeometry[] = [
     paint(place(hull, 0, 0.0, 0), "#7a4e2c", 0.12),
     paint(place(new BoxGeometry(0.16, 0.012, 0.44), 0, 0.048, 0), "#b48a5a"),
     paint(place(new CylinderGeometry(0.008, 0.01, 0.5, 5), 0, 0.29, 0.01), "#4a3420"),
-    paint(sail, "#f1e8d4"),
-    paint(jib, "#e6dcc4"),
     paint(place(new BoxGeometry(0.004, 0.035, 0.06), 0, 0.54, -0.02), "#a3442a"),
-  ]);
+  ];
+  if (sailAmt > 0) {
+    // Simple triangular cloth hung on mast (below flag). Slight +X belly so it never edge-on.
+    // Sized to read at coast camera; mast top ≈ y 0.54.
+    const peakY = 0.50;
+    const footY = 0.09;
+    const reach = 0.38 + 0.14 * sailAmt; // long triangle aft
+    const belly = 0.07 + 0.04 * sailAmt;
+    const peak: [number, number, number] = [belly * 0.15, peakY, 0.0];
+    const tack: [number, number, number] = [belly * 0.2, footY, -0.04];
+    const clew: [number, number, number] = [belly, footY + 0.02, reach];
+    const sail = new BufferGeometry();
+    sail.setAttribute("position", new BufferAttribute(new Float32Array([
+      ...peak, ...tack, ...clew,
+      ...peak, ...clew, ...tack, // back face
+    ]), 3));
+    parts.push(paint(sail, sailAmt > 0.55 ? "#faf6ec" : "#f2ede3", 0));
+    // Small foresail on high only — still simple triangles, no rigging.
+    if (sailAmt > 0.7) {
+      const jib = new BufferGeometry();
+      const jp: [number, number, number] = [belly * 0.12, peakY * 0.9, 0.06];
+      const jt: [number, number, number] = [belly * 0.18, footY + 0.02, 0.14];
+      const jc: [number, number, number] = [belly * 0.7, footY + 0.02, reach * 0.45 + 0.16];
+      jib.setAttribute("position", new BufferAttribute(new Float32Array([
+        ...jp, ...jt, ...jc,
+        ...jp, ...jc, ...jt,
+      ]), 3));
+      parts.push(paint(jib, "#f6f1e7", 0));
+    }
+  }
+  // Readable wet band ABOVE opaque water — one open 6-seg ring, Z-stretched with hull.
+  if (wetLine > 0) {
+    const waterLocal = -0.012;
+    const bandH = 0.022 + 0.012 * wetLine;
+    const bandR = 0.098 + 0.012 * wetLine;
+    const wetHex = wetLine > 0.55 ? "#1a120c" : "#2c1e14";
+    const ring = new CylinderGeometry(bandR, bandR * 1.04, bandH, 6, 1, true);
+    parts.push(paint(place(ring, 0, waterLocal + bandH * 0.15, 0, 1, 1, 2.45), wetHex));
+  }
+  const g = merged(parts);
+  if (wetLine > 0) applyBoatWetLine(g, wetLine);
+  return g;
+}
+
+/** Darken hull verts near / below waterline; sail / mast / deck stay dry. */
+function applyBoatWetLine(g: BufferGeometry, strength: number): void {
+  const waterLocal = -0.012;
+  const dampTop = waterLocal + 0.04; // splash band above water
+  const pos = g.getAttribute("position");
+  const col = g.getAttribute("color");
+  if (!pos || !col) return;
+  for (let i = 0; i < pos.count; i += 1) {
+    const y = pos.getY(i);
+    if (y > dampTop) continue; // deck / sail / mast
+    if (y > 0.04) continue;
+    const t = Math.min(1, Math.max(0, (dampTop - y) / (dampTop - (waterLocal - 0.04))));
+    const k = 1 - strength * (0.32 + 0.48 * t);
+    col.setXYZ(i, col.getX(i) * k, col.getY(i) * k, col.getZ(i) * (0.94 + 0.06 * k));
+  }
+  col.needsUpdate = true;
 }
 
 // ── 图层 ───────────────────────────────────────────────────────────────────
@@ -532,9 +699,11 @@ export function createIslandLayer(): IslandLayer {
   const group = new Group();
   group.name = "island";
   const vertexMat = new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85 });
-  const rockMap = rockTexture();
-  const rockMat = new MeshStandardMaterial({ color: "#ffffff", map: rockMap, vertexColors: true, roughness: 0.97, metalness: 0, flatShading: true });
-  if (!rockMap) rockMat.color.set("#5a5149");
+  const rockMapHigh = rockTexture(1);
+  const rockMapMed = rockTexture(0.34);
+  const rockMapLow = rockTexture(0);
+  const rockMat = new MeshStandardMaterial({ color: "#ffffff", map: rockMapHigh, vertexColors: true, roughness: 0.97, metalness: 0, flatShading: true });
+  if (!rockMapHigh) rockMat.color.set("#5a5149");
   const signMap = signAtlas();
   const signMat = new MeshStandardMaterial({ map: signMap, transparent: true, alphaTest: 0.4, roughness: 0.8 });
   signMat.onBeforeCompile = (shader) => {
@@ -546,8 +715,12 @@ export function createIslandLayer(): IslandLayer {
       );
   };
   const stoneGeom = shoreStoneGeometry();
-  const dockGeom = dockGeometry();
-  const boatGeom = boatGeometry();
+  const dockGeomDry = dockGeometry(0.62, 0);
+  const dockGeomMed = dockGeometry(0.62, 0.32);
+  const dockGeomHigh = dockGeometry(0.62, 1);
+  const boatGeomDry = boatGeometry({ wetLine: 0, sail: 0 });
+  const boatGeomMed = boatGeometry({ wetLine: 0.32, sail: 0.4 });
+  const boatGeomHigh = boatGeometry({ wetLine: 1, sail: 1 });
   const signGeom = new CircleGeometry(SIGN_RADIUS, 28);
   const m = new Matrix4();
   const q = new Quaternion();
@@ -594,7 +767,12 @@ export function createIslandLayer(): IslandLayer {
 
       // 连续岩壁 + 顶盖（1 个 draw call，几何随地块集合重建）。
       wallGeom?.dispose();
-      wallGeom = coastWallGeometry(tiles);
+      wallGeom = coastWallGeometry(tiles, {
+        wetFootDark: tier === "high",
+        midBandDark: tier === "high" ? 1 : tier === "medium" ? 0.34 : 0,
+      });
+      rockMat.map = tier === "high" ? rockMapHigh : tier === "medium" ? rockMapMed : rockMapLow;
+      rockMat.needsUpdate = true;
       const wall = new Mesh(wallGeom, rockMat);
       wall.name = "island:cliff";
       wall.castShadow = castShadow;
@@ -602,16 +780,18 @@ export function createIslandLayer(): IslandLayer {
       wall.userData.gdShared = true;
       group.add(wall);
 
-      // 岸石：每条外圈海岸边 3–5 颗圆石，落在水线。
+      // 岸石：每条外圈海岸边常规圆石；high 另在部分边加断续扁平礁石浅滩簇（非整圈砂台）。
       const edges = coastEdges(tiles);
       const perEdge = tier === "low" ? 2 : 4;
-      const stones = new InstancedMesh(stoneGeom, vertexMat, Math.max(1, edges.length * perEdge));
+      const reefBudget = tier === "high" ? edges.length * 6 : 0; // clusters + gap wall-huggers
+      const stones = new InstancedMesh(stoneGeom, vertexMat, Math.max(1, edges.length * perEdge + reefBudget));
       let n = 0;
+      let edgeIdx = 0;
       for (const [a, b, c] of edges) {
         for (let k = 0; k < perEdge; k += 1) {
-          const t = (k + 0.25 + rand() * 0.5) / perEdge;
-          const ex = a[0] + (b[0] - a[0]) * t;
-          const ez = a[2] + (b[2] - a[2]) * t;
+          const tt = (k + 0.25 + rand() * 0.5) / perEdge;
+          const ex = a[0] + (b[0] - a[0]) * tt;
+          const ez = a[2] + (b[2] - a[2]) * tt;
           const ox = ex - c[0];
           const oz = ez - c[2];
           const ol = Math.hypot(ox, oz) || 1;
@@ -622,6 +802,53 @@ export function createIslandLayer(): IslandLayer {
           m.compose(p.set(ex + (ox / ol) * out, WATER_Y + 0.015, ez + (oz / ol) * out), q, s.set(size * 1.3, size * 0.78, size));
           stones.setMatrixAt(n++, m);
         }
+        // high only：断续礁石簇 — 约半数边留空，其余 2–4 块扁平错层外推（干露 / 半湿 / 入水）。
+        if (tier === "high") {
+          const ox0 = (a[0] + b[0]) / 2 - c[0];
+          const oz0 = (a[2] + b[2]) / 2 - c[2];
+          const ol0 = Math.hypot(ox0, oz0) || 1;
+          const nx = ox0 / ol0;
+          const nz = oz0 / ol0;
+          if (reefEdgeMask(edgeIdx)) {
+            // 断续礁石簇 — 约半数边；扁平错层外推。
+            const cluster = reefClusterSize(edgeIdx);
+            for (let j = 0; j < cluster; j += 1) {
+              const along = 0.18 + rand() * 0.64;
+              const ex = a[0] + (b[0] - a[0]) * along + (-nz) * (rand() - 0.5) * 0.12;
+              const ez = a[2] + (b[2] - a[2]) * along + nx * (rand() - 0.5) * 0.12;
+              const step = j + rand() * 0.7;
+              const out = 0.22 + step * 0.14 + rand() * 0.08;
+              const y = WATER_Y + 0.09 - step * 0.035 + (rand() - 0.5) * 0.02;
+              const sx = 1.55 + rand() * 1.1;
+              const sy = 0.22 + rand() * 0.28;
+              const sz = 1.15 + rand() * 0.9;
+              q.setFromAxisAngle(up, rand() * Math.PI * 2);
+              const tip = new Quaternion().setFromAxisAngle(new Vector3(nx, 0, nz), (rand() - 0.5) * 0.35);
+              q.multiply(tip);
+              m.compose(p.set(ex + nx * out, y, ez + nz * out), q, s.set(sx, sy, sz));
+              stones.setMatrixAt(n++, m);
+            }
+          } else {
+            // 簇间空档：贴崖稀疏立石，盖住褐色纸板状六角侧面（非整圈）。
+            const hug = 1 + Math.floor(rand() * 2); // 1–2
+            for (let j = 0; j < hug; j += 1) {
+              const along = 0.2 + rand() * 0.6;
+              const ex = a[0] + (b[0] - a[0]) * along + (-nz) * (rand() - 0.5) * 0.06;
+              const ez = a[2] + (b[2] - a[2]) * along + nx * (rand() - 0.5) * 0.06;
+              const out = 0.05 + rand() * 0.11; // wall-hugging
+              const y = WATER_Y + 0.03 + rand() * 0.08;
+              const sx = 0.95 + rand() * 0.85;
+              const sy = 0.55 + rand() * 0.55; // more vertical rock face
+              const sz = 0.85 + rand() * 0.7;
+              q.setFromAxisAngle(up, rand() * Math.PI * 2);
+              const tip = new Quaternion().setFromAxisAngle(new Vector3(nx, 0, nz), (rand() - 0.5) * 0.25);
+              q.multiply(tip);
+              m.compose(p.set(ex + nx * out, y, ez + nz * out), q, s.set(sx, sy, sz));
+              stones.setMatrixAt(n++, m);
+            }
+          }
+        }
+        edgeIdx += 1;
       }
       stones.count = n;
       add(stones, "island:shore-stones", false);
@@ -629,6 +856,7 @@ export function createIslandLayer(): IslandLayer {
       // 码头 + 港口牌。
       dockList = docksFor(ports);
       if (dockList.length > 0) {
+        const dockGeom = tier === "high" ? dockGeomHigh : tier === "medium" ? dockGeomMed : dockGeomDry;
         const docks = new InstancedMesh(dockGeom, vertexMat, dockList.length);
         const sg = signGeom.clone();
         const cells = new Float32Array(dockList.length * 2);
@@ -647,6 +875,7 @@ export function createIslandLayer(): IslandLayer {
         add(signs, "island:harbor-signs", false, false);
       }
 
+      const boatGeom = tier === "high" ? boatGeomHigh : tier === "medium" ? boatGeomMed : boatGeomDry;
       boats = new InstancedMesh(boatGeom, vertexMat, BOAT_SPOTS.length);
       boats.instanceMatrix.setUsage(DynamicDrawUsage);
       add(boats, "island:boats", false); // 起伏的船不进静态阴影图
@@ -688,11 +917,11 @@ export function createIslandLayer(): IslandLayer {
     },
     dispose() {
       clear();
-      for (const g of [stoneGeom, dockGeom, boatGeom, signGeom]) g.dispose();
+      for (const g of [stoneGeom, dockGeomDry, dockGeomMed, dockGeomHigh, boatGeomDry, boatGeomMed, boatGeomHigh, signGeom]) g.dispose();
       wallGeom?.dispose();
       wallGeom = null;
+      for (const tex of [rockMapHigh, rockMapMed, rockMapLow]) tex?.dispose();
       for (const mat of [vertexMat, rockMat, signMat]) mat.dispose();
-      rockMap?.dispose();
       signMap?.dispose();
       layoutKey = "";
     },
