@@ -2,7 +2,7 @@ import { InstancedMesh, Matrix4, PerspectiveCamera, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 import { dressingInputs, tileCenter, vertexWorld, withoutReplacedNodes } from "./hex-dressing";
 import { mapHexSettlementToScene } from "./mappers/hex-settlement";
-import { SIGN_KINDS, SKIRT_BOTTOM_Y, SKIRT_TOP_Y, WATER_Y, coastEdges, coastWallGeometry, createIslandLayer, dockGeometry, docksFor, outerTiles, reefClusterSize, reefEdgeMask, signCell } from "./island";
+import { SIGN_KINDS, SKIRT_BOTTOM_Y, SKIRT_TOP_Y, WATER_Y, boatGeometry, coastEdges, coastWallGeometry, createIslandLayer, dockGeometry, docksFor, outerTiles, reefClusterSize, reefEdgeMask, signCell } from "./island";
 import { beginnerSceneInput } from "./terrain-dressing.fixture";
 
 const input = beginnerSceneInput();
@@ -166,6 +166,37 @@ describe("G3D-ISLAND island + coast", () => {
     // Skirts add verts; deck planks on dry geom sit above dampTop and are not the wet target.
     expect(wet.getAttribute("position").count).toBeGreaterThan(dry.getAttribute("position").count);
     expect(faint.getAttribute("position").count).toBeGreaterThan(dry.getAttribute("position").count);
+    dry.dispose(); wet.dispose(); faint.dispose();
+  });
+
+  it("boat wetLine darkens hull near waterline; sail stays bright", () => {
+    const dry = boatGeometry(0);
+    const wet = boatGeometry(1);
+    const faint = boatGeometry(0.32);
+    const meanBand = (g: ReturnType<typeof boatGeometry>, lo: number, hi: number) => {
+      const p = g.getAttribute("position");
+      const c = g.getAttribute("color");
+      let s = 0, n = 0;
+      for (let i = 0; i < p.count; i += 1) {
+        const y = p.getY(i);
+        if (y < lo || y > hi) continue;
+        s += c.getX(i) + c.getY(i) + c.getZ(i);
+        n += 1;
+      }
+      return { mean: s / Math.max(1, n), n };
+    };
+    const hullDry = meanBand(dry, -0.05, 0.02);
+    const hullWet = meanBand(wet, -0.05, 0.02);
+    const hullFaint = meanBand(faint, -0.05, 0.02);
+    const sailDry = meanBand(dry, 0.15, 0.55);
+    const sailWet = meanBand(wet, 0.15, 0.55);
+    expect(hullDry.n).toBeGreaterThan(10);
+    expect(sailDry.n).toBeGreaterThan(4);
+    expect(hullWet.mean).toBeLessThan(hullDry.mean);
+    expect(hullFaint.mean).toBeGreaterThan(hullWet.mean);
+    expect(hullFaint.mean).toBeLessThan(hullDry.mean);
+    expect(Math.abs(sailWet.mean - sailDry.mean)).toBeLessThan(0.05);
+    expect(wet.getAttribute("position").count).toBeGreaterThan(dry.getAttribute("position").count);
     dry.dispose(); wet.dispose(); faint.dispose();
   });
 

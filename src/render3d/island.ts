@@ -3,7 +3,7 @@
  * LicenseRef-GoDesk-Original）。取代 #138 的灰色平石板（cliff 节点）、灰盒港口（port）与船（ship）。
  *
  * draw call（不含阴影 pass）：岩壁 1 + 岸石 1 + 码头 1 + 港口牌 1 + 帆船 1 = 5，与档位无关
- * （low 档岸石减半、帆船保留但不投影）。high 在同岸石 InstancedMesh 内加断续礁石簇 + 簇间贴崖稀疏立石；崖脚湿暗加深；中段岩色加深；码头桩柱水线湿脚（无额外 draw call）。
+ * （low 档岸石减半、帆船保留但不投影）。high 在同岸石 InstancedMesh 内加断续礁石簇 + 簇间贴崖稀疏立石；崖脚湿暗加深；中段岩色加深；码头桩柱水线湿脚；帆船船体水线湿带（无额外 draw call）。
  */
 import {
   BufferAttribute,
@@ -588,7 +588,12 @@ function applyPierWetFoot(g: BufferGeometry, strength: number): void {
 }
 
 /** 小帆船：船体 + 甲板 + 桅杆 + 三角帆 + 小旗（船头朝 +Z）。 */
-function boatGeometry(): BufferGeometry {
+/**
+ * 帆船：船体 + 甲板 + 桅帆。wetLine（0..1）只加深水线一带船体色 + 一条细湿环，
+ * 不改整体外形 / 不加复杂索具。boat origin ≈ WATER_Y+0.02 → 局部水线 ≈ -0.012。
+ * high=1 · medium≈0.32 · low=0。
+ */
+export function boatGeometry(wetLine = 0): BufferGeometry {
   const hull = new CylinderGeometry(0.11, 0.06, 0.09, 8, 1, false);
   hull.scale(1, 1, 2.6);
   const sail = new BufferGeometry();
@@ -601,14 +606,44 @@ function boatGeometry(): BufferGeometry {
     0, 0.1, 0.2, 0, 0.42, 0.01, 0, 0.1, 0.34,
     0, 0.1, 0.34, 0, 0.42, 0.01, 0, 0.1, 0.2,
   ]), 3));
-  return merged([
+  const parts: BufferGeometry[] = [
     paint(place(hull, 0, 0.0, 0), "#7a4e2c", 0.12),
     paint(place(new BoxGeometry(0.16, 0.012, 0.44), 0, 0.048, 0), "#b48a5a"),
     paint(place(new CylinderGeometry(0.008, 0.01, 0.5, 5), 0, 0.29, 0.01), "#4a3420"),
     paint(sail, "#f1e8d4"),
     paint(jib, "#e6dcc4"),
     paint(place(new BoxGeometry(0.004, 0.035, 0.06), 0, 0.54, -0.02), "#a3442a"),
-  ]);
+  ];
+  // Readable wet band ABOVE opaque water — one open 6-seg ring, Z-stretched with hull.
+  if (wetLine > 0) {
+    const waterLocal = -0.012;
+    const bandH = 0.022 + 0.012 * wetLine;
+    const bandR = 0.098 + 0.012 * wetLine;
+    const wetHex = wetLine > 0.55 ? "#1a120c" : "#2c1e14";
+    const ring = new CylinderGeometry(bandR, bandR * 1.04, bandH, 6, 1, true);
+    parts.push(paint(place(ring, 0, waterLocal + bandH * 0.15, 0, 1, 1, 2.45), wetHex));
+  }
+  const g = merged(parts);
+  if (wetLine > 0) applyBoatWetLine(g, wetLine);
+  return g;
+}
+
+/** Darken hull verts near / below waterline; sail / mast / deck stay dry. */
+function applyBoatWetLine(g: BufferGeometry, strength: number): void {
+  const waterLocal = -0.012;
+  const dampTop = waterLocal + 0.04; // splash band above water
+  const pos = g.getAttribute("position");
+  const col = g.getAttribute("color");
+  if (!pos || !col) return;
+  for (let i = 0; i < pos.count; i += 1) {
+    const y = pos.getY(i);
+    if (y > dampTop) continue; // deck / sail / mast
+    if (y > 0.04) continue;
+    const t = Math.min(1, Math.max(0, (dampTop - y) / (dampTop - (waterLocal - 0.04))));
+    const k = 1 - strength * (0.32 + 0.48 * t);
+    col.setXYZ(i, col.getX(i) * k, col.getY(i) * k, col.getZ(i) * (0.94 + 0.06 * k));
+  }
+  col.needsUpdate = true;
 }
 
 // ── 图层 ───────────────────────────────────────────────────────────────────
@@ -658,7 +693,9 @@ export function createIslandLayer(): IslandLayer {
   const dockGeomDry = dockGeometry(0.62, 0);
   const dockGeomMed = dockGeometry(0.62, 0.32);
   const dockGeomHigh = dockGeometry(0.62, 1);
-  const boatGeom = boatGeometry();
+  const boatGeomDry = boatGeometry(0);
+  const boatGeomMed = boatGeometry(0.32);
+  const boatGeomHigh = boatGeometry(1);
   const signGeom = new CircleGeometry(SIGN_RADIUS, 28);
   const m = new Matrix4();
   const q = new Quaternion();
@@ -813,6 +850,7 @@ export function createIslandLayer(): IslandLayer {
         add(signs, "island:harbor-signs", false, false);
       }
 
+      const boatGeom = tier === "high" ? boatGeomHigh : tier === "medium" ? boatGeomMed : boatGeomDry;
       boats = new InstancedMesh(boatGeom, vertexMat, BOAT_SPOTS.length);
       boats.instanceMatrix.setUsage(DynamicDrawUsage);
       add(boats, "island:boats", false); // 起伏的船不进静态阴影图
@@ -854,7 +892,7 @@ export function createIslandLayer(): IslandLayer {
     },
     dispose() {
       clear();
-      for (const g of [stoneGeom, dockGeomDry, dockGeomMed, dockGeomHigh, boatGeom, signGeom]) g.dispose();
+      for (const g of [stoneGeom, dockGeomDry, dockGeomMed, dockGeomHigh, boatGeomDry, boatGeomMed, boatGeomHigh, signGeom]) g.dispose();
       wallGeom?.dispose();
       wallGeom = null;
       for (const tex of [rockMapHigh, rockMapMed, rockMapLow]) tex?.dispose();
