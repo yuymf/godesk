@@ -9,7 +9,7 @@
  * 4. status = "cleared"（来自 manifest；LICENSES 表无 status 列，以 manifest 为准）
  * 5. 来源 URL：http(s) 返回 2xx（可用 --skip-network）；程序化/自制/AI 生成检查路径存在
  * 6. G3D-ART：LicenseRef-AI-Generated 行须记录工具、提示词、生成日期、后处理与「法务审查:」标记；
- *    标记为「待 G3D-17」的资产输出 warning（不失败）—— G3D-17 上线前须由法务清零。
+ *    标记为「待 G3D-17」的资产输出 warning（不失败）。G3D-17：用户豁免后改为「已豁免 2026-10-06」，不再计 pending。
  *
  * 用法：
  *   node scripts/verify-assets.mjs
@@ -312,7 +312,7 @@ export async function verifyAssets(options) {
   }
   if (aiPending.length) {
     warnings.push(
-      `AI 生成资产待法务审查（G3D-17 上线前须清零，共 ${aiPending.length} 项）：${aiPending.join(", ")}`,
+      `AI 生成资产仍标记待法务审查（共 ${aiPending.length} 项；G3D-17 豁免后应改为「已豁免」）：${aiPending.join(", ")}`,
     );
   }
 

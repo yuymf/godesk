@@ -87,10 +87,10 @@ export const ASSET_MANIFEST = Object.freeze([
       "author": "GoDesk Track B（离线自渲，场景含 G3D-ART AI 贴图）",
       "obtainedAt": "2026-10-06",
       "modified": true,
-      "modificationNote": "Room canvas 截取（无 HUD/?perf）；含 AI 地形贴图；ffmpeg WebP/AVIF；法务审查: 待 G3D-17",
+      "modificationNote": "Room canvas 截取（无 HUD/?perf）；含 AI 地形贴图；ffmpeg WebP/AVIF；法务审查: 已豁免 2026-10-06",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 
@@ -107,10 +107,10 @@ export const ASSET_MANIFEST = Object.freeze([
       "author": "GoDesk Track B（离线自渲，场景含 G3D-ART AI 贴图）",
       "obtainedAt": "2026-10-06",
       "modified": true,
-      "modificationNote": "Room canvas 截取（无 HUD/?perf）；含 AI 地形贴图；ffmpeg WebP/AVIF；法务审查: 待 G3D-17",
+      "modificationNote": "Room canvas 截取（无 HUD/?perf）；含 AI 地形贴图；ffmpeg WebP/AVIF；法务审查: 已豁免 2026-10-06",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 
@@ -127,10 +127,10 @@ export const ASSET_MANIFEST = Object.freeze([
       "author": "GoDesk Track B（离线自渲，场景含 G3D-ART AI 贴图）",
       "obtainedAt": "2026-10-06",
       "modified": true,
-      "modificationNote": "Room canvas 截取（无 HUD/?perf）；含 AI 地形贴图；ffmpeg WebP/AVIF；法务审查: 待 G3D-17",
+      "modificationNote": "Room canvas 截取（无 HUD/?perf）；含 AI 地形贴图；ffmpeg WebP/AVIF；法务审查: 已豁免 2026-10-06",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 
@@ -147,10 +147,10 @@ export const ASSET_MANIFEST = Object.freeze([
       "author": "GoDesk Track B（离线自渲，场景含 G3D-ART AI 贴图）",
       "obtainedAt": "2026-10-06",
       "modified": true,
-      "modificationNote": "Room canvas 截取（无 HUD/?perf）；含 AI 地形贴图；ffmpeg WebP/AVIF；法务审查: 待 G3D-17",
+      "modificationNote": "Room canvas 截取（无 HUD/?perf）；含 AI 地形贴图；ffmpeg WebP/AVIF；法务审查: 已豁免 2026-10-06",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 
@@ -167,10 +167,10 @@ export const ASSET_MANIFEST = Object.freeze([
       "author": "GoDesk Track B（离线自渲，场景含 G3D-ART AI 贴图）",
       "obtainedAt": "2026-10-06",
       "modified": true,
-      "modificationNote": "Room canvas 截取（无 HUD/?perf）；含 AI 地形贴图；ffmpeg WebP/AVIF；法务审查: 待 G3D-17",
+      "modificationNote": "Room canvas 截取（无 HUD/?perf）；含 AI 地形贴图；ffmpeg WebP/AVIF；法务审查: 已豁免 2026-10-06",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 
@@ -422,7 +422,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（C6）；1280x720 中心裁切到 2:3→512x768→WebP q82（原位替换）",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -567,7 +567,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏 forest-floor）；源图 assets/ai-textures/r19/forest-floor.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R20 绘本化（scripts/bake-ai-r20.py：苔绿重着色（HSV 色相映射到 0.20–0.34、饱和 ×0.55、明度 ×0.85，林地不再读成褐色落叶）→中位切分调色板色块化 K=10 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -586,7 +586,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T1）；由无缝 AI albedo 亮度高度场推导 normal（自有算法，非 AI）→512²→toktx UASTC+zstd",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -605,7 +605,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T1）；由无缝 AI albedo 亮度高度场推导 orm（自有算法，非 AI）→512²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -624,7 +624,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏 forest-floor）；源图 assets/ai-textures/r19/forest-floor.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R20 绘本化（scripts/bake-ai-r20.py：苔绿重着色（HSV 色相映射到 0.20–0.34、饱和 ×0.55、明度 ×0.85，林地不再读成褐色落叶）→中位切分调色板色块化 K=10 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→回卷填充 Lanczos 缩至 256²→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -643,7 +643,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T1）；由无缝 AI albedo 亮度高度场推导 normal（自有算法，非 AI）→256²→toktx UASTC+zstd",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -662,7 +662,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T1）；由无缝 AI albedo 亮度高度场推导 orm（自有算法，非 AI）→256²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -681,7 +681,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏 clay）；源图 assets/ai-textures/r19/clay.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=9 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -700,7 +700,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T4）；由无缝 AI albedo 亮度高度场推导 normal（自有算法，非 AI）→512²→toktx UASTC+zstd",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -719,7 +719,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T4）；由无缝 AI albedo 亮度高度场推导 orm（自有算法，非 AI）→512²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -738,7 +738,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏 clay）；源图 assets/ai-textures/r19/clay.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=9 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→回卷填充 Lanczos 缩至 256²→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -757,7 +757,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T4）；由无缝 AI albedo 亮度高度场推导 normal（自有算法，非 AI）→256²→toktx UASTC+zstd",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -776,7 +776,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T4）；由无缝 AI albedo 亮度高度场推导 orm（自有算法，非 AI）→256²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -795,7 +795,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏 grass）；源图 assets/ai-textures/r19/grass.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R22 鲜绿化（scripts/bake-ai-r20.py fresh_meadow：HSV 色相 +5°、饱和 ×0.95、明度 gamma 0.8 提亮，橄榄绿→浅草绿）→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=10 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -814,7 +814,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T2）；由无缝 AI albedo 亮度高度场推导 normal（自有算法，非 AI）→512²→toktx UASTC+zstd",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -833,7 +833,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T2）；由无缝 AI albedo 亮度高度场推导 orm（自有算法，非 AI）→512²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -852,7 +852,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏 grass）；源图 assets/ai-textures/r19/grass.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R22 鲜绿化（scripts/bake-ai-r20.py fresh_meadow：HSV 色相 +5°、饱和 ×0.95、明度 gamma 0.8 提亮，橄榄绿→浅草绿）→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=10 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→回卷填充 Lanczos 缩至 256²→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -871,7 +871,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T2）；由无缝 AI albedo 亮度高度场推导 normal（自有算法，非 AI）→256²→toktx UASTC+zstd",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -890,7 +890,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T2）；由无缝 AI albedo 亮度高度场推导 orm（自有算法，非 AI）→256²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -909,7 +909,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏 wheat-field）；源图 assets/ai-textures/r19/wheat-field.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R22 金黄化（scripts/bake-ai-r20.py golden_wheat：HSV 色相 +6°、饱和 ×0.8、明度 gamma 0.74 提亮，琥珀橙→明亮金黄）→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=9 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -928,7 +928,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T3b）；由无缝 AI albedo 亮度高度场推导 normal（自有算法，非 AI）→512²→toktx UASTC+zstd",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -947,7 +947,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T3b）；由无缝 AI albedo 亮度高度场推导 orm（自有算法，非 AI）→512²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -966,7 +966,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏 wheat-field）；源图 assets/ai-textures/r19/wheat-field.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R22 金黄化（scripts/bake-ai-r20.py golden_wheat：HSV 色相 +6°、饱和 ×0.8、明度 gamma 0.74 提亮，琥珀橙→明亮金黄）→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=9 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→回卷填充 Lanczos 缩至 256²→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -985,7 +985,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T3b）；由无缝 AI albedo 亮度高度场推导 normal（自有算法，非 AI）→256²→toktx UASTC+zstd",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1004,7 +1004,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T3b）；由无缝 AI albedo 亮度高度场推导 orm（自有算法，非 AI）→256²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1023,7 +1023,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏 scree）；源图 assets/ai-textures/r19/scree.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R21 浅灰岩化（scripts/bake-ai-r20.py light_rock：去饱和 80%、略冷调、gamma 0.62 提亮，灰褐→浅灰岩）→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=9 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1042,7 +1042,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T5）；由无缝 AI albedo 亮度高度场推导 normal（自有算法，非 AI）→512²→toktx UASTC+zstd",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1061,7 +1061,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T5）；由无缝 AI albedo 亮度高度场推导 orm（自有算法，非 AI）→512²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1080,7 +1080,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏 scree）；源图 assets/ai-textures/r19/scree.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R21 浅灰岩化（scripts/bake-ai-r20.py light_rock：去饱和 80%、略冷调、gamma 0.62 提亮，灰褐→浅灰岩）→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=9 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→回卷填充 Lanczos 缩至 256²→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1099,7 +1099,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T5）；由无缝 AI albedo 亮度高度场推导 normal（自有算法，非 AI）→256²→toktx UASTC+zstd",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1118,7 +1118,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T5）；由无缝 AI albedo 亮度高度场推导 orm（自有算法，非 AI）→256²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1137,7 +1137,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏 sand）；源图 assets/ai-textures/r19/sand.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R22 淡沙化（scripts/bake-ai-r20.py pale_sand：HSV 色相 +4°、饱和 ×0.72、明度 gamma 0.78 提亮，暖米→浅沙色）→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=8 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1156,7 +1156,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T6）；由无缝 AI albedo 亮度高度场推导 normal（自有算法，非 AI）→512²→toktx UASTC+zstd",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1175,7 +1175,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T6）；由无缝 AI albedo 亮度高度场推导 orm（自有算法，非 AI）→512²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1194,7 +1194,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏 sand）；源图 assets/ai-textures/r19/sand.webp（1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝））→R22 淡沙化（scripts/bake-ai-r20.py pale_sand：HSV 色相 +4°、饱和 ×0.72、明度 gamma 0.78 提亮，暖米→浅沙色）→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=8 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，回卷填充保持双向无缝）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→回卷填充 Lanczos 缩至 256²→toktx --encode etc1s --clevel 2 --qlevel 128（scripts/bake-ai-r20.py；R19 版为 scripts/bake-ai-r19.py 直出）；normal / ORM 未重烘焙（沿用 R6 CC0 版）；取代 R7 程序化绘本 albedo",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1213,7 +1213,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T6）；由无缝 AI albedo 亮度高度场推导 normal（自有算法，非 AI）→256²→toktx UASTC+zstd",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1232,7 +1232,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T6）；由无缝 AI albedo 亮度高度场推导 orm（自有算法，非 AI）→256²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1359,7 +1359,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T8）；中心方块裁切→1024→逐轴 offset-by-half 羽化混合无缝化→去饱和 0.25、提亮 1.55（漂流木灰，木色由 token 决定）→512²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1378,7 +1378,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T8）；由无缝 AI albedo 亮度高度场推导 normal（自有算法，非 AI）→512²→toktx UASTC+zstd",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1397,7 +1397,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T8）；由无缝 AI albedo 亮度高度场推导 orm（自有算法，非 AI）→512²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1416,7 +1416,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T8）；中心方块裁切→1024→逐轴 offset-by-half 羽化混合无缝化→去饱和 0.25、提亮 1.55（漂流木灰，木色由 token 决定）→256²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1435,7 +1435,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T8）；由无缝 AI albedo 亮度高度场推导 normal（自有算法，非 AI）→256²→toktx UASTC+zstd",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1454,7 +1454,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（T8）；由无缝 AI albedo 亮度高度场推导 orm（自有算法，非 AI）→256²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1689,7 +1689,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（N1）；圆盘裁切→圆外以边缘色填充→512²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1708,7 +1708,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（N1）；由 AI albedo 亮度推导 normal（自有算法）→512²→toktx",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1727,7 +1727,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（N1）；由 AI albedo 亮度推导 orm（自有算法）→512²→toktx",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1746,7 +1746,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（N1）；圆盘裁切→圆外以边缘色填充→256²→toktx ETC1S",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1765,7 +1765,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（N1）；由 AI albedo 亮度推导 normal（自有算法）→256²→toktx",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1784,7 +1784,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（N1）；由 AI albedo 亮度推导 orm（自有算法）→256²→toktx",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1857,7 +1857,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（S4）；S4 中按描边分割裁出→描边泛洪键出羊皮纸底为 alpha→128²→WebP",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1876,7 +1876,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（S4）；S4 中按描边分割裁出→描边泛洪键出羊皮纸底为 alpha→64²→WebP",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1895,7 +1895,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（S4）；S4 中按描边分割裁出→描边泛洪键出羊皮纸底为 alpha→128²→WebP",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1914,7 +1914,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（S4）；S4 中按描边分割裁出→描边泛洪键出羊皮纸底为 alpha→64²→WebP",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1933,7 +1933,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（S4）；S4 中按描边分割裁出→描边泛洪键出羊皮纸底为 alpha→128²→WebP",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1952,7 +1952,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（S4）；S4 中按描边分割裁出→描边泛洪键出羊皮纸底为 alpha→64²→WebP",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1971,7 +1971,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（S4）；S4 中按描边分割裁出→描边泛洪键出羊皮纸底为 alpha→128²→WebP",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -1990,7 +1990,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（S4）；S4 中按描边分割裁出→描边泛洪键出羊皮纸底为 alpha→64²→WebP",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -2009,7 +2009,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（S4）；S4 中按描边分割裁出→描边泛洪键出羊皮纸底为 alpha→128²→WebP",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -2028,7 +2028,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（S4）；S4 中按描边分割裁出→描边泛洪键出羊皮纸底为 alpha→64²→WebP",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -2047,7 +2047,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（S3）；S3 左块裁切→重建 9-slice（四角取原角花、四边取素边条、中心纸色；去掉中饰与内部残影）→WebP；切片见 assets/ui/ai/nine-slice.json",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -2066,7 +2066,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（S3）；S3 右块裁切→羊皮纸底键出 alpha→插画窗不透明→WebP；切片见 assets/ui/ai/nine-slice.json",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -2085,7 +2085,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（N1）；N1 圆盘检测裁切→圆形 alpha→256²→WebP",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -2104,7 +2104,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（N1）；N1 圆盘检测裁切→圆形 alpha→128²→WebP",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -2537,7 +2537,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏）；1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝）；仓库源图，不直接进 dist（派生见 scripts/bake-ai-r19.py）",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -2556,7 +2556,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏）；1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝）；仓库源图，不直接进 dist（派生见 scripts/bake-ai-r19.py）",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -2575,7 +2575,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏）；1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝）；仓库源图，不直接进 dist（派生见 scripts/bake-ai-r19.py）",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -2594,7 +2594,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏）；1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝）；仓库源图，不直接进 dist（派生见 scripts/bake-ai-r19.py）",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -2613,7 +2613,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏）；1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝）；仓库源图，不直接进 dist（派生见 scripts/bake-ai-r19.py）",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -2632,7 +2632,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏）；1280×720 生成→中心裁 720²→水平 + 竖直重叠回卷接缝合并（overlap 160px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 512²→无损 WebP（双向无缝）；仓库源图，不直接进 dist（派生见 scripts/bake-ai-r19.py）",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -2651,7 +2651,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏）；1280×720 生成→中心裁 1280×540→水平重叠回卷接缝合并（overlap 200px，低频余弦交叉淡化 + 高频最小误差切缝）→低频亮度拉平→回卷 Lanczos 1024×512→无损 WebP（仅水平平铺）；仓库源图，不直接进 dist（派生见 scripts/bake-ai-r19.py）",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -2670,7 +2670,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏）；1280×720 生成→白底前景阈值取最大连通域→圆拟合重定心裁切→Lanczos 512²（圆盘直径 94%）→1.5px 抗锯齿圆形 alpha→无损 WebP（RGBA）；仓库源图，不直接进 dist（派生见 scripts/bake-ai-r19.py）",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -2689,7 +2689,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏）派生；源图 assets/ai-textures/r19/cliff-rock.webp→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=10 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，竖直方向镜像、水平回卷）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→Lanczos 512×256→WebP q82；运行时 island.ts 叠回 35% 程序岩层/竖缝（canvas）",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {
@@ -2708,7 +2708,7 @@ export const ASSET_MANIFEST = Object.freeze([
       "modificationNote": "AI 生图（R19 虹夏）派生；源图 assets/ai-textures/r19/harbor-sign.webp→R20 绘本化（scripts/bake-ai-r20.py：中位切分调色板色块化 K=12 无抖动→软 Kuwahara r=9 + r=5（逆方差加权，仅 RGB，alpha 原样保留）→35% 拉回色块调色板，与油彩 dab 同一低频画风）→R21 复原外圈木框（源图外圈 ~34 px 按 0.8× 明度回贴 + 5 px 深色描边，Kuwahara 后保留深色外框）→Lanczos 256²→WebP q85 RGBA；运行时 island.ts 在其上绘「2:1/3:1 + 资源字」（canvas）",
       "orderRef": "n/a",
       "status": "cleared",
-      "legalReview": "pending-G3D-17"
+      "legalReview": "cleared"
     }
   },
 {

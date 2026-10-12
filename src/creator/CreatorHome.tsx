@@ -20,7 +20,6 @@ import {
   examplesForHomepage,
   type DefaultExampleId,
 } from "./default-examples";
-import { isTidewellHomepageEnabled } from "./tidewell-feature";
 import { HOBBYIST_STARTERS } from "./hobbyist-starters";
 import {
   extractRulebookText,
@@ -426,14 +425,10 @@ export function CreatorHome() {
               <p>挑一款，开局后就能邀请朋友。</p>
             </header>
             <div
-              className={
-                isTidewellHomepageEnabled()
-                  ? "example-grid example-grid-showcase"
-                  : "example-grid"
-              }
-              data-homepage-showcase={isTidewellHomepageEnabled() ? "tidewell" : "classic"}
+              className="example-grid example-grid-showcase"
+              data-homepage-showcase="tidewell"
             >
-              {examplesForHomepage(isTidewellHomepageEnabled()).map((example) => (
+              {examplesForHomepage().map((example) => (
                 <article key={example.id}>
                   <ExampleArtwork exampleId={example.id} />
                   <div className="example-body">

@@ -58,10 +58,10 @@ export const DEFAULT_EXAMPLES: DefaultExample[] = [
   },
 ];
 
-/** Homepage 「先玩一局现成的」 when GODESK_FEATURE_TIDEWELL is on (SPEC §6 G3D-16 / Q9). */
+/** Homepage 「先玩一局现成的」 production showcase (SPEC §6 G3D-16 / G3D-17: flag removed). */
 export const HOMEPAGE_SHOWCASE: DefaultExampleId[] = ["tidewell-isles"];
 
-/** Homepage classic three-card gallery when the Tidewell flag is off. */
+/** Classic three-card gallery kept for Creator Studio / MCP templates; not the homepage default. */
 export const HOMEPAGE_CLASSIC: DefaultExampleId[] = [
   "harbor-13",
   "mistpeak-lodge",
@@ -72,9 +72,9 @@ export function isDefaultExampleId(value: unknown): value is DefaultExampleId {
   return DEFAULT_EXAMPLES.some((example) => example.id === value);
 }
 
-export function examplesForHomepage(showcase: boolean): DefaultExample[] {
-  const ids = showcase ? HOMEPAGE_SHOWCASE : HOMEPAGE_CLASSIC;
-  return ids
+/** Production homepage always shows the 汐屿 showcase (G3D-17). */
+export function examplesForHomepage(): DefaultExample[] {
+  return HOMEPAGE_SHOWCASE
     .map((id) => DEFAULT_EXAMPLES.find((example) => example.id === id))
     .filter((example): example is DefaultExample => Boolean(example));
 }
