@@ -13,7 +13,7 @@
 | 任务范围 | G3D-01 至 G3D-27；里程碑 M0–M5；人日上限 91 |
 | 代码基线 | `yuymf/godesk` `main` @ `f3ea418`（#148 G3D-JUDGE `f3ea418`；#153 资产搜索 `1d1f45b`；#145 G3D-ART-3 `5b585ec`；#143 `0526d16`；#144 G3D-17 预备 `1884e19`；#141 G3D-04c `0bda43e`；#138 G3D-13 `19f212d`；#147 CI 瘦身 `45cd590`；#150 公开前清理 `f79fcc7`；#142 G3D-ART-2 `45a5a1c`） |
 | 状态文件维护人 | 劳埃德(工程) / Track B（素材） |
-| 最近更新 | 2026-10-13（Asia/Shanghai）· boat-sail：帆船三角帆布（draft，叠 #175） |
+| 最近更新 | 2026-10-13（Asia/Shanghai）· boat-sail #176：帆船三角帆布（draft，叠 #175） |
 
 ## 硬约束（三条）
 
@@ -102,7 +102,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 | pier-wet-foot（码头湿脚） | Track C | `feat/pier-wet-foot` [#173](https://github.com/yuymf/godesk/pull/173)（叠 #172） | 码头桩柱水线湿脚（high；medium 淡；low 关）；无 +drawCall；**draft，不合入** |
 | cliff-midband（崖壁中段） | Track C | `feat/cliff-midband` [#174](https://github.com/yuymf/godesk/pull/174)（叠 #173） | 崖壁中段岩色加深（high；medium 淡；low 关）；无新 mesh / drawCall；**draft，不合入** |
 | boat-wetline（帆船水线） | Track C | `feat/boat-wetline` [#175](https://github.com/yuymf/godesk/pull/175)（叠 #174） | 帆船船体水线湿带（high；medium 淡；low 关）；无 +drawCall；**draft，不合入** |
-| boat-sail（帆船帆布） | Track C | `feat/boat-sail`（叠 #175） | 桅上三角白帆（high；medium 缩小；low 关）；无 +drawCall；**draft，不合入** |
+| boat-sail（帆船帆布） | Track C | `feat/boat-sail` [#176](https://github.com/yuymf/godesk/pull/176)（叠 #175） | 桅上三角白帆（high；medium 缩小；low 关）；无 +drawCall；**draft，不合入** |
 
 ## 已知限制
 
@@ -151,7 +151,7 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
-| `feat/boat-sail` | （待开 draft） | 桅上三角白帆；base=`feat/boat-wetline` @f274c97 | draft · 不合入 |
+| `feat/boat-sail` | [#176](https://github.com/yuymf/godesk/pull/176) | 桅上三角白帆；base=`feat/boat-wetline` @f274c97 | draft · 不合入 |
 | `feat/boat-wetline` | [#175](https://github.com/yuymf/godesk/pull/175) | 帆船船体水线湿带；base=`feat/cliff-midband` @3d8b26b | draft · 不合入 |
 | `feat/cliff-midband` | [#174](https://github.com/yuymf/godesk/pull/174) | 崖壁中段岩色；base=`feat/pier-wet-foot` @6392ee4 | draft · 不合入 |
 | `feat/pier-wet-foot` | [#173](https://github.com/yuymf/godesk/pull/173) | 码头桩柱水线湿脚；base=`feat/shore-wave-ridge` @86e8eca | draft · 不合入 |
@@ -239,4 +239,4 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 | 2026-10-12 | shore-wave-ridge #172 draft：近岸 swell / soft ridge（距离场门控；shader-only；叠 #171）；证据 `/workspace/g3d-evidence/godesk-2026-10-12/shore-wave-ridge/`；不合入 | Track C |
 | 2026-10-13 | cliff-midband #174 draft：崖壁中段岩色加深（叠 #173）；证据 `/workspace/g3d-evidence/godesk-2026-10-12/cliff-midband/`；不合入 | Track C |
 | 2026-10-13 | boat-wetline #175 draft：帆船船体水线湿带（叠 #174）；证据 `/workspace/g3d-evidence/godesk-2026-10-12/boat-wetline/`；不合入 | Track C |
-| 2026-10-13 | boat-sail draft：桅上三角白帆（叠 #175）；证据 `/workspace/g3d-evidence/godesk-2026-10-12/boat-sail/`；不合入 | Track C |
+| 2026-10-13 | boat-sail #176 draft：桅上三角白帆（叠 #175）；证据 `/workspace/g3d-evidence/godesk-2026-10-12/boat-sail/`；不合入 | Track C |
