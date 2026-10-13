@@ -52,7 +52,7 @@ import { fulfillAssetAttachIntents } from "./auto-battler-assets";
 import { resolveAutoBattlerContent, DEFAULT_AUTO_BATTLER_CONTENT } from "../src/runtime/adapters/auto-battler-content";
 
 const AUTO_BATTLER_BASE_UNSUPPORTED =
-  "auto-battler-v1 runs 2-seat shop→place→seeded combat→HP resolve on the public play-kernel. Units, trait tiers/effect presets, ★2/★3 rules, prep timers, starting HP/gold, the visual theme (preset tide/ember/frost/night: palette, table material, lighting, background, camera, unit scale) and per-unit modelRef / proceduralPreset (CC0 search, imported GLB, or stylized procedural fallback) are creator-configurable data; board size, lobbies beyond 2 seats, new effect kinds and sealed/hidden shop economy are unsupported.";
+  "auto-battler-v1: 2-seat shop→place→combat→HP on the play-kernel. Configurable: units/traits/stars, timers, start HP/gold, theme presets, per-unit modelRef/proceduralPreset (CC0 search, imported GLB, or stylized fallback). Not: board size, >2 seats, new effect kinds, sealed shop.";
 
 /** Request-like clause (numbers or edit verbs) that the kernel could not map — listed honestly. */
 const REQUEST_LIKE = /[0-9一二三四五六七八九十]|改成|改为|加一个|新增|开启|关闭|设为/;
