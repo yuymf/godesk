@@ -76,7 +76,7 @@ export function applySkillFxIntents(content: AutoBattlerContent, intents: SkillF
         tiers,
         atkBonus: 0,
         hpBonus: 40,
-        effect: { kind: "shield_start", label: `${intent.label}护盾`, values },
+        effect: { kind: "shield_start", label: intent.label.includes("盾") ? intent.label : `${intent.label}护盾`, values },
       };
       traits = [...traits, trait];
       contentTouched.add("traits");
