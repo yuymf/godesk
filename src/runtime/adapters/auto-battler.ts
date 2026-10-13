@@ -14,6 +14,15 @@ import {
   type PlayKernelConfig,
   type PlayState,
 } from "../play-kernel";
+import {
+  DEFAULT_AUTO_BATTLER_CONTENT,
+  resolveAutoBattlerContent,
+  traitTierIndex,
+  type AutoBattlerContent,
+  type AutoBattlerContentPatch,
+  type TraitDef,
+  type UnitDef,
+} from "./auto-battler-content";
 
 export const AUTO_BATTLER_KERNEL_TYPE = "auto-battler-v1" as const;
 
@@ -57,58 +66,63 @@ export function boardCap(level: number): number {
   return Math.min(Math.max(1, level), BOARD_SLOTS);
 }
 
-/** ★★ ×1.8, ★★★ ×3.2 (★3 merge deferred). */
-export function starMult(stars: number): number {
-  if (stars >= 3) return 3.2;
-  if (stars >= 2) return 1.8;
+/** Star multiplier from the active content's star rules (default ★★ ×1.8, ★★★ ×3.2). */
+export function starMult(stars: number, content: AutoBattlerContent = active.content): number {
+  if (stars >= 3) return content.stars.mult3;
+  if (stars >= 2) return content.stars.mult2;
   return 1;
 }
 
-export type TraitId = "tide" | "shell" | "coral" | "voyager";
+export type TraitId = string;
 export type StarLevel = 1 | 2 | 3;
+export type { UnitDef, TraitDef, AutoBattlerContent, AutoBattlerContentPatch };
 
-export type UnitDef = {
-  id: string;
-  name: string;
-  cost: number;
-  atk: number;
-  hp: number;
-  traits: readonly TraitId[];
+type ResolvedContent = {
+  content: AutoBattlerContent;
+  byId: Record<string, UnitDef>;
+  traitById: Record<string, TraitDef>;
 };
 
-/** Original Tide Arena roster (10–12 sea-themed; no third-party names). */
-export const UNIT_CATALOG: readonly UnitDef[] = [
-  { id: "crab", name: "礁蟹", cost: 1, atk: 45, hp: 650, traits: ["shell", "tide"] },
-  { id: "conch", name: "螺号卫", cost: 1, atk: 40, hp: 700, traits: ["shell"] },
-  { id: "blade", name: "潮刃", cost: 2, atk: 70, hp: 550, traits: ["tide"] },
-  { id: "archer", name: "飞鱼弓", cost: 2, atk: 60, hp: 450, traits: ["voyager"] },
-  { id: "rider", name: "浪脊骑", cost: 2, atk: 65, hp: 520, traits: ["tide", "voyager"] },
-  { id: "anemone", name: "海葵师", cost: 2, atk: 55, hp: 500, traits: ["coral"] },
-  { id: "witch", name: "珊瑚巫", cost: 3, atk: 50, hp: 600, traits: ["coral"] },
-  { id: "priest", name: "潮汐祭司", cost: 3, atk: 48, hp: 620, traits: ["tide", "coral"] },
-  { id: "turtle", name: "珍珠龟", cost: 3, atk: 42, hp: 900, traits: ["shell", "voyager"] },
-  { id: "whale", name: "鲸盾", cost: 4, atk: 55, hp: 1100, traits: ["shell"] },
-  { id: "lantern", name: "雾灯人", cost: 4, atk: 75, hp: 700, traits: ["voyager"] },
-  { id: "spirit", name: "海风灵", cost: 5, atk: 85, hp: 800, traits: ["voyager", "tide"] },
-] as const;
+function indexContent(content: AutoBattlerContent): ResolvedContent {
+  return {
+    content,
+    byId: Object.fromEntries(content.units.map((u) => [u.id, u])),
+    traitById: Object.fromEntries(content.traits.map((t) => [t.id, t])),
+  };
+}
 
-const UNIT_BY_ID: Record<string, UnitDef> = Object.fromEntries(
-  UNIT_CATALOG.map((unit) => [unit.id, unit]),
-);
-
+const DEFAULT_RESOLVED = indexContent(DEFAULT_AUTO_BATTLER_CONTENT);
 /**
- * Synergies: trait count ≥2 changes combat stats; timed / heal / extra-hit
- * effects emit heal / trait_trigger combat-log events (Step5).
+ * Content in effect for the current synchronous adapter call. Adapter entry points
+ * pin it from their config via withAutoBattlerContent; it is never left changed.
  */
-export const TRAIT_SYNERGIES: Record<
-  TraitId,
-  { label: string; glyph: string; min: number; tiers: readonly number[]; atkBonus: number; hpBonus: number }
-> = {
-  tide: { label: "潮汐", glyph: "潮", min: 2, tiers: [2, 4, 6], atkBonus: 0, hpBonus: 60 },
-  shell: { label: "硬壳", glyph: "甲", min: 2, tiers: [2, 4], atkBonus: 0, hpBonus: 150 },
-  coral: { label: "珊瑚咒", glyph: "咒", min: 2, tiers: [2, 3], atkBonus: 10, hpBonus: 0 },
-  voyager: { label: "远航", glyph: "风", min: 2, tiers: [2, 4], atkBonus: 12, hpBonus: 0 },
-};
+let active: ResolvedContent = DEFAULT_RESOLVED;
+const resolvedCache = new WeakMap<AutoBattlerContent, ResolvedContent>();
+
+export function withAutoBattlerContent<T>(content: AutoBattlerContent | undefined, fn: () => T): T {
+  if (!content || content === active.content) return fn();
+  let resolved = resolvedCache.get(content);
+  if (!resolved) {
+    resolved = indexContent(content);
+    resolvedCache.set(content, resolved);
+  }
+  const previous = active;
+  active = resolved;
+  try {
+    return fn();
+  } finally {
+    active = previous;
+  }
+}
+
+/** Default roster (data, not logic) — kept as named exports for existing callers. */
+export const UNIT_CATALOG: readonly UnitDef[] = DEFAULT_AUTO_BATTLER_CONTENT.units;
+
+/** Trait table keyed by id for the given content (HUD rows). */
+export function traitTable(content: AutoBattlerContent = active.content): Record<string, TraitDef & { min: number }> {
+  return Object.fromEntries(content.traits.map((t) => [t.id, { ...t, min: t.tiers[0] ?? 2 }]));
+}
+export const TRAIT_SYNERGIES = traitTable(DEFAULT_AUTO_BATTLER_CONTENT);
 
 export type Piece = {
   uid: string;
@@ -171,7 +185,7 @@ export function normalizeAutoBattlerTuning(raw: unknown): AutoBattlerTuning | nu
   return out;
 }
 
-export type AutoBattlerConfig = { playerCount: number; tuning?: AutoBattlerTuning };
+export type AutoBattlerConfig = { playerCount: number; tuning?: AutoBattlerTuning; content?: AutoBattlerContent };
 
 export type AutoBattlerGenre = {
   round: number;
@@ -194,10 +208,19 @@ function parseAutoBattlerConfig(
   if (playerCount !== 2) return null;
   const tuning = normalizeAutoBattlerTuning(raw.tuning);
   if (tuning === null) return null;
-  return Object.keys(tuning).length ? { playerCount: 2, tuning } : { playerCount: 2 };
+  const content = raw.content === undefined ? undefined : resolveAutoBattlerContent(raw.content);
+  if (content === null) return null;
+  return {
+    playerCount: 2,
+    ...(Object.keys(tuning).length ? { tuning } : {}),
+    ...(content ? { content } : {}),
+  };
 }
 
-export function createAutoBattlerKernelConfig(tuning?: AutoBattlerTuning): PlayKernelConfig {
+export function createAutoBattlerKernelConfig(
+  tuning?: AutoBattlerTuning,
+  content?: AutoBattlerContentPatch,
+): PlayKernelConfig {
   return {
     kernelType: AUTO_BATTLER_KERNEL_TYPE,
     playerCount: 2,
@@ -206,7 +229,11 @@ export function createAutoBattlerKernelConfig(tuning?: AutoBattlerTuning): PlayK
       { id: "place", name: "Place" },
       { id: "ended", name: "Ended" },
     ],
-    adapter: tuning && Object.keys(tuning).length ? { playerCount: 2, tuning } : { playerCount: 2 },
+    adapter: {
+      playerCount: 2,
+      ...(tuning && Object.keys(tuning).length ? { tuning } : {}),
+      ...(content && Object.keys(content).length ? { content } : {}),
+    },
   };
 }
 
@@ -216,10 +243,11 @@ function emptySlots<T>(n: number): Array<T | null> {
 
 function rollShop(seed: number, sequence: number, count: number): string[] {
   const rng = createSeededRng(seed);
-  const ids = UNIT_CATALOG.map((unit) => unit.id);
+  const ids = active.content.units.map((unit) => unit.id);
   const shop: string[] = [];
   for (let i = 0; i < count; i += 1) {
-    const roll = rng.at(sequence + 17 + i) % ids.length;
+    // Stride by shop size so consecutive refreshes (sequence+1) don't reuse 4 of 5 rolls.
+    const roll = rng.at(sequence * (count + 3) + 17 + i) % ids.length;
     shop.push(ids[roll]!);
   }
   return shop;
@@ -287,7 +315,7 @@ function makePiece(
   owner: number,
   stars: StarLevel = 1,
 ): Piece | null {
-  const def = UNIT_BY_ID[unitId];
+  const def = active.byId[unitId];
   if (!def) return null;
   const uid = `p${genre.nextUid}`;
   genre.nextUid += 1;
@@ -308,17 +336,27 @@ function sellRefund(def: UnitDef, stars: StarLevel): number {
 }
 
 /**
- * ★2 merge: any three ★1 of the same unitId across board+bench → one ★2.
- * ★3 deferred (interface allows stars=3 but no merge path yet).
+ * Star-up per content star rules: three ★1 of a unit → ★2 (when star2), three ★2 → ★3
+ * (when star3), across board + bench.
  */
 function tryMergeSeat(seat: SeatState, genre: AutoBattlerGenre): void {
+  const { star2, star3 } = active.content.stars;
+  if (!star2) return;
+  for (const from of star3 ? [1, 2] as const : [1] as const) {
+    mergeStarsOnce(seat, genre, from);
+  }
+  // A fresh ★2 may complete a ★3 trio.
+  if (star3) mergeStarsOnce(seat, genre, 2);
+}
+
+function mergeStarsOnce(seat: SeatState, genre: AutoBattlerGenre, from: 1 | 2): void {
   let changed = true;
   while (changed) {
     changed = false;
     const groups = new Map<string, Array<{ where: "board" | "bench"; index: number; piece: Piece }>>();
     const collect = (where: "board" | "bench", slots: Array<Piece | null>) => {
       slots.forEach((piece, index) => {
-        if (!piece || piece.stars !== 1) return;
+        if (!piece || piece.stars !== from) return;
         const list = groups.get(piece.unitId) ?? [];
         list.push({ where, index, piece });
         groups.set(piece.unitId, list);
@@ -331,7 +369,7 @@ function tryMergeSeat(seat: SeatState, genre: AutoBattlerGenre): void {
       const keep = list[0]!;
       const dropA = list[1]!;
       const dropB = list[2]!;
-      const merged = makePiece(genre, keep.piece.unitId, keep.piece.owner, 2);
+      const merged = makePiece(genre, keep.piece.unitId, keep.piece.owner, (from + 1) as StarLevel);
       if (!merged) continue;
       // Prefer keeping the keep slot; free the other two.
       const keepSlots = keep.where === "board" ? seat.board : seat.bench;
@@ -344,42 +382,43 @@ function tryMergeSeat(seat: SeatState, genre: AutoBattlerGenre): void {
   }
 }
 
-export function unitDef(unitId: string): UnitDef | undefined {
-  return UNIT_BY_ID[unitId];
+export function unitDef(unitId: string, content?: AutoBattlerContent): UnitDef | undefined {
+  return content ? content.units.find((u) => u.id === unitId) : active.byId[unitId];
 }
 
 /** Trait counts on a board (for HUD rows incl. inactive traits). */
-export function traitCounts(board: Array<Piece | null>): Record<TraitId, number> {
-  const counts: Record<TraitId, number> = { tide: 0, shell: 0, coral: 0, voyager: 0 };
-  for (const piece of board) {
-    const def = piece ? UNIT_BY_ID[piece.unitId] : undefined;
-    if (def) for (const trait of def.traits) counts[trait] += 1;
-  }
-  return counts;
+export function traitCounts(board: Array<Piece | null>, content?: AutoBattlerContent): Record<TraitId, number> {
+  return withAutoBattlerContent(content, () => {
+    const counts: Record<TraitId, number> = Object.fromEntries(active.content.traits.map((t) => [t.id, 0]));
+    for (const piece of board) {
+      const def = piece ? active.byId[piece.unitId] : undefined;
+      if (def) for (const trait of def.traits) if (trait in counts) counts[trait] = (counts[trait] ?? 0) + 1;
+    }
+    return counts;
+  });
 }
 
 export function activeSynergies(
   board: Array<Piece | null>,
-): Array<{ trait: TraitId; count: number; label: string }> {
-  const counts = traitCounts(board);
-  return (Object.keys(TRAIT_SYNERGIES) as TraitId[])
-    .filter((trait) => counts[trait] >= TRAIT_SYNERGIES[trait].min)
-    .map((trait) => ({
-      trait,
-      count: counts[trait],
-      label: TRAIT_SYNERGIES[trait].label,
-    }));
+  content?: AutoBattlerContent,
+): Array<{ trait: TraitId; count: number; label: string; tier: number }> {
+  return withAutoBattlerContent(content, () => {
+    const counts = traitCounts(board);
+    return active.content.traits
+      .map((t) => ({ trait: t.id, count: counts[t.id] ?? 0, label: t.label, tier: traitTierIndex(t, counts[t.id] ?? 0) }))
+      .filter((entry) => entry.tier >= 0);
+  });
 }
 
 function applySynergiesToPiece(piece: Piece, board: Array<Piece | null>): Piece {
-  const def = UNIT_BY_ID[piece.unitId];
+  const def = active.byId[piece.unitId];
   if (!def) return { ...piece };
   const syn = activeSynergies(board);
   const base = scaledStats(def, piece.stars);
   let atk = base.atk;
   let hp = base.hp;
   for (const entry of syn) {
-    const bonus = TRAIT_SYNERGIES[entry.trait];
+    const bonus = active.traitById[entry.trait]!;
     atk += bonus.atkBonus;
     hp += bonus.hpBonus;
   }
@@ -419,17 +458,10 @@ function manhattan(a: CombatFighter, b: CombatFighter): number {
   return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 }
 
-function tideShieldAmount(count: number): number {
-  if (count >= 6) return 90;
-  if (count >= 4) return 45;
-  if (count >= 2) return 20;
-  return 0;
-}
-
-function coralHealRatio(count: number): number {
-  if (count >= 3) return 0.4;
-  if (count >= 2) return 0.2;
-  return 0;
+/** Effect value at the trait's current tier for a side (0 when inactive / no such effect). */
+function effectValue(trait: TraitDef, count: number): number {
+  const idx = traitTierIndex(trait, count);
+  return idx >= 0 && trait.effect ? trait.effect.values[idx] ?? 0 : 0;
 }
 
 function applyHeal(
@@ -469,60 +501,28 @@ function runCombat(
   const counts0 = traitCounts(genre.seats[0].board);
   const counts1 = traitCounts(genre.seats[1].board);
 
-  // Tide surge at combat start: shield (heal) all living allies.
-  for (const [owner, syn, counts] of [
-    [0, syn0, counts0] as const,
-    [1, syn1, counts1] as const,
-  ]) {
-    if (!syn.some((s) => s.trait === "tide")) continue;
-    const amount = tideShieldAmount(counts.tide);
-    if (amount <= 0) continue;
-    log.push({
-      kind: "trait_trigger",
-      trait: "tide",
-      label: TRAIT_SYNERGIES.tide.label,
-      detail: `潮涌护盾 +${amount}`,
-    });
-    for (const f of fighters.filter((x) => x.owner === owner && x.hp > 0)) {
-      applyHeal(fighters, f.uid, amount, log);
+  const countsBy = [counts0, counts1] as const;
+  const synBy = [syn0, syn1] as const;
+  // Combat-start trait triggers, in content order (data-driven effect presets).
+  for (const trait of active.content.traits) {
+    const kind = trait.effect?.kind;
+    if (kind === "shield_start") {
+      for (const owner of [0, 1] as const) {
+        if (!synBy[owner].some((s) => s.trait === trait.id)) continue;
+        const amount = effectValue(trait, countsBy[owner][trait.id] ?? 0);
+        if (amount <= 0) continue;
+        log.push({ kind: "trait_trigger", trait: trait.id, label: trait.label, detail: `${trait.effect!.label} +${amount}` });
+        for (const f of fighters.filter((x) => x.owner === owner && x.hp > 0)) {
+          applyHeal(fighters, f.uid, amount, log);
+        }
+      }
+    } else if (synBy[0].some((s) => s.trait === trait.id) || synBy[1].some((s) => s.trait === trait.id)) {
+      log.push({ kind: "trait_trigger", trait: trait.id, label: trait.label, detail: trait.effect?.label ?? `${trait.label}加持` });
     }
   }
-  if (syn0.some((s) => s.trait === "shell") || syn1.some((s) => s.trait === "shell")) {
-    for (const [owner, syn] of [[0, syn0] as const, [1, syn1] as const]) {
-      if (!syn.some((s) => s.trait === "shell")) continue;
-      log.push({
-        kind: "trait_trigger",
-        trait: "shell",
-        label: TRAIT_SYNERGIES.shell.label,
-        detail: counts0.shell >= 4 || counts1.shell >= 4 ? "硬壳反射就绪" : "硬壳加持",
-      });
-      void owner;
-    }
-  }
-  for (const [syn] of [[syn0] as const, [syn1] as const]) {
-    if (syn.some((s) => s.trait === "coral")) {
-      log.push({
-        kind: "trait_trigger",
-        trait: "coral",
-        label: TRAIT_SYNERGIES.coral.label,
-        detail: "珊瑚愈伤",
-      });
-      break;
-    }
-  }
-  for (const [syn] of [[syn0] as const, [syn1] as const]) {
-    if (syn.some((s) => s.trait === "voyager")) {
-      log.push({
-        kind: "trait_trigger",
-        trait: "voyager",
-        label: TRAIT_SYNERGIES.voyager.label,
-        detail: "远航追击",
-      });
-      break;
-    }
-  }
+  const traitsWith = (kind: string) => active.content.traits.filter((t) => t.effect?.kind === kind);
 
-  const coralHealUsed = new Set<number>(); // per owner: first coral strike heals
+  const healUsed = new Set<string>(); // per owner+trait: first strike of a healer trait heals
   let tick = 0;
   while (tick < MAX_COMBAT_TICKS) {
     const living0 = fighters.filter((f) => f.owner === 0 && f.hp > 0);
@@ -560,11 +560,12 @@ function runCombat(
           damage: dmg,
           targetHp: Math.max(0, target.hp),
         });
-        // Shell (4): reflect 10% of melee damage back.
-        const shellCount = attacker.owner === 0 ? counts1.shell : counts0.shell;
-        const targetDef = UNIT_BY_ID[target.unitId];
-        if (shellCount >= 4 && targetDef?.traits.includes("shell") && target.hp > 0) {
-          const reflect = Math.max(1, Math.floor(dmg * 0.1));
+        // Reflect presets: defender units carrying the trait bounce a share of damage back.
+        const targetDef = active.byId[target.unitId];
+        for (const trait of traitsWith("reflect")) {
+          const ratio = effectValue(trait, countsBy[target.owner as 0 | 1][trait.id] ?? 0);
+          if (ratio <= 0 || !targetDef?.traits.includes(trait.id) || target.hp <= 0) continue;
+          const reflect = Math.max(1, Math.floor(dmg * ratio));
           attacker.hp -= reflect;
           log.push({
             kind: "strike",
@@ -586,32 +587,28 @@ function runCombat(
 
       deal(attacker.atk);
 
-      // Coral: first strike from a coral unit heals lowest-hp ally.
-      const atkDef = UNIT_BY_ID[attacker.unitId];
-      const coralCount = attacker.owner === 0 ? counts0.coral : counts1.coral;
-      if (
-        atkDef?.traits.includes("coral") &&
-        coralCount >= 2 &&
-        !coralHealUsed.has(attacker.owner)
-      ) {
-        coralHealUsed.add(attacker.owner);
-        const ratio = coralHealRatio(coralCount);
+      const atkDef = active.byId[attacker.unitId];
+      const ownCounts = countsBy[attacker.owner as 0 | 1];
+      // Heal presets: the first strike of a unit carrying the trait heals the neediest ally.
+      for (const trait of traitsWith("heal_first_strike")) {
+        const ratio = effectValue(trait, ownCounts[trait.id] ?? 0);
+        const key = `${attacker.owner}:${trait.id}`;
+        if (ratio <= 0 || !atkDef?.traits.includes(trait.id) || healUsed.has(key)) continue;
+        healUsed.add(key);
         const allies = fighters.filter((f) => f.owner === attacker.owner && f.hp > 0);
         allies.sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp || a.uid.localeCompare(b.uid));
         const needy = allies[0];
         if (needy) applyHeal(fighters, needy.uid, Math.max(1, Math.floor(attacker.atk * ratio)), log);
       }
 
-      // Voyager: first attack fires an extra hit at 50% damage.
-      const voyCount = attacker.owner === 0 ? counts0.voyager : counts1.voyager;
-      if (
-        atkDef?.traits.includes("voyager") &&
-        voyCount >= 2 &&
-        !attacker.firstStrikeDone &&
-        target.hp > 0
-      ) {
+      // Extra-hit presets: a unit's first attack fires a follow-up at ratio × atk.
+      const extra = traitsWith("extra_hit")
+        .filter((t) => atkDef?.traits.includes(t.id))
+        .map((t) => effectValue(t, ownCounts[t.id] ?? 0))
+        .find((ratio) => ratio > 0);
+      if (extra !== undefined && !attacker.firstStrikeDone && target.hp > 0) {
         attacker.firstStrikeDone = true;
-        deal(Math.max(1, Math.floor(attacker.atk * 0.5)));
+        deal(Math.max(1, Math.floor(attacker.atk * extra)));
       } else {
         attacker.firstStrikeDone = true;
       }
@@ -686,6 +683,21 @@ export const autoBattlerAdapter: PlayKernelAdapter<
   kernelType: AUTO_BATTLER_KERNEL_TYPE,
   parseConfig: parseAutoBattlerConfig,
   createGenreState(config, seed) {
+    return withAutoBattlerContent(config.content, () => createGenreStateImpl(config, seed));
+  },
+  initialPhase() {
+    return "shop";
+  },
+  listLegalActions(state, playerId, config) {
+    return withAutoBattlerContent(config?.content, () => listLegalActionsImpl(state, playerId));
+  },
+  reduce(state, action, config) {
+    return withAutoBattlerContent(config?.content, () => reduceImpl(state, action));
+  },
+};
+
+function createGenreStateImpl(config: AutoBattlerConfig, seed: number): AutoBattlerGenre {
+  {
     const tuning = config.tuning && Object.keys(config.tuning).length ? config.tuning : undefined;
     const genre: AutoBattlerGenre = {
       round: 1,
@@ -698,11 +710,11 @@ export const autoBattlerAdapter: PlayKernelAdapter<
     };
     setPrepDeadline(genre, "shop");
     return genre;
-  },
-  initialPhase() {
-    return "shop";
-  },
-  listLegalActions(state, playerId) {
+  }
+}
+
+function listLegalActionsImpl(state: PlayState<AutoBattlerGenre>, playerId: number) {
+  {
     if (
       state.status !== "active" ||
       playerId !== state.activePlayerId ||
@@ -713,10 +725,10 @@ export const autoBattlerAdapter: PlayKernelAdapter<
     const seat = state.genre.seats[playerId];
     if (!seat || seat.ready) return [];
     const legal: Array<{ type: string; label: string; payload?: Record<string, unknown> }> = [];
-    const name = (piece: Piece) => UNIT_BY_ID[piece.unitId]?.name ?? piece.unitId;
+    const name = (piece: Piece) => active.byId[piece.unitId]?.name ?? piece.unitId;
     if (state.phase === "shop") {
       seat.shop.forEach((unitId, shopIndex) => {
-        const def = UNIT_BY_ID[unitId];
+        const def = active.byId[unitId];
         if (def && seat.gold >= def.cost && firstEmpty(seat.bench) >= 0) {
           legal.push({ type: "buy", label: `购买 ${def.name}`, payload: { shopIndex } });
         }
@@ -752,8 +764,11 @@ export const autoBattlerAdapter: PlayKernelAdapter<
         : { type: "ready_place", label: "锁定阵容" },
     );
     return legal;
-  },
-  reduce(state, action) {
+  }
+}
+
+function reduceImpl(state: PlayState<AutoBattlerGenre>, action: PlayAction): ReturnType<typeof autoBattlerAdapter.reduce> {
+  {
     if (
       state.status !== "active" ||
       action.playerId !== state.activePlayerId ||
@@ -782,7 +797,7 @@ export const autoBattlerAdapter: PlayKernelAdapter<
       if (phase !== "shop") return null;
       const shopIndex = index("shopIndex", seat.shop.length);
       if (shopIndex === null) return null;
-      const def = UNIT_BY_ID[seat.shop[shopIndex] ?? ""];
+      const def = active.byId[seat.shop[shopIndex] ?? ""];
       const slot = firstEmpty(seat.bench);
       if (!def || seat.gold < def.cost || slot < 0) return null;
       const piece = makePiece(genre, def.id, action.playerId);
@@ -806,7 +821,7 @@ export const autoBattlerAdapter: PlayKernelAdapter<
       const slots = benchIndex !== null ? seat.bench : seat.board;
       const at = (benchIndex ?? boardIndex)!;
       const piece = slots[at];
-      const def = piece ? UNIT_BY_ID[piece.unitId] : undefined;
+      const def = piece ? active.byId[piece.unitId] : undefined;
       if (!piece || !def) return null;
       slots[at] = null;
       seat.gold += sellRefund(def, piece.stars);
@@ -892,8 +907,8 @@ export const autoBattlerAdapter: PlayKernelAdapter<
       return { genre, phase: "shop", activePlayerId: 0, status: "active", winnerId: null };
     }
     return null;
-  },
-};
+  }
+}
 
 function seatToSession(seat: SeatState) {
   return {
@@ -936,9 +951,10 @@ export function autoBattlerToSessionFields(state: PlayState<AutoBattlerGenre>) {
 export function bindAutoBattlerFromRuntimeKernel(input: {
   playerCount: number;
   tuning?: AutoBattlerTuning;
+  content?: AutoBattlerContentPatch;
 }): PlayKernelConfig {
   if (input.playerCount !== 2) throw new Error("auto_battler_requires_two_players");
-  return createAutoBattlerKernelConfig(input.tuning);
+  return createAutoBattlerKernelConfig(input.tuning, input.content);
 }
 
 export function playActionFromAutoBattlerIntent(
@@ -989,11 +1005,13 @@ export function applyAutoBattlerPrepTimeout(
 export function pickAutoBattlerBotAction(
   state: PlayState<AutoBattlerGenre>,
   seed: number,
+  content?: AutoBattlerContentPatch,
 ): PlayAction {
+  const resolved = content ? resolveAutoBattlerContent(content) ?? undefined : undefined;
   const legal = autoBattlerAdapter.listLegalActions(
     state,
     state.activePlayerId,
-    { playerCount: 2 },
+    { playerCount: 2, ...(resolved ? { content: resolved } : {}) },
   );
   if (!legal.length) {
     return {

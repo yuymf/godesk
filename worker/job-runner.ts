@@ -47,7 +47,32 @@ import {
   createGenerationPlan,
   materializeRuleSystem,
 } from "./rulebook-generation";
-import { createKernelTuningIterationPlan } from "./kernel-tuning-iteration";
+import { createKernelTuningIterationPlan, parseKernelEdits } from "./kernel-tuning-iteration";
+
+const AUTO_BATTLER_BASE_UNSUPPORTED =
+  "auto-battler-v1 runs 2-seat shop→place→seeded combat→HP resolve on the public play-kernel. Units, trait tiers/effect presets, ★2/★3 rules, prep timers and starting HP/gold are creator-configurable data; theme art, board size, lobbies beyond 2 seats, new effect kinds and sealed/hidden shop economy are unsupported.";
+
+/** Request-like clause (numbers or edit verbs) that the kernel could not map — listed honestly. */
+const REQUEST_LIKE = /[0-9一二三四五六七八九十]|改成|改为|加一个|新增|开启|关闭|设为/;
+
+/** Fold any configurable edits in the idea into the proposed configure_auto_battler op. */
+function autoBattlerProposedRuntime(idea: string) {
+  const parsed = parseKernelEdits({ type: "auto-battler-v1", playerCount: 2 } as never, idea);
+  const recognized = Boolean(parsed?.changes.length);
+  const leftovers = recognized ? (parsed?.unsupportedClauses ?? []).filter((c) => REQUEST_LIKE.test(c)) : [];
+  return {
+    op: "configure_auto_battler" as const,
+    config: {
+      playerCount: 2,
+      unsupported: [
+        AUTO_BATTLER_BASE_UNSUPPORTED,
+        ...leftovers.map((c) => `未执行的创作者要求：「${c}」——当前内核没有对应的可配置项。`),
+      ],
+      ...(recognized && parsed && Object.keys(parsed.tuning).length ? { tuning: parsed.tuning } : {}),
+      ...(recognized && parsed?.contentPatch ? { content: parsed.contentPatch } : {}),
+    },
+  };
+}
 import { createActionDescriptionIterationPlan } from "./rule-system-iteration";
 import {
   PROJECT_PREFIX,
@@ -429,15 +454,7 @@ export async function runCreatorJob(
             },
           }
         : autoBattlerRuntimeConfigured
-        ? {
-            op: "configure_auto_battler" as const,
-            config: {
-              playerCount: 2,
-              unsupported: [
-                "auto-battler-v1 (Tide Arena / 潮阵) runs 2-seat shop→place→seeded combat→HP resolve on the public play-kernel (★2 three-of-a-kind merge, fixed 12-unit roster, 4 trait synergies, authoritative prep timer); ★3, custom rosters/traits, lobbies beyond 2 seats, and sealed/hidden shop economy are unsupported.",
-              ],
-            },
-          }
+        ? autoBattlerProposedRuntime(idea)
         : auctionBiddingRuntimeConfigured
         ? {
             op: "configure_auction_bidding" as const,

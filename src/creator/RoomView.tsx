@@ -58,6 +58,12 @@ const LazyHexSettlementBoard = lazy(async () => {
 import { NetworkRouteBoard, type NetworkRouteBoardState } from "./NetworkRouteBoard";
 import { AuctionBiddingBoard } from "./AuctionBiddingBoard";
 import { TideArenaBoard } from "./TideArenaBoard";
+import type { AutoBattlerContentPatch } from "../runtime/adapters/auto-battler-content";
+
+function autoBattlerContent(ruleSystem: { runtimeSupport: unknown }): AutoBattlerContentPatch | undefined {
+  const support = ruleSystem.runtimeSupport as { status?: string; kernel?: { type?: string; content?: AutoBattlerContentPatch } };
+  return support?.status === "executable" && support.kernel?.type === "auto-battler-v1" ? support.kernel.content : undefined;
+}
 import { HandPlayBoard } from "./HandPlayBoard";
 import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import {
@@ -704,6 +710,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
           onAct={(actionId, payload) => { void act(actionId, -1, payload); }} />
       ) : autoBattler && autoBattlerState ? (
         <TideArenaBoard arena={autoBattlerState} activeSeat={activeSeat}
+          content={autoBattlerContent(build.ruleSystem)}
           enabled={isMyTurn} busy={busy} status={room.state.status} viewerSeat={seat}
           onAct={(actionId, payload) => { void act(actionId, -1, payload); }} />
       ) : (

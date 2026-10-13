@@ -78,6 +78,8 @@ import {
 } from "../src/runtime/adapters/auction-bidding";
 import {
   autoBattlerAdapter,
+  autoBattlerNow,
+  setAutoBattlerNow,
   autoBattlerToSessionFields,
   applyAutoBattlerPrepTimeout,
   bindAutoBattlerFromRuntimeKernel,
@@ -369,7 +371,7 @@ export function initialSessionState(
   if (runtime?.kernel.type === "auto-battler-v1") {
     const play = createInitialState(
       autoBattlerAdapter,
-      bindAutoBattlerFromRuntimeKernel({ playerCount: runtime.kernel.playerCount, tuning: runtime.kernel.tuning }),
+      bindAutoBattlerFromRuntimeKernel({ playerCount: runtime.kernel.playerCount, tuning: runtime.kernel.tuning, content: runtime.kernel.content }),
       _seed,
     );
     return autoBattlerToSessionFields(play);
@@ -388,6 +390,22 @@ function winnerSeat(scores: number[]) {
     (winner, score, seat) => (score > scores[winner] ? seat : winner),
     0,
   );
+}
+
+/**
+ * Run `fn` with every wall-clock-reading kernel pinned to `ms` (no-op when undefined).
+ * Used to (re)play logged actions at their recorded acceptance time, so a room rebuilt
+ * from its action log has the same deadlines as the live room.
+ */
+export function runAtSessionTime<T>(ms: number | undefined, fn: () => T): T {
+  if (ms === undefined || !Number.isFinite(ms)) return fn();
+  const previous = autoBattlerNow;
+  setAutoBattlerNow(() => ms);
+  try {
+    return fn();
+  } finally {
+    setAutoBattlerNow(previous);
+  }
 }
 
 export function acceptIntent(
@@ -1029,7 +1047,7 @@ export function acceptIntent(
 
   if (runtime.kernel.type === "auto-battler-v1") {
     if (state.status !== "active" || !state.autoBattler || intent.seat !== state.activeSeat) return null;
-    const kernelConfig = bindAutoBattlerFromRuntimeKernel({ playerCount: runtime.kernel.playerCount, tuning: runtime.kernel.tuning });
+    const kernelConfig = bindAutoBattlerFromRuntimeKernel({ playerCount: runtime.kernel.playerCount, tuning: runtime.kernel.tuning, content: runtime.kernel.content });
     let playState = {
       seed,
       sequence: state.turn,
@@ -1051,6 +1069,7 @@ export function acceptIntent(
         actionId: timed ? "prep_timeout" : intent.actionId,
         points: 0,
         payload: intent.payload,
+        at: autoBattlerNow(),
         state: autoBattlerToSessionFields(playState),
       };
     }
@@ -1068,7 +1087,8 @@ export function acceptIntent(
           seat: intent.seat,
           actionId: "prep_timeout",
           points: 0,
-          state: autoBattlerToSessionFields(playState),
+          at: autoBattlerNow(),
+        state: autoBattlerToSessionFields(playState),
         };
       }
       return null;
@@ -1080,6 +1100,7 @@ export function acceptIntent(
       actionId: intent.actionId,
       points: 0,
       payload: intent.payload,
+      at: autoBattlerNow(),
       state: autoBattlerToSessionFields(result.state),
     };
   }
@@ -1275,7 +1296,7 @@ export function pickBotIntent(
       const readyType = playState.phase === "shop" ? "ready_shop" : "ready_place";
       return { seat: state.activeSeat, actionId: readyType };
     }
-    const bot = pickAutoBattlerBotAction(playState, seed);
+    const bot = pickAutoBattlerBotAction(playState, seed, runtime.kernel.content);
     return {
       seat: state.activeSeat,
       actionId: bot.type,
@@ -1428,7 +1449,7 @@ export function runBotSimulation(
         events: [] as const,
         genre: sessionAutoBattlerToGenre(state.autoBattler),
       };
-      const bot = pickAutoBattlerBotAction(playState, seed);
+      const bot = pickAutoBattlerBotAction(playState, seed, runtime.kernel.content);
       const accepted = acceptIntent(state, runtime, {
         intentId: `bot_${acceptedActions.length + 1}`,
         seat: state.activeSeat,

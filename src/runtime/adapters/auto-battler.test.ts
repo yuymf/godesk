@@ -291,3 +291,68 @@ describe("auto-battler tuning (creator knobs)", () => {
     expect(m.normalizeAutoBattlerTuning({ bogus: 1 })).toBeNull();
   });
 });
+
+describe("auto-battler content data layer", () => {
+  it("default content reproduces the shipped 12 units / 4 traits / ★2-only rules", async () => {
+    const { DEFAULT_AUTO_BATTLER_CONTENT, resolveAutoBattlerContent } = await import("./auto-battler-content");
+    expect(DEFAULT_AUTO_BATTLER_CONTENT.units).toHaveLength(12);
+    expect(DEFAULT_AUTO_BATTLER_CONTENT.traits.map((t) => t.id)).toEqual(["tide", "shell", "coral", "voyager"]);
+    expect(resolveAutoBattlerContent(undefined)).toBe(DEFAULT_AUTO_BATTLER_CONTENT);
+    expect(resolveAutoBattlerContent({ units: [{ id: "x", name: "X", cost: 9, atk: 1, hp: 1, traits: [] }] })).toBeNull();
+  });
+  it("custom roster drives the shop and ★3 merges three ★2", async () => {
+    const m = await import("./auto-battler");
+    const { applyAction, createInitialState } = await import("../play-kernel");
+    const units = [
+      { id: "a", name: "甲", cost: 1, atk: 10, hp: 100, traits: [] },
+      { id: "b", name: "乙", cost: 1, atk: 10, hp: 100, traits: [] },
+    ];
+    const cfg = m.bindAutoBattlerFromRuntimeKernel({ playerCount: 2, tuning: { startGold: 100 }, content: { units, stars: { star3: true } } });
+    let s = createInitialState(m.autoBattlerAdapter, cfg, 3);
+    expect(s.genre.seats[0].shop.every((id) => id === "a" || id === "b")).toBe(true);
+    // Force a shop of all "a" and buy 9 → one ★3.
+    for (let k = 0; k < 9; k++) {
+      s = { ...s, genre: { ...s.genre, seats: [{ ...s.genre.seats[0], shop: ["a", "a", "a", "a", "a"] }, s.genre.seats[1]] } };
+      const r = applyAction(m.autoBattlerAdapter, s, { type: "buy", playerId: 0, payload: { shopIndex: 0 } }, cfg);
+      expect(r.ok).toBe(true);
+      if (r.ok) s = r.state;
+    }
+    const pieces = [...s.genre.seats[0].bench, ...s.genre.seats[0].board].filter(Boolean);
+    expect(pieces).toHaveLength(1);
+    expect(pieces[0]!.stars).toBe(3);
+    expect(pieces[0]!.atk).toBe(Math.round(10 * 3.2));
+  });
+  it("trait tiers from content gate activation", async () => {
+    const m = await import("./auto-battler");
+    const { DEFAULT_AUTO_BATTLER_CONTENT, resolveAutoBattlerContent } = await import("./auto-battler-content");
+    const traits = DEFAULT_AUTO_BATTLER_CONTENT.traits.map((t) => (t.id === "coral" ? { ...t, tiers: [3], effect: { ...t.effect!, values: [0.3] } } : t));
+    const content = resolveAutoBattlerContent({ traits })!;
+    const board = [
+      { uid: "1", unitId: "anemone", owner: 0, stars: 1 as const, atk: 1, hp: 1, maxHp: 1 },
+      { uid: "2", unitId: "witch", owner: 0, stars: 1 as const, atk: 1, hp: 1, maxHp: 1 },
+    ];
+    expect(m.activeSynergies(board).some((s) => s.trait === "coral")).toBe(true);
+    expect(m.activeSynergies(board, content).some((s) => s.trait === "coral")).toBe(false);
+  });
+});
+
+describe("shop refresh variety", () => {
+  it("consecutive refreshes are not a sliding window of the previous shop", async () => {
+    const m = await import("./auto-battler");
+    const { applyAction, createInitialState } = await import("../play-kernel");
+    const cfg = m.bindAutoBattlerFromRuntimeKernel({ playerCount: 2, tuning: { startGold: 100 } });
+    let s = createInitialState(m.autoBattlerAdapter, cfg, 11);
+    const seen = new Set<string>();
+    let slid = 0;
+    for (let k = 0; k < 12; k++) {
+      const prev = s.genre.seats[0].shop.join(",");
+      const r = applyAction(m.autoBattlerAdapter, s, { type: "refresh", playerId: 0 }, cfg);
+      if (!r.ok) throw new Error("refresh");
+      s = r.state;
+      s.genre.seats[0].shop.forEach((id) => seen.add(id));
+      if (s.genre.seats[0].shop.slice(0, 4).join(",") === prev.split(",").slice(1).join(",")) slid += 1;
+    }
+    expect(slid).toBe(0);
+    expect(seen.size).toBeGreaterThanOrEqual(10);
+  });
+});

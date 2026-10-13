@@ -1,3 +1,4 @@
+import type { AutoBattlerContentPatch } from "../runtime/adapters/auto-battler-content";
 import type { GameSpec, GenerationMetadata } from "./game-spec";
 import type { RenderPatch, RenderSpec } from "./render-spec";
 
@@ -282,6 +283,8 @@ export interface RuleSystem {
               playerCount: number;
               /** Creator tuning (prep timers, starting HP/gold); omitted → kernel defaults. */
               tuning?: { prepShopSeconds?: number; prepPlaceSeconds?: number; startHp?: number; startGold?: number };
+              /** Content data (units / traits / star rules); omitted fields → kernel defaults. */
+              content?: AutoBattlerContentPatch;
             };
   };
 }
@@ -631,7 +634,7 @@ export type ProjectChangeOperation =
     }
   | {
       op: "configure_auto_battler";
-      config: { playerCount: number; unsupported?: string[]; tuning?: { prepShopSeconds?: number; prepPlaceSeconds?: number; startHp?: number; startGold?: number } };
+      config: { playerCount: number; unsupported?: string[]; tuning?: { prepShopSeconds?: number; prepPlaceSeconds?: number; startHp?: number; startGold?: number }; content?: AutoBattlerContentPatch };
     }
   | {
       /** G3D-15: partial patch over `presentation.render` (spatial surfaces only). */
@@ -1027,6 +1030,12 @@ export interface AcceptedAction {
   points: number;
   payload?: Record<string, unknown>;
   state: SessionState;
+  /**
+   * Epoch ms the authority accepted this action. Only set for kernels whose rules read a
+   * wall clock (prep timers); replay re-runs the action at this time so reconstructed
+   * state is identical to the live state.
+   */
+  at?: number;
 }
 
 export interface PlaytestRun {

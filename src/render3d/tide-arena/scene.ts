@@ -33,6 +33,8 @@ import {
   WebGLRenderer,
 } from "three";
 import { BENCH_SLOTS, BOARD_SLOTS, UNIT_CATALOG, type Piece } from "../../runtime/adapters/auto-battler";
+
+import { unitAppearance } from "./appearance";
 import type { TierCaps } from "../tiers";
 import {
   ARENA_COLS,
@@ -239,6 +241,7 @@ export class TideArenaScene {
 
     this.buildTable();
     const unitMat = new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.55, metalness: 0.05 });
+    this.unitMat = unitMat;
     for (const def of UNIT_CATALOG) {
       const mesh = new InstancedMesh(unitGeometry(def.id, def.cost), unitMat, MAX_PER_TYPE);
       mesh.castShadow = true;
@@ -422,6 +425,22 @@ export class TideArenaScene {
     return (slot.kind === "cell" ? this.view.ownBoard[slot.boardIndex] : this.view.ownBench[slot.benchIndex]) ?? null;
   }
 
+  private unitMat: MeshStandardMaterial | null = null;
+
+  /** Lazily build a mesh for a content-defined unit from its shape preset (data layer). */
+  private ensureUnitMesh(unitId: string): InstancedMesh | undefined {
+    const look = unitAppearance.get(unitId);
+    if (!look || !this.unitMat) return undefined;
+    const mesh = new InstancedMesh(unitGeometry(look.shape, look.cost), this.unitMat, MAX_PER_TYPE);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.count = 0;
+    mesh.frustumCulled = false;
+    this.units.set(unitId, mesh);
+    this.scene.add(mesh);
+    return mesh;
+  }
+
   private syncTokens() {
     const counts = new Map<string, number>();
     let ringCount = 0;
@@ -430,7 +449,7 @@ export class TideArenaScene {
     const place = (piece: Piece, pos: { x: number; y: number; z: number }, isOwn: boolean, backRow: boolean, onBench: boolean) => {
       const hp = this.view.hp?.get(piece.uid) ?? piece.hp;
       if (hp <= 0 && !this.replay) return;
-      const mesh = this.units.get(piece.unitId);
+      const mesh = this.units.get(piece.unitId) ?? this.ensureUnitMesh(piece.unitId);
       if (!mesh) return;
       const dragging = this.drag?.uid === piece.uid && this.drag.point;
       const p = dragging ? { x: this.drag!.point!.x, y: TILE_TOP + LIFT, z: this.drag!.point!.z } : pos;

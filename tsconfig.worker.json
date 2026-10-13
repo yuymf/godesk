@@ -51,6 +51,7 @@
     "src/runtime/adapters/network-route.ts",
     "src/runtime/adapters/auction-bidding.ts",
     "src/runtime/adapters/auto-battler.ts",
+    "src/runtime/adapters/auto-battler-content.ts",
     "src/runtime/topology-stub.ts"
   ]
 }

@@ -1,11 +1,13 @@
 import { generationMetadataSchema, migrateRuleSystemToV2 } from "../src/creator/game-spec";
 import { normalizeAutoBattlerTuning } from "../src/runtime/adapters/auto-battler";
+import { resolveAutoBattlerContent } from "../src/runtime/adapters/auto-battler-content";
 import { defaultRenderSpec, isSpatialPresentationKind, patchRenderSpec, renderSpecIssues, renderSpecSchema } from "../src/creator/render-spec";
 import type { ImportedProjectAsset } from "../src/creator/asset-search/types";
 import {
   acceptIntent,
   executableRuntime,
   initialSessionState,
+  runAtSessionTime,
   scopeSessionState,
 } from "./runtime";
 import type {
@@ -734,6 +736,9 @@ function configureRuntimeKernel(
       type: "auto-battler-v1", playerCount: configuration.config.playerCount,
       ...(configuration.config.tuning && Object.keys(configuration.config.tuning).length
         ? { tuning: { ...configuration.config.tuning } }
+        : {}),
+      ...(configuration.config.content && Object.keys(configuration.config.content).length
+        ? { content: structuredClone(configuration.config.content) }
         : {}),
     }, configuration.config.unsupported?.map((item) => item.trim()) ?? [], configuration.config, affectedEntities);
     return;
@@ -1614,7 +1619,8 @@ const RUNTIME_HANDLERS: {
   configure_auto_battler: {
     validate: (config) => Boolean(config) && typeof config === "object" &&
       config.playerCount === 2 && validUnsupported(config.unsupported) &&
-      normalizeAutoBattlerTuning(config.tuning) !== null,
+      normalizeAutoBattlerTuning(config.tuning) !== null &&
+      (config.content === undefined || resolveAutoBattlerContent(config.content) !== null),
   },
 };
 
@@ -2349,6 +2355,7 @@ export function slimAcceptedActionForStorage(action: AcceptedAction): AcceptedAc
     actionId: action.actionId,
     points: action.points,
     ...(action.payload !== undefined ? { payload: action.payload } : {}),
+    ...(action.at !== undefined ? { at: action.at } : {}),
     state: slimState,
   };
 }
@@ -2363,12 +2370,17 @@ export function reconstructActions(
   build: StoredPlayableBuild,
   acceptedActions: GameReplay["acceptedActions"],
   seed = 42,
+  startedAtMs?: number,
 ) {
   const runtime = executableRuntime(build.ruleSystem);
   if (!runtime) throw new Error("runtime_not_executable");
-  let state = initialSessionState(build.ruleSystem, seed);
+  let state = runAtSessionTime(startedAtMs, () => initialSessionState(build.ruleSystem, seed));
+  // Legacy logs (before `at` was recorded) replay at the last known time, never at "now",
+  // so an old room cannot spuriously hit a prep deadline mid-replay.
+  let clock = startedAtMs;
   const reconstructed = acceptedActions.map((logged, index) => {
-    const accepted = acceptIntent(
+    clock = logged.at ?? clock;
+    const accepted = runAtSessionTime(clock, () => acceptIntent(
       state,
       runtime,
       {
@@ -2379,7 +2391,7 @@ export function reconstructActions(
       },
       index + 1,
       seed,
-    );
+    ));
     if (!accepted) throw new Error("action_log_invalid");
     state = accepted.state;
     return accepted;
@@ -2469,6 +2481,7 @@ export function reconstructSession(
       build,
       session.acceptedActions,
       session.seed,
+      Date.parse(session.createdAt),
     );
     return {
       ...session,
@@ -2507,7 +2520,7 @@ export function replayTail(
   if (!runtime) throw new Error("runtime_not_executable");
   let current = state;
   const acceptedActions = tail.map((logged, index) => {
-    const accepted = acceptIntent(
+    const accepted = runAtSessionTime(logged.at, () => acceptIntent(
       current,
       runtime,
       {
@@ -2518,7 +2531,7 @@ export function replayTail(
       },
       offset + index + 1,
       seed,
-    );
+    ));
     if (!accepted) throw new Error("action_log_invalid");
     current = accepted.state;
     return accepted;
@@ -2530,14 +2543,16 @@ export function reconstructReplay(
   replay: StoredReplay,
   build: StoredPlayableBuild,
 ): StoredReplay {
+  const startedAtMs = Date.parse(replay.createdAt);
   const reconstructed = reconstructActions(
     build,
     replay.acceptedActions,
     replay.seed,
+    startedAtMs,
   );
   return {
     ...replay,
-    initialState: initialSessionState(build.ruleSystem, replay.seed),
+    initialState: runAtSessionTime(startedAtMs, () => initialSessionState(build.ruleSystem, replay.seed)),
     acceptedActions: reconstructed.acceptedActions,
     finalState: reconstructed.state,
   };

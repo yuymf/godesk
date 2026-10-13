@@ -50,3 +50,63 @@
 - 通过 prompt 改单位池、羁绊（含治疗）、★2/★3 规则：内核写死，Studio 无法改（也无“已支持”的确认回复）。
 - 换主题/美术、改棋盘尺寸、>2 人。
 - 迭代只接受一次一个改动；混合句子只会命中数值部分。
+
+---
+
+# 第二刀（2026-10-13 12:14 起，先 B 后 A）
+
+## B1 · 第 2 回合计时显示 0:00 —— 根因与修法
+- **根因**：`auto-battler-v1` 的备战截止时间 `prepEndsAt` 用墙钟（`autoBattlerNow()`）计算；而共享房间（非 snapshot 内核）每次加载都会用动作日志**重放** `acceptIntent`。重放时墙钟是“现在”，于是截止时间被改写成「加载时刻 + 45s」（探针：`GET /api/sessions/:id` 连续 70 秒返回剩余时间恒为 45.0），状态不确定；推送给客户端的版本和存档重建版本不一致，计时显示会出现 0:00/跳变，超时也永远不会到。
+- **修法（通用，适用于任何读墙钟的内核）**：`AcceptedAction.at`（权威接收时间）入日志（slim 存储保留）；`runAtSessionTime(ms, fn)` 把读墙钟的内核钉在指定时间；房间创建时初始状态钉在 `createdAt`；`reconstructActions/replayTail/reconstructReplay` 按每条动作的 `at` 重放。旧日志没有 `at` 时用上一条动作的时间（最早是房间开始时间），不会用“现在”，避免老房间重放时误触超时（这个回退是在冷启动里发现 `action_log_invalid` 后补的）。
+- 测试：`worker/session-clock-replay.test.ts`（10 分钟后重放，截止时间不变；旧日志重放不触发超时）。
+- 证据：`cold-start-b/` 日志里第 2–4 回合开局计时为 0:21–0:23（30 秒设定），不再是 0:00。
+
+## B2 · 驱动脚本拖拽
+- 原因：页面滚动后用旧坐标拖动。修法：每次拖动前把「潮阵对局」区域 `scrollIntoView({block:"start"})`，然后用页面暴露的 `window.__tideArena.screenOf()` 重新取坐标；按 DOM 锚点找到真正有棋子的备战席格子；拖完核对 `data-on-bench` 计数。视口 1440×1100。
+- 证据：`cold-start-b` 第 1 回合 3 次拖动全部成功（场上 0→1→2→3），之后被等级 3 的上场人数上限挡住（预期行为）。
+
+## B3 · 人机局打满 3 回合（`cold-start-b/vs-ai-r{1,2,3}-{shop,place,combat,resolve}.png`）
+| 回合 | 开局计时 | 我方/电脑 HP（战后） |
+|---|---|---|
+| 1 | 0:27 | 30 / 26 |
+| 2 | 0:21 | 30 / 22 |
+| 3 | 0:22 | 30 / 18（进入第 4 回合） |
+（买前 3 张能买的卡，布阵，锁定，跳过回放；电脑会自己买、上阵、准备。）
+
+## A · auto-battler 内容数据层（通用）
+- `src/runtime/adapters/auto-battler-content.ts`：
+  - `UnitDef {id,name,cost,atk,hp,traits[],shape?}`，`shape` 取自 12 个外形预设 `UNIT_SHAPE_PRESETS`；
+  - `TraitDef {id,label,glyph,tiers[],atkBonus,hpBonus,effect?:{kind,label,values[]}}`，效果预设有 `shield_start | heal_first_strike | extra_hit | reflect`，数值按档位一一对应；
+  - `StarRules {star2,star3,mult2,mult3}`；
+  - `resolveAutoBattlerContent(patch)` 做校验，并把 patch 合并到默认值上（每个字段整体替换）。
+- 潮阵现有 12 单位、4 羁绊、★2 规则现在是 `DEFAULT_AUTO_BATTLER_CONTENT` 这份**数据**。adapter 不再引用具体的单位或羁绊 id：商店、合成（★2/★3 按开关）、羁绊激活（按档位）、战斗效果（按预设类型）都从当前 content 读取。
+- 数据从 `configure_auto_battler.config.content` 读入（契约、MCP zod、project-operations 校验、runtime bind、bot、客户端 HUD 和 3D 外形都接上了）。
+- 顺手修的已有缺陷：商店刷新的随机数窗口每次只滑动 1 格，连续两次刷新会重复 4/5 张卡。改成按商店大小步进，并加了单测。
+
+### NL 映射（`worker/kernel-tuning-iteration.ts`，按内核登记）
+- 把句子按逗号、分号、「并且」「同时」等切成子句。每个子句依次交给内容解析器（加单位、改羁绊档位、升星开关/倍率）或数值旋钮（计时、初始 HP/金币）认领。加单位会把后面跟着的属性子句（费用、攻击、生命、羁绊、外形）一起吞掉。
+- **一句里的多项改动全部合成一个 `configure_auto_battler`**；没被认领的子句不会悄悄丢掉，会写进 `runtimeSupport.unsupported`（「未执行的创作者要求：「…」」）。首次生成时，`generate-rule-system` 也用同一个解析器把可识别的改动折进 Generation Plan，像请求但识别不了的子句也列出来。
+
+## 10 句冷启动逐句结果（`trajectory/cold-start-b/`，新项目；规则读数见 `rule-system-final.json`）
+| # | prompt | 结果 |
+|---|---|---|
+| 1 | 做一款两人自走棋，商店买棋上阵自动打架 | ✅ 生成 + 开房（`r01-*`） |
+| 2 | 三个相同的棋子自动合成二星，属性变强 | ✅（确认式）`stars.star2=true` 写入配置；「属性变强」被列为未执行 |
+| 3 | 加一个电脑对手，我一个人也能玩 | ↪ 提示去「我的游戏 → 和电脑对战」（入口存在，`vs-ai-lobby.png`） |
+| 4 | 棋子池扩到12种单位 | ❌ `iteration_unsupported`（默认已经是 12 个，但这句不会被理解为“确认”） |
+| 5 | 做4组羁绊，其中一组能给队友治疗 | ❌ `iteration_unsupported`（同上，默认已有） |
+| 6 | 每回合备战阶段限时30秒，超时自动开打 | ✅ tuning 两段各 30s；「超时自动开打」列为未执行 |
+| 7 | 初始血量改成30 | ✅ 30/30 |
+| 8 | 加一个新单位「雷鳗」，费用3，攻击80，生命600，羁绊远航和潮汐，外形像精灵 | ✅ `units[12]={id:u13,name:雷鳗,cost:3,atk:80,hp:600,traits:[tide,voyager],shape:spirit}`；商店出现雷鳗（`r10-room-new-unit.png`） |
+| 9 | 把珊瑚咒羁绊的档位改成2/4，并且初始金币改成12 | ✅ 两项都命中：coral `tiers [2,4]`，HUD「珊瑚咒 2/4」；startGold 12（`vs-ai-r1-shop.png` 金币 12） |
+| 10 | 开启三星，三星倍率改成3.5，棋盘改成8列 | ✅ `stars {star3:true, mult3:3.5}`；「棋盘改成8列」列入 unsupported |
+
+## 三栏（截至第二刀）
+**用户靠 prompt 做到的**：第 1 句生成可玩游戏；第 2、6–10 句改配置生效；第 3 句会被引导到人机入口。
+**靠平台通用改动做到的**：计时确定性重放（B1）、内容数据层 + 多改动 NL 映射 + 如实列出未执行项（A）、内核调参、按能力显示人机入口、商店刷新随机性。
+**仍做不到**：
+- 第 4、5 句（想要的就是默认内容，但不会被识别为确认）；
+- 新的效果类型（只能用 4 种预设）、删改已有单位、自定义外形或美术、棋盘尺寸、>2 人；
+- 「超时自动开打」：截止时间只在下一次有人操作或 AI 行动时才强制执行，房间里没人操作时不会自己开打（r05 截图停在 0:00）；
+- 「属性变强」这类不带数值的描述。
+- 本次冷启动用的 wrangler 本地存储是新的，但第一次尝试时发现旧的 `wrangler.js dev` 进程没被 `pkill "wrangler dev"` 杀掉（进程名不匹配），已改为按进程名杀掉后重跑；现在的 `cold-start-b` 是在单实例、新存储下跑的。

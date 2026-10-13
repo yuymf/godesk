@@ -700,6 +700,27 @@ const operationSchema = z.discriminatedUnion("op", [
         startHp: z.number().int().min(1).max(200).optional(),
         startGold: z.number().int().min(0).max(100).optional(),
       }).strict().optional(),
+      // Content data layer (validated server-side by resolveAutoBattlerContent).
+      content: z.object({
+        units: z.array(z.object({
+          id: z.string().min(1).max(32), name: z.string().min(1).max(16),
+          cost: z.number().int().min(1).max(5), atk: z.number().int().min(1).max(500), hp: z.number().int().min(1).max(5000),
+          traits: z.array(z.string()).max(3), shape: z.string().optional(),
+        })).min(2).max(24).optional(),
+        traits: z.array(z.object({
+          id: z.string().min(1).max(32), label: z.string().min(1).max(24), glyph: z.string().min(1).max(2),
+          tiers: z.array(z.number().int().min(1).max(12)).min(1).max(4),
+          atkBonus: z.number().int().min(0).max(500), hpBonus: z.number().int().min(0).max(500),
+          effect: z.object({
+            kind: z.enum(["shield_start", "heal_first_strike", "extra_hit", "reflect"]),
+            label: z.string().min(1).max(24), values: z.array(z.number().min(0).max(1000)).min(1).max(4),
+          }).optional(),
+        })).max(8).optional(),
+        stars: z.object({
+          star2: z.boolean().optional(), star3: z.boolean().optional(),
+          mult2: z.number().min(1).max(10).optional(), mult3: z.number().min(1).max(10).optional(),
+        }).strict().optional(),
+      }).strict().optional(),
       unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
     }),
   }),

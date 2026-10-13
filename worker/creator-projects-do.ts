@@ -4,6 +4,7 @@ import {
   acceptIntent,
   executableRuntime,
   initialSessionState,
+  runAtSessionTime,
   pickBotIntent,
   runBotSimulation,
   runtimeSupportsBotSeat,
@@ -1107,10 +1108,11 @@ export class CreatorProjects extends DurableObject<Env> {
         }
         const now = new Date().toISOString();
         const replayId = `replay_${crypto.randomUUID()}`;
-        const state = initialSessionState(
+        // Pin wall-clock kernels to the room's createdAt so log replay rebuilds the same deadlines.
+        const state = runAtSessionTime(Date.parse(now), () => initialSessionState(
           build.ruleSystem,
           Number(input.seed),
-        );
+        ));
         const aiSeats = normalizeAiSeats(input.aiSeats, state.scores.length);
         const aiThinkMs = normalizeAiThinkMs(input.aiThinkMs);
         if (aiSeats === null || aiThinkMs === null) {

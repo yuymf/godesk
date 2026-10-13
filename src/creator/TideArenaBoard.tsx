@@ -2,6 +2,8 @@
  * Tide Arena / 潮阵 — room stage for auto-battler-v1: full-bleed 3D tabletop
  * (lazy) with a DOM overlay HUD (top bar, synergies, combat log, shop + sell zone).
  */
+import { DEFAULT_AUTO_BATTLER_CONTENT, resolveAutoBattlerContent, unitShape, type AutoBattlerContentPatch } from "../runtime/adapters/auto-battler-content";
+import { setTideArenaUnitAppearance } from "../render3d/tide-arena/appearance";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { SessionState } from "./project-contract";
 import {
@@ -11,7 +13,7 @@ import {
   MAX_LEVEL,
   xpToNext,
   boardCap,
-  TRAIT_SYNERGIES,
+  traitTable,
   traitCounts,
   unitDef,
   type Piece,
@@ -28,7 +30,6 @@ type TideArenaState = NonNullable<SessionState["autoBattler"]>;
 /** Resolve frame stays up this long after the replay ends (or is skipped). */
 const RESOLVE_HOLD_MS = 3000;
 const FLOATER_WINDOW_MS = 1400;
-const TRAITS = Object.keys(TRAIT_SYNERGIES) as TraitId[];
 
 const OWN_NAME = "汐屿·我方";
 const ENEMY_NAME = "珊瑚港·对手";
@@ -49,6 +50,7 @@ const UNIT_SILHOUETTE: Record<string, string> = {
   spirit: '<circle cx="28" cy="28" r="16"/><circle cx="28" cy="28" r="22" fill="none" stroke-width="3"/>',
 };
 
+const TRAIT_GLYPH_FALLBACK = ["#1F8A8A", "#C0703C", "#8A6BBE", "#5A8FC9", "#B5546A", "#6F8F3A", "#8C7A3E", "#4F6D8F"];
 const TRAIT_GLYPH_BG: Record<TraitId, string> = {
   tide: "#1F8A8A",
   shell: "#C0703C",
@@ -140,7 +142,10 @@ export function TideArenaBoard({
   status,
   viewerSeat,
   onAct,
+  content: contentPatch,
 }: {
+  /** Kernel content data (units / traits / star rules) from the build's runtime config. */
+  content?: AutoBattlerContentPatch;
   arena: TideArenaState;
   activeSeat: number;
   enabled: boolean;
@@ -150,6 +155,11 @@ export function TideArenaBoard({
   viewerSeat: number | null;
   onAct?: (actionId: string, payload?: Record<string, unknown>) => void;
 }) {
+  const content = useMemo(() => resolveAutoBattlerContent(contentPatch) ?? DEFAULT_AUTO_BATTLER_CONTENT, [contentPatch]);
+  const traitsById = useMemo(() => traitTable(content), [content]);
+  const TRAITS = content.traits.map((t) => t.id);
+  const glyphBg = (trait: TraitId) => TRAIT_GLYPH_BG[trait] ?? TRAIT_GLYPH_FALLBACK[Math.max(0, TRAITS.indexOf(trait)) % TRAIT_GLYPH_FALLBACK.length];
+  useMemo(() => setTideArenaUnitAppearance(content.units.map((u) => ({ id: u.id, cost: u.cost, shape: unitShape(u) }))), [content]);
   const stageRef = useRef<HTMLElement | null>(null);
   const width = useWidth(stageRef);
   const mobile = width < 700;
@@ -170,7 +180,7 @@ export function TideArenaBoard({
   useEffect(() => {
     if (key && key !== seenKey.current) {
       const units = new Map<string, { unitId: string; name: string }>();
-      for (const seat of arena.seats) for (const p of seat.board as Array<Piece | null>) if (p) units.set(p.uid, { unitId: p.unitId, name: unitDef(p.unitId)?.name ?? p.unitId });
+      for (const seat of arena.seats) for (const p of seat.board as Array<Piece | null>) if (p) units.set(p.uid, { unitId: p.unitId, name: unitDef(p.unitId, content)?.name ?? p.unitId });
       setReplay({ tl: buildTimeline(arena.combatLog as Array<Record<string, unknown>>, (uid) => units.get(uid)), ms: 0, done: false });
       setSpeed(1);
     }
@@ -219,7 +229,7 @@ export function TideArenaBoard({
   const dragEnabled = canAct && !inCombat && arena.phase !== "ended";
   const [drag, setDrag] = useState({ dragging: false, overSell: false });
 
-  const counts = traitCounts(ownBoard);
+  const counts = traitCounts(ownBoard, content);
   const phase = status === "complete" || arena.phase === "ended" ? "终局" : inCombat ? "战斗" : "备战";
   const step = arena.phase === "shop" ? "商店" : arena.phase === "place" ? "布阵" : "";
   const cta = arena.phase === "shop" ? { id: "ready_shop", label: "准备完毕" } : { id: "ready_place", label: "锁定阵容" };
@@ -286,14 +296,14 @@ export function TideArenaBoard({
       <aside className="ta-traits" aria-label="我方羁绊">
         {!mobile ? <h3>羁绊</h3> : null}
         {TRAITS.map((trait) => {
-          const syn = TRAIT_SYNERGIES[trait];
+          const syn = traitsById[trait]!;
           const n = counts[trait] ?? 0;
           const activeTier = [...syn.tiers].filter((t) => n >= t);
           const current = activeTier[activeTier.length - 1];
           const next = syn.tiers.find((t) => t > n) ?? syn.tiers[syn.tiers.length - 1]!;
           return (
             <div key={trait} className={`ta-trait${n >= syn.min ? " is-active" : ""}`}>
-              <span className="ta-glyph" style={{ background: n >= syn.min ? TRAIT_GLYPH_BG[trait] : undefined }}>
+              <span className="ta-glyph" style={{ background: n >= syn.min ? glyphBg(trait) : undefined }}>
                 {syn.glyph}
               </span>
               <div className="ta-trait-body">
@@ -392,9 +402,9 @@ export function TideArenaBoard({
         </div>
         <div className="ta-cards">
           {me.shop.map((unitId, shopIndex) => {
-            const def = unitId ? unitDef(unitId) : undefined;
+            const def = unitId ? unitDef(unitId, content) : undefined;
             if (!def) return <div key={shopIndex} className="ta-card is-empty" aria-hidden />;
-            const color = UNIT_COLORS[def.id] ?? "#9AA0A6";
+            const color = UNIT_COLORS[def.id] ?? UNIT_COLORS[unitShape(def)] ?? "#9AA0A6";
             return (
               <button
                 key={shopIndex}
@@ -404,7 +414,7 @@ export function TideArenaBoard({
                 disabled={!canAct || inCombat || arena.phase !== "shop" || me.gold < def.cost}
                 onClick={() => act("buy", { shopIndex })}
               >
-                <ShopPortrait unitId={def.id} name={def.name} color={color} />
+                <ShopPortrait unitId={unitShape(def)} name={def.name} color={color} />
                 <span className="ta-meta">
                   <span className="ta-card-row">
                     <strong>{def.name}</strong>
@@ -416,7 +426,7 @@ export function TideArenaBoard({
                   <span className="ta-card-traits">
                     {def.traits.map((t) => (
                       <span key={t} className="ta-chip-trait">
-                        {TRAIT_SYNERGIES[t].label}
+                        {traitsById[t]?.label ?? t}
                       </span>
                     ))}
                   </span>
