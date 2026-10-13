@@ -874,6 +874,7 @@ export async function runCreatorJob(
       const tuningPlan = plan && "assetIntents" in plan
         ? (plan as NonNullable<ReturnType<typeof createKernelTuningIterationPlan>>)
         : undefined;
+      let expectedVersion = input.expectedVersion;
       if (tuningPlan?.assetIntents?.length) {
         const ops = [...tuningPlan.operations];
         const cfgIdx = ops.findIndex((op) => op.op === "configure_auto_battler");
@@ -896,10 +897,19 @@ export async function runCreatorJob(
             operations: ops,
             summary: `${tuningPlan.summary}${applied.lines.length ? ` ${applied.lines.join(" ")}` : ""}`,
           };
+          // CC0 import bumps project.version — refresh before configure apply.
+          if (host.projectRequest) {
+            const fresh = await host.projectRequest(`/projects/${job.projectId}`);
+            if (fresh.ok) {
+              const body = await fresh.json() as { version?: number; project?: { version?: number } };
+              const v = body.project?.version ?? body.version;
+              if (typeof v === "number" && v >= expectedVersion) expectedVersion = v;
+            }
+          }
         }
       }
       operation = !plan ? operation! : await host.applyProjectChanges(job.projectId, {
-        expectedVersion: input.expectedVersion,
+        expectedVersion,
         idempotencyKey: `job:${input.idempotencyKey}`,
         operations: plan.operations,
       });
