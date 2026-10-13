@@ -5884,65 +5884,116 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   z-index: 20;
 }
 
-/* Tide Arena / 潮阵 — auto-battler-v1 HUD */
-.tide-arena-board {
-  display: grid;
-  gap: var(--space-4);
-  padding: var(--space-4);
-  color: var(--ink);
+/* Tide Arena / 潮阵 — 3D stage + overlay HUD (tokens: ui-refs/tide-arena/SPEC.md) */
+.tide-arena-stage {
+  --ta-paper: rgba(246, 239, 227, 0.94);
+  --ta-paper-2: #ede3d2;
+  --ta-ink: #2a211a;
+  --ta-ink-2: #6e6052;
+  --ta-teal: #1f8a8a;
+  --ta-teal-light: #7cc8c2;
+  --ta-teal-bg: #e1f2ef;
+  --ta-coral: #e2674f;
+  --ta-coral-bg: #fbe6df;
+  --ta-gold: #d9a43a;
+  --ta-gold-bg: #fbf0d4;
+  --ta-shadow: 0 6px 20px rgba(59, 42, 28, 0.18), 0 1px 2px rgba(59, 42, 28, 0.12);
+  position: relative;
+  height: max(560px, min(100dvh, 900px));
+  overflow: hidden;
+  background: #cdb898;
+  color: var(--ta-ink);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
 }
-.tide-arena-heading {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-4);
-  flex-wrap: wrap;
-}
-.tide-arena-kicker {
-  font-size: var(--type-sm);
-  opacity: 0.75;
-}
-.tide-arena-shop-row,
-.tide-arena-slot-row,
-.tide-arena-grid {
-  display: grid;
-  gap: var(--space-2);
-}
-.tide-arena-shop-row {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-.tide-arena-slot-row {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-.tide-arena-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-.tide-arena-card,
-.tide-arena-slot,
-.tide-arena-cell {
-  border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
-  border-radius: 10px;
-  padding: var(--space-2);
-  min-height: 4.5rem;
-  display: grid;
-  gap: 0.25rem;
-  align-content: start;
-  background: color-mix(in srgb, var(--paper) 92%, var(--ink));
-}
-.tide-arena-card.is-empty,
-.tide-arena-empty {
-  opacity: 0.55;
-}
-.tide-arena-shop-actions,
-.tide-arena-place-targets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-.tide-arena-lock {
-  margin-top: var(--space-3);
-}
-.tide-arena-combat-log {
-  max-height: 12rem;
-  overflow: auto;
-  font-size: var(--type-sm);
-}
+.ta-scene { position: absolute; inset: 0; }
+.ta-scene-loading { display: grid; place-items: center; color: var(--ta-ink-2); }
+.ta-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.ta-overlay { position: absolute; inset: 0; pointer-events: none; }
+.ta-anchor { position: absolute; transform: translate(-50%, -100%); display: grid; justify-items: center; gap: 2px; }
+.ta-hp { display: block; width: 40px; height: 6px; border-radius: 999px; background: rgba(42, 33, 26, 0.55); overflow: hidden; }
+.ta-hp.is-thin { height: 3px; width: 30px; }
+.ta-hp i { display: block; height: 100%; background: #4fae6b; }
+.is-enemy .ta-hp i { background: var(--ta-coral); }
+.ta-stars { color: var(--ta-gold); font-size: 10px; line-height: 1; text-shadow: 0 1px 1px rgba(42, 33, 26, 0.5); }
+.ta-floater { position: absolute; margin-bottom: 22px; left: 50%; transform: translateX(-50%); font-weight: 900; font-size: 16px; line-height: 18px; white-space: nowrap; text-shadow: 0 1px 0 #fff, 0 0 4px rgba(255, 255, 255, 0.8); }
+.ta-floater.is-damage { color: #c8402a; }
+.ta-floater.is-heal { color: #2f8f4e; }
+
+.ta-topbar, .ta-traits, .ta-log, .ta-shop { position: absolute; background: var(--ta-paper); border-radius: 12px; box-shadow: var(--ta-shadow); }
+.ta-topbar { top: 16px; left: 16px; right: 16px; height: 48px; display: flex; align-items: center; gap: 16px; padding: 0 16px; }
+.ta-brand { font-weight: 700; font-size: 16px; color: var(--ta-teal); }
+.ta-round { font-size: 20px; font-weight: 700; }
+.ta-pill { border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 700; background: var(--ta-teal-bg); color: var(--ta-teal); }
+.ta-pill.is-combat { background: var(--ta-coral-bg); color: var(--ta-coral); }
+.ta-pill.is-end { background: var(--ta-gold-bg); color: #8a6414; }
+.ta-turn { color: var(--ta-ink-2); font-size: 12px; margin-right: auto; }
+.ta-hpbar { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.ta-hpbar > span { width: 140px; height: 10px; border-radius: 999px; background: var(--ta-paper-2); overflow: hidden; }
+.ta-hpbar i { display: block; height: 100%; background: var(--ta-teal); }
+.ta-hpbar.is-enemy i { background: var(--ta-coral); }
+.ta-hpbar em { font-style: normal; font-weight: 700; min-width: 20px; }
+
+.ta-traits { top: 80px; left: 16px; width: 200px; padding: 12px; display: grid; gap: 8px; }
+.ta-traits h3, .ta-log h3 { margin: 0 0 4px; font-size: 12px; color: var(--ta-ink-2); letter-spacing: 0.08em; }
+.ta-trait { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; background: var(--ta-paper-2); color: var(--ta-ink-2); }
+.ta-trait.is-active { background: var(--ta-teal-bg); color: var(--ta-ink); }
+.ta-glyph { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-weight: 700; background: #d8ccb8; color: #fff; }
+.ta-trait.is-active .ta-glyph { background: var(--ta-teal); }
+.ta-trait-name { font-weight: 700; }
+.ta-trait-count { margin-left: auto; font-size: 12px; }
+
+.ta-log { top: 80px; right: 16px; width: 228px; padding: 12px; max-height: calc(100% - 290px); overflow: hidden; }
+.ta-log ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 12px; }
+.ta-log li { padding: 4px 8px; border-radius: 8px; background: var(--ta-paper-2); }
+.ta-log li.is-unit_down { color: var(--ta-coral); }
+.ta-log li.is-combat_end { background: var(--ta-gold-bg); font-weight: 700; }
+
+.ta-shop { left: 16px; right: 16px; bottom: 16px; height: 144px; padding: 12px; display: grid; grid-template-columns: 132px 1fr 120px; gap: 12px; }
+.ta-shop-side { display: grid; gap: 8px; align-content: start; }
+.ta-gold { display: flex; align-items: center; gap: 8px; font-size: 28px; font-weight: 700; line-height: 1; }
+.ta-gold i { width: 18px; height: 18px; border-radius: 50%; background: var(--ta-gold); box-shadow: inset 0 -2px 0 #b07f1c; }
+.ta-btn { min-height: 36px; border: 0; border-radius: 8px; background: var(--ta-paper-2); color: var(--ta-ink); font: inherit; font-weight: 700; cursor: pointer; }
+.ta-btn.is-cta { background: var(--ta-teal); color: #fff; }
+.ta-btn:disabled { opacity: 0.45; cursor: default; }
+.ta-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.ta-card { position: relative; display: grid; grid-template-rows: 1fr auto auto; justify-items: center; gap: 2px; padding: 8px 8px 8px; border: 0; border-top: 6px solid var(--tier, #9aa0a6); border-radius: 12px; background: #fffaf2; box-shadow: 0 1px 2px rgba(59, 42, 28, 0.12); color: var(--ta-ink); font: inherit; cursor: pointer; }
+.ta-card:disabled { cursor: default; }
+.ta-card:disabled .ta-portrait { filter: saturate(0.5); }
+.ta-card.is-empty { background: rgba(237, 227, 210, 0.6); border-top-color: transparent; box-shadow: none; }
+.ta-portrait { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 20px; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.15); }
+.ta-card strong { font-size: 16px; }
+.ta-card-traits { font-size: 12px; color: var(--ta-ink-2); }
+.ta-cost { position: absolute; top: 6px; right: 8px; font-weight: 700; color: #8a6414; }
+.ta-sell { display: grid; place-items: center; text-align: center; border-radius: 12px; border: 2px dashed rgba(226, 103, 79, 0.5); color: var(--ta-coral); font-size: 12px; font-weight: 700; padding: 8px; }
+.ta-sell.is-armed { background: var(--ta-coral-bg); }
+.ta-sell.is-hot { background: var(--ta-coral); color: #fff; border-style: solid; }
+.ta-shop.is-locked .ta-shop-side, .ta-shop.is-locked .ta-cards, .ta-shop.is-locked .ta-sell { filter: grayscale(0.6); opacity: 0.45; }
+.ta-shop-lock { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; color: var(--ta-coral); font-size: 20px; font-weight: 700; }
+.ta-shop-lock span, .ta-shop-lock svg { background: var(--ta-paper); }
+.ta-shop-lock span { padding: 4px 12px 4px 0; border-radius: 0 999px 999px 0; }
+.ta-shop-lock svg { box-sizing: content-box; padding: 6px 4px 6px 12px; border-radius: 999px 0 0 999px; }
+.ta-banner { position: absolute; top: 76px; left: 50%; transform: translateX(-50%); padding: 8px 24px; border-radius: 999px; background: var(--ta-gold-bg); box-shadow: var(--ta-shadow); font-size: 20px; font-weight: 700; }
+
+/* Mobile 390×844: top bar → trait chips → board → shop mini-cards; no sell zone / log. */
+.tide-arena-stage.is-mobile { height: max(640px, 100dvh); }
+.is-mobile .ta-topbar { top: 8px; left: 8px; right: 8px; height: auto; flex-wrap: wrap; row-gap: 6px; column-gap: 8px; padding: 8px 12px; }
+.is-mobile .ta-brand { display: none; }
+.is-mobile .ta-round { font-size: 16px; }
+.is-mobile .ta-turn { margin-right: 0; margin-left: auto; }
+.is-mobile .ta-hpbar { flex: 1 1 40%; }
+.is-mobile .ta-hpbar > span { flex: 1; width: auto; }
+.is-mobile .ta-traits { top: 80px; left: 8px; right: 8px; width: auto; padding: 6px; display: flex; gap: 6px; }
+.is-mobile .ta-trait { flex: 1; padding: 4px 6px; gap: 4px; }
+.is-mobile .ta-glyph { width: 24px; height: 24px; }
+.is-mobile .ta-shop { left: 8px; right: 8px; bottom: 8px; height: auto; grid-template-columns: 1fr; padding: 8px; gap: 8px; }
+.is-mobile .ta-shop-side { grid-template-columns: auto 1fr 1fr; align-items: center; }
+.is-mobile .ta-gold { font-size: 20px; }
+.is-mobile .ta-btn { min-height: 44px; }
+.is-mobile .ta-cards { gap: 6px; }
+.is-mobile .ta-card { min-height: 88px; padding: 6px 2px; border-top-width: 4px; }
+.is-mobile .ta-portrait { width: 32px; height: 32px; font-size: 16px; }
+.is-mobile .ta-card strong { font-size: 12px; }
+.is-mobile .ta-card-traits { display: none; }
+.is-mobile .ta-cost { top: 2px; right: 4px; font-size: 12px; }

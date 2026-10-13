@@ -56,7 +56,7 @@ export const KERNEL_PRESENTATION = {
   "hex-settlement-v1": "dedicated-board",
   "network-route-v1": "dedicated-board",
   "auction-bidding-v1": "dedicated-board",
-  "auto-battler-v1": "generic-hud",
+  "auto-battler-v1": "dedicated-board",
 } satisfies Record<KernelType, BoardPresentation>;
 
 export const UNPRESENTED_PREFIX = "未呈现";
