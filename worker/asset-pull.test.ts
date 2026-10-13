@@ -77,6 +77,7 @@ describe("asset pull from one sentence", () => {
     expect(queryFromPrompt("给汐屿的桌边加一个 CC0 木桶")).toBe("barrel");
     expect(queryFromPrompt("Add a wooden crate to my room")).toBe("wooden crate");
     expect(queryFromPrompt("please pull an anchor model")).toBe("anchor");
+    expect(queryFromPrompt("给单位加一个机器人模型")).toBe("robot");
   });
 
   it("accepts only downloadable CC0 glTF/GLB models", () => {

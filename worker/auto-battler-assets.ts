@@ -190,7 +190,9 @@ export async function fulfillAssetAttachIntents(input: {
     }
 
     // search — pullCc0 builds the GLB body; we must POST it onto the project (same as MCP pull_project_asset).
+    // Prefer mapped English query (ZH_TERMS); fall back to raw queryHint so CJK nouns still reach pull.
     const query = queryFromPrompt(intent.queryHint ? `${intent.queryHint}模型` : `${intent.unitHint}模型`)
+      || queryFromPrompt(intent.queryHint ?? "")
       || queryFromPrompt(intent.unitHint)
       || intent.queryHint
       || intent.unitHint;
@@ -200,7 +202,8 @@ export async function fulfillAssetAttachIntents(input: {
         input.env,
         input.projectRequest,
         input.projectId,
-        `给单位加一个${query}模型`,
+        // English queryHint (e.g. robot) survives queryFromPrompt; CJK mapped via ZH_TERMS.
+        /^[a-z][a-z0-9\-\s]*$/i.test(query) ? `add a ${query} model` : `给单位加一个${query}模型`,
         `${input.idempotencyKey}:asset:${i}:${unit.id}`,
       );
       const importedRes = await input.projectRequest(`/projects/${input.projectId}/imported-assets`, {
