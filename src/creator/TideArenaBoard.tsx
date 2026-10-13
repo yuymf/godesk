@@ -22,6 +22,7 @@ import {
 import type { FloaterEvent } from "../render3d/tide-arena/floaters";
 import type { CSSProperties } from "react";
 import { DEFAULT_THEME_ID, resolveAutoBattlerTheme, THEME_PRESETS, type AutoBattlerThemePatch } from "../runtime/adapters/auto-battler-theme";
+import type { UnitModelSource } from "../render3d/tide-arena/unit-models";
 import { buildTimeline, hpAt, type Timeline } from "../render3d/tide-arena/timeline";
 import { TIER_COLORS, UNIT_COLORS } from "../render3d/tide-arena/palette";
 
@@ -146,9 +147,12 @@ export function TideArenaBoard({
   onAct,
   content: contentPatch,
   theme: themePatch,
+  importedModels,
 }: {
   /** Visual theme data (preset + overrides) from the build's runtime config. */
   theme?: AutoBattlerThemePatch;
+  /** Imported GLBs available to bind via unit.modelRef. */
+  importedModels?: readonly UnitModelSource[];
   /** Kernel content data (units / traits / star rules) from the build's runtime config. */
   content?: AutoBattlerContentPatch;
   arena: TideArenaState;
@@ -167,7 +171,7 @@ export function TideArenaBoard({
   const traitsById = useMemo(() => traitTable(content), [content]);
   const TRAITS = content.traits.map((t) => t.id);
   const glyphBg = (trait: TraitId) => TRAIT_GLYPH_BG[trait] ?? TRAIT_GLYPH_FALLBACK[Math.max(0, TRAITS.indexOf(trait)) % TRAIT_GLYPH_FALLBACK.length];
-  useMemo(() => setTideArenaUnitAppearance(content.units.map((u) => ({ id: u.id, cost: u.cost, shape: unitShape(u) }))), [content]);
+  useMemo(() => setTideArenaUnitAppearance(content.units.map((u) => ({ id: u.id, cost: u.cost, proceduralPreset: unitShape(u), ...(u.modelRef ? { modelRef: u.modelRef } : {}) }))), [content]);
   const stageRef = useRef<HTMLElement | null>(null);
   const width = useWidth(stageRef);
   const mobile = width < 700;
@@ -282,6 +286,7 @@ export function TideArenaBoard({
           onAction={(type, payload) => act(type, payload)}
           onDrag={setDrag}
           theme={theme}
+          importedModels={importedModels}
         />
       </Suspense>
 

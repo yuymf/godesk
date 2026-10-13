@@ -57,6 +57,7 @@ import {
 } from "./layout";
 import { ENEMY_RING, OWN_RING, TOKEN_HEIGHT, ringGeometry, unitGeometry } from "./tokens";
 import { DEFAULT_THEME_ID, THEME_PRESETS, type ThemeSpec } from "../../runtime/adapters/auto-battler-theme";
+import { UnitModelPool, type UnitModelSource } from "./unit-models";
 import { DEATH_FADE_MS, HIT_DELAY_MS, type Timeline } from "./timeline";
 
 export type ArenaView = {
@@ -114,6 +115,9 @@ type TokenSlot = {
   stars: number;
   hp: number;
   maxHp: number;
+  /** When set, a GLB clone from UnitModelPool is shown instead of the procedural instance. */
+  modelRef?: string;
+  usesModel?: boolean;
 };
 
 const PROJECTILES = 12;
@@ -213,11 +217,14 @@ export class TideArenaScene {
   peakCalls = 0;
   peakTriangles = 0;
 
+  private modelPool: UnitModelPool | null = null;
+
   constructor(
     private readonly canvas: HTMLCanvasElement,
     private readonly caps: TierCaps,
     private readonly cb: SceneCallbacks,
     private readonly theme: ThemeSpec = THEME_PRESETS[DEFAULT_THEME_ID]!,
+    importedModels: readonly UnitModelSource[] = [],
   ) {
     this.renderer = new WebGLRenderer({ canvas, antialias: caps.antialias, powerPreference: "high-performance" });
     this.renderer.toneMapping = ACESFilmicToneMapping;
@@ -276,6 +283,7 @@ export class TideArenaScene {
     this.projectiles.count = 0;
     this.projectiles.frustumCulled = false;
     this.scene.add(this.projectiles);
+    if (importedModels.length) this.modelPool = new UnitModelPool(this.scene, importedModels);
 
     canvas.addEventListener("pointerdown", this.onDown);
     canvas.addEventListener("pointermove", this.onMove);
@@ -441,7 +449,7 @@ export class TideArenaScene {
   private ensureUnitMesh(unitId: string): InstancedMesh | undefined {
     const look = unitAppearance.get(unitId);
     if (!look || !this.unitMat) return undefined;
-    const mesh = new InstancedMesh(unitGeometry(look.shape, look.cost), this.unitMat, MAX_PER_TYPE);
+    const mesh = new InstancedMesh(unitGeometry(look.proceduralPreset, look.cost), this.unitMat, MAX_PER_TYPE);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.count = 0;
@@ -461,12 +469,23 @@ export class TideArenaScene {
       if (hp <= 0 && !this.replay) return;
       const mesh = this.units.get(piece.unitId) ?? this.ensureUnitMesh(piece.unitId);
       if (!mesh) return;
+      const look = unitAppearance.get(piece.unitId);
+      const modelRef = look?.modelRef;
+      let usesModel = false;
+      if (modelRef && this.modelPool?.hasSource(modelRef)) {
+        const obj = this.modelPool.ensure(piece.uid, modelRef);
+        usesModel = Boolean(obj);
+      }
       const dragging = this.drag?.uid === piece.uid && this.drag.point;
       const p = dragging ? { x: this.drag!.point!.x, y: TILE_TOP + LIFT, z: this.drag!.point!.z } : pos;
+      const rotY = isOwn ? 0 : Math.PI;
+      const scale = (dragging ? 1.08 : 1) * this.theme.unitScale;
       this.tmp.position.set(p.x, p.y, p.z);
-      this.tmp.rotation.set(0, isOwn ? 0 : Math.PI, 0);
-      this.tmp.scale.setScalar((dragging ? 1.08 : 1) * this.theme.unitScale);
+      this.tmp.rotation.set(0, rotY, 0);
+      // Hide procedural instance when a GLB clone is live (still keep a slot for replay/HUD).
+      this.tmp.scale.setScalar(usesModel ? 0 : scale);
       this.tmp.updateMatrix();
+      if (usesModel && modelRef) this.modelPool!.place(piece.uid, p.x, p.y, p.z, rotY, scale, hp > 0 || Boolean(this.replay));
       const n = counts.get(piece.unitId) ?? 0;
       const slot: TokenSlot = {
         uid: piece.uid,
@@ -479,7 +498,7 @@ export class TideArenaScene {
         cx: p.x,
         cy: p.y,
         cz: p.z,
-        rotY: isOwn ? 0 : Math.PI,
+        rotY,
         dead: hp <= 0,
         own: isOwn,
         backRow,
@@ -488,6 +507,7 @@ export class TideArenaScene {
         stars: piece.stars ?? 1,
         hp,
         maxHp: piece.maxHp,
+        ...(modelRef ? { modelRef, usesModel } : {}),
       };
       this.slots.push(slot);
       this.slotByUid.set(piece.uid, slot);
@@ -525,6 +545,7 @@ export class TideArenaScene {
     this.view.ownBoard.forEach((piece, i) => piece && place(piece, boardWorld(true, i), true, i >= 7, false));
     this.view.ownBench.forEach((piece, i) => piece && place(piece, benchWorld(i), true, false, true));
     this.view.enemyBoard.forEach((piece, i) => piece && place(piece, boardWorld(false, i), false, i >= 7, false));
+    this.modelPool?.prune(new Set(this.slots.map((s) => s.uid)));
     for (const [id, mesh] of this.units) {
       mesh.count = counts.get(id) ?? 0;
       mesh.instanceMatrix.needsUpdate = true;
@@ -690,12 +711,14 @@ export class TideArenaScene {
     s.cx = x;
     s.cy = y;
     s.cz = z;
+    const sMul = scale * this.theme.unitScale;
     this.tmp.position.set(x, y, z);
     this.tmp.rotation.set(0, s.rotY, 0);
-    this.tmp.scale.setScalar(scale * this.theme.unitScale);
+    this.tmp.scale.setScalar(s.usesModel ? 0 : sMul);
     this.tmp.updateMatrix();
     s.mesh.setMatrixAt(s.index, this.tmp.matrix);
     this.rings.setMatrixAt(s.ring, this.tmp.matrix);
+    if (s.usesModel && s.modelRef) this.modelPool?.place(s.uid, x, y, z, s.rotY, sMul, !s.dead || Boolean(this.replay));
   }
 
   private syncHighlights() {
@@ -825,6 +848,8 @@ export class TideArenaScene {
 
   dispose() {
     this.stopReplay();
+    this.modelPool?.dispose();
+    this.modelPool = null;
     this.disposed = true;
     this.canvas.removeEventListener("pointerdown", this.onDown);
     this.canvas.removeEventListener("pointermove", this.onMove);

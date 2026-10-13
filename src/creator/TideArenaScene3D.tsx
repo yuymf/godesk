@@ -7,6 +7,7 @@ import type { Piece } from "../runtime/adapters/auto-battler";
 import { TideArenaScene, type TokenAnchor } from "../render3d/tide-arena/scene";
 import { resolveFloaterLift, stackFloaters, type FloaterEvent } from "../render3d/tide-arena/floaters";
 import type { ThemeSpec } from "../runtime/adapters/auto-battler-theme";
+import type { UnitModelSource } from "../render3d/tide-arena/unit-models";
 import { detectEnvFromBrowser, resolveTier } from "../render3d/tiers";
 import type { Timeline } from "../render3d/tide-arena/timeline";
 
@@ -30,6 +31,8 @@ export type TideArenaSceneProps = {
   onDrag: (state: { dragging: boolean; overSell: boolean }) => void;
   /** Resolved visual theme (palette / table / light / camera / unit scale). */
   theme?: ThemeSpec;
+  /** Project-imported GLBs (same list SceneHost uses). */
+  importedModels?: readonly UnitModelSource[];
 };
 
 declare global {
@@ -62,7 +65,7 @@ export default function TideArenaScene3D(props: TideArenaSceneProps) {
       onAnchors: setAnchors,
       onLabels: setLabels,
       onReplayTime: (ms, done) => cbRef.current.onReplayTime?.(ms, done),
-    }, props.theme);
+    }, props.theme, props.importedModels ?? []);
     sceneRef.current = scene;
     window.__tideArena = { perf: () => scene.perf(), screenOf: (slot) => scene.screenOf(slot), tier: tier.tier,
       frameStats: () => {
@@ -76,7 +79,7 @@ export default function TideArenaScene3D(props: TideArenaSceneProps) {
       sceneRef.current = null;
       delete window.__tideArena;
     };
-  }, [props.theme]);
+  }, [props.theme, props.importedModels]);
 
   const safeKey = `${props.safe.top}:${props.safe.bottom}:${props.safe.left}:${props.safe.right}:${props.mobile}`;
   useEffect(() => {

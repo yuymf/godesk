@@ -10,6 +10,8 @@ import { assetServerUrlFromEnv } from "./asset-server";
 import { toGlb } from "./gltf-zip-to-glb";
 
 const ZH_TERMS: Array<[RegExp, string]> = [
+  [/螃蟹|蟹/, "crab"],
+  [/巫师|法师|女巫|巫/, "wizard"],
   [/木?桶/, "barrel"],
   [/箱/, "crate"],
   [/树桩|树墩/, "stump"],

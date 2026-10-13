@@ -20,8 +20,19 @@ export type UnitDef = {
   atk: number;
   hp: number;
   traits: readonly string[];
-  /** Silhouette preset; defaults to `id` when that is a preset, else "blade". */
+  /**
+   * Procedural stylized piece preset (renderer fallback when no modelRef).
+   * Legacy field `shape` is accepted as an alias and normalized to this.
+   */
+  proceduralPreset?: UnitShapePreset;
+  /** @deprecated alias of proceduralPreset — kept for older content patches. */
   shape?: UnitShapePreset;
+  /**
+   * Imported project asset id (GLB under assets/imported/). When set and the
+   * matching imported model is available, the renderer uses that mesh instead
+   * of the procedural silhouette.
+   */
+  modelRef?: string;
 };
 
 /** Combat effect presets a trait can carry (values are per tier, index-aligned with `tiers`). */
@@ -124,10 +135,14 @@ function normalizeUnit(raw: unknown, traitIds: Set<string>): UnitDef | null {
   if (!isInt(u.cost, CONTENT_LIMITS.cost.min, CONTENT_LIMITS.cost.max)) return null;
   if (!isInt(u.atk, CONTENT_LIMITS.atk.min, CONTENT_LIMITS.atk.max) || !isInt(u.hp, CONTENT_LIMITS.hp.min, CONTENT_LIMITS.hp.max)) return null;
   if (!Array.isArray(u.traits) || u.traits.length > 3 || !u.traits.every((id) => typeof id === "string" && traitIds.has(id))) return null;
-  if (u.shape !== undefined && !UNIT_SHAPE_PRESETS.includes(u.shape as UnitShapePreset)) return null;
+  const procedural = (u.proceduralPreset ?? u.shape) as UnitShapePreset | undefined;
+  if (procedural !== undefined && !UNIT_SHAPE_PRESETS.includes(procedural)) return null;
+  if (u.modelRef !== undefined && !isText(u.modelRef, 128)) return null;
   return {
     id: u.id as string, name: u.name as string, cost: u.cost as number, atk: u.atk as number, hp: u.hp as number,
-    traits: [...(u.traits as string[])], ...(u.shape ? { shape: u.shape as UnitShapePreset } : {}),
+    traits: [...(u.traits as string[])],
+    ...(procedural ? { proceduralPreset: procedural, shape: procedural } : {}),
+    ...(u.modelRef ? { modelRef: (u.modelRef as string).trim() } : {}),
   };
 }
 
@@ -171,9 +186,21 @@ export function resolveAutoBattlerContent(raw: unknown): AutoBattlerContent | nu
   return { units, traits, stars };
 }
 
-export function unitShape(unit: Pick<UnitDef, "id" | "shape">): UnitShapePreset {
-  if (unit.shape) return unit.shape;
+export function unitShape(unit: Pick<UnitDef, "id" | "shape" | "proceduralPreset">): UnitShapePreset {
+  const preset = unit.proceduralPreset ?? unit.shape;
+  if (preset) return preset;
   return (UNIT_SHAPE_PRESETS as readonly string[]).includes(unit.id) ? (unit.id as UnitShapePreset) : "blade";
+}
+
+/** Resolved appearance: imported GLB when modelRef is set, else procedural stylized piece. */
+export function unitAppearanceOf(unit: Pick<UnitDef, "id" | "shape" | "proceduralPreset" | "modelRef">): {
+  proceduralPreset: UnitShapePreset;
+  modelRef?: string;
+} {
+  const proceduralPreset = unitShape(unit);
+  return unit.modelRef
+    ? { proceduralPreset, modelRef: unit.modelRef }
+    : { proceduralPreset };
 }
 
 /** Highest tier index reached by `count` (−1 when inactive). */

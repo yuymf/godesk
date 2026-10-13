@@ -721,6 +721,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         <TideArenaBoard arena={autoBattlerState} activeSeat={activeSeat}
           content={autoBattlerContent(build.ruleSystem)}
           theme={autoBattlerTheme(build.ruleSystem)}
+          importedModels={importedModels}
           enabled={isMyTurn} busy={busy} status={room.state.status} viewerSeat={seat}
           onAct={(actionId, payload) => { void act(actionId, -1, payload); }} />
       ) : (

@@ -1,6 +1,22 @@
-/** unitId → silhouette preset + cost for content-defined units (filled by the board from kernel content). */
-export const unitAppearance = new Map<string, { shape: string; cost: number }>();
+/** unitId → look for content-defined units (filled by the board from kernel content). */
+export type UnitLook = {
+  proceduralPreset: string;
+  cost: number;
+  /** Imported asset id; when set the scene prefers the GLB over procedural geometry. */
+  modelRef?: string;
+};
 
-export function setTideArenaUnitAppearance(units: ReadonlyArray<{ id: string; cost: number; shape: string }>) {
-  for (const u of units) unitAppearance.set(u.id, { shape: u.shape, cost: u.cost });
+export const unitAppearance = new Map<string, UnitLook>();
+
+export function setTideArenaUnitAppearance(
+  units: ReadonlyArray<{ id: string; cost: number; proceduralPreset: string; modelRef?: string }>,
+) {
+  unitAppearance.clear();
+  for (const u of units) {
+    unitAppearance.set(u.id, {
+      proceduralPreset: u.proceduralPreset,
+      cost: u.cost,
+      ...(u.modelRef ? { modelRef: u.modelRef } : {}),
+    });
+  }
 }
