@@ -17,17 +17,20 @@ import {
 
 export const AUTO_BATTLER_KERNEL_TYPE = "auto-battler-v1" as const;
 
-export const BOARD_SLOTS = 8;
-export const BENCH_SLOTS = 4;
+/** Own half: 7 columns × 2 rows (row 0 = front, at the tide line). */
+export const BOARD_COLS = 7;
+export const BOARD_ROWS = 2;
+export const BOARD_SLOTS = BOARD_COLS * BOARD_ROWS;
+export const BENCH_SLOTS = 5;
 export const SHOP_SIZE = 5;
 export const START_GOLD = 10;
 export const REFRESH_COST = 1;
 export const BASE_INCOME = 5;
 export const START_HP = 20;
-export const MAX_COMBAT_TICKS = 48;
+export const MAX_COMBAT_TICKS = 64;
 export const SELL_REFUND_RATIO = 0.5;
 
-export type TraitId = "tidal" | "shell" | "swift";
+export type TraitId = "tide" | "shell" | "coral" | "voyager";
 
 export type UnitDef = {
   id: string;
@@ -40,26 +43,30 @@ export type UnitDef = {
 
 /** Original Tide Arena roster (≥6). */
 export const UNIT_CATALOG: readonly UnitDef[] = [
-  { id: "reef-crab", name: "礁蟹", cost: 1, atk: 2, hp: 4, traits: ["tidal", "shell"] },
-  { id: "spray-finch", name: "浪雀", cost: 1, atk: 3, hp: 2, traits: ["tidal", "swift"] },
-  { id: "kelp-warden", name: "藻卫", cost: 2, atk: 2, hp: 6, traits: ["shell"] },
-  { id: "tide-runner", name: "潮奔", cost: 2, atk: 4, hp: 3, traits: ["swift", "tidal"] },
-  { id: "coral-brute", name: "珊蛮", cost: 3, atk: 5, hp: 7, traits: ["shell"] },
-  { id: "mist-archer", name: "雾弓", cost: 3, atk: 6, hp: 3, traits: ["swift"] },
+  { id: "crab", name: "礁蟹", cost: 1, atk: 45, hp: 650, traits: ["shell", "tide"] },
+  { id: "blade", name: "潮刃", cost: 2, atk: 70, hp: 550, traits: ["tide"] },
+  { id: "archer", name: "飞鱼弓", cost: 2, atk: 60, hp: 450, traits: ["voyager"] },
+  { id: "witch", name: "珊瑚巫", cost: 3, atk: 50, hp: 600, traits: ["coral"] },
+  { id: "whale", name: "鲸盾", cost: 4, atk: 55, hp: 1100, traits: ["shell"] },
+  { id: "spirit", name: "海风灵", cost: 5, atk: 85, hp: 800, traits: ["voyager", "tide"] },
 ] as const;
 
 const UNIT_BY_ID: Record<string, UnitDef> = Object.fromEntries(
   UNIT_CATALOG.map((unit) => [unit.id, unit]),
 );
 
-/** Synergies: trait count ≥2 changes combat stats. */
+/**
+ * Synergies: trait count ≥2 changes combat stats (v0 flat bonuses; the SPEC's
+ * timed shield / armor / brittle / extra-projectile effects are not yet modelled).
+ */
 export const TRAIT_SYNERGIES: Record<
   TraitId,
-  { label: string; min: number; atkBonus: number; hpBonus: number }
+  { label: string; glyph: string; min: number; tiers: readonly number[]; atkBonus: number; hpBonus: number }
 > = {
-  tidal: { label: "潮汐", min: 2, atkBonus: 1, hpBonus: 0 },
-  shell: { label: "甲壳", min: 2, atkBonus: 0, hpBonus: 2 },
-  swift: { label: "迅潮", min: 2, atkBonus: 1, hpBonus: 0 },
+  tide: { label: "潮汐", glyph: "潮", min: 2, tiers: [2, 4, 6], atkBonus: 0, hpBonus: 60 },
+  shell: { label: "硬壳", glyph: "甲", min: 2, tiers: [2, 4], atkBonus: 0, hpBonus: 150 },
+  coral: { label: "珊瑚咒", glyph: "咒", min: 2, tiers: [2, 3], atkBonus: 10, hpBonus: 0 },
+  voyager: { label: "远航", glyph: "风", min: 2, tiers: [2, 4], atkBonus: 12, hpBonus: 0 },
 };
 
 export type Piece = {
@@ -189,10 +196,20 @@ export function unitDef(unitId: string): UnitDef | undefined {
   return UNIT_BY_ID[unitId];
 }
 
+/** Trait counts on a board (for HUD rows incl. inactive traits). */
+export function traitCounts(board: Array<Piece | null>): Record<TraitId, number> {
+  const counts: Record<TraitId, number> = { tide: 0, shell: 0, coral: 0, voyager: 0 };
+  for (const piece of board) {
+    const def = piece ? UNIT_BY_ID[piece.unitId] : undefined;
+    if (def) for (const trait of def.traits) counts[trait] += 1;
+  }
+  return counts;
+}
+
 export function activeSynergies(
   board: Array<Piece | null>,
 ): Array<{ trait: TraitId; count: number; label: string }> {
-  const counts: Record<TraitId, number> = { tidal: 0, shell: 0, swift: 0 };
+  const counts: Record<TraitId, number> = { tide: 0, shell: 0, coral: 0, voyager: 0 };
   for (const piece of board) {
     if (!piece) continue;
     const def = UNIT_BY_ID[piece.unitId];
@@ -233,13 +250,22 @@ function boardToFighters(
     const piece = board[i];
     if (!piece) continue;
     const buffed = applySynergiesToPiece(piece, board);
-    const x = i % 4;
-    const localY = Math.floor(i / 4);
-    // Seat 0 occupies y=0..1; seat 1 mirrors onto y=3..2 facing them.
-    const y = seat === 0 ? localY : 3 - localY;
-    fighters.push({ ...buffed, x, y });
+    const cell = arenaCell(seat, i);
+    fighters.push({ ...buffed, x: cell.col, y: cell.row });
   }
   return fighters;
+}
+
+/**
+ * Shared arena coordinates (7×4, row 0 = far edge from seat 0). Seat 0's front
+ * row sits on row 2 at the tide line; seat 1 is mirrored onto rows 1..0.
+ */
+export function arenaCell(seat: number, boardIndex: number): { col: number; row: number } {
+  const col = boardIndex % BOARD_COLS;
+  const local = Math.floor(boardIndex / BOARD_COLS);
+  return seat === 0
+    ? { col, row: BOARD_ROWS + local }
+    : { col: BOARD_COLS - 1 - col, row: BOARD_ROWS - 1 - local };
 }
 
 function manhattan(a: CombatFighter, b: CombatFighter): number {
@@ -309,7 +335,7 @@ function runCombat(
   if (alive0 > 0 && alive1 === 0) winnerSeat = 0;
   else if (alive1 > 0 && alive0 === 0) winnerSeat = 1;
   const survivors = winnerSeat === 0 ? alive0 : winnerSeat === 1 ? alive1 : 0;
-  const damage = winnerSeat === null ? 0 : Math.max(1, survivors);
+  const damage = winnerSeat === null ? 0 : 2 + survivors;
   log.push({
     kind: "combat_end",
     winnerSeat,
@@ -378,71 +404,50 @@ export const autoBattlerAdapter: PlayKernelAdapter<
     return "shop";
   },
   listLegalActions(state, playerId) {
-    if (state.status !== "active" || playerId !== state.activePlayerId) {
+    if (
+      state.status !== "active" ||
+      playerId !== state.activePlayerId ||
+      (state.phase !== "shop" && state.phase !== "place")
+    ) {
       return [];
     }
     const seat = state.genre.seats[playerId];
     if (!seat || seat.ready) return [];
-    const legal: Array<{
-      type: string;
-      label: string;
-      payload?: Record<string, unknown>;
-    }> = [];
-
+    const legal: Array<{ type: string; label: string; payload?: Record<string, unknown> }> = [];
+    const name = (piece: Piece) => UNIT_BY_ID[piece.unitId]?.name ?? piece.unitId;
     if (state.phase === "shop") {
       seat.shop.forEach((unitId, shopIndex) => {
         const def = UNIT_BY_ID[unitId];
-        if (!def) return;
-        if (seat.gold >= def.cost && firstEmpty(seat.bench) >= 0) {
-          legal.push({
-            type: "buy",
-            label: `购买 ${def.name}`,
-            payload: { shopIndex },
-          });
+        if (def && seat.gold >= def.cost && firstEmpty(seat.bench) >= 0) {
+          legal.push({ type: "buy", label: `购买 ${def.name}`, payload: { shopIndex } });
         }
       });
-      seat.bench.forEach((piece, benchIndex) => {
-        if (!piece) return;
-        legal.push({
-          type: "sell",
-          label: `出售 ${UNIT_BY_ID[piece.unitId]?.name ?? piece.unitId}`,
-          payload: { benchIndex },
-        });
+      if (seat.gold >= REFRESH_COST) legal.push({ type: "refresh", label: "刷新商店" });
+    }
+    // Arrange (drag) + sell are legal in both prep phases; locked during combat.
+    seat.bench.forEach((piece, benchIndex) => {
+      if (!piece) return;
+      legal.push({ type: "sell", label: `出售 ${name(piece)}`, payload: { benchIndex } });
+      seat.board.forEach((cell, boardIndex) => {
+        if (!cell) legal.push({ type: "place", label: `上阵 ${name(piece)}`, payload: { benchIndex, boardIndex } });
       });
-      if (seat.gold >= REFRESH_COST) {
-        legal.push({ type: "refresh", label: "刷新商店" });
+    });
+    seat.board.forEach((piece, boardIndex) => {
+      if (!piece) return;
+      legal.push({ type: "sell", label: `出售 ${name(piece)}`, payload: { boardIndex } });
+      if (firstEmpty(seat.bench) >= 0) {
+        legal.push({ type: "recall", label: `撤回 ${name(piece)}`, payload: { boardIndex } });
       }
-      legal.push({ type: "ready_shop", label: "准备完毕" });
-      return legal;
-    }
-
-    if (state.phase === "place") {
-      seat.bench.forEach((piece, benchIndex) => {
-        if (!piece) return;
-        seat.board.forEach((cell, boardIndex) => {
-          if (cell) return;
-          legal.push({
-            type: "place",
-            label: `上阵 ${UNIT_BY_ID[piece.unitId]?.name ?? piece.unitId}`,
-            payload: { benchIndex, boardIndex },
-          });
-        });
+      seat.board.forEach((cell, to) => {
+        if (!cell) legal.push({ type: "move", label: `移动 ${name(piece)}`, payload: { from: boardIndex, to } });
       });
-      seat.board.forEach((piece, boardIndex) => {
-        if (!piece) return;
-        if (firstEmpty(seat.bench) >= 0) {
-          legal.push({
-            type: "recall",
-            label: `撤回 ${UNIT_BY_ID[piece.unitId]?.name ?? piece.unitId}`,
-            payload: { boardIndex },
-          });
-        }
-      });
-      legal.push({ type: "ready_place", label: "锁定阵容" });
-      return legal;
-    }
-
-    return [];
+    });
+    legal.push(
+      state.phase === "shop"
+        ? { type: "ready_shop", label: "准备完毕" }
+        : { type: "ready_place", label: "锁定阵容" },
+    );
+    return legal;
   },
   reduce(state, action) {
     if (
@@ -452,197 +457,112 @@ export const autoBattlerAdapter: PlayKernelAdapter<
     ) {
       return null;
     }
+    const phase = state.phase as "shop" | "place";
     const genre = cloneGenre(state.genre);
     const seat = genre.seats[action.playerId];
     if (!seat || seat.ready) return null;
     const other = action.playerId === 0 ? 1 : 0;
+    const stay = () => ({
+      genre,
+      phase,
+      activePlayerId: action.playerId,
+      status: "active" as const,
+      winnerId: null,
+    });
+    const index = (key: string, length: number): number | null => {
+      const value = action.payload?.[key];
+      return typeof value === "number" && Number.isInteger(value) && value >= 0 && value < length ? value : null;
+    };
 
-    if (state.phase === "shop") {
-      if (action.type === "buy") {
-        const shopIndex = action.payload?.shopIndex;
-        if (
-          typeof shopIndex !== "number" ||
-          !Number.isInteger(shopIndex) ||
-          shopIndex < 0 ||
-          shopIndex >= seat.shop.length
-        ) {
-          return null;
-        }
-        const unitId = seat.shop[shopIndex];
-        if (!unitId) return null;
-        const def = UNIT_BY_ID[unitId];
-        if (!def || seat.gold < def.cost) return null;
-        const slot = firstEmpty(seat.bench);
-        if (slot < 0) return null;
-        const piece = makePiece(genre, unitId, action.playerId);
-        if (!piece) return null;
-        seat.gold -= def.cost;
-        seat.bench[slot] = piece;
-        seat.shop[shopIndex] = ""; // sold-out slot
-        return {
-          genre,
-          phase: "shop",
-          activePlayerId: action.playerId,
-          status: "active",
-          winnerId: null,
-        };
-      }
-      if (action.type === "sell") {
-        const benchIndex = action.payload?.benchIndex;
-        if (
-          typeof benchIndex !== "number" ||
-          !Number.isInteger(benchIndex) ||
-          benchIndex < 0 ||
-          benchIndex >= seat.bench.length
-        ) {
-          return null;
-        }
-        const piece = seat.bench[benchIndex];
-        if (!piece) return null;
-        const def = UNIT_BY_ID[piece.unitId];
-        if (!def) return null;
-        seat.bench[benchIndex] = null;
-        seat.gold += Math.max(1, Math.floor(def.cost * SELL_REFUND_RATIO));
-        return {
-          genre,
-          phase: "shop",
-          activePlayerId: action.playerId,
-          status: "active",
-          winnerId: null,
-        };
-      }
-      if (action.type === "refresh") {
-        if (action.payload !== undefined || seat.gold < REFRESH_COST) return null;
-        seat.gold -= REFRESH_COST;
-        seat.shop = rollShop(
-          state.seed,
-          state.sequence + 50 + action.playerId,
-          SHOP_SIZE,
-        );
-        return {
-          genre,
-          phase: "shop",
-          activePlayerId: action.playerId,
-          status: "active",
-          winnerId: null,
-        };
-      }
-      if (action.type === "ready_shop") {
-        if (action.payload !== undefined) return null;
-        seat.ready = true;
-        if (!bothReady(genre)) {
-          return {
-            genre,
-            phase: "shop",
-            activePlayerId: other,
-            status: "active",
-            winnerId: null,
-          };
-        }
-        clearReady(genre);
-        return {
-          genre,
-          phase: "place",
-          activePlayerId: 0,
-          status: "active",
-          winnerId: null,
-        };
-      }
-      return null;
+    if (action.type === "buy") {
+      if (phase !== "shop") return null;
+      const shopIndex = index("shopIndex", seat.shop.length);
+      if (shopIndex === null) return null;
+      const def = UNIT_BY_ID[seat.shop[shopIndex] ?? ""];
+      const slot = firstEmpty(seat.bench);
+      if (!def || seat.gold < def.cost || slot < 0) return null;
+      const piece = makePiece(genre, def.id, action.playerId);
+      if (!piece) return null;
+      seat.gold -= def.cost;
+      seat.bench[slot] = piece;
+      seat.shop[shopIndex] = ""; // sold-out slot
+      return stay();
     }
-
-    // place
+    if (action.type === "refresh") {
+      if (phase !== "shop" || action.payload !== undefined || seat.gold < REFRESH_COST) return null;
+      seat.gold -= REFRESH_COST;
+      seat.shop = rollShop(state.seed, state.sequence + 50 + action.playerId, SHOP_SIZE);
+      return stay();
+    }
+    if (action.type === "sell") {
+      const benchIndex = index("benchIndex", seat.bench.length);
+      const boardIndex = index("boardIndex", seat.board.length);
+      if ((benchIndex === null) === (boardIndex === null)) return null;
+      const slots = benchIndex !== null ? seat.bench : seat.board;
+      const at = (benchIndex ?? boardIndex)!;
+      const piece = slots[at];
+      const def = piece ? UNIT_BY_ID[piece.unitId] : undefined;
+      if (!piece || !def) return null;
+      slots[at] = null;
+      seat.gold += Math.max(1, Math.floor(def.cost * SELL_REFUND_RATIO));
+      return stay();
+    }
     if (action.type === "place") {
-      const benchIndex = action.payload?.benchIndex;
-      const boardIndex = action.payload?.boardIndex;
-      if (
-        typeof benchIndex !== "number" ||
-        typeof boardIndex !== "number" ||
-        !Number.isInteger(benchIndex) ||
-        !Number.isInteger(boardIndex) ||
-        benchIndex < 0 ||
-        benchIndex >= seat.bench.length ||
-        boardIndex < 0 ||
-        boardIndex >= seat.board.length
-      ) {
-        return null;
-      }
+      const benchIndex = index("benchIndex", seat.bench.length);
+      const boardIndex = index("boardIndex", seat.board.length);
+      if (benchIndex === null || boardIndex === null) return null;
       const piece = seat.bench[benchIndex];
       if (!piece || seat.board[boardIndex]) return null;
       seat.board[boardIndex] = piece;
       seat.bench[benchIndex] = null;
-      return {
-        genre,
-        phase: "place",
-        activePlayerId: action.playerId,
-        status: "active",
-        winnerId: null,
-      };
+      return stay();
+    }
+    if (action.type === "move") {
+      const from = index("from", seat.board.length);
+      const to = index("to", seat.board.length);
+      if (from === null || to === null || from === to) return null;
+      const piece = seat.board[from];
+      if (!piece || seat.board[to]) return null;
+      seat.board[to] = piece;
+      seat.board[from] = null;
+      return stay();
     }
     if (action.type === "recall") {
-      const boardIndex = action.payload?.boardIndex;
-      if (
-        typeof boardIndex !== "number" ||
-        !Number.isInteger(boardIndex) ||
-        boardIndex < 0 ||
-        boardIndex >= seat.board.length
-      ) {
-        return null;
-      }
+      const boardIndex = index("boardIndex", seat.board.length);
+      if (boardIndex === null) return null;
       const piece = seat.board[boardIndex];
-      if (!piece) return null;
       const slot = firstEmpty(seat.bench);
-      if (slot < 0) return null;
+      if (!piece || slot < 0) return null;
       seat.bench[slot] = piece;
       seat.board[boardIndex] = null;
-      return {
-        genre,
-        phase: "place",
-        activePlayerId: action.playerId,
-        status: "active",
-        winnerId: null,
-      };
+      return stay();
     }
-    if (action.type === "ready_place") {
-      if (action.payload !== undefined) return null;
+    if (action.type === "ready_shop") {
+      if (phase !== "shop" || action.payload !== undefined) return null;
       seat.ready = true;
       if (!bothReady(genre)) {
-        return {
-          genre,
-          phase: "place",
-          activePlayerId: other,
-          status: "active",
-          winnerId: null,
-        };
+        return { genre, phase: "shop", activePlayerId: other, status: "active", winnerId: null };
+      }
+      clearReady(genre);
+      return { genre, phase: "place", activePlayerId: 0, status: "active", winnerId: null };
+    }
+    if (action.type === "ready_place") {
+      if (phase !== "place" || action.payload !== undefined) return null;
+      seat.ready = true;
+      if (!bothReady(genre)) {
+        return { genre, phase: "place", activePlayerId: other, status: "active", winnerId: null };
       }
       // Combat + resolve inside this reduce (authoritative).
       const result = runCombat(genre, state.seed, state.sequence);
       genre.combatLog = result.log;
-      genre.lastCombat = {
-        winnerSeat: result.winnerSeat,
-        damage: result.damage,
-      };
+      genre.lastCombat = { winnerSeat: result.winnerSeat, damage: result.damage };
       if (result.winnerSeat !== null) {
-        const loser = result.winnerSeat === 0 ? 1 : 0;
-        genre.seats[loser]!.hp -= result.damage;
+        genre.seats[result.winnerSeat === 0 ? 1 : 0]!.hp -= result.damage;
       }
-      // Heal board pieces back to catalog+synergy max for next round (instances persist).
-      for (const s of genre.seats) {
-        s.board = s.board.map((piece) => {
-          if (!piece) return null;
-          const def = UNIT_BY_ID[piece.unitId];
-          if (!def) return piece;
-          return { ...piece, atk: def.atk, hp: def.hp, maxHp: def.hp };
-        });
-        s.ready = false;
-      }
+      for (const s of genre.seats) s.ready = false;
       if (genre.seats[0].hp <= 0 || genre.seats[1].hp <= 0) {
         const winnerId =
-          genre.seats[0].hp <= 0 && genre.seats[1].hp <= 0
-            ? null
-            : genre.seats[0].hp <= 0
-              ? 1
-              : 0;
+          genre.seats[0].hp <= 0 && genre.seats[1].hp <= 0 ? null : genre.seats[0].hp <= 0 ? 1 : 0;
         return {
           genre,
           phase: "ended",
@@ -653,13 +573,7 @@ export const autoBattlerAdapter: PlayKernelAdapter<
         };
       }
       startShopRound(genre, state.seed, state.sequence);
-      return {
-        genre,
-        phase: "shop",
-        activePlayerId: 0,
-        status: "active",
-        winnerId: null,
-      };
+      return { genre, phase: "shop", activePlayerId: 0, status: "active", winnerId: null };
     }
     return null;
   },

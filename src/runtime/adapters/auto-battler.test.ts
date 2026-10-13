@@ -6,6 +6,7 @@ import {
   replay,
 } from "../play-kernel";
 import {
+  arenaCell,
   autoBattlerAdapter,
   autoPlayAutoBattlerGame,
   createAutoBattlerKernelConfig,
@@ -26,7 +27,8 @@ describe("auto-battler-v1 Tide Arena", () => {
     expect(state.genre.seats[0].hp).toBe(20);
     expect(state.genre.seats[0].shop).toHaveLength(5);
     expect(state.genre.seats[0].bench.every((slot) => slot === null)).toBe(true);
-    expect(state.genre.seats[0].board).toHaveLength(8);
+    expect(state.genre.seats[0].board).toHaveLength(14);
+    expect(state.genre.seats[0].bench).toHaveLength(5);
   });
 
   it("buy → ready_shop both → place → ready_place runs combat deterministically", () => {
@@ -107,5 +109,30 @@ describe("auto-battler-v1 Tide Arena", () => {
     const { state, actions } = autoPlayAutoBattlerGame(21, 80);
     const replayed = replay(autoBattlerAdapter, config, 21, actions);
     expect(hashPlayState(replayed)).toBe(hashPlayState(state));
+  });
+
+  it("drag ops: place, move between own cells, sell from board; illegal targets fail closed", () => {
+    let state = createInitialState(autoBattlerAdapter, config, 7);
+    const step = (type: string, payload?: Record<string, unknown>) => {
+      const result = applyAction(autoBattlerAdapter, state, { type, playerId: 0, ...(payload ? { payload } : {}) }, config);
+      if (result.ok) state = result.state;
+      return result.ok;
+    };
+    expect(step("buy", { shopIndex: 0 })).toBe(true);
+    expect(step("place", { benchIndex: 0, boardIndex: 3 })).toBe(true); // placement allowed during shop
+    expect(step("move", { from: 3, to: 10 })).toBe(true);
+    expect(state.genre.seats[0].board[10]).not.toBeNull();
+    expect(step("move", { from: 10, to: 14 })).toBe(false); // outside own half
+    const gold = state.genre.seats[0].gold;
+    expect(step("sell", { boardIndex: 10 })).toBe(true);
+    expect(state.genre.seats[0].gold).toBeGreaterThan(gold);
+    expect(step("sell", { boardIndex: 10, benchIndex: 0 })).toBe(false);
+  });
+
+  it("mirrors seat 1 onto the enemy half with seat 0's front row at the tide line", () => {
+    expect(arenaCell(0, 0)).toEqual({ col: 0, row: 2 });
+    expect(arenaCell(0, 13)).toEqual({ col: 6, row: 3 });
+    expect(arenaCell(1, 0)).toEqual({ col: 6, row: 1 });
+    expect(arenaCell(1, 13)).toEqual({ col: 0, row: 0 });
   });
 });
