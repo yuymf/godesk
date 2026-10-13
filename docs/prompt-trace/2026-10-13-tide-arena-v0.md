@@ -43,3 +43,12 @@ Decisions:
 - `src/render3d/tide-arena/timeline.ts` (pure): strike spacing `clamp(10s/n, 180, 1500)ms`, hit lands 360ms after swing; log line text and floater share `floaterText`; unit test asserts final HP equals `combatDigest(log).hp` on a real autoplay log.
 - Scene owns the replay clock (rAF while playing, render-on-demand otherwise); per frame it only rewrites cached instance matrices (token slot cache, pooled 12-instance projectile mesh, reused temps). React is notified only when an event boundary is crossed.
 - Ranged = archer / witch / spirit (projectile arc); others lunge.
+
+## Knife 4 — Step 4 HUD + Step2 leftovers (same day)
+Prompt (大主管 Step4 裁定): shop cards with identifiable portraits (tier stripe, name, cost, trait chips); level/XP + teal 升级 button (separate from 准备完毕/锁定); top bar timer + both player name slots + HP ticks keeping `START_HP = 20`; left synergy panel with 2/4/6 (or real tiers) ladder. Fold-ins from Step2: floaters follow lunge pose; death = sink + soft fade (not shrink-in-place); mobile keep 潮线/备战席 labels (smaller); mobile camera closer (FOV 50, wider fit). Out of scope → Step5: ★2 merge, stronger AI, 10–12 units, synergy combat events.
+
+Decisions:
+- Kernel: `SeatState.level` + `xp`; `buy_xp` costs 4 gold → +4 XP → auto level-up; board cap = level; `START_LEVEL = 3` for round-1 playability; no compat layer.
+- Shop art: inline SVG silhouettes from mockup (paper card + tier top stripe + gold cost chip).
+- Scene: live anchor emit each replay frame so floaters/HP track lunge; death sinks Y ~1.05 with mild scale dissolve; mobile `fov=50`, `mx=1.22`.
+- Evidence (not committed): `/workspace/g3d-evidence/godesk-2026-10-13/tide-arena/step4/` (`cmp-place`, `cmp-mobile`, `cmp-combat-mid` + raw shots). Perf e2e: 17 draw / 13.5k tri.

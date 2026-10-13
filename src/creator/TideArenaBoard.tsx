@@ -7,6 +7,9 @@ import type { SessionState } from "./project-contract";
 import {
   START_HP,
   REFRESH_COST,
+  BUY_XP_COST,
+  MAX_LEVEL,
+  xpToNext,
   TRAIT_SYNERGIES,
   traitCounts,
   unitDef,
@@ -25,6 +28,26 @@ type TideArenaState = NonNullable<SessionState["autoBattler"]>;
 const RESOLVE_HOLD_MS = 3000;
 const FLOATER_WINDOW_MS = 1400;
 const TRAITS = Object.keys(TRAIT_SYNERGIES) as TraitId[];
+
+const OWN_NAME = "汐屿·我方";
+const ENEMY_NAME = "珊瑚港·对手";
+
+/** SVG silhouettes aligned to SPEC / mockup unit shapes. */
+const UNIT_SILHOUETTE: Record<string, string> = {
+  crab: '<ellipse cx="28" cy="34" rx="18" ry="11"/><circle cx="10" cy="22" r="6"/><circle cx="46" cy="22" r="6"/>',
+  blade: '<path d="M28 6 L36 40 L28 50 L20 40Z"/>',
+  witch: '<path d="M28 6 L42 48 H14Z"/><circle cx="28" cy="12" r="5"/>',
+  whale: '<rect x="8" y="14" width="40" height="34" rx="10"/>',
+  archer: '<path d="M6 30 Q28 8 50 30 Q28 44 6 30Z"/>',
+  spirit: '<circle cx="28" cy="28" r="16"/><circle cx="28" cy="28" r="22" fill="none" stroke-width="3"/>',
+};
+
+const TRAIT_GLYPH_BG: Record<TraitId, string> = {
+  tide: "#1F8A8A",
+  shell: "#C0703C",
+  coral: "#8A6BBE",
+  voyager: "#5A8FC9",
+};
 
 function useWidth(ref: React.RefObject<HTMLElement | null>) {
   const [width, setWidth] = useState(1440);
@@ -45,12 +68,59 @@ function combatKey(arena: TideArenaState): string | null {
   return start ? `${start.round}:${arena.combatLog.length}` : null;
 }
 
+function formatClock(totalSec: number): string {
+  const s = Math.max(0, Math.floor(totalSec));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${r.toString().padStart(2, "0")}`;
+}
+
 function LockIcon() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden>
       <path d="M7 10V7a5 5 0 0 1 10 0v3" fill="none" stroke="currentColor" strokeWidth="2.2" />
       <rect x="4.5" y="10" width="15" height="11" rx="2.5" fill="currentColor" />
     </svg>
+  );
+}
+
+function CoinIcon({ size = 14 }: { size?: number }) {
+  return <i className="ta-coin" style={{ width: size, height: size }} aria-hidden />;
+}
+
+function HpTicks({ hp, max, tone }: { hp: number; max: number; tone: "own" | "enemy" }) {
+  const pct = Math.max(0, Math.min(100, (hp / max) * 100));
+  return (
+    <span className={`ta-hpbar is-${tone}`} aria-label={tone === "own" ? "我方生命" : "对手生命"}>
+      <b className="ta-pl-name">{tone === "own" ? OWN_NAME : ENEMY_NAME}</b>
+      <span className="ta-hp-track">
+        <i style={{ width: `${pct}%` }} />
+        <span className="ta-hp-ticks" aria-hidden>
+          {Array.from({ length: max }, (_, i) => (
+            <em key={i} />
+          ))}
+        </span>
+      </span>
+      <em className="ta-hp-num">
+        {hp}/{max}
+      </em>
+    </span>
+  );
+}
+
+function ShopPortrait({ unitId, name, color }: { unitId: string; name: string; color: string }) {
+  const sil = UNIT_SILHOUETTE[unitId];
+  if (!sil) {
+    return (
+      <span className="ta-portrait" style={{ background: color }}>
+        {name.slice(0, 1)}
+      </span>
+    );
+  }
+  return (
+    <span className="ta-art" style={{ background: `linear-gradient(160deg, ${color}33, ${color}55)` }}>
+      <svg viewBox="0 0 56 56" fill={color} stroke={color} aria-hidden dangerouslySetInnerHTML={{ __html: sil }} />
+    </span>
   );
 }
 
@@ -107,6 +177,16 @@ export function TideArenaBoard({
   const inCombat = replay !== null && status === "active";
   const onReplayTime = (ms: number, done: boolean) => setReplay((r) => (r ? { ...r, ms, done: r.done || done } : r));
 
+  // Prep timer: fixed derived countdown (not authoritative).
+  const prepBudget = arena.phase === "shop" ? 45 : 30;
+  const [prepLeft, setPrepLeft] = useState(prepBudget);
+  useEffect(() => {
+    if (inCombat || status !== "active" || arena.phase === "ended") return;
+    setPrepLeft(prepBudget);
+    const id = setInterval(() => setPrepLeft((n) => Math.max(0, n - 1)), 1000);
+    return () => clearInterval(id);
+  }, [arena.phase, arena.round, inCombat, status, prepBudget]);
+
   const live = useMemo(() => {
     if (!replay) return null;
     const { tl, ms } = replay;
@@ -124,13 +204,15 @@ export function TideArenaBoard({
   const [drag, setDrag] = useState({ dragging: false, overSell: false });
 
   const counts = traitCounts(ownBoard);
-  const names = new Map<string, string>();
-  for (const p of [...ownBoard, ...enemyBoard]) if (p) names.set(p.uid, unitDef(p.unitId)?.name ?? p.unitId);
-
   const phase = status === "complete" || arena.phase === "ended" ? "终局" : inCombat ? "战斗" : "备战";
   const step = arena.phase === "shop" ? "商店" : arena.phase === "place" ? "布阵" : "";
   const cta = arena.phase === "shop" ? { id: "ready_shop", label: "准备完毕" } : { id: "ready_place", label: "锁定阵容" };
   const safe = mobile ? { top: 120, bottom: 176, left: 0, right: 0 } : { top: 72, bottom: 172, left: 200, right: 200 };
+
+  const level = me.level ?? 1;
+  const xp = me.xp ?? 0;
+  const need = xpToNext(level);
+  const timerLabel = inCombat ? (live?.lines.at(-1)?.stamp ?? "0:00") : formatClock(prepLeft);
 
   const act = (id: string, payload?: Record<string, unknown>) => onAct?.(id, payload);
 
@@ -170,19 +252,16 @@ export function TideArenaBoard({
           {phase}
           {phase === "备战" && step ? ` · ${step}` : ""}
         </span>
+        <span className={`ta-timer${inCombat ? " is-combat" : ""}`} aria-label="计时">
+          {timerLabel}
+        </span>
         <span className="ta-turn" aria-live="polite">
           {status === "complete" ? "对局结束" : me.ready ? "已准备，等待对手" : `座位 ${activeSeat} 行动`}
         </span>
-        <span className="ta-hpbar is-own" aria-label="我方生命">
-          <b>我方</b>
-          <span><i style={{ width: `${(me.hp / START_HP) * 100}%` }} /></span>
-          <em>{me.hp}</em>
-        </span>
-        <span className="ta-hpbar is-enemy" aria-label="对手生命">
-          <b>对手</b>
-          <span><i style={{ width: `${(them.hp / START_HP) * 100}%` }} /></span>
-          <em>{them.hp}</em>
-        </span>
+        <div className="ta-players">
+          <HpTicks hp={me.hp} max={START_HP} tone="own" />
+          <HpTicks hp={them.hp} max={START_HP} tone="enemy" />
+        </div>
       </header>
 
       <aside className="ta-traits" aria-label="我方羁绊">
@@ -190,12 +269,30 @@ export function TideArenaBoard({
         {TRAITS.map((trait) => {
           const syn = TRAIT_SYNERGIES[trait];
           const n = counts[trait] ?? 0;
+          const activeTier = [...syn.tiers].filter((t) => n >= t);
+          const current = activeTier[activeTier.length - 1];
           const next = syn.tiers.find((t) => t > n) ?? syn.tiers[syn.tiers.length - 1]!;
           return (
             <div key={trait} className={`ta-trait${n >= syn.min ? " is-active" : ""}`}>
-              <span className="ta-glyph">{syn.glyph}</span>
-              {!mobile ? <span className="ta-trait-name">{syn.label}</span> : null}
-              <span className="ta-trait-count">{n}/{next}</span>
+              <span className="ta-glyph" style={{ background: n >= syn.min ? TRAIT_GLYPH_BG[trait] : undefined }}>
+                {syn.glyph}
+              </span>
+              <div className="ta-trait-body">
+                {!mobile ? <span className="ta-trait-name">{syn.label}</span> : null}
+                {!mobile ? (
+                  <span className="ta-trait-steps" aria-label={`${syn.label}档位`}>
+                    {syn.tiers.map((t, i) => (
+                      <span key={t} className={current === t || (current === undefined && false) ? "is-on" : n >= t ? "is-on" : ""}>
+                        {i > 0 ? " / " : ""}
+                        {t}
+                      </span>
+                    ))}
+                  </span>
+                ) : null}
+              </div>
+              <span className="ta-trait-count">
+                <b>{n}</b>/{next}
+              </span>
             </div>
           );
         })}
@@ -230,11 +327,43 @@ export function TideArenaBoard({
 
       <footer className={`ta-shop${inCombat ? " is-locked" : ""}`} aria-label="商店">
         <div className="ta-shop-side">
-          <span className="ta-gold" aria-label="金币"><i />{me.gold}</span>
-          <button type="button" className="ta-btn" disabled={!canAct || inCombat || arena.phase !== "shop" || me.gold < REFRESH_COST} onClick={() => act("refresh")}>
-            刷新 {REFRESH_COST}
+          <span className="ta-gold" aria-label="金币">
+            <CoinIcon size={18} />
+            {me.gold}
+          </span>
+          <div className="ta-lvlw">
+            <div className="ta-lvl">
+              等级 {level} · {xp}/{need} 经验
+            </div>
+            <div className="ta-xp" aria-hidden>
+              <i style={{ width: `${Math.min(100, (xp / Math.max(1, need)) * 100)}%` }} />
+            </div>
+          </div>
+          <button
+            type="button"
+            className="ta-btn"
+            disabled={!canAct || inCombat || arena.phase !== "shop" || me.gold < REFRESH_COST}
+            onClick={() => act("refresh")}
+          >
+            <span>刷新</span>
+            <small>
+              <CoinIcon size={12} />
+              {REFRESH_COST}
+            </small>
           </button>
-          <button type="button" className="ta-btn is-cta" disabled={!canAct || inCombat} onClick={() => act(cta.id)}>
+          <button
+            type="button"
+            className="ta-btn is-cta"
+            disabled={!canAct || inCombat || arena.phase !== "shop" || level >= MAX_LEVEL || me.gold < BUY_XP_COST}
+            onClick={() => act("buy_xp")}
+          >
+            <span>升级</span>
+            <small>
+              <CoinIcon size={12} />
+              {BUY_XP_COST}
+            </small>
+          </button>
+          <button type="button" className="ta-btn is-ready" disabled={!canAct || inCombat} onClick={() => act(cta.id)}>
             {cta.label}
           </button>
         </div>
@@ -242,6 +371,7 @@ export function TideArenaBoard({
           {me.shop.map((unitId, shopIndex) => {
             const def = unitId ? unitDef(unitId) : undefined;
             if (!def) return <div key={shopIndex} className="ta-card is-empty" aria-hidden />;
+            const color = UNIT_COLORS[def.id] ?? "#9AA0A6";
             return (
               <button
                 key={shopIndex}
@@ -251,10 +381,23 @@ export function TideArenaBoard({
                 disabled={!canAct || inCombat || arena.phase !== "shop" || me.gold < def.cost}
                 onClick={() => act("buy", { shopIndex })}
               >
-                <span className="ta-portrait" style={{ background: UNIT_COLORS[def.id] }}>{def.name.slice(0, 1)}</span>
-                <strong>{def.name}</strong>
-                <span className="ta-card-traits">{def.traits.map((t) => TRAIT_SYNERGIES[t].glyph).join(" ")}</span>
-                <span className="ta-cost">{def.cost}</span>
+                <ShopPortrait unitId={def.id} name={def.name} color={color} />
+                <span className="ta-meta">
+                  <span className="ta-card-row">
+                    <strong>{def.name}</strong>
+                    <span className="ta-cost">
+                      <CoinIcon size={14} />
+                      {def.cost}
+                    </span>
+                  </span>
+                  <span className="ta-card-traits">
+                    {def.traits.map((t) => (
+                      <span key={t} className="ta-chip-trait">
+                        {TRAIT_SYNERGIES[t].label}
+                      </span>
+                    ))}
+                  </span>
+                </span>
               </button>
             );
           })}

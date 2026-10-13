@@ -95,8 +95,18 @@ type TokenSlot = {
   x: number;
   y: number;
   z: number;
+  /** Live pose (includes lunge / death sink) for HUD anchors. */
+  cx: number;
+  cy: number;
+  cz: number;
   rotY: number;
   dead: boolean;
+  own: boolean;
+  backRow: boolean;
+  onBench: boolean;
+  unitId: string;
+  hp: number;
+  maxHp: number;
 };
 
 const PROJECTILES = 12;
@@ -345,17 +355,17 @@ export class TideArenaScene {
     const cam = this.camera;
     const sw = Math.max(1, this.width - safe.left - safe.right);
     const sh = Math.max(1, this.height - safe.top - safe.bottom);
-    cam.fov = this.mobile ? 42 : 33;
+    cam.fov = this.mobile ? 50 : 33;
     cam.aspect = sw / sh;
-    const target = new Vector3(0, 0, this.mobile ? 1.0 : 0.9);
-    const dir = new Vector3(0, this.mobile ? 17 : 12, this.mobile ? 13 : 11.5).normalize();
+    const target = new Vector3(0, 0, this.mobile ? 1.2 : 0.9);
+    const dir = new Vector3(0, this.mobile ? 16 : 12, this.mobile ? 12 : 11.5).normalize();
     const zMin = BOARD_Z - FRAME_D / 2;
     const zMax = BENCH_Z + (CELL + 0.4) / 2;
     const corners: Vector3[] = [];
     for (const x of [-FRAME_W / 2, FRAME_W / 2]) for (const z of [zMin, zMax]) for (const y of [0, this.mobile ? 0.4 : TOKEN_HEIGHT]) corners.push(new Vector3(x, y, z));
-    // Mobile: board fills the width (frame corners may kiss the edge), camera closer.
-    const mx = this.mobile ? 1.1 : 0.98;
-    const my = this.mobile ? 1.06 : 0.97;
+    // Mobile: pull in so the board fills width (less empty side gutters).
+    const mx = this.mobile ? 1.22 : 0.98;
+    const my = this.mobile ? 1.1 : 0.97;
     const fits = (d: number) => {
       cam.position.copy(target).addScaledVector(dir, d);
       cam.lookAt(target);
@@ -411,7 +421,6 @@ export class TideArenaScene {
   private syncTokens() {
     const counts = new Map<string, number>();
     let ringCount = 0;
-    const anchors: TokenAnchor[] = [];
     const own = new Color(OWN_RING);
     const enemy = new Color(ENEMY_RING);
     const place = (piece: Piece, pos: { x: number; y: number; z: number }, isOwn: boolean, backRow: boolean, onBench: boolean) => {
@@ -426,7 +435,26 @@ export class TideArenaScene {
       this.tmp.scale.setScalar(dragging ? 1.08 : 1);
       this.tmp.updateMatrix();
       const n = counts.get(piece.unitId) ?? 0;
-      const slot: TokenSlot = { uid: piece.uid, mesh, index: n, ring: ringCount, x: p.x, y: p.y, z: p.z, rotY: isOwn ? 0 : Math.PI, dead: hp <= 0 };
+      const slot: TokenSlot = {
+        uid: piece.uid,
+        mesh,
+        index: n,
+        ring: ringCount,
+        x: p.x,
+        y: p.y,
+        z: p.z,
+        cx: p.x,
+        cy: p.y,
+        cz: p.z,
+        rotY: isOwn ? 0 : Math.PI,
+        dead: hp <= 0,
+        own: isOwn,
+        backRow,
+        onBench,
+        unitId: piece.unitId,
+        hp,
+        maxHp: piece.maxHp,
+      };
       this.slots.push(slot);
       this.slotByUid.set(piece.uid, slot);
       mesh.setMatrixAt(n, this.tmp.matrix);
@@ -434,18 +462,27 @@ export class TideArenaScene {
       this.rings.setMatrixAt(ringCount, this.tmp.matrix);
       this.rings.setColorAt(ringCount, isOwn ? own : enemy);
       ringCount += 1;
-      const s = new Vector3(p.x, p.y + TOKEN_HEIGHT + 0.12, p.z).project(this.camera);
-      anchors.push({
-        uid: piece.uid,
-        unitId: piece.unitId,
-        own: isOwn,
-        backRow,
-        onBench,
-        x: ((s.x + 1) / 2) * this.width,
-        y: ((1 - s.y) / 2) * this.height,
-        hp,
-        maxHp: piece.maxHp,
-      });
+    };
+    // Anchors emitted after optional replay animate so HUD tracks lunge / sink.
+    const pushAnchors = () => {
+      const out: TokenAnchor[] = [];
+      this.camera.updateMatrixWorld();
+      for (const s of this.slots) {
+        if (s.dead && !this.replay) continue;
+        const p = new Vector3(s.cx, s.cy + TOKEN_HEIGHT + 0.12, s.cz).project(this.camera);
+        out.push({
+          uid: s.uid,
+          unitId: s.unitId,
+          own: s.own,
+          backRow: s.backRow,
+          onBench: s.onBench,
+          x: ((p.x + 1) / 2) * this.width,
+          y: ((1 - p.y) / 2) * this.height,
+          hp: s.hp,
+          maxHp: s.maxHp,
+        });
+      }
+      this.cb.onAnchors(out);
     };
     this.camera.updateMatrixWorld();
     this.slots = [];
@@ -461,8 +498,8 @@ export class TideArenaScene {
     this.rings.instanceMatrix.needsUpdate = true;
     if (this.rings.instanceColor) this.rings.instanceColor.needsUpdate = true;
     this.syncHighlights();
-    this.cb.onAnchors(anchors);
     if (this.replay) this.animate(this.replay.ms);
+    else pushAnchors();
   }
 
   // ── Combat replay (presentational; the worker already resolved the fight) ──
@@ -537,14 +574,19 @@ export class TideArenaScene {
   private animate(ms: number) {
     const r = this.replay;
     if (!r) return;
-    // Base pose + death fade.
+    // Base pose + death sink/fade (not shrink-in-place).
     for (const s of this.slots) {
+      let y = s.y;
       let scale = 1;
       if (s.dead) {
         const down = this.downAt(r.tl, s.uid);
-        scale = ms < down ? 1 : Math.max(0, 1 - (ms - down) / DEATH_FADE_MS);
+        if (ms >= down) {
+          const t = Math.min(1, (ms - down) / DEATH_FADE_MS);
+          y = s.y - t * 1.05;
+          scale = Math.max(0.05, 1 - t * 0.35);
+        }
       }
-      this.pose(s, s.x, s.y, s.z, scale);
+      this.pose(s, s.x, y, s.z, scale);
       this.rings.setColorAt(s.ring, s.rotY === 0 ? this.cOwn : this.cEnemy);
     }
     // Swings in flight: melee lunge, ranged projectile arc, hit flash.
@@ -579,6 +621,28 @@ export class TideArenaScene {
     for (const mesh of this.units.values()) mesh.instanceMatrix.needsUpdate = true;
     this.rings.instanceMatrix.needsUpdate = true;
     if (this.rings.instanceColor) this.rings.instanceColor.needsUpdate = true;
+    this.emitLiveAnchors();
+  }
+
+  /** Project live token poses so floaters / HP bars track lunge and death sink. */
+  private emitLiveAnchors() {
+    const out: TokenAnchor[] = [];
+    this.camera.updateMatrixWorld();
+    for (const s of this.slots) {
+      const p = this.v1.set(s.cx, s.cy + TOKEN_HEIGHT + 0.12, s.cz).project(this.camera);
+      out.push({
+        uid: s.uid,
+        unitId: s.unitId,
+        own: s.own,
+        backRow: s.backRow,
+        onBench: s.onBench,
+        x: ((p.x + 1) / 2) * this.width,
+        y: ((1 - p.y) / 2) * this.height,
+        hp: s.hp,
+        maxHp: s.maxHp,
+      });
+    }
+    this.cb.onAnchors(out);
   }
 
   private downAt(tl: Timeline, uid: string): number {
@@ -587,6 +651,9 @@ export class TideArenaScene {
   }
 
   private pose(s: TokenSlot, x: number, y: number, z: number, scale: number) {
+    s.cx = x;
+    s.cy = y;
+    s.cz = z;
     this.tmp.position.set(x, y, z);
     this.tmp.rotation.set(0, s.rotY, 0);
     this.tmp.scale.setScalar(scale);

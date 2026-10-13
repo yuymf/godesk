@@ -956,6 +956,8 @@ export interface SessionState {
       {
         gold: number;
         hp: number;
+        level: number;
+        xp: number;
         shop: string[];
         bench: Array<{
           uid: string;
@@ -979,6 +981,8 @@ export interface SessionState {
       {
         gold: number;
         hp: number;
+        level: number;
+        xp: number;
         shop: string[];
         bench: Array<{
           uid: string;

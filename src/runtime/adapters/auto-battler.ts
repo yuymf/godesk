@@ -27,8 +27,24 @@ export const START_GOLD = 10;
 export const REFRESH_COST = 1;
 export const BASE_INCOME = 5;
 export const START_HP = 20;
+export const START_LEVEL = 3;
+export const MAX_LEVEL = 9;
+/** Gold cost to buy XP (TFT-style 「升级」). */
+export const BUY_XP_COST = 4;
+/** XP granted per purchase; level-up when xp >= xpToNext(level). */
+export const XP_PER_BUY = 4;
 export const MAX_COMBAT_TICKS = 64;
 export const SELL_REFUND_RATIO = 0.5;
+
+/** XP needed to advance from `level` → level+1 (flat ladder, simplest). */
+export function xpToNext(_level: number): number {
+  return XP_PER_BUY;
+}
+
+/** Board unit cap = current level (clamped to board slots). */
+export function boardCap(level: number): number {
+  return Math.min(Math.max(1, level), BOARD_SLOTS);
+}
 
 export type TraitId = "tide" | "shell" | "coral" | "voyager";
 
@@ -81,6 +97,8 @@ export type Piece = {
 export type SeatState = {
   gold: number;
   hp: number;
+  level: number;
+  xp: number;
   shop: string[];
   bench: Array<Piece | null>;
   board: Array<Piece | null>;
@@ -144,11 +162,27 @@ function cloneSeat(seat: SeatState): SeatState {
   return {
     gold: seat.gold,
     hp: seat.hp,
+    level: seat.level,
+    xp: seat.xp,
     shop: [...seat.shop],
     bench: seat.bench.map((piece) => (piece ? { ...piece } : null)),
     board: seat.board.map((piece) => (piece ? { ...piece } : null)),
     ready: seat.ready,
   };
+}
+
+function boardCount(seat: SeatState): number {
+  return seat.board.reduce((n, p) => n + (p ? 1 : 0), 0);
+}
+
+/** Apply purchased XP; auto-level while xp fills (no leftover compat layer). */
+function applyBuyXp(seat: SeatState): void {
+  seat.xp += XP_PER_BUY;
+  while (seat.level < MAX_LEVEL && seat.xp >= xpToNext(seat.level)) {
+    seat.xp -= xpToNext(seat.level);
+    seat.level += 1;
+  }
+  if (seat.level >= MAX_LEVEL) seat.xp = 0;
 }
 
 function cloneGenre(genre: AutoBattlerGenre): AutoBattlerGenre {
@@ -380,6 +414,8 @@ export const autoBattlerAdapter: PlayKernelAdapter<
         {
           gold: START_GOLD,
           hp: START_HP,
+          level: START_LEVEL,
+          xp: 0,
           shop: rollShop(seed, 1, SHOP_SIZE),
           bench: emptySlots(BENCH_SLOTS),
           board: emptySlots(BOARD_SLOTS),
@@ -388,6 +424,8 @@ export const autoBattlerAdapter: PlayKernelAdapter<
         {
           gold: START_GOLD,
           hp: START_HP,
+          level: START_LEVEL,
+          xp: 0,
           shop: rollShop(seed, 2, SHOP_SIZE),
           bench: emptySlots(BENCH_SLOTS),
           board: emptySlots(BOARD_SLOTS),
@@ -423,11 +461,17 @@ export const autoBattlerAdapter: PlayKernelAdapter<
         }
       });
       if (seat.gold >= REFRESH_COST) legal.push({ type: "refresh", label: "刷新商店" });
+      if (seat.level < MAX_LEVEL && seat.gold >= BUY_XP_COST) {
+        legal.push({ type: "buy_xp", label: "升级" });
+      }
     }
     // Arrange (drag) + sell are legal in both prep phases; locked during combat.
+    const cap = boardCap(seat.level);
+    const onBoard = boardCount(seat);
     seat.bench.forEach((piece, benchIndex) => {
       if (!piece) return;
       legal.push({ type: "sell", label: `出售 ${name(piece)}`, payload: { benchIndex } });
+      if (onBoard >= cap) return;
       seat.board.forEach((cell, boardIndex) => {
         if (!cell) legal.push({ type: "place", label: `上阵 ${name(piece)}`, payload: { benchIndex, boardIndex } });
       });
@@ -507,12 +551,20 @@ export const autoBattlerAdapter: PlayKernelAdapter<
       seat.gold += Math.max(1, Math.floor(def.cost * SELL_REFUND_RATIO));
       return stay();
     }
+    if (action.type === "buy_xp") {
+      if (phase !== "shop" || action.payload !== undefined) return null;
+      if (seat.level >= MAX_LEVEL || seat.gold < BUY_XP_COST) return null;
+      seat.gold -= BUY_XP_COST;
+      applyBuyXp(seat);
+      return stay();
+    }
     if (action.type === "place") {
       const benchIndex = index("benchIndex", seat.bench.length);
       const boardIndex = index("boardIndex", seat.board.length);
       if (benchIndex === null || boardIndex === null) return null;
       const piece = seat.bench[benchIndex];
       if (!piece || seat.board[boardIndex]) return null;
+      if (boardCount(seat) >= boardCap(seat.level)) return null;
       seat.board[boardIndex] = piece;
       seat.bench[benchIndex] = null;
       return stay();
@@ -594,6 +646,8 @@ export function autoBattlerToSessionFields(state: PlayState<AutoBattlerGenre>) {
         {
           gold: g.seats[0].gold,
           hp: g.seats[0].hp,
+          level: g.seats[0].level,
+          xp: g.seats[0].xp,
           shop: [...g.seats[0].shop],
           bench: g.seats[0].bench.map((p) => (p ? { ...p } : null)),
           board: g.seats[0].board.map((p) => (p ? { ...p } : null)),
@@ -603,6 +657,8 @@ export function autoBattlerToSessionFields(state: PlayState<AutoBattlerGenre>) {
         {
           gold: g.seats[1].gold,
           hp: g.seats[1].hp,
+          level: g.seats[1].level,
+          xp: g.seats[1].xp,
           shop: [...g.seats[1].shop],
           bench: g.seats[1].bench.map((p) => (p ? { ...p } : null)),
           board: g.seats[1].board.map((p) => (p ? { ...p } : null)),
@@ -654,7 +710,7 @@ export function pickAutoBattlerBotAction(
       playerId: state.activePlayerId,
     };
   }
-  // Prefer buy cheapest, then place first free, else ready.
+  // Prefer buy cheapest, then place, then buy_xp when capped, else ready.
   const buy = legal
     .filter((a) => a.type === "buy")
     .sort(
@@ -675,6 +731,10 @@ export function pickAutoBattlerBotAction(
       playerId: state.activePlayerId,
       payload: place.payload,
     };
+  }
+  const buyXp = legal.find((a) => a.type === "buy_xp");
+  if (buyXp && createSeededRng(seed).at(state.sequence + 7) % 3 !== 0) {
+    return { type: "buy_xp", playerId: state.activePlayerId };
   }
   const ready = legal.find(
     (a) => a.type === "ready_shop" || a.type === "ready_place",
@@ -712,6 +772,8 @@ export type AutoBattlerSessionBlob = {
     {
       gold: number;
       hp: number;
+      level?: number;
+      xp?: number;
       shop: string[];
       bench: Array<Piece | null>;
       board: Array<Piece | null>;
@@ -721,6 +783,8 @@ export type AutoBattlerSessionBlob = {
     {
       gold: number;
       hp: number;
+      level?: number;
+      xp?: number;
       shop: string[];
       bench: Array<Piece | null>;
       board: Array<Piece | null>;
@@ -743,6 +807,8 @@ export function sessionAutoBattlerToGenre(
       {
         gold: blob.seats[0].gold,
         hp: blob.seats[0].hp,
+        level: blob.seats[0].level ?? START_LEVEL,
+        xp: blob.seats[0].xp ?? 0,
         shop: [...blob.seats[0].shop],
         bench: blob.seats[0].bench.map((p) => (p ? { ...p } : null)),
         board: blob.seats[0].board.map((p) => (p ? { ...p } : null)),
@@ -751,6 +817,8 @@ export function sessionAutoBattlerToGenre(
       {
         gold: blob.seats[1].gold,
         hp: blob.seats[1].hp,
+        level: blob.seats[1].level ?? START_LEVEL,
+        xp: blob.seats[1].xp ?? 0,
         shop: [...blob.seats[1].shop],
         bench: blob.seats[1].bench.map((p) => (p ? { ...p } : null)),
         board: blob.seats[1].board.map((p) => (p ? { ...p } : null)),

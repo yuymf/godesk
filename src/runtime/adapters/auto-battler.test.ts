@@ -135,4 +135,16 @@ describe("auto-battler-v1 Tide Arena", () => {
     expect(arenaCell(1, 0)).toEqual({ col: 6, row: 1 });
     expect(arenaCell(1, 13)).toEqual({ col: 0, row: 0 });
   });
+
+  it("buy_xp raises level and board cap", () => {
+    let state = createInitialState(autoBattlerAdapter, config, 11);
+    expect(state.genre.seats[0].level).toBe(3);
+    const before = state.genre.seats[0].gold;
+    const up = applyAction(autoBattlerAdapter, state, { type: "buy_xp", playerId: 0 }, config);
+    expect(up.ok).toBe(true);
+    state = up.state;
+    expect(state.genre.seats[0].gold).toBe(before - 4);
+    expect(state.genre.seats[0].level).toBe(4);
+    expect(state.genre.seats[0].xp).toBe(0);
+  });
 });
