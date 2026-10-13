@@ -127,6 +127,15 @@ interface RoomDeadline {
 function roomDeadlineKey(sessionId: string) {
   return `${ROOM_DEADLINE_PREFIX}${sessionId}`;
 }
+const IDLE_ROOM_SERVER_ACTION_LIMIT = 4;
+function trailingServerActions(room: StoredSharedSession) {
+  let count = 0;
+  for (let i = room.acceptedActions.length - 1; i >= 0; i -= 1) {
+    if (!/^(timer|botphase)_/.test(room.acceptedActions[i]!.intentId)) break;
+    count += 1;
+  }
+  return count;
+}
 function roomDeadlineFor(room: StoredSharedSession, build: StoredPlayableBuild): RoomDeadline | null {
   const runtime = executableRuntime(build.ruleSystem);
   if (runtime) {
@@ -135,6 +144,9 @@ function roomDeadlineFor(room: StoredSharedSession, build: StoredPlayableBuild):
       return { sessionId: room.id, expectedActions: room.acceptedActions.length, dueAt: Date.now() + Math.min(room.aiThinkMs ?? 600, 1500), kind: "bot", intent: bot };
     }
   }
+  // Rooms with no computer seat stop ticking after two idle rounds of pure server actions
+  // (nobody is there); the next human action re-arms the clock.
+  if (!room.aiSeats?.length && trailingServerActions(room) >= IDLE_ROOM_SERVER_ACTION_LIMIT) return null;
   const dueAt = runtime ? sessionDeadline(room.state, runtime) : null;
   return dueAt === null ? null : { sessionId: room.id, expectedActions: room.acceptedActions.length, dueAt };
 }
@@ -429,7 +441,9 @@ export class CreatorProjects extends DurableObject<Env> {
       }
       const sequence = room.acceptedActions.length + 1;
       const accepted = deadline.kind === "bot" && deadline.intent
-        ? runAtSessionTime(Date.now(), () => acceptIntent(room.state, runtime, deadline.intent!, sequence, room.seed))
+        // Pinned to the scheduled time (always before the prep deadline), so a busy alarm
+        // that runs late still applies the hook and replays to the same state.
+        ? runAtSessionTime(deadline.dueAt, () => acceptIntent(room.state, runtime, deadline.intent!, sequence, room.seed))
         : runAtSessionTime(deadline.dueAt, () => acceptIntent(
         room.state,
         runtime,
