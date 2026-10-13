@@ -23,6 +23,7 @@ import {
   type UnitShapePreset,
 } from "../src/runtime/adapters/auto-battler-content";
 import { parseRuleNumber, RULE_NUMBER_TOKEN } from "./rule-numbers";
+import { parseAssetAttachClause, type AssetAttachIntent } from "./auto-battler-assets";
 import {
   DEFAULT_THEME_ID,
   resolveAutoBattlerTheme,
@@ -57,6 +58,8 @@ interface Draft<TContent> {
   notes: string[];
   /** Visual theme patch (preset + overrides) when a clause touched the look. */
   theme?: AutoBattlerThemePatch;
+  /** Unit asset attachments to fulfill asynchronously (search / imported / procedural). */
+  assetIntents?: AssetAttachIntent[];
 }
 
 /** Returns how many clauses starting at `i` it consumed (0 = not mine). */
@@ -135,6 +138,7 @@ const addUnitParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
     hp: Number.isInteger(hp) ? hp : 450 + unitCost * 100,
     traits,
     shape: shape ?? (UNIT_SHAPE_PRESETS[(unitCost * 3) % UNIT_SHAPE_PRESETS.length] as UnitShapePreset),
+    proceduralPreset: shape ?? (UNIT_SHAPE_PRESETS[(unitCost * 3) % UNIT_SHAPE_PRESETS.length] as UnitShapePreset),
   };
   draft.content = { ...content, units: [...content.units, unit] };
   draft.contentTouched.add("units");
@@ -321,7 +325,7 @@ const editUnitParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => 
   if (shapeText !== undefined) {
     const shape = UNIT_SHAPE_PRESETS.find((p) => shapeText.includes(p)) ?? SHAPE_WORDS.find(([re]) => re.test(shapeText))?.[1];
     if (!shape) throw new KernelTuningRangeError(`外形只能选预设：${UNIT_SHAPE_PRESETS.join(" / ")}（或说「像螃蟹/鲸/弓手…」）。`);
-    next.shape = shape; parts.push(`外形 → ${shape}`);
+    next.shape = shape; next.proceduralPreset = shape; parts.push(`外形 → ${shape}`);
   }
   if (!parts.length) return 0;
   const L = CONTENT_LIMITS;
@@ -439,6 +443,29 @@ const vagueParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
 };
 
 
+
+// ---------------------------------------------------------------- unit asset (modelRef) parser
+
+const assetAttachParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
+  const intent = parseAssetAttachClause(clauses[i]!);
+  if (!intent) return 0;
+  draft.assetIntents = [...(draft.assetIntents ?? []), intent];
+  const label =
+    intent.kind === "search" ? `为单位搜索并挂模型（「${clauses[i]}」）`
+    : intent.kind === "imported" ? `为单位挂导入 GLB（「${clauses[i]}」）`
+    : `单位改用风格化棋子兜底（「${clauses[i]}」）`;
+  draft.changes.push({
+    key: "asset",
+    label,
+    value: intent.kind === "procedural"
+      ? (intent.allFallbacks ? "无素材时用程序化风格化棋子" : `单位 ${intent.unitHint} → proceduralPreset`)
+      : intent.kind === "imported"
+        ? `单位 ${intent.unitHint} → modelRef(imported)`
+        : `单位 ${intent.unitHint} → 搜索「${intent.queryHint ?? intent.unitHint}」`,
+  });
+  return 1;
+};
+
 // ---------------------------------------------------------------- theme (visual) parser
 
 const THEME_WORDS: Array<[RegExp, string]> = [
@@ -510,7 +537,7 @@ export const KERNEL_TUNING_REGISTRY: Partial<Record<Kernel["type"], KernelTuning
       { key: "startHp", label: "初始生命", unit: "", subject: /(血量|生命|血|hp)/i, ...lim.startHp },
       { key: "startGold", label: "初始金币", unit: "", subject: /(金币|金钱|gold)/i, ...lim.startGold },
     ],
-    parsers: [themeParser, addUnitParser, deleteUnitParser, traitTierParser, starParser, editUnitParser, defaultsParser, vagueParser],
+    parsers: [assetAttachParser, themeParser, addUnitParser, deleteUnitParser, traitTierParser, starParser, editUnitParser, defaultsParser, vagueParser],
     current: (kernel) => {
       const k = kernel as { tuning?: Record<string, number>; content?: AutoBattlerContentPatch };
       return {
@@ -548,6 +575,7 @@ const filler = /^(?:请|帮我|麻烦|谢谢|好的|嗯|吧|呢|一下)*$/;
 
 export interface KernelEditResult {
   theme?: AutoBattlerThemePatch;
+  assetIntents?: AssetAttachIntent[];
   changes: KernelChange[];
   notes: string[];
   unsupportedClauses: string[];
@@ -617,6 +645,7 @@ export function parseKernelEdits(
     tuning: draft.tuning,
     ...(contentPatch ? { contentPatch } : {}),
     ...(draft.theme ? { theme: draft.theme } : {}),
+    ...(draft.assetIntents?.length ? { assetIntents: draft.assetIntents } : {}),
     operation: spec.operation(draft.tuning, contentPatch, unsupported, draft.theme),
   };
 }
@@ -630,6 +659,7 @@ export interface KernelTuningIterationPlan {
   changes: KernelChange[];
   unsupportedClauses: string[];
   operations: ProjectChangeOperation[];
+  assetIntents?: AssetAttachIntent[];
 }
 
 /** Returns undefined when the prompt names nothing the active kernel can configure. */
@@ -668,5 +698,6 @@ export function createKernelTuningIterationPlan(input: {
       },
       parsed.operation,
     ],
+    ...(parsed.assetIntents?.length ? { assetIntents: parsed.assetIntents } : {}),
   };
 }

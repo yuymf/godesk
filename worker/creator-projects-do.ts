@@ -510,6 +510,11 @@ export class CreatorProjects extends DurableObject<Env> {
   private async runJob(jobId: string, submittedInput?: SubmitJobInput) {
     return runCreatorJob({
       ctx: this.ctx,
+      env: this.env,
+      projectRequest: (path, init) => {
+        const url = path.startsWith("http") ? path : `https://do${path.startsWith("/") ? path : `/${path}`}`;
+        return this.fetch(new Request(url, init));
+      },
       saveJob: (job, input) => this.saveJob(job, input),
       schedulePendingJobRecovery: () => this.schedulePendingJobRecovery(),
       requestJobRecoveryAlarm: () => this.requestJobRecoveryAlarm(),

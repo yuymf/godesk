@@ -48,32 +48,40 @@ import {
   materializeRuleSystem,
 } from "./rulebook-generation";
 import { createKernelTuningIterationPlan, parseKernelEdits } from "./kernel-tuning-iteration";
+import { fulfillAssetAttachIntents } from "./auto-battler-assets";
+import { resolveAutoBattlerContent, DEFAULT_AUTO_BATTLER_CONTENT } from "../src/runtime/adapters/auto-battler-content";
 
 const AUTO_BATTLER_BASE_UNSUPPORTED =
-  "auto-battler-v1 runs 2-seat shop→place→seeded combat→HP resolve on the public play-kernel. Units, trait tiers/effect presets, ★2/★3 rules, prep timers, starting HP/gold and the visual theme (preset tide/ember/frost/night: palette, table material, lighting, background, camera, unit scale) are creator-configurable data; custom 3D models/textures, board size, lobbies beyond 2 seats, new effect kinds and sealed/hidden shop economy are unsupported.";
+  "auto-battler-v1 runs 2-seat shop→place→seeded combat→HP resolve on the public play-kernel. Units, trait tiers/effect presets, ★2/★3 rules, prep timers, starting HP/gold, the visual theme (preset tide/ember/frost/night: palette, table material, lighting, background, camera, unit scale) and per-unit modelRef / proceduralPreset (CC0 search, imported GLB, or stylized procedural fallback) are creator-configurable data; board size, lobbies beyond 2 seats, new effect kinds and sealed/hidden shop economy are unsupported.";
 
 /** Request-like clause (numbers or edit verbs) that the kernel could not map — listed honestly. */
 const REQUEST_LIKE = /[0-9一二三四五六七八九十]|改成|改为|加一个|新增|开启|关闭|设为/;
 
-/** Fold any configurable edits in the idea into the proposed configure_auto_battler op. */
+/** Fold any configurable edits in the idea into the proposed configure_auto_battler op (sync; assets fulfilled separately). */
 function autoBattlerProposedRuntime(idea: string) {
   const parsed = parseKernelEdits({ type: "auto-battler-v1", playerCount: 2 } as never, idea);
   const recognized = Boolean(parsed?.changes.length);
   const leftovers = recognized ? (parsed?.unsupportedClauses ?? []).filter((c) => REQUEST_LIKE.test(c)) : [];
   return {
-    op: "configure_auto_battler" as const,
-    config: {
-      playerCount: 2,
-      unsupported: [
-        AUTO_BATTLER_BASE_UNSUPPORTED,
-        ...leftovers.map((c) => `未执行的创作者要求：「${c}」——当前内核没有对应的可配置项。`),
-      ],
-      ...(recognized && parsed && Object.keys(parsed.tuning).length ? { tuning: parsed.tuning } : {}),
-      ...(recognized && parsed?.contentPatch ? { content: parsed.contentPatch } : {}),
-      ...(recognized && parsed?.theme ? { theme: parsed.theme } : {}),
+    configure: {
+      op: "configure_auto_battler" as const,
+      config: {
+        playerCount: 2,
+        unsupported: [
+          AUTO_BATTLER_BASE_UNSUPPORTED,
+          ...leftovers.map((c) => `未执行的创作者要求：「${c}」——当前内核没有对应的可配置项。`),
+        ],
+        ...(recognized && parsed && Object.keys(parsed.tuning).length ? { tuning: parsed.tuning } : {}),
+        ...(recognized && parsed?.contentPatch ? { content: parsed.contentPatch } : {}),
+        ...(recognized && parsed?.theme ? { theme: parsed.theme } : {}),
+      },
     },
+    assetIntents: parsed?.assetIntents,
   };
 }
+
+/* applyAssetIntentsToConfigure defined after CreatorJobHost */
+
 import { createActionDescriptionIterationPlan, IterationPlanError } from "./rule-system-iteration";
 import {
   PROJECT_PREFIX,
@@ -88,6 +96,10 @@ import {
 
 interface CreatorJobHost {
   ctx: DurableObjectState;
+  /** Worker env (ASSET_SERVER_URL); optional in unit tests → asset search falls back to procedural. */
+  env?: Env;
+  /** Same-project HTTP helper used by CC0 pull / imported-assets list. */
+  projectRequest?: (path: string, init?: RequestInit) => Promise<Response>;
   saveJob(job: CreatorJob, input?: SubmitJobInput): Promise<void>;
   schedulePendingJobRecovery(): Promise<void>;
   /** Optional: alarm-merging job grace (keeps Room AI turns on time). */
@@ -114,6 +126,64 @@ interface CreatorJobHost {
       aiThinkMs?: unknown;
     },
   ): Promise<Response>;
+}
+
+async function applyAssetIntentsToConfigure(
+  host: CreatorJobHost,
+  projectId: string,
+  configure: { op: "configure_auto_battler"; config: Record<string, unknown> },
+  intents: NonNullable<ReturnType<typeof parseKernelEdits>>["assetIntents"],
+  idempotencyKey: string,
+  baseContent?: unknown,
+) {
+  if (!intents?.length) return { configure, lines: [] as string[] };
+  const content = resolveAutoBattlerContent(
+    (configure.config.content as unknown) ?? baseContent,
+  ) ?? DEFAULT_AUTO_BATTLER_CONTENT;
+  let contentPatch: Record<string, unknown> = {};
+  let lines: string[] = [];
+  if (host.env && host.projectRequest) {
+    const fulfilled = await fulfillAssetAttachIntents({
+      env: host.env,
+      projectRequest: host.projectRequest,
+      projectId,
+      content,
+      intents,
+      idempotencyKey,
+    });
+    contentPatch = fulfilled.contentPatch as Record<string, unknown>;
+    lines = fulfilled.report.lines;
+  } else {
+    // Unit tests / no sidecar: honest procedural fallback for every intent.
+    const units = content.units.map((u) => ({ ...u, traits: [...u.traits] }));
+    lines = intents.map((intent) => {
+      if (intent.kind === "procedural") {
+        return intent.allFallbacks
+          ? "资产：无素材时用程序化风格化棋子（本环境未接资产服务，保持 proceduralPreset）。"
+          : `资产：单位 ${intent.unitHint} → 程序化风格化棋子（本环境未接资产服务）。`;
+      }
+      return `资产：请求挂模型（${intent.kind}:${intent.unitHint}）但本环境未接资产服务 → 程序化风格化棋子兜底。`;
+    });
+    contentPatch = { units };
+  }
+  const unsupported = [
+    ...((configure.config.unsupported as string[] | undefined) ?? []),
+    ...lines,
+  ];
+  return {
+    configure: {
+      ...configure,
+      config: {
+        ...configure.config,
+        content: {
+          ...((configure.config.content as object) ?? {}),
+          ...contentPatch,
+        },
+        unsupported,
+      },
+    },
+    lines,
+  };
 }
 
 
@@ -185,6 +255,7 @@ export async function runCreatorJob(
     let operation: Response;
     let generationRuntimeConfigured = false;
     let proposedRuntime: RuntimeConfigureOperation | null = null;
+    let autoBattlerAssetIntents: NonNullable<ReturnType<typeof parseKernelEdits>>["assetIntents"];
     let nonScoreHandLoopRefused = false;
     let weakGenreScoreRaceRefused = false;
     let multiActHiddenRoleRefused = false;
@@ -455,7 +526,7 @@ export async function runCreatorJob(
             },
           }
         : autoBattlerRuntimeConfigured
-        ? autoBattlerProposedRuntime(idea)
+        ? (() => { const ab = autoBattlerProposedRuntime(idea); autoBattlerAssetIntents = ab.assetIntents; return ab.configure; })()
         : auctionBiddingRuntimeConfigured
         ? {
             op: "configure_auction_bidding" as const,
@@ -700,6 +771,14 @@ export async function runCreatorJob(
             : null;
       const capabilityGap = gameSpecCapabilityGap(`${input.name ?? ""}\n${idea}\n${authoredMaterial}`);
       proposedRuntime = capabilityGap ? null : runtimeOperation;
+      if (proposedRuntime?.op === "configure_auto_battler" && autoBattlerAssetIntents?.length) {
+        const applied = await applyAssetIntentsToConfigure(
+          host, job.projectId, proposedRuntime as { op: "configure_auto_battler"; config: Record<string, unknown> },
+          autoBattlerAssetIntents, `job:${input.idempotencyKey}:gen-assets`,
+          (proposedRuntime as { config?: { content?: unknown } }).config?.content,
+        );
+        proposedRuntime = applied.configure as typeof proposedRuntime;
+      }
       if (capabilityGap) generationRuntimeConfigured = false;
       operation = await host.applyProjectChanges(job.projectId, {
         expectedVersion: input.expectedVersion,
@@ -790,6 +869,33 @@ export async function runCreatorJob(
           operation = json({ guidance: reason.message.replace(/^iteration_guidance:\s*/, ""), prompt: input.prompt });
         } else {
           throw reason;
+        }
+      }
+      const tuningPlan = plan && "assetIntents" in plan
+        ? (plan as NonNullable<ReturnType<typeof createKernelTuningIterationPlan>>)
+        : undefined;
+      if (tuningPlan?.assetIntents?.length) {
+        const ops = [...tuningPlan.operations];
+        const cfgIdx = ops.findIndex((op) => op.op === "configure_auto_battler");
+        if (cfgIdx >= 0) {
+          const support = record.ruleSystem.runtimeSupport;
+          const baseContent = support.status === "executable" && support.kernel.type === "auto-battler-v1"
+            ? (support.kernel as { content?: unknown }).content
+            : undefined;
+          const applied = await applyAssetIntentsToConfigure(
+            host,
+            job.projectId,
+            ops[cfgIdx] as { op: "configure_auto_battler"; config: Record<string, unknown> },
+            tuningPlan.assetIntents,
+            `job:${input.idempotencyKey}:iter-assets`,
+            baseContent,
+          );
+          ops[cfgIdx] = applied.configure as (typeof ops)[number];
+          plan = {
+            ...tuningPlan,
+            operations: ops,
+            summary: `${tuningPlan.summary}${applied.lines.length ? ` ${applied.lines.join(" ")}` : ""}`,
+          };
         }
       }
       operation = !plan ? operation! : await host.applyProjectChanges(job.projectId, {
