@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { RuleSystem } from "../creator/project-contract";
 import {
+  KERNEL_PRESENTATION,
+  UNPRESENTED_PREFIX,
+  boardPresentationGap,
   genreObjectFidelity,
   hasBoundImage,
   presentationFloor,
@@ -283,4 +286,31 @@ describe("presentationFloor", () => {
     expect(presentationFloor(ruleSystem).status).toBe("passed");
   });
 
+});
+
+describe("board presentation gate (new mechanics need a dedicated board)", () => {
+  it("fails a kernel whose only presentation is a generic form HUD", () => {
+    expect(boardPresentationGap("new-mech-v1", { "new-mech-v1": "generic-hud" })).toContain(UNPRESENTED_PREFIX);
+    expect(boardPresentationGap("new-mech-v1", { "new-mech-v1": "dedicated-board" })).toBeNull();
+  });
+
+  it("fails closed for kernels missing from the registry", () => {
+    expect(boardPresentationGap("never-registered-v1")).toContain("不能报告为可玩");
+  });
+
+  it("surfaces as Presentation Floor failure for a generic-hud kernel", () => {
+    const genericHud = (Object.entries(KERNEL_PRESENTATION) as Array<[string, string]>)
+      .find(([, kind]) => kind === "generic-hud");
+    if (!genericHud) return; // every registered kernel ships a dedicated surface
+    const floor = presentationFloor(base({
+      runtimeSupport: { status: "executable", unsupported: [], kernel: { type: genericHud[0], playerCount: 2 } as never },
+    }));
+    expect(floor.status).toBe("failed");
+    expect(floor.reason).toContain(UNPRESENTED_PREFIX);
+  });
+
+  it("keeps existing dedicated kernels passing the gate", () => {
+    expect(boardPresentationGap("score-race-v1")).toBeNull();
+    expect(boardPresentationGap("disc-flipping-v1")).toBeNull();
+  });
 });

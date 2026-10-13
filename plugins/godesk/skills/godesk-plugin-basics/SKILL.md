@@ -77,6 +77,8 @@ iteration tools, not the destination.
 
 ## Executable Kernel choice
 
+- New mechanics must ship a dedicated board presentation (declared in `KERNEL_PRESENTATION`) before being called playable; a kernel with only a generic form-like DOM HUD stays draft / 未呈现 and fails Presentation Floor.
+
 Playability Floor (ADR 0012) gates share on genre fidelity **and decision
 density**: a named Kernel with an empty contract (no hands, fewer than 2
 placeable regions, no speech actions, no roles/accuse path) must fail the

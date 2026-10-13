@@ -30,6 +30,48 @@ type GenreObjectFidelity = {
 /** Distinctive Presentation Floor fail prefix — Studio copy keys off this (W3-06). */
 export const GENRE_OBJECT_GAP_PREFIX = "桌子好看但还不是那款游戏";
 
+type KernelType = Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"]["type"];
+
+/**
+ * How each Executable Kernel is presented in Room. A new mechanic must ship a
+ * dedicated board (or other genre surface) before it may be reported playable;
+ * `generic-hud` = only a form-like DOM control list → Presentation Floor fails.
+ */
+export type BoardPresentation = "dedicated-board" | "score-track" | "transcript" | "card-table" | "generic-hud";
+
+export const KERNEL_PRESENTATION = {
+  "score-race-v1": "score-track",
+  "shared-goal-v1": "score-track",
+  "turn-taking-v1": "score-track",
+  "take-away-v1": "score-track",
+  "roll-and-move-v1": "score-track",
+  "draw-and-score-v1": "score-track",
+  "push-your-luck-v1": "score-track",
+  "harbor-voyage-v1": "dedicated-board",
+  "worker-placement-v1": "dedicated-board",
+  "hidden-role-v1": "transcript",
+  "hand-play-v1": "card-table",
+  "conversation-relay-v1": "transcript",
+  "disc-flipping-v1": "dedicated-board",
+  "hex-settlement-v1": "dedicated-board",
+  "network-route-v1": "dedicated-board",
+  "auction-bidding-v1": "dedicated-board",
+  "auto-battler-v1": "generic-hud",
+} satisfies Record<KernelType, BoardPresentation>;
+
+export const UNPRESENTED_PREFIX = "未呈现";
+
+/** Unknown kernels fail closed as generic HUD. */
+export function boardPresentationGap(
+  kernelType: string,
+  registry: Readonly<Record<string, BoardPresentation>> = KERNEL_PRESENTATION,
+): string | null {
+  const presentation = Object.hasOwn(registry, kernelType) ? registry[kernelType] : "generic-hud";
+  return presentation === "generic-hud"
+    ? `${UNPRESENTED_PREFIX}：${kernelType} 只有通用表单式 HUD，没有专用棋盘呈现，不能报告为可玩；保持草稿。`
+    : null;
+}
+
 export function hasBoundImage(ruleSystem: RuleSystem) {
   return Boolean(
     ruleSystem.presentation.image?.url ||
@@ -233,6 +275,12 @@ export function presentationFloor(ruleSystem: RuleSystem): PresentationFloorRead
       reason: "generated、extracted 或 uploaded 呈现必须绑定真实图像，不能只写 provenance。",
       visuals,
     };
+  }
+
+  const kernel = executableKernel(ruleSystem);
+  const unpresented = kernel ? boardPresentationGap(kernel.type) : null;
+  if (unpresented) {
+    return { status: "failed", reason: unpresented, visuals };
   }
 
   // ADR 0014: spatial genres additionally need a schema-valid 3D declaration.
