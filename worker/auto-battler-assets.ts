@@ -87,8 +87,10 @@ export function parseAssetAttachClause(clause: string): AssetAttachIntent | null
       ?? text.match(/把\s*([^\s，,。]+)/)?.[1]
       ?? text.match(/([^\s，,。]+)(?:换|挂)/)?.[1];
     if (!unitHint) return null;
-    const queryHint = text.match(/(?:换|挂|搜|找|用)\s*([^\s，,。给]+)(?:模型|glb|GLB)/i)?.[1]
+    // Prefer 「…机器人模型」 noun; strip leading 一个/免费 so sidecar query stays clean.
+    let queryHint = text.match(/(?:换|挂|搜|找|用)\s*(?:一个|几个)?\s*(?:免费|合适的|好看的)?\s*([^\s，,。给]+?)(?:模型|glb|GLB)/i)?.[1]
       ?? queryFromPrompt(text);
+    if (queryHint) queryHint = queryHint.replace(/^(?:一个|免费)+/, "").trim() || undefined;
     return { kind: "search", unitHint, ...(queryHint ? { queryHint } : {}) };
   }
   return null;

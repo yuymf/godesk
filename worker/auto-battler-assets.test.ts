@@ -4,6 +4,12 @@ import { parseAssetAttachClause, resolveUnitHint } from "./auto-battler-assets";
 import { parseKernelEdits } from "./kernel-tuning-iteration";
 
 describe("auto-battler asset attach (NL → modelRef / procedural)", () => {
+  it("strips 一个/免费 from search queryHint", () => {
+    expect(parseAssetAttachClause("给钻头机兵搜一个免费机器人模型挂上")).toMatchObject({
+      kind: "search", unitHint: "钻头机兵", queryHint: "机器人",
+    });
+  });
+
   it("parses search / imported / procedural clauses", () => {
     expect(parseAssetAttachClause("给螃蟹换螃蟹模型")).toEqual({ kind: "search", unitHint: "螃蟹", queryHint: "螃蟹" });
     expect(parseAssetAttachClause("给巫师挂导入的 GLB")).toMatchObject({ kind: "imported", unitHint: "巫师" });
