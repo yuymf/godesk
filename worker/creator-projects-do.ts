@@ -1280,6 +1280,8 @@ export class CreatorProjects extends DurableObject<Env> {
   }
 
 
+  private jobRecoveryRunning = false;
+
   async alarm() {
     // Room AI turns first: they are short and the human is waiting on them.
     const aiTurns = await this.ctx.storage.list<AiPendingTurn>({
@@ -1300,7 +1302,9 @@ export class CreatorProjects extends DurableObject<Env> {
     for (const deadline of deadlines.values()) {
       if (deadline.dueAt <= Date.now() + 25) {
         try {
+          const t0 = Date.now();
           await this.runRoomDeadline(deadline);
+          if (Date.now() - t0 > 1_000) console.warn("room_deadline_slow", deadline.sessionId, Date.now() - t0);
         } catch (reason) {
           console.error("room_deadline_failed", deadline.sessionId, reason);
         }
@@ -1309,16 +1313,29 @@ export class CreatorProjects extends DurableObject<Env> {
     // Job recovery keeps its 30 s grace: only run when due (or legacy alarm
     // without a recorded recovery time).
     const jobRecoveryAt = await this.ctx.storage.get<number>(JOB_RECOVERY_AT_KEY);
-    if (jobRecoveryAt === undefined || jobRecoveryAt <= Date.now() + 25) {
-      const jobs = await this.ctx.storage.list<CreatorJob>({ prefix: "job:" });
-      for (const job of [...jobs.values()].sort((left, right) =>
-        left.createdAt.localeCompare(right.createdAt)
-      )) {
-        if (job.status === "queued" || job.status === "running") {
-          await this.runJob(job.id);
+    if ((jobRecoveryAt === undefined || jobRecoveryAt <= Date.now() + 25) && !this.jobRecoveryRunning) {
+      // Job recovery can take seconds per job; run it off the alarm path so room clocks
+      // (deadlines / bot hooks) keep firing on time meanwhile.
+      this.jobRecoveryRunning = true;
+      const recovery = (async () => {
+        try {
+          const jobs = await this.ctx.storage.list<CreatorJob>({ prefix: "job:" });
+          for (const job of [...jobs.values()].sort((left, right) =>
+            left.createdAt.localeCompare(right.createdAt)
+          )) {
+            if (job.status === "queued" || job.status === "running") {
+              const t0 = Date.now();
+              await this.runJob(job.id);
+              if (Date.now() - t0 > 1_000) console.warn("alarm_job_slow", job.id, job.kind, Date.now() - t0);
+            }
+          }
+          await this.schedulePendingJobRecovery();
+        } finally {
+          this.jobRecoveryRunning = false;
         }
-      }
-      await this.schedulePendingJobRecovery();
+      })();
+      this.ctx.waitUntil(recovery);
+      await this.rescheduleAlarm();
     } else {
       await this.rescheduleAlarm();
     }
