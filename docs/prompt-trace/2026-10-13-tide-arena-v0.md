@@ -35,3 +35,11 @@ Decisions:
 - Palette split into a three-free module so the eager HUD chunk does not pull three.js.
 
 Evidence (not committed): `/workspace/g3d-evidence/godesk-2026-10-13/tide-arena/step3/` (place/combat at 1440×900 and 390×844, cmp-place/cmp-mobile/cmp-combat). Iteration: wood was dark red (base colour × texture) → untinted light planks; mobile fit was height-bound → fit by frame footprint.
+
+## Knife 3 — Step 2 combat replay (same day)
+Prompt (大主管, approved Step 6+3 @ 17f8222): turn the deterministic combat log into a client-side timeline replay in the three scene (lunge, projectile arc, hit flash, stacked floaters, death fade; ~8–15s; 1x/2x/skip; no per-frame allocations); right-hand log synced by timestamp (「0:04 飞鱼弓 射击 鲸盾 −18」) with numbers equal to floaters; worker stays authoritative and replay ends in the resolved state. Fold-ins: closer camera (board ≈55–60% width), tide line + 「潮线」/「备战席」 labels, bench tray same dark wood as rim, e2e mid-combat ≠ resolve frame + log value = floater. Out of scope: shop art/level/XP, top-bar timer/names/HP scale (Step 4), ★2 (Step 5).
+
+Decisions:
+- `src/render3d/tide-arena/timeline.ts` (pure): strike spacing `clamp(10s/n, 180, 1500)ms`, hit lands 360ms after swing; log line text and floater share `floaterText`; unit test asserts final HP equals `combatDigest(log).hp` on a real autoplay log.
+- Scene owns the replay clock (rAF while playing, render-on-demand otherwise); per frame it only rewrites cached instance matrices (token slot cache, pooled 12-instance projectile mesh, reused temps). React is notified only when an event boundary is crossed.
+- Ranged = archer / witch / spirit (projectile arc); others lunge.
