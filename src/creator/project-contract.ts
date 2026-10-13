@@ -952,6 +952,8 @@ export interface SessionState {
   autoBattler?: {
     phase: "shop" | "place" | "ended";
     round: number;
+    /** Epoch ms; client shows remaining seconds only. */
+    prepEndsAt?: number;
     seats: [
       {
         gold: number;
@@ -963,6 +965,7 @@ export interface SessionState {
           uid: string;
           unitId: string;
           owner: number;
+          stars: number;
           atk: number;
           hp: number;
           maxHp: number;
@@ -971,6 +974,7 @@ export interface SessionState {
           uid: string;
           unitId: string;
           owner: number;
+          stars: number;
           atk: number;
           hp: number;
           maxHp: number;
@@ -988,6 +992,7 @@ export interface SessionState {
           uid: string;
           unitId: string;
           owner: number;
+          stars: number;
           atk: number;
           hp: number;
           maxHp: number;
@@ -996,6 +1001,7 @@ export interface SessionState {
           uid: string;
           unitId: string;
           owner: number;
+          stars: number;
           atk: number;
           hp: number;
           maxHp: number;

@@ -22,6 +22,7 @@ export type TideArenaSceneProps = {
   skipToken?: number;
   onReplayTime?: (ms: number, done: boolean) => void;
   dragEnabled: boolean;
+  boardFull?: boolean;
   mobile: boolean;
   safe: { top: number; bottom: number; left: number; right: number };
   onAction: (type: string, payload: Record<string, unknown>) => void;
@@ -91,7 +92,7 @@ export default function TideArenaScene3D(props: TideArenaSceneProps) {
 
   useEffect(() => {
     sceneRef.current?.setView(viewOf(props));
-  }, [props.ownBoard, props.ownBench, props.enemyBoard, props.hp, props.dragEnabled]);
+  }, [props.ownBoard, props.ownBench, props.enemyBoard, props.hp, props.dragEnabled, props.boardFull]);
 
   useEffect(() => {
     const scene = sceneRef.current;
@@ -139,7 +140,9 @@ export default function TideArenaScene3D(props: TideArenaSceneProps) {
                   <i style={{ width: `${pct * 100}%` }} />
                 </span>
               ) : null}
-              <span className="ta-stars">★</span>
+              <span className={`ta-stars${(a.stars ?? 1) >= 2 ? " is-star2" : " is-star1"}`} data-stars={a.stars ?? 1}>
+                {"★".repeat(Math.max(1, Math.min(3, a.stars ?? 1)))}
+              </span>
             </div>
           );
         })}
@@ -155,5 +158,12 @@ export default function TideArenaScene3D(props: TideArenaSceneProps) {
 }
 
 function viewOf(p: TideArenaSceneProps) {
-  return { ownBoard: p.ownBoard, ownBench: p.ownBench, enemyBoard: p.enemyBoard, hp: p.hp, dragEnabled: p.dragEnabled };
+  return {
+    ownBoard: p.ownBoard,
+    ownBench: p.ownBench,
+    enemyBoard: p.enemyBoard,
+    hp: p.hp,
+    dragEnabled: p.dragEnabled,
+    boardFull: Boolean(p.boardFull),
+  };
 }

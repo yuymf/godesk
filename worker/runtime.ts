@@ -79,6 +79,7 @@ import {
 import {
   autoBattlerAdapter,
   autoBattlerToSessionFields,
+  applyAutoBattlerPrepTimeout,
   bindAutoBattlerFromRuntimeKernel,
   pickAutoBattlerBotAction,
   playActionFromAutoBattlerIntent,
@@ -1029,7 +1030,7 @@ export function acceptIntent(
   if (runtime.kernel.type === "auto-battler-v1") {
     if (state.status !== "active" || !state.autoBattler || intent.seat !== state.activeSeat) return null;
     const kernelConfig = bindAutoBattlerFromRuntimeKernel({ playerCount: runtime.kernel.playerCount });
-    const playState = {
+    let playState = {
       seed,
       sequence: state.turn,
       phase: state.autoBattler.phase,
@@ -1040,13 +1041,38 @@ export function acceptIntent(
       events: [] as const,
       genre: sessionAutoBattlerToGenre(state.autoBattler) satisfies AutoBattlerGenre,
     };
+    const timed = applyAutoBattlerPrepTimeout(playState, kernelConfig);
+    if (timed) playState = timed as typeof playState;
+    if (playState.status !== "active" || intent.seat !== playState.activePlayerId) {
+      return {
+        sequence,
+        intentId: intent.intentId,
+        seat: intent.seat,
+        actionId: timed ? "prep_timeout" : intent.actionId,
+        points: 0,
+        payload: intent.payload,
+        state: autoBattlerToSessionFields(playState),
+      };
+    }
     const result = applyAction(
       autoBattlerAdapter,
       playState,
       playActionFromAutoBattlerIntent(intent.seat, intent.actionId, intent.payload),
       kernelConfig,
     );
-    if (!result.ok) return null;
+    if (!result.ok) {
+      if (timed) {
+        return {
+          sequence,
+          intentId: intent.intentId,
+          seat: intent.seat,
+          actionId: "prep_timeout",
+          points: 0,
+          state: autoBattlerToSessionFields(playState),
+        };
+      }
+      return null;
+    }
     return {
       sequence,
       intentId: intent.intentId,
@@ -1241,6 +1267,14 @@ export function pickBotIntent(
       events: [] as const,
       genre: sessionAutoBattlerToGenre(state.autoBattler),
     };
+    // Prefer emitting ready when the authoritative prep clock has expired.
+    if (
+      (playState.phase === "shop" || playState.phase === "place") &&
+      Date.now() >= playState.genre.prepEndsAt
+    ) {
+      const readyType = playState.phase === "shop" ? "ready_shop" : "ready_place";
+      return { seat: state.activeSeat, actionId: readyType };
+    }
     const bot = pickAutoBattlerBotAction(playState, seed);
     return {
       seat: state.activeSeat,

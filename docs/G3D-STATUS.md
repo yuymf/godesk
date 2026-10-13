@@ -13,7 +13,7 @@
 | 任务范围 | G3D-01 至 G3D-27；里程碑 M0–M5；人日上限 91 |
 | 代码基线 | `yuymf/godesk` `main` @ `f3ea418`（#148 G3D-JUDGE `f3ea418`；#153 资产搜索 `1d1f45b`；#145 G3D-ART-3 `5b585ec`；#143 `0526d16`；#144 G3D-17 预备 `1884e19`；#141 G3D-04c `0bda43e`；#138 G3D-13 `19f212d`；#147 CI 瘦身 `45cd590`；#150 公开前清理 `f79fcc7`；#142 G3D-ART-2 `45a5a1c`） |
 | 状态文件维护人 | 劳埃德(工程) / Track B（素材） |
-| 最近更新 | 2026-10-13（Asia/Shanghai）· Tide Arena / 潮阵 `auto-battler-v1` draft PR #179（`feat/tide-arena-v0`）：Step 4 HUD（商店肖像卡、等级/XP+升级、顶栏计时/双名/HP20刻度、羁绊 2/4/6 档位梯子）+ Step2 遗留（飘字跟 lunge、阵亡下沉淡出、手机潮线/备战席标签保留、手机镜头再拉近）；未进 SHAREABLE_KERNELS；**不合 main** |
+| 最近更新 | 2026-10-13（Asia/Shanghai）· Tide Arena / 潮阵 `auto-battler-v1` draft PR #179（`feat/tide-arena-v0`）：**Step 5 玩法深度**（★2 合成、12 单位/4 羁绊、heal 绿字、权威备战计时、AI 上阵、拖拽 level 帽、手机 XP 一行）；未进 SHAREABLE_KERNELS；**不合 main** |
 
 ## 硬约束（三条）
 
@@ -94,7 +94,7 @@ C2C ChatGPT 审查闸门已由用户于 2026-10-06 作废；审查与写码均�
 
 | 项 | 负责人 | 分支 / PR | 说明 |
 | --- | --- | --- | --- |
-| Tide Arena / 潮阵 Step 4 HUD | 劳埃德(工程) | `feat/tide-arena-v0` [#179](https://github.com/yuymf/godesk/pull/179) | 商店卡画 + level/xp + 顶栏计时/双名/HP20刻度 + 羁绊档位梯子；飘字跟 lunge / 阵亡下沉 / 手机标签与镜头；**draft，不合入** |
+| Tide Arena / 潮阵 Step 5 玩法深度 | 劳埃德(工程) | `feat/tide-arena-v0` [#179](https://github.com/yuymf/godesk/pull/179) | ★2、12 单位/4 羁绊、heal 绿字、权威计时、AI 上阵、拖拽 level 帽、手机 XP；**draft，不合入** |
 | G3D-17 上线闸门 | Track C | `feat/g3d-17-tidewell-launch` | 删除 `GODESK_FEATURE_TIDEWELL`（首页默认汐屿）；`GODESK_LAUNCH_GATE_BLOCK=asset-legal,hud-raw-action-ids,draw-calls`；Lighthouse / draw-calls / size 仍 warn；**draft，不合入**；待大主管评分 |
 | LOD-high（triangles） | Track C | `feat/lod-high` [#169](https://github.com/yuymf/godesk/pull/169)（叠 #168） | pine 内部面剔除 + shadow proxy；triangles(high) 415926→295310；medium/low 字节+像素恒等；**draft，不合入**；待大主管评分 |
 | shore-steps（浅滩台阶） | Track C | `feat/shore-steps` [#170](https://github.com/yuymf/godesk/pull/170)（叠 #169） | 汐屿海岸断续礁石 + 簇间贴崖立石 + 湿暗崖脚（high only，r3）；**draft，不合入**；待大主管评分 |
@@ -152,7 +152,7 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 | 分支 | PR | 范围 | 状态 |
 | --- | --- | --- | --- |
-| `feat/tide-arena-v0` | [#179](https://github.com/yuymf/godesk/pull/179) | Tide Arena Step4 HUD + Step2 战斗遗留修补；base=`main` | draft · **不合入** |
+| `feat/tide-arena-v0` | [#179](https://github.com/yuymf/godesk/pull/179) | Tide Arena Step5 玩法深度；base=`main` | draft · **不合入** |
 | `feat/boat-sail` | [#176](https://github.com/yuymf/godesk/pull/176) | 桅上三角白帆；base=`feat/boat-wetline` @f274c97 | draft · 不合入 |
 | `feat/boat-wetline` | [#175](https://github.com/yuymf/godesk/pull/175) | 帆船船体水线湿带；base=`feat/cliff-midband` @3d8b26b | draft · 不合入 |
 | `feat/cliff-midband` | [#174](https://github.com/yuymf/godesk/pull/174) | 崖壁中段岩色；base=`feat/pier-wet-foot` @6392ee4 | draft · 不合入 |
@@ -169,6 +169,7 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 | 日期 | 变更 | 作者 |
 | --- | --- | --- |
+| 2026-10-13 | Tide Arena / 潮阵 Step 5 玩法深度（#179 draft）：★2 / 12 单位 / heal 绿字 / 权威备战计时 / AI 上阵 / 拖拽帽 / 手机 XP；证据 step5/ | 劳埃德(工程) |
 | 2026-10-13 | Tide Arena / 潮阵 Step 4 HUD（#179 draft）：商店肖像、level/xp、顶栏计时/双名/HP20 刻度、羁绊档位；飘字跟 lunge、阵亡下沉、手机标签与镜头；证据 step4/ | 劳埃德(工程) |
 | 2026-10-12 | shore-steps（叠 #169）：汐屿海岸 high-only 三级沙滩台阶（干→湿）；medium/low 无 beach mesh；证据 `/workspace/g3d-evidence/godesk-2026-10-12/shore-steps/` | Track C |
 | 2026-10-12 | LOD-high（叠 #168）：pine 内部面剔除 + shadow proxy（icosa-0 drawRange）；perf:ci triangles(high) 415926→295310；medium/low digest+像素恒等；证据 `/workspace/g3d-evidence/godesk-2026-10-12/lod-high/` | Track C |

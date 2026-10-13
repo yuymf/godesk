@@ -6,7 +6,14 @@
  */
 import { floaterText } from "./floaters";
 
-export const RANGED_UNITS: ReadonlySet<string> = new Set(["archer", "witch", "spirit"]);
+export const RANGED_UNITS: ReadonlySet<string> = new Set([
+  "archer",
+  "witch",
+  "spirit",
+  "anemone",
+  "priest",
+  "lantern",
+]);
 export const REPLAY_LEAD_MS = 700;
 export const REPLAY_TAIL_MS = 1200;
 /** Projectile flight / lunge peak: the hit lands this long after the swing starts. */
@@ -24,10 +31,30 @@ export type ReplayStrike = {
   targetHp: number;
   ranged: boolean;
 };
+export type ReplayHeal = {
+  kind: "heal";
+  t: number;
+  uid: string;
+  amount: number;
+  targetHp: number;
+};
+export type ReplayTrait = {
+  kind: "trait";
+  t: number;
+  trait: string;
+  label: string;
+  detail?: string;
+};
 export type ReplayDown = { kind: "down"; t: number; uid: string };
 export type ReplayEnd = { kind: "end"; t: number; winnerSeat: number | null; damageToLoser: number };
-export type ReplayEvent = ReplayStrike | ReplayDown | ReplayEnd;
-export type ReplayLine = { t: number; stamp: string; text: string; value: string | null; kind: "strike" | "down" | "end" };
+export type ReplayEvent = ReplayStrike | ReplayHeal | ReplayTrait | ReplayDown | ReplayEnd;
+export type ReplayLine = {
+  t: number;
+  stamp: string;
+  text: string;
+  value: string | null;
+  kind: "strike" | "heal" | "trait" | "down" | "end";
+};
 export type Timeline = { events: ReplayEvent[]; lines: ReplayLine[]; durationMs: number; finalHp: Map<string, number> };
 
 type LogEntry = Record<string, unknown>;
@@ -64,9 +91,47 @@ export function buildTimeline(
       events.push({ kind: "strike", t, hitT, attackerUid, targetUid, damage, targetHp: Number(e.targetHp), ranged });
       finalHp.set(targetUid, Number(e.targetHp));
       const value = floaterText({ kind: "damage", amount: damage });
-      lines.push({ t: hitT, stamp: stamp(hitT), text: `${name(attackerUid)} ${ranged ? "射击" : "攻击"} ${name(targetUid)} ${value}`, value, kind: "strike" });
+      lines.push({
+        t: hitT,
+        stamp: stamp(hitT),
+        text: `${name(attackerUid)} ${ranged ? "射击" : "攻击"} ${name(targetUid)} ${value}`,
+        value,
+        kind: "strike",
+      });
       lastHit = hitT;
       t += step;
+    } else if (e.kind === "heal") {
+      const uid = String(e.uid);
+      const amount = Number(e.amount);
+      const healT = Math.max(t - Math.floor(step / 2), lastHit + 40);
+      events.push({ kind: "heal", t: healT, uid, amount, targetHp: Number(e.targetHp) });
+      if (typeof e.targetHp === "number") finalHp.set(uid, Number(e.targetHp));
+      const value = floaterText({ kind: "heal", amount });
+      lines.push({
+        t: healT,
+        stamp: stamp(healT),
+        text: `${name(uid)} 恢复 ${value}`,
+        value,
+        kind: "heal",
+      });
+    } else if (e.kind === "trait_trigger") {
+      const traitT = Math.max(REPLAY_LEAD_MS - 200, lastHit);
+      const label = String(e.label ?? e.trait ?? "羁绊");
+      const detail = e.detail ? String(e.detail) : "";
+      events.push({
+        kind: "trait",
+        t: traitT,
+        trait: String(e.trait ?? ""),
+        label,
+        detail: detail || undefined,
+      });
+      lines.push({
+        t: traitT,
+        stamp: stamp(traitT),
+        text: detail ? `【${label}】${detail}` : `【${label}】触发`,
+        value: null,
+        kind: "trait",
+      });
     } else if (e.kind === "unit_down") {
       const downT = lastHit + 60;
       events.push({ kind: "down", t: downT, uid: String(e.uid) });
@@ -84,13 +149,18 @@ export function buildTimeline(
       });
     }
   }
-  const last = events.length ? Math.max(...events.map((e) => (e.kind === "strike" ? e.hitT : e.t))) : 0;
+  const last = events.length
+    ? Math.max(...events.map((e) => (e.kind === "strike" ? e.hitT : e.t)))
+    : 0;
   return { events, lines, durationMs: last + REPLAY_TAIL_MS, finalHp };
 }
 
-/** HP per uid as of replay time `ms` (hits land at hitT). */
+/** HP per uid as of replay time `ms` (hits land at hitT; heals at t). */
 export function hpAt(timeline: Timeline, ms: number, out: Map<string, number> = new Map()): Map<string, number> {
   out.clear();
-  for (const e of timeline.events) if (e.kind === "strike" && e.hitT <= ms) out.set(e.targetUid, e.targetHp);
+  for (const e of timeline.events) {
+    if (e.kind === "strike" && e.hitT <= ms) out.set(e.targetUid, e.targetHp);
+    if (e.kind === "heal" && e.t <= ms) out.set(e.uid, e.targetHp);
+  }
   return out;
 }

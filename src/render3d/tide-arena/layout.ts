@@ -69,12 +69,24 @@ export function dragAction(
   return null; // bench → bench reorder is not a kernel action
 }
 
+export type LegalDropOpts = {
+  /** When true, bench→cell place is illegal (board already at level cap). */
+  boardFull?: boolean;
+};
+
 /** Legal drop slots for a drag source (empty own cells; empty bench slots when lifting from the board). */
-export function legalDrops(from: SlotRef, occupied: (slot: SlotRef) => boolean): SlotRef[] {
+export function legalDrops(
+  from: SlotRef,
+  occupied: (slot: SlotRef) => boolean,
+  opts: LegalDropOpts = {},
+): SlotRef[] {
   const drops: SlotRef[] = [];
-  for (let i = 0; i < BOARD_COLS * BOARD_ROWS; i += 1) {
-    const slot: SlotRef = { kind: "cell", boardIndex: i };
-    if (!occupied(slot)) drops.push(slot);
+  const allowBoardCells = from.kind === "cell" || !opts.boardFull;
+  if (allowBoardCells) {
+    for (let i = 0; i < BOARD_COLS * BOARD_ROWS; i += 1) {
+      const slot: SlotRef = { kind: "cell", boardIndex: i };
+      if (!occupied(slot)) drops.push(slot);
+    }
   }
   if (from.kind === "cell") {
     for (let i = 0; i < BENCH_SLOTS; i += 1) {

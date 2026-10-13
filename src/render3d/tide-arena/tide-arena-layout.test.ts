@@ -31,6 +31,12 @@ describe("tide arena layout", () => {
     expect(legalDrops({ kind: "bench", benchIndex: 0 }, occupied)).toHaveLength(13);
     expect(legalDrops({ kind: "cell", boardIndex: 0 }, occupied)).toHaveLength(13 + 5);
   });
+
+  it("suppresses board-cell highlights when board is at level cap", () => {
+    const empty = () => false;
+    expect(legalDrops({ kind: "bench", benchIndex: 0 }, empty, { boardFull: true })).toHaveLength(0);
+    expect(legalDrops({ kind: "cell", boardIndex: 1 }, empty, { boardFull: true }).some((s) => s.kind === "cell")).toBe(true);
+  });
 });
 
 describe("floater stacking", () => {

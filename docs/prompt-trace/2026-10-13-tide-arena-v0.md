@@ -52,3 +52,17 @@ Decisions:
 - Shop art: inline SVG silhouettes from mockup (paper card + tier top stripe + gold cost chip).
 - Scene: live anchor emit each replay frame so floaters/HP track lunge; death sinks Y ~1.05 with mild scale dissolve; mobile `fov=50`, `mx=1.22`.
 - Evidence (not committed): `/workspace/g3d-evidence/godesk-2026-10-13/tide-arena/step4/` (`cmp-place`, `cmp-mobile`, `cmp-combat-mid` + raw shots). Perf e2e: 17 draw / 13.5k tri.
+
+
+## Knife 5 — Step 5 玩法深度（same day）
+Prompt（大主管 Step5）: ★2 合成；基础对手 AI 稳定上阵；单位池 10–12 + 羁绊≥4；战斗 heal / trait-trigger + 绿字飘字；备战计时服务端权威到 0 自动锁定；拖拽高亮按 level 禁超限格；手机 XP 条一行可见。不合 main；不碰 Collecta；证据 step5/。
+
+Decisions:
+- Kernel `Piece.stars` + board+bench 三合一 ★2（×1.8）；卖价按 stars；★3 仅类型预留。
+- 扩到 12 海主题原创单位；`runCombat` 发 `heal` / `trait_trigger`（潮汐护盾、珊瑚愈伤、硬壳反射、远航追击）；timeline/floaters 同源绿字。
+- `prepEndsAt` 权威字段；`applyAutoBattlerPrepTimeout` + worker acceptIntent/bot 到期先 ready；客户端只显示剩余秒。
+- `legalDrops(..., { boardFull })`；scene 满编不亮上场格。
+- Bot 优先 place/buy，空板不 ready。
+- Codex gpt-5.5 high 卡在 stdin（已知）；本刀 box 本地手写。
+
+Evidence (not committed): `/workspace/g3d-evidence/godesk-2026-10-13/tide-arena/step5/`

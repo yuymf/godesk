@@ -10,6 +10,7 @@ import {
   BUY_XP_COST,
   MAX_LEVEL,
   xpToNext,
+  boardCap,
   TRAIT_SYNERGIES,
   traitCounts,
   unitDef,
@@ -35,10 +36,16 @@ const ENEMY_NAME = "珊瑚港·对手";
 /** SVG silhouettes aligned to SPEC / mockup unit shapes. */
 const UNIT_SILHOUETTE: Record<string, string> = {
   crab: '<ellipse cx="28" cy="34" rx="18" ry="11"/><circle cx="10" cy="22" r="6"/><circle cx="46" cy="22" r="6"/>',
+  conch: '<ellipse cx="26" cy="32" rx="14" ry="12"/><path d="M34 20 L48 12 L44 28Z"/>',
   blade: '<path d="M28 6 L36 40 L28 50 L20 40Z"/>',
-  witch: '<path d="M28 6 L42 48 H14Z"/><circle cx="28" cy="12" r="5"/>',
-  whale: '<rect x="8" y="14" width="40" height="34" rx="10"/>',
   archer: '<path d="M6 30 Q28 8 50 30 Q28 44 6 30Z"/>',
+  rider: '<path d="M8 36 L28 12 L48 36 Z"/><rect x="24" y="8" width="8" height="16"/>',
+  anemone: '<rect x="24" y="28" width="8" height="18"/><circle cx="28" cy="22" r="12"/>',
+  witch: '<path d="M28 6 L42 48 H14Z"/><circle cx="28" cy="12" r="5"/>',
+  priest: '<path d="M28 4 L40 50 H16Z"/><line x1="42" y1="10" x2="42" y2="48" stroke-width="3"/>',
+  turtle: '<ellipse cx="28" cy="30" rx="18" ry="14"/><circle cx="28" cy="18" r="6"/>',
+  whale: '<rect x="8" y="14" width="40" height="34" rx="10"/>',
+  lantern: '<rect x="25" y="10" width="6" height="28"/><rect x="18" y="8" width="20" height="16" rx="3"/>',
   spirit: '<circle cx="28" cy="28" r="16"/><circle cx="28" cy="28" r="22" fill="none" stroke-width="3"/>',
 };
 
@@ -177,15 +184,21 @@ export function TideArenaBoard({
   const inCombat = replay !== null && status === "active";
   const onReplayTime = (ms: number, done: boolean) => setReplay((r) => (r ? { ...r, ms, done: r.done || done } : r));
 
-  // Prep timer: fixed derived countdown (not authoritative).
-  const prepBudget = arena.phase === "shop" ? 45 : 30;
-  const [prepLeft, setPrepLeft] = useState(prepBudget);
+  // Prep timer: display-only from authoritative prepEndsAt (worker/kernel).
+  const prepEndsAt = typeof (arena as { prepEndsAt?: number }).prepEndsAt === "number"
+    ? (arena as { prepEndsAt: number }).prepEndsAt
+    : 0;
+  const [prepLeft, setPrepLeft] = useState(0);
   useEffect(() => {
-    if (inCombat || status !== "active" || arena.phase === "ended") return;
-    setPrepLeft(prepBudget);
-    const id = setInterval(() => setPrepLeft((n) => Math.max(0, n - 1)), 1000);
+    if (inCombat || status !== "active" || arena.phase === "ended" || !prepEndsAt) {
+      setPrepLeft(0);
+      return;
+    }
+    const tick = () => setPrepLeft(Math.max(0, Math.ceil((prepEndsAt - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 250);
     return () => clearInterval(id);
-  }, [arena.phase, arena.round, inCombat, status, prepBudget]);
+  }, [prepEndsAt, arena.phase, arena.round, inCombat, status]);
 
   const live = useMemo(() => {
     if (!replay) return null;
@@ -194,6 +207,9 @@ export function TideArenaBoard({
     for (const e of tl.events) {
       if (e.kind === "strike" && e.hitT <= ms && (replay.done ? e.hitT >= tl.durationMs - 3000 : ms - e.hitT < FLOATER_WINDOW_MS)) {
         floaters.push({ uid: e.targetUid, amount: e.damage, kind: "damage" });
+      }
+      if (e.kind === "heal" && e.t <= ms && (replay.done ? e.t >= tl.durationMs - 3000 : ms - e.t < FLOATER_WINDOW_MS)) {
+        floaters.push({ uid: e.uid, amount: e.amount, kind: "heal" });
       }
     }
     return { floaters, hp: hpAt(tl, ms), lines: tl.lines.filter((l) => l.t <= ms) };
@@ -212,6 +228,8 @@ export function TideArenaBoard({
   const level = me.level ?? 1;
   const xp = me.xp ?? 0;
   const need = xpToNext(level);
+  const onBoard = ownBoard.reduce((n, p) => n + (p ? 1 : 0), 0);
+  const full = onBoard >= boardCap(level);
   const timerLabel = inCombat ? (live?.lines.at(-1)?.stamp ?? "0:00") : formatClock(prepLeft);
 
   const act = (id: string, payload?: Record<string, unknown>) => onAct?.(id, payload);
@@ -238,6 +256,7 @@ export function TideArenaBoard({
           skipToken={skipToken}
           onReplayTime={onReplayTime}
           dragEnabled={dragEnabled}
+          boardFull={full}
           mobile={mobile}
           safe={safe}
           onAction={(type, payload) => act(type, payload)}
@@ -331,9 +350,13 @@ export function TideArenaBoard({
             <CoinIcon size={18} />
             {me.gold}
           </span>
-          <div className="ta-lvlw">
+          <div className="ta-lvlw" aria-label="等级与经验">
             <div className="ta-lvl">
-              等级 {level} · {xp}/{need} 经验
+              <span>等级 {level}</span>
+              <span className="ta-lvl-xp">
+                {xp}/{need}
+              </span>
+              <span className="ta-lvl-cost">升级 {BUY_XP_COST}</span>
             </div>
             <div className="ta-xp" aria-hidden>
               <i style={{ width: `${Math.min(100, (xp / Math.max(1, need)) * 100)}%` }} />

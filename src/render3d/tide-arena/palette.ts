@@ -9,10 +9,16 @@ export const TIER_COLORS: Record<number, string> = {
 
 export const UNIT_COLORS: Record<string, string> = {
   crab: "#E07A4E",
+  conch: "#C48A5A",
   blade: "#2E9C9C",
   archer: "#6FB4E0",
+  rider: "#3A9E8C",
+  anemone: "#E07A9A",
   witch: "#E58FA8",
+  priest: "#6B9ED4",
+  turtle: "#7BA86A",
   whale: "#4F6E8F",
+  lantern: "#D4B06A",
   spirit: "#9FE3DA",
 };
 

@@ -98,6 +98,47 @@ function silhouette(unitId: string): Part[] {
         { geo: new BoxGeometry(0.5, 0.55, 0.08), color: "#C9B48A", at: [0, 0.42, 0.36] },
         { geo: new ConeGeometry(0.12, 0.24, 4), color: col, at: [0, 0.46, -0.46], rot: [-Math.PI / 2, 0, 0] },
       ];
+    case "conch": // spiral shell horn + small guard
+      return [
+        { geo: new SphereGeometry(0.28, 8, 6), color: col, at: [0, 0.36, 0], scale: [1.1, 0.9, 1.2] },
+        { geo: new ConeGeometry(0.12, 0.4, 6), color: col, at: [0.22, 0.55, 0], rot: [0, 0, -0.9] },
+        { geo: new BoxGeometry(0.18, 0.35, 0.06), color: "#C9B48A", at: [-0.22, 0.4, 0.1] },
+      ];
+    case "rider": // wave crest mount + rider fin
+      return [
+        { geo: new ConeGeometry(0.2, 0.5, 4), color: col, at: [0, 0.4, 0], rot: [Math.PI / 2, 0, 0] },
+        { geo: new BoxGeometry(0.12, 0.4, 0.12), color: "#E8F4F0", at: [0, 0.62, 0] },
+        { geo: new ConeGeometry(0.08, 0.28, 4), color: "#CFEAF7", at: [0.2, 0.5, -0.1], rot: [0, 0, 0.6] },
+      ];
+    case "anemone": // stalk + petal crown
+      return [
+        { geo: new CylinderGeometry(0.08, 0.14, 0.45, 6), color: col, at: [0, 0.35, 0] },
+        { geo: new SphereGeometry(0.22, 7, 5), color: "#F2B8C6", at: [0, 0.68, 0] },
+        ...[0, 1, 2, 3].map((i): Part => ({
+          geo: new ConeGeometry(0.05, 0.22, 4),
+          color: col,
+          at: [Math.cos(i * 1.57) * 0.18, 0.78, Math.sin(i * 1.57) * 0.18],
+          rot: [0.4, 0, 0],
+        })),
+      ];
+    case "priest": // tall robe + tide staff
+      return [
+        { geo: new ConeGeometry(0.24, 0.72, 6), color: col, at: [0, 0.48, 0] },
+        { geo: new SphereGeometry(0.09, 6, 4), color: "#F7E8D0", at: [0, 0.9, 0] },
+        { geo: new CylinderGeometry(0.03, 0.03, 0.7, 5), color: "#D9A43A", at: [0.28, 0.5, 0] },
+      ];
+    case "turtle": // dome shell + head
+      return [
+        { geo: new SphereGeometry(0.32, 8, 5), color: col, at: [0, 0.34, 0], scale: [1.2, 0.7, 1.1] },
+        { geo: new SphereGeometry(0.1, 6, 4), color: "#C9B48A", at: [0, 0.4, 0.34] },
+        { geo: new BoxGeometry(0.5, 0.08, 0.5), color: "#5A7A4A", at: [0, 0.42, 0] },
+      ];
+    case "lantern": // post + glowing lantern
+      return [
+        { geo: new CylinderGeometry(0.05, 0.07, 0.55, 5), color: "#7A5234", at: [0, 0.4, 0] },
+        { geo: new BoxGeometry(0.28, 0.28, 0.28), color: col, at: [0, 0.78, 0] },
+        { geo: new SphereGeometry(0.1, 6, 4), color: "#F7D57A", at: [0, 0.78, 0] },
+      ];
     case "spirit": // floating icosahedron + tilted gold halo + thin stem
     default:
       return [

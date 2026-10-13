@@ -63,6 +63,8 @@ export type ArenaView = {
   /** Combat still: uid → final hp (0 = down, hidden). */
   hp?: Map<string, number>;
   dragEnabled: boolean;
+  /** When true, bench→board place highlights are suppressed (level cap). */
+  boardFull?: boolean;
 };
 
 export type TokenAnchor = {
@@ -71,6 +73,7 @@ export type TokenAnchor = {
   own: boolean;
   backRow: boolean;
   onBench: boolean;
+  stars: number;
   x: number;
   y: number;
   hp: number;
@@ -105,6 +108,7 @@ type TokenSlot = {
   backRow: boolean;
   onBench: boolean;
   unitId: string;
+  stars: number;
   hp: number;
   maxHp: number;
 };
@@ -186,7 +190,7 @@ export class TideArenaScene {
   private readonly boardPlane = new Plane(new Vector3(0, 1, 0), -TILE_TOP);
   private readonly benchPlane = new Plane(new Vector3(0, 1, 0), -BENCH_TOP);
   private readonly tmp = new Object3D();
-  private view: ArenaView = { ownBoard: [], ownBench: [], enemyBoard: [], dragEnabled: false };
+  private view: ArenaView = { ownBoard: [], ownBench: [], enemyBoard: [], dragEnabled: false, boardFull: false };
   private drag: { from: SlotRef; uid: string; point: Vector3 | null; over: SlotRef | null; sell: boolean; pointerId: number } | null = null;
   private frame = 0;
   private width = 1;
@@ -452,6 +456,7 @@ export class TideArenaScene {
         backRow,
         onBench,
         unitId: piece.unitId,
+        stars: piece.stars ?? 1,
         hp,
         maxHp: piece.maxHp,
       };
@@ -476,6 +481,7 @@ export class TideArenaScene {
           own: s.own,
           backRow: s.backRow,
           onBench: s.onBench,
+          stars: s.stars,
           x: ((p.x + 1) / 2) * this.width,
           y: ((1 - p.y) / 2) * this.height,
           hp: s.hp,
@@ -636,6 +642,7 @@ export class TideArenaScene {
         own: s.own,
         backRow: s.backRow,
         onBench: s.onBench,
+        stars: s.stars,
         x: ((p.x + 1) / 2) * this.width,
         y: ((1 - p.y) / 2) * this.height,
         hp: s.hp,
@@ -667,7 +674,7 @@ export class TideArenaScene {
       this.highlights.count = 0;
       return;
     }
-    const drops = legalDrops(this.drag.from, this.occupied);
+    const drops = legalDrops(this.drag.from, this.occupied, { boardFull: Boolean(this.view.boardFull) });
     const legal = new Color("#E9FFF9");
     const hot = new Color("#FFE08A");
     drops.forEach((slot, i) => {
@@ -744,7 +751,11 @@ export class TideArenaScene {
     this.cb.onDrag({ dragging: false, overSell: false });
     if (commit) {
       const action = dragAction(drag.from, drag.sell ? "sell" : drag.over, this.occupied);
-      if (action) this.cb.onAction(action.type, action.payload);
+      if (action?.type === "place" && this.view.boardFull) {
+        // Kernel would reject; do not highlight or submit over-cap places.
+      } else if (action) {
+        this.cb.onAction(action.type, action.payload);
+      }
     }
     this.syncTokens();
     this.invalidate();

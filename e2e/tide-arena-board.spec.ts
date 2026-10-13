@@ -117,11 +117,14 @@ test("NL tide arena → configure_auto_battler → room shop+place+combat", asyn
     }
     await guestBoard.getByRole("button", { name: "准备完毕" }).click();
     // Seat 1 fields a unit too so combat has two sides.
+    await expect(board.locator(".tide-arena-card:enabled").first()).toBeEnabled({ timeout: 15_000 });
     await board.locator(".tide-arena-card:enabled").first().click();
+    await expect(board.locator('.ta-anchor.is-own[data-on-bench="1"]')).toHaveCount(1, { timeout: 10_000 });
     await pointerDrag(page, await slotPoint(page, { kind: "bench", benchIndex: 0 }), await slotPoint(page, { kind: "cell", boardIndex: 4 }));
+    await expect(board.locator('.ta-anchor.is-own[data-on-bench="0"]')).toHaveCount(1, { timeout: 10_000 });
     await board.getByRole("button", { name: "准备完毕" }).click();
     await expect(guestBoard).toContainText("布阵");
-    await expect(guestBoard.locator(".ta-anchor.is-enemy")).toHaveCount(1);
+    await expect.poll(async () => guestBoard.locator(".ta-anchor.is-enemy").count(), { timeout: 15_000 }).toBeGreaterThanOrEqual(1);
     await evidenceScreenshot(guestPage, "place-1440");
     await guestPage.setViewportSize({ width: 390, height: 844 });
     await evidenceScreenshot(guestPage, "place-390");
@@ -141,6 +144,13 @@ test("NL tide arena → configure_auto_battler → room shop+place+combat", asyn
       const values = await guestBoard.locator(".ta-log li[data-value]").evaluateAll((els) => els.map((el) => el.getAttribute("data-value")));
       return floaters.some((f) => values.includes(f.trim()));
     }, { timeout: 10_000 }).toBe(true);
+    // Step5: green heal floater and/or ★★ pip may appear depending on traits/roster.
+    const step5Feedback = await guestBoard.evaluate((root) => ({
+      heal: root.querySelectorAll(".ta-floater.is-heal").length,
+      star2: root.querySelectorAll('.ta-stars[data-stars="2"]').length,
+      traitLog: [...root.querySelectorAll(".ta-log li.is-trait")].length,
+    }));
+    console.log(`[tide-arena step5] ${JSON.stringify(step5Feedback)}`);
     const mid = await evidenceScreenshot(guestPage, "combat-mid-1440", 150);
     await guestPage.setViewportSize({ width: 390, height: 844 });
     await evidenceScreenshot(guestPage, "combat-mid-390", 250);
