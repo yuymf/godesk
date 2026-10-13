@@ -41,7 +41,7 @@ describe("floater stacking", () => {
       { uid: "b", amount: 9, kind: "damage" },
     ]);
     const a = stacked.filter((f) => f.uid === "a");
-    expect(a.map((f) => [f.text, f.slot])).toEqual([["+15", 0], ["-12", 1]]);
+    expect(a.map((f) => [f.text, f.slot])).toEqual([["+15", 0], ["−12", 1]]);
     expect(a[0]!.offsetPx).toBe(FLOATER_BASE_PX);
     expect(a[1]!.offsetPx).toBe(FLOATER_BASE_PX + FLOATER_LINE_PX);
     expect(stacked.find((f) => f.uid === "b")?.slot).toBe(0);

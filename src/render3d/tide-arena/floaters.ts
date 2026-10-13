@@ -23,7 +23,7 @@ export function stackFloaters(events: readonly FloaterEvent[], maxPerCell = 3): 
     recent.forEach((event, slot) => {
       out.push({
         ...event,
-        text: `${event.kind === "heal" ? "+" : "-"}${event.amount}`,
+        text: floaterText(event),
         slot,
         offsetPx: FLOATER_BASE_PX + slot * FLOATER_LINE_PX,
       });
@@ -47,4 +47,9 @@ export function combatDigest(log: readonly LogEntry[]): { floaters: FloaterEvent
     }
   }
   return { floaters, hp };
+}
+
+/** Shared by the floater and the replay log line so their numbers always match. */
+export function floaterText(event: { kind: "damage" | "heal"; amount: number }): string {
+  return `${event.kind === "heal" ? "+" : "−"}${event.amount}`;
 }
