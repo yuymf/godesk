@@ -235,3 +235,13 @@
 
 真 CC0 sidecar（`local:rocky-shore-crab`）+ NL 按名点选导入物；通用 VFX 预设与可扩展 effect kinds。
 证据（仓外）：`/workspace/g3d-evidence/godesk-2026-10-13/tide-arena/trajectory/asset-vfx/`。
+
+## 缺口3补完（战斗语义 + 中途帧，同 `asset-vfx/mid-combat/`）
+
+aoe_splash / heal_ally / shield_start：单测断言 combatLog 事件与 HP；e2e `seekReplay`/`firstVfxAt` 截中途特效帧（splash 圈 / 治疗绿光 / 护盾环），hash ≠ prep/t0/resolve。
+证据：`…/asset-vfx/mid-combat/`（`mid-aoe-ring.png`、`mid-heal-glow.png`、`mid-shield-ring.png`、`log.json`）。
+
+## 缺口4 内容数据层（`trajectory/content-layer/`，2026-10-13）
+
+增/删羁绊组、棋盘 `boardCols`/`boardRows` 可配置；Plan unsupported 写清可配置范围与 Not（>2 seats、sealed shop）。
+证据（仓外）：`/workspace/g3d-evidence/godesk-2026-10-13/tide-arena/trajectory/content-layer/`。
