@@ -209,3 +209,16 @@
 - 棋盘尺寸、主题美术、>2 人、新效果种类、增删羁绊组仍不支持。
 - 第 3 句的提示写在 Studio 的 `creator-notice` 区，截图视口里没拍到提示文本本身（只拍到绿色「已完成」条）。
 - 历史潮阵特例手写清单同前，未新增。
+
+---
+
+# 主题管线刀（2026-10-13，管线缺口第 1 项）
+
+升级对象是 **GoDesk 插件管线**（NL→内核 theme 配置→呈现→迭代），潮阵/汐屿只作验收样例；**不为样例写特例/加皮肤**。
+
+- 数据层：`auto-battler-theme.ts` 预设 tide/ember/frost/night + overrides；NL 与 content/tuning 同一套 `kernel-tuning-iteration`。
+- 呈现：Room→TideArenaBoard→Scene3D 读 `ThemeSpec`（配色、桌面材质、灯光、背景、机位、单位尺度）。
+- presentation-floor：机位/单位尺度/卡面对比不达标 → 保持草稿标注。
+- 三小修：HP≥0；备战 deadline 含战斗回放；board-surface 对局中隐藏反馈区。
+
+**证据（仓外）**：`/workspace/g3d-evidence/godesk-2026-10-13/tide-arena/trajectory/theme-pipeline/`（含 `TRAJECTORY.md`、三套 place/combat、bugA/B/C）。
