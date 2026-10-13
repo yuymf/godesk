@@ -82,6 +82,7 @@ import {
   setAutoBattlerNow,
   autoBattlerToSessionFields,
   applyAutoBattlerPrepTimeout,
+  autoBattlerBotPhaseStart,
   bindAutoBattlerFromRuntimeKernel,
   pickAutoBattlerBotAction,
   playActionFromAutoBattlerIntent,
@@ -410,6 +411,34 @@ export function sessionDeadline(state: SessionState, runtime: ExecutableRuntime)
     const ab = state.autoBattler;
     if (!ab || (ab.phase !== "shop" && ab.phase !== "place") || typeof ab.prepEndsAt !== "number") return null;
     return ab.prepEndsAt;
+  }
+  return null;
+}
+
+/** Action id a computer seat's phase-start hook logs (out-of-turn buy + field). */
+export const BOT_PHASE_START_ACTION = "bot_phase_start";
+
+/**
+ * Generic bot hook: the out-of-turn intent a computer seat should submit at the start of
+ * the current phase, or null. Kernels opt in here; the id is unique per (round, seat) so
+ * the server submits it at most once and it replays as an ordinary timestamped action.
+ */
+export function sessionBotPhaseStartIntent(
+  state: SessionState,
+  runtime: ExecutableRuntime,
+  aiSeats: readonly number[] | undefined,
+  loggedIntentIds: ReadonlySet<string>,
+): { intentId: string; seat: number; actionId: string } | null {
+  if (state.status !== "active" || !aiSeats?.length) return null;
+  if (runtime.kernel.type === "auto-battler-v1") {
+    const ab = state.autoBattler;
+    if (!ab || ab.phase !== "shop") return null;
+    for (const seat of aiSeats) {
+      const intentId = `botphase_r${ab.round}_s${seat}`;
+      if (!loggedIntentIds.has(intentId) && !ab.seats[seat]?.ready) {
+        return { intentId, seat, actionId: BOT_PHASE_START_ACTION };
+      }
+    }
   }
   return null;
 }
@@ -1063,7 +1092,8 @@ export function acceptIntent(
   }
 
   if (runtime.kernel.type === "auto-battler-v1") {
-    if (state.status !== "active" || !state.autoBattler || intent.seat !== state.activeSeat) return null;
+    if (state.status !== "active" || !state.autoBattler) return null;
+    if (intent.actionId !== BOT_PHASE_START_ACTION && intent.seat !== state.activeSeat) return null;
     const kernelConfig = bindAutoBattlerFromRuntimeKernel({ playerCount: runtime.kernel.playerCount, tuning: runtime.kernel.tuning, content: runtime.kernel.content });
     let playState = {
       seed,
@@ -1078,6 +1108,20 @@ export function acceptIntent(
     };
     const timed = applyAutoBattlerPrepTimeout(playState, kernelConfig);
     if (timed) playState = timed as typeof playState;
+    if (intent.actionId === BOT_PHASE_START_ACTION) {
+      if (timed) return null;
+      const prepped = autoBattlerBotPhaseStart(playState, intent.seat, seed, kernelConfig, runtime.kernel.content);
+      // Logged even when the bot has nothing to buy, so the hook fires exactly once per round.
+      return {
+        sequence,
+        intentId: intent.intentId,
+        seat: intent.seat,
+        actionId: BOT_PHASE_START_ACTION,
+        points: 0,
+        at: autoBattlerNow(),
+        state: autoBattlerToSessionFields(prepped ?? playState),
+      };
+    }
     // Server deadline timer intent: only valid once the clock (pinned to the deadline) is overdue.
     if (intent.actionId === PREP_TIMEOUT_ACTION) {
       if (!timed) return null;

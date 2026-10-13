@@ -64,3 +64,22 @@ describe("server deadline timer action", () => {
     expect(rebuilt.state).toEqual(fired.state);
   });
 });
+
+describe("computer seat phase-start hook", () => {
+  it("buys + fields out of turn once per round, keeps the human's turn, and replays identically", async () => {
+    const { BOT_PHASE_START_ACTION, sessionBotPhaseStartIntent } = await import("./runtime");
+    const rule = executableAutoBattlerSpecFixture();
+    const runtime = executableRuntime(rule)!;
+    const start = 1_800_000_000_000;
+    const s0 = runAtSessionTime(start, () => initialSessionState(rule, 7));
+    const hook = sessionBotPhaseStartIntent(s0, runtime, [1], new Set())!;
+    expect(hook).toEqual({ intentId: "botphase_r1_s1", seat: 1, actionId: BOT_PHASE_START_ACTION });
+    const fired = runAtSessionTime(start + 800, () => acceptIntent(s0, runtime, hook, 1, 7))!;
+    expect(fired.state.activeSeat).toBe(0);
+    expect(fired.state.autoBattler!.seats[1]!.board.filter(Boolean).length).toBeGreaterThan(0);
+    expect(sessionBotPhaseStartIntent(fired.state, runtime, [1], new Set([hook.intentId]))).toBeNull();
+    const build = { id: "b", projectId: "p", ruleSystem: rule } as StoredPlayableBuild;
+    const rebuilt = runAtSessionTime(start + 999_999, () => reconstructActions(build, [fired], 7, start));
+    expect(rebuilt.state).toEqual(fired.state);
+  });
+});

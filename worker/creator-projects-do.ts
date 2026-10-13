@@ -6,6 +6,7 @@ import {
   initialSessionState,
   runAtSessionTime,
   sessionDeadline,
+  sessionBotPhaseStartIntent,
   PREP_TIMEOUT_ACTION,
   pickBotIntent,
   runBotSimulation,
@@ -119,12 +120,21 @@ interface RoomDeadline {
   /** acceptedActions.length when scheduled; any later action makes it stale. */
   expectedActions: number;
   dueAt: number;
+  /** "timer" = prep clock expiry; "bot" = a computer seat's phase-start hook. */
+  kind?: "timer" | "bot";
+  intent?: { intentId: string; seat: number; actionId: string };
 }
 function roomDeadlineKey(sessionId: string) {
   return `${ROOM_DEADLINE_PREFIX}${sessionId}`;
 }
 function roomDeadlineFor(room: StoredSharedSession, build: StoredPlayableBuild): RoomDeadline | null {
   const runtime = executableRuntime(build.ruleSystem);
+  if (runtime) {
+    const bot = sessionBotPhaseStartIntent(room.state, runtime, room.aiSeats, new Set(room.acceptedActions.map((a) => a.intentId)));
+    if (bot) {
+      return { sessionId: room.id, expectedActions: room.acceptedActions.length, dueAt: Date.now() + Math.min(room.aiThinkMs ?? 600, 1500), kind: "bot", intent: bot };
+    }
+  }
   const dueAt = runtime ? sessionDeadline(room.state, runtime) : null;
   return dueAt === null ? null : { sessionId: room.id, expectedActions: room.acceptedActions.length, dueAt };
 }
@@ -410,7 +420,7 @@ export class CreatorProjects extends DurableObject<Env> {
         return { kind: "dropped" as const };
       }
       const room = await this.loadRoom(storedRoom, build, transaction);
-      const due = sessionDeadline(room.state, runtime);
+      const due = deadline.kind === "bot" ? deadline.dueAt : sessionDeadline(room.state, runtime);
       if (room.acceptedActions.length !== deadline.expectedActions || due !== deadline.dueAt) {
         const next = roomDeadlineFor(room, build);
         if (next) await transaction.put(roomDeadlineKey(room.id), next);
@@ -418,7 +428,9 @@ export class CreatorProjects extends DurableObject<Env> {
         return { kind: "stale" as const };
       }
       const sequence = room.acceptedActions.length + 1;
-      const accepted = runAtSessionTime(deadline.dueAt, () => acceptIntent(
+      const accepted = deadline.kind === "bot" && deadline.intent
+        ? runAtSessionTime(Date.now(), () => acceptIntent(room.state, runtime, deadline.intent!, sequence, room.seed))
+        : runAtSessionTime(deadline.dueAt, () => acceptIntent(
         room.state,
         runtime,
         { intentId: `timer_${sequence}`, seat: room.state.activeSeat, actionId: PREP_TIMEOUT_ACTION },
@@ -426,7 +438,10 @@ export class CreatorProjects extends DurableObject<Env> {
         room.seed,
       ));
       if (!accepted) {
-        await transaction.delete(roomDeadlineKey(room.id));
+        // A bot hook that can no longer apply (clock already overdue) falls back to the timer.
+        const due = deadline.kind === "bot" ? sessionDeadline(room.state, runtime) : null;
+        if (due !== null) await transaction.put(roomDeadlineKey(room.id), { sessionId: room.id, expectedActions: room.acceptedActions.length, dueAt: due, kind: "timer" });
+        else await transaction.delete(roomDeadlineKey(room.id));
         return { kind: "dropped" as const };
       }
       const persisted = await this.persistAcceptedAction(transaction, room, accepted, build);

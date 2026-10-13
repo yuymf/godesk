@@ -1002,6 +1002,35 @@ export function applyAutoBattlerPrepTimeout(
   return current === state ? null : current;
 }
 
+/**
+ * Phase-start bot hook: at the start of a shop phase a computer seat buys and fields
+ * units out of turn (it does not ready up; the prep timer or its own turn does that).
+ * Pure function of (state, seat, seed, content) so the logged action replays exactly.
+ * Returns null when nothing changed.
+ */
+export function autoBattlerBotPhaseStart(
+  state: PlayState<AutoBattlerGenre>,
+  seat: number,
+  seed: number,
+  config: PlayKernelConfig,
+  content?: AutoBattlerContentPatch,
+): PlayState<AutoBattlerGenre> | null {
+  if (state.status !== "active" || state.phase !== "shop") return null;
+  if (!state.genre.seats[seat] || state.genre.seats[seat]!.ready) return null;
+  const restore = state.activePlayerId;
+  let current: PlayState<AutoBattlerGenre> = { ...state, activePlayerId: seat };
+  let changed = false;
+  for (let i = 0; i < 24; i += 1) {
+    const pick = pickAutoBattlerBotAction(current, seed, content);
+    if (pick.type !== "buy" && pick.type !== "place" && pick.type !== "buy_xp") break;
+    const result = applyAction(autoBattlerAdapter, current, pick, config);
+    if (!result.ok) break;
+    current = result.state;
+    changed = true;
+  }
+  return changed ? { ...current, activePlayerId: restore } : null;
+}
+
 export function pickAutoBattlerBotAction(
   state: PlayState<AutoBattlerGenre>,
   seed: number,

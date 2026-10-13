@@ -16,7 +16,7 @@ interface ActionDescriptionIterationPlan {
 
 export class IterationPlanError extends Error {
   constructor(
-    readonly code: "iteration_unsupported" | "iteration_action_not_found",
+    readonly code: "iteration_unsupported" | "iteration_action_not_found" | "iteration_guidance",
     detail: string,
   ) {
     super(`${code}: ${detail}`);
@@ -100,8 +100,9 @@ export function createActionDescriptionIterationPlan(input: {
   const parsed = parseDescriptionRequest(prompt);
   if (!parsed) {
     if (/电脑|人机|机器人|\bai\b|\bbot\b|computer/i.test(prompt) && computerSeatForRuleSystem(input.ruleSystem) !== null) {
+      // Not a failure: the capability exists elsewhere in the product; the UI shows this neutrally.
       throw new IterationPlanError(
-        "iteration_unsupported",
+        "iteration_guidance",
         "这款游戏已内置电脑玩家，不需要改规则：到「我的游戏」点这款游戏的「和电脑对战」即可单人开局。",
       );
     }
