@@ -10,6 +10,20 @@ describe("auto-battler asset attach (NL → modelRef / procedural)", () => {
     expect(parseAssetAttachClause("没有素材时用风格化棋子")).toMatchObject({ kind: "procedural", allFallbacks: true });
   });
 
+
+  it("parses named imported GLB selection", () => {
+    expect(parseAssetAttachClause("用刚导入的 rocky-shore-crab.glb 挂到巫师")).toEqual({
+      kind: "imported",
+      unitHint: "巫师",
+      nameHint: "rocky-shore-crab",
+    });
+    expect(parseAssetAttachClause("给螃蟹挂导入的 rocky-shore-crab.glb")).toMatchObject({
+      kind: "imported",
+      unitHint: "螃蟹",
+      nameHint: "rocky-shore-crab",
+    });
+  });
+
   it("resolves unit hints via aliases without tide-only hardcoding of names in the renderer", () => {
     expect(resolveUnitHint(DEFAULT_AUTO_BATTLER_CONTENT, "螃蟹")?.id).toBe("crab");
     expect(resolveUnitHint(DEFAULT_AUTO_BATTLER_CONTENT, "珊瑚巫")?.id).toBe("witch");

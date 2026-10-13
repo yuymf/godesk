@@ -8,7 +8,7 @@ import { pullCc0GlbFromPrompt, queryFromPrompt } from "./asset-pull";
 
 export type AssetAttachIntent =
   | { kind: "search"; unitHint: string; queryHint?: string }
-  | { kind: "imported"; unitHint: string }
+  | { kind: "imported"; unitHint: string; nameHint?: string }
   | { kind: "procedural"; unitHint?: string; allFallbacks?: boolean };
 
 export type AssetPipelineReport = {
@@ -62,10 +62,25 @@ export function parseAssetAttachClause(clause: string): AssetAttachIntent | null
       ?? text.match(/单位\s*([^\s，,。]+)/)?.[1];
     return { kind: "procedural", ...(unitHint ? { unitHint } : { allFallbacks: true }) };
   }
+  // Named imported: 「用刚导入的 xxx.glb 挂到巫师」「把 rocky-shore-crab.glb 挂到螃蟹」
+  const named =
+    text.match(/(?:用|把)?\s*(?:刚)?(?:导入的)?\s*([A-Za-z0-9._\-]+\.glb)\s*(?:挂到|给|绑到|装到)\s*([^\s，,。]+)/i)
+    ?? text.match(/(?:用|把)\s*(?:刚)?导入的\s*([^\s，,。]+?)\s*(?:挂到|给|绑到|装到)\s*([^\s，,。]+)/i)
+    ?? text.match(/给\s*([^\s，,。给换挂]+)\s*(?:挂|用)\s*(?:刚)?导入的\s*([A-Za-z0-9._\-]+(?:\.glb)?)/i);
+  if (named) {
+    // forms: (file, unit) or (unit, file)
+    const a = named[1]!;
+    const b = named[2]!;
+    const fileFirst = /\.glb$/i.test(a) || /^[A-Za-z0-9._\-]+$/.test(a) && !/[\u4e00-\u9fff]/.test(a);
+    const nameHint = (fileFirst ? a : b).replace(/\.glb$/i, "");
+    const unitHint = fileFirst ? b : a;
+    if (unitHint && nameHint) return { kind: "imported", unitHint, nameHint };
+  }
   if (/(挂导入|用导入|已导入).*(glb|GLB|模型)?|(glb|GLB).*(挂|导入)/.test(text) || /给.+挂导入/.test(text)) {
     const unitHint = text.match(/给\s*([^\s，,。给换挂]+)/)?.[1] ?? text.match(/([^\s，,。]+)(?:挂导入)/)?.[1];
     if (!unitHint) return null;
-    return { kind: "imported", unitHint };
+    const nameHint = text.match(/导入的\s*([A-Za-z0-9._\-]+(?:\.glb)?)/i)?.[1]?.replace(/\.glb$/i, "");
+    return { kind: "imported", unitHint, ...(nameHint ? { nameHint } : {}) };
   }
   if (/(换|挂|搜|找|用).{0,6}(模型|glb|GLB|网格|mesh)/i.test(text) || /(模型|glb).{0,6}(换|挂|到)/i.test(text)) {
     const unitHint = text.match(/给\s*([^\s，,。给换挂]+)/)?.[1]
@@ -142,17 +157,33 @@ export async function fulfillAssetAttachIntents(input: {
 
     if (intent.kind === "imported") {
       const imported = await listImported();
-      const pick = imported[0];
+      const hint = (intent.nameHint ?? "").trim().toLowerCase();
+      const score = (a: { id: string; title?: string; path?: string }) => {
+        if (!hint) return 0;
+        const blob = `${a.id} ${a.title ?? ""} ${a.path ?? ""}`.toLowerCase();
+        if (blob.includes(hint)) return 2;
+        if (hint.split(/[-_\s]+/).filter(Boolean).every((t) => blob.includes(t))) return 1;
+        return 0;
+      };
+      const ranked = hint
+        ? imported.slice().sort((a, b) => score(b) - score(a))
+        : imported;
+      const pick = hint ? ranked.find((a) => score(a) > 0) : ranked[0];
       if (!pick) {
         const proceduralPreset = unitShape(unit);
         units = patchUnit(units, unit.id, { modelRef: undefined, proceduralPreset, shape: proceduralPreset });
-        report.fallback.push({ unitId: unit.id, unitName: unit.name, proceduralPreset, reason: "项目尚无导入 GLB" });
-        report.lines.push(`资产：项目无导入 GLB → ${unit.name} 用程序化风格化棋子（${proceduralPreset}）`);
+        const reason = hint ? `未找到名为「${intent.nameHint}」的导入 GLB` : "项目尚无导入 GLB";
+        report.fallback.push({ unitId: unit.id, unitName: unit.name, proceduralPreset, reason });
+        report.lines.push(`资产：${reason} → ${unit.name} 用程序化风格化棋子（${proceduralPreset}）`);
         continue;
       }
       units = patchUnit(units, unit.id, { modelRef: pick.id });
       report.attached.push({ unitId: unit.id, unitName: unit.name, modelRef: pick.id, title: pick.title, via: "imported" });
-      report.lines.push(`资产：已挂导入 GLB「${pick.title ?? pick.id}」→ ${unit.name}`);
+      report.lines.push(
+        hint
+          ? `资产：按名点选导入 GLB「${pick.title ?? pick.id}」（匹配 ${intent.nameHint}）→ ${unit.name}`
+          : `资产：已挂导入 GLB「${pick.title ?? pick.id}」→ ${unit.name}`,
+      );
       continue;
     }
 
