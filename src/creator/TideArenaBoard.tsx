@@ -20,6 +20,8 @@ import {
   type TraitId,
 } from "../runtime/adapters/auto-battler";
 import type { FloaterEvent } from "../render3d/tide-arena/floaters";
+import type { CSSProperties } from "react";
+import { DEFAULT_THEME_ID, resolveAutoBattlerTheme, THEME_PRESETS, type AutoBattlerThemePatch } from "../runtime/adapters/auto-battler-theme";
 import { buildTimeline, hpAt, type Timeline } from "../render3d/tide-arena/timeline";
 import { TIER_COLORS, UNIT_COLORS } from "../render3d/tide-arena/palette";
 
@@ -143,7 +145,10 @@ export function TideArenaBoard({
   viewerSeat,
   onAct,
   content: contentPatch,
+  theme: themePatch,
 }: {
+  /** Visual theme data (preset + overrides) from the build's runtime config. */
+  theme?: AutoBattlerThemePatch;
   /** Kernel content data (units / traits / star rules) from the build's runtime config. */
   content?: AutoBattlerContentPatch;
   arena: TideArenaState;
@@ -155,6 +160,9 @@ export function TideArenaBoard({
   viewerSeat: number | null;
   onAct?: (actionId: string, payload?: Record<string, unknown>) => void;
 }) {
+  const themeKey = JSON.stringify(themePatch ?? null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const theme = useMemo(() => resolveAutoBattlerTheme(themePatch) ?? THEME_PRESETS[DEFAULT_THEME_ID]!, [themeKey]);
   const content = useMemo(() => resolveAutoBattlerContent(contentPatch) ?? DEFAULT_AUTO_BATTLER_CONTENT, [contentPatch]);
   const traitsById = useMemo(() => traitTable(content), [content]);
   const TRAITS = content.traits.map((t) => t.id);
@@ -249,6 +257,8 @@ export function TideArenaBoard({
       aria-label="潮阵对局"
       ref={stageRef}
       className={`tide-arena-stage${mobile ? " is-mobile" : ""}`}
+      data-theme={theme.id}
+      style={{ "--ta-teal": theme.ui.accent, "--ta-coral": theme.ui.enemy, background: theme.background } as CSSProperties}
       data-phase={arena.phase}
       data-combat={inCombat ? "1" : "0"}
       data-replay={replay ? (replay.done ? "done" : "playing") : "none"}
@@ -271,6 +281,7 @@ export function TideArenaBoard({
           safe={safe}
           onAction={(type, payload) => act(type, payload)}
           onDrag={setDrag}
+          theme={theme}
         />
       </Suspense>
 

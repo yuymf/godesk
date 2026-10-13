@@ -56,6 +56,7 @@ import {
   type SlotRef,
 } from "./layout";
 import { ENEMY_RING, OWN_RING, TOKEN_HEIGHT, ringGeometry, unitGeometry } from "./tokens";
+import { DEFAULT_THEME_ID, THEME_PRESETS, type ThemeSpec } from "../../runtime/adapters/auto-battler-theme";
 import { DEATH_FADE_MS, HIT_DELAY_MS, type Timeline } from "./timeline";
 
 export type ArenaView = {
@@ -216,6 +217,7 @@ export class TideArenaScene {
     private readonly canvas: HTMLCanvasElement,
     private readonly caps: TierCaps,
     private readonly cb: SceneCallbacks,
+    private readonly theme: ThemeSpec = THEME_PRESETS[DEFAULT_THEME_ID]!,
   ) {
     this.renderer = new WebGLRenderer({ canvas, antialias: caps.antialias, powerPreference: "high-performance" });
     this.renderer.toneMapping = ACESFilmicToneMapping;
@@ -225,10 +227,12 @@ export class TideArenaScene {
     this.renderer.shadowMap.autoUpdate = false;
     this.renderer.info.autoReset = true;
 
-    this.scene.background = new Color("#CDB898");
-    this.scene.fog = new Fog("#CDB898", 26, 48);
-    this.scene.add(new HemisphereLight("#FFF3DC", "#3B2A1C", 1.2));
-    this.sun = new DirectionalLight("#FFF1DA", 2.4);
+    const t = this.theme;
+    this.renderer.toneMappingExposure = t.light.exposure;
+    this.scene.background = new Color(t.background);
+    this.scene.fog = new Fog(t.background, t.fogNear, t.fogFar);
+    this.scene.add(new HemisphereLight(t.light.sky, t.light.ground, t.light.hemi));
+    this.sun = new DirectionalLight(t.light.sun, t.light.sunIntensity);
     this.sun.position.set(-6, 12, 7);
     this.sun.castShadow = this.renderer.shadowMap.enabled;
     this.sun.shadow.mapSize.set(caps.shadowMapSize, caps.shadowMapSize);
@@ -280,13 +284,16 @@ export class TideArenaScene {
   }
 
   private buildTable() {
-    const wood = woodTexture();
+    const th = this.theme.table;
+    // Table material preset: wood grain (tinted), matte stone, glossy frost or soft felt.
+    const wood = th.material === "wood" ? woodTexture() : null;
     if (wood) wood.repeat.set(3, 2);
-    const table = new Mesh(new BoxGeometry(40, 1, 30), new MeshStandardMaterial({ color: wood ? "#ffffff" : "#B98B5E", map: wood, roughness: 0.85 }));
+    const surface = { wood: { roughness: 0.85, metalness: 0 }, stone: { roughness: 0.95, metalness: 0 }, frost: { roughness: 0.28, metalness: 0.08 }, felt: { roughness: 1, metalness: 0 } }[th.material];
+    const table = new Mesh(new BoxGeometry(40, 1, 30), new MeshStandardMaterial({ color: wood && th.base === "#B98B5E" ? "#ffffff" : th.base, map: wood, ...surface }));
     table.position.y = -0.5;
     table.receiveShadow = true;
     // Rim and bench tray share one dark-brown wood (SPEC wood-700).
-    const frameMat = new MeshStandardMaterial({ color: wood ? "#6B4A2F" : "#5A3D26", map: wood, roughness: 0.75 });
+    const frameMat = new MeshStandardMaterial({ color: th.rim, map: wood, roughness: th.material === "frost" ? 0.35 : 0.75, metalness: th.material === "frost" ? 0.1 : 0 });
     const frame = new Mesh(new BoxGeometry(FRAME_W, 0.4, FRAME_D), frameMat);
     frame.position.set(0, 0.2, BOARD_Z);
     frame.castShadow = frame.receiveShadow = true;
@@ -297,8 +304,8 @@ export class TideArenaScene {
 
     const geo = tileGeometry();
     const half = (ARENA_ROWS / 2) * ARENA_COLS;
-    const own = new InstancedMesh(geo, new MeshStandardMaterial({ color: "#8FCFC6", roughness: 0.6 }), half);
-    const enemy = new InstancedMesh(geo, new MeshStandardMaterial({ color: "#F0A792", roughness: 0.6 }), half);
+    const own = new InstancedMesh(geo, new MeshStandardMaterial({ color: this.theme.tiles.own, roughness: 0.6 }), half);
+    const enemy = new InstancedMesh(geo, new MeshStandardMaterial({ color: this.theme.tiles.enemy, roughness: 0.6 }), half);
     let o = 0;
     let e = 0;
     for (let row = 0; row < ARENA_ROWS; row += 1) {
@@ -317,16 +324,16 @@ export class TideArenaScene {
     }
     const tide = new Mesh(
       new BoxGeometry(ARENA_COLS * CELL + 0.2, 0.05, 0.06),
-      new MeshStandardMaterial({ color: "#7CC8C2", emissive: "#9FE3DA", emissiveIntensity: 1.3 }),
+      new MeshStandardMaterial({ color: this.theme.tiles.divider, emissive: this.theme.tiles.dividerGlow, emissiveIntensity: 1.3 }),
     );
     tide.position.set(0, TILE_TOP - 0.01, BOARD_Z);
     const glow = new Mesh(
       new BoxGeometry(ARENA_COLS * CELL + 0.2, 0.01, 0.2),
-      new MeshBasicMaterial({ color: "#BDEDE8", transparent: true, opacity: 0.3, depthWrite: false }),
+      new MeshBasicMaterial({ color: this.theme.tiles.dividerGlow, transparent: true, opacity: 0.3, depthWrite: false }),
     );
     glow.position.set(0, TILE_TOP - 0.03, BOARD_Z);
     this.scene.add(glow);
-    const wells = new InstancedMesh(new CylinderGeometry(0.46, 0.46, 0.1, 24), new MeshStandardMaterial({ color: "#4A3020", roughness: 0.9 }), BENCH_SLOTS);
+    const wells = new InstancedMesh(new CylinderGeometry(0.46, 0.46, 0.1, 24), new MeshStandardMaterial({ color: this.theme.table.wells, roughness: 0.9 }), BENCH_SLOTS);
     for (let i = 0; i < BENCH_SLOTS; i += 1) {
       const p = benchWorld(i);
       this.tmp.position.set(p.x, BENCH_TOP - 0.05, p.z);
@@ -365,7 +372,9 @@ export class TideArenaScene {
     cam.fov = this.mobile ? 50 : 33;
     cam.aspect = sw / sh;
     const target = new Vector3(0, 0, this.mobile ? 1.2 : 0.9);
-    const dir = new Vector3(0, this.mobile ? 16 : 12, this.mobile ? 12 : 11.5).normalize();
+    // Elevation from the theme (mobile looks a bit more top-down so the board fills width).
+    const pitch = ((this.theme.camera.pitchDeg + (this.mobile ? 9 : 0)) * Math.PI) / 180;
+    const dir = new Vector3(0, Math.sin(pitch), Math.cos(pitch)).normalize();
     const zMin = BOARD_Z - FRAME_D / 2;
     const zMax = BENCH_Z + (CELL + 0.4) / 2;
     const corners: Vector3[] = [];
@@ -391,7 +400,8 @@ export class TideArenaScene {
       if (fits(mid)) hi = mid;
       else lo = mid;
     }
-    fits(hi);
+    // Theme distance (<1 pulls in: the bench/frame edge may crop slightly for a closer read).
+    fits(hi * this.theme.camera.distance);
     // Center vertically on the projected footprint inside the safe rect.
     let minY = Infinity;
     let maxY = -Infinity;
@@ -455,7 +465,7 @@ export class TideArenaScene {
       const p = dragging ? { x: this.drag!.point!.x, y: TILE_TOP + LIFT, z: this.drag!.point!.z } : pos;
       this.tmp.position.set(p.x, p.y, p.z);
       this.tmp.rotation.set(0, isOwn ? 0 : Math.PI, 0);
-      this.tmp.scale.setScalar(dragging ? 1.08 : 1);
+      this.tmp.scale.setScalar((dragging ? 1.08 : 1) * this.theme.unitScale);
       this.tmp.updateMatrix();
       const n = counts.get(piece.unitId) ?? 0;
       const slot: TokenSlot = {
@@ -493,7 +503,7 @@ export class TideArenaScene {
       this.camera.updateMatrixWorld();
       for (const s of this.slots) {
         if (s.dead && !this.replay) continue;
-        const p = new Vector3(s.cx, s.cy + TOKEN_HEIGHT + 0.12, s.cz).project(this.camera);
+        const p = new Vector3(s.cx, s.cy + TOKEN_HEIGHT * this.theme.unitScale + 0.12, s.cz).project(this.camera);
         out.push({
           uid: s.uid,
           unitId: s.unitId,
@@ -654,7 +664,7 @@ export class TideArenaScene {
     const out: TokenAnchor[] = [];
     this.camera.updateMatrixWorld();
     for (const s of this.slots) {
-      const p = this.v1.set(s.cx, s.cy + TOKEN_HEIGHT + 0.12, s.cz).project(this.camera);
+      const p = this.v1.set(s.cx, s.cy + TOKEN_HEIGHT * this.theme.unitScale + 0.12, s.cz).project(this.camera);
       out.push({
         uid: s.uid,
         unitId: s.unitId,
@@ -682,7 +692,7 @@ export class TideArenaScene {
     s.cz = z;
     this.tmp.position.set(x, y, z);
     this.tmp.rotation.set(0, s.rotY, 0);
-    this.tmp.scale.setScalar(scale);
+    this.tmp.scale.setScalar(scale * this.theme.unitScale);
     this.tmp.updateMatrix();
     s.mesh.setMatrixAt(s.index, this.tmp.matrix);
     this.rings.setMatrixAt(s.ring, this.tmp.matrix);

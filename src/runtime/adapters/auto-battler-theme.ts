@@ -122,3 +122,46 @@ export function resolveAutoBattlerTheme(raw: unknown): ThemeSpec | null {
     unitScale: o.unitScale ?? base.unitScale,
   };
 }
+
+/** Generic presentation-floor thresholds for board readability (not genre-specific art). */
+export const THEME_PRESENTATION_FLOOR = {
+  pitchDeg: { min: 34, max: 62 },
+  distance: { max: 1.15 },
+  unitScale: { min: 1.05 },
+  /** Relative luminance gap between UI accent and surface (WCAG-ish soft floor). */
+  cardContrast: { min: 0.28 },
+} as const;
+
+function luminance(hex: string): number {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = (v: number) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * ch((n >> 16) & 255) + 0.7152 * ch((n >> 8) & 255) + 0.0722 * ch(n & 255);
+}
+
+/**
+ * Soft presentation-floor hints for a resolved theme.
+ * Below-floor → keep draft / annotate (do not invent genre skins).
+ */
+export function themePresentationHints(spec: ThemeSpec): { ok: boolean; notes: string[] } {
+  const F = THEME_PRESENTATION_FLOOR;
+  const notes: string[] = [];
+  if (spec.camera.pitchDeg < F.pitchDeg.min) {
+    notes.push(`机位过平（俯角 ${spec.camera.pitchDeg}° < ${F.pitchDeg.min}°）：棋盘可读性不足，保持草稿并调高俯角。`);
+  } else if (spec.camera.pitchDeg > F.pitchDeg.max) {
+    notes.push(`机位过顶（俯角 ${spec.camera.pitchDeg}° > ${F.pitchDeg.max}°）：立体感不足，保持草稿并略降俯角。`);
+  }
+  if (spec.camera.distance > F.distance.max) {
+    notes.push(`机位过远（距离 ×${spec.camera.distance} > ×${F.distance.max}）：单位偏小，保持草稿并拉近。`);
+  }
+  if (spec.unitScale < F.unitScale.min) {
+    notes.push(`单位尺度过小（×${spec.unitScale} < ×${F.unitScale.min}）：棋子难辨，保持草稿并放大。`);
+  }
+  const gap = Math.abs(luminance(spec.ui.accent) - luminance(spec.ui.surface));
+  if (gap < F.cardContrast.min) {
+    notes.push(`卡面对比不足（强调色与表面亮度差 ${gap.toFixed(2)} < ${F.cardContrast.min}）：保持草稿并拉开配色对比。`);
+  }
+  return { ok: notes.length === 0, notes };
+}

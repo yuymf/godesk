@@ -11,6 +11,11 @@ import {
   renderSpecIssues,
   renderSpecSchema,
 } from "../creator/render-spec";
+import {
+  resolveAutoBattlerTheme,
+  themePresentationHints,
+  type AutoBattlerThemePatch,
+} from "./adapters/auto-battler-theme";
 
 
 export type GenreObjectFamily =
@@ -296,6 +301,28 @@ export function presentationFloor(ruleSystem: RuleSystem): PresentationFloorRead
       reason: objects.reason,
       visuals,
     };
+  }
+
+  // Auto-battler theme: camera / unit scale / card contrast as generic floor hints.
+  // Below floor → keep draft (failed) with notes; presets ship above the floor.
+  if (kernel?.type === "auto-battler-v1") {
+    const themePatch = (kernel as { theme?: AutoBattlerThemePatch }).theme;
+    const resolved = resolveAutoBattlerTheme(themePatch);
+    if (!resolved) {
+      return {
+        status: "failed",
+        reason: "主题配置不合法，无法通过 Presentation Floor；保持草稿。",
+        visuals,
+      };
+    }
+    const hints = themePresentationHints(resolved);
+    if (!hints.ok) {
+      return {
+        status: "failed",
+        reason: `呈现底线未达标（${resolved.label}）：${hints.notes.join(" ")}`,
+        visuals,
+      };
+    }
   }
 
   return {

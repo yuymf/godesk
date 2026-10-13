@@ -53,3 +53,35 @@ export function combatDigest(log: readonly LogEntry[]): { floaters: FloaterEvent
 export function floaterText(event: { kind: "damage" | "heal"; amount: number }): string {
   return `${event.kind === "heal" ? "+" : "−"}${event.amount}`;
 }
+
+/** Approximate floater label box (px) used for screen-space collision. */
+export const FLOATER_BOX = { w: 46, h: FLOATER_LINE_PX };
+
+/**
+ * Greedy de-overlap across cells: anchors are processed bottom-up; a stack whose box
+ * collides with an already placed stack is lifted until it clears. Returns extra px per uid.
+ */
+export function resolveFloaterLift(
+  anchors: ReadonlyArray<{ uid: string; x: number; y: number }>,
+  byUid: ReadonlyMap<string, ReadonlyArray<{ offsetPx: number }>>,
+): Map<string, number> {
+  const lift = new Map<string, number>();
+  const placed: Array<{ x: number; top: number; bottom: number }> = [];
+  const withFloaters = anchors.filter((a) => (byUid.get(a.uid)?.length ?? 0) > 0).sort((a, b) => b.y - a.y);
+  for (const a of withFloaters) {
+    const list = byUid.get(a.uid)!;
+    const lo = Math.min(...list.map((f) => f.offsetPx));
+    const hi = Math.max(...list.map((f) => f.offsetPx)) + FLOATER_BOX.h;
+    let extra = 0;
+    for (let guard = 0; guard < 12; guard += 1) {
+      const bottom = a.y - lo - extra;
+      const top = a.y - hi - extra;
+      const hit = placed.find((p) => Math.abs(p.x - a.x) < FLOATER_BOX.w && top < p.bottom && bottom > p.top);
+      if (!hit) break;
+      extra += bottom - hit.top + 2;
+    }
+    lift.set(a.uid, extra);
+    placed.push({ x: a.x, top: a.y - hi - extra, bottom: a.y - lo - extra });
+  }
+  return lift;
+}

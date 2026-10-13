@@ -313,3 +313,43 @@ describe("board presentation gate (new mechanics need a dedicated board)", () =>
     expect(KERNEL_PRESENTATION["auto-battler-v1"]).toBe("dedicated-board");
   });
 });
+
+describe("presentationFloor theme hints (auto-battler)", () => {
+  it("passes default / preset themes above the floor", () => {
+    const rule = base({
+      playSurface: { kind: "table", layout: "tide-arena", regions: [] },
+      presentation: {
+        render: defaultRenderSpec("auto-battler-v1", "table")!,
+        visuals: [{ provenance: "kit", label: "主题 kit" }],
+      },
+      runtimeSupport: {
+        status: "executable",
+        unsupported: [],
+        kernel: { type: "auto-battler-v1", playerCount: 2, theme: { preset: "ember" } },
+      },
+    });
+    expect(presentationFloor(rule).status).toBe("passed");
+  });
+
+  it("keeps draft when camera / unit scale fall below the floor", () => {
+    const rule = base({
+      playSurface: { kind: "table", layout: "tide-arena", regions: [] },
+      presentation: {
+        render: defaultRenderSpec("auto-battler-v1", "table")!,
+        visuals: [{ provenance: "kit", label: "主题 kit" }],
+      },
+      runtimeSupport: {
+        status: "executable",
+        unsupported: [],
+        kernel: {
+          type: "auto-battler-v1",
+          playerCount: 2,
+          theme: { preset: "tide", overrides: { camera: { pitchDeg: 28 }, unitScale: 0.9 } },
+        },
+      },
+    });
+    const floor = presentationFloor(rule);
+    expect(floor.status).toBe("failed");
+    expect(floor.reason).toMatch(/机位|单位尺度|呈现底线/);
+  });
+});

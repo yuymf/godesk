@@ -5,7 +5,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Piece } from "../runtime/adapters/auto-battler";
 import { TideArenaScene, type TokenAnchor } from "../render3d/tide-arena/scene";
-import { stackFloaters, type FloaterEvent } from "../render3d/tide-arena/floaters";
+import { resolveFloaterLift, stackFloaters, type FloaterEvent } from "../render3d/tide-arena/floaters";
+import type { ThemeSpec } from "../runtime/adapters/auto-battler-theme";
 import { detectEnvFromBrowser, resolveTier } from "../render3d/tiers";
 import type { Timeline } from "../render3d/tide-arena/timeline";
 
@@ -27,6 +28,8 @@ export type TideArenaSceneProps = {
   safe: { top: number; bottom: number; left: number; right: number };
   onAction: (type: string, payload: Record<string, unknown>) => void;
   onDrag: (state: { dragging: boolean; overSell: boolean }) => void;
+  /** Resolved visual theme (palette / table / light / camera / unit scale). */
+  theme?: ThemeSpec;
 };
 
 declare global {
@@ -59,7 +62,7 @@ export default function TideArenaScene3D(props: TideArenaSceneProps) {
       onAnchors: setAnchors,
       onLabels: setLabels,
       onReplayTime: (ms, done) => cbRef.current.onReplayTime?.(ms, done),
-    });
+    }, props.theme);
     sceneRef.current = scene;
     window.__tideArena = { perf: () => scene.perf(), screenOf: (slot) => scene.screenOf(slot), tier: tier.tier,
       frameStats: () => {
@@ -73,7 +76,7 @@ export default function TideArenaScene3D(props: TideArenaSceneProps) {
       sceneRef.current = null;
       delete window.__tideArena;
     };
-  }, []);
+  }, [props.theme]);
 
   const safeKey = `${props.safe.top}:${props.safe.bottom}:${props.safe.left}:${props.safe.right}:${props.mobile}`;
   useEffect(() => {
@@ -105,12 +108,15 @@ export default function TideArenaScene3D(props: TideArenaSceneProps) {
     if (props.skipToken) sceneRef.current?.skipReplay();
   }, [props.skipToken]);
 
-  const stacked = useMemo(() => stackFloaters(props.floaters ?? []), [props.floaters]);
+  const stacked = useMemo(() => stackFloaters(props.floaters ?? [], 2), [props.floaters]);
   const byUid = useMemo(() => {
     const map = new Map<string, typeof stacked>();
     for (const f of stacked) map.set(f.uid, [...(map.get(f.uid) ?? []), f]);
     return map;
   }, [stacked]);
+
+  // Screen-space de-overlap: neighbouring cells' number stacks never collide.
+  const lift = useMemo(() => resolveFloaterLift(anchors, byUid), [anchors, byUid]);
 
   return (
     <div className="ta-scene" ref={hostRef}>
@@ -131,7 +137,7 @@ export default function TideArenaScene3D(props: TideArenaSceneProps) {
               style={{ left: a.x, top: a.y }}
             >
               {(byUid.get(a.uid) ?? []).map((f) => (
-                <span key={`${f.slot}`} className={`ta-floater is-${f.kind}`} style={{ bottom: f.offsetPx }}>
+                <span key={`${f.slot}`} className={`ta-floater is-${f.kind}`} style={{ bottom: f.offsetPx + (lift.get(a.uid) ?? 0) }}>
                   {f.text}
                 </span>
               ))}
