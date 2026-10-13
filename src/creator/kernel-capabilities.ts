@@ -87,3 +87,18 @@ export function inferRequestedMechanics(corpus: string): string[] {
   }
   return mechanics;
 }
+
+/**
+ * Kernels the worker's built-in computer player (`pickBotIntent`) can drive in a Shared
+ * Session `aiSeats` slot. Keep in sync with worker/runtime.ts pickBotIntent (asserted by test).
+ */
+export const BOT_PLAYABLE_KERNELS: readonly string[] = ["hex-settlement-v1", "network-route-v1", "auto-battler-v1"];
+
+/** Seat the computer takes (last seat) for a bot-playable executable kernel; null otherwise. */
+export function computerSeatForRuleSystem(ruleSystem: Pick<RuleSystem, "runtimeSupport">): number | null {
+  const support = ruleSystem.runtimeSupport;
+  if (support?.status !== "executable") return null;
+  const kernel = support.kernel as { type: string; playerCount?: number };
+  if (!BOT_PLAYABLE_KERNELS.includes(kernel.type) || !kernel.playerCount || kernel.playerCount < 2) return null;
+  return kernel.playerCount - 1;
+}

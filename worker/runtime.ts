@@ -369,7 +369,7 @@ export function initialSessionState(
   if (runtime?.kernel.type === "auto-battler-v1") {
     const play = createInitialState(
       autoBattlerAdapter,
-      bindAutoBattlerFromRuntimeKernel({ playerCount: runtime.kernel.playerCount }),
+      bindAutoBattlerFromRuntimeKernel({ playerCount: runtime.kernel.playerCount, tuning: runtime.kernel.tuning }),
       _seed,
     );
     return autoBattlerToSessionFields(play);
@@ -1029,7 +1029,7 @@ export function acceptIntent(
 
   if (runtime.kernel.type === "auto-battler-v1") {
     if (state.status !== "active" || !state.autoBattler || intent.seat !== state.activeSeat) return null;
-    const kernelConfig = bindAutoBattlerFromRuntimeKernel({ playerCount: runtime.kernel.playerCount });
+    const kernelConfig = bindAutoBattlerFromRuntimeKernel({ playerCount: runtime.kernel.playerCount, tuning: runtime.kernel.tuning });
     let playState = {
       seed,
       sequence: state.turn,

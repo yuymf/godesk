@@ -4,12 +4,13 @@ import { ExampleArtwork } from "./ExampleArtwork";
 import { createSharedSession, getBuilds, getSharedSessions, listProjects } from "./project-api";
 import type { GameProject, PlayableBuild, SharedSession } from "./project-contract";
 import { conversationRelayKernel, hiddenRoleKernel, isAuctionBidding,
-  isAutoBattler, isDiscFlipping, isHandPlay, isHarborVoyage, hexSettlementKernel, isHexSettlement, isNetworkRoute } from "./room-presentation";
+  isAutoBattler, isDiscFlipping, isHandPlay, isHarborVoyage, isHexSettlement, isNetworkRoute } from "./room-presentation";
 import { othelloStartingBoardThumbnailDataUrl } from "./othello-thumbnail";
 import { networkRouteStartingBoardThumbnailDataUrl } from "./network-route-thumbnail";
 import { auctionBiddingThumbnailDataUrl } from "./auction-bidding-thumbnail";
 import { tideArenaThumbnailDataUrl } from "./tide-arena-thumbnail";
 import { handPlayStartingBoardThumbnailDataUrl } from "./hand-play-thumbnail";
+import { computerSeatForRuleSystem } from "./kernel-capabilities";
 import { buildCanOpenSharedSession, href, latestStudioPlayTarget } from "./studio-utils";
 
 type LobbyGame = {
@@ -21,8 +22,7 @@ type LobbyGame = {
 /** G3D-04b: kernels with a server-side Room AI seat (worker runtimeSupportsBotSeat).
  *  The computer takes the last seat so the human opens the game. */
 function computerSeatFor(game: LobbyGame): number | null {
-  const kernel = game.build ? hexSettlementKernel(game.build.ruleSystem) : null;
-  return kernel ? kernel.playerCount - 1 : null;
+  return game.build ? computerSeatForRuleSystem(game.build.ruleSystem) : null;
 }
 
 export function GameLobby() {

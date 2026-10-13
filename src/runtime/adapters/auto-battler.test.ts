@@ -263,3 +263,31 @@ describe("auto-battler-v1 Step5 depth", () => {
     expect(boardsAtCombat![1]).toBeGreaterThanOrEqual(1);
   });
 });
+
+describe("auto-battler tuning (creator knobs)", () => {
+  it("applies prep timers and starting HP/gold, and round-trips through the session blob", async () => {
+    const m = await import("./auto-battler");
+    const { createInitialState } = await import("../play-kernel");
+    m.setAutoBattlerNow(() => 1_000_000);
+    try {
+      const cfg = m.bindAutoBattlerFromRuntimeKernel({ playerCount: 2, tuning: { prepShopSeconds: 30, startHp: 40, startGold: 15 } });
+      const s = createInitialState(m.autoBattlerAdapter, cfg, 7);
+      expect(s.genre.prepEndsAt).toBe(1_000_000 + 30_000);
+      expect(s.genre.seats[0].hp).toBe(40);
+      expect(s.genre.seats[1].gold).toBe(15);
+      const blob = m.autoBattlerToSessionFields(s).autoBattler!;
+      expect(m.sessionAutoBattlerToGenre(blob as never).tuning).toEqual({ prepShopSeconds: 30, startHp: 40, startGold: 15 });
+      // tuning must survive an applied action (cloneGenre), else timers/HP max reset mid-match
+      const { applyAction } = await import("../play-kernel");
+      const next = applyAction(m.autoBattlerAdapter, s, m.playActionFromAutoBattlerIntent(0, "ready_shop"), cfg);
+      expect(next.ok && next.state.genre.tuning).toEqual({ prepShopSeconds: 30, startHp: 40, startGold: 15 });
+    } finally {
+      m.resetAutoBattlerNow();
+    }
+  });
+  it("rejects out-of-range tuning", async () => {
+    const m = await import("./auto-battler");
+    expect(m.normalizeAutoBattlerTuning({ prepShopSeconds: 2 })).toBeNull();
+    expect(m.normalizeAutoBattlerTuning({ bogus: 1 })).toBeNull();
+  });
+});

@@ -694,6 +694,12 @@ const operationSchema = z.discriminatedUnion("op", [
     op: z.literal("configure_auto_battler"),
     config: z.object({
       playerCount: z.literal(2),
+      tuning: z.object({
+        prepShopSeconds: z.number().int().min(10).max(300).optional(),
+        prepPlaceSeconds: z.number().int().min(10).max(300).optional(),
+        startHp: z.number().int().min(1).max(200).optional(),
+        startGold: z.number().int().min(0).max(100).optional(),
+      }).strict().optional(),
       unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
     }),
   }),

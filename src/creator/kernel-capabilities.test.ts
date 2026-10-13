@@ -105,3 +105,13 @@ describe("Tide Arena / auto-battler mechanics", () => {
     expect(mechanicsCapabilityGap(["auto-battler"], "auto-battler-v1")).toBeNull();
   });
 });
+
+describe("BOT_PLAYABLE_KERNELS", () => {
+  it("seats the computer in the last seat only for bot-playable executable kernels", async () => {
+    const { computerSeatForRuleSystem } = await import("./kernel-capabilities");
+    expect(computerSeatForRuleSystem({ runtimeSupport: { status: "executable", unsupported: [], kernel: { type: "auto-battler-v1", playerCount: 2 } } } as never)).toBe(1);
+    expect(computerSeatForRuleSystem({ runtimeSupport: { status: "executable", unsupported: [], kernel: { type: "hex-settlement-v1", playerCount: 3 } } } as never)).toBe(2);
+    expect(computerSeatForRuleSystem({ runtimeSupport: { status: "executable", unsupported: [], kernel: { type: "turn-taking-v1", maxTurns: 4, actions: [] } } } as never)).toBeNull();
+    expect(computerSeatForRuleSystem({ runtimeSupport: { status: "draft", unsupported: [] } } as never)).toBeNull();
+  });
+});

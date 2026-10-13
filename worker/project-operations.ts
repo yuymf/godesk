@@ -1,4 +1,5 @@
 import { generationMetadataSchema, migrateRuleSystemToV2 } from "../src/creator/game-spec";
+import { normalizeAutoBattlerTuning } from "../src/runtime/adapters/auto-battler";
 import { defaultRenderSpec, isSpatialPresentationKind, patchRenderSpec, renderSpecIssues, renderSpecSchema } from "../src/creator/render-spec";
 import type { ImportedProjectAsset } from "../src/creator/asset-search/types";
 import {
@@ -731,6 +732,9 @@ function configureRuntimeKernel(
   if (configuration.op === "configure_auto_battler") {
     configureDedicatedKernel(record, configuration.op, {
       type: "auto-battler-v1", playerCount: configuration.config.playerCount,
+      ...(configuration.config.tuning && Object.keys(configuration.config.tuning).length
+        ? { tuning: { ...configuration.config.tuning } }
+        : {}),
     }, configuration.config.unsupported?.map((item) => item.trim()) ?? [], configuration.config, affectedEntities);
     return;
   }
@@ -1609,7 +1613,8 @@ const RUNTIME_HANDLERS: {
   },
   configure_auto_battler: {
     validate: (config) => Boolean(config) && typeof config === "object" &&
-      config.playerCount === 2 && validUnsupported(config.unsupported),
+      config.playerCount === 2 && validUnsupported(config.unsupported) &&
+      normalizeAutoBattlerTuning(config.tuning) !== null,
   },
 };
 

@@ -139,7 +139,39 @@ export type CombatLogEntry =
   | { kind: "unit_down"; uid: string; owner: number }
   | { kind: "combat_end"; winnerSeat: number | null; damageToLoser: number };
 
-export type AutoBattlerConfig = { playerCount: number };
+/**
+ * Creator-tunable genre knobs (generic auto-battler rules, not roster content).
+ * Every field is optional; omitted fields fall back to the kernel defaults.
+ */
+export type AutoBattlerTuning = {
+  prepShopSeconds?: number;
+  prepPlaceSeconds?: number;
+  startHp?: number;
+  startGold?: number;
+};
+
+/** Inclusive bounds a tuning value must satisfy (validated on every write path). */
+export const AUTO_BATTLER_TUNING_LIMITS: Record<keyof AutoBattlerTuning, { min: number; max: number }> = {
+  prepShopSeconds: { min: 10, max: 300 },
+  prepPlaceSeconds: { min: 10, max: 300 },
+  startHp: { min: 1, max: 200 },
+  startGold: { min: 0, max: 100 },
+};
+
+export function normalizeAutoBattlerTuning(raw: unknown): AutoBattlerTuning | null {
+  if (raw === undefined) return {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const out: AutoBattlerTuning = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    const limits = AUTO_BATTLER_TUNING_LIMITS[key as keyof AutoBattlerTuning];
+    if (!limits) return null;
+    if (typeof value !== "number" || !Number.isInteger(value) || value < limits.min || value > limits.max) return null;
+    out[key as keyof AutoBattlerTuning] = value;
+  }
+  return out;
+}
+
+export type AutoBattlerConfig = { playerCount: number; tuning?: AutoBattlerTuning };
 
 export type AutoBattlerGenre = {
   round: number;
@@ -149,6 +181,8 @@ export type AutoBattlerGenre = {
   nextUid: number;
   /** Epoch ms; client displays remaining seconds; worker auto-locks at expiry. */
   prepEndsAt: number;
+  /** Creator tuning carried with the match so timers survive session round-trips. */
+  tuning?: AutoBattlerTuning;
 };
 
 export type AutoBattlerPhase = "shop" | "place" | "ended";
@@ -157,10 +191,13 @@ function parseAutoBattlerConfig(
   raw: Record<string, unknown>,
 ): AutoBattlerConfig | null {
   const playerCount = raw.playerCount ?? 2;
-  return playerCount === 2 ? { playerCount: 2 } : null;
+  if (playerCount !== 2) return null;
+  const tuning = normalizeAutoBattlerTuning(raw.tuning);
+  if (tuning === null) return null;
+  return Object.keys(tuning).length ? { playerCount: 2, tuning } : { playerCount: 2 };
 }
 
-export function createAutoBattlerKernelConfig(): PlayKernelConfig {
+export function createAutoBattlerKernelConfig(tuning?: AutoBattlerTuning): PlayKernelConfig {
   return {
     kernelType: AUTO_BATTLER_KERNEL_TYPE,
     playerCount: 2,
@@ -169,7 +206,7 @@ export function createAutoBattlerKernelConfig(): PlayKernelConfig {
       { id: "place", name: "Place" },
       { id: "ended", name: "Ended" },
     ],
-    adapter: { playerCount: 2 },
+    adapter: tuning && Object.keys(tuning).length ? { playerCount: 2, tuning } : { playerCount: 2 },
   };
 }
 
@@ -223,6 +260,7 @@ function cloneGenre(genre: AutoBattlerGenre): AutoBattlerGenre {
     lastCombat: genre.lastCombat ? { ...genre.lastCombat } : null,
     nextUid: genre.nextUid,
     prepEndsAt: genre.prepEndsAt,
+    ...(genre.tuning ? { tuning: { ...genre.tuning } } : {}),
   };
 }
 
@@ -607,7 +645,9 @@ function clearReady(genre: AutoBattlerGenre): void {
 }
 
 function setPrepDeadline(genre: AutoBattlerGenre, phase: "shop" | "place"): void {
-  const sec = phase === "shop" ? PREP_SHOP_SECONDS : PREP_PLACE_SECONDS;
+  const sec = phase === "shop"
+    ? genre.tuning?.prepShopSeconds ?? PREP_SHOP_SECONDS
+    : genre.tuning?.prepPlaceSeconds ?? PREP_PLACE_SECONDS;
   genre.prepEndsAt = autoBattlerNow() + sec * 1000;
 }
 
@@ -626,10 +666,10 @@ function startShopRound(
   setPrepDeadline(genre, "shop");
 }
 
-function emptySeat(seed: number, seq: number): SeatState {
+function emptySeat(seed: number, seq: number, tuning?: AutoBattlerTuning): SeatState {
   return {
-    gold: START_GOLD,
-    hp: START_HP,
+    gold: tuning?.startGold ?? START_GOLD,
+    hp: tuning?.startHp ?? START_HP,
     level: START_LEVEL,
     xp: 0,
     shop: rollShop(seed, seq, SHOP_SIZE),
@@ -645,14 +685,16 @@ export const autoBattlerAdapter: PlayKernelAdapter<
 > = {
   kernelType: AUTO_BATTLER_KERNEL_TYPE,
   parseConfig: parseAutoBattlerConfig,
-  createGenreState(_config, seed) {
+  createGenreState(config, seed) {
+    const tuning = config.tuning && Object.keys(config.tuning).length ? config.tuning : undefined;
     const genre: AutoBattlerGenre = {
       round: 1,
-      seats: [emptySeat(seed, 1), emptySeat(seed, 2)],
+      seats: [emptySeat(seed, 1, tuning), emptySeat(seed, 2, tuning)],
       combatLog: [],
       lastCombat: null,
       nextUid: 1,
       prepEndsAt: 0,
+      ...(tuning ? { tuning } : {}),
     };
     setPrepDeadline(genre, "shop");
     return genre;
@@ -886,15 +928,17 @@ export function autoBattlerToSessionFields(state: PlayState<AutoBattlerGenre>) {
       combatLog: [...g.combatLog],
       lastCombat: g.lastCombat ? { ...g.lastCombat } : null,
       nextUid: g.nextUid,
+      ...(g.tuning ? { tuning: { ...g.tuning } } : {}),
     },
   };
 }
 
 export function bindAutoBattlerFromRuntimeKernel(input: {
   playerCount: number;
+  tuning?: AutoBattlerTuning;
 }): PlayKernelConfig {
   if (input.playerCount !== 2) throw new Error("auto_battler_requires_two_players");
-  return createAutoBattlerKernelConfig();
+  return createAutoBattlerKernelConfig(input.tuning);
 }
 
 export function playActionFromAutoBattlerIntent(
@@ -1047,6 +1091,7 @@ export type AutoBattlerSessionBlob = {
   phase: AutoBattlerPhase;
   round: number;
   prepEndsAt?: number;
+  tuning?: AutoBattlerTuning;
   seats: [
     {
       gold: number;
@@ -1113,6 +1158,7 @@ export function sessionAutoBattlerToGenre(
     combatLog: [...blob.combatLog] as CombatLogEntry[],
     lastCombat: blob.lastCombat ? { ...blob.lastCombat } : null,
     nextUid: blob.nextUid,
-    prepEndsAt: blob.prepEndsAt ?? autoBattlerNow() + PREP_SHOP_SECONDS * 1000,
+    prepEndsAt: blob.prepEndsAt ?? autoBattlerNow() + (blob.tuning?.prepShopSeconds ?? PREP_SHOP_SECONDS) * 1000,
+    ...(blob.tuning ? { tuning: { ...blob.tuning } } : {}),
   };
 }

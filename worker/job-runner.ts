@@ -47,6 +47,7 @@ import {
   createGenerationPlan,
   materializeRuleSystem,
 } from "./rulebook-generation";
+import { createKernelTuningIterationPlan } from "./kernel-tuning-iteration";
 import { createActionDescriptionIterationPlan } from "./rule-system-iteration";
 import {
   PROJECT_PREFIX,
@@ -433,7 +434,7 @@ export async function runCreatorJob(
             config: {
               playerCount: 2,
               unsupported: [
-                "auto-battler-v1 (Tide Arena / 潮阵) runs 2-seat shop→place→seeded combat→HP resolve on the public play-kernel; ★2 merge, multi-player lobbies beyond 2, and sealed/hidden shop economy are unsupported.",
+                "auto-battler-v1 (Tide Arena / 潮阵) runs 2-seat shop→place→seeded combat→HP resolve on the public play-kernel (★2 three-of-a-kind merge, fixed 12-unit roster, 4 trait synergies, authoritative prep timer); ★3, custom rosters/traits, lobbies beyond 2 seats, and sealed/hidden shop economy are unsupported.",
               ],
             },
           }
@@ -752,11 +753,16 @@ export async function runCreatorJob(
       ) {
         throw new Error("finding_not_found");
       }
-      const plan = createActionDescriptionIterationPlan({
+      const iterationInput = {
         ruleSystem: record.ruleSystem,
         prompt: input.prompt,
         sourceId: `source_${job.id}`,
-      });
+      };
+      // Generic: numeric knobs the active kernel declares (timers, start HP/gold…) first,
+      // then the original single-action description rewrite.
+      const plan =
+        createKernelTuningIterationPlan(iterationInput) ??
+        createActionDescriptionIterationPlan(iterationInput);
       operation = await host.applyProjectChanges(job.projectId, {
         expectedVersion: input.expectedVersion,
         idempotencyKey: `job:${input.idempotencyKey}`,

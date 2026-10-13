@@ -278,8 +278,8 @@ export function TideArenaBoard({
           {status === "complete" ? "对局结束" : me.ready ? "已准备，等待对手" : `座位 ${activeSeat} 行动`}
         </span>
         <div className="ta-players">
-          <HpTicks hp={me.hp} max={START_HP} tone="own" />
-          <HpTicks hp={them.hp} max={START_HP} tone="enemy" />
+          <HpTicks hp={me.hp} max={arena.tuning?.startHp ?? START_HP} tone="own" />
+          <HpTicks hp={them.hp} max={arena.tuning?.startHp ?? START_HP} tone="enemy" />
         </div>
       </header>
 
