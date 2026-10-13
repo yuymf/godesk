@@ -22,6 +22,8 @@ describe("auto-battler skill / VFX NL", () => {
     expect(b.content.units.find((u) => u.id === "witch")?.combatFx?.attackEffect?.kind).toBe("heal_ally");
     const c = applySkillFxIntents(b.content, [parseSkillFxClause("给新羁绊加护盾")!]);
     expect(c.content.traits.some((t) => t.effect?.kind === "shield_start" && t.label.includes("护盾"))).toBe(true);
+    const newId = c.content.traits.find((t) => t.label.includes("护盾") && t.id.startsWith("shield_"))!.id;
+    expect(c.content.units.filter((u) => u.traits.includes(newId)).length).toBeGreaterThanOrEqual(2);
   });
 
   it("maps through kernel edits", () => {

@@ -80,7 +80,18 @@ export function applySkillFxIntents(content: AutoBattlerContent, intents: SkillF
       };
       traits = [...traits, trait];
       contentTouched.add("traits");
-      report.lines.push(`技能：新羁绊「${trait.label}」→ shield_start 护盾（${values.join("/")}）+ VFX shield`);
+      // Attach to up to 2 units with free trait slots so the synergy can activate in combat.
+      let attached = 0;
+      units = units.map((u) => {
+        if (attached >= 2 || u.traits.length >= 3 || u.traits.includes(trait.id)) return u;
+        attached += 1;
+        contentTouched.add("units");
+        return { ...u, traits: [...u.traits, trait.id] };
+      });
+      report.lines.push(
+        `技能：新羁绊「${trait.label}」→ shield_start 护盾（${values.join("/")}）+ VFX shield` +
+          (attached ? `；已挂到 ${attached} 个单位` : "；未自动挂单位（槽已满）"),
+      );
       continue;
     }
 

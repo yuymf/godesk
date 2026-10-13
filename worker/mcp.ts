@@ -699,6 +699,8 @@ const operationSchema = z.discriminatedUnion("op", [
         prepPlaceSeconds: z.number().int().min(10).max(300).optional(),
         startHp: z.number().int().min(1).max(200).optional(),
         startGold: z.number().int().min(0).max(100).optional(),
+        boardCols: z.number().int().min(4).max(8).optional(),
+        boardRows: z.number().int().min(1).max(3).optional(),
       }).strict().optional(),
       // Content data layer (validated server-side by resolveAutoBattlerContent).
       content: z.object({

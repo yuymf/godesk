@@ -391,6 +391,13 @@ describe("auto-battler-v1 Step5 depth", () => {
 });
 
 describe("auto-battler tuning (creator knobs)", () => {
+  it("boardCols creates a longer board array", () => {
+    const cfg = createAutoBattlerKernelConfig({ boardCols: 8, boardRows: 2 });
+    const state = createInitialState(autoBattlerAdapter, cfg, 3);
+    expect(state.genre.seats[0].board).toHaveLength(16);
+    expect(state.genre.tuning?.boardCols).toBe(8);
+  });
+
   it("applies prep timers and starting HP/gold, and round-trips through the session blob", async () => {
     const m = await import("./auto-battler");
     const { createInitialState } = await import("../play-kernel");

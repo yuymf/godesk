@@ -446,6 +446,76 @@ const vagueParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
 
 
 
+
+// ---------------------------------------------------------------- trait add / delete + board size
+
+const addTraitParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
+  const clause = clauses[i]!;
+  const m = clause.match(/(?:加|新增|增加|添加)\s*(?:一个|一组|个)?\s*羁绊\s*[「"『]?([\u4e00-\u9fa5A-Za-z0-9]{1,8})[」"』]?/);
+  if (!m && !/(?:加|新增)\s*羁绊/.test(clause)) return 0;
+  const label = m?.[1] ?? clause.match(/羁绊\s*[「"『]?([\u4e00-\u9fa5A-Za-z0-9]{1,8})/)?.[1];
+  if (!label) throw new KernelTuningRangeError("请写明羁绊名字，例如「加一个羁绊「雷霆」」。");
+  if (draft.content.traits.some((tr) => tr.label === label)) throw new KernelTuningRangeError(`已经有叫「${label}」的羁绊了。`);
+  if (draft.content.traits.length >= CONTENT_LIMITS.traits.max) throw new KernelTuningRangeError(`羁绊最多 ${CONTENT_LIMITS.traits.max} 组。`);
+  const id = `trait_${label}`.replace(/[^\w\u4e00-\u9fa5]+/g, "_").slice(0, 32).toLowerCase() || `trait_${draft.content.traits.length + 1}`;
+  const safeId = draft.content.traits.some((tr) => tr.id === id) ? `t${draft.content.traits.length + 1}` : id;
+  const trait: TraitDef = {
+    id: safeId,
+    label,
+    glyph: label.slice(0, 1),
+    tiers: [2, 4],
+    atkBonus: 8,
+    hpBonus: 40,
+  };
+  draft.content = { ...draft.content, traits: [...draft.content.traits, trait] };
+  draft.contentTouched.add("traits");
+  draft.changes.push({ key: `trait:${safeId}`, label: `新增羁绊 ${label}`, value: `${label} 2/4（攻+8 血+40）` });
+  return 1;
+};
+
+const deleteTraitParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
+  const clause = clauses[i]!;
+  if (!/(删|去掉|移除|删除).{0,6}羁绊|(羁绊).{0,4}(删|去掉|移除)/.test(clause)) return 0;
+  const trait = findTrait(draft.content, clause);
+  if (!trait) throw new KernelTuningRangeError(`没找到要删的羁绊；当前：${draft.content.traits.map((t) => t.label).join("、")}。`);
+  if (draft.content.traits.length <= 1) throw new KernelTuningRangeError("至少保留 1 组羁绊。");
+  draft.content = {
+    ...draft.content,
+    traits: draft.content.traits.filter((t) => t.id !== trait.id),
+    units: draft.content.units.map((u) => ({ ...u, traits: u.traits.filter((id) => id !== trait.id) })),
+  };
+  draft.contentTouched.add("traits");
+  draft.contentTouched.add("units");
+  draft.changes.push({ key: `trait:${trait.id}`, label: `删除羁绊 ${trait.label}`, value: "已从单位列表清除引用" });
+  return 1;
+};
+
+
+const boardSizeParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
+  const clause = clauses[i]!;
+  if (!/棋盘/.test(clause)) return 0;
+  const colsM = clause.match(new RegExp(`(${NUM})\\s*列`));
+  const rowsM = clause.match(new RegExp(`(${NUM})\\s*行`));
+  if (!colsM && !rowsM) return 0;
+  const parts: string[] = [];
+  if (colsM) {
+    const cols = num(colsM[1]);
+    const lim = AUTO_BATTLER_TUNING_LIMITS.boardCols;
+    if (cols < lim.min || cols > lim.max) throw new KernelTuningRangeError(`棋盘列数只能是 ${lim.min}–${lim.max}。`);
+    draft.tuning.boardCols = cols;
+    parts.push(`列 ${cols}`);
+  }
+  if (rowsM) {
+    const rows = num(rowsM[1]);
+    const lim = AUTO_BATTLER_TUNING_LIMITS.boardRows;
+    if (rows < lim.min || rows > lim.max) throw new KernelTuningRangeError(`棋盘行数只能是 ${lim.min}–${lim.max}。`);
+    draft.tuning.boardRows = rows;
+    parts.push(`行 ${rows}`);
+  }
+  draft.changes.push({ key: "board", label: "棋盘尺寸", value: parts.join("，") });
+  return 1;
+};
+
 // ---------------------------------------------------------------- skill / VFX parser
 
 const skillFxParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
@@ -560,7 +630,7 @@ export const KERNEL_TUNING_REGISTRY: Partial<Record<Kernel["type"], KernelTuning
       { key: "startHp", label: "初始生命", unit: "", subject: /(血量|生命|血|hp)/i, ...lim.startHp },
       { key: "startGold", label: "初始金币", unit: "", subject: /(金币|金钱|gold)/i, ...lim.startGold },
     ],
-    parsers: [skillFxParser, assetAttachParser, themeParser, addUnitParser, deleteUnitParser, traitTierParser, starParser, editUnitParser, defaultsParser, vagueParser],
+    parsers: [skillFxParser, boardSizeParser, addTraitParser, deleteTraitParser, assetAttachParser, themeParser, addUnitParser, deleteUnitParser, traitTierParser, starParser, editUnitParser, defaultsParser, vagueParser],
     current: (kernel) => {
       const k = kernel as { tuning?: Record<string, number>; content?: AutoBattlerContentPatch };
       return {

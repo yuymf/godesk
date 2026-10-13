@@ -20,6 +20,7 @@ import {
   type TraitId,
 } from "../runtime/adapters/auto-battler";
 import type { FloaterEvent } from "../render3d/tide-arena/floaters";
+import { setArenaHalfDims } from "../render3d/tide-arena/layout";
 import type { CSSProperties } from "react";
 import { DEFAULT_THEME_ID, resolveAutoBattlerTheme, THEME_PRESETS, type AutoBattlerThemePatch } from "../runtime/adapters/auto-battler-theme";
 import type { UnitModelSource } from "../render3d/tide-arena/unit-models";
@@ -179,6 +180,8 @@ export function TideArenaBoard({
   const me = arena.seats[seatIdx]!;
   const them = arena.seats[seatIdx === 0 ? 1 : 0]!;
   const ownBoard = me.board as Array<Piece | null>;
+  // Keep layout hit-tests / token world positions aligned with creator board size.
+  setArenaHalfDims(arena.tuning?.boardCols ?? 7, arena.tuning?.boardRows ?? 2);
   const ownBench = me.bench as Array<Piece | null>;
   const enemyBoard = them.board as Array<Piece | null>;
 

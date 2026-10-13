@@ -64,8 +64,8 @@ export function xpToNext(_level: number): number {
 }
 
 /** Board unit cap = current level (clamped to board slots). */
-export function boardCap(level: number): number {
-  return Math.min(Math.max(1, level), BOARD_SLOTS);
+export function boardCap(level: number, slots: number = BOARD_SLOTS): number {
+  return Math.min(Math.max(1, level), slots);
 }
 
 /** Star multiplier from the active content's star rules (default ★★ ×1.8, ★★★ ×3.2). */
@@ -165,6 +165,10 @@ export type AutoBattlerTuning = {
   prepPlaceSeconds?: number;
   startHp?: number;
   startGold?: number;
+  /** Own-half columns (default 7). */
+  boardCols?: number;
+  /** Own-half rows (default 2). */
+  boardRows?: number;
 };
 
 /** Inclusive bounds a tuning value must satisfy (validated on every write path). */
@@ -173,7 +177,16 @@ export const AUTO_BATTLER_TUNING_LIMITS: Record<keyof AutoBattlerTuning, { min: 
   prepPlaceSeconds: { min: 10, max: 300 },
   startHp: { min: 1, max: 200 },
   startGold: { min: 0, max: 100 },
+  boardCols: { min: 4, max: 8 },
+  boardRows: { min: 1, max: 3 },
 };
+
+/** Resolve board half size from tuning (falls back to defaults). */
+export function boardDims(tuning?: AutoBattlerTuning | null): { cols: number; rows: number; slots: number } {
+  const cols = tuning?.boardCols ?? BOARD_COLS;
+  const rows = tuning?.boardRows ?? BOARD_ROWS;
+  return { cols, rows, slots: cols * rows };
+}
 
 export function normalizeAutoBattlerTuning(raw: unknown): AutoBattlerTuning | null {
   if (raw === undefined) return {};
@@ -433,13 +446,14 @@ type CombatFighter = Piece & { x: number; y: number; firstStrikeDone?: boolean }
 function boardToFighters(
   seat: number,
   board: Array<Piece | null>,
+  dims?: { cols: number; rows: number },
 ): CombatFighter[] {
   const fighters: CombatFighter[] = [];
   for (let i = 0; i < board.length; i += 1) {
     const piece = board[i];
     if (!piece) continue;
     const buffed = applySynergiesToPiece(piece, board);
-    const cell = arenaCell(seat, i);
+    const cell = arenaCell(seat, i, dims);
     fighters.push({ ...buffed, x: cell.col, y: cell.row, firstStrikeDone: false });
   }
   return fighters;
@@ -449,12 +463,18 @@ function boardToFighters(
  * Shared arena coordinates (7×4, row 0 = far edge from seat 0). Seat 0's front
  * row sits on row 2 at the tide line; seat 1 is mirrored onto rows 1..0.
  */
-export function arenaCell(seat: number, boardIndex: number): { col: number; row: number } {
-  const col = boardIndex % BOARD_COLS;
-  const local = Math.floor(boardIndex / BOARD_COLS);
+export function arenaCell(
+  seat: number,
+  boardIndex: number,
+  dims?: { cols?: number; rows?: number },
+): { col: number; row: number } {
+  const cols = dims?.cols ?? BOARD_COLS;
+  const rows = dims?.rows ?? BOARD_ROWS;
+  const col = boardIndex % cols;
+  const local = Math.floor(boardIndex / cols);
   return seat === 0
-    ? { col, row: BOARD_ROWS + local }
-    : { col: BOARD_COLS - 1 - col, row: BOARD_ROWS - 1 - local };
+    ? { col, row: rows + local }
+    : { col: cols - 1 - col, row: rows - 1 - local };
 }
 
 function manhattan(a: CombatFighter, b: CombatFighter): number {
@@ -494,9 +514,10 @@ function runCombat(
   sequence: number,
 ): { winnerSeat: number | null; damage: number; log: CombatLogEntry[] } {
   const log: CombatLogEntry[] = [{ kind: "combat_start", round: genre.round }];
+  const dims = boardDims(genre.tuning);
   let fighters = [
-    ...boardToFighters(0, genre.seats[0].board),
-    ...boardToFighters(1, genre.seats[1].board),
+    ...boardToFighters(0, genre.seats[0].board, dims),
+    ...boardToFighters(1, genre.seats[1].board, dims),
   ];
   const rng = createSeededRng(seed);
   const syn0 = activeSynergies(genre.seats[0].board);
@@ -744,6 +765,7 @@ function startShopRound(
 }
 
 function emptySeat(seed: number, seq: number, tuning?: AutoBattlerTuning): SeatState {
+  const { slots } = boardDims(tuning);
   return {
     gold: tuning?.startGold ?? START_GOLD,
     hp: tuning?.startHp ?? START_HP,
@@ -751,7 +773,7 @@ function emptySeat(seed: number, seq: number, tuning?: AutoBattlerTuning): SeatS
     xp: 0,
     shop: rollShop(seed, seq, SHOP_SIZE),
     bench: emptySlots(BENCH_SLOTS),
-    board: emptySlots(BOARD_SLOTS),
+    board: emptySlots(slots),
     ready: false,
   };
 }
@@ -818,7 +840,7 @@ function listLegalActionsImpl(state: PlayState<AutoBattlerGenre>, playerId: numb
         legal.push({ type: "buy_xp", label: "升级" });
       }
     }
-    const cap = boardCap(seat.level);
+    const cap = boardCap(seat.level, boardDims(state.genre.tuning).slots);
     const onBoard = boardCount(seat);
     seat.bench.forEach((piece, benchIndex) => {
       if (!piece) return;
@@ -920,7 +942,7 @@ function reduceImpl(state: PlayState<AutoBattlerGenre>, action: PlayAction): Ret
       if (benchIndex === null || boardIndex === null) return null;
       const piece = seat.bench[benchIndex];
       if (!piece || seat.board[boardIndex]) return null;
-      if (boardCount(seat) >= boardCap(seat.level)) return null;
+      if (boardCount(seat) >= boardCap(seat.level, boardDims(genre.tuning).slots)) return null;
       seat.board[boardIndex] = piece;
       seat.bench[benchIndex] = null;
       tryMergeSeat(seat, genre);
@@ -1132,7 +1154,7 @@ export function pickAutoBattlerBotAction(
   }
   const seat = state.genre.seats[state.activePlayerId]!;
   const onBoard = boardCount(seat);
-  const cap = boardCap(seat.level);
+  const cap = boardCap(seat.level, boardDims(state.genre.tuning).slots);
 
   // Always place when possible so Shared Session / e2e see enemy pieces.
   const place = legal.find((a) => a.type === "place");

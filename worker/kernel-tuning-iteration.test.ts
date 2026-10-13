@@ -72,12 +72,22 @@ describe("content data-layer NL edits (multi-change, honest leftovers)", () => {
     expect(coral.effect.values).toHaveLength(2);
     expect(p.changes.map((c) => c.key)).toEqual(["trait:coral", "startGold"]);
   });
-  it("enables ★3 with a multiplier and records the unsupported clause instead of dropping it", () => {
+  it("enables ★3 with a multiplier and configures board columns", () => {
     const p = plan(battler(), "开启三星，三星倍率改成3.5，棋盘改成8列")!;
     const cfg = (p.operations[1] as { config: Record<string, any> }).config;
     expect(cfg.content.stars).toEqual({ star2: true, star3: true, mult2: 1.8, mult3: 3.5 });
-    expect(p.unsupportedClauses).toEqual(["棋盘改成8列"]);
-    expect(cfg.unsupported.at(-1)).toContain("棋盘改成8列");
+    expect(cfg.tuning.boardCols).toBe(8);
+    expect(p.unsupportedClauses).toEqual([]);
+    expect(p.changes.some((c) => c.key === "board")).toBe(true);
+  });
+
+  it("adds and deletes trait groups via NL", () => {
+    const added = plan(battler(), "加一个羁绊「雷霆」")!;
+    const cfg = (added.operations[1] as { config: Record<string, any> }).config;
+    expect(cfg.content.traits.some((t: { label: string }) => t.label === "雷霆")).toBe(true);
+    const deleted = plan(withKernel({ type: "auto-battler-v1", playerCount: 2, content: cfg.content }), "删掉远航羁绊")!;
+    const cfg2 = (deleted.operations[1] as { config: Record<string, any> }).config;
+    expect(cfg2.content.traits.some((t: { id: string }) => t.id === "voyager")).toBe(false);
   });
   it("keeps earlier content edits when a later prompt touches another field", () => {
     const first = plan(battler(), "加一个新单位「雷鳗」，费用3")!;

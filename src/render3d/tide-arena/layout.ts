@@ -1,19 +1,43 @@
 /**
  * Tide Arena / 潮阵 — pure board layout (no three.js). World units; y up.
- * 7×4 arena (rows 0–1 enemy half, 2–3 own half), 5-slot bench at the near edge.
- * The viewer always sees their own half near the camera.
+ * Default 7×4 arena (rows 0–1 enemy half, 2–3 own half), 5-slot bench.
+ * Half size is live via setArenaHalfDims so creator boardCols/boardRows take effect.
  */
 import { arenaCell, BENCH_SLOTS, BOARD_COLS, BOARD_ROWS } from "../../runtime/adapters/auto-battler";
 
 export const CELL = 1.15;
-export const ARENA_COLS = BOARD_COLS;
-export const ARENA_ROWS = BOARD_ROWS * 2;
+/** Live own-half columns (default 7). */
+export let ARENA_COLS = BOARD_COLS;
+/** Live full arena rows = 2 × own-half rows (default 4). */
+export let ARENA_ROWS = BOARD_ROWS * 2;
 export const BOARD_Z = -0.6;
 export const TILE_TOP = 0.5;
-export const FRAME_W = ARENA_COLS * CELL + 0.6;
-export const FRAME_D = ARENA_ROWS * CELL + 0.6;
-export const BENCH_Z = BOARD_Z + FRAME_D / 2 + (CELL + 0.4) / 2;
+export let FRAME_W = ARENA_COLS * CELL + 0.6;
+export let FRAME_D = ARENA_ROWS * CELL + 0.6;
+export let BENCH_Z = BOARD_Z + FRAME_D / 2 + (CELL + 0.4) / 2;
 export const BENCH_TOP = 0.32;
+
+/** Own-half rows currently in effect. */
+export function arenaHalfRows(): number {
+  return ARENA_ROWS / 2;
+}
+
+export function arenaHalfSlots(): number {
+  return ARENA_COLS * arenaHalfRows();
+}
+
+/** Apply creator boardCols/boardRows (own half). Returns whether geometry should rebuild. */
+export function setArenaHalfDims(cols: number, rows: number): boolean {
+  const c = Math.max(4, Math.min(8, Math.round(cols)));
+  const r = Math.max(1, Math.min(3, Math.round(rows)));
+  if (c === ARENA_COLS && r * 2 === ARENA_ROWS) return false;
+  ARENA_COLS = c;
+  ARENA_ROWS = r * 2;
+  FRAME_W = ARENA_COLS * CELL + 0.6;
+  FRAME_D = ARENA_ROWS * CELL + 0.6;
+  BENCH_Z = BOARD_Z + FRAME_D / 2 + (CELL + 0.4) / 2;
+  return true;
+}
 
 export type SlotRef = { kind: "cell"; boardIndex: number } | { kind: "bench"; benchIndex: number };
 
@@ -26,7 +50,7 @@ export function arenaWorld(col: number, row: number): { x: number; z: number } {
 
 /** World position of a board index on the viewer's own (near) or the opponent's (far) half. */
 export function boardWorld(own: boolean, boardIndex: number) {
-  const cell = arenaCell(own ? 0 : 1, boardIndex);
+  const cell = arenaCell(own ? 0 : 1, boardIndex, { cols: ARENA_COLS, rows: arenaHalfRows() });
   return { ...arenaWorld(cell.col, cell.row), y: TILE_TOP };
 }
 
@@ -41,7 +65,7 @@ export function slotAt(x: number, z: number): SlotRef | null {
     const p = benchWorld(i);
     if (Math.abs(x - p.x) <= half && Math.abs(z - p.z) <= half) return { kind: "bench", benchIndex: i };
   }
-  for (let i = 0; i < BOARD_COLS * BOARD_ROWS; i += 1) {
+  for (let i = 0; i < arenaHalfSlots(); i += 1) {
     const p = boardWorld(true, i);
     if (Math.abs(x - p.x) <= half && Math.abs(z - p.z) <= half) return { kind: "cell", boardIndex: i };
   }
@@ -66,15 +90,13 @@ export function dragAction(
   if (from.kind === "bench" && to.kind === "cell") return { type: "place", payload: { benchIndex: from.benchIndex, boardIndex: to.boardIndex } };
   if (from.kind === "cell" && to.kind === "cell") return { type: "move", payload: { from: from.boardIndex, to: to.boardIndex } };
   if (from.kind === "cell" && to.kind === "bench") return { type: "recall", payload: { boardIndex: from.boardIndex } };
-  return null; // bench → bench reorder is not a kernel action
+  return null;
 }
 
 export type LegalDropOpts = {
-  /** When true, bench→cell place is illegal (board already at level cap). */
   boardFull?: boolean;
 };
 
-/** Legal drop slots for a drag source (empty own cells; empty bench slots when lifting from the board). */
 export function legalDrops(
   from: SlotRef,
   occupied: (slot: SlotRef) => boolean,
@@ -83,7 +105,7 @@ export function legalDrops(
   const drops: SlotRef[] = [];
   const allowBoardCells = from.kind === "cell" || !opts.boardFull;
   if (allowBoardCells) {
-    for (let i = 0; i < BOARD_COLS * BOARD_ROWS; i += 1) {
+    for (let i = 0; i < arenaHalfSlots(); i += 1) {
       const slot: SlotRef = { kind: "cell", boardIndex: i };
       if (!occupied(slot)) drops.push(slot);
     }
