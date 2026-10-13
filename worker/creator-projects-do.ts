@@ -141,7 +141,11 @@ function roomDeadlineFor(room: StoredSharedSession, build: StoredPlayableBuild):
   if (runtime) {
     const bot = sessionBotPhaseStartIntent(room.state, runtime, room.aiSeats, new Set(room.acceptedActions.map((a) => a.intentId)));
     if (bot) {
-      return { sessionId: room.id, expectedActions: room.acceptedActions.length, dueAt: Date.now() + Math.min(room.aiThinkMs ?? 600, 1500), kind: "bot", intent: bot };
+      // Anchored to the session clock (the action that opened this phase), not wall time,
+      // so the hook lands inside the phase even when the alarm runs late.
+      const last = room.acceptedActions.at(-1)?.at;
+      const anchor = typeof last === "number" ? last : Date.now();
+      return { sessionId: room.id, expectedActions: room.acceptedActions.length, dueAt: anchor + Math.min(room.aiThinkMs ?? 600, 1500), kind: "bot", intent: bot };
     }
   }
   // Rooms with no computer seat stop ticking after two idle rounds of pure server actions
@@ -417,6 +421,8 @@ export class CreatorProjects extends DurableObject<Env> {
    * kernel clock), so the timeout is an ordinary timestamped action that replays exactly.
    */
   private async runRoomDeadline(deadline: RoomDeadline) {
+    const lateMs = Date.now() - deadline.dueAt;
+    if (lateMs > 2_000) console.warn("room_deadline_late", deadline.sessionId, deadline.kind ?? "timer", lateMs);
     const roomKey = `session:${deadline.sessionId}`;
     const outcome = await this.ctx.storage.transaction(async (transaction) => {
       const current = await transaction.get<RoomDeadline>(roomDeadlineKey(deadline.sessionId));
