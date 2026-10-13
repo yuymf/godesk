@@ -156,8 +156,11 @@ export async function fulfillAssetAttachIntents(input: {
       continue;
     }
 
-    // search
-    const query = intent.queryHint || queryFromPrompt(`${intent.unitHint} 模型`) || intent.unitHint;
+    // search — pullCc0 builds the GLB body; we must POST it onto the project (same as MCP pull_project_asset).
+    const query = queryFromPrompt(intent.queryHint ? `${intent.queryHint}模型` : `${intent.unitHint}模型`)
+      || queryFromPrompt(intent.unitHint)
+      || intent.queryHint
+      || intent.unitHint;
     report.searched.push(query);
     try {
       const pulled = await pullCc0GlbFromPrompt(
@@ -167,8 +170,21 @@ export async function fulfillAssetAttachIntents(input: {
         `给单位加一个${query}模型`,
         `${input.idempotencyKey}:asset:${i}:${unit.id}`,
       );
-      const imported = await listImported();
-      const entry = imported.find((a) => a.id.includes(pulled.asset.nativeId) || a.title === pulled.asset.title) ?? imported[imported.length - 1];
+      const importedRes = await input.projectRequest(`/projects/${input.projectId}/imported-assets`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(pulled.importBody),
+      });
+      if (!importedRes.ok) {
+        const err = await importedRes.json().catch(() => ({})) as { error?: string };
+        throw new Error(err.error ?? `导入失败（${importedRes.status}）`);
+      }
+      const importedBody = await importedRes.json() as {
+        importedAssets?: Array<{ id: string; title?: string }>;
+      };
+      const entry = (importedBody.importedAssets ?? []).find(
+        (a) => a.id.includes(pulled.asset.nativeId) || a.title === pulled.asset.title,
+      ) ?? (importedBody.importedAssets ?? []).at(-1);
       if (!entry) throw new Error("导入后未找到资产条目");
       units = patchUnit(units, unit.id, { modelRef: entry.id });
       report.attached.push({ unitId: unit.id, unitName: unit.name, modelRef: entry.id, title: pulled.asset.title, via: "search" });
