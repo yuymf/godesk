@@ -13,14 +13,17 @@ import {
   type Piece,
   type TraitId,
 } from "../runtime/adapters/auto-battler";
-import { combatDigest } from "../render3d/tide-arena/floaters";
+import type { FloaterEvent } from "../render3d/tide-arena/floaters";
+import { buildTimeline, hpAt, type Timeline } from "../render3d/tide-arena/timeline";
 import { TIER_COLORS, UNIT_COLORS } from "../render3d/tide-arena/palette";
 
 const LazyTideArenaScene3D = lazy(() => import("./TideArenaScene3D"));
 
 type TideArenaState = NonNullable<SessionState["autoBattler"]>;
 
-const COMBAT_VIEW_MS = 7000;
+/** Resolve frame stays up this long after the replay ends (or is skipped). */
+const RESOLVE_HOLD_MS = 3000;
+const FLOATER_WINDOW_MS = 1400;
 const TRAITS = Object.keys(TRAIT_SYNERGIES) as TraitId[];
 
 function useWidth(ref: React.RefObject<HTMLElement | null>) {
@@ -84,22 +87,37 @@ export function TideArenaBoard({
   const key = combatKey(arena);
   const seenKey = useRef(key);
   const hold = typeof location !== "undefined" && new URLSearchParams(location.search).get("tideHold") === "combat";
-  const [combatUntil, setCombatUntil] = useState(0);
+  const [replay, setReplay] = useState<{ tl: Timeline; ms: number; done: boolean } | null>(null);
+  const [speed, setSpeed] = useState(1);
+  const [skipToken, setSkipToken] = useState(0);
   useEffect(() => {
-    if (key && key !== seenKey.current) setCombatUntil(Date.now() + COMBAT_VIEW_MS);
+    if (key && key !== seenKey.current) {
+      const units = new Map<string, { unitId: string; name: string }>();
+      for (const seat of arena.seats) for (const p of seat.board as Array<Piece | null>) if (p) units.set(p.uid, { unitId: p.unitId, name: unitDef(p.unitId)?.name ?? p.unitId });
+      setReplay({ tl: buildTimeline(arena.combatLog as Array<Record<string, unknown>>, (uid) => units.get(uid)), ms: 0, done: false });
+      setSpeed(1);
+    }
     seenKey.current = key;
   }, [key]);
   useEffect(() => {
-    if (!combatUntil || hold) return;
-    const t = setTimeout(() => setCombatUntil(0), Math.max(0, combatUntil - Date.now()));
+    if (!replay?.done || hold) return;
+    const t = setTimeout(() => setReplay(null), RESOLVE_HOLD_MS);
     return () => clearTimeout(t);
-  }, [combatUntil, hold]);
-  const inCombat = combatUntil > 0 && status === "active";
+  }, [replay?.done, hold]);
+  const inCombat = replay !== null && status === "active";
+  const onReplayTime = (ms: number, done: boolean) => setReplay((r) => (r ? { ...r, ms, done: r.done || done } : r));
 
-  const digest = useMemo(
-    () => (inCombat ? combatDigest(arena.combatLog as Array<Record<string, unknown>>) : null),
-    [inCombat, arena.combatLog],
-  );
+  const live = useMemo(() => {
+    if (!replay) return null;
+    const { tl, ms } = replay;
+    const floaters: FloaterEvent[] = [];
+    for (const e of tl.events) {
+      if (e.kind === "strike" && e.hitT <= ms && (replay.done ? e.hitT >= tl.durationMs - 3000 : ms - e.hitT < FLOATER_WINDOW_MS)) {
+        floaters.push({ uid: e.targetUid, amount: e.damage, kind: "damage" });
+      }
+    }
+    return { floaters, hp: hpAt(tl, ms), lines: tl.lines.filter((l) => l.t <= ms) };
+  }, [replay]);
 
   const canAct = enabled && !busy && !readOnly && status === "active" && viewerSeat === activeSeat && !me.ready;
   const dragEnabled = canAct && !inCombat && arena.phase !== "ended";
@@ -112,7 +130,7 @@ export function TideArenaBoard({
   const phase = status === "complete" || arena.phase === "ended" ? "终局" : inCombat ? "战斗" : "备战";
   const step = arena.phase === "shop" ? "商店" : arena.phase === "place" ? "布阵" : "";
   const cta = arena.phase === "shop" ? { id: "ready_shop", label: "准备完毕" } : { id: "ready_place", label: "锁定阵容" };
-  const safe = mobile ? { top: 120, bottom: 176, left: 0, right: 0 } : { top: 72, bottom: 176, left: 210, right: 210 };
+  const safe = mobile ? { top: 120, bottom: 176, left: 0, right: 0 } : { top: 72, bottom: 172, left: 200, right: 200 };
 
   const act = (id: string, payload?: Record<string, unknown>) => onAct?.(id, payload);
 
@@ -123,14 +141,20 @@ export function TideArenaBoard({
       className={`tide-arena-stage${mobile ? " is-mobile" : ""}`}
       data-phase={arena.phase}
       data-combat={inCombat ? "1" : "0"}
+      data-replay={replay ? (replay.done ? "done" : "playing") : "none"}
     >
       <Suspense fallback={<div className="ta-scene ta-scene-loading">棋盘加载中…</div>}>
         <LazyTideArenaScene3D
           ownBoard={ownBoard}
           ownBench={ownBench}
           enemyBoard={enemyBoard}
-          hp={digest?.hp}
-          floaters={digest?.floaters}
+          hp={replay?.tl.finalHp}
+          liveHp={live?.hp}
+          floaters={live?.floaters}
+          replay={replay && !replay.done ? replay.tl : null}
+          replaySpeed={speed}
+          skipToken={skipToken}
+          onReplayTime={onReplayTime}
           dragEnabled={dragEnabled}
           mobile={mobile}
           safe={safe}
@@ -177,24 +201,29 @@ export function TideArenaBoard({
         })}
       </aside>
 
+      {inCombat ? (
+        <div className="ta-replay" role="group" aria-label="战斗回放">
+          <span className="ta-replay-clock">{live?.lines.at(-1)?.stamp ?? "0:00"}</span>
+          {[1, 2].map((s) => (
+            <button key={s} type="button" className={`ta-chip${speed === s ? " is-on" : ""}`} aria-pressed={speed === s} disabled={replay?.done} onClick={() => setSpeed(s)}>
+              {s}x
+            </button>
+          ))}
+          <button type="button" className="ta-chip" disabled={replay?.done} onClick={() => setSkipToken((n) => n + 1)}>
+            跳过
+          </button>
+        </div>
+      ) : null}
+
       {inCombat && !mobile ? (
         <aside className="ta-log" aria-label="战斗日志">
           <h3>战斗日志</h3>
           <ol>
-            {(arena.combatLog as Array<Record<string, unknown>>)
-              .filter((e) => e.kind === "strike" || e.kind === "unit_down" || e.kind === "combat_end")
-              .slice(-9)
-              .map((e, i) => (
-                <li key={i} className={`is-${String(e.kind)}`}>
-                  {e.kind === "strike"
-                    ? `${names.get(String(e.attackerUid)) ?? "?"} → ${names.get(String(e.targetUid)) ?? "?"} −${e.damage}`
-                    : e.kind === "unit_down"
-                      ? `${names.get(String(e.uid)) ?? "?"} 倒下`
-                      : e.winnerSeat === null
-                        ? "平局"
-                        : `座位 ${e.winnerSeat} 胜 · 伤害 ${e.damageToLoser}`}
-                </li>
-              ))}
+            {(live?.lines ?? []).slice(-9).map((line) => (
+              <li key={`${line.t}:${line.text}`} className={`is-${line.kind}`} data-value={line.value ?? undefined}>
+                <time>{line.stamp}</time> {line.text}
+              </li>
+            ))}
           </ol>
         </aside>
       ) : null}

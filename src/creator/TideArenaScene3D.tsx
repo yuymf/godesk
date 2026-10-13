@@ -7,6 +7,7 @@ import type { Piece } from "../runtime/adapters/auto-battler";
 import { TideArenaScene, type TokenAnchor } from "../render3d/tide-arena/scene";
 import { stackFloaters, type FloaterEvent } from "../render3d/tide-arena/floaters";
 import { detectEnvFromBrowser, resolveTier } from "../render3d/tiers";
+import type { Timeline } from "../render3d/tide-arena/timeline";
 
 export type TideArenaSceneProps = {
   ownBoard: Array<Piece | null>;
@@ -14,6 +15,12 @@ export type TideArenaSceneProps = {
   enemyBoard: Array<Piece | null>;
   hp?: Map<string, number>;
   floaters?: FloaterEvent[];
+  /** HP as of the replay clock (HP bars); falls back to `hp`. */
+  liveHp?: Map<string, number>;
+  replay?: Timeline | null;
+  replaySpeed?: number;
+  skipToken?: number;
+  onReplayTime?: (ms: number, done: boolean) => void;
   dragEnabled: boolean;
   mobile: boolean;
   safe: { top: number; bottom: number; left: number; right: number };
@@ -27,6 +34,7 @@ declare global {
       perf: () => { calls: number; triangles: number; peakCalls: number; peakTriangles: number };
       screenOf: TideArenaScene["screenOf"];
       tier: string;
+      frameStats: () => { frames: number; meanMs: number; p95Ms: number };
     };
   }
 }
@@ -38,6 +46,7 @@ export default function TideArenaScene3D(props: TideArenaSceneProps) {
   const cbRef = useRef(props);
   cbRef.current = props;
   const [anchors, setAnchors] = useState<TokenAnchor[]>([]);
+  const [labels, setLabels] = useState<{ tide: { x: number; y: number }; bench: { x: number; y: number } } | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -47,9 +56,17 @@ export default function TideArenaScene3D(props: TideArenaSceneProps) {
       onAction: (type, payload) => cbRef.current.onAction(type, payload),
       onDrag: (state) => cbRef.current.onDrag(state),
       onAnchors: setAnchors,
+      onLabels: setLabels,
+      onReplayTime: (ms, done) => cbRef.current.onReplayTime?.(ms, done),
     });
     sceneRef.current = scene;
-    window.__tideArena = { perf: () => scene.perf(), screenOf: (slot) => scene.screenOf(slot), tier: tier.tier };
+    window.__tideArena = { perf: () => scene.perf(), screenOf: (slot) => scene.screenOf(slot), tier: tier.tier,
+      frameStats: () => {
+        const s = [...scene.frameSamples].sort((a, b) => a - b);
+        const mean = s.length ? s.reduce((a, b) => a + b, 0) / s.length : 0;
+        return { frames: s.length, meanMs: mean, p95Ms: s[Math.floor(s.length * 0.95)] ?? 0 };
+      },
+    };
     return () => {
       scene.dispose();
       sceneRef.current = null;
@@ -76,6 +93,17 @@ export default function TideArenaScene3D(props: TideArenaSceneProps) {
     sceneRef.current?.setView(viewOf(props));
   }, [props.ownBoard, props.ownBench, props.enemyBoard, props.hp, props.dragEnabled]);
 
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    if (props.replay) scene.playReplay(props.replay, cbRef.current.replaySpeed ?? 1);
+    else scene.stopReplay();
+  }, [props.replay]);
+  useEffect(() => sceneRef.current?.setReplaySpeed(props.replaySpeed ?? 1), [props.replaySpeed]);
+  useEffect(() => {
+    if (props.skipToken) sceneRef.current?.skipReplay();
+  }, [props.skipToken]);
+
   const stacked = useMemo(() => stackFloaters(props.floaters ?? []), [props.floaters]);
   const byUid = useMemo(() => {
     const map = new Map<string, typeof stacked>();
@@ -88,10 +116,12 @@ export default function TideArenaScene3D(props: TideArenaSceneProps) {
       <canvas ref={canvasRef} className="ta-canvas" aria-label="潮阵 3D 棋盘" data-testid="tide-arena-canvas" />
       <div className="ta-overlay" aria-hidden>
         {anchors.map((a) => {
-          const damaged = a.hp < a.maxHp;
+          const hp = props.liveHp?.get(a.uid) ?? (props.replay ? a.maxHp : a.hp);
+          if (hp <= 0) return null;
+          const damaged = hp < a.maxHp;
           // Mobile: back-row bars only when damaged; bench never shows bars.
           const showBar = !a.onBench && (!props.mobile || !a.backRow || damaged);
-          const pct = Math.max(0, Math.min(1, a.hp / Math.max(1, a.maxHp)));
+          const pct = Math.max(0, Math.min(1, hp / Math.max(1, a.maxHp)));
           return (
             <div
               key={a.uid}
@@ -113,6 +143,12 @@ export default function TideArenaScene3D(props: TideArenaSceneProps) {
             </div>
           );
         })}
+        {labels ? (
+          <>
+            <span className="ta-label is-tide" style={{ left: labels.tide.x, top: labels.tide.y }}>潮线</span>
+            <span className="ta-label is-bench" style={{ left: labels.bench.x, top: labels.bench.y }}>备战席</span>
+          </>
+        ) : null}
       </div>
     </div>
   );
