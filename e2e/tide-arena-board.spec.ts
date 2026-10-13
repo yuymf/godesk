@@ -1,4 +1,5 @@
 import { chromium, expect, test } from "@playwright/test";
+import { createHash } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { TIDE_ARENA_PROMPT, openLobbyCard, shareHrefFromStudio } from "./helpers/sol-max-baseline";
 
@@ -7,12 +8,11 @@ const evidenceDir = process.env.GODESK_E2E_EVIDENCE_DIR;
 type Page = import("@playwright/test").Page;
 type Slot = { kind: "cell" | "enemy"; boardIndex: number } | { kind: "bench"; benchIndex: number };
 
-async function evidenceScreenshot(page: Page, name: string) {
-  if (!evidenceDir) return;
-  await mkdir(evidenceDir, { recursive: true });
-  await page.waitForTimeout(400); // render-on-demand frame + overlay settle
-  await page.getByRole("region", { name: "潮阵对局" }).screenshot({
-    path: `${evidenceDir}/${name}.png`,
+async function evidenceScreenshot(page: Page, name: string, settleMs = 400) {
+  if (evidenceDir) await mkdir(evidenceDir, { recursive: true });
+  await page.waitForTimeout(settleMs); // render-on-demand frame + overlay settle
+  return page.getByRole("region", { name: "潮阵对局" }).screenshot({
+    path: evidenceDir ? `${evidenceDir}/${name}.png` : undefined,
   });
 }
 
@@ -132,14 +132,28 @@ test("NL tide arena → configure_auto_battler → room shop+place+combat", asyn
     expect(perf.peakTriangles).toBeLessThanOrEqual(300_000);
     await guestBoard.getByRole("button", { name: "锁定阵容" }).click();
     await board.getByRole("button", { name: "锁定阵容" }).click();
-    await expect(guestBoard).toHaveAttribute("data-combat", "1", { timeout: 15_000 });
+    await expect(guestBoard).toHaveAttribute("data-replay", "playing", { timeout: 15_000 });
     // Shop is locked with icon + 「战斗中」 and drag is disabled.
     await expect(guestBoard.locator(".ta-shop-lock")).toContainText("战斗中");
-    await expect(guestBoard.getByRole("region", { name: "战斗日志" }).or(guestBoard.getByLabel("战斗日志"))).toBeVisible();
-    await evidenceScreenshot(guestPage, "combat-1440");
+    // Mid-fight: a log line's number must equal a floater currently on screen.
+    await expect.poll(async () => {
+      const floaters = await guestBoard.locator(".ta-floater").allTextContents();
+      const values = await guestBoard.locator(".ta-log li[data-value]").evaluateAll((els) => els.map((el) => el.getAttribute("data-value")));
+      return floaters.some((f) => values.includes(f.trim()));
+    }, { timeout: 10_000 }).toBe(true);
+    const mid = await evidenceScreenshot(guestPage, "combat-mid-1440", 150);
     await guestPage.setViewportSize({ width: 390, height: 844 });
-    await evidenceScreenshot(guestPage, "combat-390");
+    await evidenceScreenshot(guestPage, "combat-mid-390", 250);
     await guestPage.setViewportSize({ width: 1440, height: 900 });
+    await guestBoard.getByRole("button", { name: "2x" }).click();
+    await expect(guestBoard.getByRole("button", { name: "2x" })).toHaveAttribute("aria-pressed", "true");
+    await guestBoard.getByRole("button", { name: "跳过" }).click();
+    await expect(guestBoard).toHaveAttribute("data-replay", "done");
+    const resolve = await evidenceScreenshot(guestPage, "resolve-1440");
+    const hash = (b: Buffer) => createHash("sha256").update(b).digest("hex");
+    expect(hash(mid)).not.toBe(hash(resolve));
+    const stats = await guestPage.evaluate(() => window.__tideArena!.frameStats());
+    console.log(`[tide-arena replay frames] ${JSON.stringify(stats)}`);
     await expect(guestBoard).toContainText(/第 2 回合|终局/);
   } finally {
     await guest.close();
