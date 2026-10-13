@@ -250,3 +250,8 @@ aoe_splash / heal_ally / shield_start：单测断言 combatLog 事件与 HP；e2
 
 auto-battler 为通用商店/备战/战斗/升星；潮阵仅为默认 content+theme 包。换题材冷启动（赛博机甲）靠 cue→pack，不引用潮阵资产。
 证据（仓外）：`/workspace/g3d-evidence/godesk-2026-10-13/tide-arena/trajectory/kernel-generalize/`。
+
+## 缺口6 质量闸（`trajectory/quality-gate/`，2026-10-13）
+
+presentation-floor 美术底线：机位（棋盘约占宽 ~55–60%）、单位尺度、卡面对比；不达标保持草稿并写明条款。赛博冷启动可过闸；故意不合格 prompt 卡草稿。
+证据（仓外）：`/workspace/g3d-evidence/godesk-2026-10-13/tide-arena/trajectory/quality-gate/`。
