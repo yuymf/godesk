@@ -50,6 +50,7 @@ import {
 import { createKernelTuningIterationPlan, parseKernelEdits } from "./kernel-tuning-iteration";
 import { fulfillAssetAttachIntents } from "./auto-battler-assets";
 import { resolveAutoBattlerContent, DEFAULT_AUTO_BATTLER_CONTENT } from "../src/runtime/adapters/auto-battler-content";
+import { packToContentPatch, resolveAutoBattlerPack } from "../src/runtime/adapters/auto-battler-packs";
 
 const AUTO_BATTLER_BASE_UNSUPPORTED =
   "auto-battler-v1: 2-seat shop→place→combat→HP. Configurable: units/traits(add/del)/stars, boardCols/Rows 4–8×1–3, timers, HP/gold, themes, modelRef, VFX presets. Not: >2 seats, sealed shop.";
@@ -59,9 +60,21 @@ const REQUEST_LIKE = /[0-9一二三四五六七八九十]|改成|改为|加一�
 
 /** Fold any configurable edits in the idea into the proposed configure_auto_battler op (sync; assets fulfilled separately). */
 function autoBattlerProposedRuntime(idea: string) {
-  const parsed = parseKernelEdits({ type: "auto-battler-v1", playerCount: 2 } as never, idea);
+  const pack = resolveAutoBattlerPack(idea);
+  const packContent = packToContentPatch(pack);
+  const seedKernel = {
+    type: "auto-battler-v1" as const,
+    playerCount: 2 as const,
+    content: packContent,
+    theme: pack.theme,
+    branding: pack.branding,
+  };
+  const parsed = parseKernelEdits(seedKernel as never, idea);
   const recognized = Boolean(parsed?.changes.length);
   const leftovers = recognized ? (parsed?.unsupportedClauses ?? []).filter((c) => REQUEST_LIKE.test(c)) : [];
+  // Pack supplies default content+theme+branding; NL edits overlay when recognized.
+  const content = recognized && parsed?.contentPatch ? parsed.contentPatch : packContent;
+  const theme = recognized && parsed?.theme ? parsed.theme : pack.theme;
   return {
     configure: {
       op: "configure_auto_battler" as const,
@@ -71,9 +84,10 @@ function autoBattlerProposedRuntime(idea: string) {
           AUTO_BATTLER_BASE_UNSUPPORTED,
           ...leftovers.map((c) => `未执行的创作者要求：「${c}」——当前内核没有对应的可配置项。`),
         ],
+        content,
+        theme,
+        branding: pack.branding,
         ...(recognized && parsed && Object.keys(parsed.tuning).length ? { tuning: parsed.tuning } : {}),
-        ...(recognized && parsed?.contentPatch ? { content: parsed.contentPatch } : {}),
-        ...(recognized && parsed?.theme ? { theme: parsed.theme } : {}),
       },
     },
     assetIntents: parsed?.assetIntents,
@@ -1128,7 +1142,7 @@ export async function runCreatorJob(
           : proposedRuntime?.op === "configure_network_route"
           ? "规则结构来自体裁识别；城市图铺线、交替占领路线与连通枢纽获胜将在批准 Generation Plan 后配置为 network-route-v1（公共 play-kernel 适配器；最小原创铺线规则）。"
           : proposedRuntime?.op === "configure_auto_battler"
-          ? "规则结构来自体裁识别；潮阵两人商店买棋、备战上阵与自动战斗将在批准 Generation Plan 后配置为 auto-battler-v1。"
+          ? "规则结构来自体裁识别；两人商店买棋、备战上阵与自动战斗将在批准 Generation Plan 后配置为 auto-battler-v1。"
           : proposedRuntime?.op === "configure_auction_bidding"
           ? "规则结构来自体裁识别；两人公开轮流出价或放弃，最高有效出价获得拍品，将在批准 Generation Plan 后配置为 auction-bidding-v1。"
           : proposedRuntime?.op === "configure_hidden_role"

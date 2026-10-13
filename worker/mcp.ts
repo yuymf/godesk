@@ -733,6 +733,12 @@ const operationSchema = z.discriminatedUnion("op", [
         preset: z.string().max(32).optional(),
         overrides: z.record(z.string(), z.unknown()).optional(),
       }).strict().optional(),
+      // Content+theme pack HUD labels (title / seat names).
+      branding: z.object({
+        title: z.string().min(1).max(24),
+        ownSeat: z.string().min(1).max(24),
+        enemySeat: z.string().min(1).max(24),
+      }).strict().optional(),
       unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
     }),
   }),

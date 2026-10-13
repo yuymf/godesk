@@ -317,7 +317,7 @@ describe("board presentation gate (new mechanics need a dedicated board)", () =>
 describe("presentationFloor theme hints (auto-battler)", () => {
   it("passes default / preset themes above the floor", () => {
     const rule = base({
-      playSurface: { kind: "table", layout: "tide-arena", regions: [] },
+      playSurface: { kind: "table", layout: "auto-battler", regions: [] },
       presentation: {
         render: defaultRenderSpec("auto-battler-v1", "table")!,
         visuals: [{ provenance: "kit", label: "主题 kit" }],
@@ -333,7 +333,7 @@ describe("presentationFloor theme hints (auto-battler)", () => {
 
   it("keeps draft when camera / unit scale fall below the floor", () => {
     const rule = base({
-      playSurface: { kind: "table", layout: "tide-arena", regions: [] },
+      playSurface: { kind: "table", layout: "auto-battler", regions: [] },
       presentation: {
         render: defaultRenderSpec("auto-battler-v1", "table")!,
         visuals: [{ provenance: "kit", label: "主题 kit" }],

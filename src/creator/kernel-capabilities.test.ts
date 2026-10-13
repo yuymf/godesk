@@ -93,12 +93,13 @@ describe("inferRequestedMechanics — baseline vs unseen", () => {
 
 
 describe("Tide Arena / auto-battler mechanics", () => {
-  it("binds 自走棋 / 潮阵 cues to auto-battler only", () => {
+  it("binds 自走棋 / 潮阵 / 机甲 cues to auto-battler only", () => {
     for (const prompt of [
       "做一款两人自走棋，商店买棋上阵自动打架",
       "潮阵自动战斗",
       "Tide Arena auto-battler",
       "备战席买棋上阵",
+      "赛博机甲自走棋",
     ]) {
       expect(inferRequestedMechanics(prompt)).toEqual(["auto-battler"]);
     }

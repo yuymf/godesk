@@ -55,6 +55,7 @@
     "src/runtime/adapters/auto-battler-vfx.ts",
     "src/runtime/adapters/combat-playback.ts",
     "src/runtime/adapters/auto-battler-theme.ts",
+    "src/runtime/adapters/auto-battler-packs.ts",
     "src/runtime/topology-stub.ts"
   ]
 }

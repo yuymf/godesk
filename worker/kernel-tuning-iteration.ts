@@ -34,6 +34,7 @@ import {
   type ThemeOverrides,
   type ThemeSpec,
 } from "../src/runtime/adapters/auto-battler-theme";
+import type { AutoBattlerBranding } from "../src/runtime/adapters/auto-battler-packs";
 
 type Kernel = Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"];
 
@@ -59,6 +60,8 @@ interface Draft<TContent> {
   notes: string[];
   /** Visual theme patch (preset + overrides) when a clause touched the look. */
   theme?: AutoBattlerThemePatch;
+  /** HUD labels from the selected content+theme pack (preserved across iterates). */
+  branding?: AutoBattlerBranding;
   /** Unit asset attachments to fulfill asynchronously (search / imported / procedural). */
   assetIntents?: AssetAttachIntent[];
 }
@@ -69,10 +72,10 @@ type ClauseParser<TContent> = (clauses: string[], i: number, draft: Draft<TConte
 interface KernelTuningSpec<TContent = unknown> {
   knobs: TuningKnob[];
   parsers: ClauseParser<TContent>[];
-  current(kernel: Kernel): { tuning: Record<string, number>; content: TContent; theme?: AutoBattlerThemePatch };
+  current(kernel: Kernel): { tuning: Record<string, number>; content: TContent; theme?: AutoBattlerThemePatch; branding?: AutoBattlerBranding };
   /** Patch persisted on the kernel for the touched content fields. */
   contentPatch(draft: Draft<TContent>, previous: unknown): Record<string, unknown> | undefined;
-  operation(tuning: Record<string, number>, content: Record<string, unknown> | undefined, unsupported: string[], theme?: AutoBattlerThemePatch): ProjectChangeOperation;
+  operation(tuning: Record<string, number>, content: Record<string, unknown> | undefined, unsupported: string[], theme?: AutoBattlerThemePatch, branding?: AutoBattlerBranding): ProjectChangeOperation;
 }
 
 export class KernelTuningRangeError extends Error {
@@ -632,11 +635,12 @@ export const KERNEL_TUNING_REGISTRY: Partial<Record<Kernel["type"], KernelTuning
     ],
     parsers: [skillFxParser, boardSizeParser, addTraitParser, deleteTraitParser, assetAttachParser, themeParser, addUnitParser, deleteUnitParser, traitTierParser, starParser, editUnitParser, defaultsParser, vagueParser],
     current: (kernel) => {
-      const k = kernel as { tuning?: Record<string, number>; content?: AutoBattlerContentPatch };
+      const k = kernel as { tuning?: Record<string, number>; content?: AutoBattlerContentPatch; theme?: AutoBattlerThemePatch; branding?: AutoBattlerBranding };
       return {
         tuning: { ...(k.tuning ?? {}) },
         content: resolveAutoBattlerContent(k.content) ?? DEFAULT_AUTO_BATTLER_CONTENT,
-        theme: (kernel as { theme?: AutoBattlerThemePatch }).theme,
+        theme: k.theme,
+        branding: k.branding,
       };
     },
     contentPatch: (draft, previous) => {
@@ -649,7 +653,7 @@ export const KERNEL_TUNING_REGISTRY: Partial<Record<Kernel["type"], KernelTuning
       if (draft.contentTouched.has("stars")) patch.stars = { ...draft.content.stars };
       return Object.keys(patch).length ? patch : undefined;
     },
-    operation: (tuning, content, unsupported, theme) => ({
+    operation: (tuning, content, unsupported, theme, branding) => ({
       op: "configure_auto_battler",
       config: {
         playerCount: 2,
@@ -657,6 +661,7 @@ export const KERNEL_TUNING_REGISTRY: Partial<Record<Kernel["type"], KernelTuning
         ...(Object.keys(tuning).length ? { tuning } : {}),
         ...(content ? { content: content as AutoBattlerContentPatch } : {}),
         ...(theme ? { theme } : {}),
+        ...(branding ? { branding } : {}),
       },
     }),
   },
@@ -668,6 +673,7 @@ const filler = /^(?:请|帮我|麻烦|谢谢|好的|嗯|吧|呢|一下)*$/;
 
 export interface KernelEditResult {
   theme?: AutoBattlerThemePatch;
+  branding?: AutoBattlerBranding;
   assetIntents?: AssetAttachIntent[];
   changes: KernelChange[];
   notes: string[];
@@ -687,7 +693,7 @@ export function parseKernelEdits(
   if (!spec) return undefined;
   const clauses = prompt.split(clauseSplit).map((c) => c.trim()).filter((c) => c && !filler.test(c));
   const base = spec.current(kernel);
-  const draft: Draft<AutoBattlerContent> = { tuning: { ...base.tuning }, content: base.content, contentTouched: new Set(), changes: [], notes: [], ...(base.theme ? { theme: structuredClone(base.theme) } : {}) };
+  const draft: Draft<AutoBattlerContent> = { tuning: { ...base.tuning }, content: base.content, contentTouched: new Set(), changes: [], notes: [], ...(base.theme ? { theme: structuredClone(base.theme) } : {}), ...(base.branding ? { branding: { ...base.branding } } : {}) };
   const numberRe = new RegExp(`(${NUM})\\s*(秒|s\\b|点|金|滴)?`, "i");
   const unsupportedClauses: string[] = [];
   for (let i = 0; i < clauses.length; ) {
@@ -738,8 +744,9 @@ export function parseKernelEdits(
     tuning: draft.tuning,
     ...(contentPatch ? { contentPatch } : {}),
     ...(draft.theme ? { theme: draft.theme } : {}),
+    ...(draft.branding ? { branding: draft.branding } : {}),
     ...(draft.assetIntents?.length ? { assetIntents: draft.assetIntents } : {}),
-    operation: spec.operation(draft.tuning, contentPatch, unsupported, draft.theme),
+    operation: spec.operation(draft.tuning, contentPatch, unsupported, draft.theme, draft.branding),
   };
 }
 

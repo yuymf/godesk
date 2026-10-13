@@ -1,6 +1,6 @@
 /**
- * Tide Arena / 潮阵 — room stage for auto-battler-v1: full-bleed 3D tabletop
- * (lazy) with a DOM overlay HUD (top bar, synergies, combat log, shop + sell zone).
+ * auto-battler-v1 room stage: full-bleed 3D tabletop (lazy) with a DOM overlay HUD
+ * (top bar, synergies, combat log, shop + sell zone). Genre labels come from branding.
  */
 import { DEFAULT_AUTO_BATTLER_CONTENT, resolveAutoBattlerContent, unitShape, type AutoBattlerContentPatch } from "../runtime/adapters/auto-battler-content";
 import { setTideArenaUnitAppearance } from "../render3d/tide-arena/appearance";
@@ -23,6 +23,8 @@ import type { FloaterEvent } from "../render3d/tide-arena/floaters";
 import { setArenaHalfDims } from "../render3d/tide-arena/layout";
 import type { CSSProperties } from "react";
 import { DEFAULT_THEME_ID, resolveAutoBattlerTheme, THEME_PRESETS, type AutoBattlerThemePatch } from "../runtime/adapters/auto-battler-theme";
+import type { AutoBattlerBranding } from "../runtime/adapters/auto-battler-packs";
+import { DEFAULT_AUTO_BATTLER_PACK } from "../runtime/adapters/auto-battler-packs";
 import type { UnitModelSource } from "../render3d/tide-arena/unit-models";
 import { buildTimeline, hpAt, type Timeline } from "../render3d/tide-arena/timeline";
 import { TIER_COLORS, UNIT_COLORS } from "../render3d/tide-arena/palette";
@@ -35,8 +37,7 @@ type TideArenaState = NonNullable<SessionState["autoBattler"]>;
 const RESOLVE_HOLD_MS = 3000;
 const FLOATER_WINDOW_MS = 1400;
 
-const OWN_NAME = "汐屿·我方";
-const ENEMY_NAME = "珊瑚港·对手";
+const DEFAULT_BRANDING: AutoBattlerBranding = DEFAULT_AUTO_BATTLER_PACK.branding;
 
 /** SVG silhouettes aligned to SPEC / mockup unit shapes. */
 const UNIT_SILHOUETTE: Record<string, string> = {
@@ -101,11 +102,11 @@ function CoinIcon({ size = 14 }: { size?: number }) {
   return <i className="ta-coin" style={{ width: size, height: size }} aria-hidden />;
 }
 
-function HpTicks({ hp, max, tone }: { hp: number; max: number; tone: "own" | "enemy" }) {
+function HpTicks({ hp, max, tone, ownName, enemyName }: { hp: number; max: number; tone: "own" | "enemy"; ownName: string; enemyName: string }) {
   const pct = Math.max(0, Math.min(100, (hp / max) * 100));
   return (
     <span className={`ta-hpbar is-${tone}`} aria-label={tone === "own" ? "我方生命" : "对手生命"}>
-      <b className="ta-pl-name">{tone === "own" ? OWN_NAME : ENEMY_NAME}</b>
+      <b className="ta-pl-name">{tone === "own" ? ownName : enemyName}</b>
       <span className="ta-hp-track">
         <i style={{ width: `${pct}%` }} />
         <span className="ta-hp-ticks" aria-hidden>
@@ -148,10 +149,13 @@ export function TideArenaBoard({
   onAct,
   content: contentPatch,
   theme: themePatch,
+  branding: brandingProp,
   importedModels,
 }: {
   /** Visual theme data (preset + overrides) from the build's runtime config. */
   theme?: AutoBattlerThemePatch;
+  /** HUD labels from the selected content+theme pack. */
+  branding?: AutoBattlerBranding;
   /** Imported GLBs available to bind via unit.modelRef. */
   importedModels?: readonly UnitModelSource[];
   /** Kernel content data (units / traits / star rules) from the build's runtime config. */
@@ -169,6 +173,7 @@ export function TideArenaBoard({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const theme = useMemo(() => resolveAutoBattlerTheme(themePatch) ?? THEME_PRESETS[DEFAULT_THEME_ID]!, [themeKey]);
   const content = useMemo(() => resolveAutoBattlerContent(contentPatch) ?? DEFAULT_AUTO_BATTLER_CONTENT, [contentPatch]);
+  const branding = brandingProp ?? DEFAULT_BRANDING;
   const traitsById = useMemo(() => traitTable(content), [content]);
   const TRAITS = content.traits.map((t) => t.id);
   const glyphBg = (trait: TraitId) => TRAIT_GLYPH_BG[trait] ?? TRAIT_GLYPH_FALLBACK[Math.max(0, TRAITS.indexOf(trait)) % TRAIT_GLYPH_FALLBACK.length];
@@ -261,7 +266,7 @@ export function TideArenaBoard({
 
   return (
     <section
-      aria-label="潮阵对局"
+      aria-label={`${branding.title}对局`}
       ref={stageRef}
       className={`tide-arena-stage${mobile ? " is-mobile" : ""}`}
       data-theme={theme.id}
@@ -293,8 +298,19 @@ export function TideArenaBoard({
         />
       </Suspense>
 
+
+      {/* Slot markers for e2e board-size asserts (own half length = boardCols×boardRows). */}
+      <div className="ta-anchors" aria-hidden data-testid="ta-board-anchors">
+        {ownBoard.map((_, i) => (
+          <span key={`own-${i}`} className="ta-anchor" data-half="own" data-slot={i} />
+        ))}
+        {enemyBoard.map((_, i) => (
+          <span key={`enemy-${i}`} className="ta-anchor" data-half="enemy" data-slot={i} />
+        ))}
+      </div>
+
       <header className="ta-topbar">
-        <span className="ta-brand">潮阵</span>
+        <span className="ta-brand">{branding.title}</span>
         <span className="ta-round">第 {arena.round} 回合</span>
         <span className={`ta-pill is-${phase === "战斗" ? "combat" : phase === "终局" ? "end" : "prep"}`}>
           {phase}
@@ -307,8 +323,8 @@ export function TideArenaBoard({
           {status === "complete" ? "对局结束" : me.ready ? "已准备，等待对手" : `座位 ${activeSeat} 行动`}
         </span>
         <div className="ta-players">
-          <HpTicks hp={me.hp} max={arena.tuning?.startHp ?? START_HP} tone="own" />
-          <HpTicks hp={them.hp} max={arena.tuning?.startHp ?? START_HP} tone="enemy" />
+          <HpTicks hp={me.hp} max={arena.tuning?.startHp ?? START_HP} tone="own" ownName={branding.ownSeat} enemyName={branding.enemySeat} />
+          <HpTicks hp={them.hp} max={arena.tuning?.startHp ?? START_HP} tone="enemy" ownName={branding.ownSeat} enemyName={branding.enemySeat} />
         </div>
       </header>
 

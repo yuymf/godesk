@@ -1,4 +1,5 @@
 import type { RuleSystem } from "./project-contract";
+import { packMentionsAutoBattler } from "../runtime/adapters/auto-battler-packs";
 
 type KernelType = Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"]["type"];
 
@@ -67,8 +68,8 @@ export function mechanicsCapabilityGap(mechanics: readonly string[], kernelType?
 export function inferRequestedMechanics(corpus: string): string[] {
   const mechanics: string[] = [];
   if (/拍卖|竞价|出价|\bauction\b|\bbid(?:s|ding)?\b/i.test(corpus)) mechanics.push("auction-bidding");
-  // Tide Arena / 潮阵 — must win over generic/hand-play card verbs when present.
-  if (/自走棋|自动战斗|买棋上阵|备战席|潮阵|\btide arena\b|\bauto[- ]?battler\b/i.test(corpus)) {
+  // Registrable auto-battler cues (packs + mechanic phrases) — not a tide-only branch.
+  if (packMentionsAutoBattler(corpus)) {
     mechanics.push("auto-battler");
   }
   if (/汐屿|\btidewell\b|hex[- ]?island|六角.*(?:资源|建造)|hex.*(?:resource|build)/i.test(corpus)) mechanics.push("hex-settlement");

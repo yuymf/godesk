@@ -1,5 +1,6 @@
 import type { AutoBattlerContentPatch } from "../runtime/adapters/auto-battler-content";
 import type { AutoBattlerThemePatch } from "../runtime/adapters/auto-battler-theme";
+import type { AutoBattlerBranding } from "../runtime/adapters/auto-battler-packs";
 import type { GameSpec, GenerationMetadata } from "./game-spec";
 import type { RenderPatch, RenderSpec } from "./render-spec";
 
@@ -288,6 +289,8 @@ export interface RuleSystem {
               content?: AutoBattlerContentPatch;
               /** Visual theme (preset + overrides); omitted → default preset. */
               theme?: AutoBattlerThemePatch;
+              /** HUD labels from the selected content+theme pack. */
+              branding?: AutoBattlerBranding;
             };
   };
 }
@@ -637,7 +640,7 @@ export type ProjectChangeOperation =
     }
   | {
       op: "configure_auto_battler";
-      config: { playerCount: number; unsupported?: string[]; tuning?: { prepShopSeconds?: number; prepPlaceSeconds?: number; startHp?: number; startGold?: number; boardCols?: number; boardRows?: number }; content?: AutoBattlerContentPatch; theme?: AutoBattlerThemePatch };
+      config: { playerCount: number; unsupported?: string[]; tuning?: { prepShopSeconds?: number; prepPlaceSeconds?: number; startHp?: number; startGold?: number; boardCols?: number; boardRows?: number }; content?: AutoBattlerContentPatch; theme?: AutoBattlerThemePatch; branding?: AutoBattlerBranding };
     }
   | {
       /** G3D-15: partial patch over `presentation.render` (spatial surfaces only). */
@@ -956,7 +959,7 @@ export interface SessionState {
     awardedTo: number | null;
     seatOrder: [number, number];
   };
-  /** Present when the build kernel is auto-battler-v1 (Tide Arena / 潮阵). */
+  /** Present when the build kernel is auto-battler-v1 (generic shop/bench/combat). */
   autoBattler?: {
     phase: "shop" | "place" | "ended";
     round: number;

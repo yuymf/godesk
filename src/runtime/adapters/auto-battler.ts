@@ -1,6 +1,6 @@
 /**
- * Tide Arena / 潮阵 — Executable Kernel `auto-battler-v1`.
- * Product name only: Tide Arena / 潮阵 (never third-party auto-battler brands).
+ * Executable Kernel `auto-battler-v1` — generic shop → bench → board → combat → star-up.
+ * Genre flavour (tide / cyber / …) lives in content+theme packs, not adapter branches.
  *
  * Loop: shop → place → combat → resolve → next shop; end when seat HP ≤ 0.
  * Step5: ★2 merge, 10–12 units, trait heal/trigger events, authoritative prep timer.

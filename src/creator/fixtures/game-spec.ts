@@ -174,7 +174,7 @@ export function executableAutoBattlerSpecFixture(): RuleSystem {
       { id: "recall", label: "撤回", description: "撤回", sourceId: null, provenance: "source-anchored", confidence: 1 },
       { id: "ready_place", label: "锁定阵容", description: "锁定", sourceId: null, provenance: "source-anchored", confidence: 1 },
     ],
-    playSurface: { kind: "table", layout: "tide-arena", regions: [
+    playSurface: { kind: "table", layout: "auto-battler", regions: [
       { id: "shop", name: "商店", description: "购买" },
       { id: "bench", name: "备战席", description: "备战" },
       { id: "board", name: "战场", description: "半场" },

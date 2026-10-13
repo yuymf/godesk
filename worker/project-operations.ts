@@ -572,7 +572,7 @@ function configureDedicatedKernel(
         { id: "ready_place", label: "锁定阵容", description: "锁定后进入自动战斗。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
       ],
       participants: { ...record.ruleSystem.participants, min: 2, max: 2, default: 2 },
-      playSurface: { kind: "table" as const, layout: "tide-arena", regions: [
+      playSurface: { kind: "table" as const, layout: "auto-battler", regions: [
         { id: "shop", name: "商店", description: "购买单位" },
         { id: "bench", name: "备战席", description: "未上阵单位" },
         { id: "board", name: "战场", description: "己方半场上阵" },
@@ -742,6 +742,7 @@ function configureRuntimeKernel(
         ? { content: structuredClone(configuration.config.content) }
         : {}),
       ...(configuration.config.theme ? { theme: structuredClone(configuration.config.theme) } : {}),
+      ...(configuration.config.branding ? { branding: structuredClone(configuration.config.branding) } : {}),
     }, configuration.config.unsupported?.map((item) => item.trim()) ?? [], configuration.config, affectedEntities);
     return;
   }
@@ -1623,7 +1624,13 @@ const RUNTIME_HANDLERS: {
       config.playerCount === 2 && validUnsupported(config.unsupported) &&
       normalizeAutoBattlerTuning(config.tuning) !== null &&
       (config.content === undefined || resolveAutoBattlerContent(config.content) !== null) &&
-      (config.theme === undefined || resolveAutoBattlerTheme(config.theme) !== null),
+      (config.theme === undefined || resolveAutoBattlerTheme(config.theme) !== null) &&
+      (config.branding === undefined || (
+        typeof config.branding === "object" && config.branding !== null &&
+        typeof config.branding.title === "string" && config.branding.title.length > 0 &&
+        typeof config.branding.ownSeat === "string" && config.branding.ownSeat.length > 0 &&
+        typeof config.branding.enemySeat === "string" && config.branding.enemySeat.length > 0
+      )),
   },
 };
 

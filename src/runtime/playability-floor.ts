@@ -155,7 +155,7 @@ export function playabilityFloor(ruleSystem: RuleSystem): PlayabilityFloorReadin
   }
   if (ruleSystem.generation?.requestedMechanics?.includes("auto-battler") &&
       kernelType !== "auto-battler-v1") {
-    return { status: "failed", reason: "潮阵/自走棋来源需要 auto-battler-v1 的商店买入与自动战斗环。", genre, kernelType };
+    return { status: "failed", reason: "自走棋来源需要 auto-battler-v1 的商店买入与自动战斗环。", genre, kernelType };
   }
   if (kernelType === "auto-battler-v1") {
     const hasShop = ruleSystem.actions.some((action) => action.id === "buy") &&

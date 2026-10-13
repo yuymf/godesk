@@ -6068,3 +6068,7 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
 .ta-chip:disabled { opacity: 0.45; }
 .is-mobile .ta-replay { top: auto; bottom: 210px; }
 .is-mobile .ta-chip { min-height: 44px; }
+
+/* auto-battler e2e board slot markers (invisible; counted by .ta-anchor) */
+.ta-anchors { position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none; }
+.ta-anchor { display: none; }

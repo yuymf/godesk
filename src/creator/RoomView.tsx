@@ -59,6 +59,7 @@ import { NetworkRouteBoard, type NetworkRouteBoardState } from "./NetworkRouteBo
 import { AuctionBiddingBoard } from "./AuctionBiddingBoard";
 import { TideArenaBoard } from "./TideArenaBoard";
 import type { AutoBattlerThemePatch } from "../runtime/adapters/auto-battler-theme";
+import type { AutoBattlerBranding } from "../runtime/adapters/auto-battler-packs";
 import type { AutoBattlerContentPatch } from "../runtime/adapters/auto-battler-content";
 
 function autoBattlerContent(ruleSystem: { runtimeSupport: unknown }): AutoBattlerContentPatch | undefined {
@@ -70,6 +71,11 @@ function autoBattlerTheme(ruleSystem: { runtimeSupport: unknown }): AutoBattlerT
   const support = ruleSystem.runtimeSupport as { status?: string; kernel?: { type?: string; theme?: AutoBattlerThemePatch } };
   return support?.status === "executable" && support.kernel?.type === "auto-battler-v1" ? support.kernel.theme : undefined;
 }
+function autoBattlerBranding(ruleSystem: { runtimeSupport: unknown }): AutoBattlerBranding | undefined {
+  const support = ruleSystem.runtimeSupport as { status?: string; kernel?: { type?: string; branding?: AutoBattlerBranding } };
+  return support?.status === "executable" && support.kernel?.type === "auto-battler-v1" ? support.kernel.branding : undefined;
+}
+
 import { HandPlayBoard } from "./HandPlayBoard";
 import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import {
@@ -721,6 +727,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         <TideArenaBoard arena={autoBattlerState} activeSeat={activeSeat}
           content={autoBattlerContent(build.ruleSystem)}
           theme={autoBattlerTheme(build.ruleSystem)}
+          branding={autoBattlerBranding(build.ruleSystem)}
           importedModels={importedModels}
           enabled={isMyTurn} busy={busy} status={room.state.status} viewerSeat={seat}
           onAct={(actionId, payload) => { void act(actionId, -1, payload); }} />
