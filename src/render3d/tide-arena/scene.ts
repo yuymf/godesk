@@ -606,6 +606,33 @@ export class TideArenaScene {
     if (this.replay) this.replay.speed = speed;
   }
 
+  /** Jump to a replay clock (ms) and pause — for e2e mid-combat VFX frames. */
+  getReplayMs(): number {
+    return this.replay?.ms ?? -1;
+  }
+
+  seekReplay(ms: number) {
+    const r = this.replay;
+    if (!r) return false;
+    r.ms = Math.max(0, Math.min(ms, r.tl.durationMs));
+    r.speed = 0;
+    this.animate(r.ms);
+    this.emitTime(r.ms);
+    this.syncTokens();
+    this.invalidate();
+    return true;
+  }
+
+  /** First timeline clock for a VFX preset (or -1). */
+  firstVfxAt(preset: string): number {
+    const r = this.replay;
+    if (!r) return -1;
+    for (const e of r.tl.events) {
+      if (e.kind === "vfx" && e.preset === preset) return e.t;
+    }
+    return -1;
+  }
+
   skipReplay() {
     if (!this.replay) return;
     this.replay.ms = this.replay.tl.durationMs;

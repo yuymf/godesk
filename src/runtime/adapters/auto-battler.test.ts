@@ -19,6 +19,7 @@ import {
   UNIT_CATALOG,
   unitDef,
 } from "./auto-battler";
+import { DEFAULT_AUTO_BATTLER_CONTENT, resolveAutoBattlerContent } from "./auto-battler-content";
 
 describe("auto-battler-v1 Tide Arena", () => {
   const config = createAutoBattlerKernelConfig();
@@ -240,6 +241,131 @@ describe("auto-battler-v1 Step5 depth", () => {
     expect(next).not.toBeNull();
     expect(next!.phase).toBe("place");
     resetAutoBattlerNow();
+  });
+
+  it("aoe_splash damages adjacent enemies and emits vfx aoe", () => {
+    const content = resolveAutoBattlerContent({
+      units: DEFAULT_AUTO_BATTLER_CONTENT.units.map((u) =>
+        u.id === "crab"
+          ? {
+              ...u,
+              combatFx: {
+                attackVfx: "aoe",
+                hitVfx: "hit_particles",
+                attackEffect: { kind: "aoe_splash", value: 0.5, label: "溅射" },
+              },
+            }
+          : { ...u },
+      ),
+    })!;
+    const cfg = createAutoBattlerKernelConfig(undefined, content);
+    let state = createInitialState(autoBattlerAdapter, cfg, 11);
+    const mk = (uid: string, unitId: string, owner: number) => {
+      const def = unitDef(unitId, content)!;
+      return { uid, unitId, owner, stars: 1 as const, atk: def.atk, hp: def.hp, maxHp: def.hp };
+    };
+    // Seat0 crab attacks seat1: primary at board[0], adjacent at board[1] (manhattan ≤1 on arena).
+    state.genre.seats[0].board[0] = mk("atk", "crab", 0);
+    state.genre.seats[1].board[0] = mk("t0", "conch", 1);
+    state.genre.seats[1].board[1] = mk("t1", "blade", 1);
+    state = { ...state, phase: "place", activePlayerId: 0 };
+    const r0 = applyAction(autoBattlerAdapter, state, { type: "ready_place", playerId: 0 }, cfg);
+    expect(r0.ok).toBe(true);
+    state = r0.state;
+    const r1 = applyAction(autoBattlerAdapter, state, { type: "ready_place", playerId: 1 }, cfg);
+    expect(r1.ok).toBe(true);
+    state = r1.state;
+    const log = state.genre.combatLog;
+    const splash = log.filter((e) => e.kind === "strike" && "splash" in e && e.splash);
+    expect(splash.length).toBeGreaterThanOrEqual(1);
+    const aoe = log.filter((e) => e.kind === "vfx" && e.preset === "aoe");
+    expect(aoe.length).toBeGreaterThanOrEqual(1);
+    // Adjacent target HP dropped below max (primary and/or splash).
+    const t1Strikes = log.filter((e) => e.kind === "strike" && e.targetUid === "t1");
+    expect(t1Strikes.length).toBeGreaterThanOrEqual(1);
+    expect(t1Strikes.some((e) => e.kind === "strike" && e.targetHp < unitDef("blade", content)!.hp)).toBe(true);
+  });
+
+  it("heal_ally emits heal + vfx heal and raises ally HP/maxHp", () => {
+    const content = resolveAutoBattlerContent({
+      units: DEFAULT_AUTO_BATTLER_CONTENT.units.map((u) =>
+        u.id === "witch"
+          ? {
+              ...u,
+              combatFx: {
+                attackVfx: "heal",
+                hitVfx: "hit_particles",
+                attackEffect: { kind: "heal_ally", value: 0.5, label: "治疗" },
+              },
+            }
+          : { ...u },
+      ),
+    })!;
+    const cfg = createAutoBattlerKernelConfig(undefined, content);
+    let state = createInitialState(autoBattlerAdapter, cfg, 13);
+    const mk = (uid: string, unitId: string, owner: number, hp?: number) => {
+      const def = unitDef(unitId, content)!;
+      const h = hp ?? def.hp;
+      return { uid, unitId, owner, stars: 1 as const, atk: def.atk, hp: h, maxHp: def.hp };
+    };
+    state.genre.seats[0].board[0] = mk("w", "witch", 0);
+    state.genre.seats[0].board[1] = mk("ally", "crab", 0, 100); // wounded
+    state.genre.seats[1].board[0] = mk("e", "conch", 1);
+    state = { ...state, phase: "place", activePlayerId: 0 };
+    state = applyAction(autoBattlerAdapter, state, { type: "ready_place", playerId: 0 }, cfg).state;
+    state = applyAction(autoBattlerAdapter, state, { type: "ready_place", playerId: 1 }, cfg).state;
+    const log = state.genre.combatLog;
+    const heals = log.filter((e) => e.kind === "heal");
+    expect(heals.length).toBeGreaterThanOrEqual(1);
+    const allyHeal = heals.find((e) => e.kind === "heal" && e.uid === "ally");
+    expect(allyHeal).toBeTruthy();
+    if (allyHeal && allyHeal.kind === "heal") {
+      expect(allyHeal.amount).toBeGreaterThan(0);
+      expect(allyHeal.targetHp).toBeGreaterThan(100);
+    }
+    expect(log.some((e) => e.kind === "vfx" && e.preset === "heal" && e.atUid === "ally")).toBe(true);
+  });
+
+  it("shield_start emits trait_trigger + vfx shield and raises fighter HP", () => {
+    const content = resolveAutoBattlerContent({
+      traits: [
+        ...DEFAULT_AUTO_BATTLER_CONTENT.traits,
+        {
+          id: "bulwark",
+          label: "壁垒",
+          glyph: "盾",
+          tiers: [1],
+          atkBonus: 0,
+          hpBonus: 0,
+          effect: { kind: "shield_start", label: "开战护盾", values: [80] },
+        },
+      ],
+      units: DEFAULT_AUTO_BATTLER_CONTENT.units.map((u) =>
+        u.id === "crab" ? { ...u, traits: [...u.traits, "bulwark"] } : { ...u },
+      ),
+    })!;
+    const cfg = createAutoBattlerKernelConfig(undefined, content);
+    let state = createInitialState(autoBattlerAdapter, cfg, 17);
+    const mk = (uid: string, unitId: string, owner: number) => {
+      const def = unitDef(unitId, content)!;
+      return { uid, unitId, owner, stars: 1 as const, atk: def.atk, hp: def.hp, maxHp: def.hp };
+    };
+    state.genre.seats[0].board[0] = mk("c0", "crab", 0);
+    state.genre.seats[1].board[0] = mk("e0", "conch", 1);
+    const baseHp = unitDef("crab", content)!.hp;
+    state = { ...state, phase: "place", activePlayerId: 0 };
+    state = applyAction(autoBattlerAdapter, state, { type: "ready_place", playerId: 0 }, cfg).state;
+    state = applyAction(autoBattlerAdapter, state, { type: "ready_place", playerId: 1 }, cfg).state;
+    const log = state.genre.combatLog;
+    expect(log.some((e) => e.kind === "trait_trigger" && e.trait === "bulwark")).toBe(true);
+    const shields = log.filter((e) => e.kind === "vfx" && e.preset === "shield");
+    expect(shields.length).toBeGreaterThanOrEqual(1);
+    const heals = log.filter((e) => e.kind === "heal" && e.uid === "c0");
+    expect(heals.length).toBeGreaterThanOrEqual(1);
+    if (heals[0] && heals[0].kind === "heal") {
+      expect(heals[0].amount).toBe(80);
+      expect(heals[0].targetHp).toBe(baseHp + 80);
+    }
   });
 
   it("bot autoplay fields units on both boards before the first combat", () => {

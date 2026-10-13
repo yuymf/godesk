@@ -42,6 +42,10 @@ declare global {
       screenOf: TideArenaScene["screenOf"];
       tier: string;
       frameStats: () => { frames: number; meanMs: number; p95Ms: number };
+      seekReplay: (ms: number) => boolean;
+      firstVfxAt: (preset: string) => number;
+      replayMs: () => number;
+      dataReplay: () => string | null;
     };
   }
 }
@@ -67,12 +71,19 @@ export default function TideArenaScene3D(props: TideArenaSceneProps) {
       onReplayTime: (ms, done) => cbRef.current.onReplayTime?.(ms, done),
     }, props.theme, props.importedModels ?? []);
     sceneRef.current = scene;
-    window.__tideArena = { perf: () => scene.perf(), screenOf: (slot) => scene.screenOf(slot), tier: tier.tier,
+    window.__tideArena = {
+      perf: () => scene.perf(),
+      screenOf: (slot) => scene.screenOf(slot),
+      tier: tier.tier,
       frameStats: () => {
         const s = [...scene.frameSamples].sort((a, b) => a - b);
         const mean = s.length ? s.reduce((a, b) => a + b, 0) / s.length : 0;
         return { frames: s.length, meanMs: mean, p95Ms: s[Math.floor(s.length * 0.95)] ?? 0 };
       },
+      seekReplay: (ms) => scene.seekReplay(ms),
+      firstVfxAt: (preset) => scene.firstVfxAt(preset),
+      replayMs: () => scene.getReplayMs(),
+      dataReplay: () => document.querySelector('[data-replay]')?.getAttribute("data-replay") ?? null,
     };
     return () => {
       scene.dispose();
