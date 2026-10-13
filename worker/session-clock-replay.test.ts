@@ -5,7 +5,7 @@ import { acceptIntent, executableRuntime, initialSessionState, runAtSessionTime 
 import type { StoredPlayableBuild } from "./public-urls";
 
 describe("wall-clock kernels replay at logged acceptance time", () => {
-  it("rebuilds the same prep deadlines as the live room (round-2 timer regression)", () => {
+  it("rebuilds the same prep deadlines as the live room (round-2 timer regression)", async () => {
     const rule = executableAutoBattlerSpecFixture();
     const runtime = executableRuntime(rule)!;
     const start = 1_800_000_000_000;
@@ -21,7 +21,9 @@ describe("wall-clock kernels replay at logged acceptance time", () => {
     });
     expect(state.autoBattler?.round).toBe(2);
     const liveDeadline = state.autoBattler!.prepEndsAt!;
-    expect(liveDeadline).toBe(start + 20_000 + 45_000);
+    // Shop clock starts after the combat replay (shared playback clock).
+    const { combatReplayDurationMs } = await import("../src/runtime/adapters/combat-playback");
+    expect(liveDeadline).toBe(start + 20_000 + combatReplayDurationMs(state.autoBattler!.combatLog as never) + 45_000);
     const build = { id: "b", projectId: "p", ruleSystem: rule } as StoredPlayableBuild;
     // Replaying "much later" must not move the deadline to now+45s.
     const rebuilt = runAtSessionTime(start + 600_000, () => reconstructActions(build, live, 42, start));
