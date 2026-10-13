@@ -283,7 +283,7 @@ export interface RuleSystem {
               type: "auto-battler-v1";
               playerCount: number;
               /** Creator tuning (prep timers, starting HP/gold); omitted → kernel defaults. */
-              tuning?: { prepShopSeconds?: number; prepPlaceSeconds?: number; startHp?: number; startGold?: number };
+              tuning?: { prepShopSeconds?: number; prepPlaceSeconds?: number; startHp?: number; startGold?: number; boardCols?: number; boardRows?: number };
               /** Content data (units / traits / star rules); omitted fields → kernel defaults. */
               content?: AutoBattlerContentPatch;
               /** Visual theme (preset + overrides); omitted → default preset. */
@@ -637,7 +637,7 @@ export type ProjectChangeOperation =
     }
   | {
       op: "configure_auto_battler";
-      config: { playerCount: number; unsupported?: string[]; tuning?: { prepShopSeconds?: number; prepPlaceSeconds?: number; startHp?: number; startGold?: number }; content?: AutoBattlerContentPatch; theme?: AutoBattlerThemePatch };
+      config: { playerCount: number; unsupported?: string[]; tuning?: { prepShopSeconds?: number; prepPlaceSeconds?: number; startHp?: number; startGold?: number; boardCols?: number; boardRows?: number }; content?: AutoBattlerContentPatch; theme?: AutoBattlerThemePatch };
     }
   | {
       /** G3D-15: partial patch over `presentation.render` (spatial surfaces only). */
@@ -962,7 +962,7 @@ export interface SessionState {
     round: number;
     /** Epoch ms; client shows remaining seconds only. */
     prepEndsAt?: number;
-    tuning?: { prepShopSeconds?: number; prepPlaceSeconds?: number; startHp?: number; startGold?: number };
+    tuning?: { prepShopSeconds?: number; prepPlaceSeconds?: number; startHp?: number; startGold?: number; boardCols?: number; boardRows?: number };
     seats: [
       {
         gold: number;

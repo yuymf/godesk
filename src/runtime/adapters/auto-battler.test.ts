@@ -19,7 +19,7 @@ import {
   UNIT_CATALOG,
   unitDef,
 } from "./auto-battler";
-import { DEFAULT_AUTO_BATTLER_CONTENT, resolveAutoBattlerContent } from "./auto-battler-content";
+import { DEFAULT_AUTO_BATTLER_CONTENT, resolveAutoBattlerContent, type AutoBattlerContentPatch } from "./auto-battler-content";
 
 describe("auto-battler-v1 Tide Arena", () => {
   const config = createAutoBattlerKernelConfig();
@@ -258,7 +258,7 @@ describe("auto-battler-v1 Step5 depth", () => {
           : { ...u },
       ),
     })!;
-    const cfg = createAutoBattlerKernelConfig(undefined, content);
+    const cfg = createAutoBattlerKernelConfig(undefined, content as AutoBattlerContentPatch);
     let state = createInitialState(autoBattlerAdapter, cfg, 11);
     const mk = (uid: string, unitId: string, owner: number) => {
       const def = unitDef(unitId, content)!;
@@ -301,7 +301,7 @@ describe("auto-battler-v1 Step5 depth", () => {
           : { ...u },
       ),
     })!;
-    const cfg = createAutoBattlerKernelConfig(undefined, content);
+    const cfg = createAutoBattlerKernelConfig(undefined, content as AutoBattlerContentPatch);
     let state = createInitialState(autoBattlerAdapter, cfg, 13);
     const mk = (uid: string, unitId: string, owner: number, hp?: number) => {
       const def = unitDef(unitId, content)!;
@@ -344,7 +344,7 @@ describe("auto-battler-v1 Step5 depth", () => {
         u.id === "crab" ? { ...u, traits: [...u.traits, "bulwark"] } : { ...u },
       ),
     })!;
-    const cfg = createAutoBattlerKernelConfig(undefined, content);
+    const cfg = createAutoBattlerKernelConfig(undefined, content as AutoBattlerContentPatch);
     let state = createInitialState(autoBattlerAdapter, cfg, 17);
     const mk = (uid: string, unitId: string, owner: number) => {
       const def = unitDef(unitId, content)!;
