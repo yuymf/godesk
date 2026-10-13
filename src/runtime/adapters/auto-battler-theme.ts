@@ -79,6 +79,8 @@ export type ThemeOverrides = {
   light?: Partial<ThemeSpec["light"]>;
   camera?: Partial<ThemeSpec["camera"]>;
   unitScale?: number;
+  /** HUD accent / surface — used by card-contrast presentation floor. */
+  ui?: Partial<ThemeSpec["ui"]>;
 };
 /** What a configure op carries. */
 export type AutoBattlerThemePatch = { preset?: string; overrides?: ThemeOverrides };
@@ -104,7 +106,7 @@ export function resolveAutoBattlerTheme(raw: unknown): ThemeSpec | null {
   if (!base) return null;
   const o = patch.overrides ?? {};
   if (typeof o !== "object") return null;
-  for (const key of Object.keys(o)) if (!["background", "table", "light", "camera", "unitScale"].includes(key)) return null;
+  for (const key of Object.keys(o)) if (!["background", "table", "light", "camera", "unitScale", "ui"].includes(key)) return null;
   if (o.background !== undefined && !HEX.test(o.background)) return null;
   if (o.unitScale !== undefined && !inRange(o.unitScale, THEME_LIMITS.unitScale)) return null;
   if (o.camera?.pitchDeg !== undefined && !inRange(o.camera.pitchDeg, THEME_LIMITS.pitchDeg)) return null;
@@ -113,6 +115,11 @@ export function resolveAutoBattlerTheme(raw: unknown): ThemeSpec | null {
   if (o.light?.exposure !== undefined && !inRange(o.light.exposure, THEME_LIMITS.exposure)) return null;
   for (const c of [o.light?.sun, o.light?.sky, o.table?.base, o.table?.rim]) if (c !== undefined && !HEX.test(c)) return null;
   if (o.table?.material !== undefined && !TABLE_MATERIALS.includes(o.table.material)) return null;
+  if (o.ui) {
+    for (const c of [o.ui.accent, o.ui.enemy, o.ui.surface, o.ui.ink]) {
+      if (c !== undefined && !HEX.test(c)) return null;
+    }
+  }
   return {
     ...base,
     ...(o.background ? { background: o.background } : {}),
@@ -120,17 +127,30 @@ export function resolveAutoBattlerTheme(raw: unknown): ThemeSpec | null {
     light: { ...base.light, ...(o.light ?? {}) },
     camera: { ...base.camera, ...(o.camera ?? {}) },
     unitScale: o.unitScale ?? base.unitScale,
+    ui: { ...base.ui, ...(o.ui ?? {}) },
   };
 }
 
 /** Generic presentation-floor thresholds for board readability (not genre-specific art). */
 export const THEME_PRESENTATION_FLOOR = {
   pitchDeg: { min: 34, max: 62 },
+  /** Camera distance still reported; board width frac is the primary 机位 gate. */
   distance: { max: 1.15 },
   unitScale: { min: 1.05 },
+  /**
+   * Estimated board share of frame width from camera.distance (calibrated so
+   * shipped presets land ≈55–60%). Below/above → keep draft.
+   */
+  boardWidthFrac: { min: 0.53, max: 0.62 },
   /** Relative luminance gap between UI accent and surface (WCAG-ish soft floor). */
   cardContrast: { min: 0.28 },
 } as const;
+
+/** Map camera distance → approximate board width fraction of the frame. */
+export function estimatedBoardWidthFrac(distance: number): number {
+  if (!(distance > 0)) return 0;
+  return 0.5 / distance;
+}
 
 function luminance(hex: string): number {
   const n = parseInt(hex.slice(1), 16);
@@ -153,8 +173,12 @@ export function themePresentationHints(spec: ThemeSpec): { ok: boolean; notes: s
   } else if (spec.camera.pitchDeg > F.pitchDeg.max) {
     notes.push(`机位过顶（俯角 ${spec.camera.pitchDeg}° > ${F.pitchDeg.max}°）：立体感不足，保持草稿并略降俯角。`);
   }
-  if (spec.camera.distance > F.distance.max) {
-    notes.push(`机位过远（距离 ×${spec.camera.distance} > ×${F.distance.max}）：单位偏小，保持草稿并拉近。`);
+  const boardFrac = estimatedBoardWidthFrac(spec.camera.distance);
+  const boardPct = Math.round(boardFrac * 100);
+  if (boardFrac < F.boardWidthFrac.min || spec.camera.distance > F.distance.max) {
+    notes.push(`机位过远（棋盘约占宽 ${boardPct}%，目标约 55–60%，距离 ×${spec.camera.distance}）：保持草稿并拉近机位。`);
+  } else if (boardFrac > F.boardWidthFrac.max) {
+    notes.push(`机位过近（棋盘约占宽 ${boardPct}%，目标约 55–60%）：保持草稿并略拉远。`);
   }
   if (spec.unitScale < F.unitScale.min) {
     notes.push(`单位尺度过小（×${spec.unitScale} < ×${F.unitScale.min}）：棋子难辨，保持草稿并放大。`);

@@ -8,6 +8,7 @@ import {
   hasBoundImage,
   presentationFloor,
 } from "./presentation-floor";
+import type { AutoBattlerThemePatch } from "./adapters/auto-battler-theme";
 import { defaultRenderSpec } from "../creator/render-spec";
 
 const RENDER = defaultRenderSpec("score-race-v1", "table")!;
@@ -315,41 +316,48 @@ describe("board presentation gate (new mechanics need a dedicated board)", () =>
 });
 
 describe("presentationFloor theme hints (auto-battler)", () => {
-  it("passes default / preset themes above the floor", () => {
-    const rule = base({
-      playSurface: { kind: "table", layout: "auto-battler", regions: [] },
-      presentation: {
-        render: defaultRenderSpec("auto-battler-v1", "table")!,
-        visuals: [{ provenance: "kit", label: "主题 kit" }],
-      },
-      runtimeSupport: {
-        status: "executable",
-        unsupported: [],
-        kernel: { type: "auto-battler-v1", playerCount: 2, theme: { preset: "ember" } },
-      },
-    });
-    expect(presentationFloor(rule).status).toBe("passed");
+  const abBase = (theme: AutoBattlerThemePatch) => base({
+    playSurface: { kind: "table", layout: "auto-battler", regions: [] },
+    presentation: {
+      render: defaultRenderSpec("auto-battler-v1", "table")!,
+      visuals: [{ provenance: "kit", label: "主题 kit" }],
+    },
+    runtimeSupport: {
+      status: "executable",
+      unsupported: [],
+      kernel: { type: "auto-battler-v1", playerCount: 2, theme },
+    },
   });
 
-  it("keeps draft when camera / unit scale fall below the floor", () => {
-    const rule = base({
-      playSurface: { kind: "table", layout: "auto-battler", regions: [] },
-      presentation: {
-        render: defaultRenderSpec("auto-battler-v1", "table")!,
-        visuals: [{ provenance: "kit", label: "主题 kit" }],
-      },
-      runtimeSupport: {
-        status: "executable",
-        unsupported: [],
-        kernel: {
-          type: "auto-battler-v1",
-          playerCount: 2,
-          theme: { preset: "tide", overrides: { camera: { pitchDeg: 28 }, unitScale: 0.9 } },
-        },
-      },
-    });
-    const floor = presentationFloor(rule);
+  it("passes default / preset themes above the floor (incl. cyber night)", () => {
+    expect(presentationFloor(abBase({ preset: "ember" })).status).toBe("passed");
+    expect(presentationFloor(abBase({ preset: "night" })).status).toBe("passed");
+  });
+
+  it("keeps draft when camera pitch / unit scale fall below the floor", () => {
+    const floor = presentationFloor(abBase({
+      preset: "tide",
+      overrides: { camera: { pitchDeg: 28 }, unitScale: 0.9 },
+    }));
     expect(floor.status).toBe("failed");
     expect(floor.reason).toMatch(/机位|单位尺度|呈现底线/);
+  });
+
+  it("keeps draft when board width frac is below 55% (机位过远)", () => {
+    const floor = presentationFloor(abBase({
+      preset: "night",
+      overrides: { camera: { distance: 1.25 } },
+    }));
+    expect(floor.status).toBe("failed");
+    expect(floor.reason).toMatch(/机位过远|约占宽/);
+  });
+
+  it("keeps draft when card contrast is too weak", () => {
+    const floor = presentationFloor(abBase({
+      preset: "night",
+      overrides: { ui: { accent: "#1C2238", surface: "#1C2238" } },
+    }));
+    expect(floor.status).toBe("failed");
+    expect(floor.reason).toMatch(/卡面对比/);
   });
 });

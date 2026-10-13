@@ -35,4 +35,17 @@ describe("kernel theme edits (NL → theme config)", () => {
       expect(themePresentationHints(spec).ok).toBe(true);
     }
   });
+
+  it("intentional below-floor prompts annotate draft notes and fail hints", () => {
+    const r = parse("机位过远，单位变得很小，卡面对比很弱");
+    expect(r.theme?.overrides?.camera?.distance).toBeGreaterThan(1.15);
+    expect(r.theme?.overrides?.unitScale).toBeLessThan(1.05);
+    expect(r.theme?.overrides?.ui?.accent).toBeTruthy();
+    const resolved = resolveAutoBattlerTheme(r.theme)!;
+    const hints = themePresentationHints(resolved);
+    expect(hints.ok).toBe(false);
+    expect(r.notes.some((n) => n.includes("呈现底线未达标"))).toBe(true);
+    const op = r.operation as { op: string; config: { unsupported?: string[] } };
+    expect(op.config.unsupported?.some((u) => u.includes("呈现底线未达标"))).toBe(true);
+  });
 });

@@ -28,6 +28,7 @@ import { applySkillFxIntents, parseSkillFxClause } from "./auto-battler-skills";
 import {
   DEFAULT_THEME_ID,
   resolveAutoBattlerTheme,
+  themePresentationHints,
   THEME_LIMITS,
   THEME_PRESETS,
   type AutoBattlerThemePatch,
@@ -571,7 +572,7 @@ const THEME_WORDS: Array<[RegExp, string]> = [
   [/(海岸|海边|海滨|潮汐风|木桌|原来的风格|默认风格|seaside)/i, "tide"],
 ];
 const STYLE_WORD = /(风格|主题|画风|色调|配色|场景|背景|画面|桌|style|风|氛围|感觉)/i;
-const LOOK_SUBJECT = /(机位|镜头|视角|相机|棋子|单位|模型|灯光|光线|光照|背景)/;
+const LOOK_SUBJECT = /(机位|镜头|视角|相机|棋子|单位|模型|灯光|光线|光照|背景|对比|卡面|配色)/;
 
 function shade(hex: string, factor: number) {
   const n = parseInt(hex.slice(1), 16);
@@ -586,7 +587,7 @@ function describeTheme(spec: ThemeSpec) {
 const themeParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
   const clause = clauses[i]!;
   const preset = STYLE_WORD.test(clause) ? THEME_WORDS.find(([re]) => re.test(clause))?.[1] : undefined;
-  const lookEdit = LOOK_SUBJECT.test(clause) && /(低|高|俯|平视|近|远|大|小|亮|暗|暖|冷|深|浅)/.test(clause) && !/[0-9]/.test(clause);
+  const lookEdit = LOOK_SUBJECT.test(clause) && /(低|高|俯|平视|近|远|大|小|亮|暗|暖|冷|深|浅|弱|不足|过远|过小|过近)/.test(clause) && !/[0-9]/.test(clause);
   if (!preset && !lookEdit) return 0;
   const patch: AutoBattlerThemePatch = { ...(draft.theme ?? {}), ...(preset ? { preset, overrides: {} } : {}) };
   const current = resolveAutoBattlerTheme(patch) ?? THEME_PRESETS[DEFAULT_THEME_ID]!;
@@ -597,12 +598,34 @@ const themeParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
   if (/(机位|镜头|视角|相机)/.test(clause)) {
     if (/(低|平视)/.test(clause)) { o.camera = { ...o.camera, pitchDeg: clamp(current.camera.pitchDeg - 8, L.pitchDeg) }; tweaks.push(`机位俯角 ${current.camera.pitchDeg}°→${o.camera.pitchDeg}°`); }
     if (/(高|俯视|顶视)/.test(clause)) { o.camera = { ...o.camera, pitchDeg: clamp(current.camera.pitchDeg + 10, L.pitchDeg) }; tweaks.push(`机位俯角 ${current.camera.pitchDeg}°→${o.camera.pitchDeg}°`); }
-    if (/(近|拉近)/.test(clause)) { o.camera = { ...o.camera, distance: clamp(current.camera.distance * 0.9, L.distance) }; tweaks.push(`机位距离 ×${current.camera.distance}→×${o.camera.distance}`); }
-    if (/(远|拉远)/.test(clause)) { o.camera = { ...o.camera, distance: clamp(current.camera.distance * 1.1, L.distance) }; tweaks.push(`机位距离 ×${current.camera.distance}→×${o.camera.distance}`); }
+    // 「过远 / 拉远很多」jump below presentation floor (board width <55%); mild 拉远 stays incremental.
+    if (/(过远|太远|拉远很多|很远)/.test(clause)) {
+      o.camera = { ...o.camera, distance: clamp(1.25, L.distance) };
+      tweaks.push(`机位距离 ×${current.camera.distance}→×${o.camera.distance}（故意偏远）`);
+    } else if (/(近|拉近)/.test(clause)) {
+      o.camera = { ...o.camera, distance: clamp(current.camera.distance * 0.97, L.distance) };
+      tweaks.push(`机位距离 ×${current.camera.distance}→×${o.camera.distance}`);
+    } else if (/(远|拉远)/.test(clause)) {
+      o.camera = { ...o.camera, distance: clamp(current.camera.distance * 1.05, L.distance) };
+      tweaks.push(`机位距离 ×${current.camera.distance}→×${o.camera.distance}`);
+    }
   }
   if (/(棋子|单位|模型)/.test(clause)) {
-    if (/大/.test(clause)) { o.unitScale = clamp(current.unitScale * 1.15, L.unitScale); tweaks.push(`单位尺寸 ×${current.unitScale}→×${o.unitScale}`); }
-    else if (/小/.test(clause)) { o.unitScale = clamp(current.unitScale * 0.87, L.unitScale); tweaks.push(`单位尺寸 ×${current.unitScale}→×${o.unitScale}`); }
+    if (/(过小|太小|很小)/.test(clause)) {
+      o.unitScale = clamp(0.9, L.unitScale);
+      tweaks.push(`单位尺寸 ×${current.unitScale}→×${o.unitScale}（故意偏小）`);
+    } else if (/大/.test(clause)) {
+      o.unitScale = clamp(current.unitScale * 1.15, L.unitScale);
+      tweaks.push(`单位尺寸 ×${current.unitScale}→×${o.unitScale}`);
+    } else if (/小/.test(clause)) {
+      o.unitScale = clamp(current.unitScale * 0.87, L.unitScale);
+      tweaks.push(`单位尺寸 ×${current.unitScale}→×${o.unitScale}`);
+    }
+  }
+  if (/(对比|卡面|配色)/.test(clause) && /(弱|不足|低|差)/.test(clause)) {
+    // Collapse accent toward surface → cardContrast floor fail.
+    o.ui = { ...(o.ui ?? {}), accent: current.ui.surface, surface: current.ui.surface };
+    tweaks.push(`卡面对比 → 强调色贴近表面 ${current.ui.surface}（故意偏弱）`);
   }
   if (/(灯光|光线|光照)/.test(clause) || /(暖光|冷光)/.test(clause)) {
     if (/亮/.test(clause)) { o.light = { ...o.light, sunIntensity: clamp(current.light.sunIntensity * 1.2, L.sunIntensity), exposure: clamp(current.light.exposure + 0.1, L.exposure) }; tweaks.push(`主光 ×${current.light.sunIntensity}→×${o.light.sunIntensity}`); }
@@ -620,6 +643,10 @@ const themeParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
   if (!resolved) throw new KernelTuningRangeError("主题参数超出范围。");
   draft.theme = next;
   draft.changes.push({ key: "theme", label: preset ? `主题风格（由「${clause}」）` : `画面调整（由「${clause}」换算）`, value: preset ? `${describeTheme(resolved)}${tweaks.length ? `；${tweaks.join("，")}` : ""}` : tweaks.join("，") });
+  const floor = themePresentationHints(resolved);
+  if (!floor.ok) {
+    for (const note of floor.notes) draft.notes.push(`呈现底线未达标（保持草稿）：${note}`);
+  }
   return 1;
 };
 
@@ -733,9 +760,11 @@ export function parseKernelEdits(
   if (contentPatch && resolveAutoBattlerContent(contentPatch) === null) {
     throw new KernelTuningRangeError("改动后的单位/羁绊数据不合法（例如超过 24 个单位或数值越界）。");
   }
+  const floorNotes = draft.notes.filter((n) => n.startsWith("呈现底线未达标"));
   const unsupported = [
     ...baseUnsupported,
     ...unsupportedClauses.map((c) => `未执行的创作者要求：「${c}」——当前内核没有对应的可配置项。`),
+    ...floorNotes,
   ];
   return {
     changes: draft.changes,
