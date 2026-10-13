@@ -706,6 +706,11 @@ const operationSchema = z.discriminatedUnion("op", [
           id: z.string().min(1).max(32), name: z.string().min(1).max(16),
           cost: z.number().int().min(1).max(5), atk: z.number().int().min(1).max(500), hp: z.number().int().min(1).max(5000),
           traits: z.array(z.string()).max(3), shape: z.string().optional(), proceduralPreset: z.string().optional(), modelRef: z.string().max(128).optional(),
+          combatFx: z.object({
+            attackVfx: z.string().optional(),
+            hitVfx: z.string().optional(),
+            attackEffect: z.object({ kind: z.string(), value: z.number(), label: z.string().optional() }).optional(),
+          }).optional(),
         })).min(2).max(24).optional(),
         traits: z.array(z.object({
           id: z.string().min(1).max(32), label: z.string().min(1).max(24), glyph: z.string().min(1).max(2),

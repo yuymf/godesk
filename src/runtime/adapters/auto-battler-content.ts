@@ -6,6 +6,9 @@
  * the shipped roster below is merely the default value of this data.
  */
 
+import type { UnitCombatFx } from "./auto-battler-vfx";
+import { isVfxPreset } from "./auto-battler-vfx";
+
 /** Silhouette presets the 3D/2D token renderers know how to draw. */
 export const UNIT_SHAPE_PRESETS = [
   "crab", "conch", "blade", "archer", "rider", "anemone",
@@ -33,11 +36,25 @@ export type UnitDef = {
    * of the procedural silhouette.
    */
   modelRef?: string;
+  /** Generic attack / hit VFX + optional attackEffect (aoe splash, unit heal, …). */
+  combatFx?: UnitCombatFx;
 };
 
-/** Combat effect presets a trait can carry (values are per tier, index-aligned with `tiers`). */
-export const TRAIT_EFFECT_KINDS = ["shield_start", "heal_first_strike", "extra_hit", "reflect"] as const;
-export type TraitEffectKind = (typeof TRAIT_EFFECT_KINDS)[number];
+/**
+ * Built-in combat effect presets a trait can carry (values per tier).
+ * Kinds are extensible: unknown kinds are kept on content for Plan honesty and
+ * ignored by the combat loop until a handler is registered (not hard-capped at 4).
+ */
+export const BUILTIN_TRAIT_EFFECT_KINDS = [
+  "shield_start",
+  "heal_first_strike",
+  "extra_hit",
+  "reflect",
+  "aoe_on_hit",
+] as const;
+/** @deprecated alias — prefer BUILTIN_TRAIT_EFFECT_KINDS; kept for older imports. */
+export const TRAIT_EFFECT_KINDS = BUILTIN_TRAIT_EFFECT_KINDS;
+export type TraitEffectKind = string;
 
 export type TraitDef = {
   id: string;
@@ -117,10 +134,10 @@ function normalizeTrait(raw: unknown): TraitDef | null {
   let effect: TraitDef["effect"];
   if (t.effect !== undefined) {
     const e = t.effect as Record<string, unknown>;
-    if (!e || !TRAIT_EFFECT_KINDS.includes(e.kind as TraitEffectKind) || !isText(e.label, 24)) return null;
+    if (!e || !isText(e.kind, 32) || !isText(e.label, 24)) return null;
     const values = e.values;
     if (!Array.isArray(values) || values.length !== tiers.length || !values.every((v) => isNum(v, 0, 1000))) return null;
-    effect = { kind: e.kind as TraitEffectKind, label: e.label as string, values: values as number[] };
+    effect = { kind: String(e.kind), label: e.label as string, values: values as number[] };
   }
   return {
     id: t.id as string, label: t.label as string, glyph: t.glyph as string, tiers: tiers as number[],
@@ -138,11 +155,36 @@ function normalizeUnit(raw: unknown, traitIds: Set<string>): UnitDef | null {
   const procedural = (u.proceduralPreset ?? u.shape) as UnitShapePreset | undefined;
   if (procedural !== undefined && !UNIT_SHAPE_PRESETS.includes(procedural)) return null;
   if (u.modelRef !== undefined && !isText(u.modelRef, 128)) return null;
+  let combatFx: UnitCombatFx | undefined;
+  if (u.combatFx !== undefined && typeof u.combatFx === "object") {
+    const fx = u.combatFx as Record<string, unknown>;
+    const attackVfx = isVfxPreset(fx.attackVfx) ? fx.attackVfx : undefined;
+    const hitVfx = isVfxPreset(fx.hitVfx) ? fx.hitVfx : undefined;
+    let attackEffect: UnitCombatFx["attackEffect"];
+    if (fx.attackEffect && typeof fx.attackEffect === "object") {
+      const ae = fx.attackEffect as Record<string, unknown>;
+      if (isText(ae.kind, 32) && isNum(ae.value, 0, 10)) {
+        attackEffect = {
+          kind: String(ae.kind),
+          value: ae.value as number,
+          ...(isText(ae.label, 24) ? { label: ae.label as string } : {}),
+        };
+      }
+    }
+    if (attackVfx || hitVfx || attackEffect) {
+      combatFx = {
+        ...(attackVfx ? { attackVfx } : {}),
+        ...(hitVfx ? { hitVfx } : {}),
+        ...(attackEffect ? { attackEffect } : {}),
+      };
+    }
+  }
   return {
     id: u.id as string, name: u.name as string, cost: u.cost as number, atk: u.atk as number, hp: u.hp as number,
     traits: [...(u.traits as string[])],
     ...(procedural ? { proceduralPreset: procedural, shape: procedural } : {}),
     ...(u.modelRef ? { modelRef: (u.modelRef as string).trim() } : {}),
+    ...(combatFx ? { combatFx } : {}),
   };
 }
 

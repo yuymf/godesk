@@ -23,7 +23,8 @@ import {
   type UnitShapePreset,
 } from "../src/runtime/adapters/auto-battler-content";
 import { parseRuleNumber, RULE_NUMBER_TOKEN } from "./rule-numbers";
-import { parseAssetAttachClause, type AssetAttachIntent } from "./auto-battler-assets";
+import { parseAssetAttachClause, type AssetAttachIntent } from "./auto-battler-assets"
+import { applySkillFxIntents, parseSkillFxClause } from "./auto-battler-skills";
 import {
   DEFAULT_THEME_ID,
   resolveAutoBattlerTheme,
@@ -444,6 +445,28 @@ const vagueParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
 
 
 
+
+// ---------------------------------------------------------------- skill / VFX parser
+
+const skillFxParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
+  const intent = parseSkillFxClause(clauses[i]!);
+  if (!intent) return 0;
+  const applied = applySkillFxIntents(draft.content, [intent]);
+  draft.content = applied.content;
+  for (const k of applied.contentTouched) draft.contentTouched.add(k);
+  for (const line of applied.report.lines) {
+    draft.changes.push({ key: "skill", label: "技能/特效映射", value: line });
+    draft.notes.push(line);
+  }
+  for (const u of applied.report.unsupported) {
+    draft.notes.push(u);
+  }
+  if (!applied.report.lines.length && applied.report.unsupported.length) {
+    draft.changes.push({ key: "skill", label: "技能/特效（未落地）", value: applied.report.unsupported.join("；") });
+  }
+  return 1;
+};
+
 // ---------------------------------------------------------------- unit asset (modelRef) parser
 
 const assetAttachParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
@@ -537,7 +560,7 @@ export const KERNEL_TUNING_REGISTRY: Partial<Record<Kernel["type"], KernelTuning
       { key: "startHp", label: "初始生命", unit: "", subject: /(血量|生命|血|hp)/i, ...lim.startHp },
       { key: "startGold", label: "初始金币", unit: "", subject: /(金币|金钱|gold)/i, ...lim.startGold },
     ],
-    parsers: [assetAttachParser, themeParser, addUnitParser, deleteUnitParser, traitTierParser, starParser, editUnitParser, defaultsParser, vagueParser],
+    parsers: [skillFxParser, assetAttachParser, themeParser, addUnitParser, deleteUnitParser, traitTierParser, starParser, editUnitParser, defaultsParser, vagueParser],
     current: (kernel) => {
       const k = kernel as { tuning?: Record<string, number>; content?: AutoBattlerContentPatch };
       return {

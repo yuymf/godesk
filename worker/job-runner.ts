@@ -52,7 +52,7 @@ import { fulfillAssetAttachIntents } from "./auto-battler-assets";
 import { resolveAutoBattlerContent, DEFAULT_AUTO_BATTLER_CONTENT } from "../src/runtime/adapters/auto-battler-content";
 
 const AUTO_BATTLER_BASE_UNSUPPORTED =
-  "auto-battler-v1: 2-seat shop→place→combat→HP on the play-kernel. Configurable: units/traits/stars, timers, start HP/gold, theme presets, per-unit modelRef/proceduralPreset (CC0 search, imported GLB, or stylized fallback). Not: board size, >2 seats, new effect kinds, sealed shop.";
+  "auto-battler-v1: 2-seat shop→place→combat→HP. Configurable: units/traits/stars, timers, HP/gold, themes, modelRef/proceduralPreset, extensible trait effects + VFX presets (projectile/aoe/heal/shield/hit/crit). Not: board size, >2 seats, sealed shop.";
 
 /** Request-like clause (numbers or edit verbs) that the kernel could not map — listed honestly. */
 const REQUEST_LIKE = /[0-9一二三四五六七八九十]|改成|改为|加一个|新增|开启|关闭|设为/;

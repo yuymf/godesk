@@ -45,13 +45,22 @@ export type ReplayTrait = {
 };
 export type ReplayDown = { kind: "down"; t: number; uid: string };
 export type ReplayEnd = { kind: "end"; t: number; winnerSeat: number | null; damageToLoser: number };
-export type ReplayEvent = ReplayStrike | ReplayHeal | ReplayTrait | ReplayDown | ReplayEnd;
+export type ReplayVfx = {
+  kind: "vfx";
+  t: number;
+  preset: string;
+  atUid?: string;
+  fromUid?: string;
+  toUid?: string;
+  amount?: number;
+};
+export type ReplayEvent = ReplayStrike | ReplayHeal | ReplayTrait | ReplayDown | ReplayVfx | ReplayEnd;
 export type ReplayLine = {
   t: number;
   stamp: string;
   text: string;
   value: string | null;
-  kind: "strike" | "heal" | "trait" | "down" | "end";
+  kind: "strike" | "heal" | "trait" | "down" | "vfx" | "end";
 };
 export type Timeline = { events: ReplayEvent[]; lines: ReplayLine[]; durationMs: number; finalHp: Map<string, number> };
 
@@ -106,6 +115,24 @@ export function buildTimeline(
         text: `${name(uid)} 恢复 ${value}`,
         value,
         kind: "heal",
+      });
+    } else if (e.kind === "vfx") {
+      const vfxT = Math.max(t - Math.floor(step / 3), lastHit);
+      events.push({
+        kind: "vfx",
+        t: vfxT,
+        preset: String(e.preset ?? "hit_particles"),
+        atUid: e.atUid ? String(e.atUid) : undefined,
+        fromUid: e.fromUid ? String(e.fromUid) : undefined,
+        toUid: e.toUid ? String(e.toUid) : undefined,
+        amount: typeof e.amount === "number" ? e.amount : undefined,
+      });
+      lines.push({
+        t: vfxT,
+        stamp: stamp(vfxT),
+        text: `特效 ${String(e.preset ?? "")}`,
+        value: null,
+        kind: "vfx",
       });
     } else if (e.kind === "trait_trigger") {
       const traitT = Math.max(REPLAY_LEAD_MS - 200, lastHit);

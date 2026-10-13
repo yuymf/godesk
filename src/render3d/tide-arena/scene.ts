@@ -207,6 +207,12 @@ export class TideArenaScene {
   private slots: TokenSlot[] = [];
   private slotByUid = new Map<string, TokenSlot>();
   private projectiles!: InstancedMesh;
+  private fxAoe!: InstancedMesh;
+  private fxHeal!: InstancedMesh;
+  private fxShield!: InstancedMesh;
+  private fxHit!: InstancedMesh;
+  private shakeUntil = 0;
+  private baseCamPos = new Vector3();
   private replay: { tl: Timeline; ms: number; speed: number; last: number; fired: number; raf: number } | null = null;
   private readonly v1 = new Vector3();
   private readonly v2 = new Vector3();
@@ -283,6 +289,17 @@ export class TideArenaScene {
     this.projectiles.count = 0;
     this.projectiles.frustumCulled = false;
     this.scene.add(this.projectiles);
+    const mkFx = (geo: ConstructorParameters<typeof InstancedMesh>[0], color: number, n: number) => {
+      const mesh = new InstancedMesh(geo, new MeshBasicMaterial({ color, transparent: true, opacity: 0.55, depthWrite: false }), n);
+      mesh.count = 0;
+      mesh.frustumCulled = false;
+      this.scene.add(mesh);
+      return mesh;
+    };
+    this.fxAoe = mkFx(new CylinderGeometry(0.15, 1.1, 0.08, 24), 0xff8844, 8);
+    this.fxHeal = mkFx(new IcosahedronGeometry(0.28, 0), 0x55ff99, 12);
+    this.fxShield = mkFx(new IcosahedronGeometry(0.55, 1), 0x66ccff, 12);
+    this.fxHit = mkFx(new IcosahedronGeometry(0.12, 0), 0xffee66, 24);
     if (importedModels.length) this.modelPool = new UnitModelPool(this.scene, importedModels);
 
     canvas.addEventListener("pointerdown", this.onDown);
@@ -410,6 +427,7 @@ export class TideArenaScene {
     }
     // Theme distance (<1 pulls in: the bench/frame edge may crop slightly for a closer read).
     fits(hi * this.theme.camera.distance);
+    this.baseCamPos.copy(cam.position);
     // Center vertically on the projected footprint inside the safe rect.
     let minY = Infinity;
     let maxY = -Infinity;
@@ -610,6 +628,10 @@ export class TideArenaScene {
     cancelAnimationFrame(this.replay.raf);
     this.replay = null;
     this.projectiles.count = 0;
+    if (this.fxAoe) this.fxAoe.count = 0;
+    if (this.fxHeal) this.fxHeal.count = 0;
+    if (this.fxShield) this.fxShield.count = 0;
+    if (this.fxHit) this.fxHit.count = 0;
   }
 
   /** Notify React only when an event boundary is crossed (keeps per-frame work allocation-free). */
@@ -674,6 +696,57 @@ export class TideArenaScene {
     }
     this.projectiles.count = proj;
     this.projectiles.instanceMatrix.needsUpdate = true;
+
+    // Generic VFX presets from combat log (aoe / heal / shield / hit / crit shake).
+    let aoe = 0, heal = 0, shield = 0, hit = 0;
+    for (const e of r.tl.events) {
+      if (e.kind !== "vfx") continue;
+      if (ms < e.t || ms > e.t + 420) continue;
+      const k = Math.min(1, (ms - e.t) / 420);
+      const uid = e.atUid ?? e.toUid;
+      const slot = uid ? this.slotByUid.get(uid) : undefined;
+      const x = slot?.cx ?? 0, y = (slot?.cy ?? 0) + 0.4, z = slot?.cz ?? 0;
+      if (e.preset === "aoe" && aoe < 8) {
+        const s = 0.6 + k * 1.8;
+        this.tmp.position.set(x, y * 0.2, z);
+        this.tmp.rotation.set(0, 0, 0);
+        this.tmp.scale.set(s, 1, s);
+        this.tmp.updateMatrix();
+        this.fxAoe.setMatrixAt(aoe++, this.tmp.matrix);
+      } else if (e.preset === "heal" && heal < 12) {
+        this.tmp.position.set(x, y + k * 0.8, z);
+        this.tmp.scale.setScalar(0.8 + (1 - k) * 0.6);
+        this.tmp.updateMatrix();
+        this.fxHeal.setMatrixAt(heal++, this.tmp.matrix);
+      } else if (e.preset === "shield" && shield < 12) {
+        this.tmp.position.set(x, y, z);
+        this.tmp.scale.setScalar(0.9 + Math.sin(k * Math.PI) * 0.25);
+        this.tmp.updateMatrix();
+        this.fxShield.setMatrixAt(shield++, this.tmp.matrix);
+      } else if ((e.preset === "hit_particles" || e.preset === "projectile") && hit < 24) {
+        const ang = hit * 1.7;
+        this.tmp.position.set(x + Math.cos(ang) * k * 0.5, y + 0.2 + k * 0.4, z + Math.sin(ang) * k * 0.5);
+        this.tmp.scale.setScalar(0.7 * (1 - k));
+        this.tmp.updateMatrix();
+        this.fxHit.setMatrixAt(hit++, this.tmp.matrix);
+      } else if (e.preset === "crit_shake") {
+        this.shakeUntil = Math.max(this.shakeUntil, e.t + 280);
+      }
+    }
+    this.fxAoe.count = aoe; this.fxAoe.instanceMatrix.needsUpdate = true;
+    this.fxHeal.count = heal; this.fxHeal.instanceMatrix.needsUpdate = true;
+    this.fxShield.count = shield; this.fxShield.instanceMatrix.needsUpdate = true;
+    this.fxHit.count = hit; this.fxHit.instanceMatrix.needsUpdate = true;
+    if (ms <= this.shakeUntil) {
+      const j = (this.shakeUntil - ms) / 280;
+      this.camera.position.x = this.baseCamPos.x + (Math.random() - 0.5) * 0.12 * j;
+      this.camera.position.y = this.baseCamPos.y + (Math.random() - 0.5) * 0.08 * j;
+      this.camera.position.z = this.baseCamPos.z + (Math.random() - 0.5) * 0.12 * j;
+      this.camera.lookAt(0, 0.2, 0);
+    } else if (this.baseCamPos.lengthSq() > 0) {
+      this.camera.position.copy(this.baseCamPos);
+    }
+
     for (const mesh of this.units.values()) mesh.instanceMatrix.needsUpdate = true;
     this.rings.instanceMatrix.needsUpdate = true;
     if (this.rings.instanceColor) this.rings.instanceColor.needsUpdate = true;

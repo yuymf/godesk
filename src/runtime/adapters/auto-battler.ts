@@ -24,6 +24,7 @@ import {
   type TraitDef,
   type UnitDef,
 } from "./auto-battler-content";
+import type { CombatVfxEntry } from "./auto-battler-vfx";
 
 export const AUTO_BATTLER_KERNEL_TYPE = "auto-battler-v1" as const;
 
@@ -148,10 +149,11 @@ export type SeatState = {
 
 export type CombatLogEntry =
   | { kind: "combat_start"; round: number }
-  | { kind: "strike"; attackerUid: string; targetUid: string; damage: number; targetHp: number }
+  | { kind: "strike"; attackerUid: string; targetUid: string; damage: number; targetHp: number; crit?: boolean; splash?: boolean }
   | { kind: "heal"; uid: string; amount: number; targetHp: number }
   | { kind: "trait_trigger"; trait: TraitId; label: string; detail?: string }
   | { kind: "unit_down"; uid: string; owner: number }
+  | CombatVfxEntry
   | { kind: "combat_end"; winnerSeat: number | null; damageToLoser: number };
 
 /**
@@ -515,6 +517,7 @@ function runCombat(
         log.push({ kind: "trait_trigger", trait: trait.id, label: trait.label, detail: `${trait.effect!.label} +${amount}` });
         for (const f of fighters.filter((x) => x.owner === owner && x.hp > 0)) {
           applyHeal(fighters, f.uid, amount, log);
+          log.push({ kind: "vfx", preset: "shield", atUid: f.uid, amount });
         }
       }
     } else if (synBy[0].some((s) => s.trait === trait.id) || synBy[1].some((s) => s.trait === trait.id)) {
@@ -552,7 +555,11 @@ function runCombat(
         return a.uid.localeCompare(b.uid);
       });
       const target = enemies[0]!;
-      const deal = (dmg: number) => {
+      const atkDef = active.byId[attacker.unitId];
+      const ownCounts = countsBy[attacker.owner as 0 | 1];
+      const fx = atkDef?.combatFx;
+      const deal = (dmg: number, opts?: { splash?: boolean; skipAoe?: boolean }) => {
+        const crit = dmg >= attacker.atk * 1.5;
         target.hp -= dmg;
         log.push({
           kind: "strike",
@@ -560,7 +567,17 @@ function runCombat(
           targetUid: target.uid,
           damage: dmg,
           targetHp: Math.max(0, target.hp),
+          ...(crit ? { crit: true } : {}),
+          ...(opts?.splash ? { splash: true } : {}),
         });
+        const attackVfx = fx?.attackVfx ?? (opts?.splash ? "aoe" : undefined);
+        if (attackVfx) {
+          log.push({ kind: "vfx", preset: attackVfx, fromUid: attacker.uid, toUid: target.uid, amount: dmg });
+        }
+        log.push({ kind: "vfx", preset: fx?.hitVfx ?? "hit_particles", atUid: target.uid, fromUid: attacker.uid, amount: dmg });
+        if (crit) {
+          log.push({ kind: "vfx", preset: "crit_shake", atUid: target.uid, fromUid: attacker.uid, amount: dmg });
+        }
         // Reflect presets: defender units carrying the trait bounce a share of damage back.
         const targetDef = active.byId[target.unitId];
         for (const trait of traitsWith("reflect")) {
@@ -584,12 +601,59 @@ function runCombat(
           target.hp = 0;
           log.push({ kind: "unit_down", uid: target.uid, owner: target.owner });
         }
+        // Unit attackEffect aoe_splash: damage other enemies near the primary target.
+        if (!opts?.skipAoe && fx?.attackEffect?.kind === "aoe_splash" && fx.attackEffect.value > 0) {
+          const splash = Math.max(1, Math.floor(attacker.atk * fx.attackEffect.value));
+          log.push({ kind: "vfx", preset: "aoe", atUid: target.uid, fromUid: attacker.uid, amount: splash });
+          for (const other of enemies) {
+            if (other.uid === target.uid || other.hp <= 0) continue;
+            if (manhattan(target, other) > 1) continue;
+            other.hp -= splash;
+            log.push({
+              kind: "strike",
+              attackerUid: attacker.uid,
+              targetUid: other.uid,
+              damage: splash,
+              targetHp: Math.max(0, other.hp),
+              splash: true,
+            });
+            log.push({ kind: "vfx", preset: "hit_particles", atUid: other.uid, fromUid: attacker.uid, amount: splash });
+            if (other.hp <= 0) {
+              other.hp = 0;
+              log.push({ kind: "unit_down", uid: other.uid, owner: other.owner });
+            }
+          }
+        }
+        // Trait aoe_on_hit: same splash using trait value as ratio.
+        if (!opts?.skipAoe) {
+          for (const trait of traitsWith("aoe_on_hit")) {
+            const ratio = effectValue(trait, ownCounts[trait.id] ?? 0);
+            if (ratio <= 0 || !atkDef?.traits.includes(trait.id)) continue;
+            const splash = Math.max(1, Math.floor(attacker.atk * ratio));
+            log.push({ kind: "vfx", preset: "aoe", atUid: target.uid, fromUid: attacker.uid, amount: splash });
+            for (const other of enemies) {
+              if (other.uid === target.uid || other.hp <= 0) continue;
+              if (manhattan(target, other) > 1) continue;
+              other.hp -= splash;
+              log.push({
+                kind: "strike",
+                attackerUid: attacker.uid,
+                targetUid: other.uid,
+                damage: splash,
+                targetHp: Math.max(0, other.hp),
+                splash: true,
+              });
+              if (other.hp <= 0) {
+                other.hp = 0;
+                log.push({ kind: "unit_down", uid: other.uid, owner: other.owner });
+              }
+            }
+          }
+        }
       };
 
       deal(attacker.atk);
 
-      const atkDef = active.byId[attacker.unitId];
-      const ownCounts = countsBy[attacker.owner as 0 | 1];
       // Heal presets: the first strike of a unit carrying the trait heals the neediest ally.
       for (const trait of traitsWith("heal_first_strike")) {
         const ratio = effectValue(trait, ownCounts[trait.id] ?? 0);
@@ -599,7 +663,21 @@ function runCombat(
         const allies = fighters.filter((f) => f.owner === attacker.owner && f.hp > 0);
         allies.sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp || a.uid.localeCompare(b.uid));
         const needy = allies[0];
-        if (needy) applyHeal(fighters, needy.uid, Math.max(1, Math.floor(attacker.atk * ratio)), log);
+        if (needy) {
+          applyHeal(fighters, needy.uid, Math.max(1, Math.floor(attacker.atk * ratio)), log);
+          log.push({ kind: "vfx", preset: "heal", atUid: needy.uid, fromUid: attacker.uid });
+        }
+      }
+      // Unit combatFx heal_ally (e.g. NL「巫师有治疗」).
+      if (fx?.attackEffect?.kind === "heal_ally" && !healUsed.has(`${attacker.uid}:heal_ally`)) {
+        healUsed.add(`${attacker.uid}:heal_ally`);
+        const allies = fighters.filter((f) => f.owner === attacker.owner && f.hp > 0);
+        allies.sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp || a.uid.localeCompare(b.uid));
+        const needy = allies[0];
+        if (needy) {
+          applyHeal(fighters, needy.uid, Math.max(1, Math.floor(attacker.atk * fx.attackEffect.value)), log);
+          log.push({ kind: "vfx", preset: "heal", atUid: needy.uid, fromUid: attacker.uid });
+        }
       }
 
       // Extra-hit presets: a unit's first attack fires a follow-up at ratio × atk.
@@ -609,7 +687,7 @@ function runCombat(
         .find((ratio) => ratio > 0);
       if (extra !== undefined && !attacker.firstStrikeDone && target.hp > 0) {
         attacker.firstStrikeDone = true;
-        deal(Math.max(1, Math.floor(attacker.atk * extra)));
+        deal(Math.max(1, Math.floor(attacker.atk * extra)), { skipAoe: true });
       } else {
         attacker.firstStrikeDone = true;
       }
