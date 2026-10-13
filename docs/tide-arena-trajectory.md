@@ -222,3 +222,11 @@
 - 三小修：HP≥0；备战 deadline 含战斗回放；board-surface 对局中隐藏反馈区。
 
 **证据（仓外）**：`/workspace/g3d-evidence/godesk-2026-10-13/tide-arena/trajectory/theme-pipeline/`（含 `TRAJECTORY.md`、三套 place/combat、bugA/B/C）。
+
+---
+
+# 资产管线刀（缺口2，2026-10-13）
+
+单位外形改为数据字段 `modelRef` / `proceduralPreset`；NL 可搜 CC0、挂 imported GLB、或风格化棋子兜底。Room 经 `importedModels` → `UnitModelPool` 呈现。Generation Plan unsupported 如实列搜索/挂接/兜底。
+
+证据（仓外）：`/workspace/g3d-evidence/godesk-2026-10-13/tide-arena/trajectory/asset-pipeline/`。
