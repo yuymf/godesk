@@ -5,6 +5,8 @@ import {
   executableRuntime,
   initialSessionState,
   runAtSessionTime,
+  sessionDeadline,
+  PREP_TIMEOUT_ACTION,
   pickBotIntent,
   runBotSimulation,
   runtimeSupportsBotSeat,
@@ -110,6 +112,22 @@ export function sendableCloseCode(code: number): number {
 
 /** Next time queued/running jobs should be recovered by the alarm (ms epoch). */
 const JOB_RECOVERY_AT_KEY = "alarm:job-recovery-at";
+
+const ROOM_DEADLINE_PREFIX = "room-deadline:";
+interface RoomDeadline {
+  sessionId: string;
+  /** acceptedActions.length when scheduled; any later action makes it stale. */
+  expectedActions: number;
+  dueAt: number;
+}
+function roomDeadlineKey(sessionId: string) {
+  return `${ROOM_DEADLINE_PREFIX}${sessionId}`;
+}
+function roomDeadlineFor(room: StoredSharedSession, build: StoredPlayableBuild): RoomDeadline | null {
+  const runtime = executableRuntime(build.ruleSystem);
+  const dueAt = runtime ? sessionDeadline(room.state, runtime) : null;
+  return dueAt === null ? null : { sessionId: room.id, expectedActions: room.acceptedActions.length, dueAt };
+}
 
 export class CreatorProjects extends DurableObject<Env> {
   private broadcastSession(session: StoredSharedSession) {
@@ -232,7 +250,10 @@ export class CreatorProjects extends DurableObject<Env> {
       candidate.id === persistedRoom.id ? persistedRoom : candidate,
     );
     const aiPending = aiPendingFor(updatedRoom, Date.now());
+    const deadline = roomDeadlineFor(updatedRoom, build);
+    if (!deadline) await transaction.delete(roomDeadlineKey(room.id));
     await transaction.put({
+      ...(deadline ? { [roomDeadlineKey(room.id)]: deadline } : {}),
       [roomKey]: persistedRoom,
       [`replay:${room.replayId}`]: updatedReplay,
       [projectKey]: record,
@@ -258,6 +279,8 @@ export class CreatorProjects extends DurableObject<Env> {
       prefix: AI_TURN_PREFIX,
     });
     for (const turn of pending.values()) times.push(Math.max(turn.dueAt, now));
+    const deadlines = await this.ctx.storage.list<RoomDeadline>({ prefix: ROOM_DEADLINE_PREFIX });
+    for (const deadline of deadlines.values()) times.push(Math.max(deadline.dueAt, now));
     if (times.length) {
       await this.ctx.storage.setAlarm(Math.min(...times));
     } else {
@@ -360,6 +383,55 @@ export class CreatorProjects extends DurableObject<Env> {
       const persisted = await this.persistAcceptedAction(transaction, room, accepted, build);
       if ("error" in persisted) {
         await transaction.delete(aiTurnKey(room.id));
+        return { kind: "dropped" as const };
+      }
+      return { kind: "moved" as const, room: persisted.room };
+    });
+    if (outcome.kind === "moved") this.broadcastSession(outcome.room);
+  }
+
+  /**
+   * Room deadline step: log a timer action AT the deadline (runAtSessionTime pins the
+   * kernel clock), so the timeout is an ordinary timestamped action that replays exactly.
+   */
+  private async runRoomDeadline(deadline: RoomDeadline) {
+    const roomKey = `session:${deadline.sessionId}`;
+    const outcome = await this.ctx.storage.transaction(async (transaction) => {
+      const current = await transaction.get<RoomDeadline>(roomDeadlineKey(deadline.sessionId));
+      if (!current || current.expectedActions !== deadline.expectedActions || current.dueAt !== deadline.dueAt) {
+        return { kind: "stale" as const };
+      }
+      const storedRoom = await transaction.get<StoredSharedSession>(roomKey);
+      const storedBuild = storedRoom ? await transaction.get<StoredPlayableBuild>(`build:${storedRoom.buildId}`) : undefined;
+      const build = storedBuild ? normalizedBuild(storedBuild) : undefined;
+      const runtime = build && executableRuntime(build.ruleSystem);
+      if (!storedRoom || !build || !runtime) {
+        await transaction.delete(roomDeadlineKey(deadline.sessionId));
+        return { kind: "dropped" as const };
+      }
+      const room = await this.loadRoom(storedRoom, build, transaction);
+      const due = sessionDeadline(room.state, runtime);
+      if (room.acceptedActions.length !== deadline.expectedActions || due !== deadline.dueAt) {
+        const next = roomDeadlineFor(room, build);
+        if (next) await transaction.put(roomDeadlineKey(room.id), next);
+        else await transaction.delete(roomDeadlineKey(room.id));
+        return { kind: "stale" as const };
+      }
+      const sequence = room.acceptedActions.length + 1;
+      const accepted = runAtSessionTime(deadline.dueAt, () => acceptIntent(
+        room.state,
+        runtime,
+        { intentId: `timer_${sequence}`, seat: room.state.activeSeat, actionId: PREP_TIMEOUT_ACTION },
+        sequence,
+        room.seed,
+      ));
+      if (!accepted) {
+        await transaction.delete(roomDeadlineKey(room.id));
+        return { kind: "dropped" as const };
+      }
+      const persisted = await this.persistAcceptedAction(transaction, room, accepted, build);
+      if ("error" in persisted) {
+        await transaction.delete(roomDeadlineKey(room.id));
         return { kind: "dropped" as const };
       }
       return { kind: "moved" as const, room: persisted.room };
@@ -1157,16 +1229,18 @@ export class CreatorProjects extends DurableObject<Env> {
         };
         record.sessions.push(room);
         const aiPending = aiPendingFor(room, Date.now());
+        const deadline = roomDeadlineFor(room, build);
         await transaction.put({
+          ...(deadline ? { [roomDeadlineKey(room.id)]: deadline } : {}),
           [projectKey]: record,
           [`session:${room.id}`]: room,
           [`replay:${replay.id}`]: replay,
           [idempotencyKey]: room,
           ...(aiPending ? { [aiTurnKey(room.id)]: aiPending } : {}),
         });
-        return { status: 201, value: room, aiPending };
+        return { status: 201, value: room, aiPending, deadline };
       });
-      if ("aiPending" in outcome && outcome.aiPending) await this.rescheduleAlarm();
+      if (("aiPending" in outcome && outcome.aiPending) || ("deadline" in outcome && outcome.deadline)) await this.rescheduleAlarm();
       return json(outcome.value, outcome.status);
   }
 
@@ -1183,6 +1257,17 @@ export class CreatorProjects extends DurableObject<Env> {
           await this.runAiTurn(turn);
         } catch (reason) {
           console.error("room_ai_turn_failed", turn.sessionId, reason);
+        }
+      }
+    }
+    // Room deadlines (server-authoritative clocks): advance rooms nobody touched in time.
+    const deadlines = await this.ctx.storage.list<RoomDeadline>({ prefix: ROOM_DEADLINE_PREFIX });
+    for (const deadline of deadlines.values()) {
+      if (deadline.dueAt <= Date.now() + 25) {
+        try {
+          await this.runRoomDeadline(deadline);
+        } catch (reason) {
+          console.error("room_deadline_failed", deadline.sessionId, reason);
         }
       }
     }
@@ -2224,7 +2309,8 @@ export class CreatorProjects extends DurableObject<Env> {
       });
       if (outcome.status === 200 && "broadcast" in outcome && outcome.broadcast) {
         this.broadcastSession(outcome.broadcast);
-        if ("aiPending" in outcome && outcome.aiPending) await this.rescheduleAlarm();
+        // Always re-arm: the accepted action may have moved (or cleared) a room deadline.
+        if (outcome.status === 200 || ("aiPending" in outcome && outcome.aiPending)) await this.rescheduleAlarm();
       }
       return json(outcome.value, outcome.status);
     }

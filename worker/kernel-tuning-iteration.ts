@@ -15,6 +15,7 @@ import {
   DEFAULT_AUTO_BATTLER_CONTENT,
   resolveAutoBattlerContent,
   UNIT_SHAPE_PRESETS,
+  CONTENT_LIMITS,
   type AutoBattlerContent,
   type AutoBattlerContentPatch,
   type TraitDef,
@@ -43,6 +44,8 @@ interface Draft<TContent> {
   content: TContent;
   contentTouched: Set<string>;
   changes: KernelChange[];
+  /** Clauses claimed without a change: the request already matches the current config. */
+  notes: string[];
 }
 
 /** Returns how many clauses starting at `i` it consumed (0 = not mine). */
@@ -176,12 +179,252 @@ const starParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
   } else if (/(关闭|关掉|禁用|取消|去掉)\s*(?:合成|升星|★2|★★|二星|两星|2星)/.test(clause)) {
     stars.star2 = false; stars.star3 = false; draft.changes.push({ key: "stars.star2", label: "升星合成", value: "关闭" }); hit = true;
   } else if (!mult && STAR2.test(clause) && /(开启|打开|允许|启用|合成)/.test(clause)) {
-    stars.star2 = true; draft.changes.push({ key: "stars.star2", label: "★2 合成", value: "开启" }); hit = true;
+    if (stars.star2) draft.notes.push(`已支持：三个相同棋子自动合成 ★2（当前已开启，倍率 ×${stars.mult2}）`);
+    else { stars.star2 = true; draft.changes.push({ key: "stars.star2", label: "★2 合成", value: "开启" }); }
+    hit = true;
   }
   if (!hit) return 0;
+  // Trailing qualitative clause about the merged unit ("属性变强" / "再强一点").
+  const next = clauses[i + 1]?.trim();
+  if (next && STAR_STRONGER.test(next) && !new RegExp(NUM).test(next)) {
+    const which = STAR3.test(clause) && stars.star3 ? "mult3" : "mult2";
+    const label = which === "mult3" ? "★3" : "★2";
+    const sample = sampleUnit(draft.content);
+    if (/(更|再|还要|加强|提高|提升)/.test(next)) {
+      const before = stars[which];
+      const after = Math.min(10, Math.round(before * (1 + magnitude(next)) * 10) / 10);
+      stars[which] = after;
+      draft.changes.push({ key: `stars.${which}`, label: `${label} 倍率（由「${next}」换算 +${Math.round(magnitude(next) * 100)}%）`, value: `×${before}→×${after}${sample ? `（例：${sample.name} 攻 ${Math.round(sample.atk * after)}、血 ${Math.round(sample.hp * after)}）` : ""}` });
+    } else {
+      draft.notes.push(`已支持：「${next}」= ${label} 属性 ×${stars[which]}${sample ? `（例：${sample.name} 攻 ${sample.atk}→${Math.round(sample.atk * stars[which])}，血 ${sample.hp}→${Math.round(sample.hp * stars[which])}）` : ""}`);
+    }
+    draft.content = { ...draft.content, stars };
+    draft.contentTouched.add("stars");
+    return 2;
+  }
   draft.content = { ...draft.content, stars };
   draft.contentTouched.add("stars");
   return 1;
+};
+
+
+const STAR_STRONGER = /^(?:属性|数值|能力|强度)?\s*(?:会|要|就)?\s*(?:变强|更强|变得更强|提升|提高|增强|加强|翻倍|再强)/;
+
+/** Qualitative degree → fraction: 稍微/一点 10%, 很多/大幅 40%, default 20%. */
+function magnitude(text: string) {
+  if (/(稍微|略|一点点|小幅|微)/.test(text)) return 0.1;
+  if (/(很多|大幅|非常|特别|超级|翻倍|多很多)/.test(text)) return 0.4;
+  return 0.2;
+}
+
+function sampleUnit(content: AutoBattlerContent) {
+  return [...content.units].sort((a, b) => b.cost - a.cost)[0];
+}
+
+/** Longest existing unit names mentioned in text (non-overlapping). */
+function mentionedUnits(content: AutoBattlerContent, text: string): UnitDef[] {
+  const found: UnitDef[] = [];
+  let rest = text;
+  for (const u of [...content.units].sort((a, b) => b.name.length - a.name.length)) {
+    if (rest.includes(u.name)) { found.push(u); rest = rest.split(u.name).join("\u0000"); }
+  }
+  return found.sort((a, b) => text.indexOf(a.name) - text.indexOf(b.name));
+}
+
+function describeUnit(u: UnitDef, content: AutoBattlerContent) {
+  const traits = u.traits.map((id) => content.traits.find((t) => t.id === id)?.label ?? id).join("/");
+  return `${u.name}（${u.cost}费 攻${u.atk} 血${u.hp}${traits ? ` ${traits}` : ""}${u.shape ? ` 外形${u.shape}` : ""}）`;
+}
+
+const DELETE_VERB = /(删除|删掉|去掉|移除|拿掉|删了|砍掉)/;
+const deleteUnitParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
+  const clause = clauses[i]!;
+  const verb = clause.match(DELETE_VERB);
+  if (!verb || verb.index === undefined) return 0;
+  const targets = mentionedUnits(draft.content, clause);
+  if (!targets.length) {
+    if (!/(单位|棋子|角色)/.test(clause)) return 0;
+    throw new KernelTuningRangeError(`没找到要删除的单位；当前单位：${draft.content.units.map((u) => u.name).join("、")}。`);
+  }
+  const ids = new Set(targets.map((u) => u.id));
+  const units = draft.content.units.filter((u) => !ids.has(u.id));
+  if (units.length < CONTENT_LIMITS.units.min) {
+    throw new KernelTuningRangeError(`至少要保留 ${CONTENT_LIMITS.units.min} 个单位。`);
+  }
+  draft.content = { ...draft.content, units };
+  draft.contentTouched.add("units");
+  draft.changes.push({ key: "units.delete", label: "删除单位", value: `${targets.map((u) => u.name).join("、")}（剩 ${units.length} 种）` });
+  return 1;
+};
+
+const EDIT_ATTR = new RegExp(`(?:改名|名字|叫|费用|花费|价格|攻击|生命|血量|hp|羁绊|特质|种族|外形|造型|外观)`, "i");
+function relativeOrAbsolute(text: string, field: RegExp, current: number): number | undefined {
+  const abs = text.match(new RegExp(`${field.source}(?:力|值)?\\s*(?:改成|改为|设为|调成|变成|调到|=|是|为)\\s*(${NUM})`, "i"));
+  if (abs) return num(abs[1]);
+  const pct = text.match(new RegExp(`${field.source}(?:力|值)?\\s*(?:提高|增加|加|提升|\\+|降低|减少|减|下调|-)\\s*(${NUM})\\s*%`, "i"));
+  if (pct) {
+    const sign = /(降低|减少|减|下调|-)/.test(pct[0]) ? -1 : 1;
+    return Math.round(current * (1 + (sign * num(pct[1])) / 100));
+  }
+  const delta = text.match(new RegExp(`${field.source}(?:力|值)?\\s*(提高|增加|加|提升|\\+|降低|减少|减|下调|-)\\s*(${NUM})`, "i"));
+  if (delta) return current + (/(降低|减少|减|下调|-)/.test(delta[1]!) ? -1 : 1) * num(delta[2]);
+  return undefined;
+}
+
+const editUnitParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
+  const head = clauses[i]!;
+  const targets = mentionedUnits(draft.content, head);
+  if (targets.length !== 1 || !EDIT_ATTR.test(head) || DELETE_VERB.test(head)) return 0;
+  const target = targets[0]!;
+  let used = 1;
+  while (
+    i + used < clauses.length &&
+    EDIT_ATTR.test(clauses[i + used]!) &&
+    !mentionedUnits(draft.content, clauses[i + used]!).length &&
+    !COMMAND_START.test(clauses[i + used]!.trim()) &&
+    !ADD_UNIT.test(clauses[i + used]!)
+  ) used += 1;
+  const text = clauses.slice(i, i + used).join("，");
+  const content = draft.content;
+  const next: UnitDef = { ...target, traits: [...target.traits] };
+  const parts: string[] = [];
+  const rename =
+    text.match(/(?:改名(?:为|成|叫)?|名字改(?:为|成)|改叫|名字叫)\s*[“「『"]?([\u4e00-\u9fa5A-Za-z0-9]{1,8})/)?.[1];
+  if (rename) {
+    if (content.units.some((u) => u.name === rename && u.id !== target.id)) throw new KernelTuningRangeError(`已经有叫「${rename}」的单位了。`);
+    next.name = rename; parts.push(`改名 ${target.name}→${rename}`);
+  }
+  const cost = relativeOrAbsolute(text, /(?:费用|花费|价格)/, target.cost);
+  if (cost !== undefined) { next.cost = cost; parts.push(`费用 ${target.cost}→${cost}`); }
+  const atk = relativeOrAbsolute(text, /攻击/, target.atk);
+  if (atk !== undefined) { next.atk = atk; parts.push(`攻击 ${target.atk}→${atk}`); }
+  const hp = relativeOrAbsolute(text, /(?:生命|血量|hp)/, target.hp);
+  if (hp !== undefined) { next.hp = hp; parts.push(`生命 ${target.hp}→${hp}`); }
+  const traitText = text.match(/(?:羁绊|特质|种族)\s*(?:改成|改为|换成|设为|变成|是)\s*([^，,。；;]+)/)?.[1];
+  if (traitText !== undefined) {
+    const traits = content.traits.filter((t) => traitText.includes(t.label)).map((t) => t.id).slice(0, 3);
+    if (!traits.length && !/(无|没有|去掉)/.test(traitText)) throw new KernelTuningRangeError(`没找到羁绊「${traitText}」；当前羁绊：${content.traits.map((t) => t.label).join("、")}。`);
+    next.traits = traits; parts.push(`羁绊 → ${traits.map((id) => content.traits.find((t) => t.id === id)!.label).join("/") || "无"}`);
+  }
+  const shapeText = text.match(/(?:外形|造型|外观)\s*(?:改成|改为|换成|变成|像|是)\s*([^，,。；;]+)/)?.[1];
+  if (shapeText !== undefined) {
+    const shape = UNIT_SHAPE_PRESETS.find((p) => shapeText.includes(p)) ?? SHAPE_WORDS.find(([re]) => re.test(shapeText))?.[1];
+    if (!shape) throw new KernelTuningRangeError(`外形只能选预设：${UNIT_SHAPE_PRESETS.join(" / ")}（或说「像螃蟹/鲸/弓手…」）。`);
+    next.shape = shape; parts.push(`外形 → ${shape}`);
+  }
+  if (!parts.length) return 0;
+  const L = CONTENT_LIMITS;
+  if (!(Number.isInteger(next.cost) && next.cost >= L.cost.min && next.cost <= L.cost.max)) throw new KernelTuningRangeError(`费用只能是 ${L.cost.min}–${L.cost.max}。`);
+  if (!(Number.isInteger(next.atk) && next.atk >= L.atk.min && next.atk <= L.atk.max)) throw new KernelTuningRangeError(`攻击只能是 ${L.atk.min}–${L.atk.max}。`);
+  if (!(Number.isInteger(next.hp) && next.hp >= L.hp.min && next.hp <= L.hp.max)) throw new KernelTuningRangeError(`生命只能是 ${L.hp.min}–${L.hp.max}。`);
+  draft.content = { ...content, units: content.units.map((u) => (u.id === target.id ? next : u)) };
+  draft.contentTouched.add("units");
+  draft.changes.push({ key: `unit:${target.id}`, label: `修改单位 ${target.name}`, value: `${parts.join("，")}（现为 ${describeUnit(next, content)}）` });
+  return used;
+};
+
+/** Requests that already match the current content: claimed with an "已支持" note. */
+const defaultsParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
+  const clause = clauses[i]!;
+  const content = draft.content;
+  if (/超时.{0,4}(?:自动)?(?:开打|开战|开始战斗|进入战斗|开始)/.test(clause) && !/[0-9]/.test(clause)) {
+    draft.notes.push("已支持：备战截止时间到了服务端定时器会自动开打（没人操作也会推进）");
+    return 1;
+  }
+  const pool = clause.match(new RegExp(`(?:棋子池|单位池|卡池|棋子|单位).{0,6}?(${NUM})\\s*(?:种|个|款)`));
+  if (pool && /(池|种|扩|做|有|增加到|达到)/.test(clause) && !ADD_UNIT.test(clause)) {
+    const n = num(pool[1]);
+    if (n === content.units.length) {
+      draft.notes.push(`已支持：当前单位池就是 ${n} 种（${content.units.map((u) => `${u.name}${u.cost}费`).join("、")}）`);
+      return 1;
+    }
+    throw new KernelTuningRangeError(`单位池数量由单位列表决定，当前 ${content.units.length} 种；要改成 ${n} 种请逐个说「加一个新单位「名字」，费用…」或「删掉某某」。`);
+  }
+  const traitCount = clause.match(new RegExp(`(${NUM})\\s*(?:组|个|种|套)\\s*羁绊`));
+  if (traitCount) {
+    const n = num(traitCount[1]);
+    let used = 1;
+    const wantsHeal = (text: string) => /(治疗|回血|奶|恢复)/.test(text);
+    let healAsked = wantsHeal(clause);
+    if (!healAsked && clauses[i + 1] && wantsHeal(clauses[i + 1]!) && !/[0-9]/.test(clauses[i + 1]!)) { healAsked = true; used = 2; }
+    const healer = content.traits.find((t) => t.effect?.kind === "heal_first_strike");
+    if (n === content.traits.length && (!healAsked || healer)) {
+      draft.notes.push(`已支持：当前已有 ${n} 组羁绊（${content.traits.map((t) => `${t.label} ${t.tiers.join("/")}${t.effect ? ` ${t.effect.label}` : ""}`).join("；")}）${healAsked && healer ? `，其中「${healer.label}」带治疗效果（${healer.effect!.label}：${healer.effect!.values.map((v) => `${Math.round(v * 100)}%`).join("/")}）` : ""}`);
+      return used;
+    }
+    throw new KernelTuningRangeError(`当前 ${content.traits.length} 组羁绊${healer ? `（含治疗：${healer.label}）` : "（无治疗效果）"}；增删羁绊组或新效果种类暂不支持，只能改已有羁绊的档位。`);
+  }
+  return 0;
+};
+
+/** Qualitative balance requests → concrete numbers (reported in the change list). */
+const vagueParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
+  const clause = clauses[i]!;
+  if (new RegExp(NUM).test(clause.replace(/[一二两三]星/g, ""))) return 0;
+  const m = magnitude(clause);
+  const pctLabel = `${Math.round(m * 100)}%`;
+  const content = draft.content;
+  const ratio = (u: UnitDef) => u.hp / u.atk;
+  const sorted = [...content.units].sort((a, b) => ratio(b) - ratio(a));
+  const quarter = Math.max(1, Math.round(content.units.length / 4));
+  const scaleUnits = (group: UnitDef[], field: "hp" | "atk", sign: 1 | -1, label: string) => {
+    const ids = new Set(group.map((u) => u.id));
+    const cap = field === "hp" ? CONTENT_LIMITS.hp.max : CONTENT_LIMITS.atk.max;
+    const detail: string[] = [];
+    draft.content = {
+      ...draft.content,
+      units: draft.content.units.map((u) => {
+        if (!ids.has(u.id)) return u;
+        const value = Math.max(1, Math.min(cap, Math.round(u[field] * (1 + sign * m))));
+        detail.push(`${u.name} ${u[field]}→${value}`);
+        return { ...u, [field]: value };
+      }),
+    };
+    draft.contentTouched.add("units");
+    draft.changes.push({ key: `vague:${label}`, label: `${label}${field === "hp" ? "生命" : "攻击"} ${sign > 0 ? "+" : "-"}${pctLabel}（由「${clause}」换算）`, value: detail.join("，") });
+  };
+  if (/(坦克|前排|肉盾|硬壳|tank)/i.test(clause) && /(肉|硬|耐打|抗揍|血厚|厚)/.test(clause)) {
+    scaleUnits(sorted.slice(0, quarter), "hp", /(脆|薄|软)/.test(clause) ? -1 : 1, "坦克（血/攻比最高的 1/4 单位）");
+    return 1;
+  }
+  if (/(输出|射手|刺客|后排|dps|脆皮)/i.test(clause) && /(痛|伤害|输出高|更强|猛)/.test(clause)) {
+    scaleUnits([...sorted].reverse().slice(0, quarter), "atk", 1, "输出（攻/血比最高的 1/4 单位）");
+    return 1;
+  }
+  if (/(所有|全部|全体)(单位|棋子)/.test(clause) && /(更强|变强|加强)/.test(clause)) {
+    scaleUnits([...content.units], "atk", 1, "全体单位");
+    scaleUnits([...content.units], "hp", 1, "全体单位");
+    return 1;
+  }
+  const pace = clause.match(/节奏\s*(?:再|更)?\s*(快|慢)|(快|慢)节奏/);
+  if (pace) {
+    const faster = (pace[1] ?? pace[2]) === "快";
+    const factor = faster ? 1 - Math.max(m, 0.2) - (m >= 0.4 ? 0 : 0.13) : 1 + Math.max(m, 0.2) * 2.5;
+    const defaults: Record<string, number> = { prepShopSeconds: 45, prepPlaceSeconds: 30 };
+    const out: string[] = [];
+    for (const key of ["prepShopSeconds", "prepPlaceSeconds"] as const) {
+      const before = draft.tuning[key] ?? defaults[key]!;
+      const after = Math.max(lim[key].min, Math.min(lim[key].max, Math.round((before * factor) / 5) * 5));
+      draft.tuning[key] = after;
+      out.push(`${key === "prepShopSeconds" ? "商店" : "布阵"} ${before}→${after}秒`);
+    }
+    if (faster && /前期|开局|早期/.test(clause)) {
+      const before = draft.tuning.startGold ?? 10;
+      const after = Math.min(lim.startGold.max, Math.round(before * 1.3));
+      draft.tuning.startGold = after;
+      out.push(`初始金币 ${before}→${after}（开局多买 1–2 个棋子）`);
+    }
+    draft.changes.push({ key: "vague:pace", label: `节奏${faster ? "加快" : "放慢"}（由「${clause}」换算）`, value: out.join("，") });
+    return 1;
+  }
+  if (/(金币|钱)/.test(clause) && /(多|宽裕)/.test(clause)) {
+    const before = draft.tuning.startGold ?? 10;
+    const after = Math.min(lim.startGold.max, Math.round(before * (1 + Math.max(m, 0.3))));
+    draft.tuning.startGold = after;
+    draft.changes.push({ key: "vague:gold", label: `初始金币（由「${clause}」换算）`, value: `${before}→${after}` });
+    return 1;
+  }
+  return 0;
 };
 
 export const KERNEL_TUNING_REGISTRY: Partial<Record<Kernel["type"], KernelTuningSpec<AutoBattlerContent>>> = {
@@ -194,7 +437,7 @@ export const KERNEL_TUNING_REGISTRY: Partial<Record<Kernel["type"], KernelTuning
       { key: "startHp", label: "初始生命", unit: "", subject: /(血量|生命|血|hp)/i, ...lim.startHp },
       { key: "startGold", label: "初始金币", unit: "", subject: /(金币|金钱|gold)/i, ...lim.startGold },
     ],
-    parsers: [addUnitParser, traitTierParser, starParser],
+    parsers: [addUnitParser, deleteUnitParser, traitTierParser, starParser, editUnitParser, defaultsParser, vagueParser],
     current: (kernel) => {
       const k = kernel as { tuning?: Record<string, number>; content?: AutoBattlerContentPatch };
       return {
@@ -230,6 +473,7 @@ const filler = /^(?:请|帮我|麻烦|谢谢|好的|嗯|吧|呢|一下)*$/;
 
 export interface KernelEditResult {
   changes: KernelChange[];
+  notes: string[];
   unsupportedClauses: string[];
   tuning: Record<string, number>;
   contentPatch?: Record<string, unknown>;
@@ -246,7 +490,7 @@ export function parseKernelEdits(
   if (!spec) return undefined;
   const clauses = prompt.split(clauseSplit).map((c) => c.trim()).filter((c) => c && !filler.test(c));
   const base = spec.current(kernel);
-  const draft: Draft<AutoBattlerContent> = { tuning: { ...base.tuning }, content: base.content, contentTouched: new Set(), changes: [] };
+  const draft: Draft<AutoBattlerContent> = { tuning: { ...base.tuning }, content: base.content, contentTouched: new Set(), changes: [], notes: [] };
   const numberRe = new RegExp(`(${NUM})\\s*(秒|s\\b|点|金|滴)?`, "i");
   const unsupportedClauses: string[] = [];
   for (let i = 0; i < clauses.length; ) {
@@ -280,7 +524,7 @@ export function parseKernelEdits(
     }
     i += used;
   }
-  if (!draft.changes.length) return { changes: [], unsupportedClauses, tuning: draft.tuning };
+  if (!draft.changes.length && !draft.notes.length) return { changes: [], notes: [], unsupportedClauses, tuning: draft.tuning };
   const prevContent = (kernel as { content?: unknown }).content;
   const contentPatch = spec.contentPatch(draft, prevContent);
   if (contentPatch && resolveAutoBattlerContent(contentPatch) === null) {
@@ -292,6 +536,7 @@ export function parseKernelEdits(
   ];
   return {
     changes: draft.changes,
+    notes: draft.notes,
     unsupportedClauses,
     tuning: draft.tuning,
     ...(contentPatch ? { contentPatch } : {}),
@@ -322,7 +567,8 @@ export function createKernelTuningIterationPlan(input: {
   const parsed = parseKernelEdits(support.kernel, prompt, [...(support.unsupported ?? [])]);
   if (!parsed || !parsed.operation) return undefined;
   const summary =
-    `调整内核配置：${parsed.changes.map((c) => `${c.label} → ${c.value}`).join("，")}。` +
+    (parsed.changes.length ? `调整内核配置：${parsed.changes.map((c) => `${c.label} → ${c.value}`).join("，")}。` : "无需改动。") +
+    (parsed.notes.length ? ` ${parsed.notes.join("；")}。` : "") +
     (parsed.unsupportedClauses.length ? ` 未执行（已记入不支持清单）：${parsed.unsupportedClauses.map((c) => `「${c}」`).join("、")}。` : "");
   return {
     prompt,

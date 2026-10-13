@@ -397,6 +397,23 @@ function winnerSeat(scores: number[]) {
  * Used to (re)play logged actions at their recorded acceptance time, so a room rebuilt
  * from its action log has the same deadlines as the live room.
  */
+/** Action id the server's deadline timer logs when a prep clock expires with nobody acting. */
+export const PREP_TIMEOUT_ACTION = "prep_timeout";
+
+/**
+ * Epoch ms at which this session must advance on its own (a wall-clock deadline), or null.
+ * Generic hook: any kernel with a server-authoritative clock reports it here.
+ */
+export function sessionDeadline(state: SessionState, runtime: ExecutableRuntime): number | null {
+  if (state.status !== "active") return null;
+  if (runtime.kernel.type === "auto-battler-v1") {
+    const ab = state.autoBattler;
+    if (!ab || (ab.phase !== "shop" && ab.phase !== "place") || typeof ab.prepEndsAt !== "number") return null;
+    return ab.prepEndsAt;
+  }
+  return null;
+}
+
 export function runAtSessionTime<T>(ms: number | undefined, fn: () => T): T {
   if (ms === undefined || !Number.isFinite(ms)) return fn();
   const previous = autoBattlerNow;
@@ -1061,6 +1078,19 @@ export function acceptIntent(
     };
     const timed = applyAutoBattlerPrepTimeout(playState, kernelConfig);
     if (timed) playState = timed as typeof playState;
+    // Server deadline timer intent: only valid once the clock (pinned to the deadline) is overdue.
+    if (intent.actionId === PREP_TIMEOUT_ACTION) {
+      if (!timed) return null;
+      return {
+        sequence,
+        intentId: intent.intentId,
+        seat: intent.seat,
+        actionId: PREP_TIMEOUT_ACTION,
+        points: 0,
+        at: autoBattlerNow(),
+        state: autoBattlerToSessionFields(playState),
+      };
+    }
     if (playState.status !== "active" || intent.seat !== playState.activePlayerId) {
       return {
         sequence,

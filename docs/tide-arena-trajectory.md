@@ -110,3 +110,63 @@
 - 「超时自动开打」：截止时间只在下一次有人操作或 AI 行动时才强制执行，房间里没人操作时不会自己开打（r05 截图停在 0:00）；
 - 「属性变强」这类不带数值的描述。
 - 本次冷启动用的 wrangler 本地存储是新的，但第一次尝试时发现旧的 `wrangler.js dev` 进程没被 `pkill "wrangler dev"` 杀掉（进程名不匹配），已改为按进程名杀掉后重跑；现在的 `cold-start-b` 是在单实例、新存储下跑的。
+
+---
+
+## 第三刀（cold-start-c，2026-10-13 12:55–13:03 CST）：服务端定时器 / 已是默认 / 改删单位 / 模糊描述
+
+全新存储（`wrangler dev --persist-to /tmp/wr-coldc-*`），新项目 `project_1a599a28…`，只走插件 UI（Playwright 驱动 `/chatgpt-plugin/new` → Studio「改下一版并试玩」→「我的游戏 · 和电脑对战」）。证据：`/workspace/g3d-evidence/godesk-2026-10-13/tide-arena/trajectory/cold-start-c/`（不进仓）。迭代回执原文取自 `GET /api/projects/:id?view=jobs` 的 `result.iteration.summary`。
+
+### 平台通用改动（本刀）
+
+| 项 | 改了什么 | 为何通用 |
+| --- | --- | --- |
+| 1 服务端超时定时器 | `worker/runtime.ts` 新增 `sessionDeadline(state, runtime)`（内核声明自己的服务端截止时间，auto-battler 为 shop/place 的 `prepEndsAt`）与 `PREP_TIMEOUT_ACTION`；`acceptIntent` 认 `prep_timeout` 意图——未到期返回 null，到期推进。`worker/creator-projects-do.ts` 每次落动作/建房后把 `room-deadline:<id> {expectedActions, dueAt}` 写入存储并并入 DO alarm；`alarm()` 到点在事务里用 `runAtSessionTime(dueAt)` 提交 `timer_<seq>` 动作（`at = dueAt`），过期/有人动过则重算 | 截止时间由内核钩子给出，DO 只认「deadline」不认潮阵；超时本身是一条带时间戳的普通动作，重放逐条按 `at` 钉钟，结果一致（单测 `session-clock-replay.test.ts`） |
+| 2 已是默认 → 「已支持」 | `kernel-tuning-iteration.ts` 新增 `notes`（认领但无改动的子句）与 `defaultsParser`：单位池数量、羁绊组数（含「治疗」查效果预设 `heal_first_strike`）、「超时自动开打」、★2 已开启、「属性变强」（= 当前倍率并举例数值）。回执写「无需改动。已支持：…」 | 判断依据是当前内容数据（数量/效果种类/开关），不是名字 |
+| 3 改/删已有单位 | `editUnitParser`：按现有单位名定位，支持改名、费用/攻击/生命（绝对值、±N、±N%）、羁绊、外形，连续属性子句合并；`deleteUnitParser`：可一次删多个；越界（费用 1–5、攻 1–500、血 1–5000、至少 2 个单位、重名）抛可读错误，最终再经 `resolveAutoBattlerContent` 校验 | 面向 content 数据层的增删改，与单位是谁无关 |
+| 4 模糊描述换算 | `vagueParser` + `magnitude()`（稍微 10% / 默认 20% / 大幅 40%）：「坦克更肉」= 血/攻比最高的 1/4 单位生命 +20%；「输出更痛」= 攻/血比最高 1/4 攻击 +20%；「节奏快/慢」= 两段计时 ×0.67/×1.5（5 秒取整，夹在上下限），「前期」再加初始金币 ×1.3；「金币多点」；「所有单位更强」。换算出的每个数字写进回执 | 「坦克/输出」按数据比值分组，不依赖具体单位名 |
+
+### 13 句冷启动逐句结果
+
+| # | prompt 原文 | 结果 | 迭代回执 / rule-system 读出 | 截图 |
+| --- | --- | --- | --- | --- |
+| 1 | 做一款两人自走棋，商店买棋上阵自动打架 | ✅ 生成 | `configure_auto_battler {playerCount:2}` → executable | `r01-plan.png` `r01-studio.png` `r01-room-shop.png` |
+| 2 | 三个相同的棋子自动合成二星，属性变强 | ✅ 已支持 | 「无需改动。已支持：三个相同棋子自动合成 ★2（当前已开启，倍率 ×1.8）；已支持：「属性变强」= ★2 属性 ×1.8（例：海风灵 攻 85→153，血 800→1440）」 | `r02-*` |
+| 3 | 加一个电脑对手，我一个人也能玩 | ↪ 引导 | 「这款游戏已内置电脑玩家…到「我的游戏」点「和电脑对战」」（界面以「处理失败」样式显示，见仍做不到） | `r03-studio.png` `vs-ai-lobby.png` |
+| 4 | 棋子池扩到12种单位 | ✅ 已支持 | 「已支持：当前单位池就是 12 种（礁蟹1费…海风灵5费）」 | `r04-*` |
+| 5 | 做4组羁绊，其中一组能给队友治疗 | ✅ 已支持 | 「已支持：当前已有 4 组羁绊（…），其中「珊瑚咒」带治疗效果（珊瑚愈伤：20%/40%）」 | `r05-*` |
+| 6 | 每回合备战阶段限时30秒，超时自动开打 | ✅ | tuning `prepShop/Place=30`；「超时自动开打」→ 已支持（服务端定时器） | `r06-room-shop.png` |
+| 7 | 初始血量改成30 | ✅ | `startHp 30`，HUD 30/30 | `r07-room-shop.png` |
+| 8 | 加一个新单位「雷鳗」，费用3，攻击80，生命600，羁绊远航和潮汐，外形像精灵 | ✅ | `units[]` 新增 雷鳗（3费 攻80 血600 潮汐/远航 spirit），商店可见 | `r08-*` `r12-room-shop.png`（商店出现雷鳗） |
+| 9 | 把珊瑚咒羁绊的档位改成2/4，并且初始金币改成12 | ✅ 两项 | coral tiers 2/4（HUD「珊瑚咒 2/4」），金币 12 | `r09-room-shop.png` |
+| 10 | 开启三星，三星倍率改成3.5，棋盘改成8列 | ✅ + 如实列出 | `stars {star3:true, mult3:3.5}`；「棋盘改成8列」记入 unsupported | `r10-*` |
+| 11 | 把鲸盾改名为巨鲸，费用改成5，攻击提高20，外形改成龟 | ✅ | 「改名 鲸盾→巨鲸，费用 4→5，攻击 55→75，外形 → turtle」；商店卡显示「巨鲸 5」 | `r11-room-shop.png` |
+| 12 | 删掉礁蟹 | ✅ | `units` 不再含 crab；回执「删除单位 → 礁蟹（剩 12 种）」（此前 +雷鳗 共 13） | `r12-room-shop.png` |
+| 13 | 坦克更肉，前期节奏快点 | ✅ 换算 | 「坦克（血/攻比最高的 1/4）生命 +20%：螺号卫 700→840，珍珠龟 900→1080，巨鲸 1100→1320；节奏加快：商店 30→20 秒，布阵 30→20 秒，初始金币 12→16」 | `r13-room-shop.png`（计时 0:20 起、金币 16） |
+
+### 人机房「我方不碰」5 回合（服务端超时）
+
+`idle-*` 截图 + `idle-log.json` + `idle-session.json`（房间完整动作日志）。脚本打开「和电脑对战」后**只读 HUD、不点任何东西**。动作日志里 10 条全部是服务端 `timer_N / prep_timeout`，`at` 精确间隔 20.000 s（12:59:57.960 → 13:02:57.960 CST），与第 13 句换算出的 20 秒一致；读房间时重放得到相同状态（shop，turn 20）。
+
+| 回合 | 商店 | 布阵 | 战斗 → 下一回合 |
+| --- | --- | --- | --- |
+| 1 | `idle-r1-商店.png` 0:20 | `idle-r1-布阵.png` 0:20（+20 s） | `idle-r2-战斗.png`（+41 s） |
+| 2 | `idle-r2-商店.png` | `idle-r2-布阵.png` | `idle-r3-战斗.png` |
+| 3 | `idle-r3-商店.png` | `idle-r3-布阵.png` | `idle-r4-战斗.png` |
+| 4 | `idle-r4-商店.png` | `idle-r4-布阵.png` | `idle-r5-战斗.png` |
+| 5 | `idle-r5-商店.png` | `idle-r5-布阵.png` | `idle-r6-战斗.png`（第 6 回合开始，停止观察） |
+
+战斗中途截图（另开人机房、我方操作上阵 3 子）：1440 `combat-r1-combat.png`；手机 390 `combat-mobile-390.png`（同一时刻、战斗 0:01，可见伤害/治疗飘字）。
+
+### 三栏（本刀增量）
+
+**用户靠 prompt 就做到的**：第 2/4/5 句现在得到「已支持」+ 现状说明；第 11 句一句改 4 个属性；第 12 句删单位；第 13 句模糊描述换算出具体数字并生效（20 秒计时、金币 16、坦克血量）。
+
+**靠平台通用改动才做到的**：服务端截止定时器（`sessionDeadline` 钩子 + DO `room-deadline:` alarm + 带时间戳的 `prep_timeout` 动作）；`notes`/已支持认领；单位改/删解析与校验；模糊描述幅度换算。均在 `worker/kernel-tuning-iteration.ts` 的通用登记/解析器和 `worker/runtime.ts`、`worker/creator-projects-do.ts` 的通用 deadline 机制里，无潮阵名字特判。新单测：`worker/kernel-content-edits.test.ts`、`session-clock-replay.test.ts`（deadline 一条）。
+
+**仍做不到 / 有缺陷**：
+- 人机房我方完全不操作时，电脑也**不会买子**：内核是「座位 0 先行动，再轮到电脑」，超时一次把双方都强制准备完毕，电脑没有轮到行动的窗口 → 5 回合双方空场、血量 30/30 不变。定时器验证了「到点自动开打」，但这不是一局有意义的对局。要修需改为按座位分别计时或超时时先让 AI 座位行动（内核轮次结构的通用改动，本刀未做）。
+- 第 3 句的引导文案仍以「处理失败」样式出现（走 `iteration_unsupported` 通道），不是正向回执。
+- 模糊描述只覆盖登记过的几类（坦克/输出/全体/节奏/金币）；「更好玩」「平衡一点」这类仍会进不支持清单。「坦克」按血/攻比取前 1/4，不读羁绊语义。
+- 单位池数量不能一句话改成任意 N（需逐个加/删）；不能增删羁绊组或新效果种类；棋盘尺寸、主题美术、>2 人仍不支持。
+- 历史潮阵特例手写清单同前（`src/render3d/tide-arena/`、`TideArenaBoard.tsx`、默认 12 单位/4 羁绊名字与 shape 预设等），本刀未新增。

@@ -43,3 +43,24 @@ describe("legacy logs without `at`", () => {
     expect(rebuilt.state.autoBattler?.phase).toBe("shop");
   });
 });
+
+describe("server deadline timer action", () => {
+  it("prep_timeout is rejected before the deadline, advances at it, and replays identically", async () => {
+    const { PREP_TIMEOUT_ACTION, sessionDeadline } = await import("./runtime");
+    const rule = executableAutoBattlerSpecFixture();
+    const runtime = executableRuntime(rule)!;
+    const start = 1_800_000_000_000;
+    const s0 = runAtSessionTime(start, () => initialSessionState(rule, 42));
+    const due = sessionDeadline(s0, runtime)!;
+    expect(due).toBe(start + 45_000);
+    const intent = { intentId: "timer_1", seat: s0.activeSeat, actionId: PREP_TIMEOUT_ACTION };
+    expect(runAtSessionTime(due - 1, () => acceptIntent(s0, runtime, intent, 1, 42))).toBeNull();
+    const fired = runAtSessionTime(due, () => acceptIntent(s0, runtime, intent, 1, 42))!;
+    expect(fired.at).toBe(due);
+    expect(fired.state.autoBattler?.phase).toBe("place");
+    expect(sessionDeadline(fired.state, runtime)).toBe(due + 30_000);
+    const build = { id: "b", projectId: "p", ruleSystem: rule } as StoredPlayableBuild;
+    const rebuilt = runAtSessionTime(due + 999_999, () => reconstructActions(build, [fired], 42, start));
+    expect(rebuilt.state).toEqual(fired.state);
+  });
+});

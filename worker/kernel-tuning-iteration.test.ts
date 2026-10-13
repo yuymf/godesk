@@ -21,8 +21,9 @@ describe("createKernelTuningIterationPlan", () => {
       op: "configure_auto_battler",
       config: { playerCount: 2, tuning: { prepShopSeconds: 30, prepPlaceSeconds: 30 } },
     });
-    // "超时自动开打" has no dedicated knob: it is listed, not silently claimed.
-    expect(p.unsupportedClauses).toEqual(["超时自动开打"]);
+    // "超时自动开打" is what the server deadline timer already does: claimed as 已支持.
+    expect(p.unsupportedClauses).toEqual([]);
+    expect(p.summary).toMatch(/已支持：备战截止时间到了服务端定时器会自动开打/);
   });
   it("targets one phase, keeps existing tuning, parses Chinese numerals", () => {
     const p = plan(battler({ startHp: 30 }), "布阵时间改成二十秒")!;
@@ -38,7 +39,10 @@ describe("createKernelTuningIterationPlan", () => {
   });
   it("returns undefined for non-numeric or unrelated prompts and other kernels", () => {
     expect(plan(battler(), "把规则写得更有趣")).toBeUndefined();
-    expect(plan(battler(), "三个相同的棋子自动合成二星")!.changes).toEqual([{ key: "stars.star2", label: "★2 合成", value: "开启" }]);
+    // ★2 is on by default: confirmed as 已支持 with no change.
+    const star = plan(battler(), "三个相同的棋子自动合成二星")!;
+    expect(star.changes).toEqual([]);
+    expect(star.summary).toMatch(/已支持：三个相同棋子自动合成 ★2/);
     expect(plan(withKernel({ type: "turn-taking-v1", maxTurns: 8, actions: [] }), "备战限时30秒")).toBeUndefined();
   });
 });
