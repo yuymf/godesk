@@ -245,3 +245,8 @@ aoe_splash / heal_ally / shield_start：单测断言 combatLog 事件与 HP；e2
 
 增/删羁绊组、棋盘 `boardCols`/`boardRows` 可配置；Plan unsupported 写清可配置范围与 Not（>2 seats、sealed shop）。
 证据（仓外）：`/workspace/g3d-evidence/godesk-2026-10-13/tide-arena/trajectory/content-layer/`。
+
+## 缺口5 内核泛化（`trajectory/kernel-generalize/`，2026-10-13）
+
+auto-battler 为通用商店/备战/战斗/升星；潮阵仅为默认 content+theme 包。换题材冷启动（赛博机甲）靠 cue→pack，不引用潮阵资产。
+证据（仓外）：`/workspace/g3d-evidence/godesk-2026-10-13/tide-arena/trajectory/kernel-generalize/`。
