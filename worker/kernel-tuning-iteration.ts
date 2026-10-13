@@ -23,6 +23,15 @@ import {
   type UnitShapePreset,
 } from "../src/runtime/adapters/auto-battler-content";
 import { parseRuleNumber, RULE_NUMBER_TOKEN } from "./rule-numbers";
+import {
+  DEFAULT_THEME_ID,
+  resolveAutoBattlerTheme,
+  THEME_LIMITS,
+  THEME_PRESETS,
+  type AutoBattlerThemePatch,
+  type ThemeOverrides,
+  type ThemeSpec,
+} from "../src/runtime/adapters/auto-battler-theme";
 
 type Kernel = Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"];
 
@@ -46,6 +55,8 @@ interface Draft<TContent> {
   changes: KernelChange[];
   /** Clauses claimed without a change: the request already matches the current config. */
   notes: string[];
+  /** Visual theme patch (preset + overrides) when a clause touched the look. */
+  theme?: AutoBattlerThemePatch;
 }
 
 /** Returns how many clauses starting at `i` it consumed (0 = not mine). */
@@ -54,10 +65,10 @@ type ClauseParser<TContent> = (clauses: string[], i: number, draft: Draft<TConte
 interface KernelTuningSpec<TContent = unknown> {
   knobs: TuningKnob[];
   parsers: ClauseParser<TContent>[];
-  current(kernel: Kernel): { tuning: Record<string, number>; content: TContent };
+  current(kernel: Kernel): { tuning: Record<string, number>; content: TContent; theme?: AutoBattlerThemePatch };
   /** Patch persisted on the kernel for the touched content fields. */
   contentPatch(draft: Draft<TContent>, previous: unknown): Record<string, unknown> | undefined;
-  operation(tuning: Record<string, number>, content: Record<string, unknown> | undefined, unsupported: string[]): ProjectChangeOperation;
+  operation(tuning: Record<string, number>, content: Record<string, unknown> | undefined, unsupported: string[], theme?: AutoBattlerThemePatch): ProjectChangeOperation;
 }
 
 export class KernelTuningRangeError extends Error {
@@ -427,6 +438,68 @@ const vagueParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
   return 0;
 };
 
+
+// ---------------------------------------------------------------- theme (visual) parser
+
+const THEME_WORDS: Array<[RegExp, string]> = [
+  [/(火山|熔岩|岩浆|火焰|炽热|地狱|lava|ember)/i, "ember"],
+  [/(冰雪|冰原|冰霜|雪地|寒冬|极地|冰川|雪山|frost|ice|snow)/i, "frost"],
+  [/(星夜|夜晚|星空|霓虹|赛博|午夜|暗夜|夜色|night|neon)/i, "night"],
+  [/(海岸|海边|海滨|潮汐风|木桌|原来的风格|默认风格|seaside)/i, "tide"],
+];
+const STYLE_WORD = /(风格|主题|画风|色调|配色|场景|背景|画面|桌|style|风|氛围|感觉)/i;
+const LOOK_SUBJECT = /(机位|镜头|视角|相机|棋子|单位|模型|灯光|光线|光照|背景)/;
+
+function shade(hex: string, factor: number) {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = (v: number) => Math.max(0, Math.min(255, Math.round(factor < 1 ? v * factor : v + (255 - v) * (factor - 1))));
+  return `#${[(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => ch(v).toString(16).padStart(2, "0")).join("")}`;
+}
+
+function describeTheme(spec: ThemeSpec) {
+  return `${spec.label}（${spec.id}）：背景 ${spec.background}，桌面 ${spec.table.material} ${spec.table.base}，己方/敌方格 ${spec.tiles.own}/${spec.tiles.enemy}，主光 ${spec.light.sun}×${spec.light.sunIntensity}，机位俯角 ${spec.camera.pitchDeg}° 距离×${spec.camera.distance}，单位×${spec.unitScale}`;
+}
+
+const themeParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
+  const clause = clauses[i]!;
+  const preset = STYLE_WORD.test(clause) ? THEME_WORDS.find(([re]) => re.test(clause))?.[1] : undefined;
+  const lookEdit = LOOK_SUBJECT.test(clause) && /(低|高|俯|平视|近|远|大|小|亮|暗|暖|冷|深|浅)/.test(clause) && !/[0-9]/.test(clause);
+  if (!preset && !lookEdit) return 0;
+  const patch: AutoBattlerThemePatch = { ...(draft.theme ?? {}), ...(preset ? { preset, overrides: {} } : {}) };
+  const current = resolveAutoBattlerTheme(patch) ?? THEME_PRESETS[DEFAULT_THEME_ID]!;
+  const o: ThemeOverrides = structuredClone(patch.overrides ?? {});
+  const L = THEME_LIMITS;
+  const clamp = (v: number, r: { min: number; max: number }) => Math.round(Math.min(r.max, Math.max(r.min, v)) * 100) / 100;
+  const tweaks: string[] = [];
+  if (/(机位|镜头|视角|相机)/.test(clause)) {
+    if (/(低|平视)/.test(clause)) { o.camera = { ...o.camera, pitchDeg: clamp(current.camera.pitchDeg - 8, L.pitchDeg) }; tweaks.push(`机位俯角 ${current.camera.pitchDeg}°→${o.camera.pitchDeg}°`); }
+    if (/(高|俯视|顶视)/.test(clause)) { o.camera = { ...o.camera, pitchDeg: clamp(current.camera.pitchDeg + 10, L.pitchDeg) }; tweaks.push(`机位俯角 ${current.camera.pitchDeg}°→${o.camera.pitchDeg}°`); }
+    if (/(近|拉近)/.test(clause)) { o.camera = { ...o.camera, distance: clamp(current.camera.distance * 0.9, L.distance) }; tweaks.push(`机位距离 ×${current.camera.distance}→×${o.camera.distance}`); }
+    if (/(远|拉远)/.test(clause)) { o.camera = { ...o.camera, distance: clamp(current.camera.distance * 1.1, L.distance) }; tweaks.push(`机位距离 ×${current.camera.distance}→×${o.camera.distance}`); }
+  }
+  if (/(棋子|单位|模型)/.test(clause)) {
+    if (/大/.test(clause)) { o.unitScale = clamp(current.unitScale * 1.15, L.unitScale); tweaks.push(`单位尺寸 ×${current.unitScale}→×${o.unitScale}`); }
+    else if (/小/.test(clause)) { o.unitScale = clamp(current.unitScale * 0.87, L.unitScale); tweaks.push(`单位尺寸 ×${current.unitScale}→×${o.unitScale}`); }
+  }
+  if (/(灯光|光线|光照)/.test(clause) || /(暖光|冷光)/.test(clause)) {
+    if (/亮/.test(clause)) { o.light = { ...o.light, sunIntensity: clamp(current.light.sunIntensity * 1.2, L.sunIntensity), exposure: clamp(current.light.exposure + 0.1, L.exposure) }; tweaks.push(`主光 ×${current.light.sunIntensity}→×${o.light.sunIntensity}`); }
+    if (/暗/.test(clause)) { o.light = { ...o.light, sunIntensity: clamp(current.light.sunIntensity * 0.8, L.sunIntensity), exposure: clamp(current.light.exposure - 0.1, L.exposure) }; tweaks.push(`主光 ×${current.light.sunIntensity}→×${o.light.sunIntensity}`); }
+    if (/暖/.test(clause)) { o.light = { ...o.light, sun: "#FFC98A" }; tweaks.push("主光色 → 暖 #FFC98A"); }
+    if (/冷/.test(clause)) { o.light = { ...o.light, sun: "#CFE4FF" }; tweaks.push("主光色 → 冷 #CFE4FF"); }
+  }
+  if (/背景/.test(clause) && !preset) {
+    if (/(暗|深)/.test(clause)) { o.background = shade(current.background, 0.7); tweaks.push(`背景 ${current.background}→${o.background}`); }
+    else if (/(亮|浅)/.test(clause)) { o.background = shade(current.background, 1.3); tweaks.push(`背景 ${current.background}→${o.background}`); }
+  }
+  if (!preset && !tweaks.length) return 0;
+  const next: AutoBattlerThemePatch = { ...(patch.preset ? { preset: patch.preset } : {}), ...(Object.keys(o).length ? { overrides: o } : {}) };
+  const resolved = resolveAutoBattlerTheme(next);
+  if (!resolved) throw new KernelTuningRangeError("主题参数超出范围。");
+  draft.theme = next;
+  draft.changes.push({ key: "theme", label: preset ? `主题风格（由「${clause}」）` : `画面调整（由「${clause}」换算）`, value: preset ? `${describeTheme(resolved)}${tweaks.length ? `；${tweaks.join("，")}` : ""}` : tweaks.join("，") });
+  return 1;
+};
+
 export const KERNEL_TUNING_REGISTRY: Partial<Record<Kernel["type"], KernelTuningSpec<AutoBattlerContent>>> = {
   "auto-battler-v1": {
     knobs: [
@@ -437,12 +510,13 @@ export const KERNEL_TUNING_REGISTRY: Partial<Record<Kernel["type"], KernelTuning
       { key: "startHp", label: "初始生命", unit: "", subject: /(血量|生命|血|hp)/i, ...lim.startHp },
       { key: "startGold", label: "初始金币", unit: "", subject: /(金币|金钱|gold)/i, ...lim.startGold },
     ],
-    parsers: [addUnitParser, deleteUnitParser, traitTierParser, starParser, editUnitParser, defaultsParser, vagueParser],
+    parsers: [themeParser, addUnitParser, deleteUnitParser, traitTierParser, starParser, editUnitParser, defaultsParser, vagueParser],
     current: (kernel) => {
       const k = kernel as { tuning?: Record<string, number>; content?: AutoBattlerContentPatch };
       return {
         tuning: { ...(k.tuning ?? {}) },
         content: resolveAutoBattlerContent(k.content) ?? DEFAULT_AUTO_BATTLER_CONTENT,
+        theme: (kernel as { theme?: AutoBattlerThemePatch }).theme,
       };
     },
     contentPatch: (draft, previous) => {
@@ -455,13 +529,14 @@ export const KERNEL_TUNING_REGISTRY: Partial<Record<Kernel["type"], KernelTuning
       if (draft.contentTouched.has("stars")) patch.stars = { ...draft.content.stars };
       return Object.keys(patch).length ? patch : undefined;
     },
-    operation: (tuning, content, unsupported) => ({
+    operation: (tuning, content, unsupported, theme) => ({
       op: "configure_auto_battler",
       config: {
         playerCount: 2,
         ...(unsupported.length ? { unsupported } : {}),
         ...(Object.keys(tuning).length ? { tuning } : {}),
         ...(content ? { content: content as AutoBattlerContentPatch } : {}),
+        ...(theme ? { theme } : {}),
       },
     }),
   },
@@ -472,6 +547,7 @@ const clauseSplit = /[，,。；;！!\n]|并且|同时|另外|然后|以及/;
 const filler = /^(?:请|帮我|麻烦|谢谢|好的|嗯|吧|呢|一下)*$/;
 
 export interface KernelEditResult {
+  theme?: AutoBattlerThemePatch;
   changes: KernelChange[];
   notes: string[];
   unsupportedClauses: string[];
@@ -490,7 +566,7 @@ export function parseKernelEdits(
   if (!spec) return undefined;
   const clauses = prompt.split(clauseSplit).map((c) => c.trim()).filter((c) => c && !filler.test(c));
   const base = spec.current(kernel);
-  const draft: Draft<AutoBattlerContent> = { tuning: { ...base.tuning }, content: base.content, contentTouched: new Set(), changes: [], notes: [] };
+  const draft: Draft<AutoBattlerContent> = { tuning: { ...base.tuning }, content: base.content, contentTouched: new Set(), changes: [], notes: [], ...(base.theme ? { theme: structuredClone(base.theme) } : {}) };
   const numberRe = new RegExp(`(${NUM})\\s*(秒|s\\b|点|金|滴)?`, "i");
   const unsupportedClauses: string[] = [];
   for (let i = 0; i < clauses.length; ) {
@@ -540,7 +616,8 @@ export function parseKernelEdits(
     unsupportedClauses,
     tuning: draft.tuning,
     ...(contentPatch ? { contentPatch } : {}),
-    operation: spec.operation(draft.tuning, contentPatch, unsupported),
+    ...(draft.theme ? { theme: draft.theme } : {}),
+    operation: spec.operation(draft.tuning, contentPatch, unsupported, draft.theme),
   };
 }
 

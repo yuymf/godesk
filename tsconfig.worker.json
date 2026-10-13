@@ -53,6 +53,7 @@
     "src/runtime/adapters/auto-battler.ts",
     "src/runtime/adapters/auto-battler-content.ts",
     "src/runtime/adapters/combat-playback.ts",
+    "src/runtime/adapters/auto-battler-theme.ts",
     "src/runtime/topology-stub.ts"
   ]
 }

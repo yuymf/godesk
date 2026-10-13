@@ -1,6 +1,7 @@
 import { generationMetadataSchema, migrateRuleSystemToV2 } from "../src/creator/game-spec";
 import { normalizeAutoBattlerTuning } from "../src/runtime/adapters/auto-battler";
 import { resolveAutoBattlerContent } from "../src/runtime/adapters/auto-battler-content";
+import { resolveAutoBattlerTheme } from "../src/runtime/adapters/auto-battler-theme";
 import { defaultRenderSpec, isSpatialPresentationKind, patchRenderSpec, renderSpecIssues, renderSpecSchema } from "../src/creator/render-spec";
 import type { ImportedProjectAsset } from "../src/creator/asset-search/types";
 import {
@@ -740,6 +741,7 @@ function configureRuntimeKernel(
       ...(configuration.config.content && Object.keys(configuration.config.content).length
         ? { content: structuredClone(configuration.config.content) }
         : {}),
+      ...(configuration.config.theme ? { theme: structuredClone(configuration.config.theme) } : {}),
     }, configuration.config.unsupported?.map((item) => item.trim()) ?? [], configuration.config, affectedEntities);
     return;
   }
@@ -1620,7 +1622,8 @@ const RUNTIME_HANDLERS: {
     validate: (config) => Boolean(config) && typeof config === "object" &&
       config.playerCount === 2 && validUnsupported(config.unsupported) &&
       normalizeAutoBattlerTuning(config.tuning) !== null &&
-      (config.content === undefined || resolveAutoBattlerContent(config.content) !== null),
+      (config.content === undefined || resolveAutoBattlerContent(config.content) !== null) &&
+      (config.theme === undefined || resolveAutoBattlerTheme(config.theme) !== null),
   },
 };
 

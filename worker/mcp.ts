@@ -721,6 +721,11 @@ const operationSchema = z.discriminatedUnion("op", [
           mult2: z.number().min(1).max(10).optional(), mult3: z.number().min(1).max(10).optional(),
         }).strict().optional(),
       }).strict().optional(),
+      // Visual theme layer (validated server-side by resolveAutoBattlerTheme): preset tide|ember|frost|night + overrides.
+      theme: z.object({
+        preset: z.string().max(32).optional(),
+        overrides: z.record(z.string(), z.unknown()).optional(),
+      }).strict().optional(),
       unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
     }),
   }),

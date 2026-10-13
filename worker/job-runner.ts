@@ -50,7 +50,7 @@ import {
 import { createKernelTuningIterationPlan, parseKernelEdits } from "./kernel-tuning-iteration";
 
 const AUTO_BATTLER_BASE_UNSUPPORTED =
-  "auto-battler-v1 runs 2-seat shop→place→seeded combat→HP resolve on the public play-kernel. Units, trait tiers/effect presets, ★2/★3 rules, prep timers and starting HP/gold are creator-configurable data; theme art, board size, lobbies beyond 2 seats, new effect kinds and sealed/hidden shop economy are unsupported.";
+  "auto-battler-v1 runs 2-seat shop→place→seeded combat→HP resolve on the public play-kernel. Units, trait tiers/effect presets, ★2/★3 rules, prep timers, starting HP/gold and the visual theme (preset tide/ember/frost/night: palette, table material, lighting, background, camera, unit scale) are creator-configurable data; custom 3D models/textures, board size, lobbies beyond 2 seats, new effect kinds and sealed/hidden shop economy are unsupported.";
 
 /** Request-like clause (numbers or edit verbs) that the kernel could not map — listed honestly. */
 const REQUEST_LIKE = /[0-9一二三四五六七八九十]|改成|改为|加一个|新增|开启|关闭|设为/;
@@ -70,6 +70,7 @@ function autoBattlerProposedRuntime(idea: string) {
       ],
       ...(recognized && parsed && Object.keys(parsed.tuning).length ? { tuning: parsed.tuning } : {}),
       ...(recognized && parsed?.contentPatch ? { content: parsed.contentPatch } : {}),
+      ...(recognized && parsed?.theme ? { theme: parsed.theme } : {}),
     },
   };
 }
