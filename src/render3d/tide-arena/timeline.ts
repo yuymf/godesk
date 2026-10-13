@@ -5,6 +5,8 @@
  * and its final HP map equals combatDigest(log).hp (the resolved state).
  */
 import { floaterText } from "./floaters";
+import { HIT_DELAY_MS, REPLAY_LEAD_MS, REPLAY_TAIL_MS, strikeStep } from "../../runtime/adapters/combat-playback";
+export { HIT_DELAY_MS, REPLAY_LEAD_MS, REPLAY_TAIL_MS, strikeStep };
 
 export const RANGED_UNITS: ReadonlySet<string> = new Set([
   "archer",
@@ -14,12 +16,8 @@ export const RANGED_UNITS: ReadonlySet<string> = new Set([
   "priest",
   "lantern",
 ]);
-export const REPLAY_LEAD_MS = 700;
-export const REPLAY_TAIL_MS = 1200;
 /** Projectile flight / lunge peak: the hit lands this long after the swing starts. */
-export const HIT_DELAY_MS = 360;
 export const DEATH_FADE_MS = 500;
-const TARGET_TOTAL_MS = 10_000;
 
 export type ReplayStrike = {
   kind: "strike";
@@ -62,11 +60,6 @@ type LogEntry = Record<string, unknown>;
 export function stamp(ms: number): string {
   const s = Math.floor(ms / 1000);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-}
-
-/** Strike spacing so a fight lasts ~8–15s (short fights floor at 1.5s per strike). */
-export function strikeStep(strikes: number): number {
-  return Math.round(Math.min(1500, Math.max(180, TARGET_TOTAL_MS / Math.max(1, strikes))));
 }
 
 export function buildTimeline(

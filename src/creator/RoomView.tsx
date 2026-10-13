@@ -466,6 +466,9 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       ? copy.progress
       : copy.points;
 
+  // Board-surface games (dedicated play surfaces) keep the play page clean: the feedback
+  // form appears only once the match is over.
+  const feedbackVisible = !(autoBattler || auction || immersive) || room.state.status === "complete";
   return (
     <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute || auction || autoBattler ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-hex-island room-view-tidewell-immersive" : ""} ${woodChrome ? "room-view-tidewell-immersive room-view-tabletop-immersive" : ""} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
       <header className="room-shell-header">
@@ -1020,7 +1023,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         </section>
       )}
 
-{immersive ? (
+{!feedbackVisible ? null : immersive ? (
         <details className="room-feedback-drawer" id="room-feedback-drawer">
           <summary>{copy.feedbackTitle}</summary>
                 <section aria-label={copy.feedbackTitle} className="room-feedback-panel">

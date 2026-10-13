@@ -5,6 +5,7 @@
  * Loop: shop → place → combat → resolve → next shop; end when seat HP ≤ 0.
  * Step5: ★2 merge, 10–12 units, trait heal/trigger events, authoritative prep timer.
  */
+import { combatReplayDurationMs } from "./combat-playback";
 import {
   applyAction,
   createInitialState,
@@ -641,11 +642,11 @@ function clearReady(genre: AutoBattlerGenre): void {
   genre.seats[1].ready = false;
 }
 
-function setPrepDeadline(genre: AutoBattlerGenre, phase: "shop" | "place"): void {
+function setPrepDeadline(genre: AutoBattlerGenre, phase: "shop" | "place", afterMs = 0): void {
   const sec = phase === "shop"
     ? genre.tuning?.prepShopSeconds ?? PREP_SHOP_SECONDS
     : genre.tuning?.prepPlaceSeconds ?? PREP_PLACE_SECONDS;
-  genre.prepEndsAt = autoBattlerNow() + sec * 1000;
+  genre.prepEndsAt = autoBattlerNow() + afterMs + sec * 1000;
 }
 
 function startShopRound(
@@ -660,7 +661,8 @@ function startShopRound(
     s.shop = rollShop(seed, sequence + seat * 31 + genre.round * 97, SHOP_SIZE);
     s.ready = false;
   }
-  setPrepDeadline(genre, "shop");
+  // The shop clock starts after the combat replay the players are watching ends.
+  setPrepDeadline(genre, "shop", genre.combatLog.length ? combatReplayDurationMs(genre.combatLog) : 0);
 }
 
 function emptySeat(seed: number, seq: number, tuning?: AutoBattlerTuning): SeatState {
@@ -888,7 +890,9 @@ function reduceImpl(state: PlayState<AutoBattlerGenre>, action: PlayAction): Ret
       genre.combatLog = result.log;
       genre.lastCombat = { winnerSeat: result.winnerSeat, damage: result.damage };
       if (result.winnerSeat !== null) {
-        genre.seats[result.winnerSeat === 0 ? 1 : 0]!.hp -= result.damage;
+        const loser = genre.seats[result.winnerSeat === 0 ? 1 : 0]!;
+        // Player HP floors at 0 (the match ends there; never show negative HP).
+        loser.hp = Math.max(0, loser.hp - result.damage);
       }
       for (const s of genre.seats) s.ready = false;
       if (genre.seats[0].hp <= 0 || genre.seats[1].hp <= 0) {

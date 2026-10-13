@@ -36,3 +36,21 @@ describe("tide arena replay timeline", () => {
     expect(strikeStep(64) * 64).toBeLessThanOrEqual(15_000);
   });
 });
+
+describe("shared combat playback clock", () => {
+  it("kernel replay duration equals the renderer timeline duration", async () => {
+    const { combatReplayDurationMs } = await import("../../runtime/adapters/combat-playback");
+    const { buildTimeline } = await import("./timeline");
+    const log = [
+      { kind: "combat_start", round: 1 },
+      { kind: "trait_trigger", trait: "tide", label: "潮涌" },
+      { kind: "strike", attackerUid: "a", targetUid: "b", damage: 50, targetHp: 10 },
+      { kind: "heal", uid: "b", amount: 20, targetHp: 30 },
+      { kind: "strike", attackerUid: "b", targetUid: "a", damage: 40, targetHp: 0 },
+      { kind: "unit_down", uid: "a", owner: 0 },
+      { kind: "combat_end", winnerSeat: 1, damageToLoser: 4 },
+    ];
+    const tl = buildTimeline(log, () => ({ unitId: "crab", name: "x" }));
+    expect(combatReplayDurationMs(log)).toBe(tl.durationMs);
+  });
+});
