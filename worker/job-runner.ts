@@ -73,7 +73,7 @@ function autoBattlerProposedRuntime(idea: string) {
     },
   };
 }
-import { createActionDescriptionIterationPlan } from "./rule-system-iteration";
+import { createActionDescriptionIterationPlan, IterationPlanError } from "./rule-system-iteration";
 import {
   PROJECT_PREFIX,
   generationPlanKey,
@@ -777,15 +777,26 @@ export async function runCreatorJob(
       };
       // Generic: numeric knobs the active kernel declares (timers, start HP/gold…) first,
       // then the original single-action description rewrite.
-      const plan =
-        createKernelTuningIterationPlan(iterationInput) ??
-        createActionDescriptionIterationPlan(iterationInput);
-      operation = await host.applyProjectChanges(job.projectId, {
+      let plan: ReturnType<typeof createActionDescriptionIterationPlan> | NonNullable<ReturnType<typeof createKernelTuningIterationPlan>> | undefined;
+      try {
+        plan =
+          createKernelTuningIterationPlan(iterationInput) ??
+          createActionDescriptionIterationPlan(iterationInput);
+      } catch (reason) {
+        // Guidance is a successful, no-change answer ("already available elsewhere").
+        if (reason instanceof IterationPlanError && reason.code === "iteration_guidance") {
+          plan = undefined;
+          operation = json({ guidance: reason.message.replace(/^iteration_guidance:\s*/, ""), prompt: input.prompt });
+        } else {
+          throw reason;
+        }
+      }
+      operation = !plan ? operation! : await host.applyProjectChanges(job.projectId, {
         expectedVersion: input.expectedVersion,
         idempotencyKey: `job:${input.idempotencyKey}`,
         operations: plan.operations,
       });
-      if (operation.ok) {
+      if (plan && operation.ok) {
         const operationBody = await operation.clone().json<Record<string, unknown>>();
         operationBody.iteration = {
           prompt: plan.prompt,

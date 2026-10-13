@@ -332,6 +332,11 @@ export function ProjectStudio({ projectId }: { projectId: string }) {
           error.replace(/^iteration_(?:unsupported|action_not_found):\s*/, ""),
         );
       }
+      const guidanceText = iterationJob.result?.guidance;
+      if (typeof guidanceText === "string") {
+        setNotice(`提示：${guidanceText}`);
+        return;
+      }
       iterationApplied = true;
       const iteration = iterationJob.result?.iteration as
         | { summary?: string }
