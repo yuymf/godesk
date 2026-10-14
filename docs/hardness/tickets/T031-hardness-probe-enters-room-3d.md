@@ -5,7 +5,7 @@
 | 回归靶 | H01–H05 证据链 |
 | 层 | **硬度探针 / 证据**（非样例游戏） |
 | 状态 | **关** |
-| tip | `79e0ade01e83ea2e95788cca91f9b5bd7ead752b` |
+| tip |  |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-probe-t031/` |
 
 ## 现象
