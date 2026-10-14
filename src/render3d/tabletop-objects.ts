@@ -6,6 +6,7 @@
 import {
   BoxGeometry,
   BufferGeometry,
+  CircleGeometry,
   CylinderGeometry,
   DoubleSide,
   DynamicDrawUsage,
@@ -789,7 +790,8 @@ function label(node: SceneNode): Object3D {
       g.fillText(text, w / 2, h / 2 + 3);
     }
   }
-  const worldH = 0.4;
+  // T039: float labels stay very faint so they do not form large white boards on the table.
+  const worldH = text.length <= 3 ? 0.22 : 0.28;
   const geom = new PlaneGeometry((w / h) * worldH, worldH);
   geom.rotateX(-Math.PI / 2);
   const texture = canvas ? new CanvasTexture(canvas) : null;
@@ -797,10 +799,17 @@ function label(node: SceneNode): Object3D {
     texture.colorSpace = SRGBColorSpace;
     texture.anisotropy = 4;
   }
-  // 名牌永远压在铁轨 / 景物之上（只读标注，不参与深度）。
-  const mesh = new Mesh(geom, new MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false, depthTest: false, toneMapped: false }));
+  const mesh = new Mesh(geom, new MeshBasicMaterial({
+    map: texture,
+    transparent: true,
+    opacity: 0.28,
+    depthWrite: false,
+    depthTest: false,
+    toneMapped: false,
+  }));
   mesh.raycast = () => {};
   mesh.renderOrder = 10;
+  mesh.userData.faintLabel = true;
   return mesh;
 }
 
@@ -841,6 +850,29 @@ function shoreNatural(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   return mesh;
 }
 
+
+/** T038 · soft contact / ground shadow under desk pieces (cheap, no lightmap). */
+function softContactShadow(rx = 0.55, rz = 0.55): Mesh {
+  const geom = new CircleGeometry(1, 24);
+  geom.rotateX(-Math.PI / 2);
+  geom.scale(rx, 1, rz);
+  geom.translate(0, 0.002, 0);
+  const mat = new MeshBasicMaterial({
+    color: "#0c0a08",
+    transparent: true,
+    opacity: 0.32,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  const mesh = new Mesh(geom, mat);
+  mesh.name = "contact-shadow";
+  mesh.raycast = () => {};
+  mesh.castShadow = false;
+  mesh.receiveShadow = false;
+  mesh.renderOrder = -1;
+  return mesh;
+}
+
 export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const mesh = node.mesh ?? "pawn";
   let object: Object3D;
@@ -864,12 +896,27 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = shoreNatural(node, ctx);
   } else if (mesh === "label") {
     object = label(node);
+  } else if (mesh === "contact-shadow") {
+    const sx = Math.max(0.2, Math.abs(node.scale?.[0] ?? 1));
+    const sz = Math.max(0.2, Math.abs(node.scale?.[2] ?? sx));
+    object = softContactShadow(sx, sz);
   } else if (mesh === "card") {
     object = cardWithFace(node, ctx);
+    (object as Group).add(softContactShadow(0.48, 0.68));
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
+    (object as Group).add(softContactShadow(0.52, 0.52));
   } else if (mesh === "plaque") {
     object = plaqueWithFace(node, ctx);
+    (object as Group).add(softContactShadow(0.5, 0.38));
+  } else if (mesh === "gem-chip") {
+    const built = new Mesh(geometryFor(mesh), materialFor(node, ctx));
+    built.castShadow = true;
+    built.receiveShadow = true;
+    const g = new Group();
+    g.add(built);
+    g.add(softContactShadow(0.4, 0.4));
+    object = g;
   } else if (INSTANCED_MESHES.has(mesh)) {
     object = createInstanceProxy(mesh, node, ctx);
   } else {

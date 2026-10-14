@@ -531,6 +531,9 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
     if (!piece.label) continue;
     // T037: card/plaque labels are face schema tags — do not spawn debug parchment nameplates.
     if (FACE_SCHEMA_KINDS.has(piece.objectKind)) continue;
+    // T039: forbid persistent Eng pad boards (F0/F1) and seat debug plates; tip counts stay faint via label mesh.
+    if (/^F\d+$/i.test(piece.label)) continue;
+    if (/^S\d+:/i.test(piece.label)) continue;
     // 名牌：平放在棋子南侧（朝向默认机位），羊皮纸底 + 墨字（tabletop-objects `label` 网格）。
     nodes.push({
       id: `label:${piece.id}`,
@@ -565,6 +568,17 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
         : libraryKey(piece.materialKey ?? seatKey(piece.seat, resolved.materialKey)),
     });
     if (piece.action) actions[id] = piece.action;
+    // T038: soft contact shadow under instanced discs/tokens (groups already embed theirs).
+    if (piece.objectKind === "disc" || piece.objectKind === "token") {
+      const s = Math.max(0.18, size * 0.85);
+      nodes.push({
+        id: `contact:${piece.id}`,
+        kind: "piece",
+        mesh: "contact-shadow",
+        position: [round(piece.x), round(baseY + 0.003), round(piece.z)],
+        scale: [s, 1, s],
+      });
+    }
   }
 
   for (const link of layout.links) {

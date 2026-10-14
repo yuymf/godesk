@@ -429,15 +429,22 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     return;
   }
   if (kernelType === "gem-engine-v1" || kernelType === "pattern-draft-v1" || kernelType === "auction-bidding-v1") {
-    // T030 · desk-kernel visual baseline: felt board, wood table, clearcoat pieces, card stock.
+    // T030 · desk-kernel visual baseline; T038 · softer contact lighting + felt that eats light.
     render.camera = { ...render.camera, fovDeg: 30, distance: 12.5, minPolarDeg: 32, maxPolarDeg: 62, polarDeg: 48 };
+    render.lighting = {
+      ...render.lighting,
+      sun: { ...render.lighting.sun, azimuthDeg: 132, elevationDeg: 52, intensity: 2.75, color: "#ffd2a0" },
+      hemisphere: { sky: "#f4ebe0", ground: "#8f7d64", intensity: 0.92 },
+      shadow: { enabled: true, softness: 1 },
+      exposure: 1.06,
+    };
     Object.assign(render.materials, {
-      board: material("#5c6b58", "cloth", 0.88),
+      board: material("#556354", "cloth", 0.94),
       table: material("#7a4e28", "grain", 0.92),
-      piece: material("#f7f1e6", "none", 0.42, 0.08, 0.35),
-      card: material("#f3e7d3", "none", 0.62, 0, 0.18),
+      piece: material("#f7f1e6", "none", 0.4, 0.08, 0.38),
+      card: material("#f3e7d3", "none", 0.55, 0, 0.2),
       resource: material("#e8d9b8", "none", 0.28, 0.22, 0.72),
-      token: material("#c4b5fd", "none", 0.4, 0.15, 0.4),
+      token: material("#c4b5fd", "none", 0.38, 0.15, 0.42),
       ink: material("#334155", "none", 0.55),
     });
     render.bindings = [
@@ -456,13 +463,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     ];
     if (kernelType === "auction-bidding-v1") {
       Object.assign(render.materials, {
-        board: material("#6b5f4e", "cloth", 0.86),
+        board: material("#6b5f4e", "cloth", 0.93),
         card: material("#fff7ed", "none", 0.68, 0, 0.1),
       });
     }
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
-        board: material("#4a6741", "cloth", 0.9),
+        board: material("#4a6741", "cloth", 0.95),
         piece: material("#f8fafc", "none", 0.4, 0.05, 0.32),
       });
     }
