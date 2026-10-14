@@ -5,7 +5,7 @@
 | 回归靶 | H03 / H04 / H05 Room 观感（相对 T030） |
 | 层 | **共享呈现**（tabletop-objects / materials / camera） |
 | 状态 | **关** |
-| tip |  |
+| tip | `e487f0e235b1995813fbf204867d44cbc0670de1` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t033/` |
 
 ## 现象
