@@ -4,7 +4,7 @@
 | --- | --- |
 | 回归靶 | H03 / H04 / H05 Room 同机位光照/落影 |
 | 层 | **共享呈现**（SceneHost lighting / tabletop-objects / MaterialLibrary env） |
-| 状态 | **开** |
+| 状态 | **关** |
 | tip | `46278ea6e10cd20772a5912f3c6a6720ce72c2f9` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t038/` |
 
