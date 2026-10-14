@@ -844,7 +844,7 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
       objectKind: "lot",
       x: companion ? -0.7 : 0,
       z: -0.35,
-      size: 1.55,
+      size: 1.75,
       label: encodeLotArt({
         title: String(lot.name ?? "拍品"),
         reserve: lot.reserve,
@@ -895,7 +895,7 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
         objectKind: "lot",
         x,
         z: -0.35,
-        size: floorLots.length === 1 ? 1.35 : 1.05,
+        size: floorLots.length === 1 ? 1.65 : 1.35,
         label: encodeLotArt({
           title: String(fl.name ?? "拍品"),
           reserve: fl.reserve,
@@ -1012,7 +1012,7 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
         x: x0 - ((n - 1) * step) / 2 + pi * step,
         z: zMeeple - 0.2,
         y: 0.14,
-        size: 1.45,
+        size: 1.65,
         seat: seatId,
         emphasis: true,
         label: encodeLotArt({ title: String(painting.name ?? "藏品"), artistId: painting.artistId }),

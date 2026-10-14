@@ -1170,27 +1170,26 @@ function proceduralLotCanvas(schema: { title: string; prestige?: number; bid?: n
     ["#334155", "#94a3b8", "#e2e8f0", "#f59e0b"],
   ];
   const pal = palettes[seed % palettes.length]!;
+  // T075 · stage-readable full-bleed color masses (pay T072 H05 debt)
   g.fillStyle = pal[0]!;
   g.fillRect(0, 0, W, H);
-  // Color field washes
-  for (let i = 0; i < 5; i += 1) {
-    g.globalAlpha = 0.35 + rnd() * 0.35;
-    g.fillStyle = pal[1 + (i % 3)]!;
-    const x = rnd() * W * 0.6;
-    const y = rnd() * H * 0.55;
-    g.beginPath();
-    g.ellipse(x + 40, y + 40, 50 + rnd() * 70, 35 + rnd() * 55, rnd() * Math.PI, 0, Math.PI * 2);
-    g.fill();
-  }
-  g.globalAlpha = 1;
-  // Brush blocks
-  for (let i = 0; i < 8; i += 1) {
-    g.fillStyle = pal[1 + (i % 3)]!;
-    g.globalAlpha = 0.55 + rnd() * 0.4;
-    const bw = 18 + rnd() * 50;
-    const bh = 10 + rnd() * 28;
-    g.fillRect(20 + rnd() * (W - 80), 30 + rnd() * (H * 0.55), bw, bh);
-  }
+  g.fillStyle = pal[1]!;
+  g.fillRect(0, 0, W * 0.55, H * 0.72);
+  g.fillStyle = pal[2]!;
+  g.fillRect(W * 0.42, H * 0.08, W * 0.52, H * 0.5);
+  g.fillStyle = pal[3]!;
+  g.beginPath();
+  g.moveTo(W * 0.55, H * 0.12);
+  g.lineTo(W * 0.92, H * 0.38);
+  g.lineTo(W * 0.55, H * 0.64);
+  g.lineTo(W * 0.28, H * 0.38);
+  g.closePath();
+  g.fill();
+  // secondary blocks for value structure at stage distance
+  g.fillStyle = pal[1]!;
+  g.fillRect(W * 0.08, H * 0.48, W * 0.28, H * 0.22);
+  g.fillStyle = pal[3]!;
+  g.fillRect(W * 0.62, H * 0.52, W * 0.28, H * 0.18);
   g.globalAlpha = 1;
   // Title plate
   g.fillStyle = "rgba(15,23,42,0.72)";
