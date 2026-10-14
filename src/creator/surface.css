@@ -6072,3 +6072,38 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
 /* auto-battler e2e board slot markers (invisible; counted by .ta-anchor) */
 .ta-anchors { position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none; }
 .ta-anchor { display: none; }
+
+
+/* T035 · desk tabletop: after seated, collapse invite strip and grow 3D stage. */
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-collapsed {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  padding: 0.35rem 0.75rem;
+  align-items: center;
+}
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-collapsed .invitation-heading,
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-collapsed .seat-rail-label,
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-collapsed .seat-picker-fallback {
+  display: none;
+}
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-collapsed .invitation-link-row {
+  min-width: 0;
+}
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-collapsed .invitation-link-row label span {
+  display: none;
+}
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-collapsed .seat-chip-row {
+  flex-wrap: nowrap;
+}
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-collapsed .seat-chip small {
+  display: none;
+}
+.room-view-tabletop-immersive.room-view-seated .tabletop-stage,
+.room-view-tabletop-immersive.room-view-seated .g3d-stage {
+  height: clamp(420px, 64vh, 780px);
+  min-height: 420px;
+  margin: 0.35rem 0 0.75rem;
+}
+.room-view-tabletop-immersive.room-view-unseated .tabletop-stage {
+  height: clamp(260px, 46vh, 520px);
+}
