@@ -5,7 +5,7 @@
 | 回归靶 | H03+H05 stage/close before/after；unit；不与 T048 打架 |
 | 层 | **共享呈现**（card-face zones） |
 | 状态 | **关** |
-| tip | pending |
+| tip | `847c8e4` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t063/` |
 
 ## 问题
