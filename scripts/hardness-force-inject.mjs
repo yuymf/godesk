@@ -365,3 +365,108 @@ export async function forceOwnAuctionLots(page, tokens, { minLots = 2, maxSteps 
     return { ok: lots.length >= minLots, lots, log };
   }, { tokens, minLots, maxSteps });
 }
+
+/**
+ * Force hex-settlement setup until seat 0 has ≥ minSettlements + minRoads.
+ * Probes place_settlement / place_road via real intents over the fixed radius-2 graph.
+ */
+export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, minRoads = 2, maxSteps = 80 } = {}) {
+  const VERTEX_IDS = ["-100:-173", "-100:-346", "-100:0", "-100:173", "-100:346", "-200:-173", "-200:-346", "-200:0", "-200:173", "-200:346", "-250:-260", "-250:-87", "-250:260", "-250:87", "-350:-260", "-350:-87", "-350:260", "-350:87", "-400:-173", "-400:0", "-400:173", "-50:-260", "-50:-433", "-50:-87", "-50:260", "-50:433", "-50:87", "100:-173", "100:-346", "100:0", "100:173", "100:346", "200:-173", "200:-346", "200:0", "200:173", "200:346", "250:-260", "250:-87", "250:260", "250:87", "350:-260", "350:-87", "350:260", "350:87", "400:-173", "400:0", "400:173", "50:-260", "50:-433", "50:-87", "50:260", "50:433", "50:87"];
+  const EDGE_IDS = ["-100:-173|-200:-173", "-100:-173|-50:-260", "-100:-173|-50:-87", "-100:-346|-200:-346", "-100:-346|-50:-260", "-100:-346|-50:-433", "-100:0|-200:0", "-100:0|-50:-87", "-100:0|-50:87", "-100:173|-200:173", "-100:173|-50:260", "-100:173|-50:87", "-100:346|-200:346", "-100:346|-50:260", "-100:346|-50:433", "-200:-173|-250:-260", "-200:-173|-250:-87", "-200:-346|-250:-260", "-200:0|-250:-87", "-200:0|-250:87", "-200:173|-250:260", "-200:173|-250:87", "-200:346|-250:260", "-250:-260|-350:-260", "-250:-87|-350:-87", "-250:260|-350:260", "-250:87|-350:87", "-350:-260|-400:-173", "-350:-87|-400:-173", "-350:-87|-400:0", "-350:260|-400:173", "-350:87|-400:0", "-350:87|-400:173", "-50:-260|50:-260", "-50:-433|50:-433", "-50:-87|50:-87", "-50:260|50:260", "-50:433|50:433", "-50:87|50:87", "100:-173|200:-173", "100:-173|50:-260", "100:-173|50:-87", "100:-346|200:-346", "100:-346|50:-260", "100:-346|50:-433", "100:0|200:0", "100:0|50:-87", "100:0|50:87", "100:173|200:173", "100:173|50:260", "100:173|50:87", "100:346|200:346", "100:346|50:260", "100:346|50:433", "200:-173|250:-260", "200:-173|250:-87", "200:-346|250:-260", "200:0|250:-87", "200:0|250:87", "200:173|250:260", "200:173|250:87", "200:346|250:260", "250:-260|350:-260", "250:-87|350:-87", "250:260|350:260", "250:87|350:87", "350:-260|400:-173", "350:-87|400:-173", "350:-87|400:0", "350:260|400:173", "350:87|400:0", "350:87|400:173"];
+  return page.evaluate(async ({ tokens, minSettlements, minRoads, maxSteps, VERTEX_IDS, EDGE_IDS }) => {
+    const m = location.pathname.match(/room\/([^/?]+)/);
+    const sid = m?.[1];
+    const share = new URLSearchParams(location.search).get("share");
+    const q = share ? `?share=${encodeURIComponent(share)}` : "";
+    const tok = (s) => tokens[String(s)];
+    const intent = async (seat, actionId, payload) => {
+      const r = await fetch(`/chatgpt-plugin/api/sessions/${sid}/intents${q}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          intentId: crypto.randomUUID(),
+          seat,
+          seatToken: tok(seat),
+          actionId,
+          ...(payload ? { payload } : {}),
+        }),
+      });
+      const text = await r.text();
+      let j = null;
+      try { j = JSON.parse(text); } catch {}
+      const hi = j?.state?.hexIsland;
+      const p0 = hi?.players?.[0];
+      return {
+        status: r.status,
+        ok: r.ok,
+        err: j?.error,
+        active: j?.state?.activeSeat,
+        phase: hi?.phase,
+        settle0: p0?.settlements?.length,
+        roads0: p0?.roads?.length,
+      };
+    };
+    const get = async () => {
+      const j = await (await fetch(`/chatgpt-plugin/api/sessions/${sid}${q}`)).json();
+      const s = j.session || j;
+      return s.state || s;
+    };
+    const log = [];
+    for (let step = 0; step < maxSteps; step++) {
+      const st = await get();
+      if (st.status !== "active") return { ok: false, err: "dead", log };
+      const hi = st.hexIsland;
+      const p0 = hi.players[0];
+      const settle0 = (p0.settlements || []).length;
+      const roads0 = (p0.roads || []).length;
+      if (settle0 >= minSettlements && roads0 >= minRoads) {
+        return {
+          ok: true,
+          settlements: [...p0.settlements],
+          roads: [...p0.roads],
+          steps: step,
+          phase: hi.phase,
+          log,
+        };
+      }
+      const active = st.activeSeat;
+      let acted = null;
+      if (hi.pendingRoadVertex) {
+        for (const edgeId of EDGE_IDS) {
+          const r = await intent(active, "place_road", { edgeId });
+          if (r.ok) { acted = { type: "place_road", edgeId, ...r }; break; }
+        }
+      } else if (hi.phase === "setup") {
+        for (const vertexId of VERTEX_IDS) {
+          const r = await intent(active, "place_settlement", { vertexId });
+          if (r.ok) { acted = { type: "place_settlement", vertexId, ...r }; break; }
+        }
+      } else {
+        // post-setup: try building with resources if any
+        for (const vertexId of VERTEX_IDS) {
+          const r = await intent(active, "place_settlement", { vertexId });
+          if (r.ok) { acted = { type: "place_settlement", vertexId, ...r }; break; }
+        }
+        if (!acted) {
+          for (const edgeId of EDGE_IDS) {
+            const r = await intent(active, "place_road", { edgeId });
+            if (r.ok) { acted = { type: "place_road", edgeId, ...r }; break; }
+          }
+        }
+      }
+      if (!acted) {
+        log.push({ step, stuck: true, active, phase: hi.phase, pending: hi.pendingRoadVertex, settle0, roads0 });
+        return { ok: false, err: "stuck", settle0, roads0, log };
+      }
+      log.push({ step, active, acted: { type: acted.type, ok: acted.ok, settle0: acted.settle0, roads0: acted.roads0 } });
+    }
+    const st = await get();
+    const p0 = st.hexIsland.players[0];
+    return {
+      ok: (p0.settlements || []).length >= minSettlements && (p0.roads || []).length >= minRoads,
+      settlements: p0.settlements,
+      roads: p0.roads,
+      log,
+    };
+  }, { tokens, minSettlements, minRoads, maxSteps, VERTEX_IDS, EDGE_IDS });
+}
