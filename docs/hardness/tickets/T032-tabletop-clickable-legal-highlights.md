@@ -5,7 +5,7 @@
 | 回归靶 | H03 / H04（及 H05）Room 桌面拾取 |
 | 层 | **共享呈现**（TabletopStage / legal 过滤 / 悬停抬起） |
 | 状态 | **关** |
-| tip |  |
+| tip | `9179905447edf2075b5571bdcb5671ee7777e78b` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t032/` |
 
 ## 现象
