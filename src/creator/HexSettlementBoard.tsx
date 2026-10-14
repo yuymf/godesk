@@ -340,10 +340,8 @@ export function HexSettlementBoard({
   homeHref?: string;
   replayUrl?: string;
 }) {
-  const [boardTargetsOpen, setBoardTargetsOpen] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return window.matchMedia("(min-width: 768px)").matches;
-  });
+  // T067 · placement assist folded by default so island canvas stays primary
+  const [boardTargetsOpen, setBoardTargetsOpen] = useState(false);
   const [logTab, setLogTab] = useState<"chronicle" | "chat" | "coach">("chronicle");
   const [logOpenMobile, setLogOpenMobile] = useState(false);
   const [tableOpen, setTableOpen] = useState(false);
@@ -363,13 +361,7 @@ export function HexSettlementBoard({
   const [resourceGain, setResourceGain] = useState<Partial<Record<Resource, number>>>({});
   const prevResourcesRef = useRef<Record<Resource, number> | null>(null);
 
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)");
-    const sync = () => setBoardTargetsOpen(mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
+  // T067 · do not auto-open placement drawer on desktop (island stays primary)
 
   const copy = COPY[locale];
   const resourceLabel = RESOURCE_LABEL[locale];

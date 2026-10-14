@@ -1039,20 +1039,20 @@ body:has(.room-view-tidewell-immersive) {
   padding: 6px 10px;
   font-size: 12px;
 }
-/* Open drawer: fixed centered overlay so e2e/keyboard targets stay in-viewport
-   under overflow:hidden fullscreen shell. */
+/* T067 · open as foldable side drawer (not centered fullscreen cover of island) */
 .tidewell-game-screen .hex-settlement-board-targets[open] {
-  position: fixed;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 120;
-  width: min(440px, calc(100vw - 24px));
-  max-width: min(440px, calc(100vw - 24px));
-  max-height: min(70vh, 560px);
+  position: absolute;
+  left: 8px;
+  bottom: calc(var(--tw-dock, 160px) + 8px);
+  top: auto;
+  transform: none;
+  z-index: 70;
+  width: min(360px, 36vw);
+  max-width: min(360px, 40vw);
+  max-height: min(42vh, 360px);
   overflow: auto;
   padding: 8px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 .tidewell-game-screen .hex-settlement-board-targets[open] .hex-settlement-action-list {
   max-height: none;
