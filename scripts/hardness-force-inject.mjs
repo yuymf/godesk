@@ -470,3 +470,100 @@ export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, min
     };
   }, { tokens, minSettlements, minRoads, maxSteps, VERTEX_IDS, EDGE_IDS });
 }
+
+/**
+ * Force pattern-draft until seat 0 has glazed tiles on ≥1 line and ≥1 floor tile.
+ * Uses real `draft` intents (source/color/line[/factoryId]) — no pack hardcodes.
+ */
+export async function forceDraftPattern(page, tokens, { minLineTiles = 2, minFloor = 1, maxSteps = 80 } = {}) {
+  return page.evaluate(async ({ tokens, minLineTiles, minFloor, maxSteps }) => {
+    const m = location.pathname.match(/room\/([^/?]+)/);
+    const sid = m?.[1];
+    const share = new URLSearchParams(location.search).get("share");
+    const q = share ? `?share=${encodeURIComponent(share)}` : "";
+    const tok = (s) => tokens[String(s)];
+    const intent = async (seat, actionId, payload) => {
+      const r = await fetch(`/chatgpt-plugin/api/sessions/${sid}/intents${q}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          intentId: crypto.randomUUID(),
+          seat,
+          seatToken: tok(seat),
+          actionId,
+          ...(payload ? { payload } : {}),
+        }),
+      });
+      const text = await r.text();
+      let j = null;
+      try { j = JSON.parse(text); } catch {}
+      return { status: r.status, ok: r.ok, err: j?.error, state: j?.state || j?.session?.state };
+    };
+    const get = async () => {
+      const j = await (await fetch(`/chatgpt-plugin/api/sessions/${sid}${q}`)).json();
+      const s = j.session || j;
+      return s.state || s;
+    };
+    const seat0Stats = (pd) => {
+      const seat = pd.seats?.[0];
+      if (!seat) return { lineTiles: 0, floor: 0, linesFilled: 0 };
+      const lineTiles = (seat.lines || []).reduce((n, l) => n + (l.tiles?.length || 0), 0);
+      const linesFilled = (seat.lines || []).filter((l) => (l.tiles?.length || 0) > 0).length;
+      return { lineTiles, floor: (seat.floor || []).length, linesFilled };
+    };
+    const log = [];
+    for (let step = 0; step < maxSteps; step++) {
+      const st = await get();
+      if (st.status !== "active") return { ok: false, err: "dead", log };
+      const pd = st.patternDraft;
+      if (!pd) return { ok: false, err: "no-patternDraft", log };
+      const stats = seat0Stats(pd);
+      if (stats.lineTiles >= minLineTiles && stats.floor >= minFloor && stats.linesFilled >= 1) {
+        return { ok: true, ...stats, steps: step, phase: pd.phase, seat0: pd.seats[0], log };
+      }
+      const active = st.activeSeat;
+      // Enumerate factories/center colors like listLegalActions
+      const candidates = [];
+      (pd.factories || []).forEach((factory, factoryId) => {
+        const colors = [...new Set(factory)];
+        for (const color of colors) {
+          for (let line = 0; line < 5; line++) candidates.push({ source: "factory", factoryId, color, line });
+          candidates.push({ source: "factory", factoryId, color, line: "floor" });
+        }
+      });
+      for (const color of [...new Set(pd.center || [])]) {
+        for (let line = 0; line < 5; line++) candidates.push({ source: "center", color, line });
+        candidates.push({ source: "center", color, line: "floor" });
+      }
+      // Prefer: seat0 → line fills; others → floor to advance quickly
+      const preferLine = active === 0 && stats.lineTiles < minLineTiles;
+      const preferFloor = active === 0 && stats.lineTiles >= minLineTiles && stats.floor < minFloor;
+      const ordered = [...candidates].sort((a, b) => {
+        const score = (c) => {
+          let s = 0;
+          if (preferLine && c.line !== "floor") s += 10;
+          if (preferFloor && c.line === "floor") s += 10;
+          if (active !== 0 && c.line === "floor") s += 5;
+          if (typeof c.line === "number") s += (4 - c.line); // shorter lines first
+          return -s;
+        };
+        return score(a) - score(b);
+      });
+      let acted = null;
+      for (const c of ordered) {
+        const payload = { source: c.source, color: c.color, line: c.line };
+        if (c.source === "factory") payload.factoryId = c.factoryId;
+        const r = await intent(active, "draft", payload);
+        if (r.ok) { acted = { ...c, status: r.status }; break; }
+      }
+      if (!acted) {
+        log.push({ step, stuck: true, active, stats, phase: pd.phase });
+        return { ok: false, err: "stuck", ...stats, log };
+      }
+      log.push({ step, active, acted });
+    }
+    const st = await get();
+    const stats = seat0Stats(st.patternDraft);
+    return { ok: stats.lineTiles >= minLineTiles && stats.floor >= minFloor, ...stats, log };
+  }, { tokens, minLineTiles, minFloor, maxSteps });
+}
