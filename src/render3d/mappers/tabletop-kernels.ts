@@ -406,7 +406,8 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
         objectKind: "card",
         x,
         z,
-        size: 0.85,
+        // T072 · larger market cards so stage-wide reads motif color masses
+        size: 1.2,
         tint: GEM_TINT[discount] ?? "#d6d3d1",
         label: encodeCardFace({
           tier: tier + 1,
@@ -843,7 +844,7 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
       objectKind: "lot",
       x: companion ? -0.7 : 0,
       z: -0.35,
-      size: 1.35,
+      size: 1.55,
       label: encodeLotArt({
         title: String(lot.name ?? "拍品"),
         reserve: lot.reserve,
@@ -1011,7 +1012,7 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
         x: x0 - ((n - 1) * step) / 2 + pi * step,
         z: zMeeple - 0.2,
         y: 0.14,
-        size: 1.25,
+        size: 1.45,
         seat: seatId,
         emphasis: true,
         label: encodeLotArt({ title: String(painting.name ?? "藏品"), artistId: painting.artistId }),

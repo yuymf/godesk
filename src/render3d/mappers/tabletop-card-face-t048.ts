@@ -138,16 +138,25 @@ export function paintIllustrationBand(
   g.closePath();
   g.fill();
 
-  // T069 · readable motifs (gem / building silhouettes) — not pure gradient
-  const motifKind = Math.floor(rnd() * 3); // 0 gem, 1 building, 2 stacked gems
-  g.globalAlpha = 0.95;
+  // T072 · stage-readable motifs (pay T069 far-distance debt): huge high-contrast blocks
+  const motifKind = Math.floor(rnd() * 3);
+  g.globalAlpha = 1;
+  // full-bleed reward mass (dominates stage-wide crop)
+  const solid = rewardHex.startsWith("#") ? rewardHex : mix(rgb, accent, 0.05);
+  g.fillStyle = solid;
+  g.fillRect(box.x + box.w * 0.04, box.y + box.h * 0.06, box.w * 0.92, box.h * 0.88);
+  // dark counter-block for value structure
+  g.fillStyle = mix(shadow, rgb, 0.25);
+  g.fillRect(box.x + box.w * 0.08, box.y + box.h * 0.12, box.w * 0.36, box.h * 0.72);
+  // parchment highlight slab
+  g.fillStyle = mix(parchment, accent, 0.25);
+  g.fillRect(box.x + box.w * 0.48, box.y + box.h * 0.1, box.w * 0.42, box.h * 0.28);
   if (motifKind === 0 || motifKind === 2) {
-    // large gem / diamond — high-contrast fill vs wash
-    const gx = box.x + box.w * 0.62;
-    const gy = box.y + box.h * 0.42;
-    const gw = box.w * 0.32;
-    const gh = box.h * 0.48;
-    g.fillStyle = mix(rgb, shadow, 0.05);
+    const gx = box.x + box.w * 0.68;
+    const gy = box.y + box.h * 0.55;
+    const gw = box.w * 0.48;
+    const gh = box.h * 0.7;
+    g.fillStyle = mix(parchment, rgb, 0.15);
     g.beginPath();
     g.moveTo(gx, gy - gh * 0.55);
     g.lineTo(gx + gw * 0.55, gy);
@@ -155,59 +164,36 @@ export function paintIllustrationBand(
     g.lineTo(gx - gw * 0.55, gy);
     g.closePath();
     g.fill();
-    g.strokeStyle = mix(parchment, accent, 0.2);
-    g.lineWidth = 3;
+    g.strokeStyle = mix(shadow, parchment, 0.1);
+    g.lineWidth = Math.max(5, box.w * 0.025);
     g.stroke();
-    // bright crown facet
-    g.fillStyle = mix(accent, parchment, 0.55);
+    g.fillStyle = mix(accent, parchment, 0.2);
     g.beginPath();
-    g.moveTo(gx - gw * 0.28, gy - gh * 0.12);
-    g.lineTo(gx + gw * 0.28, gy - gh * 0.12);
-    g.lineTo(gx, gy + gh * 0.12);
-    g.closePath();
-    g.fill();
-    // side facets
-    g.fillStyle = mix(rgb, accent, 0.55);
-    g.beginPath();
-    g.moveTo(gx - gw * 0.55, gy);
-    g.lineTo(gx - gw * 0.18, gy - gh * 0.08);
-    g.lineTo(gx, gy + gh * 0.55);
+    g.moveTo(gx - gw * 0.3, gy - gh * 0.08);
+    g.lineTo(gx + gw * 0.3, gy - gh * 0.08);
+    g.lineTo(gx, gy + gh * 0.18);
     g.closePath();
     g.fill();
     if (motifKind === 2) {
-      const gx2 = gx - box.w * 0.28;
-      const gy2 = gy + box.h * 0.08;
-      const gw2 = gw * 0.55;
-      const gh2 = gh * 0.55;
-      g.fillStyle = mix(rgb, shadow, 0.4);
-      g.beginPath();
-      g.moveTo(gx2, gy2 - gh2 * 0.5);
-      g.lineTo(gx2 + gw2 * 0.5, gy2);
-      g.lineTo(gx2, gy2 + gh2 * 0.5);
-      g.lineTo(gx2 - gw2 * 0.5, gy2);
-      g.closePath();
-      g.fill();
+      g.fillStyle = mix(shadow, accent, 0.3);
+      g.fillRect(box.x + box.w * 0.1, box.y + box.h * 0.2, box.w * 0.3, box.h * 0.55);
     }
   } else {
-    // building silhouette: tall base + pitched roof (dominant in band)
-    const bx = box.x + box.w * 0.58;
-    const by = box.y + box.h * 0.72;
-    const bw = box.w * 0.4;
-    const bh = box.h * 0.42;
-    g.fillStyle = mix(rgb, shadow, 0.2);
-    g.fillRect(bx - bw / 2, by - bh * 0.7, bw, bh * 0.7);
+    const bx = box.x + box.w * 0.66;
+    const by = box.y + box.h * 0.82;
+    const bw = box.w * 0.52;
+    const bh = box.h * 0.62;
+    g.fillStyle = mix(parchment, shadow, 0.2);
+    g.fillRect(bx - bw / 2, by - bh * 0.75, bw, bh * 0.75);
+    g.fillStyle = mix(parchment, accent, 0.15);
     g.beginPath();
-    g.moveTo(bx - bw * 0.62, by - bh * 0.7);
-    g.lineTo(bx, by - bh * 1.15);
-    g.lineTo(bx + bw * 0.62, by - bh * 0.7);
+    g.moveTo(bx - bw * 0.62, by - bh * 0.75);
+    g.lineTo(bx, by - bh * 1.22);
+    g.lineTo(bx + bw * 0.62, by - bh * 0.75);
     g.closePath();
-    g.fillStyle = mix(rgb, accent, 0.35);
     g.fill();
-    g.fillStyle = mix(shadow, rgb, 0.55);
-    g.fillRect(bx - bw * 0.1, by - bh * 0.45, bw * 0.2, bh * 0.42);
-    g.fillStyle = mix(parchment, accent, 0.35);
-    g.fillRect(bx - bw * 0.38, by - bh * 0.55, bw * 0.14, bh * 0.14);
-    g.fillRect(bx + bw * 0.24, by - bh * 0.55, bw * 0.14, bh * 0.14);
+    g.fillStyle = mix(shadow, parchment, 0.15);
+    g.fillRect(bx - bw * 0.12, by - bh * 0.5, bw * 0.24, bh * 0.48);
   }
 
   g.globalAlpha = 1;
