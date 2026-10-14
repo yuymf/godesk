@@ -5,7 +5,7 @@
 | 回归靶 | H05 close；H03/H04 smoke |
 | 层 | **共享呈现**（seat economy marker / labels） |
 | 状态 | **关** |
-| tip | （feat commit 后填） |
+| tip | `717776850be7c2734c11901d9e4951e63aaaa679` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t045/` |
 
 ## 实现（通用）
