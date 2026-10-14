@@ -598,11 +598,12 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
     const fz = Math.sin(angle) * factoryRadius * 0.75 - 1.2;
     pieces.push({
       id: `factory:${fi}:pad`,
-      objectKind: "disc",
+      // T076 · porcelain plate under glazed tiles
+      objectKind: "plate",
       x: fx,
       z: fz,
-      size: 1.05,
-      tint: "#4a6741",
+      size: 1.15,
+      tint: "#f3efe6",
     });
     // T036: N glazed-tile children in a 2×2 pad grid (color-visible, countable at a glance).
     const GRID: ReadonlyArray<readonly [number, number]> = [
@@ -640,6 +641,17 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
         action,
       });
     }
+  });
+
+  // T076 · central discard porcelain dish
+  pieces.push({
+    id: "center:dish",
+    objectKind: "plate",
+    x: 0,
+    z: -0.15,
+    y: 0.02,
+    size: 1.35,
+    tint: "#f5f0e6",
   });
 
   // Center pile

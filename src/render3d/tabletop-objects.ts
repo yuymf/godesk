@@ -1022,6 +1022,45 @@ function softContactShadow(rx = 0.55, rz = 0.55): Mesh {
 
 
 /** T041 · wood rim with slight top bevel (reads as table-edge product frame). */
+
+/** T076 · shallow porcelain plate: dish bed + rim lip + glaze wash (factory/center). */
+function porcelainPlate(node: SceneNode, ctx: TabletopObjectContext): Object3D {
+  const group = new Group();
+  const tint = (node.material && ctx.materials[node.material]?.base) || "#f3efe6";
+  const bodyMat = ctx.library.get("tt-porcelain-body", {
+    base: String(tint),
+    roughness: 0.35,
+    metalness: 0.05,
+    pattern: "none" as const,
+  });
+  const rimMat = ctx.library.get("tt-porcelain-rim", {
+    base: "#e7e0d4",
+    roughness: 0.28,
+    metalness: 0.08,
+    pattern: "none" as const,
+  });
+  const glazeMat = ctx.library.get("tt-porcelain-glaze", {
+    base: "#ffffff",
+    roughness: 0.18,
+    metalness: 0.12,
+    pattern: "none" as const,
+  });
+  // shallow dish bed
+  const bed = new Mesh(translated(new CylinderGeometry(0.42, 0.46, 0.06, 28), 0.03), bodyMat);
+  bed.receiveShadow = true;
+  bed.castShadow = true;
+  // raised rim lip
+  const rim = new Mesh(translated(new CylinderGeometry(0.48, 0.48, 0.045, 28), 0.075), rimMat);
+  rim.receiveShadow = true;
+  rim.castShadow = true;
+  // inner glaze wash (slightly smaller, glossy)
+  const glaze = new Mesh(translated(new CylinderGeometry(0.36, 0.36, 0.02, 28), 0.065), glazeMat);
+  glaze.receiveShadow = true;
+  group.add(bed, rim, glaze);
+  group.add(softContactShadow(0.55, 0.55));
+  return group;
+}
+
 function feltWoodRim(): Geometry {
   const outer = new BoxGeometry(1, 1, 1);
   // Bevel cue: thinner top lip via a second box slightly inset on Y.
@@ -1317,6 +1356,8 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     built.castShadow = false;
     built.receiveShadow = true;
     object = built;
+  } else if (mesh === "porcelain-plate") {
+    object = porcelainPlate(node, ctx);
   } else if (mesh === "framed-art") {
     object = framedArtWithFace(node, ctx);
   } else if (mesh === "meeple") {

@@ -120,6 +120,7 @@ const TABLE_Y = -0.06;
 
 /** 没有 binding 时的内置图元（SPEC：mapper 找不到 binding 时回退内置图元）。 */
 const FALLBACK_MESH: Record<string, string> = {
+  plate: "porcelain-plate",
   cell: "tile-square",
   region: "tile-square",
   berth: "tile-square",
