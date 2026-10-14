@@ -153,6 +153,36 @@ function translated(geom: Geometry, y: number): Geometry {
   return geom;
 }
 
+
+/** T030 · card stock: rounded-rect extrude, bottom on y=0. */
+function cardStock(): Geometry {
+  const shape = new Shape();
+  const w = 0.31;
+  const h = 0.44;
+  const r = 0.04;
+  shape.moveTo(-w + r, -h);
+  shape.lineTo(w - r, -h);
+  shape.quadraticCurveTo(w, -h, w, -h + r);
+  shape.lineTo(w, h - r);
+  shape.quadraticCurveTo(w, h, w - r, h);
+  shape.lineTo(-w + r, h);
+  shape.quadraticCurveTo(-w, h, -w, h - r);
+  shape.lineTo(-w, -h + r);
+  shape.quadraticCurveTo(-w, -h, -w + r, -h);
+  shape.closePath();
+  const geom = new ExtrudeGeometry(shape, {
+    depth: 0.045,
+    bevelEnabled: true,
+    bevelThickness: 0.008,
+    bevelSize: 0.008,
+    bevelSegments: 2,
+  });
+  geom.rotateX(-Math.PI / 2);
+  geom.translate(0, 0, 0);
+  // Extrude depth along +Z before rotate → after rotateX(-90) thickness is +Y.
+  return geom;
+}
+
 function geometryFor(mesh: string): Geometry {
   switch (mesh) {
     case "tile-square":
@@ -161,13 +191,15 @@ function geometryFor(mesh: string): Geometry {
     case "hex-prism":
       return hexPrism();
     case "disc":
-      return translated(new CylinderGeometry(0.45, 0.45, 0.16, 32), 0.08);
+      // T030: slightly crowned chip (not a flat plastic slug).
+      return translated(new CylinderGeometry(0.46, 0.44, 0.14, 40), 0.07);
     case "house":
       return house();
     case "tower":
       return translated(new CylinderGeometry(0.26, 0.32, 0.9, 10), 0.45);
     case "card":
-      return translated(new BoxGeometry(0.62, 0.03, 0.88), 0.015);
+      // T030: thicker card stock with tiny bevel (reads as cardboard, not a paper plane).
+      return cardStock();
     case "die":
       return translated(new BoxGeometry(0.5, 0.5, 0.5), 0.25);
     case "ship":

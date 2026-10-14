@@ -334,10 +334,10 @@ const GENERIC_ENTITY_MESH: Record<typeof GAME_ENTITY_KINDS[number], RenderSpec["
   resource: "disc",
   card: "card",
   character: "pawn",
-  token: "pawn",
+  token: "disc",
   location: "tile-square",
   concept: "disc",
-  object: "pawn",
+  object: "disc",
 };
 
 function applyKernelDefaults(render: RenderSpec, kernelType: string | null | undefined) {
@@ -425,9 +425,50 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     ];
     return;
   }
+  if (kernelType === "gem-engine-v1" || kernelType === "pattern-draft-v1" || kernelType === "auction-bidding-v1") {
+    // T030 · desk-kernel visual baseline: felt board, wood table, clearcoat pieces, card stock.
+    render.camera = { ...render.camera, fovDeg: 32, distance: 14, minPolarDeg: 28, maxPolarDeg: 68 };
+    Object.assign(render.materials, {
+      board: material("#5c6b58", "cloth", 0.88),
+      table: material("#7a4e28", "grain", 0.92),
+      piece: material("#f7f1e6", "none", 0.42, 0.08, 0.35),
+      card: material("#f3e7d3", "none", 0.72, 0, 0.08),
+      resource: material("#e8d9b8", "none", 0.48, 0.12, 0.28),
+      token: material("#c4b5fd", "none", 0.4, 0.15, 0.4),
+      ink: material("#334155", "none", 0.55),
+    });
+    render.bindings = [
+      binding("region", "tile-square", "board"),
+      binding("cell", "tile-square", "board"),
+      binding("map", "tile-square", "board"),
+      binding("card", "card", "card", 1),
+      binding("disc", "disc", "piece", 0.9),
+      binding("resource", "disc", "resource", 0.85),
+      binding("token", "disc", "token", 0.75),
+      binding("building", "house", "piece", 0.9),
+      binding("station", "disc", "ink", 0.8),
+      binding("die", "die", "piece", 0.8),
+    ];
+    if (kernelType === "auction-bidding-v1") {
+      Object.assign(render.materials, {
+        board: material("#6b5f4e", "cloth", 0.86),
+        card: material("#fff7ed", "none", 0.68, 0, 0.1),
+      });
+    }
+    if (kernelType === "pattern-draft-v1") {
+      Object.assign(render.materials, {
+        board: material("#4a6741", "cloth", 0.9),
+        piece: material("#f8fafc", "none", 0.4, 0.05, 0.32),
+      });
+    }
+    return;
+  }
+
   Object.assign(render.materials, {
-    board: material("#6f7f6b", "cloth", 0.8),
-    piece: material("#f4efe6", "none", 0.58),
+    board: material("#6f7f6b", "cloth", 0.84),
+    table: material("#8b5a2b", "grain", 0.9),
+    piece: material("#f4efe6", "none", 0.48, 0.05, 0.22),
+    card: material("#f3e7d3", "none", 0.72, 0, 0.06),
   });
   // Generic tabletop (G3D-14 default base): every GameEntity kind that can
   // appear in GameSpec.objects[].kind gets a primitive, plus region cells and dice.
