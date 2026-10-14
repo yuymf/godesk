@@ -1,4 +1,6 @@
 import type { SessionState } from "./project-contract";
+import type { RenderSpec } from "./render-spec";
+import { TabletopStage } from "./TabletopStage";
 
 type GemEngineBoardState = NonNullable<SessionState["gemEngine"]>;
 
@@ -15,6 +17,8 @@ export function GemEngineBoard({
   status,
   viewerSeat,
   onAct,
+  render,
+  importedModels,
 }: {
   gem: GemEngineBoardState;
   activeSeat: number;
@@ -24,6 +28,9 @@ export function GemEngineBoard({
   status: "active" | "complete";
   viewerSeat: number | null;
   onAct?: (actionId: string, payload?: Record<string, unknown>) => void;
+  /** ADR 0014 / T026: optional RenderSpec for shared TabletopStage. */
+  render?: RenderSpec;
+  importedModels?: ReadonlyArray<{ id: string; url: string; title?: string }>;
 }) {
   const canAct =
     enabled && !busy && !readOnly && status === "active" && viewerSeat === activeSeat;
@@ -34,14 +41,37 @@ export function GemEngineBoard({
     .map(([c, n]) => `${COLOR_LABEL[c] ?? c}${n}`)
     .join(" · ");
   const reserved = (own as { reserved?: Array<{ id?: string; discount?: string; prestige?: number }> } | null)?.reserved ?? [];
+  const seats = gem.seats as Array<{
+    prestige: number;
+    discounts: Record<string, number>;
+    reserved?: unknown[];
+  }>;
+  const leader = seats.reduce(
+    (best, seat, index) => (seat.prestige > (seats[best]?.prestige ?? -1) ? index : best),
+    0,
+  );
+
+  const stageOnAct =
+    canAct && !pendingDiscard
+      ? (actionId: string, payload?: Record<string, unknown>) => {
+          onAct?.(actionId, payload);
+        }
+      : undefined;
 
   return (
-    <section aria-label="宝石引擎桌" className="gem-engine-board">
+    <section aria-label="宝石引擎桌" className="gem-engine-board room-view-tabletop-immersive">
+      <TabletopStage
+        kernel="gem-engine-v1"
+        state={gem}
+        render={render}
+        importedModels={importedModels}
+        onAct={stageOnAct}
+      />
       <header>
         <span className="auction-kicker">宝石引擎 · 声望竞速</span>
         <h2>
           {status === "complete"
-            ? `终局 · 座位 ${gem.seats[0].prestige >= gem.seats[1].prestige ? 0 : 1} 领先`
+            ? `终局 · 座位 ${leader} 领先`
             : pendingDiscard
               ? `座位 ${activeSeat} · 弃回溢出代币（上限 10）`
               : `轮到座位 ${activeSeat}`}
@@ -84,14 +114,14 @@ export function GemEngineBoard({
         </div>
       ))}
       <div role="region" aria-label="席位声望">
-        {([0, 1] as const).map((seat) => (
-          <div key={seat}>
-            座位 {seat} · 声望 {gem.seats[seat].prestige} · 折扣{" "}
-            {Object.entries(gem.seats[seat].discounts)
-              .filter(([, n]) => n > 0)
-              .map(([c, n]) => `${COLOR_LABEL[c]}${n}`)
+        {seats.map((seat, seatId) => (
+          <div key={seatId}>
+            座位 {seatId} · 声望 {seat.prestige} · 折扣{" "}
+            {Object.entries(seat.discounts ?? {})
+              .filter(([, n]) => (n as number) > 0)
+              .map(([c, n]) => `${COLOR_LABEL[c] ?? c}${n}`)
               .join(" ") || "无"}
-            {" · "}保留 {(gem.seats[seat] as { reserved?: unknown[] }).reserved?.length ?? 0}
+            {" · "}保留 {(seat as { reserved?: unknown[] }).reserved?.length ?? 0}
           </div>
         ))}
       </div>

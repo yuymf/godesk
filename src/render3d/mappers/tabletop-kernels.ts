@@ -1,5 +1,5 @@
 /**
- * G3D-14 · 四个空间 Kernel 公开状态 → 通用桌面布局（TabletopLayout）。
+ * G3D-14 · 空间 Kernel 公开状态 → 通用桌面布局（TabletopLayout）。
  * 区域排成桌面格位，对象绑定为基础网格；合法动作挂到格位 / 连线 / 提示环上，
  * 由同一拾取管线发出（与 DOM 动作按钮发同样的 actionId / payload）。
  */
@@ -278,5 +278,165 @@ export function harborVoyageLayout(
     pieces: [...pieces, ...grid.pieces],
     links: [],
     hints: [...hints, ...grid.hints],
+  };
+}
+
+
+/** Gem-token bank / market / nobles / seat tableau (T026). Generic; not IP-specific. */
+export type GemEngineTabletopInput = {
+  bank: Readonly<Record<string, number>>;
+  market: ReadonlyArray<ReadonlyArray<{ id?: string; discount?: string; prestige?: number }>>;
+  nobles: ReadonlyArray<{ id?: string; name?: string }>;
+  seats: ReadonlyArray<{
+    gems: Readonly<Record<string, number>>;
+    prestige: number;
+    cards?: ReadonlyArray<{ id?: string; discount?: string }>;
+    reserved?: ReadonlyArray<{ id?: string }>;
+  }>;
+};
+
+const GEM_TINT: Record<string, string> = {
+  white: "#f4efe6",
+  blue: "#3b82f6",
+  green: "#22c55e",
+  red: "#ef4444",
+  black: "#1f2937",
+  gold: "#eab308",
+};
+
+const GEM_BANK_ORDER = ["white", "blue", "green", "red", "black", "gold"] as const;
+
+export function gemEngineLayout(state: GemEngineTabletopInput): TabletopLayout {
+  const pieces: TabletopPiece[] = [];
+  const hints: TabletopHint[] = [];
+  const bankY = -3.2;
+  GEM_BANK_ORDER.forEach((color, i) => {
+    const count = Math.max(0, Math.floor(Number(state.bank[color] ?? 0)));
+    const x = -3.5 + i * 1.4;
+    const stack = Math.min(count, 5);
+    for (let s = 0; s < stack; s++) {
+      pieces.push({
+        id: `bank:${color}:${s}`,
+        objectKind: "resource",
+        x,
+        z: bankY,
+        y: 0.06 + s * 0.08,
+        size: 0.55,
+        tint: GEM_TINT[color],
+        label: s === stack - 1 ? `${color}:${count}` : undefined,
+      });
+    }
+    if (count === 0) {
+      pieces.push({
+        id: `bank:${color}:empty`,
+        objectKind: "resource",
+        x,
+        z: bankY,
+        size: 0.35,
+        tint: "#9ca3af",
+        label: color,
+      });
+    }
+  });
+
+  state.market.forEach((tierCards, tier) => {
+    const z = -1.6 + tier * 1.15;
+    tierCards.forEach((card, index) => {
+      const x = -2.4 + index * 1.6;
+      const discount = String(card.discount ?? "");
+      const prestige = Number(card.prestige ?? 0);
+      pieces.push({
+        id: `market:t${tier + 1}:${index}`,
+        objectKind: "card",
+        x,
+        z,
+        size: 0.85,
+        tint: GEM_TINT[discount] ?? "#d6d3d1",
+        label: `T${tier + 1}+${prestige}`,
+        action: { type: "buy", payload: { tier: tier + 1, index } },
+      });
+      hints.push({
+        id: `buy:t${tier + 1}:${index}`,
+        x,
+        z,
+        radius: 0.35,
+        action: { type: "buy", payload: { tier: tier + 1, index } },
+      });
+      hints.push({
+        id: `reserve:t${tier + 1}:${index}`,
+        x: x + 0.45,
+        z: z + 0.35,
+        radius: 0.22,
+        action: { type: "reserve", payload: { tier: tier + 1, index } },
+      });
+    });
+  });
+
+  state.nobles.forEach((noble, i) => {
+    const x = -2.5 + i * 1.5;
+    pieces.push({
+      id: `noble:${noble.id ?? i}`,
+      objectKind: "token",
+      x,
+      z: -4.4,
+      size: 0.7,
+      tint: "#a78bfa",
+      label: String(noble.name ?? `N${i}`),
+      emphasis: true,
+    });
+  });
+
+  const seatCount = state.seats.length;
+  state.seats.forEach((seat, seatId) => {
+    const x0 = -3.6 + (seatId - (seatCount - 1) / 2) * Math.min(2.4, 8 / Math.max(seatCount, 1));
+    const z0 = 2.6;
+    pieces.push({
+      id: `seat:${seatId}:marker`,
+      objectKind: "building",
+      x: x0,
+      z: z0 + 0.9,
+      size: 0.45,
+      seat: seatId,
+      label: `S${seatId}:${seat.prestige}`,
+    });
+    let gemSlot = 0;
+    for (const color of GEM_BANK_ORDER) {
+      const n = Math.max(0, Math.floor(Number(seat.gems[color] ?? 0)));
+      const show = Math.min(n, 3);
+      for (let s = 0; s < show; s++) {
+        pieces.push({
+          id: `seat:${seatId}:gem:${color}:${s}`,
+          objectKind: "disc",
+          x: x0 - 0.7 + (gemSlot % 4) * 0.35,
+          z: z0 - Math.floor(gemSlot / 4) * 0.35,
+          y: 0.05 + s * 0.06,
+          size: 0.28,
+          seat: seatId,
+          tint: GEM_TINT[color],
+        });
+      }
+      if (show > 0) gemSlot += 1;
+    }
+    (seat.cards ?? []).slice(0, 6).forEach((card, ci) => {
+      pieces.push({
+        id: `seat:${seatId}:card:${ci}`,
+        objectKind: "card",
+        x: x0 + 0.9,
+        z: z0 - 0.2 - ci * 0.12,
+        y: 0.04 + ci * 0.02,
+        size: 0.4,
+        seat: seatId,
+        tint: GEM_TINT[String(card.discount ?? "")] ?? "#e7e5e4",
+      });
+    });
+  });
+
+  return {
+    kernelType: "gem-engine-v1",
+    board: { objectKind: "region", materialKey: "table", width: BOARD_SPAN + 1.2, depth: BOARD_SPAN + 0.6 },
+    cells: [],
+    pieces,
+    links: [],
+    hints,
   };
 }

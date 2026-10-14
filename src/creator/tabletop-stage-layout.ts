@@ -4,10 +4,12 @@
 import type { TabletopLayout, TabletopRenderInput } from "../render3d/mappers/tabletop";
 import {
   discFlippingLayout,
+  gemEngineLayout,
   harborVoyageLayout,
   networkRouteLayout,
   workerPlacementLayout,
   type DiscFlippingTabletopInput,
+  type GemEngineTabletopInput,
   type NetworkRouteTabletopInput,
 } from "../render3d/mappers/tabletop-kernels";
 import { SCENE_TOKENS, SEAT_COLORS } from "../render3d/tokens";
@@ -72,5 +74,7 @@ export function layoutForStage({ kernel, state, legal, onAct }: Pick<TabletopSta
         targets: HARBOR_TARGETS,
       }, new Set(open));
     }
+    case "gem-engine-v1":
+      return gemEngineLayout(state as GemEngineTabletopInput);
   }
 }
