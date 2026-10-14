@@ -284,15 +284,16 @@ function baseDefault(kernelType: string | null | undefined): RenderSpec {
       pan: false,
     },
     lighting: {
+      // T061 · stronger sun / darker ground fill → readable specular + contact shadows
       sun: {
         azimuthDeg: 128,
-        elevationDeg: 46,
-        intensity: 3.05,
+        elevationDeg: 52,
+        intensity: 3.45,
         color: "#ffc890",
       },
-      hemisphere: { sky: "#f2e6d2", ground: "#c9a878", intensity: 1.05 },
-      shadow: { enabled: true, softness: 0.92 },
-      exposure: 1.12,
+      hemisphere: { sky: "#f7efe4", ground: "#6b5a45", intensity: 0.88 },
+      shadow: { enabled: true, softness: 0.72 },
+      exposure: 1.16,
     },
     water: {
       enabled: kernelType === "hex-settlement-v1" || kernelType === "harbor-voyage-v1",
@@ -360,8 +361,8 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       "terrain-desert": material("#d9bd7a", "sand", 0.86),
       cliff: material("#77716a", "stone", 0.9),
       "number-token": material("#efe3c8", "none", 0.58),
-      piece: material("#f4efe6", "none", 0.58),
-      "fog-lantern": material("#f6c85f", "none", 0.38, 0, 0.25),
+      piece: material("#f7f1e6", "none", 0.42, 0.08, 0.35), // T061
+      "fog-lantern": material("#f6c85f", "none", 0.32, 0.05, 0.35),
     });
     render.bindings = [
       binding("tile-wood", "hex-prism", "terrain-wood"),
@@ -446,19 +447,20 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     render.camera = { ...render.camera, fovDeg: 30, distance: 12.5, minPolarDeg: 32, maxPolarDeg: 62, polarDeg: 48 };
     render.lighting = {
       ...render.lighting,
-      sun: { ...render.lighting.sun, azimuthDeg: 132, elevationDeg: 52, intensity: 2.75, color: "#ffd2a0" },
-      hemisphere: { sky: "#f4ebe0", ground: "#8f7d64", intensity: 0.92 },
-      shadow: { enabled: true, softness: 1 },
-      exposure: 1.06,
+      // T061 · desk contrast: hotter key, cooler fill, sharper shadows
+      sun: { ...render.lighting.sun, azimuthDeg: 132, elevationDeg: 54, intensity: 3.25, color: "#ffd2a0" },
+      hemisphere: { sky: "#f8f0e6", ground: "#6e5c48", intensity: 0.82 },
+      shadow: { enabled: true, softness: 0.7 },
+      exposure: 1.14,
     };
     Object.assign(render.materials, {
       board: material("#1a8a45", "cloth", 0.99, 0, undefined, 0.62),  // T044 product green felt
-      table: material("#7a4e28", "grain", 0.92),
-      piece: material("#f7f1e6", "none", 0.4, 0.08, 0.38),
-      card: material("#f3e7d3", "none", 0.55, 0, 0.2),
-      resource: material("#e8d9b8", "none", 0.28, 0.22, 0.72),
-      token: material("#c4b5fd", "none", 0.38, 0.15, 0.42),
-      ink: material("#334155", "none", 0.55),
+      table: material("#7a4e28", "grain", 0.88, 0.06),
+      piece: material("#f7f1e6", "none", 0.32, 0.1, 0.48),
+      card: material("#f8edd8", "none", 0.42, 0.04, 0.32),
+      resource: material("#f0e2c0", "none", 0.2, 0.28, 0.82),
+      token: material("#c4b5fd", "none", 0.3, 0.18, 0.55),
+      ink: material("#334155", "none", 0.48, 0.08, 0.15),
     });
     render.bindings = [
       binding("region", "tile-square", "board"),
@@ -479,13 +481,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     if (kernelType === "auction-bidding-v1") {
       Object.assign(render.materials, {
         board: material("#1c7d42", "cloth", 0.99, 0, undefined, 0.55),  // T044 auction felt
-        card: material("#fff7ed", "none", 0.68, 0, 0.1),
+        card: material("#fff7ed", "none", 0.42, 0.04, 0.28), // T061
       });
     }
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
         board: material("#1a8644", "cloth", 0.99, 0, undefined, 0.58),  // T044 pattern felt
-        piece: material("#f8fafc", "none", 0.4, 0.05, 0.32),
+        piece: material("#f8fafc", "none", 0.34, 0.08, 0.45), // T061
         slot: material("#3f3f46", "none", 0.82, 0.05, 0.12),  // legacy recessed slots
         // T054 · pale print plate under wall hue tints (square grid, not black pits)
         "wall-print": material("#e7e5e4", "none", 0.88, 0.02, 0.08),
