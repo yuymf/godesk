@@ -733,22 +733,44 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     bed.castShadow = true;
     group.add(bed, sleepers, rails);
     // T046/T049 · countable seat-colored train/wagon segments (distinct from unclaimed weak slots).
+    // T065 · rolling-stock: chassis + windowed body + roof + coupler (not sugar-cube boxes)
     const carMat = materialFor(node, ctx);
-    // T062 · taller/wider seat-colored cars so claimed routes dominate Room close-ups
+    const chassisMat = ctx.library.get("tt-car-chassis", { base: "#1f2937", roughness: 0.7, metalness: 0.25, pattern: "none" as const });
+    const glassMat = ctx.library.get("tt-car-glass", { base: "#0f172a", roughness: 0.35, metalness: 0.05, pattern: "none" as const });
     const carCount = Math.max(2, Math.min(6, Math.round(usable / 0.38)));
     const carStep = usable / carCount;
-    const cars: Geometry[] = [];
+    const bodies: Geometry[] = [];
+    const chassis: Geometry[] = [];
+    const glass: Geometry[] = [];
     for (let i = 0; i < carCount; i += 1) {
       const cx = -usable / 2 + carStep * (i + 0.5);
-      const body = boxAt(carStep * 0.82, 0.22, gauge * 1.15, cx, 0.2, 0);
-      cars.push(body);
-      cars.push(boxAt(carStep * 0.78, 0.06, gauge * 0.85, cx, 0.34, 0)); // roof
-      cars.push(boxAt(0.04, 0.1, gauge * 0.85, cx - carStep * 0.34, 0.22, 0)); // coupler
+      const cw = carStep * 0.78;
+      const cd = gauge * 1.05;
+      // undercarriage / chassis plate + wheel nubs
+      chassis.push(boxAt(cw * 0.95, 0.05, cd * 0.95, cx, 0.08, 0));
+      chassis.push(boxAt(0.06, 0.06, 0.06, cx - cw * 0.28, 0.05, cd * 0.38));
+      chassis.push(boxAt(0.06, 0.06, 0.06, cx + cw * 0.28, 0.05, cd * 0.38));
+      chassis.push(boxAt(0.06, 0.06, 0.06, cx - cw * 0.28, 0.05, -cd * 0.38));
+      chassis.push(boxAt(0.06, 0.06, 0.06, cx + cw * 0.28, 0.05, -cd * 0.38));
+      // seat-colored body
+      bodies.push(boxAt(cw, 0.16, cd, cx, 0.18, 0));
+      bodies.push(boxAt(cw * 0.96, 0.05, cd * 0.92, cx, 0.28, 0)); // roof lip
+      // coupler knuckle between cars
+      bodies.push(boxAt(0.05, 0.06, cd * 0.35, cx - cw * 0.52, 0.14, 0));
+      // window panes (dark recesses — readable vs solid box)
+      const winW = cw * 0.18;
+      for (const side of [1, -1] as const) {
+        glass.push(boxAt(winW, 0.07, 0.02, cx - cw * 0.22, 0.2, side * (cd * 0.52)));
+        glass.push(boxAt(winW, 0.07, 0.02, cx + cw * 0.22, 0.2, side * (cd * 0.52)));
+      }
     }
-    const train = new Mesh(mergeGeometries(cars) ?? cars[0]!, carMat);
-    train.castShadow = true;
-    train.receiveShadow = true;
-    group.add(train);
+    const chassisMesh = new Mesh(mergeGeometries(chassis) ?? chassis[0]!, chassisMat);
+    chassisMesh.castShadow = true;
+    const bodyMesh = new Mesh(mergeGeometries(bodies) ?? bodies[0]!, carMat);
+    bodyMesh.castShadow = true;
+    const glassMesh = new Mesh(mergeGeometries(glass) ?? glass[0]!, glassMat);
+    glassMesh.castShadow = false;
+    group.add(chassisMesh, bodyMesh, glassMesh);
   } else {
     // Unclaimed: faint empty track + T051 countable length tick/slots (ghost wagon bays).
     group.add(sleepers, rails);
