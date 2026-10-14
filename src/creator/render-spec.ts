@@ -14,6 +14,7 @@ const builtInMesh = z.enum([
   "tower",
   "road-bar",
   "pawn",
+  "meeple",
   "disc",
   "gem-chip",
   "glazed-tile",
@@ -336,7 +337,7 @@ const GAME_ENTITY_KINDS = [
 const GENERIC_ENTITY_MESH: Record<typeof GAME_ENTITY_KINDS[number], RenderSpec["bindings"][number]["mesh"]> = {
   resource: "disc",
   card: "card",
-  character: "pawn",
+  character: "meeple",
   token: "disc",
   location: "tile-square",
   concept: "disc",
@@ -420,11 +421,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     Object.assign(render.materials, {
       map: material("#c9b68a", "none", 0.86),
       ink: material("#40505a", "none", 0.58),
+      piece: material("#f7f1e6", "none", 0.42, 0.08, 0.35),
     });
     render.bindings = [
       binding("station", "disc", "ink", 0.78),
       binding("route", "road-bar", "ink", 0.72),
       binding("claim", "road-bar", "ink", 0.72),
+      binding("worker", "meeple", "piece", 0.95),
     ];
     return;
   }
@@ -458,6 +461,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       binding("token", "disc", "token", 0.75),
       binding("plaque", "plaque", "piece", 1),
       binding("building", "house", "piece", 0.9),
+      binding("worker", "meeple", "piece", 0.95),
       binding("station", "disc", "ink", 0.8),
       binding("die", "die", "piece", 0.8),
     ];

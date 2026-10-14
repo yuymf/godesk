@@ -92,6 +92,77 @@ function pawn(): Geometry {
   return new LatheGeometry(profile, 14);
 }
 
+/** T042 · board-game meeple: extruded silhouette + front face (eyes); back plain. */
+function meepleBody(): Geometry {
+  const shape = new Shape();
+  // Classic meeple outline (Y up, X right); base at y=0.
+  shape.moveTo(0, 0);
+  shape.lineTo(0.16, 0);
+  shape.quadraticCurveTo(0.2, 0.08, 0.14, 0.18); // right foot
+  shape.lineTo(0.08, 0.28);
+  shape.lineTo(0.22, 0.38); // right arm tip
+  shape.quadraticCurveTo(0.28, 0.48, 0.16, 0.52);
+  shape.lineTo(0.1, 0.55);
+  shape.quadraticCurveTo(0.12, 0.7, 0, 0.78); // head right→top
+  shape.quadraticCurveTo(-0.12, 0.7, -0.1, 0.55);
+  shape.lineTo(-0.16, 0.52);
+  shape.quadraticCurveTo(-0.28, 0.48, -0.22, 0.38);
+  shape.lineTo(-0.08, 0.28);
+  shape.lineTo(-0.14, 0.18);
+  shape.quadraticCurveTo(-0.2, 0.08, -0.16, 0);
+  shape.closePath();
+  const geom = new ExtrudeGeometry(shape, {
+    depth: 0.22,
+    bevelEnabled: true,
+    bevelThickness: 0.02,
+    bevelSize: 0.015,
+    bevelSegments: 2,
+    curveSegments: 8,
+  });
+  // Extrude along +Z; shift so base y=0 and centered in Z.
+  geom.translate(0, 0, -0.11);
+  geom.computeVertexNormals();
+  return geom;
+}
+
+function meepleFigure(node: SceneNode, ctx: TabletopObjectContext): Object3D {
+  const group = new Group();
+  const body = new Mesh(meepleBody(), materialFor(node, ctx));
+  body.castShadow = true;
+  body.receiveShadow = true;
+  group.add(body);
+  // Front face markers (+Z): two eyes + chest notch — distinguishes front from back.
+  const faceMat = new MeshStandardMaterial({
+    color: "#1e293b",
+    roughness: 0.55,
+    metalness: 0.05,
+  });
+  for (const x of [-0.035, 0.035] as const) {
+    const eye = new Mesh(new SphereGeometry(0.022, 8, 6), faceMat);
+    eye.position.set(x, 0.62, 0.12);
+    eye.castShadow = false;
+    eye.receiveShadow = false;
+    group.add(eye);
+  }
+  const chest = new Mesh(new BoxGeometry(0.08, 0.06, 0.02), faceMat);
+  chest.position.set(0, 0.42, 0.12);
+  chest.castShadow = false;
+  group.add(chest);
+  // Back cue: small collar ridge on -Z (readable from behind, not a face).
+  const backMat = new MeshStandardMaterial({
+    color: "#0f172a",
+    roughness: 0.7,
+    metalness: 0,
+  });
+  const collar = new Mesh(new BoxGeometry(0.14, 0.03, 0.03), backMat);
+  collar.position.set(0, 0.54, -0.12);
+  group.add(collar);
+  group.add(softContactShadow(0.35, 0.28));
+  return group;
+}
+
+
+
 function ship(): Geometry {
   const shape = new Shape();
   shape.moveTo(-0.45, -0.16);
@@ -499,6 +570,8 @@ function geometryFor(mesh: string): Geometry {
       const g = new SphereGeometry(0.5, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2);
       return g;
     }
+    case "meeple":
+      return meepleBody();
     case "pawn":
     default:
       return pawn();
@@ -1005,6 +1078,8 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = feltStitchMesh();
   } else if (mesh === "table-vignette") {
     object = tableVignetteMesh();
+  } else if (mesh === "meeple") {
+    object = meepleFigure(node, ctx);
   } else if (mesh === "card") {
     object = cardWithFace(node, ctx);
     (object as Group).add(softContactShadow(0.48, 0.68));

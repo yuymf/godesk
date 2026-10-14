@@ -57,6 +57,7 @@ export function fallbackTabletopRender(kernel: TabletopStageProps["kernel"]): Ta
           { objectKind: "token", mesh: "disc", material: "token", scale: 0.75 },
           { objectKind: "plaque", mesh: "plaque", material: "piece", scale: 1 },
           { objectKind: "building", mesh: "house", material: "piece", scale: 0.9 },
+          { objectKind: "worker", mesh: "meeple", material: "piece", scale: 0.95 },
         ]
       : [{ objectKind: "cell", mesh: "tile-square", material: "board", scale: 1 }],
   };

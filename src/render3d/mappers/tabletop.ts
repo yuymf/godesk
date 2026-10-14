@@ -128,7 +128,7 @@ const FALLBACK_MESH: Record<string, string> = {
   station: "disc",
   resource: "gem-chip",
   cargo: "disc",
-  worker: "pawn",
+  worker: "meeple",
   token: "disc",
   tile: "glazed-tile",
   plaque: "plaque",
@@ -576,12 +576,18 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
     const onCell = layout.cells.some((cell) =>
       Math.abs(cell.x - piece.x) <= cell.width / 2 && Math.abs(cell.z - piece.z) <= cell.depth / 2);
     const baseY = piece.y ?? (onCell ? boardTop + CELL_THICKNESS : boardTop);
+    // Face-schema labels win; else emphasis → major (stations); else plain label tag.
+    const pieceTag = FACE_SCHEMA_KINDS.has(piece.objectKind) && piece.label
+      ? piece.label
+      : piece.emphasis
+        ? "major"
+        : piece.label;
     nodes.push({
       id,
       kind: "piece",
       mesh: resolved.mesh,
       position: [round(piece.x), round(baseY), round(piece.z)],
-      ...(piece.label ? { tag: piece.label } : piece.emphasis ? { tag: "major" } : {}),
+      ...(pieceTag ? { tag: pieceTag } : {}),
       ...(piece.rotationY ? { rotationY: round(piece.rotationY) } : {}),
       scale: [size, size, size],
       ...(piece.seat !== null && piece.seat !== undefined ? { seat: piece.seat } : {}),

@@ -61,6 +61,8 @@ export type NetworkRouteTabletopInput = {
   claims: Readonly<Record<string, number | null>>;
   terminalFrom: string;
   terminalTo: string;
+  /** Optional seat scores / route counts for shared meeple markers (T042). */
+  routeCounts?: ReadonlyArray<number>;
 };
 
 export function networkRouteLayout(
@@ -109,6 +111,23 @@ export function networkRouteLayout(
       hints.push({ id: edge.id, x: (from[0] + to[0]) / 2, z: (from[1] + to[1]) / 2, radius: 0.24, action });
     }
   }
+  // T042: shared seat meeples (per-seat color) along the near edge.
+  const counts = state.routeCounts ?? [];
+  const seatN = Math.max(counts.length, 2);
+  for (let seatId = 0; seatId < seatN; seatId += 1) {
+    const x0 = -2.4 + (seatId - (seatN - 1) / 2) * 2.2;
+    pieces.push({
+      id: `seat:${seatId}:marker`,
+      objectKind: "worker",
+      x: x0,
+      z: (spanY * scale) / 2 + 0.55,
+      size: 0.5,
+      rotationY: Math.PI,
+      seat: seatId,
+      label: `S${seatId}:${counts[seatId] ?? 0}`,
+    });
+  }
+
   return {
     kernelType: "network-route-v1",
     board: { objectKind: "map", materialKey: "map", width: spanX * scale + 1.6, depth: spanY * scale + 1.6 },
@@ -443,10 +462,11 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
     const z0 = 2.6;
     pieces.push({
       id: `seat:${seatId}:marker`,
-      objectKind: "building",
+      objectKind: "worker",
       x: x0,
       z: z0 + 0.9,
-      size: 0.45,
+      size: 0.55,
+      rotationY: Math.PI,
       seat: seatId,
       label: `S${seatId}:${seat.prestige}`,
     });
@@ -629,10 +649,11 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
     const z0 = 2.4;
     pieces.push({
       id: `seat:${seatId}:marker`,
-      objectKind: "building",
+      objectKind: "worker",
       x: x0,
       z: z0 + 1.15,
-      size: 0.4,
+      size: 0.5,
+      rotationY: Math.PI,
       seat: seatId,
       label: `S${seatId}:${seat.score}`,
       ...(seat.hasMarker ? { emphasis: true } : {}),
@@ -821,10 +842,11 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
     const high = state.highBidder === seatId;
     pieces.push({
       id: `seat:${seatId}:marker`,
-      objectKind: "building",
+      objectKind: "worker",
       x: x0,
       z: z0 + 0.95,
-      size: high ? 0.5 : 0.4,
+      size: high ? 0.6 : 0.5,
+      rotationY: Math.PI,
       seat: seatId,
       label: `S${seatId}:$${chips}`,
       ...(high ? { emphasis: true } : {}),
