@@ -814,20 +814,26 @@ function station(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const wall = ctx.library.get("tt-wall", WALL);
   const roofMat = ctx.library.get("tt-roof", ROOF);
   const ink = materialFor(node, ctx);
-  // Round stone platform (reads as a station pad, not a cabinet base).
-  const plinth = new Mesh(translated(new CylinderGeometry(0.52, 0.56, 0.09, 20), 0.045), stone);
+  // T073 · elongated platform/plinth + curb edge (desk not bald at map-close)
+  const platform = new Mesh(boxAt(0.95, 0.06, 1.15, 0, 0.03, -0.08), stone);
+  platform.receiveShadow = true;
+  platform.castShadow = true;
+  const curb = new Mesh(boxAt(0.98, 0.03, 1.18, 0, 0.065, -0.08), ink);
+  curb.receiveShadow = true;
+  // Round pad on top of platform (station footprint)
+  const plinth = new Mesh(translated(new CylinderGeometry(0.52, 0.56, 0.09, 20), 0.11), stone);
   plinth.receiveShadow = true;
   plinth.castShadow = true;
-  const ring = new Mesh(translated(new CylinderGeometry(0.48, 0.48, 0.025, 20), 0.1), ink);
+  const ring = new Mesh(translated(new CylinderGeometry(0.48, 0.48, 0.025, 20), 0.165), ink);
   ring.receiveShadow = true;
   // Main cabin body
-  const walls = new Mesh(boxAt(0.5, 0.34, 0.34, 0, 0.28, 0), wall);
+  const walls = new Mesh(boxAt(0.5, 0.34, 0.34, 0, 0.34, 0), wall);
   walls.castShadow = true;
   walls.receiveShadow = true;
   // Door slab + two window insets (dark) so it reads as a house in ortho.
-  const door = new Mesh(boxAt(0.12, 0.2, 0.02, 0, 0.22, 0.175), ink);
-  const winL = new Mesh(boxAt(0.1, 0.1, 0.02, -0.16, 0.3, 0.175), ink);
-  const winR = new Mesh(boxAt(0.1, 0.1, 0.02, 0.16, 0.3, 0.175), ink);
+  const door = new Mesh(boxAt(0.12, 0.2, 0.02, 0, 0.28, 0.175), ink);
+  const winL = new Mesh(boxAt(0.1, 0.1, 0.02, -0.16, 0.36, 0.175), ink);
+  const winR = new Mesh(boxAt(0.1, 0.1, 0.02, 0.16, 0.36, 0.175), ink);
   // Gabled roof
   const roofShape = new Shape();
   roofShape.moveTo(-0.34, 0);
@@ -835,15 +841,15 @@ function station(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   roofShape.lineTo(0, 0.22);
   roofShape.closePath();
   const roofGeom = new ExtrudeGeometry(roofShape, { depth: 0.42, bevelEnabled: false });
-  roofGeom.translate(0, 0.45, -0.21);
+  roofGeom.translate(0, 0.51, -0.21);
   const roof = new Mesh(roofGeom, roofMat);
   roof.castShadow = true;
   // Short platform canopy toward the tracks
-  const canopy = new Mesh(boxAt(0.55, 0.03, 0.18, 0, 0.36, -0.28), roofMat);
+  const canopy = new Mesh(boxAt(0.55, 0.03, 0.18, 0, 0.42, -0.28), roofMat);
   canopy.castShadow = true;
-  const postL = new Mesh(boxAt(0.04, 0.28, 0.04, -0.2, 0.2, -0.28), wall);
-  const postR = new Mesh(boxAt(0.04, 0.28, 0.04, 0.2, 0.2, -0.28), wall);
-  group.add(plinth, ring, walls, door, winL, winR, roof, canopy, postL, postR);
+  const postL = new Mesh(boxAt(0.04, 0.28, 0.04, -0.2, 0.26, -0.28), wall);
+  const postR = new Mesh(boxAt(0.04, 0.28, 0.04, 0.2, 0.26, -0.28), wall);
+  group.add(platform, curb, plinth, ring, walls, door, winL, winR, roof, canopy, postL, postR);
   const rawTag = (node.tag ?? "").trim();
   const isHub = rawTag === "major" || rawTag.startsWith("hub:");
   const stationName = rawTag.startsWith("hub:")
