@@ -143,6 +143,29 @@ try {
             snippet: textBody.slice(0, 500),
           };
           L({ step: "play-hud", ...playHud });
+          // T064 · auditable stage sidecar — reject 汐屿/潮阵 shell contamination
+          const suiteId = (SUITE || "").replace(/-regress-.*$/, "").replace(/-t\d+$/, "") || SUITE;
+          const rejectedShell = /汐屿六角岛|汐屿群岛|潮阵|礁蟹|备战席/.test(textBody);
+          const sidecar = {
+            suite: suiteId,
+            suiteRaw: SUITE,
+            kernelType: kernel.type || null,
+            roomId: j.id || null,
+            buildId: build?.id || null,
+            projectId: pid,
+            sessionUrl: page.url(),
+            canvas: roomProbe.canvas,
+            hasStage: roomProbe.hasStage,
+            hasSceneHost: roomProbe.hasSceneHost,
+            kernelAttr: roomProbe.kernelAttr,
+            rejectedShell,
+            shellNote: rejectedShell
+              ? "REJECT: 汐屿/潮阵 product shell text in hardness Room capture"
+              : "ok",
+          };
+          writeFileSync(`${OUT}/stage-sidecar.json`, JSON.stringify(sidecar, null, 2));
+          writeFileSync(`${OUT}/15-room-stage.sidecar.json`, JSON.stringify(sidecar, null, 2));
+          L({ step: "stage-sidecar", ...sidecar });
         }
       } else {
         L({ step: "session-create-fail", body: text.slice(0, 400) });

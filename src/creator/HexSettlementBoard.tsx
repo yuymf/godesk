@@ -46,8 +46,8 @@ const RESOURCE_LABEL = {
 
 const COPY = {
   zh: {
-    board: "汐屿六角岛",
-    island: "汐屿群岛",
+    board: "六角岛桌面", // T064 · generic (no product-shell brand)
+    island: "群岛",
     hud: "对局状态",
     active: "当前行动",
     seat: "座位",
@@ -119,8 +119,8 @@ const COPY = {
     toWin: "还需胜利点",
   },
   en: {
-    board: "Tidewell Isles",
-    island: "Tidewell Isles",
+    board: "Hex island table", // T064
+    island: "Archipelago",
     hud: "Match status",
     active: "Active seat",
     seat: "Seat",
