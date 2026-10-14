@@ -5,7 +5,7 @@
 | 回归靶 | H04 before/after seat-close；unit wall/pattern nodes |
 | 层 | **共享呈现**（pattern-draft seat board） |
 | 状态 | **关** |
-| tip | pending |
+| tip | `0442425` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t050/` |
 
 ## 问题
