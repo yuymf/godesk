@@ -61,6 +61,9 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
         importedModels={importedModels}
         onAct={stageOnAct}
       />
+      <details className="desk-chrome desk-action-drawer">
+        <summary className="desk-action-drawer-summary">桌面行动（主交互在 3D；点此展开按钮）</summary>
+        <div className="desk-action-drawer-body">
       <header className="auction-heading auction-lot-card">
         <div>
           <span className="auction-kicker">
@@ -253,6 +256,9 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
       {readOnly && (harbor?.currentLot || gallery?.currentLot) ? (
         <p className="auction-readonly-lot">当前拍品：{currentName}</p>
       ) : null}
+    
+        </div>
+      </details>
     </section>
   );
 }

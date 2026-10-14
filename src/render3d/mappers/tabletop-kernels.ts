@@ -540,7 +540,6 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
       z: fz,
       size: 1.05,
       tint: "#4a6741",
-      label: `F${fi}`,
     });
     // T036: N glazed-tile children in a 2×2 pad grid (color-visible, countable at a glance).
     const GRID: ReadonlyArray<readonly [number, number]> = [

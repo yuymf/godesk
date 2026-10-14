@@ -121,6 +121,9 @@ export function PatternDraftBoard({
         importedModels={importedModels}
         onAct={stageOnAct}
       />
+      <details className="desk-chrome desk-action-drawer">
+        <summary className="desk-action-drawer-summary">桌面行动（主交互在 3D；点此展开按钮）</summary>
+        <div className="desk-action-drawer-body">
       <header>
         <span className="auction-kicker">工厂草稿 · 第 {draft.round} 轮</span>
         <h2>
@@ -207,6 +210,9 @@ export function PatternDraftBoard({
           {own.wall.flat().filter(Boolean).length}/25
         </p>
       ) : null}
+    
+        </div>
+      </details>
     </section>
   );
 }
