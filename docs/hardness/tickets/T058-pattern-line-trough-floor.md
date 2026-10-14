@@ -5,7 +5,7 @@
 | 回归靶 | H04 before/after lines-close；unit trough ≠ wall-slot；T036/T047/T050/T054 绿 |
 | 层 | **共享呈现** |
 | 状态 | **关** |
-| tip | pending-feat |
+| tip | `e9afddd` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t058/` |
 
 ## 问题
