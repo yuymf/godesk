@@ -540,16 +540,23 @@ export type PatternDraftTabletopInput = {
 };
 
 
-/** T052 · shared seat-front tableau origin (toward board center from meeple). Generic — no sample layout. */
+/** T052/T056 · shared seat-front tableau origin (toward board center from meeple).
+ * Seats are centered on the felt and clamped so extreme seats stay on-board
+ * (BOARD_SPAN/2 ≈ 4). Pre-T056 left-anchored formula pushed 5-seat auctions to x≈-7. */
 export function seatTableauOrigin(
   seatId: number,
   seatCount: number,
   opts?: { span?: number; zMeeple?: number; depth?: number },
 ): { x0: number; zMeeple: number; zOwned: number } {
-  const span = opts?.span ?? 2.4;
   const zMeeple = opts?.zMeeple ?? 2.55;
   const depth = opts?.depth ?? 0.7;
-  const x0 = -3.6 + (seatId - (seatCount - 1) / 2) * Math.min(span, 9 / Math.max(seatCount, 1));
+  const half = Math.min(3.35, BOARD_SPAN * 0.42);
+  const preferred = opts?.span ?? 2.4;
+  const span =
+    seatCount <= 1
+      ? 0
+      : Math.min(preferred, (2 * half) / Math.max(seatCount - 1, 1));
+  const x0 = (seatId - (seatCount - 1) / 2) * span;
   return { x0, zMeeple, zOwned: zMeeple - depth };
 }
 
@@ -968,29 +975,34 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
         });
       }
     }
-    // T052 · owned lot thumbnails in seat-front (framed-art), not meeple-only.
+    // T052/T056 · owned lots as readable seat-front framed-art (frame+canvas), not meeple/white-placard stand-ins.
+    // Place just inward of meeple (camera-visible) with gallery-class scale — not tiny 0.42 thumbs lost at glancing angle.
     const collection = gallery?.collection?.[seatId] ?? [];
     collection.slice(0, 5).forEach((painting, pi) => {
+      const n = Math.min(collection.length, 5);
+      const step = Math.min(0.9, 2.4 / Math.max(n, 1));
       pieces.push({
         id: `seat:${seatId}:coll:${pi}`,
         objectKind: "lot",
-        x: x0 - 0.4 + pi * 0.35,
-        z: zOwned - 0.1,
-        y: 0.06,
-        size: 0.42,
+        x: x0 - ((n - 1) * step) / 2 + pi * step,
+        z: zMeeple - 0.2,
+        y: 0.14,
+        size: 1.25,
         seat: seatId,
+        emphasis: true,
         label: encodeLotArt({ title: String(painting.name ?? "藏品"), artistId: painting.artistId }),
       });
     });
+    // Hand cards sit inward of owned framed-art so seat-front collection stays visible (T056).
     const hand = gallery?.auctionHand?.[seatId] ?? [];
     hand.slice(0, 4).forEach((painting, hi) => {
       pieces.push({
         id: `seat:${seatId}:hand:${hi}`,
         objectKind: "card",
         x: x0 - 0.35 + hi * 0.28,
-        z: zOwned + 0.35,
+        z: zOwned - 0.45,
         y: 0.05,
-        size: 0.36,
+        size: 0.32,
         seat: seatId,
         tint: "#bfdbfe",
         label: encodeCardFace({ title: String(painting.name ?? "手牌") }),

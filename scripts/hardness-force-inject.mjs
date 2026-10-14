@@ -70,6 +70,24 @@ export async function shotSeatPair(page, dir) {
   });
 }
 
+
+/** Tighter seat-front crop (felt band above wood rim) — for pixel gates on owned pieces. */
+export async function shotSeatFrontClose(page, path, { leftBias = false } = {}) {
+  const box = await page.locator("canvas").first().boundingBox();
+  if (!box) return;
+  const x = leftBias ? box.x + box.width * 0.05 : box.x + box.width * 0.08;
+  const w = leftBias ? box.width * 0.55 : box.width * 0.84;
+  await page.screenshot({
+    path,
+    clip: {
+      x,
+      y: box.y + box.height * 0.38,
+      width: w,
+      height: box.height * 0.42,
+    },
+  });
+}
+
 /**
  * Force-buy ≥ minCards development cards onto seat 0 (gem-engine-v1).
  * Other seats reserve-from-deck to advance turns without draining the color bank.
