@@ -5,7 +5,7 @@
 | 回归靶 | H03+H05 stage-wide/close；vs T066/T069 ≥一闸；motif-canvas 不回退 |
 | 层 | **共享呈现** |
 | 状态 | **开** |
-| tip | pending |
+| tip | `60d0510` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t072/` |
 
 ## 问题

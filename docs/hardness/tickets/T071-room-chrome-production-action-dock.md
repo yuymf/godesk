@@ -5,7 +5,7 @@
 | 回归靶 | H01+H02+H03 stage before/after |
 | 层 | **共享呈现 / Room chrome** |
 | 状态 | **开** |
-| tip | pending |
+| tip | `529e294` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t071/` |
 
 ## 问题

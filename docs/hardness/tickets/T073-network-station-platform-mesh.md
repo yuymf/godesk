@@ -5,7 +5,7 @@
 | 回归靶 | H02 map/stage-close；站名可读；彩车/bogie 不回退 |
 | 层 | **共享呈现**（network stations） |
 | 状态 | **开** |
-| tip | pending |
+| tip | `8800b7c` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t073/` |
 
 ## 问题
