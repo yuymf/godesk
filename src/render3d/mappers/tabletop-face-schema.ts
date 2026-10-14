@@ -20,7 +20,15 @@ export type PlaqueFaceSchema = {
   requirements?: Readonly<Record<string, number>>;
 };
 
-export type FaceSchema = CardFaceSchema | PlaqueFaceSchema;
+export type LotFaceSchema = {
+  kind: "lot";
+  title: string;
+  prestige?: number;
+  bid?: number;
+  artistId?: string;
+};
+
+export type FaceSchema = CardFaceSchema | PlaqueFaceSchema | LotFaceSchema;
 
 const COST_KEYS = ["white", "blue", "green", "red", "black", "gold"] as const;
 const COST_SHORT: Record<string, string> = {
@@ -63,6 +71,20 @@ export function encodeCardFace(input: Omit<CardFaceSchema, "kind">): string {
   return parts.join("|");
 }
 
+/** Encode gallery lot art board (procedural palette seed; no external copyright art). */
+export function encodeLotArt(input: {
+  title: string;
+  reserve?: number;
+  artistId?: string;
+  bid?: number;
+}): string {
+  const parts = ["face", "lot", `n:${input.title.replace(/\|/g, "/")}`];
+  if (input.reserve != null) parts.push(`p${Math.floor(input.reserve)}`);
+  if (input.bid != null) parts.push(`bid:${Math.floor(input.bid)}`);
+  if (input.artistId) parts.push(`a:${input.artistId.replace(/\|/g, "/")}`);
+  return parts.join("|");
+}
+
 /** Encode a noble / plaque face. */
 export function encodePlaqueFace(input: Omit<PlaqueFaceSchema, "kind">): string {
   const parts = ["face", "plaque", `n:${input.title.replace(/\|/g, "/")}`];
@@ -89,26 +111,33 @@ export function parseFaceSchema(raw: string | undefined | null): FaceSchema | nu
     return null;
   }
   const parts = s.split("|");
-  const kind = parts[1] === "plaque" ? "plaque" : "card";
+  const kind = parts[1] === "plaque" ? "plaque" : parts[1] === "lot" ? "lot" : "card";
   let tier: number | undefined;
   let prestige: number | undefined;
   let reward: string | undefined;
   let title: string | undefined;
   let cost: Record<string, number> | undefined;
   let requirements: Record<string, number> | undefined;
+  let bid: number | undefined;
+  let artistId: string | undefined;
   for (const p of parts.slice(2)) {
     if (p.startsWith("t") && /^\d+$/.test(p.slice(1))) tier = Number(p.slice(1));
     else if (p.startsWith("p") && /^\d+$/.test(p.slice(1))) prestige = Number(p.slice(1));
+    else if (p.startsWith("bid:") && /^\d+$/.test(p.slice(4))) bid = Number(p.slice(4));
     else if (p.startsWith("rw:")) reward = p.slice(3);
-    else if (p.startsWith("c")) cost = decodeCost(p.slice(1));
+    else if (p.startsWith("c") && kind !== "lot") cost = decodeCost(p.slice(1));
     else if (p.startsWith("q")) requirements = decodeCost(p.slice(1));
     else if (p.startsWith("n:")) title = p.slice(2);
+    else if (p.startsWith("a:")) artistId = p.slice(2);
   }
   if (kind === "plaque") {
     return { kind: "plaque", title: title ?? "★", prestige, requirements };
+  }
+  if (kind === "lot") {
+    return { kind: "lot", title: title ?? "拍品", prestige, bid, artistId };
   }
   return { kind: "card", tier, prestige, reward, cost, title };
 }
 
 /** ObjectKinds that carry face schema in label — do not spawn floating parchment nameplates. */
-export const FACE_SCHEMA_KINDS = new Set(["card", "plaque"]);
+export const FACE_SCHEMA_KINDS = new Set(["card", "plaque", "lot"]);

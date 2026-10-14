@@ -84,10 +84,11 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
         </strong>
         <span className="desk-stage-hud-supply">
           {gallery?.currentLot
-            ? `底价 ${gallery.fixedPrice || gallery.currentLot.reserve}`
+            ? `底价 ${gallery.fixedPrice || gallery.currentLot.reserve}${phase === "bidding" || phase === "sealed" ? ` · 现价 ${auction.currentBid}` : ""}`
             : harbor?.currentLot
               ? `底价 ${harbor.currentLot.reserve}`
               : `价值 ${auction.lotValue}`}
+          {gallery ? ` · ${phase}` : ""}
         </span>
       </div>
       <details className="desk-chrome desk-action-drawer">

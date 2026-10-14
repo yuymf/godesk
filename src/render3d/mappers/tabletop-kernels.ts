@@ -4,7 +4,7 @@
  * 由同一拾取管线发出（与 DOM 动作按钮发同样的 actionId / payload）。
  */
 import type { TabletopAction, TabletopCell, TabletopHint, TabletopLayout, TabletopLink, TabletopPiece } from "./tabletop";
-import { encodeCardFace, encodePlaqueFace } from "./tabletop-face-schema";
+import { encodeCardFace, encodeLotArt, encodePlaqueFace } from "./tabletop-face-schema";
 
 /** 桌面目标尺寸（世界单位）：配合 RenderSpec 默认机位（fov 35°、距离 16）。 */
 const BOARD_SPAN = 8;
@@ -748,10 +748,11 @@ export type AuctionBiddingTabletopInput = {
   gallery?: {
     currentLot?: { id?: string; name?: string; artistId?: string; reserve?: number } | null;
     companionLot?: { id?: string; name?: string; artistId?: string; reserve?: number } | null;
+    activeFloorLots?: ReadonlyArray<{ lotId?: string; name?: string; artistId?: string; reserve?: number; highBid?: number }>;
     currentMode?: string;
     round?: number;
     roundsToEnd?: number;
-    auctionHand?: ReadonlyArray<ReadonlyArray<{ id?: string; name?: string; artistId?: string }>>;
+    auctionHand?: ReadonlyArray<ReadonlyArray<{ id?: string; name?: string; artistId?: string; instanceId?: string; reserve?: number }>>;
     collection?: ReadonlyArray<ReadonlyArray<{ id?: string; name?: string; artistId?: string }>>;
     artists?: ReadonlyArray<{ id?: string; name?: string }>;
     marketPrices?: Readonly<Record<string, number>>;
@@ -774,12 +775,16 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
   if (lot) {
     pieces.push({
       id: `lot:${lot.id ?? "main"}`,
-      objectKind: "card",
+      objectKind: "lot",
       x: companion ? -0.7 : 0,
-      z: -0.4,
-      size: 1.2,
-      tint: "#fef3c7",
-      label: encodeCardFace({ title: String(lot.name ?? "拍品"), prestige: lot.reserve }),
+      z: -0.35,
+      size: 1.35,
+      label: encodeLotArt({
+        title: String(lot.name ?? "拍品"),
+        reserve: lot.reserve,
+        artistId: (lot as { artistId?: string }).artistId,
+        bid: state.currentBid,
+      }),
       emphasis: true,
       action: { type: "bid", payload: { amount: Math.max(1, (state.currentBid ?? 0) + 1) } },
     });
@@ -801,39 +806,103 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
   if (companion) {
     pieces.push({
       id: `lot:${companion.id ?? "companion"}`,
-      objectKind: "card",
-      x: 0.7,
-      z: -0.4,
-      size: 1.05,
-      tint: "#ede9fe",
-      label: encodeCardFace({ title: String(companion.name ?? "配对") }),
+      objectKind: "lot",
+      x: 0.75,
+      z: -0.35,
+      size: 1.1,
+      label: encodeLotArt({
+        title: String(companion.name ?? "配对"),
+        artistId: (companion as { artistId?: string }).artistId,
+      }),
     });
   }
 
-  // Mode / round marker
-  pieces.push({
-    id: "auction:mode",
-    objectKind: "token",
-    x: 0,
-    z: -2.2,
-    size: 0.55,
-    tint: "#94a3b8",
-    label: `${gallery?.currentMode ?? state.phase ?? "bid"} r${gallery?.round ?? 1}`,
-  });
+  // T043: phase/mode lives in desk-stage HUD — forbid persistent desktop "open r1" tokens.
 
-  // Artist market price chips
+  // Live multi-lot floor → framed art boards (gallery T024 path; currentLot may be null).
+  const floorLots = gallery?.activeFloorLots ?? [];
+  if (floorLots.length > 0) {
+    floorLots.slice(0, 3).forEach((fl, i) => {
+      const x = floorLots.length === 1 ? 0 : -1.1 + i * 1.2;
+      pieces.push({
+        id: `lot:floor:${fl.lotId ?? i}`,
+        objectKind: "lot",
+        x,
+        z: -0.35,
+        size: floorLots.length === 1 ? 1.35 : 1.05,
+        label: encodeLotArt({
+          title: String(fl.name ?? "拍品"),
+          reserve: fl.reserve,
+          artistId: fl.artistId,
+          bid: fl.highBid ?? state.currentBid,
+        }),
+        emphasis: true,
+        action: {
+          type: "floor_raise",
+          payload: {
+            lotId: fl.lotId,
+            amount: Math.max(1, (fl.highBid ?? fl.reserve ?? state.currentBid ?? 0) + 1),
+          },
+        },
+      });
+    });
+  } else if (!lot && gallery && (state.phase === "offer" || !state.phase)) {
+    // Offer phase: show auctioneer hand as framed mini boards (procedural art; playable).
+    const auctioneer = gallery.auctioneer ?? 0;
+    const hand = gallery.auctionHand?.[auctioneer] ?? [];
+    hand.slice(0, 4).forEach((painting, i) => {
+      const x = -1.8 + i * 1.2;
+      pieces.push({
+        id: `lot:hand:${painting.instanceId ?? painting.id ?? i}`,
+        objectKind: "lot",
+        x,
+        z: -0.2,
+        size: 0.95,
+        label: encodeLotArt({
+          title: String(painting.name ?? "手牌"),
+          reserve: painting.reserve,
+          artistId: painting.artistId,
+        }),
+        action: {
+          type: "play_painting",
+          payload: { instanceId: painting.instanceId ?? painting.id, mode: gallery.currentMode ?? "open" },
+        },
+      });
+    });
+  }
+
+
+  // Artist market track: framed mini boards with readable price (not raw name:price discs).
   (gallery?.artists ?? []).forEach((artist, i) => {
     const price = gallery?.marketPrices?.[artist.id ?? ""] ?? 0;
+    const n = (gallery?.artists ?? []).length || 1;
     pieces.push({
       id: `artist:${artist.id ?? i}`,
-      objectKind: "disc",
-      x: -3.2 + i * 1.5,
-      z: -3.2,
-      size: 0.45,
+      objectKind: "plaque",
+      x: -3.4 + i * Math.min(1.7, 8 / n),
+      z: -3.15,
+      size: 0.72,
       tint: ARTIST_TINT[i % ARTIST_TINT.length],
-      label: `${artist.name ?? artist.id}:${price}`,
+      label: encodePlaqueFace({
+        title: String(artist.name ?? artist.id ?? `A${i}`),
+        prestige: price,
+      }),
     });
   });
+
+  // Current bid chip near lot (readable) — not a phase debug string.
+  if (lot && (state.currentBid ?? 0) > 0) {
+    pieces.push({
+      id: "auction:bid",
+      objectKind: "resource",
+      x: companion ? -0.7 : 0,
+      z: 0.55,
+      size: 0.38,
+      tint: "#eab308",
+      label: String(state.currentBid),
+      emphasis: true,
+    });
+  }
 
   const seatCount = state.chips.length;
   state.chips.forEach((chips, seatId) => {

@@ -570,6 +570,8 @@ function geometryFor(mesh: string): Geometry {
       const g = new SphereGeometry(0.5, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2);
       return g;
     }
+    case "framed-art":
+      return translated(new BoxGeometry(0.95, 0.08, 1.2), 0.04);
     case "meeple":
       return meepleBody();
     case "pawn":
@@ -1028,6 +1030,122 @@ function tableVignetteMesh(): Object3D {
   return mesh;
 }
 
+
+/** T043 · framed gallery lot: wood frame + procedural color fields / brush blocks (no copyright art). */
+function hashSeed(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i += 1) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function proceduralLotCanvas(schema: { title: string; prestige?: number; bid?: number; artistId?: string }): HTMLCanvasElement | null {
+  if (typeof document === "undefined") return null;
+  const W = 256, H = 320;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const g = canvas.getContext("2d");
+  if (!g) return canvas;
+  const seed = hashSeed(`${schema.artistId ?? ""}:${schema.title}`);
+  let state = seed || 1;
+  const rnd = () => {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    return ((state >>> 0) % 1000) / 1000;
+  };
+  const palettes = [
+    ["#0f172a", "#38bdf8", "#f472b6", "#fef3c7"],
+    ["#1e1b4b", "#a78bfa", "#fbbf24", "#ecfccb"],
+    ["#14532d", "#4ade80", "#f97316", "#e0f2fe"],
+    ["#7c2d12", "#fb7185", "#38bdf8", "#fef9c3"],
+    ["#334155", "#94a3b8", "#e2e8f0", "#f59e0b"],
+  ];
+  const pal = palettes[seed % palettes.length]!;
+  g.fillStyle = pal[0]!;
+  g.fillRect(0, 0, W, H);
+  // Color field washes
+  for (let i = 0; i < 5; i += 1) {
+    g.globalAlpha = 0.35 + rnd() * 0.35;
+    g.fillStyle = pal[1 + (i % 3)]!;
+    const x = rnd() * W * 0.6;
+    const y = rnd() * H * 0.55;
+    g.beginPath();
+    g.ellipse(x + 40, y + 40, 50 + rnd() * 70, 35 + rnd() * 55, rnd() * Math.PI, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.globalAlpha = 1;
+  // Brush blocks
+  for (let i = 0; i < 8; i += 1) {
+    g.fillStyle = pal[1 + (i % 3)]!;
+    g.globalAlpha = 0.55 + rnd() * 0.4;
+    const bw = 18 + rnd() * 50;
+    const bh = 10 + rnd() * 28;
+    g.fillRect(20 + rnd() * (W - 80), 30 + rnd() * (H * 0.55), bw, bh);
+  }
+  g.globalAlpha = 1;
+  // Title plate
+  g.fillStyle = "rgba(15,23,42,0.72)";
+  g.fillRect(12, H - 72, W - 24, 56);
+  g.fillStyle = "#f8fafc";
+  g.font = "bold 22px system-ui,sans-serif";
+  g.textAlign = "left";
+  g.fillText((schema.title || "拍品").slice(0, 10), 24, H - 40);
+  g.font = "16px system-ui,sans-serif";
+  g.fillStyle = "#fde68a";
+  const bits: string[] = [];
+  if (schema.prestige != null) bits.push(`底 ${schema.prestige}`);
+  if (schema.bid != null && schema.bid > 0) bits.push(`价 ${schema.bid}`);
+  g.fillText(bits.join(" · ") || "画廊拍品", 24, H - 18);
+  return canvas;
+}
+
+function framedArtWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
+  const group = new Group();
+  // Wood frame (outer)
+  const frame = new Mesh(
+    translated(new BoxGeometry(0.95, 0.08, 1.2), 0.04),
+    new MeshStandardMaterial({ color: "#6b4423", roughness: 0.78, metalness: 0.05 }),
+  );
+  frame.castShadow = true;
+  frame.receiveShadow = true;
+  group.add(frame);
+  // Inner mat
+  const mat = new Mesh(
+    translated(new BoxGeometry(0.78, 0.02, 1.0), 0.075),
+    new MeshStandardMaterial({ color: "#f5f0e6", roughness: 0.9, metalness: 0 }),
+  );
+  mat.receiveShadow = true;
+  group.add(mat);
+  const parsed = parseFaceSchema(node.tag);
+  const lot = parsed && parsed.kind === "lot"
+    ? parsed
+    : { title: "拍品", prestige: undefined as number | undefined, bid: undefined as number | undefined, artistId: undefined as string | undefined };
+  const canvas = proceduralLotCanvas({
+    title: lot.title,
+    prestige: "prestige" in lot ? lot.prestige : undefined,
+    bid: "bid" in lot ? (lot as { bid?: number }).bid : undefined,
+    artistId: "artistId" in lot ? (lot as { artistId?: string }).artistId : undefined,
+  });
+  const tex = canvas ? new CanvasTexture(canvas) : null;
+  if (tex) tex.colorSpace = SRGBColorSpace;
+  const artGeom = new PlaneGeometry(0.72, 0.92);
+  artGeom.rotateX(-Math.PI / 2);
+  const art = new Mesh(
+    artGeom,
+    new MeshBasicMaterial({ map: tex, toneMapped: false }),
+  );
+  art.position.set(0, 0.09, 0);
+  art.renderOrder = 2;
+  group.add(art);
+  group.add(softContactShadow(0.55, 0.7));
+  return group;
+}
+
+
 export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const mesh = node.mesh ?? "pawn";
   let object: Object3D;
@@ -1078,6 +1196,8 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = feltStitchMesh();
   } else if (mesh === "table-vignette") {
     object = tableVignetteMesh();
+  } else if (mesh === "framed-art") {
+    object = framedArtWithFace(node, ctx);
   } else if (mesh === "meeple") {
     object = meepleFigure(node, ctx);
   } else if (mesh === "card") {
