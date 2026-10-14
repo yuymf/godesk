@@ -5,7 +5,7 @@
 | 回归靶 | H01 force-build ≥2 road + ≥2 settlement before/after；他套 smoke |
 | 层 | **共享呈现 / force-inject** |
 | 状态 | **关** |
-| tip | pending-feat |
+| tip | `f610b66` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t057/` |
 
 ## 问题
