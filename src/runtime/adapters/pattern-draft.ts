@@ -2,11 +2,12 @@
  * pattern-draft-v1 — factory draft / pattern-line / wall tile / floor penalty
  * on the public play-kernel (T013). Generic; not an IP special-case.
  *
- * Subset (2 seats): take same-color tiles from a factory or the center, place on
- * a pattern line (excess → floor), when the table empties resolve full lines onto
- * the wall with orthogonal adjacency scoring + floor penalties, refill factories,
- * rotate first player via the center marker, then row/column/color-set end bonuses
- * when a completed row ends the game. 3–4 seats remain unsupported (T019).
+ * Subset (2-4 seats via shared seat-capacity): take same-color tiles from a
+ * factory or the center, place on a pattern line (excess -> floor), when the
+ * table empties resolve full lines onto the wall with orthogonal adjacency
+ * scoring + floor penalties, refill factories, rotate first player via the
+ * center marker, then row/column/color-set end bonuses when a completed row
+ * ends the game. Factory count scales with seats (2N+1).
  */
 import {
   applyAction,
@@ -20,6 +21,14 @@ import {
   type PlayState,
   type PlayerId,
 } from "../play-kernel";
+import {
+  SEAT_CAPACITY,
+  clampSeatCount,
+  makeSeatArray,
+  nextSeatId,
+  patternFactoryCountForSeats,
+  winnerByHighestScore,
+} from "../seat-capacity";
 
 export const PATTERN_DRAFT_KERNEL_TYPE = "pattern-draft-v1" as const;
 
@@ -72,7 +81,7 @@ export type PatternDraftGenre = {
   markerInCenter: boolean;
   bag: TileColor[];
   lid: TileColor[];
-  seats: [PatternSeat, PatternSeat];
+  seats: PatternSeat[];
   round: number;
   /** Seat who will start the next draft round. */
   nextStart: PlayerId;
@@ -98,7 +107,7 @@ export function defaultPatternDraftContent(
 
 export function patternDraftUnsupportedNotes(): string[] {
   return [
-    "pattern-draft-v1 subset: 2 seats, factory/center same-color draft, pattern lines, wall adjacency scoring, floor penalties, marker rotation, row/column/color-set end bonuses; 3–4 seats unsupported.",
+    "pattern-draft-v1 subset: 2-4 seats (shared seat-capacity), factory/center same-color draft, pattern lines, wall adjacency scoring, floor penalties, marker rotation, row/column/color-set end bonuses.",
   ];
 }
 
@@ -151,7 +160,7 @@ function cloneGenre(genre: PatternDraftGenre): PatternDraftGenre {
     markerInCenter: genre.markerInCenter,
     bag: [...genre.bag],
     lid: [...genre.lid],
-    seats: [cloneSeat(genre.seats[0]), cloneSeat(genre.seats[1])],
+    seats: genre.seats.map(cloneSeat),
     round: genre.round,
     nextStart: genre.nextStart,
     lastEvent: genre.lastEvent,
@@ -349,7 +358,7 @@ function resolveWallPhase(
   ended: boolean;
   winnerId: PlayerId | null;
 } {
-  for (const seatId of [0, 1] as const) {
+  for (let seatId = 0; seatId < genre.seats.length; seatId += 1) {
     const seat = genre.seats[seatId]!;
     for (let row = 0; row < 5; row += 1) {
       const line = seat.lines[row]!;
@@ -359,12 +368,11 @@ function resolveWallPhase(
         if (col >= 0 && seat.wall[row]![col] === null) {
           seat.wall[row]![col] = color;
           seat.score += scoreWallPlacement(seat.wall, row, col);
-          // leftover tiles on the line (capacity-1) go to lid
           for (let i = 1; i < line.tiles.length; i += 1) {
             genre.lid.push(line.tiles[i]!);
           }
         } else {
-          for (const t of line.tiles) genre.lid.push(t);
+          for (const tile of line.tiles) genre.lid.push(tile);
         }
         line.tiles = [];
         line.color = null;
@@ -372,22 +380,19 @@ function resolveWallPhase(
     }
     const loss = applyFloorPenalty(seat, content.floorPenalties);
     seat.score += loss;
-    for (const t of seat.floor) genre.lid.push(t);
+    for (const tile of seat.floor) genre.lid.push(tile);
     seat.floor = [];
-    // Marker returns to center next refill; clear hasMarker after scoring.
     seat.hasMarker = false;
   }
-  const done0 = anyRowComplete(genre.seats[0]!);
-  const done1 = anyRowComplete(genre.seats[1]!);
-  if (done0 || done1) {
-    // End-game bonuses (T018): rows / columns / color-sets — both seats.
-    applyEndGameBonuses(genre.seats[0]!, content.endBonuses);
-    applyEndGameBonuses(genre.seats[1]!, content.endBonuses);
+  const anyDone = genre.seats.some((seat) => anyRowComplete(seat));
+  if (anyDone) {
+    for (const seat of genre.seats) {
+      applyEndGameBonuses(seat, content.endBonuses);
+    }
     genre.lastEvent = "end_bonuses_applied";
-    const s0 = genre.seats[0]!.score;
-    const s1 = genre.seats[1]!.score;
-    const winnerId =
-      s0 === s1 ? null : ((s0 > s1 ? 0 : 1) as PlayerId | null);
+    const winnerId = winnerByHighestScore(
+      genre.seats.map((seat) => seat.score),
+    ) as PlayerId | null;
     return { ended: true, winnerId };
   }
   return { ended: false, winnerId: null };
@@ -397,29 +402,43 @@ export function parsePatternDraftConfig(
   adapter: PlayKernelConfig["adapter"] | Record<string, unknown> | undefined,
 ): PatternDraftConfig | null {
   if (!adapter || typeof adapter !== "object") return null;
-  const playerCount = Number((adapter as { playerCount?: unknown }).playerCount);
-  if (playerCount !== 2) return null;
+  const rawCount = Number((adapter as { playerCount?: unknown }).playerCount);
+  const cap = SEAT_CAPACITY["pattern-draft-v1"];
+  if (!Number.isInteger(rawCount) || rawCount < cap.min || rawCount > cap.max) {
+    return null;
+  }
+  const playerCount = clampSeatCount(rawCount, cap);
   const raw = (adapter as { content?: unknown }).content;
   const content = defaultPatternDraftContent(
     raw && typeof raw === "object" ? (raw as Partial<PatternDraftContent>) : undefined,
   );
   if (content.factoryCount < 1 || content.tilesPerFactory < 1) return null;
-  return { playerCount: 2, content };
+  return { playerCount, content };
 }
 
 export function createPatternDraftKernelConfig(
-  overrides?: Partial<{ content: Partial<PatternDraftContent> }>,
+  overrides?: Partial<{
+    playerCount: number;
+    content: Partial<PatternDraftContent>;
+  }>,
 ): PlayKernelConfig {
-  const content = defaultPatternDraftContent(overrides?.content);
+  const playerCount = clampSeatCount(
+    overrides?.playerCount ?? 2,
+    SEAT_CAPACITY["pattern-draft-v1"],
+  );
+  const content = defaultPatternDraftContent({
+    factoryCount: patternFactoryCountForSeats(playerCount),
+    ...overrides?.content,
+  });
   return {
     kernelType: PATTERN_DRAFT_KERNEL_TYPE,
-    playerCount: 2,
+    playerCount,
     phases: [
       { id: "draft", name: "Draft" },
       { id: "ended", name: "Ended" },
     ],
     adapter: {
-      playerCount: 2,
+      playerCount,
       content,
     },
   };
@@ -429,13 +448,16 @@ export function bindPatternDraftFromRuntimeKernel(input: {
   playerCount: number;
   content?: Partial<PatternDraftContent> | null;
 }): PlayKernelConfig {
-  if (input.playerCount !== 2) {
-    throw new Error("pattern_draft_requires_two_players");
-  }
+  const playerCount = clampSeatCount(
+    input.playerCount,
+    SEAT_CAPACITY["pattern-draft-v1"],
+  );
   return createPatternDraftKernelConfig({
+    playerCount,
     content: input.content ?? undefined,
   });
 }
+
 
 export const patternDraftAdapter: PlayKernelAdapter<
   PatternDraftGenre,
@@ -443,8 +465,9 @@ export const patternDraftAdapter: PlayKernelAdapter<
 > = {
   kernelType: PATTERN_DRAFT_KERNEL_TYPE,
   parseConfig: parsePatternDraftConfig,
-  createGenreState(config, seed) {
+  createGenreState(config, seed, playerCount) {
     const rng = createSeededRng(seed);
+    const seats = clampSeatCount(playerCount, SEAT_CAPACITY["pattern-draft-v1"]);
     const bag = shuffleInPlace(
       buildBag(config.content.tilesPerColor),
       rng,
@@ -456,7 +479,7 @@ export const patternDraftAdapter: PlayKernelAdapter<
       markerInCenter: true,
       bag,
       lid: [],
-      seats: [emptySeat(), emptySeat()],
+      seats: makeSeatArray(seats, () => emptySeat()),
       round: 1,
       nextStart: 0,
       lastEvent: null,
@@ -599,7 +622,7 @@ export const patternDraftAdapter: PlayKernelAdapter<
       };
     }
 
-    const next = ((action.playerId + 1) % 2) as PlayerId;
+    const next = nextSeatId(action.playerId, genre.seats.length) as PlayerId;
     return {
       genre,
       phase: "draft" as PlayPhaseId,
@@ -616,10 +639,7 @@ export function patternDraftToSessionFields(
   return {
     turn: state.sequence,
     activeSeat: state.activePlayerId,
-    scores: [
-      state.genre.seats[0].score,
-      state.genre.seats[1].score,
-    ],
+    scores: state.genre.seats.map((s) => s.score),
     status: state.status,
     winnerSeat: state.winnerId,
     patternDraft: {
@@ -634,10 +654,7 @@ export function patternDraftToSessionFields(
       round: state.genre.round,
       nextStart: state.genre.nextStart,
       lastEvent: state.genre.lastEvent,
-      seats: [
-        cloneSeat(state.genre.seats[0]),
-        cloneSeat(state.genre.seats[1]),
-      ] as [PatternSeat, PatternSeat],
+      seats: state.genre.seats.map(cloneSeat),
     },
   };
 }

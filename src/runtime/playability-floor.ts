@@ -11,6 +11,7 @@ import {
 } from "./genre";
 import { isNonScoreHandLoopCorpus } from "./hand-play";
 import { isMultiActHiddenRoleCorpus } from "./hidden-role";
+import { SEAT_CAPACITY } from "./seat-capacity";
 import {
   isEconomyPlacementCorpus,
   kernelHasPlacementEconomy,
@@ -207,9 +208,11 @@ export function playabilityFloor(ruleSystem: RuleSystem): PlayabilityFloorReadin
   if (kernelType === "gem-engine-v1") {
     const hasTake = ruleSystem.actions.some((action) => action.id === "take_diverse" || action.id === "take_gems");
     const hasBuy = ruleSystem.actions.some((action) => action.id === "buy" || action.id === "buy_card");
-    if (ruleSystem.playSurface.kind !== "table" || !hasTake || !hasBuy ||
-        ruleSystem.runtimeSupport.kernel.playerCount !== 2) {
-      return { status: "failed", reason: "gem-engine-v1 需要双人桌面与拿取代币/购买发展牌动作。", genre, kernelType };
+    const seats = ruleSystem.runtimeSupport.kernel.playerCount;
+    const cap = SEAT_CAPACITY["gem-engine-v1"];
+    const seatsOk = seats >= cap.min && seats <= cap.max;
+    if (ruleSystem.playSurface.kind !== "table" || !hasTake || !hasBuy || !seatsOk) {
+      return { status: "failed", reason: "gem-engine-v1 需要 2–4 人桌面与拿取代币/购买发展牌动作。", genre, kernelType };
     }
   }
   if (ruleSystem.generation?.requestedMechanics?.includes("pattern-draft") &&
@@ -218,9 +221,11 @@ export function playabilityFloor(ruleSystem: RuleSystem): PlayabilityFloorReadin
   }
   if (kernelType === "pattern-draft-v1") {
     const hasDraft = ruleSystem.actions.some((action) => action.id === "draft");
-    if (ruleSystem.playSurface.kind !== "table" || !hasDraft ||
-        ruleSystem.runtimeSupport.kernel.playerCount !== 2) {
-      return { status: "failed", reason: "pattern-draft-v1 需要双人桌面与草稿拿色动作。", genre, kernelType };
+    const seats = ruleSystem.runtimeSupport.kernel.playerCount;
+    const cap = SEAT_CAPACITY["pattern-draft-v1"];
+    const seatsOk = seats >= cap.min && seats <= cap.max;
+    if (ruleSystem.playSurface.kind !== "table" || !hasDraft || !seatsOk) {
+      return { status: "failed", reason: "pattern-draft-v1 需要 2–4 人桌面与草稿拿色动作。", genre, kernelType };
     }
   }
   const aligned = mechanicsAlignWithKernel(

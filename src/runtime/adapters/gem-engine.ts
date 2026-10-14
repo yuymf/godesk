@@ -2,9 +2,9 @@
  * gem-engine-v1 — minimal gem-token / development-card / noble prestige engine
  * on the public play-kernel (T010). Generic; not an IP special-case.
  *
- * Subset: 2 seats, take gems, reserve hand (≤3), buy visible/reserved,
- * token overflow discard to 10, discounts + nobles, prestige win.
- * 3–4 seats remain unsupported (T019).
+ * Subset: 2-4 seats (shared seat-capacity), take gems, reserve hand (<=3),
+ * buy visible/reserved, token overflow discard to 10, discounts + nobles,
+ * prestige win. Bank / noble count scale with seats.
  */
 import {
   applyAction,
@@ -18,6 +18,13 @@ import {
   type PlayState,
   type PlayerId,
 } from "../play-kernel";
+import {
+  SEAT_CAPACITY,
+  clampSeatCount,
+  gemBankPerBasicForSeats,
+  makeSeatArray,
+  nextSeatId,
+} from "../seat-capacity";
 
 export const GEM_ENGINE_KERNEL_TYPE = "gem-engine-v1" as const;
 
@@ -71,7 +78,7 @@ export type GemEngineGenre = {
   market: [GemCardDef[], GemCardDef[], GemCardDef[]];
   decks: [GemCardDef[], GemCardDef[], GemCardDef[]];
   nobles: GemNobleDef[];
-  seats: [GemSeatState, GemSeatState];
+  seats: GemSeatState[];
   lastEvent: string | null;
   /** When set, that seat must discard down to MAX_GEM_TOKENS before the turn ends. */
   pendingDiscardSeat: PlayerId | null;
@@ -118,7 +125,7 @@ function cloneGenre(genre: GemEngineGenre): GemEngineGenre {
       [...genre.decks[2]],
     ],
     nobles: [...genre.nobles],
-    seats: [cloneSeat(genre.seats[0]), cloneSeat(genre.seats[1])],
+    seats: genre.seats.map(cloneSeat),
     lastEvent: genre.lastEvent,
     pendingDiscardSeat: genre.pendingDiscardSeat,
   };
@@ -163,6 +170,8 @@ export function defaultGemEngineContent(
     { id: "noble_wb", name: "白蓝勋爵", requirements: { white: 3, blue: 3 }, prestige: 3 },
     { id: "noble_gr", name: "绿红女爵", requirements: { green: 3, red: 3 }, prestige: 3 },
     { id: "noble_kb", name: "黑蓝侯爵", requirements: { black: 3, blue: 3 }, prestige: 3 },
+    { id: "noble_wg", name: "白绿伯爵", requirements: { white: 3, green: 3 }, prestige: 3 },
+    { id: "noble_rk", name: "红黑子爵", requirements: { red: 3, black: 3 }, prestige: 3 },
   ];
   return {
     cards: overrides?.cards ?? cards,
@@ -177,14 +186,18 @@ export function parseGemEngineConfig(
   adapter: PlayKernelConfig["adapter"] | Record<string, unknown> | undefined,
 ): GemEngineConfig | null {
   if (!adapter || typeof adapter !== "object") return null;
-  const playerCount = Number((adapter as { playerCount?: unknown }).playerCount);
-  if (playerCount !== 2) return null;
+  const rawCount = Number((adapter as { playerCount?: unknown }).playerCount);
+  const cap = SEAT_CAPACITY["gem-engine-v1"];
+  if (!Number.isInteger(rawCount) || rawCount < cap.min || rawCount > cap.max) {
+    return null;
+  }
+  const playerCount = clampSeatCount(rawCount, cap);
   const raw = (adapter as { content?: unknown }).content;
   const content = defaultGemEngineContent(
     raw && typeof raw === "object" ? (raw as Partial<GemEngineContent>) : undefined,
   );
   if (!content.cards.length || content.prestigeToWin < 1) return null;
-  return { playerCount: 2, content };
+  return { playerCount, content };
 }
 
 
@@ -193,27 +206,39 @@ export function bindGemEngineFromRuntimeKernel(input: {
   content?: Partial<GemEngineContent> | null;
 }): PlayKernelConfig {
   return createGemEngineKernelConfig({
+    playerCount: input.playerCount,
     content: input.content ?? undefined,
   });
 }
 
 export function createGemEngineKernelConfig(
-  overrides?: Partial<{ content: Partial<GemEngineContent> }>,
+  overrides?: Partial<{
+    playerCount: number;
+    content: Partial<GemEngineContent>;
+  }>,
 ): PlayKernelConfig {
-  const content = defaultGemEngineContent(overrides?.content);
+  const playerCount = clampSeatCount(
+    overrides?.playerCount ?? 2,
+    SEAT_CAPACITY["gem-engine-v1"],
+  );
+  const content = defaultGemEngineContent({
+    bankPerBasic: gemBankPerBasicForSeats(playerCount),
+    ...overrides?.content,
+  });
   return {
     kernelType: GEM_ENGINE_KERNEL_TYPE,
-    playerCount: 2,
+    playerCount,
     phases: [
       { id: "main", name: "Main" },
       { id: "ended", name: "Ended" },
     ],
     adapter: {
-      playerCount: 2,
+      playerCount,
       content,
     },
   };
 }
+
 
 function shuffleInPlace<T>(items: T[], rng: { at: (i: number) => number }, salt: number): T[] {
   const out = [...items];
@@ -326,7 +351,7 @@ function afterTurn(
       winnerId: seatId,
     };
   }
-  const next = ((seatId + 1) % 2) as PlayerId;
+  const next = nextSeatId(seatId, genre.seats.length) as PlayerId;
   return {
     genre,
     phase: "main",
@@ -339,8 +364,9 @@ function afterTurn(
 export const gemEngineAdapter: PlayKernelAdapter<GemEngineGenre, GemEngineConfig> = {
   kernelType: GEM_ENGINE_KERNEL_TYPE,
   parseConfig: parseGemEngineConfig,
-  createGenreState(config, seed) {
+  createGenreState(config, seed, playerCount) {
     const rng = createSeededRng(seed);
+    const seats = clampSeatCount(playerCount, SEAT_CAPACITY["gem-engine-v1"]);
     const byTier: [GemCardDef[], GemCardDef[], GemCardDef[]] = [[], [], []];
     for (const card of config.content.cards) {
       byTier[card.tier - 1]!.push({ ...card, cost: { ...card.cost } });
@@ -351,6 +377,14 @@ export const gemEngineAdapter: PlayKernelAdapter<GemEngineGenre, GemEngineConfig
       shuffleInPlace(byTier[2], rng, 47),
     ];
     const market: [GemCardDef[], GemCardDef[], GemCardDef[]] = [[], [], []];
+    const emptySeat = (): GemSeatState => ({
+      gems: emptyGems(),
+      discounts: emptyDiscounts(),
+      prestige: 0,
+      cards: [],
+      nobles: [],
+      reserved: [],
+    });
     const genre: GemEngineGenre = {
       bank: {
         white: config.content.bankPerBasic,
@@ -362,11 +396,11 @@ export const gemEngineAdapter: PlayKernelAdapter<GemEngineGenre, GemEngineConfig
       },
       market,
       decks,
-      nobles: shuffleInPlace(config.content.nobles, rng, 67).slice(0, 3),
-      seats: [
-        { gems: emptyGems(), discounts: emptyDiscounts(), prestige: 0, cards: [], nobles: [], reserved: [] },
-        { gems: emptyGems(), discounts: emptyDiscounts(), prestige: 0, cards: [], nobles: [], reserved: [] },
-      ],
+      nobles: shuffleInPlace(config.content.nobles, rng, 67).slice(
+        0,
+        seats + 1,
+      ),
+      seats: makeSeatArray(seats, () => emptySeat()),
       lastEvent: null,
       pendingDiscardSeat: null,
     };
@@ -588,10 +622,7 @@ export function gemEngineToSessionFields(state: PlayState<GemEngineGenre>) {
   return {
     turn: state.sequence,
     activeSeat: state.activePlayerId,
-    scores: [
-      state.genre.seats[0].prestige,
-      state.genre.seats[1].prestige,
-    ],
+    scores: state.genre.seats.map((s) => s.prestige),
     status: state.status,
     winnerSeat: state.winnerId,
     gemEngine: {
@@ -678,6 +709,6 @@ export function autoPlayGemEngineGame(
 
 export function gemEngineUnsupportedNotes(): string[] {
   return [
-    "gem-engine-v1 subset: 2 seats, take gems, reserve hand (≤3) + buy reserved, token overflow discard to 10, buy visible/reserved with discounts + auto nobles, prestige win; 3–4 seats unsupported.",
+    "gem-engine-v1 subset: 2-4 seats (shared seat-capacity), take gems, reserve hand (<=3) + buy reserved, token overflow discard to 10, buy visible/reserved with discounts + auto nobles, prestige win.",
   ];
 }

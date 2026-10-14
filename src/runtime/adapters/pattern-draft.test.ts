@@ -138,3 +138,24 @@ describe("pattern-draft-v1 end bonuses (T018)", () => {
     expect(seat.score).toBe(10);
   });
 });
+
+describe("pattern-draft-v1 multi-seat (T019)", () => {
+  it("boots 3 and 4 seats with scaled factories", () => {
+    for (const n of [3, 4] as const) {
+      const cfg = createPatternDraftKernelConfig({ playerCount: n });
+      const state = createInitialState(patternDraftAdapter, cfg, 9);
+      expect(state.playerCount).toBe(n);
+      expect(state.genre.seats).toHaveLength(n);
+      expect(state.genre.factories.length).toBe(n * 2 + 1);
+    }
+  });
+
+  it("auto-plays a 3-seat game to completion", () => {
+    const { state, actions } = autoPlayPatternDraftGame(
+      23,
+      createPatternDraftKernelConfig({ playerCount: 3 }),
+    );
+    expect(actions.length).toBeGreaterThan(10);
+    expect(state.status).toBe("complete");
+  });
+});

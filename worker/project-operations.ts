@@ -617,8 +617,10 @@ function configureDedicatedKernel(
         { id: "take_diverse", label: "拿三色宝石", description: "从供应堆拿三枚不同颜色的基本宝石。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
         { id: "take_pair", label: "拿两枚同色", description: "当某色堆足够多时拿两枚同色基本宝石。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
         { id: "buy", label: "购买发展牌", description: "支付宝石（可用永久折扣抵扣）购买一张可见发展牌。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "reserve", label: "预留发展牌", description: "预留一张可见发展牌并可拿黄金（若有）。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "discard_gems", label: "弃回宝石", description: "代币超过上限时弃回至供应堆。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
       ],
-      participants: { ...record.ruleSystem.participants, min: 2, max: 2, default: 2 },
+      participants: { ...record.ruleSystem.participants, min: 2, max: 4, default: kernel.playerCount },
       playSurface: { kind: "table" as const, layout: "gem-engine-table", regions: [
         { id: "bank", name: "宝石供应", description: "基本色与黄金代币堆" },
         { id: "market", name: "发展牌列", description: "三级可见发展牌" },
@@ -630,7 +632,7 @@ function configureDedicatedKernel(
       actions: [
         { id: "draft", label: "拿色并放入准备行", description: "从工厂或中心拿走某一颜色全部瓷砖，放入一条准备行或地板。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
       ],
-      participants: { ...record.ruleSystem.participants, min: 2, max: 2, default: 2 },
+      participants: { ...record.ruleSystem.participants, min: 2, max: 4, default: kernel.playerCount },
       playSurface: { kind: "table" as const, layout: "pattern-draft-table", regions: [
         { id: "factories", name: "工厂展示", description: "各盘同色拿取" },
         { id: "center", name: "中心堆", description: "先手标记与余砖" },
@@ -1740,11 +1742,15 @@ const RUNTIME_HANDLERS: {
   },
   configure_gem_engine: {
     validate: (config) => Boolean(config) && typeof config === "object" &&
-      config.playerCount === 2 && validUnsupported(config.unsupported),
+      Number.isInteger(config.playerCount) &&
+      config.playerCount >= 2 && config.playerCount <= 4 &&
+      validUnsupported(config.unsupported),
   },
   configure_pattern_draft: {
     validate: (config) => Boolean(config) && typeof config === "object" &&
-      config.playerCount === 2 && validUnsupported(config.unsupported),
+      Number.isInteger(config.playerCount) &&
+      config.playerCount >= 2 && config.playerCount <= 4 &&
+      validUnsupported(config.unsupported),
   },
   configure_auto_battler: {
     validate: (config) => Boolean(config) && typeof config === "object" &&

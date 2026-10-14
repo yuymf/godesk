@@ -194,3 +194,28 @@ describe("gem-engine-v1 reserve + overflow (T017)", () => {
     expect(result.state.genre.seats[0].cards.some((c) => c.id === card.id)).toBe(true);
   });
 });
+
+describe("gem-engine-v1 multi-seat (T019)", () => {
+  it("boots 3 and 4 seats with scaled bank and nobles", () => {
+    for (const n of [3, 4] as const) {
+      const config = createGemEngineKernelConfig({ playerCount: n });
+      const state = createInitialState(gemEngineAdapter, config, 11);
+      expect(state.playerCount).toBe(n);
+      expect(state.genre.seats).toHaveLength(n);
+      expect(state.genre.nobles.length).toBe(n + 1);
+      const legal = listLegalActions(gemEngineAdapter, state, 0, config);
+      expect(legal.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("auto-plays a 3-seat game to completion", () => {
+    const { state, actions } = autoPlayGemEngineGame(
+      19,
+      createGemEngineKernelConfig({ playerCount: 3, content: { prestigeToWin: 5 } }),
+    );
+    expect(actions.length).toBeGreaterThan(5);
+    expect(state.status).toBe("complete");
+    expect(state.winnerId).not.toBeNull();
+    expect(state.winnerId! >= 0 && state.winnerId! < 3).toBe(true);
+  });
+});

@@ -158,6 +158,12 @@ import {
   defaultPatternDraftContent,
   patternDraftUnsupportedNotes,
 } from "../src/runtime/adapters/pattern-draft";
+import {
+  SEAT_CAPACITY,
+  gemBankPerBasicForSeats,
+  patternFactoryCountForSeats,
+  resolveSeatCount,
+} from "../src/runtime/seat-capacity";
 
 interface CreatorJobHost {
   ctx: DurableObjectState;
@@ -605,16 +611,25 @@ export async function runCreatorJob(
       const runtimeOperation = nonScoreHandLoopRefused || weakGenreScoreRaceRefused || multiActHiddenRoleRefused || patternDraftRefused
         ? null
         : hexSettlementRuntimeConfigured
-        ? {
-            op: "configure_hex_settlement" as const,
-            config: {
-              playerCount: 2,
-              victoryPointsToWin: 10,
-              unsupported: [
-                "hex-settlement-v1 executes beginner-board hex-island basics (placement, production, robber/discard, build+connectivity, bank/port + negotiated domestic trade propose/accept, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — 3–4 seat domestic auction / complex multi-party brokerage remain out of scope.",
-              ],
-            },
-          }
+        ? (() => {
+            const playerCount = resolveSeatCount({
+              idea,
+              capacity: SEAT_CAPACITY["hex-settlement-v1"],
+              participantsDefault: generatedRuleSystem.participants.default,
+              participantsMax: generatedRuleSystem.participants.max,
+              participantsMin: generatedRuleSystem.participants.min,
+            });
+            return {
+              op: "configure_hex_settlement" as const,
+              config: {
+                playerCount,
+                victoryPointsToWin: 10,
+                unsupported: [
+                  "hex-settlement-v1 executes beginner-board hex-island basics (placement, production, robber/discard, build+connectivity, bank/port + negotiated domestic trade propose/accept, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — complex multi-party brokerage / domestic auction remain out of scope.",
+                ],
+              },
+            };
+          })()
         : discFlippingRuntimeConfigured
         ? {
             op: "configure_disc_flipping" as const,
@@ -710,29 +725,51 @@ export async function runCreatorJob(
             };
           })()
         : gemEngineRuntimeConfigured
-        ? {
-            op: "configure_gem_engine" as const,
-            config: {
-              playerCount: 2,
-              content: defaultGemEngineContent(),
-              unsupported: [
-                "gem-engine-v1 executes a 2-seat gem-token / development-card / noble prestige loop on the public play-kernel.",
-                ...gemEngineUnsupportedNotes(),
-              ],
-            },
-          }
+        ? (() => {
+            const playerCount = resolveSeatCount({
+              idea,
+              capacity: SEAT_CAPACITY["gem-engine-v1"],
+              participantsDefault: generatedRuleSystem.participants.default,
+              participantsMax: generatedRuleSystem.participants.max,
+              participantsMin: generatedRuleSystem.participants.min,
+            });
+            return {
+              op: "configure_gem_engine" as const,
+              config: {
+                playerCount,
+                content: defaultGemEngineContent({
+                  bankPerBasic: gemBankPerBasicForSeats(playerCount),
+                }),
+                unsupported: [
+                  `gem-engine-v1 executes a ${playerCount}-seat gem-token / development-card / noble prestige loop on the public play-kernel.`,
+                  ...gemEngineUnsupportedNotes(),
+                ],
+              },
+            };
+          })()
         : patternDraftRuntimeConfigured
-        ? {
-            op: "configure_pattern_draft" as const,
-            config: {
-              playerCount: 2,
-              content: defaultPatternDraftContent(),
-              unsupported: [
-                "pattern-draft-v1 executes a 2-seat factory draft / pattern-line / wall-tile / floor-penalty loop on the public play-kernel.",
-                ...patternDraftUnsupportedNotes(),
-              ],
-            },
-          }
+        ? (() => {
+            const playerCount = resolveSeatCount({
+              idea,
+              capacity: SEAT_CAPACITY["pattern-draft-v1"],
+              participantsDefault: generatedRuleSystem.participants.default,
+              participantsMax: generatedRuleSystem.participants.max,
+              participantsMin: generatedRuleSystem.participants.min,
+            });
+            return {
+              op: "configure_pattern_draft" as const,
+              config: {
+                playerCount,
+                content: defaultPatternDraftContent({
+                  factoryCount: patternFactoryCountForSeats(playerCount),
+                }),
+                unsupported: [
+                  `pattern-draft-v1 executes a ${playerCount}-seat factory draft / pattern-line / wall-tile / floor-penalty loop on the public play-kernel.`,
+                  ...patternDraftUnsupportedNotes(),
+                ],
+              },
+            };
+          })()
         : hiddenRoleRuntimeConfigured
         ? {
             op: "configure_hidden_role" as const,
