@@ -28,6 +28,7 @@ import {
   deriveHandPlayDeck,
   isNonScoreHandLoopCorpus,
 } from "../src/runtime/hand-play";
+import { isPatternDraftCorpus } from "../src/runtime/pattern-draft";
 import {
   deriveVictoryBuildings,
   deriveWorkerPlacementRegions,
@@ -307,6 +308,7 @@ export async function runCreatorJob(
     let nonScoreHandLoopRefused = false;
     let weakGenreScoreRaceRefused = false;
     let multiActHiddenRoleRefused = false;
+    let patternDraftRefused = false;
     if (input.kind === "generate-rule-system") {
       const pendingPlan = await host.ctx.storage.get<GenerationPlan>(
         generationPlanKey(job.projectId),
@@ -418,12 +420,17 @@ export async function runCreatorJob(
         !requestedMechanics.some((mechanic) =>
           ["hex-settlement", "disc-flipping", "route-network"].includes(mechanic),
         );
+      // T008: hand-play must not steal route-network / hex subjects (even when corpus says 手牌).
       const handPlayRuntimeConfigured =
         (sourceGenre === "hand-play" ||
           requestedMechanics.includes("hand-play")) &&
         drawAndScoreRule === null &&
         !nonScoreHandLoopRefused &&
-        !autoBattlerRuntimeConfigured;
+        !autoBattlerRuntimeConfigured &&
+        !requestedMechanics.includes("route-network") &&
+        !requestedMechanics.includes("hex-settlement") &&
+        !requestedMechanics.includes("disc-flipping") &&
+        !requestedMechanics.includes("auction-bidding");
       const harborLikePlacement =
         sourceGenre === "placement" && isHarborLikeCorpus(authoredMaterial);
       const workerPlacementRuntimeConfigured =
@@ -491,6 +498,20 @@ export async function runCreatorJob(
         generatedRuleSystem.actions.length === 2 &&
         generatedRuleSystem.actions.some((action) => action.id === "roll") &&
         generatedRuleSystem.actions.some((action) => action.id === "bank");
+      // T009: factory/pattern-wall corpus has no kernel — refuse turn-taking fallthrough.
+      patternDraftRefused =
+        isPatternDraftCorpus(authoredMaterial) &&
+        !requestedMechanics.includes("route-network") &&
+        !requestedMechanics.includes("hex-settlement") &&
+        !requestedMechanics.includes("disc-flipping") &&
+        !requestedMechanics.includes("auction-bidding") &&
+        !requestedMechanics.includes("auto-battler") &&
+        !requestedMechanics.includes("hand-play") &&
+        !handPlayRuntimeConfigured &&
+        !hexSettlementRuntimeConfigured &&
+        !networkRouteRuntimeConfigured &&
+        !auctionBiddingRuntimeConfigured &&
+        !autoBattlerRuntimeConfigured;
       const turnTakingRuntimeConfigured =
         !sharedGoal &&
         !scoreRaceRuntimeConfigured &&
@@ -499,6 +520,7 @@ export async function runCreatorJob(
         !rollAndMoveRuntimeConfigured &&
         !drawAndScoreRuntimeConfigured &&
         !pushYourLuckRuntimeConfigured &&
+        !patternDraftRefused &&
         turnTaking &&
         sourceRuntimeActions.length === 0 &&
         generatedRuleSystem.actions.length > 0 &&
@@ -533,12 +555,16 @@ export async function runCreatorJob(
       if (multiActHiddenRoleRefused) {
         generationRuntimeConfigured = false;
       }
+      // T009: factory / pattern-wall draft — keep draft, no turn-taking executable.
+      if (patternDraftRefused) {
+        generationRuntimeConfigured = false;
+      }
       const pushMaxActions = Math.min(10_000, Math.max(
         200,
         (pushYourLuckRule?.victoryTarget ?? 0) * generatedRuleSystem.participants.default * 5,
       ));
       // Refuse configure for non-score hand loops (no silent play-to-score / turn-taking fallthrough).
-      const runtimeOperation = nonScoreHandLoopRefused || weakGenreScoreRaceRefused || multiActHiddenRoleRefused
+      const runtimeOperation = nonScoreHandLoopRefused || weakGenreScoreRaceRefused || multiActHiddenRoleRefused || patternDraftRefused
         ? null
         : hexSettlementRuntimeConfigured
         ? {
@@ -1041,7 +1067,9 @@ export async function runCreatorJob(
           ? "multi-act-hidden-role"
           : weakGenreScoreRaceRefused
             ? "weak-genre-score-race"
-            : undefined;
+            : patternDraftRefused
+              ? "pattern-draft"
+              : undefined;
       const generationPlan = createGenerationPlan({
         id: `generation_plan_${job.id}`,
         projectId: job.projectId,
@@ -1236,6 +1264,8 @@ export async function runCreatorJob(
           ? generationRefuseReason("multi-act-hidden-role")
           : weakGenreScoreRaceRefused
           ? generationRefuseReason("weak-genre-score-race")
+          : patternDraftRefused
+          ? generationRefuseReason("pattern-draft")
           : generatedRuleSystem.actions.length > 12
           ? "来源识别出超过 Kernel 上限的行动；为避免静默丢弃规则，Rule System 保持 draft，等待创作者明确缩减或配置 Executable Kernel。"
           : "规则结构来自确定性文本抽取；来源不足以证明可执行语义，Rule System 保持 draft，等待显式配置 Executable Kernel。"];

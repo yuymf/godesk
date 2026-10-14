@@ -1,3 +1,5 @@
+import { inferRequestedMechanics } from "../creator/kernel-capabilities";
+
 export type SourceGenre =
   | "hidden-role"
   | "hand-play"
@@ -18,7 +20,13 @@ export function inferSourceGenre(corpus: string): SourceGenre {
   // these tokens strongly imply a card loop in hobbyist briefs.
   // Do NOT include bare「牌库」here: finite shuffled draw-and-score briefs also
   // say 牌库 / deck; that path must stay source-anchored draw-and-score, not hand-play.
+  // T008/T011: board mechanics that mention 手牌/车厢牌 as resources must not steal
+  // the hand-play genre (route-network / hex-settlement / auction / disc).
+  const boardMechanics = inferRequestedMechanics(text).some((m) =>
+    ["route-network", "hex-settlement", "disc-flipping", "auction-bidding", "auto-battler"].includes(m),
+  );
   if (
+    !boardMechanics &&
     /手牌|出牌区|出牌|打牌|卡牌|从手牌打出|play (?:a |one )?card from (?:your )?hand|hidden hands?|card game|playing cards?/i
       .test(text)
   ) {

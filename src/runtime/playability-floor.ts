@@ -40,6 +40,27 @@ const GENRE_KERNEL: Record<Exclude<SourceGenre, "generic">, string | readonly st
   placement: ["harbor-voyage-v1", "worker-placement-v1"],
 };
 
+
+/** Declared mechanics that already bound their matching board kernel (T008/T011). */
+const MECHANIC_ALIGNED_KERNEL: Record<string, string> = {
+  "hex-settlement": "hex-settlement-v1",
+  "route-network": "network-route-v1",
+  "disc-flipping": "disc-flipping-v1",
+  "auction-bidding": "auction-bidding-v1",
+  "auto-battler": "auto-battler-v1",
+};
+
+function mechanicsAlignWithKernel(
+  mechanics: readonly string[] | undefined,
+  kernelType: string,
+): boolean {
+  if (!mechanics?.length) return false;
+  return mechanics.some(
+    (mechanic) => MECHANIC_ALIGNED_KERNEL[mechanic] === kernelType,
+  );
+}
+
+
 export function ruleSystemCorpus(ruleSystem: RuleSystem) {
   return [
     ruleSystem.name,
@@ -166,10 +187,14 @@ export function playabilityFloor(ruleSystem: RuleSystem): PlayabilityFloorReadin
     }
     // Intentionally NOT in SHAREABLE_KERNELS yet — decision-density share gate TBD.
   }
+  const aligned = mechanicsAlignWithKernel(
+    ruleSystem.generation?.requestedMechanics,
+    kernelType,
+  );
   const required = genre === "generic" ? null : GENRE_KERNEL[genre];
   if (required) {
     const allowed = typeof required === "string" ? [required] : required;
-    if (!allowed.includes(kernelType)) {
+    if (!allowed.includes(kernelType) && !aligned) {
       return {
         status: "failed",
         reason: `来源体裁是 ${genre}，不能用 ${kernelType} 换皮分享。`,
@@ -276,10 +301,30 @@ export function playabilityFloor(ruleSystem: RuleSystem): PlayabilityFloorReadin
       kernelType,
     };
   }
-  if (genre === "generic") {
+  if (genre === "generic" || aligned) {
+    if (
+      aligned &&
+      ruleSystem.playSurface.kind !== "table" &&
+      (
+        kernelType === "hex-settlement-v1" ||
+        kernelType === "network-route-v1" ||
+        kernelType === "disc-flipping-v1" ||
+        kernelType === "auction-bidding-v1" ||
+        kernelType === "auto-battler-v1"
+      )
+    ) {
+      return {
+        status: "failed",
+        reason: `${kernelType} 需要 table Play Surface（声明机制已对齐内核，但表面不符）。`,
+        genre,
+        kernelType,
+      };
+    }
     return {
       status: "passed",
-      reason: `${kernelType} 与来源体裁一致，已满足 Playability Floor。`,
+      reason: aligned
+        ? `${kernelType} 与声明机制一致，已满足 Playability Floor。`
+        : `${kernelType} 与来源体裁一致，已满足 Playability Floor。`,
       genre,
       kernelType,
     };

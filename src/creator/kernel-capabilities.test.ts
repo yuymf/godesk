@@ -137,3 +137,14 @@ describe("BOT_PLAYABLE_KERNELS", () => {
     expect(computerSeatForRuleSystem({ runtimeSupport: { status: "draft", unsupported: [] } } as never)).toBeNull();
   });
 });
+
+
+describe("T008 route-network ticket/rail cues", () => {
+  it("binds 车票/车厢/认领路线/铺线/铁道 corpus to route-network only", () => {
+    const book = `洲际铁道。收集彩色车厢牌，支付认领路线；持有车票连通起终点得分。铺线，非自走棋。`;
+    expect(inferRequestedMechanics(book)).toEqual(["route-network"]);
+  });
+  it("does not need logistics tokens when rail cues are present", () => {
+    expect(inferRequestedMechanics("认领路线并铺线，用车厢与车票连通城市")).toEqual(["route-network"]);
+  });
+});

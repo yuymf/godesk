@@ -74,7 +74,8 @@ const MECHANIC_CUES: Array<{ id: string; cues: RegExp }> = [
   // Line / route / logistics network (PR11 + hardness H02).
   {
     id: "route-network",
-    cues: /线路网络|路线连接|铺设路线|连接城市|星港|物流|货运|运货|派车|星图节点|route\s*network|connect(?:ing)?\s+cities|claim(?:ing)?\s+routes|\blogistics\b|\bconvoy\b/i,
+    // Ticket-to-ride / rail cues (T008): 车票·车厢·认领路线·铺线·铁道 — not logistics-only.
+    cues: /线路网络|路线连接|铺设路线|连接城市|星港|物流|货运|运货|派车|星图节点|车票|车厢|认领路线|铺线|铁道|route\s*network|connect(?:ing)?\s+cities|claim(?:ing)?\s+routes|\blogistics\b|\bconvoy\b|train\s*cars?|destination\s*tickets?/i,
   },
   {
     id: "hand-play",
