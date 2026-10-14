@@ -5,6 +5,7 @@
 | 回归靶 | H04（harness only） |
 | 层 | **内核**（pattern-draft-v1 同层扩） |
 | 状态 | **已关** |
+| sha | `0b20220591887f163cb30bf688b2b9f8303e8903` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H04-t018/` |
 
 ## 现象（Open · regress-t015）
