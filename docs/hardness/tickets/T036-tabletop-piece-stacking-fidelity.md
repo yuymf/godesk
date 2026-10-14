@@ -5,7 +5,7 @@
 | 回归靶 | H03 / H04 / H05 Room `15-room-stage` 堆叠可读 |
 | 层 | **共享呈现**（tabletop layout / objects） |
 | 状态 | **关** |
-| tip | （实现后填） |
+| tip | `ccca1c180b804ab8a2e571e7838c795d13c08258` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t036/` |
 
 ## 现象
