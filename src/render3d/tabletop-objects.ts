@@ -471,6 +471,9 @@ function geometryFor(mesh: string): Geometry {
       return gemChip();
     case "glazed-tile":
       return glazedTileGeom();
+    case "felt-wood-rim":
+    case "felt-inset":
+      return new BoxGeometry(1, 1, 1);
     case "plaque":
       return translated(new BoxGeometry(0.85, 0.06, 0.55), 0.03);
     case "house":
@@ -873,6 +876,85 @@ function softContactShadow(rx = 0.55, rz = 0.55): Mesh {
   return mesh;
 }
 
+
+/** T041 · wood rim with slight top bevel (reads as table-edge product frame). */
+function feltWoodRim(): Geometry {
+  const outer = new BoxGeometry(1, 1, 1);
+  // Bevel cue: thinner top lip via a second box slightly inset on Y.
+  return outer;
+}
+
+function feltInsetGeom(): Geometry {
+  return new BoxGeometry(1, 1, 1);
+}
+
+/** Stitch / piping ring on the felt lip (thin dark frame). */
+function feltStitchMesh(): Object3D {
+  const group = new Group();
+  const mat = new MeshBasicMaterial({
+    color: "#2a2118",
+    transparent: true,
+    opacity: 0.55,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  // Four thin bars forming a rectangle (unit size; posed by node.scale).
+  const mk = (sx: number, sz: number, x: number, z: number) => {
+    const m = new Mesh(new BoxGeometry(sx, 0.01, sz), mat);
+    m.position.set(x, 0, z);
+    m.castShadow = false;
+    m.receiveShadow = false;
+    m.raycast = () => {};
+    group.add(m);
+  };
+  const t = 0.012;
+  mk(1, t, 0, 0.5 - t / 2);
+  mk(1, t, 0, -0.5 + t / 2);
+  mk(t, 1 - 2 * t, 0.5 - t / 2, 0);
+  mk(t, 1 - 2 * t, -0.5 + t / 2, 0);
+  return group;
+}
+
+/** Soft radial vignette over the table (dark corners; does not fight contact shadows). */
+function tableVignetteMesh(): Object3D {
+  const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
+  const W = 256, H = 256;
+  if (canvas) {
+    canvas.width = W;
+    canvas.height = H;
+    const g = canvas.getContext("2d");
+    if (g) {
+      const grd = g.createRadialGradient(W / 2, H / 2, W * 0.22, W / 2, H / 2, W * 0.62);
+      grd.addColorStop(0, "rgba(0,0,0,0)");
+      grd.addColorStop(0.55, "rgba(0,0,0,0.05)");
+      grd.addColorStop(1, "rgba(12,8,4,0.42)");
+      g.fillStyle = grd;
+      g.fillRect(0, 0, W, H);
+    }
+  }
+  const tex = canvas ? new CanvasTexture(canvas) : null;
+  if (tex) {
+    tex.colorSpace = SRGBColorSpace;
+  }
+  const geom = new PlaneGeometry(1, 1);
+  geom.rotateX(-Math.PI / 2);
+  const mesh = new Mesh(
+    geom,
+    new MeshBasicMaterial({
+      map: tex,
+      transparent: true,
+      opacity: 1,
+      depthWrite: false,
+      toneMapped: false,
+    }),
+  );
+  mesh.raycast = () => {};
+  mesh.renderOrder = -2;
+  mesh.castShadow = false;
+  mesh.receiveShadow = false;
+  return mesh;
+}
+
 export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const mesh = node.mesh ?? "pawn";
   let object: Object3D;
@@ -900,6 +982,29 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     const sx = Math.max(0.2, Math.abs(node.scale?.[0] ?? 1));
     const sz = Math.max(0.2, Math.abs(node.scale?.[2] ?? sx));
     object = softContactShadow(sx, sz);
+  } else if (mesh === "felt-wood-rim") {
+    const built = new Mesh(feltWoodRim(), materialFor(node, ctx));
+    built.castShadow = true;
+    built.receiveShadow = true;
+    object = built;
+  } else if (mesh === "felt-wood-lip") {
+    const built = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial({
+      color: "#8b5a2b",
+      roughness: 0.72,
+      metalness: 0.08,
+    }));
+    built.castShadow = false;
+    built.receiveShadow = true;
+    object = built;
+  } else if (mesh === "felt-inset") {
+    const built = new Mesh(feltInsetGeom(), materialFor(node, ctx));
+    built.castShadow = false;
+    built.receiveShadow = true;
+    object = built;
+  } else if (mesh === "felt-stitch") {
+    object = feltStitchMesh();
+  } else if (mesh === "table-vignette") {
+    object = tableVignetteMesh();
   } else if (mesh === "card") {
     object = cardWithFace(node, ctx);
     (object as Group).add(softContactShadow(0.48, 0.68));

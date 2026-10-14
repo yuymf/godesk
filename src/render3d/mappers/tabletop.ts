@@ -457,22 +457,47 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
   // (desk layouts often mark the slab as materialKey "table"; still prefer felt center).
   const feltInset = Boolean(render.materials.table && render.materials.board?.pattern === "cloth");
   if (feltInset) {
-    const rim = 0.55;
+    // T041 · product frame: wood-edge bevel rim + cloth inset + stitch lip + soft vignette corners.
+    const rim = 0.72;
+    const feltShrink = 0.38;
     nodes.push({
       id: "board-rim",
       kind: "cell",
-      mesh: "tile-square",
-      position: [0, boardTop / 2 - 0.02, 0],
-      scale: [round(board.width + rim), BOARD_THICKNESS + 0.04, round(board.depth + rim)],
+      mesh: "felt-wood-rim",
+      position: [0, boardTop / 2 - 0.01, 0],
+      scale: [round(board.width + rim), BOARD_THICKNESS + 0.06, round(board.depth + rim)],
       material: libraryKey("table", undefined, Math.max(board.width, board.depth) + rim),
+    });
+    // Bevel lip: thin wood ring sitting above the rim, outside the felt.
+    nodes.push({
+      id: "board-rim-lip",
+      kind: "cell",
+      mesh: "felt-wood-lip",
+      position: [0, boardTop + 0.02, 0],
+      scale: [round(board.width + rim * 0.92), 0.045, round(board.depth + rim * 0.92)],
     });
     nodes.push({
       id: "board",
       kind: "cell",
-      mesh: "tile-square",
-      position: [0, boardTop / 2 + 0.02, 0],
-      scale: [round(board.width - 0.25), BOARD_THICKNESS * 0.55, round(board.depth - 0.25)],
+      mesh: "felt-inset",
+      position: [0, boardTop / 2 + 0.04, 0],
+      scale: [round(board.width - feltShrink), BOARD_THICKNESS * 0.42, round(board.depth - feltShrink)],
       material: libraryKey("board", undefined, Math.max(board.width, board.depth)),
+    });
+    nodes.push({
+      id: "board-stitch",
+      kind: "cell",
+      mesh: "felt-stitch",
+      position: [0, boardTop + 0.055, 0],
+      scale: [round(board.width - feltShrink + 0.08), 1, round(board.depth - feltShrink + 0.08)],
+      material: libraryKey("ink", render.materials.ink ?? { base: "#3f3428", roughness: 0.85, metalness: 0.05, pattern: "none" }),
+    });
+    nodes.push({
+      id: "table-vignette",
+      kind: "table",
+      mesh: "table-vignette",
+      position: [0, boardTop + 0.001, 0],
+      scale: [round(board.width + rim + 1.6), 1, round(board.depth + rim + 1.6)],
     });
   } else {
     nodes.push({
