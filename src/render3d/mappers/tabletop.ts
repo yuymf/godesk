@@ -574,6 +574,9 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
     if (piece.objectKind === "station") continue;
     // T045: forbid translucent numeric cash/score billboards on the desk (cash → chip towers or HUD only).
     if (/^\$?\d+(\.\d+)?$/.test(piece.label.trim())) continue;
+    // T074 · purge bank/debug color counts + Eng ordinal chips (gold: 0, 1st, …)
+    if (/^(white|blue|green|red|black|gold|yellow):\d+$/i.test(piece.label.trim())) continue;
+    if (/^(1st|2nd|3rd|nth)$/i.test(piece.label.trim())) continue;
     // 名牌：平放在棋子南侧（朝向默认机位），羊皮纸底 + 墨字（tabletop-objects `label` 网格）。
     nodes.push({
       id: `label:${piece.id}`,

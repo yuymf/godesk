@@ -362,7 +362,7 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
         y: 0.01,
         size: 0.4,
         tint: "#d6d3d1",
-        label: `${color}:0`,
+        // T074 · no `${color}:0` parchment nameplate on empty bank
       });
     } else {
       const stack = Math.min(count, 6);
@@ -667,7 +667,7 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
       z: -0.1,
       size: 0.35,
       tint: "#f97316",
-      label: "1st",
+      // T074 · no Eng "1st" desk nameplate
       emphasis: true,
     });
   }
