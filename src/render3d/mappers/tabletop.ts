@@ -129,6 +129,8 @@ const FALLBACK_MESH: Record<string, string> = {
   cargo: "disc",
   worker: "pawn",
   token: "disc",
+  tile: "glazed-tile",
+  plaque: "plaque",
   building: "house",
   ship: "ship",
   route: "road-bar",

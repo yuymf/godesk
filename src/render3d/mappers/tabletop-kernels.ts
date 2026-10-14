@@ -285,7 +285,7 @@ export function harborVoyageLayout(
 /** Gem-token bank / market / nobles / seat tableau (T026). Generic; not IP-specific. */
 export type GemEngineTabletopInput = {
   bank: Readonly<Record<string, number>>;
-  market: ReadonlyArray<ReadonlyArray<{ id?: string; discount?: string; prestige?: number }>>;
+  market: ReadonlyArray<ReadonlyArray<{ id?: string; discount?: string; prestige?: number; cost?: Readonly<Record<string, number>> }>>;
   nobles: ReadonlyArray<{ id?: string; name?: string }>;
   seats: ReadonlyArray<{
     gems: Readonly<Record<string, number>>;
@@ -384,7 +384,7 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
         z,
         size: 0.85,
         tint: GEM_TINT[discount] ?? "#d6d3d1",
-        label: `T${tier + 1}+${prestige}`,
+        label: discount ? `T${tier + 1}+${prestige}|${discount}` : `T${tier + 1}+${prestige}`,
         ...(canBuy ? { action: { type: "buy", payload: buyPayload }, emphasis: true } : {}),
       });
       if (canBuy) {
@@ -412,10 +412,10 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
     const x = -2.5 + i * 1.5;
     pieces.push({
       id: `noble:${noble.id ?? i}`,
-      objectKind: "token",
+      objectKind: "plaque",
       x,
       z: -4.4,
-      size: 0.7,
+      size: 0.85,
       tint: "#a78bfa",
       label: String(noble.name ?? `N${i}`),
       emphasis: true,
@@ -511,12 +511,12 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
     const fx = Math.cos(angle) * factoryRadius;
     const fz = Math.sin(angle) * factoryRadius * 0.75 - 1.2;
     pieces.push({
-      id: `factory:${fi}:disc`,
-      objectKind: "region",
+      id: `factory:${fi}:pad`,
+      objectKind: "disc",
       x: fx,
       z: fz,
-      size: 1.1,
-      tint: "#d6d3d1",
+      size: 1.05,
+      tint: "#4a6741",
       label: `F${fi}`,
     });
     tiles.forEach((color, ti) => {
@@ -527,12 +527,12 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
         ?? (legal === undefined ? { type: "draft", payload: { source: "factory", factoryId: fi, color, line: 0 } } : undefined);
       pieces.push({
         id: `factory:${fi}:tile:${ti}`,
-        objectKind: "disc",
+        objectKind: "tile",
         x,
         z,
-        y: 0.08,
-        size: 0.28,
-        tint: PATTERN_TINT[color] ?? "#a8a29e",
+        y: 0.1,
+        size: 0.32,
+        tint: PATTERN_TINT[color] ?? "#64748b",
         ...(pick ? { action: { type: pick.type, payload: { ...(pick.payload ?? {}) } }, emphasis: true } : {}),
       });
     });
@@ -560,12 +560,12 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
       ?? (legal === undefined ? { type: "draft", payload: { source: "center", color, line: 0 } } : undefined);
     pieces.push({
       id: `center:${i}`,
-      objectKind: "disc",
+      objectKind: "tile",
       x: -0.6 + col * 0.3,
       z: -0.3 + row * 0.3,
-      y: 0.08,
-      size: 0.26,
-      tint: PATTERN_TINT[color] ?? "#a8a29e",
+      y: 0.1,
+      size: 0.3,
+      tint: PATTERN_TINT[color] ?? "#64748b",
       ...(pick ? { action: { type: pick.type, payload: { ...(pick.payload ?? {}) } }, emphasis: true } : {}),
     });
   });
@@ -617,11 +617,11 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
         const filled = c < line.tiles.length;
         pieces.push({
           id: `seat:${seatId}:line:${li}:${c}`,
-          objectKind: filled ? "disc" : "cell",
+          objectKind: filled ? "tile" : "cell",
           x: x0 - 0.9 + c * 0.22,
           z: lz,
-          y: filled ? 0.06 : 0.02,
-          size: filled ? 0.2 : 0.18,
+          y: filled ? 0.08 : 0.02,
+          size: filled ? 0.22 : 0.18,
           seat: seatId,
           tint: filled
             ? PATTERN_TINT[line.tiles[c]!] ?? "#a8a29e"
@@ -637,11 +637,11 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
         const cell = row[c];
         pieces.push({
           id: `seat:${seatId}:wall:${r}:${c}`,
-          objectKind: cell ? "disc" : "cell",
+          objectKind: cell ? "tile" : "cell",
           x: x0 + 0.55 + c * 0.18,
           z: z0 - r * 0.18,
-          y: cell ? 0.05 : 0.01,
-          size: 0.16,
+          y: cell ? 0.06 : 0.01,
+          size: 0.17,
           seat: seatId,
           tint: cell ? PATTERN_TINT[cell] ?? "#a8a29e" : "#f5f5f4",
         });
