@@ -306,7 +306,23 @@ const GEM_TINT: Record<string, string> = {
 
 const GEM_BANK_ORDER = ["white", "blue", "green", "red", "black", "gold"] as const;
 
-export function gemEngineLayout(state: GemEngineTabletopInput): TabletopLayout {
+export type DeskLegalAction = { type: string; payload?: Record<string, unknown> | null };
+
+function legalMatch(legal: ReadonlyArray<DeskLegalAction> | undefined, type: string, payload: Record<string, unknown>): boolean {
+  if (legal === undefined) return true; // legacy / preview: keep affordances
+  return legal.some((a) => {
+    if (a.type !== type) return false;
+    const p = a.payload ?? {};
+    return Object.keys(payload).every((k) => p[k] === payload[k]);
+  });
+}
+
+function firstLegal(legal: ReadonlyArray<DeskLegalAction> | undefined, type: string, pred: (p: Record<string, unknown>) => boolean): DeskLegalAction | undefined {
+  if (!legal) return undefined;
+  return legal.find((a) => a.type === type && pred((a.payload ?? {}) as Record<string, unknown>));
+}
+
+export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyArray<DeskLegalAction>): TabletopLayout {
   const pieces: TabletopPiece[] = [];
   const hints: TabletopHint[] = [];
   const bankY = -3.2;
@@ -314,7 +330,9 @@ export function gemEngineLayout(state: GemEngineTabletopInput): TabletopLayout {
     const count = Math.max(0, Math.floor(Number(state.bank[color] ?? 0)));
     const x = -3.5 + i * 1.4;
     const stack = Math.min(count, 5);
+    const takePair = legalMatch(legal, "take_pair", { color });
     for (let s = 0; s < stack; s++) {
+      const top = s === stack - 1;
       pieces.push({
         id: `bank:${color}:${s}`,
         objectKind: "resource",
@@ -323,7 +341,17 @@ export function gemEngineLayout(state: GemEngineTabletopInput): TabletopLayout {
         y: 0.06 + s * 0.08,
         size: 0.55,
         tint: GEM_TINT[color],
-        label: s === stack - 1 ? `${color}:${count}` : undefined,
+        label: top ? `${color}:${count}` : undefined,
+        ...(top && takePair ? { action: { type: "take_pair", payload: { color } }, emphasis: true } : {}),
+      });
+    }
+    if (takePair) {
+      hints.push({
+        id: `take_pair:${color}`,
+        x,
+        z: bankY,
+        radius: 0.32,
+        action: { type: "take_pair", payload: { color } },
       });
     }
     if (count === 0) {
@@ -345,6 +373,10 @@ export function gemEngineLayout(state: GemEngineTabletopInput): TabletopLayout {
       const x = -2.4 + index * 1.6;
       const discount = String(card.discount ?? "");
       const prestige = Number(card.prestige ?? 0);
+      const buyPayload = { tier: tier + 1, index };
+      const reservePayload = { tier: tier + 1, index };
+      const canBuy = legalMatch(legal, "buy", buyPayload);
+      const canReserve = legalMatch(legal, "reserve", reservePayload);
       pieces.push({
         id: `market:t${tier + 1}:${index}`,
         objectKind: "card",
@@ -353,22 +385,26 @@ export function gemEngineLayout(state: GemEngineTabletopInput): TabletopLayout {
         size: 0.85,
         tint: GEM_TINT[discount] ?? "#d6d3d1",
         label: `T${tier + 1}+${prestige}`,
-        action: { type: "buy", payload: { tier: tier + 1, index } },
+        ...(canBuy ? { action: { type: "buy", payload: buyPayload }, emphasis: true } : {}),
       });
-      hints.push({
-        id: `buy:t${tier + 1}:${index}`,
-        x,
-        z,
-        radius: 0.35,
-        action: { type: "buy", payload: { tier: tier + 1, index } },
-      });
-      hints.push({
-        id: `reserve:t${tier + 1}:${index}`,
-        x: x + 0.45,
-        z: z + 0.35,
-        radius: 0.22,
-        action: { type: "reserve", payload: { tier: tier + 1, index } },
-      });
+      if (canBuy) {
+        hints.push({
+          id: `buy:t${tier + 1}:${index}`,
+          x,
+          z,
+          radius: 0.35,
+          action: { type: "buy", payload: buyPayload },
+        });
+      }
+      if (canReserve) {
+        hints.push({
+          id: `reserve:t${tier + 1}:${index}`,
+          x: x + 0.45,
+          z: z + 0.35,
+          radius: 0.22,
+          action: { type: "reserve", payload: reservePayload },
+        });
+      }
     });
   });
 
@@ -465,7 +501,7 @@ const PATTERN_TINT: Record<string, string> = {
   white: "#f4efe6",
 };
 
-export function patternDraftLayout(state: PatternDraftTabletopInput): TabletopLayout {
+export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: ReadonlyArray<DeskLegalAction>): TabletopLayout {
   const pieces: TabletopPiece[] = [];
   const hints: TabletopHint[] = [];
   const factoryCount = state.factories.length;
@@ -487,6 +523,8 @@ export function patternDraftLayout(state: PatternDraftTabletopInput): TabletopLa
       const a = (Math.PI * 2 * ti) / Math.max(tiles.length, 1);
       const x = fx + Math.cos(a) * 0.32;
       const z = fz + Math.sin(a) * 0.32;
+      const pick = firstLegal(legal, "draft", (p) => p.source === "factory" && p.factoryId === fi && p.color === color)
+        ?? (legal === undefined ? { type: "draft", payload: { source: "factory", factoryId: fi, color, line: 0 } } : undefined);
       pieces.push({
         id: `factory:${fi}:tile:${ti}`,
         objectKind: "disc",
@@ -495,15 +533,21 @@ export function patternDraftLayout(state: PatternDraftTabletopInput): TabletopLa
         y: 0.08,
         size: 0.28,
         tint: PATTERN_TINT[color] ?? "#a8a29e",
+        ...(pick ? { action: { type: pick.type, payload: { ...(pick.payload ?? {}) } }, emphasis: true } : {}),
       });
     });
     for (const color of new Set(tiles)) {
+      const pick = firstLegal(legal, "draft", (p) => p.source === "factory" && p.factoryId === fi && p.color === color);
+      if (legal !== undefined && !pick) continue;
+      const action = pick
+        ? { type: pick.type, payload: { ...(pick.payload ?? {}) } }
+        : { type: "draft", payload: { source: "factory", factoryId: fi, color, line: 0 } };
       hints.push({
         id: `draft:factory:${fi}:${color}`,
         x: fx,
         z: fz,
         radius: 0.4,
-        action: { type: "draft", payload: { source: "factory", factoryId: fi, color, line: 0 } },
+        action,
       });
     }
   });
@@ -512,6 +556,8 @@ export function patternDraftLayout(state: PatternDraftTabletopInput): TabletopLa
   state.center.forEach((color, i) => {
     const col = i % 5;
     const row = Math.floor(i / 5);
+    const pick = firstLegal(legal, "draft", (p) => p.source === "center" && p.color === color)
+      ?? (legal === undefined ? { type: "draft", payload: { source: "center", color, line: 0 } } : undefined);
     pieces.push({
       id: `center:${i}`,
       objectKind: "disc",
@@ -520,6 +566,7 @@ export function patternDraftLayout(state: PatternDraftTabletopInput): TabletopLa
       y: 0.08,
       size: 0.26,
       tint: PATTERN_TINT[color] ?? "#a8a29e",
+      ...(pick ? { action: { type: pick.type, payload: { ...(pick.payload ?? {}) } }, emphasis: true } : {}),
     });
   });
   if (state.markerInCenter) {
@@ -535,12 +582,17 @@ export function patternDraftLayout(state: PatternDraftTabletopInput): TabletopLa
     });
   }
   for (const color of new Set(state.center)) {
+    const pick = firstLegal(legal, "draft", (p) => p.source === "center" && p.color === color);
+    if (legal !== undefined && !pick) continue;
+    const action = pick
+      ? { type: pick.type, payload: { ...(pick.payload ?? {}) } }
+      : { type: "draft", payload: { source: "center", color, line: 0 } };
     hints.push({
       id: `draft:center:${color}`,
       x: 0,
       z: -0.2,
       radius: 0.45,
-      action: { type: "draft", payload: { source: "center", color, line: 0 } },
+      action,
     });
   }
 

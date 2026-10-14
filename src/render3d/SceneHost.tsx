@@ -909,6 +909,56 @@ export function SceneHost({
       onPickRef.current(matched);
     };
     renderer.domElement.addEventListener("pointerup", onPointerUp);
+    let hoverObject: Object3D | null = null;
+    const clearHover = () => {
+      if (hoverObject) {
+        const base = hoverObject.userData.gdHoverBaseY;
+        if (typeof base === "number") hoverObject.position.y = base;
+        hoverObject.userData.gdHover = false;
+        hoverObject = null;
+      }
+      if (interactiveRef.current) renderer.domElement.style.cursor = "default";
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      if (!interactiveRef.current || !adapterRef.current?.resolvePick) {
+        clearHover();
+        return;
+      }
+      const hit =
+        pickFromPointerEvent(event, renderer.domElement, camera, hitRoot.children.length > 0 ? hitRoot : contentRoot)
+        ?? pickFromPointerEvent(event, renderer.domElement, camera, contentRoot);
+      if (!hit) {
+        clearHover();
+        return;
+      }
+      const matched = adapterRef.current.resolvePick(hit);
+      if (!matched) {
+        clearHover();
+        return;
+      }
+      let found: Object3D | null = null;
+      contentRoot.traverse((obj) => {
+        if (found) return;
+        if (obj.userData?.nodeId === hit.nodeId) found = obj;
+      });
+      if (!found) {
+        clearHover();
+        return;
+      }
+      if (hoverObject !== found) {
+        clearHover();
+        hoverObject = found;
+        if (typeof found.userData.gdHoverBaseY !== "number") {
+          found.userData.gdHoverBaseY = found.position.y;
+        }
+        found.position.y = found.userData.gdHoverBaseY + 0.12;
+        found.userData.gdHover = true;
+      }
+      renderer.domElement.style.cursor = "pointer";
+    };
+    const onPointerLeave = () => clearHover();
+    renderer.domElement.addEventListener("pointermove", onPointerMove);
+    renderer.domElement.addEventListener("pointerleave", onPointerLeave);
     // `?perf=1` only: recorder + harness load lazily (out of the render3d core bundle).
     // Leak samples wait for dressing + PBR ready (see tick) so lazy attach is safe.
     let perf: PerfRecorder | null = null;
@@ -1195,6 +1245,9 @@ export function SceneHost({
       streamer?.dispose();
       window.removeEventListener("resize", onWindowResize);
       renderer.domElement.removeEventListener("pointerup", onPointerUp);
+      renderer.domElement.removeEventListener("pointermove", onPointerMove);
+      renderer.domElement.removeEventListener("pointerleave", onPointerLeave);
+      clearHover();
       observer?.disconnect();
       // Fading objects detach + dispose via their completion callbacks.
       waterAliveRef.current = false;

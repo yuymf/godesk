@@ -1,8 +1,47 @@
 import type { SessionState } from "./project-contract";
 import type { RenderSpec } from "./render-spec";
 import { TabletopStage } from "./TabletopStage";
+import {
+  createGemEngineKernelConfig,
+  gemEngineAdapter,
+  parseGemEngineConfig,
+  type GemEngineGenre,
+} from "../runtime/adapters/gem-engine";
+import type { PlayState } from "../runtime/play-kernel";
 
 type GemEngineBoardState = NonNullable<SessionState["gemEngine"]>;
+
+function playStateFromGemSession(
+  gem: GemEngineBoardState,
+  activeSeat: number,
+  status: "active" | "complete",
+): PlayState<GemEngineGenre> {
+  const genre = gem as unknown as GemEngineGenre;
+  return {
+    seed: 0,
+    sequence: 0,
+    phase: status === "complete" ? "ended" : "main",
+    activePlayerId: activeSeat,
+    playerCount: genre.seats.length,
+    status,
+    winnerId: null,
+    events: [],
+    genre,
+  };
+}
+
+export function listGemEngineLegalActionsForSession(input: {
+  gem: GemEngineBoardState;
+  activeSeat: number;
+  status: "active" | "complete";
+  playerId: number;
+}) {
+  const config = createGemEngineKernelConfig({ playerCount: Math.max(2, input.gem.seats.length) });
+  const parsed = parseGemEngineConfig(config.adapter);
+  if (!parsed) return [];
+  const state = playStateFromGemSession(input.gem, input.activeSeat, input.status);
+  return gemEngineAdapter.listLegalActions(state, input.playerId, parsed);
+}
 
 const COLOR_LABEL: Record<string, string> = {
   white: "白", blue: "蓝", green: "绿", red: "红", black: "黑", gold: "金",
@@ -57,12 +96,22 @@ export function GemEngineBoard({
           onAct?.(actionId, payload);
         }
       : undefined;
+  const legalActions =
+    canAct && !pendingDiscard
+      ? listGemEngineLegalActionsForSession({
+          gem,
+          activeSeat,
+          status,
+          playerId: viewerSeat ?? activeSeat,
+        })
+      : [];
 
   return (
     <section aria-label="宝石引擎桌" className="gem-engine-board room-view-tabletop-immersive">
       <TabletopStage
         kernel="gem-engine-v1"
         state={gem}
+        legal={legalActions}
         render={render}
         importedModels={importedModels}
         onAct={stageOnAct}

@@ -94,9 +94,19 @@ export function layoutForStage({ kernel, state, legal, onAct }: Pick<TabletopSta
       }, new Set(open));
     }
     case "gem-engine-v1":
-      return gemEngineLayout(state as GemEngineTabletopInput);
+      return gemEngineLayout(
+        state as GemEngineTabletopInput,
+        interactive
+          ? (legal ?? []) as Array<{ type: string; payload?: Record<string, unknown> | null }>
+          : undefined,
+      );
     case "pattern-draft-v1":
-      return patternDraftLayout(state as PatternDraftTabletopInput);
+      return patternDraftLayout(
+        state as PatternDraftTabletopInput,
+        interactive
+          ? (legal ?? []) as Array<{ type: string; payload?: Record<string, unknown> | null }>
+          : undefined,
+      );
     case "auction-bidding-v1":
       return auctionBiddingLayout(state as AuctionBiddingTabletopInput);
   }

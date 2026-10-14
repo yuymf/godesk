@@ -1,8 +1,47 @@
 import type { SessionState } from "./project-contract";
 import type { RenderSpec } from "./render-spec";
 import { TabletopStage } from "./TabletopStage";
+import {
+  createPatternDraftKernelConfig,
+  parsePatternDraftConfig,
+  patternDraftAdapter,
+  type PatternDraftGenre,
+} from "../runtime/adapters/pattern-draft";
+import type { PlayState } from "../runtime/play-kernel";
 
 type PatternDraftBoardState = NonNullable<SessionState["patternDraft"]>;
+
+function playStateFromPatternSession(
+  draft: PatternDraftBoardState,
+  activeSeat: number,
+  status: "active" | "complete",
+): PlayState<PatternDraftGenre> {
+  const genre = draft as unknown as PatternDraftGenre;
+  return {
+    seed: 0,
+    sequence: 0,
+    phase: status === "complete" ? "ended" : "draft",
+    activePlayerId: activeSeat,
+    playerCount: genre.seats.length,
+    status,
+    winnerId: null,
+    events: [],
+    genre,
+  };
+}
+
+export function listPatternDraftLegalActionsForSession(input: {
+  draft: PatternDraftBoardState;
+  activeSeat: number;
+  status: "active" | "complete";
+  playerId: number;
+}) {
+  const config = createPatternDraftKernelConfig({ playerCount: Math.max(2, input.draft.seats.length) });
+  const parsed = parsePatternDraftConfig(config.adapter);
+  if (!parsed) return [];
+  const state = playStateFromPatternSession(input.draft, input.activeSeat, input.status);
+  return patternDraftAdapter.listLegalActions(state, input.playerId, parsed);
+}
 
 const COLOR_LABEL: Record<string, string> = {
   blue: "蓝", yellow: "黄", red: "红", black: "黑", white: "白",
@@ -59,6 +98,14 @@ export function PatternDraftBoard({
         onAct?.(actionId, payload);
       }
     : undefined;
+  const legalActions = canAct
+    ? listPatternDraftLegalActionsForSession({
+        draft,
+        activeSeat,
+        status,
+        playerId: viewerSeat ?? activeSeat,
+      })
+    : [];
 
   return (
     <section
@@ -69,6 +116,7 @@ export function PatternDraftBoard({
       <TabletopStage
         kernel="pattern-draft-v1"
         state={draft}
+        legal={legalActions}
         render={render}
         importedModels={importedModels}
         onAct={stageOnAct}
