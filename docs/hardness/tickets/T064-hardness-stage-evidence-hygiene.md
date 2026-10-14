@@ -5,7 +5,7 @@
 | 回归靶 | H01–H05 stage + sidecar；拒汐屿/潮阵壳；重采 T061 对照帧 |
 | 层 | **探针 / 证据卫生** |
 | 状态 | **关** |
-| tip | pending |
+| tip | `d71eb91` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t064/` |
 
 ## 问题
