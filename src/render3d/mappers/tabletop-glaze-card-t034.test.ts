@@ -24,7 +24,7 @@ describe("T034 glazed tiles + card/plaque illustration", () => {
     expect(layout.pieces.filter((p) => p.id.includes("factory:") && p.objectKind === "region")).toHaveLength(0);
   });
 
-  it("gem nobles are plaques; market cards carry tier+prestige|discount tags", () => {
+  it("gem nobles are plaques; market cards carry face schema tags", () => {
     const layout = gemEngineLayout({
       bank: { white: 1, blue: 0, green: 0, red: 0, black: 0, gold: 0 },
       market: [[{ id: "c", discount: "blue", prestige: 2 }], [], []],
@@ -33,9 +33,9 @@ describe("T034 glazed tiles + card/plaque illustration", () => {
     });
     expect(layout.pieces.some((p) => p.objectKind === "plaque" && p.label?.includes("勋爵"))).toBe(true);
     const card = layout.pieces.find((p) => p.id.startsWith("market:"));
-    expect(card?.label).toMatch(/^T1\+2\|blue$/);
+    expect(card?.label).toMatch(/^face\|card\|/);
     const scene = mapTabletopToScene(layout, defaultRenderSpec("gem-engine-v1", "table") as TabletopRenderInput);
     expect(scene.model.nodes.some((n) => n.mesh === "plaque")).toBe(true);
-    expect(scene.model.nodes.some((n) => n.mesh === "card" && String(n.tag ?? "").includes("T1"))).toBe(true);
+    expect(scene.model.nodes.some((n) => n.mesh === "card" && String(n.tag ?? "").startsWith("face|"))).toBe(true);
   });
 });

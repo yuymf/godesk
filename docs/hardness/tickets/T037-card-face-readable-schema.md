@@ -4,7 +4,7 @@
 | --- | --- |
 | 回归靶 | H03 / H04 / H05 Room 近距可读牌面 |
 | 层 | **共享呈现**（tabletop-objects 程序化 atlas） |
-| 状态 | **开** |
+| 状态 | **关** |
 | tip | （实现后填） |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t037/` |
 
@@ -17,5 +17,5 @@
 3. 贵族/拍品：标题文 + 需求点，非 raw id。card/plaque 不另挂调试名牌。无样例特判。**不**自宣 ≥9。
 
 ## 验收对照
-- [ ] H03/H04/H05 before/after 近距可读；无调试串
-- [ ] 单测不回退；无外部版权图
+- [x] H03/H04/H05 before/after 近距可读；无调试串
+- [x] 单测不回退；无外部版权图

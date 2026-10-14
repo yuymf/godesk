@@ -4,6 +4,7 @@
  * 由同一拾取管线发出（与 DOM 动作按钮发同样的 actionId / payload）。
  */
 import type { TabletopAction, TabletopCell, TabletopHint, TabletopLayout, TabletopLink, TabletopPiece } from "./tabletop";
+import { encodeCardFace, encodePlaqueFace } from "./tabletop-face-schema";
 
 /** 桌面目标尺寸（世界单位）：配合 RenderSpec 默认机位（fov 35°、距离 16）。 */
 const BOARD_SPAN = 8;
@@ -285,12 +286,12 @@ export function harborVoyageLayout(
 /** Gem-token bank / market / nobles / seat tableau (T026). Generic; not IP-specific. */
 export type GemEngineTabletopInput = {
   bank: Readonly<Record<string, number>>;
-  market: ReadonlyArray<ReadonlyArray<{ id?: string; discount?: string; prestige?: number; cost?: Readonly<Record<string, number>> }>>;
-  nobles: ReadonlyArray<{ id?: string; name?: string }>;
+  market: ReadonlyArray<ReadonlyArray<{ id?: string; discount?: string; prestige?: number; cost?: Readonly<Record<string, number>>; tier?: number }>>;
+  nobles: ReadonlyArray<{ id?: string; name?: string; prestige?: number; requirements?: Readonly<Record<string, number>> }>;
   seats: ReadonlyArray<{
     gems: Readonly<Record<string, number>>;
     prestige: number;
-    cards?: ReadonlyArray<{ id?: string; discount?: string }>;
+    cards?: ReadonlyArray<{ id?: string; discount?: string; prestige?: number; cost?: Readonly<Record<string, number>>; tier?: number }>;
     reserved?: ReadonlyArray<{ id?: string }>;
   }>;
 };
@@ -388,7 +389,12 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
         z,
         size: 0.85,
         tint: GEM_TINT[discount] ?? "#d6d3d1",
-        label: discount ? `T${tier + 1}+${prestige}|${discount}` : `T${tier + 1}+${prestige}`,
+        label: encodeCardFace({
+          tier: tier + 1,
+          prestige,
+          reward: discount || undefined,
+          cost: card.cost,
+        }),
         ...(canBuy ? { action: { type: "buy", payload: buyPayload }, emphasis: true } : {}),
       });
       if (canBuy) {
@@ -414,6 +420,7 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
 
   state.nobles.forEach((noble, i) => {
     const x = -2.5 + i * 1.5;
+    const title = String(noble.name ?? "").trim() || "贵族";
     pieces.push({
       id: `noble:${noble.id ?? i}`,
       objectKind: "plaque",
@@ -421,7 +428,11 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
       z: -4.4,
       size: 0.85,
       tint: "#a78bfa",
-      label: String(noble.name ?? `N${i}`),
+      label: encodePlaqueFace({
+        title,
+        prestige: noble.prestige ?? 3,
+        requirements: noble.requirements,
+      }),
       emphasis: true,
     });
   });
@@ -748,7 +759,7 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
       z: -0.4,
       size: 1.2,
       tint: "#fef3c7",
-      label: String(lot.name ?? state.lotId ?? "lot"),
+      label: encodeCardFace({ title: String(lot.name ?? "拍品"), prestige: lot.reserve }),
       emphasis: true,
       action: { type: "bid", payload: { amount: Math.max(1, (state.currentBid ?? 0) + 1) } },
     });
@@ -775,7 +786,7 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
       z: -0.4,
       size: 1.05,
       tint: "#ede9fe",
-      label: String(companion.name ?? "pair"),
+      label: encodeCardFace({ title: String(companion.name ?? "配对") }),
     });
   }
 
@@ -849,7 +860,7 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
         size: 0.35,
         seat: seatId,
         tint: "#fdba74",
-        label: pi === 0 ? String(painting.name ?? "art") : undefined,
+        label: pi === 0 ? encodeCardFace({ title: String(painting.name ?? "藏品") }) : undefined,
       });
     });
     const hand = gallery?.auctionHand?.[seatId] ?? [];

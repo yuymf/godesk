@@ -7,6 +7,7 @@
  */
 import type { SceneModel, SceneNode, SceneVec3 } from "../scene-model";
 import type { LightingSpec, MaterialPattern, MaterialToken, PbrSetId } from "../tokens";
+import { FACE_SCHEMA_KINDS } from "./tabletop-face-schema";
 
 export type TabletopAction = { type: string; payload?: Record<string, unknown> };
 
@@ -528,6 +529,8 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
   ];
   for (const piece of layout.pieces) {
     if (!piece.label) continue;
+    // T037: card/plaque labels are face schema tags — do not spawn debug parchment nameplates.
+    if (FACE_SCHEMA_KINDS.has(piece.objectKind)) continue;
     // 名牌：平放在棋子南侧（朝向默认机位），羊皮纸底 + 墨字（tabletop-objects `label` 网格）。
     nodes.push({
       id: `label:${piece.id}`,
