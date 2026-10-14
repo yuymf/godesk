@@ -24,6 +24,7 @@ export const KERNEL_CAPABILITIES = {
   "auction-bidding-v1": ["bid-pass-resolution", "award-selection", "seeded-draw"],
   "auto-battler-v1": ["shop-economy", "bench-board", "seeded-combat", "trait-synergy"],
   "gem-engine-v1": ["gem-tokens", "development-discounts", "noble-prestige"],
+  "pattern-draft-v1": ["factory-draft", "pattern-line-placement", "wall-tiling-score", "floor-penalty"],
 } satisfies Record<KernelType, readonly string[]>;
 
 /** Mechanics are declarations, independent of a game's title or source language. */
@@ -46,6 +47,7 @@ export const MECHANIC_CAPABILITIES: Record<string, readonly string[]> = {
   "auction-bidding": ["bid-pass-resolution", "award-selection", "seeded-draw"],
   "auto-battler": ["shop-economy", "bench-board", "seeded-combat", "trait-synergy"],
   "gem-engine": ["gem-tokens", "development-discounts", "noble-prestige"],
+  "pattern-draft": ["factory-draft", "pattern-line-placement", "wall-tiling-score", "floor-penalty"],
 };
 
 export function kernelCapabilities(kernelType: string): readonly string[] | undefined {
@@ -80,6 +82,11 @@ const MECHANIC_CUES: Array<{ id: string; cues: RegExp }> = [
     id: "route-network",
     // Ticket-to-ride / rail cues (T008): 车票·车厢·认领路线·铺线·铁道 — not logistics-only.
     cues: /线路网络|路线连接|铺设路线|连接城市|星港|物流|货运|运货|派车|星图节点|车票|车厢|认领路线|铺线|铁道|route\s*network|connect(?:ing)?\s+cities|claim(?:ing)?\s+routes|\blogistics\b|\bconvoy\b|train\s*cars?|destination\s*tickets?/i,
+  },
+  // T013: factory draft / pattern lines / wall tiling.
+  {
+    id: "pattern-draft",
+    cues: /工厂(?:展示)?(?:盘)?|准备行|纹样墙|地板(?:扣分)?|factory\s+(?:displays?|tiles?)|pattern\s*(?:wall|lines?)|floor\s*line|wall\s*tiling|中心(?:区|堆)/i,
   },
   {
     id: "hand-play",

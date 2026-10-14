@@ -150,6 +150,10 @@ import {
   defaultGemEngineContent,
   gemEngineUnsupportedNotes,
 } from "../src/runtime/adapters/gem-engine";
+import {
+  defaultPatternDraftContent,
+  patternDraftUnsupportedNotes,
+} from "../src/runtime/adapters/pattern-draft";
 
 interface CreatorJobHost {
   ctx: DurableObjectState;
@@ -470,6 +474,14 @@ export async function runCreatorJob(
         !discFlippingRuntimeConfigured &&
         !networkRouteRuntimeConfigured &&
         !auctionBiddingRuntimeConfigured;
+      const patternDraftRuntimeConfigured =
+        requestedMechanics.includes("pattern-draft") &&
+        !autoBattlerRuntimeConfigured &&
+        !hexSettlementRuntimeConfigured &&
+        !discFlippingRuntimeConfigured &&
+        !networkRouteRuntimeConfigured &&
+        !auctionBiddingRuntimeConfigured &&
+        !gemEngineRuntimeConfigured;
       weakGenreScoreRaceRefused =
         sourceGenre === "generic" &&
         drawAndScoreRule === null &&
@@ -514,9 +526,11 @@ export async function runCreatorJob(
         generatedRuleSystem.actions.length === 2 &&
         generatedRuleSystem.actions.some((action) => action.id === "roll") &&
         generatedRuleSystem.actions.some((action) => action.id === "bank");
-      // T009: factory/pattern-wall corpus has no kernel — refuse turn-taking fallthrough.
+      // T009/T013: factory/pattern-wall corpus — bind pattern-draft-v1 when inferred; else refuse turn-taking.
       patternDraftRefused =
         isPatternDraftCorpus(authoredMaterial) &&
+        !patternDraftRuntimeConfigured &&
+        !requestedMechanics.includes("pattern-draft") &&
         !requestedMechanics.includes("route-network") &&
         !requestedMechanics.includes("hex-settlement") &&
         !requestedMechanics.includes("disc-flipping") &&
@@ -550,6 +564,7 @@ export async function runCreatorJob(
         autoBattlerRuntimeConfigured ||
         auctionBiddingRuntimeConfigured ||
         gemEngineRuntimeConfigured ||
+        patternDraftRuntimeConfigured ||
         hiddenRoleRuntimeConfigured ||
         handPlayRuntimeConfigured ||
         harborVoyageRuntimeConfigured ||
@@ -682,6 +697,18 @@ export async function runCreatorJob(
               unsupported: [
                 "gem-engine-v1 executes a 2-seat gem-token / development-card / noble prestige loop on the public play-kernel.",
                 ...gemEngineUnsupportedNotes(),
+              ],
+            },
+          }
+        : patternDraftRuntimeConfigured
+        ? {
+            op: "configure_pattern_draft" as const,
+            config: {
+              playerCount: 2,
+              content: defaultPatternDraftContent(),
+              unsupported: [
+                "pattern-draft-v1 executes a 2-seat factory draft / pattern-line / wall-tile / floor-penalty loop on the public play-kernel.",
+                ...patternDraftUnsupportedNotes(),
               ],
             },
           }
@@ -1285,6 +1312,8 @@ export async function runCreatorJob(
           ? "规则结构来自体裁识别；两人公开轮流出价或放弃，最高有效出价获得拍品，将在批准 Generation Plan 后配置为 auction-bidding-v1。"
           : proposedRuntime?.op === "configure_gem_engine"
           ? "规则结构来自体裁识别；宝石代币、发展牌永久折扣与贵族声望将在批准 Generation Plan 后配置为 gem-engine-v1。"
+          : proposedRuntime?.op === "configure_pattern_draft"
+          ? "规则结构来自体裁识别；工厂拿色、准备行与纹样墙计分将在批准 Generation Plan 后配置为 pattern-draft-v1。"
           : proposedRuntime?.op === "configure_hidden_role"
           ? "规则结构来自体裁识别；秘密身份、公开发言与指控将在批准 Generation Plan 后配置为 hidden-role-v1。"
           : proposedRuntime?.op === "configure_hand_play"

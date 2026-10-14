@@ -387,6 +387,9 @@ type RuntimeConfiguration =
   | Extract<ProjectChangeOperation, { op: "configure_gem_engine" }> & {
       op: "configure_gem_engine";
     }
+  | Extract<ProjectChangeOperation, { op: "configure_pattern_draft" }> & {
+      op: "configure_pattern_draft";
+    }
   | Extract<ProjectChangeOperation, { op: "configure_auction_bidding" }> & {
       op: "configure_auction_bidding";
     }
@@ -399,7 +402,7 @@ function configureDedicatedKernel(
   op: string,
   kernel: Extract<
     Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
-    { type: "harbor-voyage-v1" | "worker-placement-v1" | "hidden-role-v1" | "hand-play-v1" | "conversation-relay-v1" | "disc-flipping-v1" | "hex-settlement-v1" | "network-route-v1" | "auction-bidding-v1" | "gem-engine-v1" | "auto-battler-v1" }
+    { type: "harbor-voyage-v1" | "worker-placement-v1" | "hidden-role-v1" | "hand-play-v1" | "conversation-relay-v1" | "disc-flipping-v1" | "hex-settlement-v1" | "network-route-v1" | "auction-bidding-v1" | "gem-engine-v1" | "pattern-draft-v1" | "auto-battler-v1" }
   >,
   unsupported: string[],
   config: unknown,
@@ -607,6 +610,19 @@ function configureDedicatedKernel(
       ] },
       stages: [{ id: "main", name: "回合" }, { id: "ended", name: "终局" }],
       outcomes: [{ id: "prestige", name: "先到声望目标者获胜" }],
+    } : kernel.type === "pattern-draft-v1" ? {
+      actions: [
+        { id: "draft", label: "拿色并放入准备行", description: "从工厂或中心拿走某一颜色全部瓷砖，放入一条准备行或地板。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+      ],
+      participants: { ...record.ruleSystem.participants, min: 2, max: 2, default: 2 },
+      playSurface: { kind: "table" as const, layout: "pattern-draft-table", regions: [
+        { id: "factories", name: "工厂展示", description: "各盘同色拿取" },
+        { id: "center", name: "中心堆", description: "先手标记与余砖" },
+        { id: "lines", name: "准备行", description: "按色铺满后贴墙" },
+        { id: "wall", name: "纹样墙", description: "正交相连计分" },
+      ] },
+      stages: [{ id: "draft", name: "草稿" }, { id: "ended", name: "结算" }],
+      outcomes: [{ id: "score", name: "墙贴得分减去地板扣分后最高者获胜" }],
     } : kernel.type === "auto-battler-v1" ? {
       actions: [
         { id: "buy", label: "购买", description: "从商店购买单位到备战席。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
@@ -793,6 +809,15 @@ function configureRuntimeKernel(
   if (configuration.op === "configure_gem_engine") {
     configureDedicatedKernel(record, configuration.op, {
       type: "gem-engine-v1", playerCount: configuration.config.playerCount,
+      ...(configuration.config.content
+        ? { content: structuredClone(configuration.config.content) }
+        : {}),
+    }, configuration.config.unsupported?.map((item) => item.trim()) ?? [], configuration.config, affectedEntities);
+    return;
+  }
+  if (configuration.op === "configure_pattern_draft") {
+    configureDedicatedKernel(record, configuration.op, {
+      type: "pattern-draft-v1", playerCount: configuration.config.playerCount,
       ...(configuration.config.content
         ? { content: structuredClone(configuration.config.content) }
         : {}),
@@ -1687,6 +1712,10 @@ const RUNTIME_HANDLERS: {
       config.playerCount === 2 && validUnsupported(config.unsupported),
   },
   configure_gem_engine: {
+    validate: (config) => Boolean(config) && typeof config === "object" &&
+      config.playerCount === 2 && validUnsupported(config.unsupported),
+  },
+  configure_pattern_draft: {
     validate: (config) => Boolean(config) && typeof config === "object" &&
       config.playerCount === 2 && validUnsupported(config.unsupported),
   },

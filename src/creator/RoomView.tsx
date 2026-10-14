@@ -24,7 +24,7 @@ import {
   isDiscFlipping,
   isHexSettlement,
   isNetworkRoute,
-  isAuctionBidding, isGemEngine,
+  isAuctionBidding, isGemEngine, isPatternDraft,
   isAutoBattler,
   isHarborVoyage,
   isWorkerPlacement,
@@ -58,6 +58,7 @@ const LazyHexSettlementBoard = lazy(async () => {
 import { NetworkRouteBoard, type NetworkRouteBoardState } from "./NetworkRouteBoard";
 import { AuctionBiddingBoard } from "./AuctionBiddingBoard";
 import { GemEngineBoard } from "./GemEngineBoard";
+import { PatternDraftBoard } from "./PatternDraftBoard";
 import { TideArenaBoard } from "./TideArenaBoard";
 import type { AutoBattlerThemePatch } from "../runtime/adapters/auto-battler-theme";
 import type { AutoBattlerBranding } from "../runtime/adapters/auto-battler-packs";
@@ -419,6 +420,8 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   const auction = isAuctionBidding(build.ruleSystem) && Boolean(auctionState);
   const gemEngineState = room.state.gemEngine;
   const gemEngine = isGemEngine(build.ruleSystem) && Boolean(gemEngineState);
+  const patternDraftState = room.state.patternDraft;
+  const patternDraft = isPatternDraft(build.ruleSystem) && Boolean(patternDraftState);
   const autoBattlerState = room.state.autoBattler;
   const autoBattler = isAutoBattler(build.ruleSystem) && Boolean(autoBattlerState);
   const gameName = build.ruleSystem.name;
@@ -724,6 +727,10 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         />
       ) : auction && auctionState ? (
         <AuctionBiddingBoard auction={auctionState} activeSeat={activeSeat}
+          enabled={isMyTurn} busy={busy} status={room.state.status} viewerSeat={seat}
+          onAct={(actionId, payload) => { void act(actionId, -1, payload); }} />
+      ) : patternDraft && patternDraftState ? (
+        <PatternDraftBoard draft={patternDraftState} activeSeat={activeSeat}
           enabled={isMyTurn} busy={busy} status={room.state.status} viewerSeat={seat}
           onAct={(actionId, payload) => { void act(actionId, -1, payload); }} />
       ) : gemEngine && gemEngineState ? (

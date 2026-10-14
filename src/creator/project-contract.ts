@@ -340,6 +340,16 @@ export interface RuleSystem {
               };
             }
           | {
+              type: "pattern-draft-v1";
+              playerCount: number;
+              content?: {
+                factoryCount?: number;
+                tilesPerFactory?: number;
+                tilesPerColor?: number;
+                floorPenalties?: number[];
+              };
+            }
+          | {
               type: "auto-battler-v1";
               playerCount: number;
               /** Creator tuning (prep timers, starting HP/gold); omitted → kernel defaults. */
@@ -758,6 +768,19 @@ export type ProjectChangeOperation =
           prestigeToWin?: number;
           bankPerBasic?: number;
           bankGold?: number;
+        };
+        unsupported?: string[];
+      };
+    }
+  | {
+      op: "configure_pattern_draft";
+      config: {
+        playerCount: number;
+        content?: {
+          factoryCount?: number;
+          tilesPerFactory?: number;
+          tilesPerColor?: number;
+          floorPenalties?: number[];
         };
         unsupported?: string[];
       };
@@ -1198,7 +1221,37 @@ export interface SessionState {
     lastEvent: string | null;
     prestigeToWin?: number;
   };
-  /** Present when the build kernel is auto-battler-v1 (generic shop/bench/combat). */
+  /** Present when the build kernel is pattern-draft-v1. */
+  patternDraft?: {
+    phase?: string;
+    factories: string[][];
+    center: string[];
+    markerInCenter: boolean;
+    bag: string[];
+    lid: string[];
+    bagCount: number;
+    lidCount: number;
+    round: number;
+    nextStart: number;
+    lastEvent: string | null;
+    seats: [
+      {
+        lines: Array<{ color: string | null; tiles: string[]; capacity: number }>;
+        wall: Array<Array<string | null>>;
+        floor: string[];
+        hasMarker: boolean;
+        score: number;
+      },
+      {
+        lines: Array<{ color: string | null; tiles: string[]; capacity: number }>;
+        wall: Array<Array<string | null>>;
+        floor: string[];
+        hasMarker: boolean;
+        score: number;
+      },
+    ];
+  };
+    /** Present when the build kernel is auto-battler-v1 (generic shop/bench/combat). */
   autoBattler?: {
     phase: "shop" | "place" | "ended";
     round: number;

@@ -231,6 +231,22 @@ export function isGemEngine(ruleSystem: RuleSystem): boolean {
   return Boolean(gemEngineKernel(ruleSystem));
 }
 
+export function patternDraftKernel(
+  ruleSystem: RuleSystem,
+): Extract<
+  Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
+  { type: "pattern-draft-v1" }
+> | null {
+  return ruleSystem.runtimeSupport.status === "executable" &&
+    ruleSystem.runtimeSupport.kernel.type === "pattern-draft-v1"
+    ? ruleSystem.runtimeSupport.kernel
+    : null;
+}
+
+export function isPatternDraft(ruleSystem: RuleSystem): boolean {
+  return Boolean(patternDraftKernel(ruleSystem));
+}
+
 export function isAutoBattler(ruleSystem: RuleSystem): boolean {
   return ruleSystem.runtimeSupport.status === "executable" &&
     ruleSystem.runtimeSupport.kernel.type === "auto-battler-v1";

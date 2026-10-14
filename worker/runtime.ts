@@ -85,6 +85,14 @@ import {
   type GemEngineGenre,
 } from "../src/runtime/adapters/gem-engine";
 import {
+  patternDraftAdapter,
+  patternDraftToSessionFields,
+  bindPatternDraftFromRuntimeKernel,
+  pickPatternDraftBotAction,
+  playActionFromPatternDraftIntent,
+  type PatternDraftGenre,
+} from "../src/runtime/adapters/pattern-draft";
+import {
   autoBattlerAdapter,
   autoBattlerNow,
   setAutoBattlerNow,
@@ -395,6 +403,17 @@ export function initialSessionState(
       _seed,
     );
     return gemEngineToSessionFields(play);
+  }
+  if (runtime?.kernel.type === "pattern-draft-v1") {
+    const play = createInitialState(
+      patternDraftAdapter,
+      bindPatternDraftFromRuntimeKernel({
+        playerCount: runtime.kernel.playerCount,
+        content: runtime.kernel.content ?? null,
+      }),
+      _seed,
+    );
+    return patternDraftToSessionFields(play);
   }
   if (runtime?.kernel.type === "auto-battler-v1") {
     const play = createInitialState(
@@ -1170,6 +1189,41 @@ export function acceptIntent(
     return {
       sequence, intentId: intent.intentId, seat: intent.seat, actionId: intent.actionId,
       points: 0, payload: intent.payload, state: gemEngineToSessionFields(result.state),
+    };
+  }
+
+  if (runtime.kernel.type === "pattern-draft-v1") {
+    if (state.status !== "active" || !state.patternDraft || intent.seat !== state.activeSeat) return null;
+    const kernelConfig = bindPatternDraftFromRuntimeKernel({
+      playerCount: runtime.kernel.playerCount,
+      content: runtime.kernel.content ?? null,
+    });
+    const playState = {
+      seed, sequence: state.turn, phase: (state.patternDraft.phase ?? "draft") as string,
+      activePlayerId: state.activeSeat, playerCount: runtime.kernel.playerCount,
+      status: state.status, winnerId: state.winnerSeat, events: [] as const,
+      genre: {
+        factories: state.patternDraft.factories.map((f) => [...f]) as PatternDraftGenre["factories"],
+        center: [...state.patternDraft.center] as PatternDraftGenre["center"],
+        markerInCenter: state.patternDraft.markerInCenter,
+        bag: [...(state.patternDraft.bag ?? [])] as PatternDraftGenre["bag"],
+        lid: [...(state.patternDraft.lid ?? [])] as PatternDraftGenre["lid"],
+        seats: structuredClone(state.patternDraft.seats) as PatternDraftGenre["seats"],
+        round: state.patternDraft.round,
+        nextStart: state.patternDraft.nextStart as 0 | 1,
+        lastEvent: state.patternDraft.lastEvent,
+      } satisfies PatternDraftGenre,
+    };
+    const result = applyAction(
+      patternDraftAdapter,
+      playState,
+      playActionFromPatternDraftIntent(intent.seat, intent.actionId, intent.payload),
+      kernelConfig,
+    );
+    if (!result.ok) return null;
+    return {
+      sequence, intentId: intent.intentId, seat: intent.seat, actionId: intent.actionId,
+      points: 0, payload: intent.payload, state: patternDraftToSessionFields(result.state),
     };
   }
 

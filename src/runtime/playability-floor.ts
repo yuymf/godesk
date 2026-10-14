@@ -49,6 +49,7 @@ const MECHANIC_ALIGNED_KERNEL: Record<string, string> = {
   "auction-bidding": "auction-bidding-v1",
   "auto-battler": "auto-battler-v1",
   "gem-engine": "gem-engine-v1",
+  "pattern-draft": "pattern-draft-v1",
 };
 
 function mechanicsAlignWithKernel(
@@ -200,6 +201,17 @@ export function playabilityFloor(ruleSystem: RuleSystem): PlayabilityFloorReadin
       return { status: "failed", reason: "gem-engine-v1 需要双人桌面与拿取代币/购买发展牌动作。", genre, kernelType };
     }
   }
+  if (ruleSystem.generation?.requestedMechanics?.includes("pattern-draft") &&
+      kernelType !== "pattern-draft-v1") {
+    return { status: "failed", reason: "工厂草稿来源需要 pattern-draft-v1 的工厂拿色与准备行/墙贴环。", genre, kernelType };
+  }
+  if (kernelType === "pattern-draft-v1") {
+    const hasDraft = ruleSystem.actions.some((action) => action.id === "draft");
+    if (ruleSystem.playSurface.kind !== "table" || !hasDraft ||
+        ruleSystem.runtimeSupport.kernel.playerCount !== 2) {
+      return { status: "failed", reason: "pattern-draft-v1 需要双人桌面与草稿拿色动作。", genre, kernelType };
+    }
+  }
   const aligned = mechanicsAlignWithKernel(
     ruleSystem.generation?.requestedMechanics,
     kernelType,
@@ -324,7 +336,8 @@ export function playabilityFloor(ruleSystem: RuleSystem): PlayabilityFloorReadin
         kernelType === "disc-flipping-v1" ||
         kernelType === "auction-bidding-v1" ||
         kernelType === "auto-battler-v1" ||
-        kernelType === "gem-engine-v1"
+        kernelType === "gem-engine-v1" ||
+        kernelType === "pattern-draft-v1"
       )
     ) {
       return {

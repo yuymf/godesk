@@ -10,8 +10,8 @@ import {
   isDiscFlipping,
   isHexSettlement,
   isNetworkRoute,
-  isAuctionBidding,
-  auctionBiddingKernel,
+  isAuctionBidding, isPatternDraft,
+  auctionBiddingKernel, patternDraftKernel,
   isAutoBattler,
   isHarborVoyage,
   networkRouteKernel,
@@ -32,7 +32,9 @@ import { createInitialHexIslandSessionSlice } from "./hex-settlement-session";
 import { NetworkRouteBoard } from "./NetworkRouteBoard";
 import { createInitialNetworkRouteSessionSlice } from "./network-route-thumbnail";
 import { AuctionBiddingBoard } from "./AuctionBiddingBoard";
+import { PatternDraftBoard } from "./PatternDraftBoard";
 import { auctionBiddingAdapter, bindAuctionBiddingFromRuntimeKernel, auctionBiddingToSessionFields } from "../runtime/adapters/auction-bidding";
+import { patternDraftAdapter, bindPatternDraftFromRuntimeKernel, patternDraftToSessionFields } from "../runtime/adapters/pattern-draft";
 import { TideArenaBoard } from "./TideArenaBoard";
 import { autoBattlerAdapter, createAutoBattlerKernelConfig, autoBattlerToSessionFields } from "../runtime/adapters/auto-battler";
 import { createInitialState } from "../runtime/play-kernel";
@@ -97,6 +99,8 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
   const networkKernel = networkRouteKernel(build.ruleSystem);
   const auction = isAuctionBidding(build.ruleSystem);
   const auctionKernel = auctionBiddingKernel(build.ruleSystem);
+  const patternDraft = isPatternDraft(build.ruleSystem);
+  const patternKernel = patternDraftKernel(build.ruleSystem);
   const autoBattler = isAutoBattler(build.ruleSystem);
   const scoreTrackSurface = usesScoreTrackSurface(build.ruleSystem);
   const runtimeValues = new Map(
@@ -217,6 +221,20 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
               }),
               42,
             )).auctionBidding!}
+            activeSeat={0} enabled={false} readOnly status="active" viewerSeat={0}
+          />
+        </section>
+      ) : patternDraft && patternKernel ? (
+        <section className="preview-board" aria-label="工厂草稿可玩桌面">
+          <PatternDraftBoard
+            draft={patternDraftToSessionFields(createInitialState(
+              patternDraftAdapter,
+              bindPatternDraftFromRuntimeKernel({
+                playerCount: patternKernel.playerCount,
+                content: patternKernel.content ?? null,
+              }),
+              42,
+            )).patternDraft!}
             activeSeat={0} enabled={false} readOnly status="active" viewerSeat={0}
           />
         </section>

@@ -63,6 +63,7 @@ export const KERNEL_PRESENTATION = {
   "auction-bidding-v1": "dedicated-board",
   "auto-battler-v1": "dedicated-board",
   "gem-engine-v1": "dedicated-board",
+  "pattern-draft-v1": "dedicated-board",
 } satisfies Record<KernelType, BoardPresentation>;
 
 export const UNPRESENTED_PREFIX = "未呈现";
