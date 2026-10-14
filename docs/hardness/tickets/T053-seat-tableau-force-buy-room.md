@@ -5,7 +5,7 @@
 | 回归靶 | H03 force-buy≥2 卡 / H05 force-own≥2 藏品 before→after；H04 smoke |
 | 层 | **共享呈现 / probe**（force-buy · force-own intents + seatTableau） |
 | 状态 | **关** |
-| tip | pending |
+| tip | `9f2d679` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t053/` |
 
 ## 问题
