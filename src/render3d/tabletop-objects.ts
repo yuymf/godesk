@@ -663,6 +663,7 @@ function pose(object: Object3D, node: SceneNode): void {
 
 const STEEL: MaterialToken = { base: "#9aa1a6", roughness: 0.32, metalness: 0.85, pattern: "none" };
 const SLEEPER: MaterialToken = { base: "#5a3b22", roughness: 0.86, metalness: 0, pattern: "grain" };
+const TRACK_SLOT: MaterialToken = { base: "#94a3b8", roughness: 0.85, metalness: 0.05, pattern: "none" };
 const STONE: MaterialToken = { base: "#b8ab92", roughness: 0.9, metalness: 0, pattern: "stone" };
 const WALL: MaterialToken = { base: "#efe2c4", roughness: 0.8, metalness: 0, pattern: "none" };
 const ROOF: MaterialToken = { base: "#8e3b2c", roughness: 0.7, metalness: 0, pattern: "none" };
@@ -736,8 +737,23 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     train.receiveShadow = true;
     group.add(train);
   } else {
-    // Unclaimed: faint empty track slots (ties only, weaker rails).
+    // Unclaimed: faint empty track + T051 countable length tick/slots (ghost wagon bays).
     group.add(sleepers, rails);
+    const slotCount = Math.max(1, Math.min(6, Math.round(usable / 0.42)));
+    const slotStep = usable / slotCount;
+    const ghosts: Geometry[] = [];
+    for (let i = 0; i < slotCount; i += 1) {
+      const cx = -usable / 2 + slotStep * (i + 0.5);
+      // hollow bay: thin rim boxes (readable length marks, not claimed cars)
+      ghosts.push(boxAt(slotStep * 0.7, 0.02, gauge * 0.75, cx, 0.07, 0));
+      ghosts.push(boxAt(0.02, 0.05, gauge * 0.75, cx - slotStep * 0.32, 0.09, 0));
+      ghosts.push(boxAt(0.02, 0.05, gauge * 0.75, cx + slotStep * 0.32, 0.09, 0));
+    }
+    const ghostMat = ctx.library.get("tt-track-slot", TRACK_SLOT);
+    const ghostMesh = new Mesh(mergeGeometries(ghosts) ?? ghosts[0]!, ghostMat);
+    ghostMesh.castShadow = false;
+    ghostMesh.receiveShadow = true;
+    group.add(ghostMesh);
   }
   const hit = new Mesh(new BoxGeometry(usable, 0.1, gauge * 1.7), new MeshBasicMaterial({ visible: false }));
   hit.position.y = 0.05;
@@ -782,7 +798,14 @@ function station(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const postL = new Mesh(boxAt(0.04, 0.28, 0.04, -0.2, 0.2, -0.28), wall);
   const postR = new Mesh(boxAt(0.04, 0.28, 0.04, 0.2, 0.2, -0.28), wall);
   group.add(plinth, ring, walls, door, winL, winR, roof, canopy, postL, postR);
-  if (node.tag === "major") {
+  const rawTag = (node.tag ?? "").trim();
+  const isHub = rawTag === "major" || rawTag.startsWith("hub:");
+  const stationName = rawTag.startsWith("hub:")
+    ? rawTag.slice(4)
+    : rawTag && rawTag !== "major"
+      ? rawTag
+      : "";
+  if (isHub) {
     const chimney = new Mesh(boxAt(0.1, 0.28, 0.1, -0.14, 0.62, -0.02), wall);
     chimney.castShadow = true;
     const tower = new Mesh(boxAt(0.16, 0.48, 0.16, 0.18, 0.42, 0.08), wall);
@@ -792,6 +815,41 @@ function station(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     cap.rotation.y = Math.PI / 4;
     cap.castShadow = true;
     group.add(chimney, tower, cap);
+  }
+  // T051 · large opaque station/hub name plaque (shared; not faint floating mush).
+  if (stationName && typeof document !== "undefined") {
+    const canvas = document.createElement("canvas");
+    const W = Math.max(220, stationName.length * 52 + 64);
+    const H = 88;
+    canvas.width = W;
+    canvas.height = H;
+    const g = canvas.getContext("2d");
+    if (g) {
+      g.fillStyle = isHub ? "#fbbf24" : "#fff7ed";
+      g.fillRect(0, 0, W, H);
+      g.strokeStyle = "#5b3a1a";
+      g.lineWidth = 8;
+      g.strokeRect(4, 4, W - 8, H - 8);
+      g.fillStyle = "#111827";
+      g.font = '700 48px "Noto Serif CJK SC","Songti SC",serif';
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillText(stationName.slice(0, 8), W / 2, H / 2 + 2);
+      const tex = new CanvasTexture(canvas);
+      tex.colorSpace = SRGBColorSpace;
+      tex.anisotropy = 4;
+      const pw = Math.min(1.15, 0.42 + stationName.length * 0.14);
+      const plane = new PlaneGeometry(pw, 0.32);
+      plane.rotateX(-Math.PI / 2);
+      const plate = new Mesh(plane, new MeshBasicMaterial({ map: tex, toneMapped: false }));
+      plate.position.set(0, 0.14, 0.55);
+      plate.renderOrder = 3;
+      group.add(plate);
+      // wood riser under plaque so it lifts off the pad
+      const riser = new Mesh(boxAt(pw * 0.95, 0.04, 0.28, 0, 0.08, 0.55), wall);
+      riser.castShadow = true;
+      group.add(riser);
+    }
   }
   return group;
 }

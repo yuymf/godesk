@@ -569,6 +569,8 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
     // T039: forbid persistent Eng pad boards (F0/F1) and seat debug plates.
     if (/^F\d+$/i.test(piece.label)) continue;
     if (/^S\d+:/i.test(piece.label)) continue;
+    // T051: station names render on-station plaques — no faint floating parchment.
+    if (piece.objectKind === "station") continue;
     // T045: forbid translucent numeric cash/score billboards on the desk (cash → chip towers or HUD only).
     if (/^\$?\d+(\.\d+)?$/.test(piece.label.trim())) continue;
     // 名牌：平放在棋子南侧（朝向默认机位），羊皮纸底 + 墨字（tabletop-objects `label` 网格）。
@@ -591,11 +593,14 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
     // glazed factory tiles under the felt after T044 raised playTop.
     const baseY = playTop + (piece.y ?? (onCell ? CELL_THICKNESS : 0));
     // Face-schema labels win; else emphasis → major (stations); else plain label tag.
+    // T051: stations keep hub:/name tags (do not collapse emphasis to bare "major").
     const pieceTag = FACE_SCHEMA_KINDS.has(piece.objectKind) && piece.label
       ? piece.label
-      : piece.emphasis
-        ? "major"
-        : piece.label;
+      : piece.objectKind === "station" && piece.label
+        ? piece.label
+        : piece.emphasis
+          ? "major"
+          : piece.label;
     nodes.push({
       id,
       kind: "piece",
