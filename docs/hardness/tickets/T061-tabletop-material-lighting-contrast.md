@@ -5,7 +5,7 @@
 | 回归靶 | H01–H05 Room stage 各一帧 vs 前 tip；守卫不断；禁单主题贴图特例 |
 | 层 | **共享呈现**（MaterialLibrary + lighting） |
 | 状态 | **关** |
-| tip | pending |
+| tip | `77a1ea2` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t061/` |
 
 ## 问题
