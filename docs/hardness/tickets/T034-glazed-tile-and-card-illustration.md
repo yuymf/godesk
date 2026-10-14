@@ -5,7 +5,7 @@
 | 回归靶 | H03 / H04 / H05 Room 桌面可读插画 |
 | 层 | **共享呈现**（tabletop-objects / materials / 程序化贴图） |
 | 状态 | **关** |
-| tip | `701fb5a0fad30fa1b062ff21055e43ed3ced2510` |
+| tip | `9b834a2dfb68eca4ea6c6cafd254c75abcb5d0ec` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t034/` |
 
 ## 现象
