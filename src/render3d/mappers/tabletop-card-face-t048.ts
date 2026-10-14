@@ -15,12 +15,13 @@ export type CardFaceZone = {
 };
 
 /** Canonical layout zones — forbid center-number-only faces. */
+/** T063 · illustration panel dominates face; cost/border strip must not swallow art. */
 export const CARD_FACE_ZONES: ReadonlyArray<CardFaceZone> = [
-  { id: "illustration", x: 0.08, y: 0.07, w: 0.84, h: 0.38 },
-  { id: "rewardBar", x: 0.08, y: 0.46, w: 0.84, h: 0.06 },
-  { id: "prestige", x: 0.72, y: 0.54, w: 0.18, h: 0.14 },
-  { id: "cost", x: 0.08, y: 0.70, w: 0.84, h: 0.18 },
-  { id: "title", x: 0.08, y: 0.54, w: 0.60, h: 0.12 },
+  { id: "illustration", x: 0.06, y: 0.05, w: 0.88, h: 0.52 },
+  { id: "rewardBar", x: 0.06, y: 0.58, w: 0.88, h: 0.05 },
+  { id: "prestige", x: 0.74, y: 0.64, w: 0.18, h: 0.12 },
+  { id: "cost", x: 0.06, y: 0.78, w: 0.88, h: 0.14 },
+  { id: "title", x: 0.06, y: 0.64, w: 0.64, h: 0.12 },
 ];
 
 const CHIP: Record<string, string> = {

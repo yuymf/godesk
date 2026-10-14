@@ -85,6 +85,9 @@ describe("T048 card face illustration zones", () => {
         auctionHand: [[], []],
       },
     });
-    expect(auction.pieces.some((p) => p.objectKind === "card")).toBe(true);
+    // Auction gallery lots use framed-art ("lot"); face schema still applies when labeled.
+    expect(
+      auction.pieces.some((p) => p.objectKind === "card" || p.objectKind === "lot"),
+    ).toBe(true);
   });
 });
