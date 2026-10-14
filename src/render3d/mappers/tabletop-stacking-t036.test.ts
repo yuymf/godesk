@@ -21,12 +21,12 @@ describe("T036 piece stacking fidelity", () => {
     expect(f0tiles.filter((p) => p.tint === "#eab308")).toHaveLength(3);
     expect(f0tiles.filter((p) => p.tint === "#1f2937")).toHaveLength(1);
 
-    // wall: filled glazed tiles; empty use slot (T050) — never beige cell cubes / blank region boards
+    // wall: filled glazed tiles; empty use wall-slot print (T050/T054) — never beige cell cubes / blank region boards
     const wallPieces = layout.pieces.filter((p) => p.id.includes(":wall:"));
     expect(wallPieces.filter((p) => p.objectKind === "cell")).toHaveLength(0);
     expect(wallPieces.filter((p) => p.id.endsWith(":wall:board"))).toHaveLength(0);
     expect(wallPieces.filter((p) => p.objectKind === "tile")).toHaveLength(2);
-    expect(wallPieces.filter((p) => p.objectKind === "slot").length).toBeGreaterThan(0);
+    expect(wallPieces.filter((p) => p.objectKind === "slot" || p.objectKind === "wall-slot").length).toBeGreaterThan(0);
   });
 
   it("bank/supply vertical stacks with readable count; no single disc for pile", () => {

@@ -561,6 +561,22 @@ const PATTERN_TINT: Record<string, string> = {
   white: "#f4efe6",
 };
 
+/** T054 · muted wall-print hues for empty slots (readable grid; not pure-black pits). */
+const WALL_PRINT_TINT: Record<string, string> = {
+  blue: "#93c5fd",
+  yellow: "#fde68a",
+  red: "#fca5a5",
+  black: "#a8a29e",
+  white: "#f5f5f4",
+};
+
+const WALL_PRINT_COLORS = ["blue", "yellow", "red", "black", "white"] as const;
+
+/** Generic rotating wall print at row/col (matches pattern-draft wallColorAt). */
+export function wallPrintColorAt(row: number, col: number): string {
+  return WALL_PRINT_COLORS[(row + col) % WALL_PRINT_COLORS.length]!;
+}
+
 export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: ReadonlyArray<DeskLegalAction>): TabletopLayout {
   const pieces: TabletopPiece[] = [];
   const hints: TabletopHint[] = [];
@@ -705,7 +721,8 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
         });
       }
     });
-    // T050 · 5×5 wall grid: empty slots readable; placed tiles color-countable glazed.
+    // T050/T054 · 5×5 wall grid: empty = hue print squares (not black disc pits);
+    // glazed-on-wall tiles stay color-countable and distinct from empty print.
     // No solid marble `wall:board` region slab (that read as blank seat boards).
     const wall = seat.wall;
     for (let r = 0; r < WALL_N; r++) {
@@ -713,17 +730,18 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
       for (let c = 0; c < WALL_N; c++) {
         const cell = row[c] ?? null;
         const filled = Boolean(cell);
+        const print = wallPrintColorAt(r, c);
         pieces.push({
           id: `seat:${seatId}:wall:${r}:${c}`,
-          objectKind: filled ? "tile" : "slot",
+          objectKind: filled ? "tile" : "wall-slot",
           x: x0 + 0.45 + c * 0.2,
           z: z0 - r * 0.2,
-          y: filled ? 0.07 : 0.025,
-          size: filled ? 0.18 : 0.16,
+          y: filled ? 0.07 : 0.02,
+          size: filled ? 0.18 : 0.17,
           seat: seatId,
           ...(filled
             ? { tint: PATTERN_TINT[cell!] ?? "#a8a29e" }
-            : { tint: "#292524" }),
+            : { tint: WALL_PRINT_TINT[print] ?? "#d6d3d1", materialKey: "wall-print" }),
         });
       }
     }

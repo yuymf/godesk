@@ -41,7 +41,7 @@ describe("T050 pattern seat board — lines + 5×5 wall slots", () => {
     const wall = layout.pieces.filter((p) => /^seat:0:wall:\d+:\d+$/.test(p.id));
     expect(wall).toHaveLength(25);
     expect(wall.filter((p) => p.objectKind === "tile")).toHaveLength(2);
-    expect(wall.filter((p) => p.objectKind === "slot")).toHaveLength(23);
+    expect(wall.filter((p) => p.objectKind === "wall-slot" || p.objectKind === "slot")).toHaveLength(23);
     expect(wall.filter((p) => p.objectKind === "tile").every((p) => p.tint && p.tint !== "#292524")).toBe(true);
 
     const scene = mapTabletopToScene(layout, defaultRenderSpec("pattern-draft-v1", "table") as TabletopRenderInput);
@@ -49,7 +49,7 @@ describe("T050 pattern seat board — lines + 5×5 wall slots", () => {
     expect(wallNodes.length).toBeGreaterThanOrEqual(25);
     // slots bind to disc, tiles to glazed-tile
     expect(wallNodes.some((n) => n.mesh === "glazed-tile")).toBe(true);
-    expect(wallNodes.some((n) => n.mesh === "disc")).toBe(true);
+    expect(wallNodes.some((n) => n.mesh === "tile-square" || n.mesh === "disc")).toBe(true);
   });
 
   it("empty seat still shows readable 5×5 + pattern lines (not a blank marble slab)", () => {
