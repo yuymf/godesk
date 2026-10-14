@@ -326,24 +326,39 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
   const pieces: TabletopPiece[] = [];
   const hints: TabletopHint[] = [];
   const bankY = -3.2;
+  // T036: bank = vertical same-color stacks + readable count tip; forbid single disc for whole pile.
   GEM_BANK_ORDER.forEach((color, i) => {
     const count = Math.max(0, Math.floor(Number(state.bank[color] ?? 0)));
     const x = -3.5 + i * 1.4;
-    const stack = Math.min(count, 5);
     const takePair = legalMatch(legal, "take_pair", { color });
-    for (let s = 0; s < stack; s++) {
-      const top = s === stack - 1;
+    if (count === 0) {
+      // Empty slot marker only — not a fake coin pile.
       pieces.push({
-        id: `bank:${color}:${s}`,
-        objectKind: "resource",
+        id: `bank:${color}:slot`,
+        objectKind: "cell",
         x,
         z: bankY,
-        y: 0.06 + s * 0.08,
-        size: 0.55,
-        tint: GEM_TINT[color],
-        label: top ? `${color}:${count}` : undefined,
-        ...(top && takePair ? { action: { type: "take_pair", payload: { color } }, emphasis: true } : {}),
+        y: 0.01,
+        size: 0.4,
+        tint: "#d6d3d1",
+        label: `${color}:0`,
       });
+    } else {
+      const stack = Math.min(count, 6);
+      for (let s = 0; s < stack; s++) {
+        const top = s === stack - 1;
+        pieces.push({
+          id: `bank:${color}:${s}`,
+          objectKind: "resource",
+          x,
+          z: bankY,
+          y: 0.08 + s * 0.14,
+          size: 0.58,
+          tint: GEM_TINT[color],
+          label: top ? String(count) : undefined,
+          ...(top && takePair ? { action: { type: "take_pair", payload: { color } }, emphasis: true } : {}),
+        });
+      }
     }
     if (takePair) {
       hints.push({
@@ -352,17 +367,6 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
         z: bankY,
         radius: 0.32,
         action: { type: "take_pair", payload: { color } },
-      });
-    }
-    if (count === 0) {
-      pieces.push({
-        id: `bank:${color}:empty`,
-        objectKind: "resource",
-        x,
-        z: bankY,
-        size: 0.35,
-        tint: "#9ca3af",
-        label: color,
       });
     }
   });
@@ -435,23 +439,29 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
       seat: seatId,
       label: `S${seatId}:${seat.prestige}`,
     });
+    // T036: seat supply = vertical resource stacks + count tip (not one disc for whole pile).
     let gemSlot = 0;
     for (const color of GEM_BANK_ORDER) {
       const n = Math.max(0, Math.floor(Number(seat.gems[color] ?? 0)));
-      const show = Math.min(n, 3);
+      if (n <= 0) continue;
+      const show = Math.min(n, 5);
+      const gx = x0 - 0.7 + (gemSlot % 4) * 0.35;
+      const gz = z0 - Math.floor(gemSlot / 4) * 0.35;
       for (let s = 0; s < show; s++) {
+        const top = s === show - 1;
         pieces.push({
           id: `seat:${seatId}:gem:${color}:${s}`,
-          objectKind: "disc",
-          x: x0 - 0.7 + (gemSlot % 4) * 0.35,
-          z: z0 - Math.floor(gemSlot / 4) * 0.35,
-          y: 0.05 + s * 0.06,
-          size: 0.28,
+          objectKind: "resource",
+          x: gx,
+          z: gz,
+          y: 0.05 + s * 0.07,
+          size: 0.3,
           seat: seatId,
           tint: GEM_TINT[color],
+          label: top ? String(n) : undefined,
         });
       }
-      if (show > 0) gemSlot += 1;
+      gemSlot += 1;
     }
     (seat.cards ?? []).slice(0, 6).forEach((card, ci) => {
       pieces.push({
@@ -506,7 +516,9 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
   const hints: TabletopHint[] = [];
   const factoryCount = state.factories.length;
   const factoryRadius = 2.8;
+  // T036: pads only when inventory > 0; N glazed-tile children in color-visible stacks.
   state.factories.forEach((tiles, fi) => {
+    if (tiles.length === 0) return; // forbid empty pads pretending to be factories
     const angle = (Math.PI * 2 * fi) / Math.max(factoryCount, 1) - Math.PI / 2;
     const fx = Math.cos(angle) * factoryRadius;
     const fz = Math.sin(angle) * factoryRadius * 0.75 - 1.2;
@@ -519,24 +531,29 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
       tint: "#4a6741",
       label: `F${fi}`,
     });
+    // T036: N glazed-tile children in a 2×2 pad grid (color-visible, countable at a glance).
+    const GRID: ReadonlyArray<readonly [number, number]> = [
+      [-0.3, -0.3], [0.3, -0.3],
+      [-0.3, 0.3], [0.3, 0.3],
+    ];
     tiles.forEach((color, ti) => {
-      const a = (Math.PI * 2 * ti) / Math.max(tiles.length, 1);
-      const x = fx + Math.cos(a) * 0.32;
-      const z = fz + Math.sin(a) * 0.32;
+      const [ox, oz] = GRID[ti % 4] ?? [0, 0];
+      const layer = Math.floor(ti / 4);
       const pick = firstLegal(legal, "draft", (p) => p.source === "factory" && p.factoryId === fi && p.color === color)
         ?? (legal === undefined ? { type: "draft", payload: { source: "factory", factoryId: fi, color, line: 0 } } : undefined);
       pieces.push({
         id: `factory:${fi}:tile:${ti}`,
         objectKind: "tile",
-        x,
-        z,
-        y: 0.1,
-        size: 0.32,
+        x: fx + ox,
+        z: fz + oz,
+        y: 0.22 + layer * 0.12,
+        size: 0.44,
         tint: PATTERN_TINT[color] ?? "#64748b",
         ...(pick ? { action: { type: pick.type, payload: { ...(pick.payload ?? {}) } }, emphasis: true } : {}),
       });
     });
-    for (const color of new Set(tiles)) {
+    const colorOrder = [...new Set(tiles)];
+        for (const color of colorOrder) {
       const pick = firstLegal(legal, "draft", (p) => p.source === "factory" && p.factoryId === fi && p.color === color);
       if (legal !== undefined && !pick) continue;
       const action = pick
@@ -563,8 +580,8 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
       objectKind: "tile",
       x: -0.6 + col * 0.3,
       z: -0.3 + row * 0.3,
-      y: 0.1,
-      size: 0.3,
+      y: 0.16,
+      size: 0.36,
       tint: PATTERN_TINT[color] ?? "#64748b",
       ...(pick ? { action: { type: pick.type, payload: { ...(pick.payload ?? {}) } }, emphasis: true } : {}),
     });
@@ -629,21 +646,37 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
         });
       }
     });
-    // Wall 5x5 (compact)
+    // T036: wall — glazed tiles seated in filled cells only (no empty wall frames).
     const wall = seat.wall;
+    const wallRows = wall.length;
+    const wallCols = Math.max(0, ...wall.map((row) => row.length));
+    if (wallRows > 0 && wallCols > 0) {
+      pieces.push({
+        id: `seat:${seatId}:wall:board`,
+        objectKind: "region",
+        x: x0 + 0.55 + (wallCols - 1) * 0.09,
+        z: z0 - (wallRows - 1) * 0.09,
+        y: 0.005,
+        size: Math.max(wallCols, wallRows) * 0.2,
+        seat: seatId,
+        tint: "#e7e5e4",
+        materialKey: "board",
+      });
+    }
     for (let r = 0; r < wall.length; r++) {
       const row = wall[r] ?? [];
       for (let c = 0; c < row.length; c++) {
         const cell = row[c];
+        if (!cell) continue;
         pieces.push({
           id: `seat:${seatId}:wall:${r}:${c}`,
-          objectKind: cell ? "tile" : "cell",
+          objectKind: "tile",
           x: x0 + 0.55 + c * 0.18,
           z: z0 - r * 0.18,
-          y: cell ? 0.06 : 0.01,
+          y: 0.06,
           size: 0.17,
           seat: seatId,
-          tint: cell ? PATTERN_TINT[cell] ?? "#a8a29e" : "#f5f5f4",
+          tint: PATTERN_TINT[cell] ?? "#a8a29e",
         });
       }
     }
@@ -787,19 +820,23 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
       ...(high ? { emphasis: true } : {}),
       ...(gallery?.auctioneer === seatId ? { tint: "#f59e0b" } : {}),
     });
-    // Chip stack
-    const stack = Math.min(Math.max(1, Math.floor(chips / 20)), 5);
-    for (let s = 0; s < stack; s++) {
-      pieces.push({
-        id: `seat:${seatId}:chip:${s}`,
-        objectKind: "disc",
-        x: x0 - 0.55,
-        z: z0,
-        y: 0.05 + s * 0.06,
-        size: 0.28,
-        seat: seatId,
-        tint: "#eab308",
-      });
+    // T036: chip supply as vertical stack + readable count (not one disc for whole pile).
+    const stack = Math.max(1, Math.min(Math.max(1, Math.floor(chips / 20) || (chips > 0 ? 1 : 0)), 6));
+    if (chips > 0) {
+      for (let s = 0; s < stack; s++) {
+        const top = s === stack - 1;
+        pieces.push({
+          id: `seat:${seatId}:chip:${s}`,
+          objectKind: "resource",
+          x: x0 - 0.55,
+          z: z0,
+          y: 0.05 + s * 0.07,
+          size: 0.3,
+          seat: seatId,
+          tint: "#eab308",
+          label: top ? String(chips) : undefined,
+        });
+      }
     }
     const collection = gallery?.collection?.[seatId] ?? [];
     collection.slice(0, 5).forEach((painting, pi) => {
