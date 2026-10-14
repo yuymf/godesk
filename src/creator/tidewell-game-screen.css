@@ -1039,7 +1039,7 @@ body:has(.room-view-tidewell-immersive) {
   padding: 6px 10px;
   font-size: 12px;
 }
-/* T067 · open as foldable side drawer (not centered fullscreen cover of island) */
+/* T070 · open docks as thin edge/bottom bar (ban half-screen island cover) */
 .tidewell-game-screen .hex-settlement-board-targets[open] {
   position: absolute;
   left: 8px;
@@ -1047,12 +1047,12 @@ body:has(.room-view-tidewell-immersive) {
   top: auto;
   transform: none;
   z-index: 70;
-  width: min(360px, 36vw);
-  max-width: min(360px, 40vw);
-  max-height: min(42vh, 360px);
+  width: min(260px, 22vw);
+  max-width: min(260px, 24vw);
+  max-height: min(26vh, 220px);
   overflow: auto;
-  padding: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  padding: 6px 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32);
 }
 .tidewell-game-screen .hex-settlement-board-targets[open] .hex-settlement-action-list {
   max-height: none;
