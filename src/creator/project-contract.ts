@@ -1154,14 +1154,14 @@ export interface SessionState {
   };
   auctionBidding?: {
     lotId: string;
-    chips: [number, number];
-    scores: [number, number];
+    chips: number[];
+    scores: number[];
     lotValue: number;
     currentBid: number;
     highBidder: number | null;
     passedWithoutBid: number;
     awardedTo: number | null;
-    seatOrder: [number, number];
+    seatOrder: number[];
     phase?: string;
     harbor?: {
       bidVisibility: "open" | "sealed";
@@ -1177,28 +1177,28 @@ export interface SessionState {
     } | null;
     gallery?: {
       artists: Array<{ id: string; name: string }>;
-      modes: Array<"open" | "sealed" | "fixed">;
-      currentMode: "open" | "sealed" | "fixed";
+      modes: Array<"open" | "sealed" | "fixed" | "double">;
+      currentMode: "open" | "sealed" | "fixed" | "double";
+      modeCursor: number;
       salesToEndRound: number;
       marketLadder: number[];
       roundsToEnd: number;
       round: number;
+      playerCount: number;
+      handSize: number;
       auctioneer: number;
-      auctionHand: [
-        Array<{ id: string; name: string; artistId: string; reserve: number; instanceId: string }>,
-        Array<{ id: string; name: string; artistId: string; reserve: number; instanceId: string }>,
-      ];
-      collection: [
-        Array<{ id: string; name: string; artistId: string; reserve: number; instanceId: string }>,
-        Array<{ id: string; name: string; artistId: string; reserve: number; instanceId: string }>,
-      ];
+      auctionHand: Array<Array<{ id: string; name: string; artistId: string; reserve: number; instanceId: string }>>;
+      collection: Array<Array<{ id: string; name: string; artistId: string; reserve: number; instanceId: string }>>;
       deck: Array<{ id: string; name: string; artistId: string; reserve: number; instanceId: string }>;
       currentLot: { id: string; name: string; artistId: string; reserve: number; instanceId: string } | null;
-      sealedBids: [number | null, number | null];
+      companionLot: { id: string; name: string; artistId: string; reserve: number; instanceId: string } | null;
+      sealedBids: Array<number | null>;
       fixedPrice: number;
+      fixedAnswered: boolean[];
       roundSales: Record<string, number>;
       marketPrices: Record<string, number>;
       lastSold: { seat: number; name: string; payout: number; artistId: string } | null;
+      marketPasses: number;
     } | null;
   };
   /** Present when the build kernel is gem-engine-v1. */

@@ -1135,14 +1135,14 @@ export function acceptIntent(
       status: state.status, winnerId: state.winnerSeat, events: [] as const,
       genre: {
         lotId: state.auctionBidding.lotId,
-        chips: [...state.auctionBidding.chips] as [number, number],
-        scores: [...state.auctionBidding.scores] as [number, number],
+        chips: [...state.auctionBidding.chips],
+        scores: [...state.auctionBidding.scores],
         lotValue: state.auctionBidding.lotValue,
         currentBid: state.auctionBidding.currentBid,
         highBidder: state.auctionBidding.highBidder,
         passedWithoutBid: state.auctionBidding.passedWithoutBid,
         awardedTo: state.auctionBidding.awardedTo,
-        seatOrder: [...state.auctionBidding.seatOrder] as [number, number],
+        seatOrder: [...state.auctionBidding.seatOrder],
         harbor: state.auctionBidding.harbor
           ? structuredClone(state.auctionBidding.harbor)
           : null,
@@ -1646,14 +1646,14 @@ export function runBotSimulation(
         status: state.status, winnerId: state.winnerSeat, events: [] as const,
         genre: {
           lotId: state.auctionBidding.lotId,
-          chips: [...state.auctionBidding.chips] as [number, number],
-          scores: [...state.auctionBidding.scores] as [number, number],
+          chips: [...state.auctionBidding.chips],
+          scores: [...state.auctionBidding.scores],
           lotValue: state.auctionBidding.lotValue,
           currentBid: state.auctionBidding.currentBid,
           highBidder: state.auctionBidding.highBidder,
           passedWithoutBid: state.auctionBidding.passedWithoutBid,
           awardedTo: state.auctionBidding.awardedTo,
-          seatOrder: [...state.auctionBidding.seatOrder] as [number, number],
+          seatOrder: [...state.auctionBidding.seatOrder],
           harbor: state.auctionBidding.harbor
             ? structuredClone(state.auctionBidding.harbor)
             : null,

@@ -1724,8 +1724,15 @@ const RUNTIME_HANDLERS: {
       validUnsupported(config.unsupported),
   },
   configure_auction_bidding: {
-    validate: (config) => Boolean(config) && typeof config === "object" &&
-      config.playerCount === 2 && validUnsupported(config.unsupported),
+    validate: (config) => {
+      if (!config || typeof config !== "object") return false;
+      if (!validUnsupported(config.unsupported)) return false;
+      if (!Number.isInteger(config.playerCount)) return false;
+      if (config.gallery) {
+        return config.playerCount >= 2 && config.playerCount <= 5;
+      }
+      return config.playerCount === 2;
+    },
   },
   configure_gem_engine: {
     validate: (config) => Boolean(config) && typeof config === "object" &&

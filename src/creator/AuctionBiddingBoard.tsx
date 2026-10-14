@@ -35,8 +35,11 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
       ? "一次暗标"
       : gallery.currentMode === "fixed"
         ? "定价购买"
-        : "公开加价"
+        : gallery.currentMode === "double"
+          ? "双画固定"
+          : "公开加价"
     : null;
+  const seatCount = auction.chips.length;
 
   return (
     <section aria-label="拍卖竞价桌" className="auction-board">
@@ -51,7 +54,7 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
           </span>
           <h2>
             {gallery?.currentLot
-              ? `${currentName} · 底价/定价 ${gallery.currentLot.reserve}`
+              ? `${currentName}${gallery.companionLot ? `+${gallery.companionLot.name}` : ""} · 底价/定价 ${gallery.fixedPrice || gallery.currentLot.reserve}`
               : gallery && phase === "offer"
                 ? "拍卖官打出画作并选择拍卖方式"
                 : gallery && phase === "market"
@@ -80,7 +83,7 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
               : phase === "sealed"
                 ? `密封出价 · 座位 ${activeSeat}`
                 : phase === "fixed"
-                  ? `定价购买 · 座位 ${activeSeat} · 标价 ${gallery?.fixedPrice ?? auction.currentBid}`
+                  ? `${gallery?.currentMode === "double" ? "双画固定" : "定价购买"} · 座位 ${activeSeat} · 标价 ${gallery?.fixedPrice ?? auction.currentBid}`
                   : phase === "offer"
                     ? `拍卖官座位 ${gallery?.auctioneer ?? activeSeat} 出牌选模式`
                     : `轮到座位 ${activeSeat} 出价或放弃`}
@@ -99,8 +102,9 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
           ) : null}
           {gallery ? (
             <p aria-label="gallery-market">
-              手牌 0={gallery.auctionHand[0].length} / 1={gallery.auctionHand[1].length}
-              {" · "}藏品 0={gallery.collection[0].length} / 1={gallery.collection[1].length}
+              席位 {seatCount}
+              {" · "}手牌 {gallery.auctionHand.map((h, i) => `${i}=${h.length}`).join(" / ")}
+              {" · "}藏品 {gallery.collection.map((c, i) => `${i}=${c.length}`).join(" / ")}
               {" · "}牌库 {gallery.deck.length}
             </p>
           ) : null}
@@ -131,16 +135,18 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
         </div>
       ) : null}
       <div role="region" aria-label="座位筹码与得分" className="auction-seats">
-        {([0, 1] as const).map((seat) => <div key={seat} className={`auction-seat${seat === activeSeat && status === "active" ? " is-active" : ""}`}>
-          <strong>座位 {seat}</strong>
-          <span>筹码 <b>{auction.chips[seat]}</b></span>
-          <span>{harbor || gallery ? "拍得" : "得分"} <b>{auction.scores[seat]}</b></span>
-        </div>)}
+        {Array.from({ length: seatCount }, (_, seat) => (
+          <div key={seat} className={`auction-seat${seat === activeSeat && status === "active" ? " is-active" : ""}`}>
+            <strong>座位 {seat}</strong>
+            <span>筹码 <b>{auction.chips[seat]}</b></span>
+            <span>{harbor || gallery ? "拍得" : "得分"} <b>{auction.scores[seat]}</b></span>
+          </div>
+        ))}
       </div>
       {!readOnly && status === "active" && phase === "offer" && canAct && gallery ? (
         <div className="auction-actions" aria-label="出牌选模式">
           {myOfferHand.flatMap((p) =>
-            gallery.modes.map((mode) => (
+            gallery.modes.filter((m) => m !== "double").map((mode) => (
               <button
                 key={`${p.instanceId}-${mode}`}
                 type="button"
@@ -150,6 +156,29 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
               </button>
             )),
           )}
+          {gallery.modes.includes("double")
+            ? myOfferHand.flatMap((a, i) =>
+                myOfferHand.slice(i + 1).flatMap((b) =>
+                  a.artistId === b.artistId
+                    ? [
+                        <button
+                          key={`dbl-${a.instanceId}-${b.instanceId}`}
+                          type="button"
+                          onClick={() =>
+                            onAct?.("play_painting", {
+                              instanceId: a.instanceId,
+                              secondInstanceId: b.instanceId,
+                              mode: "double",
+                            })
+                          }
+                        >
+                          双画 {a.name}+{b.name}
+                        </button>,
+                      ]
+                    : [],
+                ),
+              )
+            : null}
         </div>
       ) : null}
       {!readOnly && status === "active" && phase === "bidding" ? (

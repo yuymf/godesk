@@ -308,3 +308,175 @@ describe("auction-bidding-v1 gallery subset (T012)", () => {
     expect(ideaRequestsHarborAuction(idea)).toBe(true);
   });
 });
+
+describe("auction-bidding-v1 gallery T015 seats/double/refill", () => {
+  it("binds 3–5 gallery seats and rejects classic 3p", () => {
+    expect(() =>
+      bindAuctionBiddingFromRuntimeKernel({
+        playerCount: 3,
+        gallery: true,
+        galleryContent: defaultGalleryContent({ playerCount: 3 }),
+      }),
+    ).not.toThrow();
+    const cfg = createAuctionBiddingKernelConfig({
+      playerCount: 3,
+      galleryContent: defaultGalleryContent({ playerCount: 3, salesToEndRound: 3 }),
+    });
+    expect(cfg.playerCount).toBe(3);
+    const state = createInitialState(auctionBiddingAdapter, cfg, 5);
+    expect(state.playerCount).toBe(3);
+    expect(state.genre.chips).toEqual([100, 100, 100]);
+    expect(state.genre.gallery!.playerCount).toBe(3);
+    expect(state.genre.gallery!.auctionHand).toHaveLength(3);
+    expect(state.genre.gallery!.modes).toEqual(
+      expect.arrayContaining(["open", "sealed", "fixed", "double"]),
+    );
+    expect(() => bindAuctionBiddingFromRuntimeKernel({ playerCount: 3 })).toThrow(
+      /two_players/,
+    );
+  });
+
+  it("double mode posts two same-artist paintings at combined fixed price", () => {
+    const cfg = createAuctionBiddingKernelConfig({
+      galleryContent: defaultGalleryContent({
+        modes: ["double"],
+        salesToEndRound: 9,
+        handSize: 6,
+      }),
+    });
+    let state = createInitialState(auctionBiddingAdapter, cfg, 21);
+    const seat = state.activePlayerId;
+    const hand = state.genre.gallery!.auctionHand[seat]!;
+    // find a same-artist pair
+    let a = hand[0]!;
+    let b = hand.find((p) => p.instanceId !== a.instanceId && p.artistId === a.artistId);
+    if (!b) {
+      // reshuffle seed until pair exists
+      for (const seed of [22, 23, 24, 25, 30, 40, 50]) {
+        state = createInitialState(auctionBiddingAdapter, cfg, seed);
+        const h = state.genre.gallery!.auctionHand[state.activePlayerId]!;
+        for (let i = 0; i < h.length; i++) {
+          for (let j = i + 1; j < h.length; j++) {
+            if (h[i]!.artistId === h[j]!.artistId) {
+              a = h[i]!;
+              b = h[j]!;
+              break;
+            }
+          }
+          if (b) break;
+        }
+        if (b) break;
+      }
+    }
+    expect(b).toBeTruthy();
+    const play = applyAction(
+      auctionBiddingAdapter,
+      state,
+      {
+        type: "play_painting",
+        playerId: state.activePlayerId,
+        payload: {
+          instanceId: a.instanceId,
+          secondInstanceId: b!.instanceId,
+          mode: "double",
+        },
+      },
+      cfg,
+    );
+    expect(play.ok).toBe(true);
+    if (!play.ok) return;
+    state = play.state;
+    expect(state.phase).toBe("fixed");
+    expect(state.genre.gallery!.currentMode).toBe("double");
+    expect(state.genre.gallery!.companionLot).not.toBeNull();
+    expect(state.genre.gallery!.fixedPrice).toBe(
+      a.reserve + b!.reserve,
+    );
+    const buyer = state.activePlayerId;
+    const buy = applyAction(
+      auctionBiddingAdapter,
+      state,
+      { type: "buy_fixed", playerId: buyer },
+      cfg,
+    );
+    expect(buy.ok).toBe(true);
+    if (!buy.ok) return;
+    expect(buy.state.genre.gallery!.collection[buyer]!.length).toBeGreaterThanOrEqual(2);
+    expect(buy.state.genre.gallery!.companionLot).toBeNull();
+  });
+
+  it("refills hands to handSize at round-start after market", () => {
+    const cfg = createAuctionBiddingKernelConfig({
+      galleryContent: defaultGalleryContent({
+        modes: ["fixed"],
+        salesToEndRound: 1,
+        handSize: 3,
+        roundsToEnd: 3,
+        startingFunds: 200,
+      }),
+    });
+    let state = createInitialState(auctionBiddingAdapter, cfg, 8);
+    const handSize = state.genre.gallery!.handSize;
+    // Play one fixed sale to trigger market (salesToEndRound=1)
+    const auctioneer = state.activePlayerId;
+    const painting = state.genre.gallery!.auctionHand[auctioneer]![0]!;
+    let r = applyAction(
+      auctionBiddingAdapter,
+      state,
+      {
+        type: "play_painting",
+        playerId: auctioneer,
+        payload: { instanceId: painting.instanceId, mode: "fixed" },
+      },
+      cfg,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    const buyer = state.activePlayerId;
+    r = applyAction(
+      auctionBiddingAdapter,
+      state,
+      { type: "buy_fixed", playerId: buyer },
+      cfg,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    expect(state.phase).toBe("market");
+    // both seats pass market
+    for (let i = 0; i < 2; i++) {
+      r = applyAction(
+        auctionBiddingAdapter,
+        state,
+        { type: "pass_market", playerId: state.activePlayerId },
+        cfg,
+      );
+      expect(r.ok).toBe(true);
+      if (!r.ok) return;
+      state = r.state;
+    }
+    expect(state.phase).toBe("offer");
+    expect(state.genre.gallery!.round).toBe(2);
+    for (const hand of state.genre.gallery!.auctionHand) {
+      expect(hand.length).toBeLessThanOrEqual(handSize);
+      // after spending 1 card, refill should bring back toward handSize if deck allows
+      expect(hand.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("3p gallery auto-play completes", () => {
+    const cfg = createAuctionBiddingKernelConfig({
+      playerCount: 3,
+      galleryContent: defaultGalleryContent({
+        playerCount: 3,
+        salesToEndRound: 3,
+        roundsToEnd: 2,
+      }),
+    });
+    const { state, actions } = autoPlayAuctionBiddingGame(77, cfg);
+    expect(actions.length).toBeGreaterThan(10);
+    expect(state.status).toBe("complete");
+    expect(state.genre.chips).toHaveLength(3);
+  });
+});

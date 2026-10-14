@@ -144,6 +144,7 @@ import {
   ideaRequestsGalleryAuction,
   ideaRequestsHarborAuction,
   parseGalleryTuningFromIdea,
+  parseGallerySeatsFromIdea,
   parseHarborTuningFromIdea,
 } from "../src/runtime/adapters/auction-bidding";
 import {
@@ -654,15 +655,26 @@ export async function runCreatorJob(
             const harbor = !gallery && ideaRequestsHarborAuction(idea);
             if (gallery) {
               const tuning = parseGalleryTuningFromIdea(idea);
-              const galleryContent = defaultGalleryContent(tuning);
+              const seats =
+                tuning.playerCount ??
+                parseGallerySeatsFromIdea(idea) ??
+                Math.max(
+                  2,
+                  Math.min(5, generatedRuleSystem.participants.default || 3),
+                );
+              const playerCount = Math.max(2, Math.min(5, seats));
+              const galleryContent = defaultGalleryContent({
+                ...tuning,
+                playerCount,
+              });
               return {
                 op: "configure_auction_bidding" as const,
                 config: {
-                  playerCount: 2,
+                  playerCount,
                   gallery: true as const,
                   galleryContent,
                   unsupported: [
-                    "auction-bidding-v1 gallery subset: open/sealed/fixed modes + artist market-ladder sell scoring; 仅部分能力.",
+                    "auction-bidding-v1 gallery subset: 2–5 seats, open/sealed/fixed/double-fixed + market sell + round-start refill; 仅部分能力.",
                     ...galleryAuctionUnsupportedNotes(),
                   ],
                 },

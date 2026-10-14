@@ -3,8 +3,8 @@
  * Classic: two-seat, one-lot open raise/pass (amber/jade).
  * Harbor subset (T007): multi-lot deck + optional sealed bids + black-market
  * resale — keeps bid/pass resolution semantics; does not invent a new kernel.
- * Gallery subset (T012): multi auction modes (open/sealed/fixed) + artist
- * market-ladder sell scoring — parallel to harbor, does not mutate harbor.
+ * Gallery subset (T012/T015): multi modes (open/sealed/fixed/double) + artist
+ * market-ladder sell + 2–5 seats + round-start hand refill — parallel to harbor.
  */
 import {
   applyAction,
@@ -39,7 +39,7 @@ export type AuctionBiddingContent = {
   bidVisibility: "open" | "sealed";
 };
 
-export type GalleryAuctionMode = "open" | "sealed" | "fixed";
+export type GalleryAuctionMode = "open" | "sealed" | "fixed" | "double";
 
 export type GalleryPaintingDef = {
   id: string;
@@ -73,14 +73,18 @@ export type GalleryAuctionState = {
   marketLadder: number[];
   roundsToEnd: number;
   round: number;
+  playerCount: number;
+  handSize: number;
   auctioneer: PlayerId;
-  auctionHand: [GalleryPaintingInstance[], GalleryPaintingInstance[]];
-  collection: [GalleryPaintingInstance[], GalleryPaintingInstance[]];
+  auctionHand: GalleryPaintingInstance[][];
+  collection: GalleryPaintingInstance[][];
   deck: GalleryPaintingInstance[];
   currentLot: GalleryPaintingInstance | null;
-  sealedBids: [number | null, number | null];
+  /** Second painting when mode === "double"; otherwise null. */
+  companionLot: GalleryPaintingInstance | null;
+  sealedBids: Array<number | null>;
   fixedPrice: number;
-  fixedAnswered: [boolean, boolean];
+  fixedAnswered: boolean[];
   roundSales: Record<string, number>;
   marketPrices: Record<string, number>;
   lastSold: {
@@ -104,15 +108,15 @@ type AuctionBiddingConfig = {
 export type AuctionBiddingGenre = {
   /** Classic lot id when !harbor && !gallery; subsets use currentLot. */
   lotId: "amber" | "jade" | string;
-  chips: [number, number];
+  chips: number[];
   /** Classic: VP from awarded lotValue. Subsets: lots won count (display). */
-  scores: [number, number];
+  scores: number[];
   lotValue: number;
   currentBid: number;
   highBidder: number | null;
   passedWithoutBid: number;
   awardedTo: number | null;
-  seatOrder: [number, number];
+  seatOrder: number[];
   /** Harbor fields (null in classic / gallery). */
   harbor: {
     bidVisibility: "open" | "sealed";
@@ -205,11 +209,13 @@ export function defaultGalleryArtists(): Array<{ id: string; name: string }> {
 
 export function defaultGalleryPaintings(
   artists: Array<{ id: string; name: string }> = defaultGalleryArtists(),
+  copiesPerArtist = 4,
 ): GalleryPaintingDef[] {
   const out: GalleryPaintingDef[] = [];
   let n = 0;
+  const copies = Math.max(4, copiesPerArtist);
   for (const artist of artists) {
-    for (let k = 0; k < 4; k += 1) {
+    for (let k = 0; k < copies; k += 1) {
       out.push({
         id: `paint_${n}`,
         name: `${artist.name}·${k + 1}`,
@@ -223,42 +229,61 @@ export function defaultGalleryPaintings(
 }
 
 export function defaultGalleryContent(
-  overrides?: Partial<GalleryAuctionContent>,
+  overrides?: Partial<GalleryAuctionContent> & { playerCount?: number },
 ): GalleryAuctionContent {
   const artists = overrides?.artists ?? defaultGalleryArtists();
+  const seats = Math.max(2, Math.min(5, overrides?.playerCount ?? 2));
+  const copies = Math.max(4, seats + 2);
   return {
     artists,
-    paintings: overrides?.paintings ?? defaultGalleryPaintings(artists),
+    paintings:
+      overrides?.paintings ?? defaultGalleryPaintings(artists, copies),
     startingFunds: overrides?.startingFunds ?? 100,
-    modes: overrides?.modes ?? ["open", "sealed", "fixed"],
-    salesToEndRound: overrides?.salesToEndRound ?? 3,
+    modes: overrides?.modes ?? ["open", "sealed", "fixed", "double"],
+    salesToEndRound:
+      overrides?.salesToEndRound ?? Math.max(3, seats),
     marketLadder: overrides?.marketLadder ?? [30, 20, 10, 0],
     handSize: overrides?.handSize ?? 4,
     roundsToEnd: overrides?.roundsToEnd ?? 4,
   };
 }
 
+export function parseGallerySeatsFromIdea(idea: string): number | null {
+  const range = idea.match(
+    /(\d+)\s*[-–—－]\s*(\d+)\s*(?:人|理想|players?|席|位)?/i,
+  );
+  if (range) {
+    return Math.max(2, Math.min(5, Number(range[1])));
+  }
+  const single = idea.match(/(\d+)\s*(?:[-–—－]?\s*)?(?:人|玩家|players?)/i);
+  if (single) return Math.max(2, Math.min(5, Number(single[1])));
+  return null;
+}
+
 export function parseGalleryTuningFromIdea(
   idea: string,
-): Partial<GalleryAuctionContent> {
-  const out: Partial<GalleryAuctionContent> = {};
+): Partial<GalleryAuctionContent> & { playerCount?: number } {
+  const out: Partial<GalleryAuctionContent> & { playerCount?: number } = {};
   const funds = idea.match(/(?:资金|筹码)\s*(\d+)/);
   if (funds) out.startingFunds = Math.max(1, Number(funds[1]));
   // Prefer 100 when 资金若干 or explicit 100.
   if (/每人\s*100|资金若干/.test(idea) && !funds) out.startingFunds = 100;
   const sales = idea.match(/第\s*(\d+)\s*张/);
   if (sales) out.salesToEndRound = Math.max(2, Number(sales[1]));
+  const seats = parseGallerySeatsFromIdea(idea);
+  if (seats !== null) out.playerCount = seats;
   const modes: GalleryAuctionMode[] = [];
   if (/公开加价|open\s*raise|open\s*bid/i.test(idea)) modes.push("open");
   if (/一次暗标|密封|sealed/i.test(idea)) modes.push("sealed");
   if (/定价购|定价购买|fixed/i.test(idea)) modes.push("fixed");
+  if (/双画|double\s*paint/i.test(idea)) modes.push("double");
   if (modes.length) out.modes = [...new Set(modes)] as GalleryAuctionMode[];
   return out;
 }
 
 export function galleryAuctionUnsupportedNotes(): string[] {
   return [
-    "auction-bidding-v1 gallery subset: open/sealed/fixed modes + artist market-ladder sell; 3–5 seats / double-painting fixed / exact hand-refill timing unsupported — 仅部分能力.",
+    "auction-bidding-v1 gallery subset: 2–5 seats, open/sealed/fixed/double-fixed + artist market-ladder sell + round-start hand refill; simultaneous live sealed / multi-party brokerage unsupported — 仅部分能力.",
   ];
 }
 
@@ -316,20 +341,17 @@ function cloneGallery(g: GalleryAuctionState): GalleryAuctionState {
     marketLadder: [...g.marketLadder],
     roundsToEnd: g.roundsToEnd,
     round: g.round,
+    playerCount: g.playerCount,
+    handSize: g.handSize,
     auctioneer: g.auctioneer,
-    auctionHand: [
-      g.auctionHand[0].map((p) => ({ ...p })),
-      g.auctionHand[1].map((p) => ({ ...p })),
-    ],
-    collection: [
-      g.collection[0].map((p) => ({ ...p })),
-      g.collection[1].map((p) => ({ ...p })),
-    ],
+    auctionHand: g.auctionHand.map((hand) => hand.map((p) => ({ ...p }))),
+    collection: g.collection.map((col) => col.map((p) => ({ ...p }))),
     deck: g.deck.map((p) => ({ ...p })),
     currentLot: g.currentLot ? { ...g.currentLot } : null,
-    sealedBids: [...g.sealedBids] as [number | null, number | null],
+    companionLot: g.companionLot ? { ...g.companionLot } : null,
+    sealedBids: [...g.sealedBids],
     fixedPrice: g.fixedPrice,
-    fixedAnswered: [...g.fixedAnswered] as [boolean, boolean],
+    fixedAnswered: [...g.fixedAnswered],
     roundSales: { ...g.roundSales },
     marketPrices: { ...g.marketPrices },
     lastSold: g.lastSold ? { ...g.lastSold } : null,
@@ -347,23 +369,31 @@ function drawNextLot(
 function dealGalleryHands(
   deck: GalleryPaintingInstance[],
   handSize: number,
+  playerCount: number,
 ): {
-  hands: [GalleryPaintingInstance[], GalleryPaintingInstance[]];
+  hands: GalleryPaintingInstance[][];
   deck: GalleryPaintingInstance[];
 } {
-  const h0: GalleryPaintingInstance[] = [];
-  const h1: GalleryPaintingInstance[] = [];
+  const hands: GalleryPaintingInstance[][] = Array.from(
+    { length: playerCount },
+    () => [],
+  );
   for (let i = 0; i < handSize; i += 1) {
-    if (deck.length) h0.push(deck.shift()!);
-    if (deck.length) h1.push(deck.shift()!);
+    for (let seat = 0; seat < playerCount; seat += 1) {
+      if (deck.length) hands[seat]!.push(deck.shift()!);
+    }
   }
-  return { hands: [h0, h1], deck };
+  return { hands, deck };
 }
 
-function refillGalleryHands(g: GalleryAuctionState, handSize: number): void {
-  for (const seat of [0, 1] as const) {
-    while (g.auctionHand[seat].length < handSize && g.deck.length > 0) {
-      g.auctionHand[seat].push(g.deck.shift()!);
+/** Round-start refill: each seat draws up to handSize from deck (T015 timing). */
+function refillGalleryHands(g: GalleryAuctionState): void {
+  for (let seat = 0; seat < g.playerCount; seat += 1) {
+    while (
+      g.auctionHand[seat]!.length < g.handSize &&
+      g.deck.length > 0
+    ) {
+      g.auctionHand[seat]!.push(g.deck.shift()!);
     }
   }
 }
@@ -396,15 +426,25 @@ function startLotBidding(
 }
 
 function finishGameByChips(genre: AuctionBiddingGenre, actor: PlayerId) {
-  const [c0, c1] = genre.chips;
-  const winnerId =
-    c0 === c1 ? null : ((c0 > c1 ? 0 : 1) as PlayerId | null);
+  let best = -Infinity;
+  let winnerId: PlayerId | null = null;
+  let tie = false;
+  for (let seat = 0; seat < genre.chips.length; seat += 1) {
+    const c = genre.chips[seat]!;
+    if (c > best) {
+      best = c;
+      winnerId = seat as PlayerId;
+      tie = false;
+    } else if (c === best) {
+      tie = true;
+    }
+  }
   return {
     genre,
     phase: "ended" as PlayPhaseId,
     activePlayerId: actor,
     status: "complete" as const,
-    winnerId,
+    winnerId: tie ? null : winnerId,
     endReason: "deck_exhausted",
   };
 }
@@ -427,9 +467,9 @@ function applyGalleryMarketLadder(g: GalleryAuctionState): void {
 
 function cashOutCollections(genre: AuctionBiddingGenre): void {
   const g = genre.gallery!;
-  for (const seat of [0, 1] as const) {
+  for (let seat = 0; seat < g.playerCount; seat += 1) {
     let payout = 0;
-    for (const painting of g.collection[seat]) {
+    for (const painting of g.collection[seat]!) {
       payout += g.marketPrices[painting.artistId] ?? 0;
     }
     genre.chips[seat]! += payout;
@@ -449,8 +489,11 @@ function ensureOfferReady(
   endReason?: string;
 } {
   const g = genre.gallery!;
-  if (g.auctionHand[g.auctioneer]!.length === 0) {
-    g.auctioneer = ((g.auctioneer + 1) % 2) as PlayerId;
+  const n = g.playerCount;
+  // Skip auctioneers with empty hands (no mid-round refill — only round-start).
+  for (let i = 0; i < n; i += 1) {
+    if (g.auctionHand[g.auctioneer]!.length > 0) break;
+    g.auctioneer = ((g.auctioneer + 1) % n) as PlayerId;
   }
   if (g.auctionHand[g.auctioneer]!.length === 0) {
     cashOutCollections(genre);
@@ -478,14 +521,21 @@ function galleryAwardLot(
 } {
   const g = genre.gallery!;
   const lot = g.currentLot!;
+  const companion = g.companionLot;
   genre.chips[winner]! -= price;
-  genre.scores[winner]! += 1;
+  genre.scores[winner]! += companion ? 2 : 1;
   genre.awardedTo = winner;
   genre.highBidder = winner;
   genre.currentBid = price;
   g.collection[winner]!.push(lot);
   g.roundSales[lot.artistId] = (g.roundSales[lot.artistId] ?? 0) + 1;
+  if (companion) {
+    g.collection[winner]!.push(companion);
+    g.roundSales[companion.artistId] =
+      (g.roundSales[companion.artistId] ?? 0) + 1;
+  }
   g.currentLot = null;
+  g.companionLot = null;
   const sales = g.roundSales[lot.artistId] ?? 0;
   if (sales >= g.salesToEndRound) {
     applyGalleryMarketLadder(g);
@@ -496,9 +546,11 @@ function galleryAwardLot(
       phase: "market",
       activePlayerId: 0 as PlayerId,
       endReason: "round_market",
+      status: "active" as const,
+      winnerId: null as PlayerId | null,
     };
   }
-  g.auctioneer = ((g.auctioneer + 1) % 2) as PlayerId;
+  g.auctioneer = ((g.auctioneer + 1) % g.playerCount) as PlayerId;
   return { ...ensureOfferReady(genre, winner), endReason: "lot_awarded" };
 }
 
@@ -514,11 +566,17 @@ function galleryUnsold(
   winnerId: PlayerId | null;
 } {
   const g = genre.gallery!;
+  // Return unsold paintings to the bottom of the deck (exact refill pool).
   if (g.currentLot) {
+    g.deck.push(g.currentLot);
     g.currentLot = null;
   }
+  if (g.companionLot) {
+    g.deck.push(g.companionLot);
+    g.companionLot = null;
+  }
   genre.awardedTo = null;
-  g.auctioneer = ((g.auctioneer + 1) % 2) as PlayerId;
+  g.auctioneer = ((g.auctioneer + 1) % g.playerCount) as PlayerId;
   return { ...ensureOfferReady(genre, actor), endReason: "lot_unsold" };
 }
 
@@ -534,15 +592,16 @@ function galleryMaybeEndAfterMarket(
     cashOutCollections(genre);
     return finishGameByChips(genre, actor);
   }
-  refillGalleryHands(g, 4);
+  // T015: exact round-start refill timing — after market, before next offer.
+  refillGalleryHands(g);
   return ensureOfferReady(genre, actor);
 }
 
 function parseAuctionBiddingConfig(
   raw: Record<string, unknown>,
 ): AuctionBiddingConfig | null {
-  const playerCount = raw.playerCount ?? 2;
-  if (playerCount !== 2) return null;
+  const rawCount = raw.playerCount ?? 2;
+  if (typeof rawCount !== "number" || !Number.isInteger(rawCount)) return null;
 
   let galleryContent: GalleryAuctionContent | null = null;
   const gcRaw = raw.galleryContent;
@@ -555,17 +614,21 @@ function parseAuctionBiddingConfig(
       ? (c.paintings as GalleryPaintingDef[])
       : null;
     const modes = Array.isArray(c.modes)
-      ? (c.modes as GalleryAuctionMode[]).filter((m) =>
-          m === "open" || m === "sealed" || m === "fixed",
+      ? (c.modes as GalleryAuctionMode[]).filter(
+          (m) =>
+            m === "open" ||
+            m === "sealed" ||
+            m === "fixed" ||
+            m === "double",
         )
-      : ["open", "sealed", "fixed"];
+      : ["open", "sealed", "fixed", "double"];
     if (artists && artists.length > 0 && paintings && paintings.length > 0) {
       galleryContent = {
         artists,
         paintings,
         startingFunds:
           typeof c.startingFunds === "number" ? c.startingFunds : 100,
-        modes: modes.length ? modes : ["open", "sealed", "fixed"],
+        modes: modes.length ? modes : ["open", "sealed", "fixed", "double"],
         salesToEndRound:
           typeof c.salesToEndRound === "number" ? c.salesToEndRound : 3,
         marketLadder: Array.isArray(c.marketLadder)
@@ -595,6 +658,12 @@ function parseAuctionBiddingConfig(
   const gallery = raw.gallery === true || galleryContent !== null;
   const harbor =
     !gallery && (raw.harbor === true || content !== null);
+  // Gallery: 2–5 seats. Classic / harbor: exactly 2.
+  if (gallery) {
+    if (rawCount < 2 || rawCount > 5) return null;
+  } else if (rawCount !== 2) {
+    return null;
+  }
   const lotValue =
     typeof raw.lotValue === "number"
       ? raw.lotValue
@@ -603,7 +672,7 @@ function parseAuctionBiddingConfig(
         : 10;
   if (!harbor && !gallery && lotValue !== 10) return null;
   return {
-    playerCount: 2,
+    playerCount: gallery ? rawCount : 2,
     lotValue: harbor || gallery ? lotValue : 10,
     harbor,
     gallery,
@@ -615,6 +684,7 @@ function parseAuctionBiddingConfig(
 export function createAuctionBiddingKernelConfig(input?: {
   harbor?: boolean;
   gallery?: boolean;
+  playerCount?: number;
   content?: AuctionBiddingContent | null;
   galleryContent?: GalleryAuctionContent | null;
 }): PlayKernelConfig {
@@ -622,9 +692,12 @@ export function createAuctionBiddingKernelConfig(input?: {
   const gallery = input?.gallery === true || galleryContent !== null;
   const content = gallery ? null : (input?.content ?? null);
   const harbor = !gallery && (input?.harbor === true || content !== null);
+  const playerCount = gallery
+    ? Math.max(2, Math.min(5, input?.playerCount ?? 2))
+    : 2;
   return {
     kernelType: AUCTION_BIDDING_KERNEL_TYPE,
-    playerCount: 2,
+    playerCount,
     phases: [
       { id: "offer", name: "Offer" },
       { id: "bidding", name: "Bidding" },
@@ -634,7 +707,7 @@ export function createAuctionBiddingKernelConfig(input?: {
       { id: "ended", name: "Ended" },
     ],
     adapter: {
-      playerCount: 2,
+      playerCount,
       lotValue: harbor || gallery ? 0 : 10,
       harbor,
       gallery,
@@ -647,10 +720,11 @@ export function createAuctionBiddingKernelConfig(input?: {
 function createGalleryState(
   content: GalleryAuctionContent,
   seed: number,
-  _first: PlayerId,
+  playerCount: number,
 ): GalleryAuctionState {
+  const n = Math.max(2, Math.min(5, playerCount));
   let deck = instantiateGalleryDeck(content.paintings, seed ^ 0xa11e17);
-  const dealt = dealGalleryHands(deck, content.handSize);
+  const dealt = dealGalleryHands(deck, content.handSize, n);
   deck = dealt.deck;
   const prices: Record<string, number> = {};
   const sales: Record<string, number> = {};
@@ -667,15 +741,18 @@ function createGalleryState(
     marketLadder: [...content.marketLadder],
     roundsToEnd: content.roundsToEnd,
     round: 1,
+    playerCount: n,
+    handSize: content.handSize,
     // play-kernel createInitialState always starts activePlayerId at 0.
     auctioneer: 0 as PlayerId,
     auctionHand: dealt.hands,
-    collection: [[], []],
+    collection: Array.from({ length: n }, () => []),
     deck,
     currentLot: null,
-    sealedBids: [null, null],
+    companionLot: null,
+    sealedBids: Array.from({ length: n }, () => null),
     fixedPrice: 0,
-    fixedAnswered: [false, false],
+    fixedAnswered: Array.from({ length: n }, () => false),
     roundSales: sales,
     marketPrices: prices,
     lastSold: null,
@@ -690,22 +767,21 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
   kernelType: AUCTION_BIDDING_KERNEL_TYPE,
   parseConfig: parseAuctionBiddingConfig,
   createGenreState(config, seed) {
-    const first = (createSeededRng(seed).at(1) % 2) as PlayerId;
+    const n = config.playerCount;
+    const first = (createSeededRng(seed).at(1) % n) as PlayerId;
     if (config.gallery && config.galleryContent) {
-      const gallery = createGalleryState(config.galleryContent, seed, first);
+      const gallery = createGalleryState(config.galleryContent, seed, n);
+      const funds = config.galleryContent.startingFunds;
       return {
         lotId: "gallery",
-        chips: [
-          config.galleryContent.startingFunds,
-          config.galleryContent.startingFunds,
-        ],
-        scores: [0, 0],
+        chips: Array.from({ length: n }, () => funds),
+        scores: Array.from({ length: n }, () => 0),
         lotValue: 0,
         currentBid: 0,
         highBidder: null,
         passedWithoutBid: 0,
         awardedTo: null,
-        seatOrder: [first, (1 - first) as PlayerId],
+        seatOrder: Array.from({ length: n }, (_, i) => (first + i) % n),
         harbor: null,
         gallery,
       };
@@ -769,13 +845,33 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
     if (gallery) {
       if (state.phase === "offer") {
         if (playerId !== gallery.auctioneer) return [];
-        for (const p of gallery.auctionHand[playerId]!) {
+        const hand = gallery.auctionHand[playerId]!;
+        for (const p of hand) {
           for (const mode of gallery.modes) {
+            if (mode === "double") continue;
             legal.push({
               type: "play_painting",
               label: `拍 ${p.name} · ${mode}`,
               payload: { instanceId: p.instanceId, mode },
             });
+          }
+        }
+        if (gallery.modes.includes("double")) {
+          for (let i = 0; i < hand.length; i += 1) {
+            for (let j = i + 1; j < hand.length; j += 1) {
+              const a = hand[i]!;
+              const b = hand[j]!;
+              if (a.artistId !== b.artistId) continue;
+              legal.push({
+                type: "play_painting",
+                label: `双画 ${a.name}+${b.name} · double`,
+                payload: {
+                  instanceId: a.instanceId,
+                  secondInstanceId: b.instanceId,
+                  mode: "double",
+                },
+              });
+            }
           }
         }
         return legal;
@@ -796,7 +892,9 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
       }
       if (state.phase === "sealed") {
         if (gallery.sealedBids[playerId] !== null) return [];
-        const reserve = gallery.currentLot?.reserve ?? 1;
+        const reserve =
+          (gallery.currentLot?.reserve ?? 1) +
+          (gallery.companionLot?.reserve ?? 0);
         const max = state.genre.chips[playerId]!;
         const amounts = [
           reserve,
@@ -817,15 +915,30 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
       if (state.phase === "fixed") {
         const price = gallery.fixedPrice;
         const isAuctioneer = playerId === gallery.auctioneer;
-        const othersDone = gallery.fixedAnswered[(1 - gallery.auctioneer) as PlayerId];
+        const n = gallery.playerCount;
+        let othersPending = false;
+        for (let s = 0; s < n; s += 1) {
+          if (s === gallery.auctioneer) continue;
+          if (!gallery.fixedAnswered[s]!) othersPending = true;
+        }
         if (!isAuctioneer && !gallery.fixedAnswered[playerId]!) {
           if (price <= state.genre.chips[playerId]!) {
-            legal.push({ type: "buy_fixed", label: `定价购 ${price}` });
+            legal.push({
+              type: "buy_fixed",
+              label:
+                gallery.currentMode === "double"
+                  ? `双画购 ${price}`
+                  : `定价购 ${price}`,
+            });
           }
           legal.push({ type: "pass_fixed", label: "不买" });
           return legal;
         }
-        if (isAuctioneer && othersDone && !gallery.fixedAnswered[playerId]!) {
+        if (
+          isAuctioneer &&
+          !othersPending &&
+          !gallery.fixedAnswered[playerId]!
+        ) {
           if (price <= state.genre.chips[playerId]!) {
             legal.push({ type: "buy_own", label: `自购 ${price}` });
           }
@@ -897,9 +1010,9 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
 
     const baseGenre = (): AuctionBiddingGenre => ({
       ...state.genre,
-      chips: [...state.genre.chips] as [number, number],
-      scores: [...state.genre.scores] as [number, number],
-      seatOrder: [...state.genre.seatOrder] as [number, number],
+      chips: [...state.genre.chips],
+      scores: [...state.genre.scores],
+      seatOrder: [...state.genre.seatOrder],
       harbor: state.genre.harbor ? cloneHarbor(state.genre.harbor) : null,
       gallery: state.genre.gallery ? cloneGallery(state.genre.gallery) : null,
     });
@@ -915,25 +1028,56 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
         const id = action.payload?.instanceId;
         const mode = action.payload?.mode;
         if (typeof id !== "string") return null;
-        if (mode !== "open" && mode !== "sealed" && mode !== "fixed") return null;
+        if (
+          mode !== "open" &&
+          mode !== "sealed" &&
+          mode !== "fixed" &&
+          mode !== "double"
+        ) {
+          return null;
+        }
         if (!g.modes.includes(mode)) return null;
         const hand = g.auctionHand[action.playerId]!;
         const idx = hand.findIndex((p) => p.instanceId === id);
         if (idx < 0) return null;
-        const [lot] = hand.splice(idx, 1);
-        g.currentLot = lot!;
+        const n = g.playerCount;
+        let lot = hand[idx]!;
+        let companion: GalleryPaintingInstance | null = null;
+        if (mode === "double") {
+          const secondId = action.payload?.secondInstanceId;
+          if (typeof secondId !== "string" || secondId === id) return null;
+          const idx2 = hand.findIndex((p) => p.instanceId === secondId);
+          if (idx2 < 0) return null;
+          const other = hand[idx2]!;
+          if (other.artistId !== lot.artistId) return null;
+          // remove higher index first
+          const [iHi, iLo] = idx > idx2 ? [idx, idx2] : [idx2, idx];
+          const removedHi = hand.splice(iHi, 1)[0]!;
+          const removedLo = hand.splice(iLo, 1)[0]!;
+          if (removedLo.instanceId === id) {
+            lot = removedLo;
+            companion = removedHi;
+          } else {
+            lot = removedHi;
+            companion = removedLo;
+          }
+        } else {
+          hand.splice(idx, 1);
+        }
+        g.currentLot = lot;
+        g.companionLot = companion;
         g.currentMode = mode;
         g.modeCursor = g.modes.indexOf(mode);
-        genre.lotId = lot!.id;
-        genre.lotValue = lot!.reserve;
+        genre.lotId = lot.id;
+        genre.lotValue = lot.reserve + (companion?.reserve ?? 0);
         genre.highBidder = null;
         genre.passedWithoutBid = 0;
         genre.awardedTo = null;
-        g.sealedBids = [null, null];
-        g.fixedPrice = lot!.reserve;
-        g.fixedAnswered = [false, false];
+        g.sealedBids = Array.from({ length: n }, () => null);
+        g.fixedPrice = lot.reserve + (companion?.reserve ?? 0);
+        g.fixedAnswered = Array.from({ length: n }, () => false);
         g.lastSold = null;
-        const other = ((g.auctioneer + 1) % 2) as PlayerId;
+        const nextSeat = ((g.auctioneer + 1) % n) as PlayerId;
         if (mode === "sealed") {
           genre.currentBid = 0;
           return {
@@ -944,22 +1088,22 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
             winnerId: null,
           };
         }
-        if (mode === "fixed") {
-          genre.currentBid = lot!.reserve;
+        if (mode === "fixed" || mode === "double") {
+          genre.currentBid = g.fixedPrice;
           return {
             genre,
             phase: "fixed" as PlayPhaseId,
-            activePlayerId: other,
+            activePlayerId: nextSeat,
             status: "active" as const,
             winnerId: null,
           };
         }
         // open
-        genre.currentBid = Math.max(0, lot!.reserve - 1);
+        genre.currentBid = Math.max(0, lot.reserve - 1);
         return {
           genre,
           phase: "bidding" as PlayPhaseId,
-          activePlayerId: other,
+          activePlayerId: nextSeat,
           status: "active" as const,
           winnerId: null,
         };
@@ -992,8 +1136,8 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
         }
         if (action.type !== "pass_market") return null;
         g.marketPasses += 1;
-        if (g.marketPasses < 2) {
-          const next = ((action.playerId + 1) % 2) as PlayerId;
+        if (g.marketPasses < g.playerCount) {
+          const next = ((action.playerId + 1) % g.playerCount) as PlayerId;
           return {
             genre,
             phase: "market" as PlayPhaseId,
@@ -1008,13 +1152,14 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
       if (state.phase === "sealed") {
         if (!g.currentLot) return null;
         if (g.sealedBids[action.playerId] !== null) return null;
+        const floor = g.currentLot.reserve + (g.companionLot?.reserve ?? 0);
         if (action.type === "sealed_pass") {
           g.sealedBids[action.playerId] = -1;
         } else if (action.type === "sealed_bid") {
           const amount = action.payload?.amount;
           if (
             !Number.isSafeInteger(amount) ||
-            (amount as number) < g.currentLot.reserve ||
+            (amount as number) < floor ||
             (amount as number) > genre.chips[action.playerId]!
           ) {
             return null;
@@ -1023,9 +1168,8 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
         } else {
           return null;
         }
-        const [b0, b1] = g.sealedBids;
-        if (b0 === null || b1 === null) {
-          const next = ((action.playerId + 1) % 2) as PlayerId;
+        if (g.sealedBids.some((b) => b === null)) {
+          const next = ((action.playerId + 1) % g.playerCount) as PlayerId;
           return {
             genre,
             phase: "sealed" as PlayPhaseId,
@@ -1035,14 +1179,16 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
           };
         }
         const cand: Array<{ seat: PlayerId; bid: number }> = [];
-        if (b0 >= 0) cand.push({ seat: 0, bid: b0 });
-        if (b1 >= 0) cand.push({ seat: 1, bid: b1 });
+        for (let s = 0; s < g.playerCount; s += 1) {
+          const b = g.sealedBids[s]!;
+          if (b >= 0) cand.push({ seat: s as PlayerId, bid: b });
+        }
         if (!cand.length) {
           const u = galleryUnsold(genre, action.playerId);
           return {
             ...u,
-            status: "active" as const,
-            winnerId: null,
+            status: u.status ?? "active",
+            winnerId: u.winnerId ?? null,
             passed: true,
           };
         }
@@ -1056,13 +1202,29 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
         const awarded = galleryAwardLot(genre, winner.seat, winner.bid);
         return {
           ...awarded,
-          status: "active" as const,
-          winnerId: null,
+          status: (awarded as { status?: "active" | "complete" }).status ?? "active",
+          winnerId: (awarded as { winnerId?: PlayerId | null }).winnerId ?? null,
         };
       }
 
       if (state.phase === "fixed") {
         if (!g.currentLot) return null;
+        const n = g.playerCount;
+        const nextFixedSeat = (from: PlayerId): PlayerId => {
+          for (let step = 1; step <= n; step += 1) {
+            const s = ((from + step) % n) as PlayerId;
+            if (s === g.auctioneer) continue;
+            if (!g.fixedAnswered[s]!) return s;
+          }
+          return g.auctioneer;
+        };
+        const othersAllDone = (): boolean => {
+          for (let s = 0; s < n; s += 1) {
+            if (s === g.auctioneer) continue;
+            if (!g.fixedAnswered[s]!) return false;
+          }
+          return true;
+        };
         if (action.type === "buy_fixed") {
           if (action.playerId === g.auctioneer) return null;
           if (g.fixedAnswered[action.playerId]!) return null;
@@ -1075,18 +1237,21 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
           );
           return {
             ...awarded,
-            status: "active" as const,
-            winnerId: null,
+            status: (awarded as { status?: "active" | "complete" }).status ?? "active",
+            winnerId: (awarded as { winnerId?: PlayerId | null }).winnerId ?? null,
           };
         }
         if (action.type === "pass_fixed") {
           if (action.playerId === g.auctioneer) return null;
           if (g.fixedAnswered[action.playerId]!) return null;
           g.fixedAnswered[action.playerId] = true;
+          const next = othersAllDone()
+            ? g.auctioneer
+            : nextFixedSeat(action.playerId);
           return {
             genre,
             phase: "fixed" as PlayPhaseId,
-            activePlayerId: g.auctioneer,
+            activePlayerId: next,
             status: "active" as const,
             winnerId: null,
             passed: true,
@@ -1094,8 +1259,7 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
         }
         if (action.type === "buy_own") {
           if (action.playerId !== g.auctioneer) return null;
-          const other = (1 - g.auctioneer) as PlayerId;
-          if (!g.fixedAnswered[other]!) return null;
+          if (!othersAllDone()) return null;
           if (g.fixedPrice > genre.chips[action.playerId]!) return null;
           g.fixedAnswered[action.playerId] = true;
           const awarded = galleryAwardLot(
@@ -1105,20 +1269,19 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
           );
           return {
             ...awarded,
-            status: "active" as const,
-            winnerId: null,
+            status: (awarded as { status?: "active" | "complete" }).status ?? "active",
+            winnerId: (awarded as { winnerId?: PlayerId | null }).winnerId ?? null,
           };
         }
         if (action.type === "decline_own") {
           if (action.playerId !== g.auctioneer) return null;
-          const other = (1 - g.auctioneer) as PlayerId;
-          if (!g.fixedAnswered[other]!) return null;
+          if (!othersAllDone()) return null;
           g.fixedAnswered[action.playerId] = true;
           const u = galleryUnsold(genre, action.playerId);
           return {
             ...u,
-            status: "active" as const,
-            winnerId: null,
+            status: u.status ?? "active",
+            winnerId: u.winnerId ?? null,
             passed: true,
           };
         }
@@ -1126,7 +1289,8 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
       }
 
       if (state.phase === "bidding") {
-        const next = ((action.playerId + 1) % 2) as PlayerId;
+        const n = g.playerCount;
+        const next = ((action.playerId + 1) % n) as PlayerId;
         if (action.type === "bid") {
           const amount = action.payload?.amount;
           if (
@@ -1149,25 +1313,36 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
         }
         if (action.type !== "pass" || action.payload !== undefined) return null;
         if (genre.highBidder !== null) {
-          const awarded = galleryAwardLot(
-            genre,
-            genre.highBidder as PlayerId,
-            genre.currentBid,
-          );
+          // Award when the next seat to act is the high bidder (full circle).
+          if (next === genre.highBidder) {
+            const awarded = galleryAwardLot(
+              genre,
+              genre.highBidder as PlayerId,
+              genre.currentBid,
+            );
+            return {
+              ...awarded,
+              status: (awarded as { status?: "active" | "complete" }).status ?? "active",
+              winnerId: (awarded as { winnerId?: PlayerId | null }).winnerId ?? null,
+              passed: true,
+            };
+          }
           return {
-            ...awarded,
+            genre,
+            phase: "bidding" as PlayPhaseId,
+            activePlayerId: next,
             status: "active" as const,
             winnerId: null,
             passed: true,
           };
         }
         genre.passedWithoutBid += 1;
-        if (genre.passedWithoutBid === 2) {
+        if (genre.passedWithoutBid >= n) {
           const u = galleryUnsold(genre, action.playerId);
           return {
             ...u,
-            status: "active" as const,
-            winnerId: null,
+            status: u.status ?? "active",
+            winnerId: u.winnerId ?? null,
             passed: true,
           };
         }
@@ -1409,14 +1584,14 @@ export function auctionBiddingToSessionFields(
     winnerSeat: state.winnerId,
     auctionBidding: {
       lotId: state.genre.lotId,
-      chips: [...state.genre.chips] as [number, number],
-      scores: [...state.genre.scores] as [number, number],
+      chips: [...state.genre.chips],
+      scores: [...state.genre.scores],
       lotValue: state.genre.lotValue,
       currentBid: state.genre.currentBid,
       highBidder: state.genre.highBidder,
       passedWithoutBid: state.genre.passedWithoutBid,
       awardedTo: state.genre.awardedTo,
-      seatOrder: [...state.genre.seatOrder] as [number, number],
+      seatOrder: [...state.genre.seatOrder],
       phase: state.phase,
       harbor: state.genre.harbor ? cloneHarbor(state.genre.harbor) : null,
       gallery: state.genre.gallery ? cloneGallery(state.genre.gallery) : null,
@@ -1431,12 +1606,19 @@ export function bindAuctionBiddingFromRuntimeKernel(input: {
   content?: AuctionBiddingContent | null;
   galleryContent?: GalleryAuctionContent | null;
 }): PlayKernelConfig {
-  if (input.playerCount !== 2) {
+  const gallery =
+    input.gallery === true || input.galleryContent != null;
+  if (gallery) {
+    if (input.playerCount < 2 || input.playerCount > 5) {
+      throw new Error("auction_bidding_gallery_requires_2_to_5_players");
+    }
+  } else if (input.playerCount !== 2) {
     throw new Error("auction_bidding_requires_two_players");
   }
   return createAuctionBiddingKernelConfig({
     harbor: input.harbor,
     gallery: input.gallery,
+    playerCount: input.playerCount,
     content: input.content ?? null,
     galleryContent: input.galleryContent ?? null,
   });
@@ -1539,10 +1721,15 @@ export function pickAuctionBiddingBotAction(
       ...(choice.payload ? { payload: { ...choice.payload } } : {}),
     };
   }
+  if (state.status !== "active" || state.phase === "ended") {
+    return { type: "pass", playerId: state.activePlayerId };
+  }
   if (state.genre.gallery || state.genre.harbor) {
-    // Empty legal list mid-subset — prefer a no-op that reduce rejects less often
-    // by ending offer via ensureOfferReady on next successful path; as last resort pass_market.
-    return { type: "pass_market", playerId: state.activePlayerId };
+    // Empty legal list mid-subset — last resort pass_market only in market phase.
+    if (state.phase === "market") {
+      return { type: "pass_market", playerId: state.activePlayerId };
+    }
+    return { type: "pass", playerId: state.activePlayerId };
   }
   const amount = state.genre.currentBid + 1;
   const bid =

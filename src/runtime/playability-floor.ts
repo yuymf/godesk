@@ -171,9 +171,20 @@ export function playabilityFloor(ruleSystem: RuleSystem): PlayabilityFloorReadin
   if (kernelType === "auction-bidding-v1") {
     const hasActions = ruleSystem.actions.some((action) => action.id === "bid") &&
       ruleSystem.actions.some((action) => action.id === "pass");
-    if (ruleSystem.playSurface.kind !== "table" || !hasActions ||
-        ruleSystem.runtimeSupport.kernel.playerCount !== 2) {
-      return { status: "failed", reason: "auction-bidding-v1 需要双人桌面与出价/放弃动作。", genre, kernelType };
+    const seats = ruleSystem.runtimeSupport.kernel.playerCount;
+    const gallery = ruleSystem.runtimeSupport.kernel.gallery === true;
+    const seatsOk = gallery
+      ? seats >= 2 && seats <= 5
+      : seats === 2;
+    if (ruleSystem.playSurface.kind !== "table" || !hasActions || !seatsOk) {
+      return {
+        status: "failed",
+        reason: gallery
+          ? "auction-bidding-v1 gallery 需要 2–5 人桌面与出价/放弃动作。"
+          : "auction-bidding-v1 需要双人桌面与出价/放弃动作。",
+        genre,
+        kernelType,
+      };
     }
   }
   if (ruleSystem.generation?.requestedMechanics?.includes("auto-battler") &&
