@@ -6,6 +6,7 @@ import {
   boardPresentationGap,
   genreObjectFidelity,
   hasBoundImage,
+  kernelUsesTabletop3d,
   presentationFloor,
 } from "./presentation-floor";
 import type { AutoBattlerThemePatch } from "./adapters/auto-battler-theme";
@@ -289,17 +290,27 @@ describe("presentationFloor", () => {
 
 });
 
-describe("board presentation gate (new mechanics need a dedicated board)", () => {
+describe("board presentation gate (T029 spatial 3D mid-layer)", () => {
   it("fails a kernel whose only presentation is a generic form HUD", () => {
     expect(boardPresentationGap("new-mech-v1", { "new-mech-v1": "generic-hud" })).toContain(UNPRESENTED_PREFIX);
-    expect(boardPresentationGap("new-mech-v1", { "new-mech-v1": "dedicated-board" })).toBeNull();
+  });
+
+  it("fails DOM-only dedicated-board (must mount SceneHost / TabletopStage)", () => {
+    const gap = boardPresentationGap("new-mech-v1", { "new-mech-v1": "dedicated-board" });
+    expect(gap).toContain(UNPRESENTED_PREFIX);
+    expect(gap).toContain("SceneHost");
+    expect(gap).toContain("TabletopStage");
+  });
+
+  it("passes tabletop-3d registration", () => {
+    expect(boardPresentationGap("new-mech-v1", { "new-mech-v1": "tabletop-3d" })).toBeNull();
   });
 
   it("fails closed for kernels missing from the registry", () => {
     expect(boardPresentationGap("never-registered-v1")).toContain("不能报告为可玩");
   });
 
-  it("surfaces as Presentation Floor failure for a kernel without a dedicated board", () => {
+  it("surfaces as Presentation Floor failure for a kernel without a 3D surface", () => {
     const floor = presentationFloor(base({
       runtimeSupport: { status: "executable", unsupported: [], kernel: { type: "never-registered-v1", playerCount: 2 } as never },
     }));
@@ -307,11 +318,33 @@ describe("board presentation gate (new mechanics need a dedicated board)", () =>
     expect(floor.reason).toContain(UNPRESENTED_PREFIX);
   });
 
-  it("keeps existing dedicated kernels passing the gate", () => {
+  it("keeps spatial kernels that mount TabletopStage/SceneHost as tabletop-3d", () => {
     expect(boardPresentationGap("score-race-v1")).toBeNull();
     expect(boardPresentationGap("disc-flipping-v1")).toBeNull();
-    // Tide Arena ships its 3D tabletop (src/render3d/tide-arena) → no longer 未呈现.
-    expect(KERNEL_PRESENTATION["auto-battler-v1"]).toBe("dedicated-board");
+    expect(boardPresentationGap("gem-engine-v1")).toBeNull();
+    expect(boardPresentationGap("pattern-draft-v1")).toBeNull();
+    expect(boardPresentationGap("auction-bidding-v1")).toBeNull();
+    expect(boardPresentationGap("hex-settlement-v1")).toBeNull();
+    expect(boardPresentationGap("network-route-v1")).toBeNull();
+    expect(KERNEL_PRESENTATION["auto-battler-v1"]).toBe("tabletop-3d");
+    expect(kernelUsesTabletop3d("gem-engine-v1")).toBe(true);
+    expect(kernelUsesTabletop3d("score-race-v1")).toBe(false);
+  });
+
+  it("presentationFloor passes gem-engine with kit + render (tabletop-3d)", () => {
+    const floor = presentationFloor(base({
+      playSurface: { kind: "table", layout: "gem-engine", regions: [] },
+      presentation: {
+        render: defaultRenderSpec("gem-engine-v1", "table")!,
+        visuals: [{ provenance: "kit", label: "主题 kit" }],
+      },
+      runtimeSupport: {
+        status: "executable",
+        unsupported: [],
+        kernel: { type: "gem-engine-v1", playerCount: 4 } as never,
+      },
+    }));
+    expect(floor.status).toBe("passed");
   });
 });
 
