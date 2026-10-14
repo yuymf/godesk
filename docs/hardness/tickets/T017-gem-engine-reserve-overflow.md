@@ -5,6 +5,7 @@
 | 回归靶 | H03（harness only） |
 | 层 | **内核**（gem-engine-v1 同层扩） |
 | 状态 | **已关** |
+| sha | `2c020a25507aebbb7483ca1fbef7e6754ee24d32` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H03-t017/` |
 
 ## 现象（Open · regress-t015）
