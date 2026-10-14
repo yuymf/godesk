@@ -5,8 +5,8 @@
  * Subset (2 seats): take same-color tiles from a factory or the center, place on
  * a pattern line (excess → floor), when the table empties resolve full lines onto
  * the wall with orthogonal adjacency scoring + floor penalties, refill factories,
- * rotate first player via the center marker. Row/column/color-set end bonuses and
- * 3–4 seats remain unsupported.
+ * rotate first player via the center marker, then row/column/color-set end bonuses
+ * when a completed row ends the game. 3–4 seats remain unsupported (T019).
  */
 import {
   applyAction,
@@ -26,6 +26,15 @@ export const PATTERN_DRAFT_KERNEL_TYPE = "pattern-draft-v1" as const;
 export const TILE_COLORS = ["blue", "yellow", "red", "black", "white"] as const;
 export type TileColor = (typeof TILE_COLORS)[number];
 
+export type PatternEndBonuses = {
+  /** Points per fully filled wall row. */
+  perCompleteRow: number;
+  /** Points per fully filled wall column. */
+  perCompleteColumn: number;
+  /** Points per color with all 5 wall cells of that color filled. */
+  perCompleteColorSet: number;
+};
+
 export type PatternDraftContent = {
   /** Factories on the table (2p default 5). */
   factoryCount: number;
@@ -33,6 +42,7 @@ export type PatternDraftContent = {
   /** Copies of each color in the bag. */
   tilesPerColor: number;
   floorPenalties: number[];
+  endBonuses: PatternEndBonuses;
 };
 
 type PatternDraftConfig = {
@@ -72,17 +82,23 @@ export type PatternDraftGenre = {
 export function defaultPatternDraftContent(
   overrides?: Partial<PatternDraftContent>,
 ): PatternDraftContent {
+  const endOverrides = overrides?.endBonuses;
   return {
     factoryCount: overrides?.factoryCount ?? 5,
     tilesPerFactory: overrides?.tilesPerFactory ?? 4,
     tilesPerColor: overrides?.tilesPerColor ?? 20,
     floorPenalties: overrides?.floorPenalties ?? [-1, -1, -2, -2, -2, -3, -3],
+    endBonuses: {
+      perCompleteRow: endOverrides?.perCompleteRow ?? 2,
+      perCompleteColumn: endOverrides?.perCompleteColumn ?? 7,
+      perCompleteColorSet: endOverrides?.perCompleteColorSet ?? 10,
+    },
   };
 }
 
 export function patternDraftUnsupportedNotes(): string[] {
   return [
-    "pattern-draft-v1 subset: 2 seats, factory/center same-color draft, pattern lines, wall adjacency scoring, floor penalties, marker rotation; 3–4 seats / row·column·color-set end bonuses unsupported.",
+    "pattern-draft-v1 subset: 2 seats, factory/center same-color draft, pattern lines, wall adjacency scoring, floor penalties, marker rotation, row/column/color-set end bonuses; 3–4 seats unsupported.",
   ];
 }
 
@@ -266,8 +282,64 @@ function rowComplete(wall: Array<Array<TileColor | null>>, row: number): boolean
   return wall[row]!.every((cell) => cell !== null);
 }
 
+function columnComplete(wall: Array<Array<TileColor | null>>, col: number): boolean {
+  return wall.every((row) => row[col] !== null);
+}
+
+function colorSetComplete(
+  wall: Array<Array<TileColor | null>>,
+  color: TileColor,
+): boolean {
+  let n = 0;
+  for (let r = 0; r < 5; r += 1) {
+    for (let c = 0; c < 5; c += 1) {
+      if (wall[r]![c] === color) n += 1;
+    }
+  }
+  return n === 5;
+}
+
 function anyRowComplete(seat: PatternSeat): boolean {
   return seat.wall.some((_, r) => rowComplete(seat.wall, r));
+}
+
+/** Apply configurable end-game bonuses; returns points added. */
+export function applyEndGameBonuses(
+  seat: PatternSeat,
+  bonuses: PatternEndBonuses,
+): number {
+  let added = 0;
+  for (let row = 0; row < 5; row += 1) {
+    if (rowComplete(seat.wall, row)) added += bonuses.perCompleteRow;
+  }
+  for (let col = 0; col < 5; col += 1) {
+    if (columnComplete(seat.wall, col)) added += bonuses.perCompleteColumn;
+  }
+  for (const color of TILE_COLORS) {
+    if (colorSetComplete(seat.wall, color)) added += bonuses.perCompleteColorSet;
+  }
+  seat.score += added;
+  return added;
+}
+
+/** Test/helpers: expose completeness checks. */
+export function wallRowComplete(
+  wall: Array<Array<TileColor | null>>,
+  row: number,
+): boolean {
+  return rowComplete(wall, row);
+}
+export function wallColumnComplete(
+  wall: Array<Array<TileColor | null>>,
+  col: number,
+): boolean {
+  return columnComplete(wall, col);
+}
+export function wallColorSetComplete(
+  wall: Array<Array<TileColor | null>>,
+  color: TileColor,
+): boolean {
+  return colorSetComplete(wall, color);
 }
 
 function resolveWallPhase(
@@ -308,6 +380,10 @@ function resolveWallPhase(
   const done0 = anyRowComplete(genre.seats[0]!);
   const done1 = anyRowComplete(genre.seats[1]!);
   if (done0 || done1) {
+    // End-game bonuses (T018): rows / columns / color-sets — both seats.
+    applyEndGameBonuses(genre.seats[0]!, content.endBonuses);
+    applyEndGameBonuses(genre.seats[1]!, content.endBonuses);
+    genre.lastEvent = "end_bonuses_applied";
     const s0 = genre.seats[0]!.score;
     const s1 = genre.seats[1]!.score;
     const winnerId =

@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { applyAction, createInitialState, listLegalActions } from "../play-kernel";
 import { KERNEL_CAPABILITIES, MECHANIC_CAPABILITIES, inferRequestedMechanics } from "../../creator/kernel-capabilities";
 import {
+  applyEndGameBonuses,
   autoPlayPatternDraftGame,
   createPatternDraftKernelConfig,
+  defaultPatternDraftContent,
   patternDraftAdapter,
   wallColorAt,
   wallColumnForColor,
@@ -76,5 +78,63 @@ describe("pattern-draft-v1 (T013)", () => {
     const { state, actions } = autoPlayPatternDraftGame(42);
     expect(actions.length).toBeGreaterThan(10);
     expect(state.status).toBe("complete");
+  });
+});
+
+
+describe("pattern-draft-v1 end bonuses (T018)", () => {
+  const bonuses = defaultPatternDraftContent().endBonuses;
+
+  it("scores complete rows (+2 each)", () => {
+    const seat = {
+      lines: [] as never[],
+      wall: Array.from({ length: 5 }, (_, r) =>
+        Array.from({ length: 5 }, (_, c) =>
+          r === 0 ? wallColorAt(0, c) : null,
+        ),
+      ),
+      floor: [] as never[],
+      hasMarker: false,
+      score: 0,
+    };
+    const added = applyEndGameBonuses(seat, bonuses);
+    expect(added).toBe(2);
+    expect(seat.score).toBe(2);
+  });
+
+  it("scores complete columns (+7 each)", () => {
+    const seat = {
+      lines: [] as never[],
+      wall: Array.from({ length: 5 }, (_, r) =>
+        Array.from({ length: 5 }, (_, c) => (c === 1 ? wallColorAt(r, 1) : null)),
+      ),
+      floor: [] as never[],
+      hasMarker: false,
+      score: 0,
+    };
+    const added = applyEndGameBonuses(seat, bonuses);
+    expect(added).toBe(7);
+    expect(seat.score).toBe(7);
+  });
+
+  it("scores complete color sets (+10 each)", () => {
+    const color = "red" as const;
+    const wall = Array.from({ length: 5 }, () =>
+      Array.from({ length: 5 }, () => null as ReturnType<typeof wallColorAt> | null),
+    );
+    for (let row = 0; row < 5; row += 1) {
+      const col = wallColumnForColor(row, color);
+      wall[row]![col] = color;
+    }
+    const seat = {
+      lines: [] as never[],
+      wall,
+      floor: [] as never[],
+      hasMarker: false,
+      score: 0,
+    };
+    const added = applyEndGameBonuses(seat, bonuses);
+    expect(added).toBe(10);
+    expect(seat.score).toBe(10);
   });
 });

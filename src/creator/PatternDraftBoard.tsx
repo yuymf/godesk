@@ -37,7 +37,7 @@ export function PatternDraftBoard({
   };
 
   return (
-    <section aria-label="瓷砖工坊桌" className="pattern-draft-board">
+    <section aria-label="瓷砖工坊桌" className="pattern-draft-board" data-end-bonuses="row2-col7-color10">
       <header>
         <span className="auction-kicker">工厂草稿 · 第 {draft.round} 轮</span>
         <h2>
