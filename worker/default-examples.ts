@@ -488,7 +488,7 @@ export function instantiateDefaultExample(
         runtimeSupport: {
           status: "executable",
           unsupported: [
-            "hex-settlement-v1 executes beginner-board Tidewell basics (placement, production, robber/discard, build+connectivity, bank/port + negotiated domestic trade propose/accept, development cards, VP win) on the public play-kernel; 3–4 seat domestic auction / complex multi-party brokerage remain out of scope.",
+            "hex-settlement-v1 executes beginner-board Tidewell basics (placement, production, robber/discard, build+connectivity, bank/port + negotiated domestic trade propose/accept, development cards, VP win) on the public play-kernel; domestic sealed resource auction + multi-party brokerage cut supported (T023); live multi-lot negotiated brokerage matrix remains out of scope.",
           ],
           kernel: {
             type: "hex-settlement-v1",
