@@ -6,7 +6,7 @@
 | 层 | **内核**（hex-settlement-v1 同层扩） |
 | 状态 | **已关** |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H01-probe3/` |
-| sha | （commit 后回填） |
+| sha | `f36c659` |
 
 ## 现象
 H01 绑 hex-settlement-v1；银行/港口交易已有；`player_trade` 为即时 1:1 强换，缺 **议价**（提议 → 对方接受/拒绝）与多资源捆绑。
