@@ -5,7 +5,7 @@
 | 回归靶 | H04 before/after lines-close；砖入槽道可读；像素门；T036/T047/T050/T054/T058 绿 |
 | 层 | **共享呈现 / force-inject** |
 | 状态 | **关** |
-| tip | pending |
+| tip | `3086cfc` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t059/` |
 
 ## 问题
