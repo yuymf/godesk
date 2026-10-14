@@ -5,7 +5,7 @@
 | 回归靶 | H03/H05/H04 before/after seat-close；unit owned→seat |
 | 层 | **共享呈现**（seatTableauOrigin / owned-pieces mapping） |
 | 状态 | **关** |
-| tip | pending |
+| tip | `8001058` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t052/` |
 
 ## 问题
