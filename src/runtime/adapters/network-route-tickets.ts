@@ -67,6 +67,10 @@ export type NetworkRouteTicketsContent = {
   faceUpCount: number;
   cardsPerColor: number;
   wildCount: number;
+  /** Face-up wilds that force a full-row reshuffle (classic flood). */
+  faceUpWildFloodLimit: number;
+  /** End-game bonus for longest continuous owned path. */
+  longestPathBonus: number;
 };
 
 export type HandCounts = Record<TrainCardColor, number>;
@@ -86,6 +90,9 @@ export type NetworkRouteTicketsState = {
   /** After a seat hits train threshold, remaining turns including others. */
   finalTurnsLeft: number | null;
   lastEvent: string | null;
+  faceUpCount: number;
+  faceUpWildFloodLimit: number;
+  longestPathBonus: number;
 };
 
 function emptyHand(): HandCounts {
@@ -210,7 +217,7 @@ export function defaultTicketsContent(
 
 export function ticketsUnsupportedNotes(): string[] {
   return [
-    "network-route-v1 tickets subset: 2–5 seats (shared seat-capacity), destination tickets, multi-color length claims, length scoring; face-up rainbow take limits / longest-path bonus unsupported.",
+    "network-route-v1 tickets subset: 2–5 seats (shared seat-capacity), destination tickets, multi-color length claims, length scoring, face-up rainbow take limits, longest-path bonus.",
   ];
 }
 
@@ -240,15 +247,35 @@ function refillFaceUpTo(
   tickets: NetworkRouteTicketsState,
   count: number,
   seedSalt: number,
+  floodLimit = 3,
 ): void {
-  while (tickets.faceUp.length < count) {
+  let guard = 0;
+  while (tickets.faceUp.length < count && guard < 40) {
+    guard += 1;
     const card = drawOne(
       tickets.trainDeck,
       tickets.trainDiscard,
-      seedSalt + tickets.faceUp.length,
+      seedSalt + tickets.faceUp.length + guard,
     );
     if (!card) break;
     tickets.faceUp.push(card);
+  }
+  // Rainbow flood: too many face-up wilds → discard row and refill once.
+  const wilds = tickets.faceUp.filter((c) => c === "wild").length;
+  if (wilds >= floodLimit && tickets.faceUp.length > 0) {
+    tickets.trainDiscard.push(...tickets.faceUp);
+    tickets.faceUp = [];
+    let g2 = 0;
+    while (tickets.faceUp.length < count && g2 < 40) {
+      g2 += 1;
+      const card = drawOne(
+        tickets.trainDeck,
+        tickets.trainDiscard,
+        seedSalt + 900 + g2,
+      );
+      if (!card) break;
+      tickets.faceUp.push(card);
+    }
   }
 }
 
@@ -300,8 +327,11 @@ export function buildTicketsState(
     finalScore: null,
     finalTurnsLeft: null,
     lastEvent: "tickets_dealt",
+    faceUpCount: content.faceUpCount,
+    faceUpWildFloodLimit: content.faceUpWildFloodLimit,
+    longestPathBonus: content.longestPathBonus,
   };
-  refillFaceUpTo(tickets, content.faceUpCount, seed ^ 0xfa3e);
+  refillFaceUpTo(tickets, content.faceUpCount, seed ^ 0xfa3e, content.faceUpWildFloodLimit);
   return tickets;
 }
 
@@ -322,6 +352,9 @@ export function cloneTicketsState(
     finalScore: t.finalScore ? [...t.finalScore] : null,
     finalTurnsLeft: t.finalTurnsLeft,
     lastEvent: t.lastEvent,
+    faceUpCount: t.faceUpCount,
+    faceUpWildFloodLimit: t.faceUpWildFloodLimit,
+    longestPathBonus: t.longestPathBonus,
   };
 }
 
@@ -387,9 +420,10 @@ export function computeFinalScores(
     from: string,
     to: string,
   ) => boolean,
+  longestPathBonus = 10,
 ): number[] {
   const n = tickets.routeScore.length;
-  return Array.from({ length: n }, (_, seat) => {
+  const base = Array.from({ length: n }, (_, seat) => {
     return (
       tickets.routeScore[seat]! +
       scoreTicketsForSeat(
@@ -401,24 +435,140 @@ export function computeFinalScores(
       )
     );
   });
+  return applyLongestPathBonuses(base, claims, edges, longestPathBonus).scores;
 }
 
+export type TrainDrawPick =
+  | { source: "deck" }
+  | { source: "faceUp"; index: number };
+
+/**
+ * Face-up rainbow take limits (generic):
+ * - Taking a face-up wild may be the only pick this turn.
+ * - Otherwise up to 2 picks; a second pick cannot be a face-up wild.
+ * - After face-up takes, refill; flood of wilds reshuffles the row.
+ */
 export function applyDrawTrains(
   tickets: NetworkRouteTicketsState,
   playerId: PlayerId,
   seedSalt: number,
+  picks?: TrainDrawPick[],
+  opts?: { faceUpCount?: number; faceUpWildFloodLimit?: number },
 ): NetworkRouteTicketsState | null {
   const next = cloneTicketsState(tickets);
-  const drawn: TrainCardColor[] = [];
-  for (let i = 0; i < 2; i += 1) {
-    const card = drawOne(next.trainDeck, next.trainDiscard, seedSalt + i);
-    if (!card) break;
-    drawn.push(card);
-    next.trainHand[playerId][card] = (next.trainHand[playerId][card] ?? 0) + 1;
+  const faceUpCount = opts?.faceUpCount ?? Math.max(5, next.faceUp.length || 5);
+  const floodLimit = opts?.faceUpWildFloodLimit ?? 3;
+  const resolved: TrainDrawPick[] =
+    picks && picks.length
+      ? picks
+      : [{ source: "deck" }, { source: "deck" }];
+  if (resolved.length < 1 || resolved.length > 2) return null;
+
+  // Validate rainbow limits before mutating.
+  let faceUpWildCount = 0;
+  for (const pick of resolved) {
+    if (pick.source === "faceUp") {
+      const card = next.faceUp[pick.index];
+      if (!card) return null;
+      if (card === "wild") faceUpWildCount += 1;
+    }
   }
-  if (drawn.length === 0) return null;
+  if (faceUpWildCount > 0 && resolved.length !== 1) return null;
+  if (resolved.length === 2) {
+    const second = resolved[1]!;
+    if (second.source === "faceUp") {
+      const card = next.faceUp[second.index];
+      if (card === "wild") return null;
+    }
+    // Distinct face-up indices
+    if (
+      resolved[0]!.source === "faceUp" &&
+      resolved[1]!.source === "faceUp" &&
+      (resolved[0] as { index: number }).index ===
+        (resolved[1] as { index: number }).index
+    ) {
+      return null;
+    }
+  }
+
+  const drawn: TrainCardColor[] = [];
+  // Take higher face-up index first so indices stay valid.
+  const ordered = [...resolved].sort((a, b) => {
+    const ai = a.source === "faceUp" ? a.index : -1;
+    const bi = b.source === "faceUp" ? b.index : -1;
+    return bi - ai;
+  });
+  for (const pick of ordered) {
+    let card: TrainCardColor | null = null;
+    if (pick.source === "faceUp") {
+      if (pick.index < 0 || pick.index >= next.faceUp.length) return null;
+      card = next.faceUp.splice(pick.index, 1)[0] ?? null;
+    } else {
+      card = drawOne(next.trainDeck, next.trainDiscard, seedSalt + drawn.length);
+    }
+    if (!card) return null;
+    drawn.push(card);
+    next.trainHand[playerId]![card] =
+      (next.trainHand[playerId]![card] ?? 0) + 1;
+  }
+  refillFaceUpTo(next, faceUpCount, seedSalt ^ 0x51eed, floodLimit);
   next.lastEvent = `seat${playerId}_draw_trains_${drawn.join("+")}`;
   return next;
+}
+
+/** Longest simple path (by edge count) over edges owned by `playerId`. */
+export function longestOwnedPathLength(
+  claims: Record<string, PlayerId | null>,
+  edges: readonly TicketsEdge[],
+  playerId: PlayerId,
+): number {
+  const adj = new Map<string, Array<{ to: string; edgeId: string }>>();
+  for (const edge of edges) {
+    if (claims[edge.id] !== playerId) continue;
+    if (!adj.has(edge.from)) adj.set(edge.from, []);
+    if (!adj.has(edge.to)) adj.set(edge.to, []);
+    adj.get(edge.from)!.push({ to: edge.to, edgeId: edge.id });
+    adj.get(edge.to)!.push({ to: edge.from, edgeId: edge.id });
+  }
+  let best = 0;
+  const nodes = [...adj.keys()];
+  for (const start of nodes) {
+    const dfs = (node: string, used: Set<string>, depth: number) => {
+      if (depth > best) best = depth;
+      for (const step of adj.get(node) ?? []) {
+        if (used.has(step.edgeId)) continue;
+        used.add(step.edgeId);
+        dfs(step.to, used, depth + 1);
+        used.delete(step.edgeId);
+      }
+    };
+    dfs(start, new Set(), 0);
+  }
+  return best;
+}
+
+export function applyLongestPathBonuses(
+  scores: number[],
+  claims: Record<string, PlayerId | null>,
+  edges: readonly TicketsEdge[],
+  bonus: number,
+): { scores: number[]; lengths: number[]; awarded: number[] } {
+  const lengths = scores.map((_, seat) =>
+    longestOwnedPathLength(claims, edges, seat),
+  );
+  const maxLen = lengths.length ? Math.max(...lengths) : 0;
+  const awarded: number[] = [];
+  const next = [...scores];
+  if (maxLen <= 0 || bonus <= 0) {
+    return { scores: next, lengths, awarded };
+  }
+  lengths.forEach((len, seat) => {
+    if (len === maxLen) {
+      next[seat] = next[seat]! + bonus;
+      awarded.push(seat);
+    }
+  });
+  return { scores: next, lengths, awarded };
 }
 
 export function applyDrawTickets(

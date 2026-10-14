@@ -421,3 +421,77 @@ describe("network-route-v1 multi-seat (T019b / T020 companion)", () => {
     }
   });
 });
+
+describe("network-route-v1 T022 rainbow take limits + longest path", () => {
+  it("rejects second pick when first face-up is wild", () => {
+    const cfg = createNetworkRouteKernelConfig({
+      playerCount: 2,
+      tickets: true,
+      ticketsContent: defaultTicketsContent(),
+    });
+    let state = createInitialState(networkRouteAdapter, cfg, 3);
+    // Force a wild onto face-up[0]
+    state = {
+      ...state,
+      genre: {
+        ...state.genre,
+        tickets: {
+          ...state.genre.tickets!,
+          faceUp: ["wild", "red", "blue", "green", "yellow"],
+        },
+      },
+    };
+    const bad = applyAction(
+      networkRouteAdapter,
+      state,
+      {
+        type: "draw_trains",
+        playerId: state.activePlayerId,
+        payload: {
+          picks: [
+            { source: "faceUp", index: 0 },
+            { source: "deck" },
+          ],
+        },
+      },
+      cfg,
+    );
+    expect(bad.ok).toBe(false);
+    const good = applyAction(
+      networkRouteAdapter,
+      state,
+      {
+        type: "draw_trains",
+        playerId: state.activePlayerId,
+        payload: { picks: [{ source: "faceUp", index: 0 }] },
+      },
+      cfg,
+    );
+    expect(good.ok).toBe(true);
+    if (!good.ok) return;
+    expect(good.state.genre.tickets!.trainHand[state.activePlayerId].wild).toBeGreaterThan(0);
+  });
+
+  it("awards longest-path bonus at tickets end", async () => {
+    const { longestOwnedPathLength, applyLongestPathBonuses } = await import(
+      "./network-route-tickets"
+    );
+    const edges = [
+      { id: "A|B", from: "A", to: "B" },
+      { id: "B|C", from: "B", to: "C" },
+      { id: "C|D", from: "C", to: "D" },
+      { id: "A|D", from: "A", to: "D" },
+    ];
+    const claims: Record<string, number | null> = {
+      "A|B": 0,
+      "B|C": 0,
+      "C|D": 0,
+      "A|D": 1,
+    };
+    expect(longestOwnedPathLength(claims, edges, 0)).toBe(3);
+    expect(longestOwnedPathLength(claims, edges, 1)).toBe(1);
+    const { scores, awarded } = applyLongestPathBonuses([5, 5], claims, edges, 10);
+    expect(awarded).toEqual([0]);
+    expect(scores).toEqual([15, 5]);
+  });
+});

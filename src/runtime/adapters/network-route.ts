@@ -44,6 +44,7 @@ import {
   type NetworkRouteTicketsContent,
   type NetworkRouteTicketsState,
   type TrainColor,
+  type TrainDrawPick,
   TRAIN_COLORS,
 } from "./network-route-tickets";
 
@@ -605,11 +606,47 @@ export const networkRouteAdapter: PlayKernelAdapter<
     const funds = freight ? freight.funds[playerId]! : Infinity;
 
     if (tickets) {
+      // Blind double-draw always available when deck/discard can yield cards.
       legal.push({
         type: "draw_trains",
-        label: "Draw train cards",
-        payload: {},
+        label: "盲抽两张车厢牌",
+        payload: { picks: [{ source: "deck" }, { source: "deck" }] },
       });
+      // Face-up picks with rainbow limits.
+      for (let i = 0; i < tickets.faceUp.length; i += 1) {
+        const card = tickets.faceUp[i]!;
+        if (card === "wild") {
+          legal.push({
+            type: "draw_trains",
+            label: `公开彩虹×1 (#${i})`,
+            payload: { picks: [{ source: "faceUp", index: i }] },
+          });
+          continue;
+        }
+        legal.push({
+          type: "draw_trains",
+          label: `公开${card}+盲抽 (#${i})`,
+          payload: {
+            picks: [
+              { source: "faceUp", index: i },
+              { source: "deck" },
+            ],
+          },
+        });
+        for (let j = i + 1; j < tickets.faceUp.length; j += 1) {
+          if (tickets.faceUp[j] === "wild") continue;
+          legal.push({
+            type: "draw_trains",
+            label: `公开${card}+${tickets.faceUp[j]} (#${i}/#${j})`,
+            payload: {
+              picks: [
+                { source: "faceUp", index: i },
+                { source: "faceUp", index: j },
+              ],
+            },
+          });
+        }
+      }
       if (tickets.ticketDeck.length > 0) {
         legal.push({
           type: "draw_tickets",
@@ -707,6 +744,7 @@ export const networkRouteAdapter: PlayKernelAdapter<
           genre.claims,
           genre.edges,
           playerConnectsTerminals,
+          tickets.longestPathBonus,
         );
         tickets = { ...tickets, finalScore: scores, finalTurnsLeft: 0 };
         const winnerId = winnerByHighestScore(scores) as PlayerId | null;
@@ -731,10 +769,19 @@ export const networkRouteAdapter: PlayKernelAdapter<
 
     if (state.genre.tickets) {
       if (action.type === "draw_trains") {
+        const rawPicks = action.payload?.picks;
+        const picks = Array.isArray(rawPicks)
+          ? (rawPicks as TrainDrawPick[])
+          : undefined;
         const nextTickets = applyDrawTrains(
           state.genre.tickets,
           action.playerId,
           state.sequence + 1,
+          picks,
+          {
+            faceUpCount: state.genre.tickets.faceUpCount,
+            faceUpWildFloodLimit: state.genre.tickets.faceUpWildFloodLimit,
+          },
         );
         if (!nextTickets) return null;
         const genre: NetworkRouteGenre = {
@@ -1123,7 +1170,12 @@ export function pickNetworkRouteBotAction(
     }
     const draws = legal.filter((a) => a.type === "draw_trains");
     if (draws.length) {
-      return { type: "draw_trains", playerId: state.activePlayerId, payload: {} };
+      const choice = draws[rng.at(state.sequence + 11) % draws.length]!;
+      return {
+        type: "draw_trains",
+        playerId: state.activePlayerId,
+        ...(choice.payload ? { payload: { ...choice.payload } } : {}),
+      };
     }
   }
   // Prefer accept when hand empty and market available.
