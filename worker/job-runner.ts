@@ -607,7 +607,7 @@ export async function runCreatorJob(
               playerCount: 2,
               victoryPointsToWin: 10,
               unsupported: [
-                "hex-settlement-v1 executes beginner-board hex-island basics (placement, production, robber/discard, build+connectivity, bank/port + simple player trade, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — full negotiated multi-resource trades remain out of scope.",
+                "hex-settlement-v1 executes beginner-board hex-island basics (placement, production, robber/discard, build+connectivity, bank/port + negotiated domestic trade propose/accept, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — 3–4 seat domestic auction / complex multi-party brokerage remain out of scope.",
               ],
             },
           }

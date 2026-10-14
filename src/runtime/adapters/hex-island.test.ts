@@ -222,3 +222,106 @@ describe("hex-settlement-v1 hexIsland adapter", () => {
     expect(result.state.phase).toBe("setup");
   });
 });
+
+describe("hex-settlement negotiated trade (T014)", () => {
+  it("propose → accept swaps multi-resource bags", () => {
+    const config = createHexIslandKernelConfig({ playerCount: 2 });
+    let state = createInitialState(hexIslandAdapter, config, 11);
+    state = {
+      ...state,
+      phase: "main",
+      activePlayerId: 0,
+      genre: {
+        ...state.genre,
+        pendingTrade: null,
+        players: state.genre.players.map((player, seat) => ({
+          ...player,
+          resources:
+            seat === 0
+              ? { wood: 2, brick: 0, sheep: 1, wheat: 0, ore: 0 }
+              : { wood: 0, brick: 1, sheep: 0, wheat: 0, ore: 1 },
+        })),
+      },
+    };
+    const propose = applyAction(
+      hexIslandAdapter,
+      state,
+      {
+        type: "propose_trade",
+        playerId: 0,
+        payload: {
+          withSeat: 1,
+          give: { wood: 1, sheep: 1, brick: 0, wheat: 0, ore: 0 },
+          take: { ore: 1, wood: 0, brick: 0, sheep: 0, wheat: 0 },
+        },
+      },
+      config,
+    );
+    expect(propose.ok).toBe(true);
+    if (!propose.ok) return;
+    expect(propose.state.phase).toBe("trade_response");
+    expect(propose.state.activePlayerId).toBe(1);
+    const accept = applyAction(
+      hexIslandAdapter,
+      propose.state,
+      { type: "accept_trade", playerId: 1 },
+      config,
+    );
+    expect(accept.ok).toBe(true);
+    if (!accept.ok) return;
+    expect(accept.state.phase).toBe("main");
+    expect(accept.state.activePlayerId).toBe(0);
+    expect(accept.state.genre.players[0].resources.ore).toBe(1);
+    expect(accept.state.genre.players[0].resources.wood).toBe(1);
+    expect(accept.state.genre.players[1].resources.wood).toBe(1);
+    expect(accept.state.genre.pendingTrade).toBeNull();
+  });
+
+  it("reject returns initiative to proposer without swapping", () => {
+    const config = createHexIslandKernelConfig({ playerCount: 2 });
+    let state = createInitialState(hexIslandAdapter, config, 5);
+    state = {
+      ...state,
+      phase: "main",
+      activePlayerId: 0,
+      genre: {
+        ...state.genre,
+        pendingTrade: null,
+        players: state.genre.players.map((player, seat) => ({
+          ...player,
+          resources:
+            seat === 0
+              ? { wood: 2, brick: 0, sheep: 0, wheat: 0, ore: 0 }
+              : { wood: 0, brick: 1, sheep: 0, wheat: 0, ore: 0 },
+        })),
+      },
+    };
+    const propose = applyAction(
+      hexIslandAdapter,
+      state,
+      {
+        type: "propose_trade",
+        playerId: 0,
+        payload: {
+          withSeat: 1,
+          give: { wood: 1, brick: 0, sheep: 0, wheat: 0, ore: 0 },
+          take: { brick: 1, wood: 0, sheep: 0, wheat: 0, ore: 0 },
+        },
+      },
+      config,
+    );
+    expect(propose.ok).toBe(true);
+    if (!propose.ok) return;
+    const reject = applyAction(
+      hexIslandAdapter,
+      propose.state,
+      { type: "reject_trade", playerId: 1 },
+      config,
+    );
+    expect(reject.ok).toBe(true);
+    if (!reject.ok) return;
+    expect(reject.state.genre.players[0].resources.wood).toBe(2);
+    expect(reject.state.genre.players[1].resources.brick).toBe(1);
+    expect(reject.state.activePlayerId).toBe(0);
+  });
+});

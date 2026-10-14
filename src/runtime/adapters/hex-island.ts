@@ -6,8 +6,9 @@
  * share `listLegalActions` → `applyAction`.
  *
  * Basic Settlers subset: fixed beginner board, initial placement, production,
- * robber+discard, build with connectivity/cost, bank/port trade, simple
- * player trade, development cards, VP win at 10. See PR body for deferred.
+ * robber+discard, build with connectivity/cost, bank/port trade, negotiated
+ * player trade (propose → accept/reject, multi-resource), development cards,
+ * VP win at 10. See PR body for deferred.
  */
 
 import {
@@ -35,6 +36,7 @@ const HEX_ISLAND_PHASES = [
   { id: "discard", name: "Discard on 7" },
   { id: "robber", name: "Move robber" },
   { id: "main", name: "Build / trade" },
+  { id: "trade_response", name: "Respond to trade" },
   { id: "ended", name: "Ended" },
 ] as const;
 
@@ -86,6 +88,16 @@ export type HexIslandPort = {
   kind: PortKind;
 };
 
+/** Negotiated domestic trade awaiting counterparty response (T014). */
+export type PendingTrade = {
+  from: PlayerId;
+  to: PlayerId;
+  /** Resources the proposer gives. */
+  give: ResourceBank;
+  /** Resources the proposer receives. */
+  take: ResourceBank;
+};
+
 export type HexIslandGenre = {
   playerCount: number;
   victoryPointsToWin: number;
@@ -112,6 +124,8 @@ export type HexIslandGenre = {
   lastAction: string | null;
   /** Seat whose turn it is (roller); survives discard rotations. */
   turnPlayer: PlayerId;
+  /** Open domestic trade offer; phase trade_response while set. */
+  pendingTrade: PendingTrade | null;
 };
 
 const EMPTY_BANK = (): ResourceBank => ({
@@ -480,6 +494,14 @@ function cloneGenre(genre: HexIslandGenre): HexIslandGenre {
     players: clonePlayers(genre.players),
     discardQueue: [...genre.discardQueue],
     devDeck: [...genre.devDeck],
+    pendingTrade: genre.pendingTrade
+      ? {
+          from: genre.pendingTrade.from,
+          to: genre.pendingTrade.to,
+          give: cloneBank(genre.pendingTrade.give),
+          take: cloneBank(genre.pendingTrade.take),
+        }
+      : null,
   };
 }
 
@@ -569,6 +591,70 @@ function payloadNumber(action: PlayAction, key: string): number | null {
   return Number.isInteger(value) ? (value as number) : null;
 }
 
+function parseResourceBag(
+  payload: Record<string, unknown> | undefined,
+  key: string,
+): ResourceBank | null {
+  const raw = payload?.[key];
+  if (!raw || typeof raw !== "object") return null;
+  const bag = EMPTY_BANK();
+  let any = false;
+  for (const resource of RESOURCES) {
+    const amount = (raw as Record<string, unknown>)[resource];
+    if (amount === undefined) continue;
+    if (!Number.isInteger(amount) || (amount as number) < 0) return null;
+    bag[resource] = amount as number;
+    if ((amount as number) > 0) any = true;
+  }
+  return any ? bag : null;
+}
+
+function canAffordBag(player: HexIslandPlayer, bag: ResourceBank): boolean {
+  return RESOURCES.every((resource) => player.resources[resource] >= bag[resource]);
+}
+
+function transferBag(
+  from: HexIslandPlayer,
+  to: HexIslandPlayer,
+  bag: ResourceBank,
+): void {
+  for (const resource of RESOURCES) {
+    from.resources[resource] -= bag[resource];
+    to.resources[resource] += bag[resource];
+  }
+}
+
+function formatBag(bag: ResourceBank): string {
+  return (
+    RESOURCES.filter((resource) => bag[resource] > 0)
+      .map((resource) => `${bag[resource]}${resource}`)
+      .join("+") || "∅"
+  );
+}
+
+function previewAfterTrade(
+  bank: ResourceBank,
+  give: ResourceBank,
+  take: ResourceBank,
+): ResourceBank {
+  const next = cloneBank(bank);
+  for (const resource of RESOURCES) {
+    next[resource] = next[resource] - give[resource] + take[resource];
+  }
+  return next;
+}
+
+function tradeHelpsBuild(before: ResourceBank, after: ResourceBank): boolean {
+  const costs: Array<Partial<ResourceBank>> = [
+    { wood: 1, brick: 1 },
+    { wood: 1, brick: 1, sheep: 1, wheat: 1 },
+    { wheat: 2, ore: 3 },
+    { sheep: 1, wheat: 1, ore: 1 },
+  ];
+  return costs.some(
+    (cost) => !canPay(before, cost) && Boolean(canPay(after, cost)),
+  );
+}
 
 function playableDevCount(player: HexIslandPlayer, kind: DevCardKind): number {
   const held = player.devCards.filter((card) => card === kind).length;
@@ -602,6 +688,7 @@ export const hexIslandAdapter: PlayKernelAdapter<HexIslandGenre, HexIslandConfig
       freeRoadsRemaining: 0,
       lastAction: null,
       turnPlayer: 0,
+      pendingTrade: null,
     };
   },
 
@@ -671,6 +758,17 @@ export const hexIslandAdapter: PlayKernelAdapter<HexIslandGenre, HexIslandConfig
           payload: { hex: key },
         });
       }
+      return actions;
+    }
+
+    if (phase === "trade_response") {
+      const pending = genre.pendingTrade;
+      if (!pending || playerId !== pending.to) return [];
+      actions.push({
+        type: "accept_trade",
+        label: `Accept ${formatBag(pending.give)}→${formatBag(pending.take)}`,
+      });
+      actions.push({ type: "reject_trade", label: "Reject trade" });
       return actions;
     }
 
@@ -747,51 +845,80 @@ export const hexIslandAdapter: PlayKernelAdapter<HexIslandGenre, HexIslandConfig
       }
     }
 
-    // Simple player trade: only list 1:1 swaps that complete a build/dev cost
-    // the player cannot currently afford (prevents endless circular trading).
+    // Negotiated domestic trade (T014): propose multi-resource bundles that
+    // unlock a build/dev cost the proposer cannot currently afford.
     const needsBuild =
       !canPay(player.resources, { wood: 1, brick: 1 }) ||
       !canPay(player.resources, { wood: 1, brick: 1, sheep: 1, wheat: 1 }) ||
       !canPay(player.resources, { wheat: 2, ore: 3 }) ||
       !canPay(player.resources, { sheep: 1, wheat: 1, ore: 1 });
     if (needsBuild) {
-      let tradeBudget = 6;
+      let tradeBudget = 8;
+      const pushPropose = (
+        seat: number,
+        give: ResourceBank,
+        take: ResourceBank,
+      ) => {
+        if (tradeBudget <= 0) return;
+        if (totalResources(give) < 1 || totalResources(take) < 1) return;
+        if (totalResources(give) > 4 || totalResources(take) > 4) return;
+        const opponent = genre.players[seat];
+        if (!canAffordBag(player, give) || !canAffordBag(opponent, take)) return;
+        const preview = previewAfterTrade(player.resources, give, take);
+        if (!tradeHelpsBuild(player.resources, preview)) return;
+        actions.push({
+          type: "propose_trade",
+          label: `Offer P${seat}: ${formatBag(give)}→${formatBag(take)}`,
+          payload: { withSeat: seat, give: { ...give }, take: { ...take } },
+        });
+        tradeBudget -= 1;
+      };
       for (let seat = 0; seat < genre.playerCount && tradeBudget > 0; seat += 1) {
         if (seat === playerId) continue;
         const opponent = genre.players[seat];
-        for (const give of RESOURCES) {
-          if (tradeBudget <= 0) break;
-          if (player.resources[give] < 1) continue;
-          // Don't give away a resource of which we hold only one copy of a needed cost key.
-          for (const take of RESOURCES) {
-            if (tradeBudget <= 0) break;
-            if (take === give) continue;
-            if (opponent.resources[take] < 1) continue;
-            const preview = addResources(
-              pay(player.resources, { [give]: 1 }) ?? player.resources,
-              { [take]: 1 },
-            );
-            const helps =
-              (!canPay(player.resources, { wood: 1, brick: 1 }) &&
-                canPay(preview, { wood: 1, brick: 1 })) ||
-              (!canPay(player.resources, {
-                wood: 1,
-                brick: 1,
-                sheep: 1,
-                wheat: 1,
-              }) &&
-                canPay(preview, { wood: 1, brick: 1, sheep: 1, wheat: 1 })) ||
-              (!canPay(player.resources, { wheat: 2, ore: 3 }) &&
-                canPay(preview, { wheat: 2, ore: 3 })) ||
-              (!canPay(player.resources, { sheep: 1, wheat: 1, ore: 1 }) &&
-                canPay(preview, { sheep: 1, wheat: 1, ore: 1 }));
-            if (!helps) continue;
-            actions.push({
-              type: "player_trade",
-              label: `Trade 1 ${give} with P${seat} for ${take}`,
-              payload: { give, take, withSeat: seat },
-            });
-            tradeBudget -= 1;
+        for (const giveRes of RESOURCES) {
+          if (player.resources[giveRes] < 1) continue;
+          for (const takeRes of RESOURCES) {
+            if (takeRes === giveRes || opponent.resources[takeRes] < 1) continue;
+            const g = EMPTY_BANK();
+            const tk = EMPTY_BANK();
+            g[giveRes] = 1;
+            tk[takeRes] = 1;
+            pushPropose(seat, g, tk);
+          }
+        }
+        for (let i = 0; i < RESOURCES.length && tradeBudget > 0; i += 1) {
+          for (let j = i + 1; j < RESOURCES.length && tradeBudget > 0; j += 1) {
+            const a = RESOURCES[i]!;
+            const b = RESOURCES[j]!;
+            if (player.resources[a] < 1 || player.resources[b] < 1) continue;
+            for (const takeRes of RESOURCES) {
+              if (opponent.resources[takeRes] < 1) continue;
+              if (takeRes === a || takeRes === b) continue;
+              const g = EMPTY_BANK();
+              const tk = EMPTY_BANK();
+              g[a] = 1;
+              g[b] = 1;
+              tk[takeRes] = 1;
+              pushPropose(seat, g, tk);
+            }
+          }
+        }
+        for (const giveRes of RESOURCES) {
+          if (player.resources[giveRes] < 1) continue;
+          for (let i = 0; i < RESOURCES.length && tradeBudget > 0; i += 1) {
+            for (let j = i + 1; j < RESOURCES.length && tradeBudget > 0; j += 1) {
+              const a = RESOURCES[i]!;
+              const b = RESOURCES[j]!;
+              if (opponent.resources[a] < 1 || opponent.resources[b] < 1) continue;
+              if (giveRes === a || giveRes === b) continue;
+              const g = EMPTY_BANK();
+              const tk = EMPTY_BANK();
+              g[giveRes] = 1;
+              tk[a] = 1;
+              tk[b] = 1;
+              pushPropose(seat, g, tk);
+            }
           }
         }
       }
@@ -938,6 +1065,30 @@ export const hexIslandAdapter: PlayKernelAdapter<HexIslandGenre, HexIslandConfig
     }
 
     // ---- ROBBER ----
+    if (phase === "trade_response") {
+      const pending = genre.pendingTrade;
+      if (!pending || playerId !== pending.to) return null;
+      if (action.type === "reject_trade") {
+        genre.pendingTrade = null;
+        return finish("main", pending.from);
+      }
+      if (action.type === "accept_trade") {
+        const fromPlayer = genre.players[pending.from];
+        const toPlayer = genre.players[pending.to];
+        if (
+          !canAffordBag(fromPlayer, pending.give) ||
+          !canAffordBag(toPlayer, pending.take)
+        ) {
+          return null;
+        }
+        transferBag(fromPlayer, toPlayer, pending.give);
+        transferBag(toPlayer, fromPlayer, pending.take);
+        genre.pendingTrade = null;
+        return finish("main", pending.from);
+      }
+      return null;
+    }
+
     if (phase === "robber") {
       if (action.type === "play_knight") {
         // Knight already moved us here via play_knight → robber; disallow.
@@ -1033,27 +1184,40 @@ export const hexIslandAdapter: PlayKernelAdapter<HexIslandGenre, HexIslandConfig
         return finish("main", playerId);
       }
 
-      if (action.type === "player_trade") {
-        const give = payloadString(action, "give") as Resource | null;
-        const take = payloadString(action, "take") as Resource | null;
+      if (action.type === "propose_trade") {
+        if (genre.pendingTrade) return null;
         const withSeat = payloadNumber(action, "withSeat");
+        const give = parseResourceBag(action.payload, "give");
+        const take = parseResourceBag(action.payload, "take");
         if (
-          !give ||
-          !take ||
           withSeat === null ||
           withSeat === playerId ||
           withSeat < 0 ||
-          withSeat >= genre.playerCount
+          withSeat >= genre.playerCount ||
+          !give ||
+          !take
         ) {
           return null;
         }
+        if (totalResources(give) > 4 || totalResources(take) > 4) return null;
         const opponent = genre.players[withSeat];
-        if (player.resources[give] < 1 || opponent.resources[take] < 1) return null;
-        player.resources[give] -= 1;
-        player.resources[take] += 1;
-        opponent.resources[take] -= 1;
-        opponent.resources[give] += 1;
-        return finish("main", playerId);
+        if (!canAffordBag(player, give) || !canAffordBag(opponent, take)) {
+          return null;
+        }
+        genre.pendingTrade = {
+          from: playerId,
+          to: withSeat as PlayerId,
+          give: cloneBank(give),
+          take: cloneBank(take),
+        };
+        genre.lastAction = "propose_trade";
+        return {
+          genre,
+          phase: "trade_response" as PlayPhaseId,
+          activePlayerId: withSeat as PlayerId,
+          status: "active" as const,
+          winnerId: null,
+        };
       }
 
       if (action.type === "buy_dev") {
@@ -1189,6 +1353,7 @@ export function hexIslandToSessionFields(state: PlayState<HexIslandGenre>): {
     freeRoadsRemaining: number;
     lastAction: string | null;
     turnPlayer: PlayerId;
+    pendingTrade: PendingTrade | null;
   };
 } {
   const scores = state.genre.players.map((_, seat) =>
@@ -1224,6 +1389,14 @@ export function hexIslandToSessionFields(state: PlayState<HexIslandGenre>): {
       freeRoadsRemaining: state.genre.freeRoadsRemaining,
       lastAction: state.genre.lastAction,
       turnPlayer: state.genre.turnPlayer,
+      pendingTrade: state.genre.pendingTrade
+        ? {
+            from: state.genre.pendingTrade.from,
+            to: state.genre.pendingTrade.to,
+            give: cloneBank(state.genre.pendingTrade.give),
+            take: cloneBank(state.genre.pendingTrade.take),
+          }
+        : null,
     },
   };
 }
@@ -1271,8 +1444,12 @@ function botActionWeight(action: LegalAction): number {
       return 50;
     case "bank_trade":
       return 25;
-    case "player_trade":
-      return 20;
+    case "propose_trade":
+      return 22;
+    case "accept_trade":
+      return 60;
+    case "reject_trade":
+      return 15;
     case "roll_dice":
     case "discard":
     case "move_robber":

@@ -1084,6 +1084,12 @@ export interface SessionState {
     freeRoadsRemaining: number;
     lastAction: string | null;
     turnPlayer: number;
+    pendingTrade: {
+      from: number;
+      to: number;
+      give: Record<string, number>;
+      take: Record<string, number>;
+    } | null;
   };
   /** Present when the build kernel is network-route-v1 (line network). */
   networkRoute?: {

@@ -204,6 +204,7 @@ function phaseLabel(phase: string, locale: RoomLocale): string {
     discard: { zh: "弃牌", en: "Discard" },
     robber: { zh: "移动雾灯", en: "Fog lantern" },
     main: { zh: "建造/贸易", en: "Build / trade" },
+    trade_response: { zh: "回应交易", en: "Trade response" },
     ended: { zh: "结束", en: "Ended" },
   };
   return map[phase]?.[locale] ?? phase;
@@ -243,12 +244,23 @@ function shortLabelForAction(
       const ratio = Number(action.payload?.ratio ?? 4);
       return `${copy.bankTrade} ${ratio}${resourceLabel[give] ?? give}→${resourceLabel[take] ?? take}`;
     }
-    case "player_trade": {
-      const give = String(action.payload?.give ?? "") as Resource;
-      const take = String(action.payload?.take ?? "") as Resource;
+    case "propose_trade": {
+      const give = action.payload?.give as Record<string, number> | undefined;
+      const take = action.payload?.take as Record<string, number> | undefined;
       const withSeat = action.payload?.withSeat;
-      return `${copy.playerTrade} 1${resourceLabel[give] ?? give}↔P${withSeat} ${resourceLabel[take] ?? take}`;
+      const fmt = (bag?: Record<string, number>) =>
+        bag
+          ? Object.entries(bag)
+              .filter(([, n]) => (n as number) > 0)
+              .map(([r, n]) => `${n}${resourceLabel[r as Resource] ?? r}`)
+              .join("+")
+          : "?";
+      return `${copy.playerTrade}→P${withSeat} ${fmt(give)}↔${fmt(take)}`;
     }
+    case "accept_trade":
+      return copy.playerTrade + " ✓";
+    case "reject_trade":
+      return copy.playerTrade + " ✗";
     default:
       return action.label;
   }
@@ -274,7 +286,9 @@ export function formatLastAction(
     play_road_building: copy.playRoadBuilding,
     discard: copy.discard,
     bank_trade: copy.bankTrade,
-    player_trade: copy.playerTrade,
+    propose_trade: copy.playerTrade,
+    accept_trade: copy.playerTrade,
+    reject_trade: copy.playerTrade,
   };
   return map[lastAction] ?? copy.noLast;
 }

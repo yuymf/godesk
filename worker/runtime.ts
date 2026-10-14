@@ -2184,5 +2184,13 @@ function sessionHexIslandToGenre(hexIsland: NonNullable<import("../src/creator/p
     freeRoadsRemaining: hexIsland.freeRoadsRemaining,
     lastAction: hexIsland.lastAction,
     turnPlayer: hexIsland.turnPlayer,
+    pendingTrade: hexIsland.pendingTrade
+      ? {
+          from: hexIsland.pendingTrade.from,
+          to: hexIsland.pendingTrade.to,
+          give: { ...(hexIsland.pendingTrade.give as HexIslandPlayer["resources"]) },
+          take: { ...(hexIsland.pendingTrade.take as HexIslandPlayer["resources"]) },
+        }
+      : null,
   };
 }
