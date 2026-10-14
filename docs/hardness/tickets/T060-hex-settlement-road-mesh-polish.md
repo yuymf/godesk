@@ -5,7 +5,7 @@
 | 回归靶 | H01 after stage-close ≥2 settle+≥2 road 形态可读；unit；无 pack 特例 |
 | 层 | **共享呈现**（hex piece kit） |
 | 状态 | **关** |
-| tip | pending |
+| tip | `388fa52` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t060/` |
 
 ## 问题
