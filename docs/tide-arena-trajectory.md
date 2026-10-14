@@ -255,3 +255,11 @@ auto-battler 为通用商店/备战/战斗/升星；潮阵仅为默认 content+t
 
 presentation-floor 美术底线：机位（棋盘约占宽 ~55–60%）、单位尺度、卡面对比；不达标保持草稿并写明条款。赛博冷启动可过闸；故意不合格 prompt 卡草稿。
 证据（仓外）：`/workspace/g3d-evidence/godesk-2026-10-13/tide-arena/trajectory/quality-gate/`。
+
+
+---
+
+# 硬度验收（2026-10-14）
+
+管线硬度规格与套件已立档：[`docs/hardness/ACCEPTANCE.md`](./hardness/ACCEPTANCE.md)、索引 [`docs/hardness/README.md`](./hardness/README.md)。
+基线/套件证据在仓外 `/workspace/g3d-evidence/godesk-2026-10-14/hardness/`（不进仓）。升级对象仍是 GoDesk 插件管线，不抛光潮阵/赛博样例。

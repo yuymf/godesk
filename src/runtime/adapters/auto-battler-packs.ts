@@ -82,11 +82,32 @@ export const AUTO_BATTLER_PACKS: readonly AutoBattlerPack[] = [
 /** Default pack when mechanic matches but no pack cue hits. */
 export const DEFAULT_AUTO_BATTLER_PACK = AUTO_BATTLER_PACKS.find((p) => p.id === "tide")!;
 
-/** Pick the first pack whose cues match; otherwise the tide default. */
+/** Negation near a cue hit — "非赛博机甲" / "不得使用…赛博机甲默认名" must not select cyber. */
+const CUE_NEGATION_NEAR = /(?:非|不是|不要|别用|禁止|不得(?:使用)?|勿|别|不含|排除)/;
+
+function cueMatchIsPositive(idea: string, cues: RegExp): boolean {
+  const flags = cues.flags.includes("g") ? cues.flags : `${cues.flags}g`;
+  const re = new RegExp(cues.source, flags);
+  re.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(idea))) {
+    // Short window: 「非赛博机甲」when the hit is 机甲.
+    const near = idea.slice(Math.max(0, m.index - 8), m.index);
+    if (CUE_NEGATION_NEAR.test(near)) continue;
+    // Sentence window: 「不得使用潮阵默认名…或赛博机甲默认名」—不得 is far but same sentence.
+    const sentStart = Math.max(idea.lastIndexOf("。", m.index) + 1, idea.lastIndexOf("\n", m.index) + 1, 0);
+    const sentenceBefore = idea.slice(sentStart, m.index);
+    if (CUE_NEGATION_NEAR.test(sentenceBefore)) continue;
+    return true;
+  }
+  return false;
+}
+
+/** Pick the first pack whose cues match positively; otherwise the tide default. */
 export function resolveAutoBattlerPack(idea: string): AutoBattlerPack {
-  const hit = AUTO_BATTLER_PACKS.find((p) => p.id !== "tide" && p.cues.test(idea));
+  const hit = AUTO_BATTLER_PACKS.find((p) => p.id !== "tide" && cueMatchIsPositive(idea, p.cues));
   if (hit) return hit;
-  if (DEFAULT_AUTO_BATTLER_PACK.cues.test(idea)) return DEFAULT_AUTO_BATTLER_PACK;
+  if (cueMatchIsPositive(idea, DEFAULT_AUTO_BATTLER_PACK.cues)) return DEFAULT_AUTO_BATTLER_PACK;
   return DEFAULT_AUTO_BATTLER_PACK;
 }
 

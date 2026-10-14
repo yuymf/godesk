@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RuleSystem } from "../src/creator/project-contract";
-import { createKernelTuningIterationPlan } from "./kernel-tuning-iteration";
+import { createKernelTuningIterationPlan, parseKernelEdits } from "./kernel-tuning-iteration";
 
 function withKernel(kernel: unknown): RuleSystem {
   return {
@@ -34,6 +34,17 @@ describe("createKernelTuningIterationPlan", () => {
     const p = plan(battler(), "初始血量改成40，初始金币改成15")!;
     expect(p.operations[1]).toMatchObject({ config: { tuning: { startHp: 40, startGold: 15 } } });
   });
+
+  it("does not treat lose-condition HP 0 as startHp (hardness H01)", () => {
+    const book = "做一款两人自走棋。初始生命 30。一方生命降至 0 或以下则战败。终局时 HP 地板为 0。";
+    const p = plan(battler(), book)!;
+    expect(p.operations[1]).toMatchObject({ config: { tuning: { startHp: 30 } } });
+    // Defeat clauses must not throw KernelTuningRangeError / iteration_unsupported.
+    expect(() => plan(battler(), "一方生命降至 0 或以下则淘汰")).not.toThrow();
+    const loseOnly = parseKernelEdits({ type: "auto-battler-v1", playerCount: 2 } as never, "一方生命降至 0 或以下则淘汰");
+    expect(loseOnly?.tuning.startHp).toBeUndefined();
+  });
+
   it("rejects out-of-range values with a readable reason", () => {
     expect(() => plan(battler(), "备战限时3秒")).toThrow(/iteration_unsupported/);
   });

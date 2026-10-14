@@ -25,4 +25,16 @@ describe("auto-battler packs", () => {
   it("defaults to tide pack when no genre cue", () => {
     expect(resolveAutoBattlerPack("做一款两人自走棋，商店买棋上阵自动打架").id).toBe("tide");
   });
+
+  it("ignores negated cyber/tide cues (hardness T002)", () => {
+    const pack = resolveAutoBattlerPack("奇幻佣兵自走棋（非潮汐、非赛博机甲）。商店买棋上阵自动打架");
+    const distant = resolveAutoBattlerPack("单位名不得使用潮阵默认名（礁蟹）或赛博机甲默认名（钻头机兵）。做两人自走棋商店买棋上阵");
+    expect(distant.id).not.toBe("cyber");
+    expect(pack.id).not.toBe("cyber");
+    // No positive tide cue either → default tide pack id, but must not be cyber.
+    expect(pack.id).toBe("tide");
+    const positive = resolveAutoBattlerPack("做一款赛博机甲自走棋，两人商店买棋上阵自动打架");
+    expect(positive.id).toBe("cyber");
+  });
+
 });
