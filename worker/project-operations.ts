@@ -603,6 +603,9 @@ function configureDedicatedKernel(
         { id: "play_painting", label: "打出画作并选拍卖方式", description: "拍卖官从手牌打出一张画作，并指定公开加价 / 一次暗标 / 定价购买。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
         { id: "bid", label: "出价", description: "公开加价时报出更高价。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
         { id: "pass", label: "放弃", description: "公开加价时放弃；已有出价则落槌。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "floor_raise", label: "实时场加价", description: "对多标的实时拍卖场中的某一拍品报出更高价。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "floor_pass", label: "实时场放弃", description: "对某一在拍标的放弃；齐后落槌或流拍。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "set_broker_terms", label: "约定经纪分成", description: "卖家为在拍标的指定经纪席与分成比例（超出固定次高 award-cut）。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
         { id: "sealed_bid", label: "暗标出价", description: "一次暗标提交密封出价。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
         { id: "buy_fixed", label: "定价购买", description: "按拍卖官标价买入。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
         { id: "sell", label: "行情卖出", description: "按画家行情价将藏品卖给银行。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
@@ -623,6 +626,7 @@ function configureDedicatedKernel(
         ? [
             { id: "offer", name: "拍卖官出牌" },
             { id: "bidding", name: "公开加价" },
+            { id: "live_floor", name: "实时多拍场" },
             { id: "sealed", name: "一次暗标" },
             { id: "fixed", name: "定价购买" },
             { id: "market", name: "行情卖出" },

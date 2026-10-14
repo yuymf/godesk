@@ -18,6 +18,18 @@ import {
   type PlayState,
   type PlayerId,
 } from "../play-kernel";
+import {
+  createLiveFloorLot,
+  passOnLiveLot,
+  raiseOnLiveLot,
+  setLiveLotBrokerTerms,
+  suggestRaiseAmounts,
+  type LiveFloorLot,
+} from "../auction-floor";
+import {
+  splitBrokerageAward,
+  splitNegotiatedBrokerage,
+} from "../brokerage";
 
 export const AUCTION_BIDDING_KERNEL_TYPE = "auction-bidding-v1" as const;
 
@@ -68,6 +80,12 @@ export type GalleryAuctionContent = {
   brokerageEnabled: boolean;
   /** Basis points of winning price to second place (1000 = 10%). */
   brokerSecondCutBps: number;
+  /** T024: concurrent open lots on a live floor (realtime multi-lot). */
+  liveMultiLotFloor: boolean;
+  /** Cap concurrent live floor lots. */
+  maxLiveLots: number;
+  /** T024: explicit per-deal broker seat+cut beyond fixed award-cut. */
+  negotiatedBrokerage: boolean;
 };
 
 export type GalleryAuctionState = {
@@ -104,6 +122,10 @@ export type GalleryAuctionState = {
   brokerageEnabled: boolean;
   brokerSecondCutBps: number;
   lastBroker: { seat: number; cut: number } | null;
+  liveMultiLotFloor: boolean;
+  maxLiveLots: number;
+  negotiatedBrokerage: boolean;
+  activeFloorLots: Array<LiveFloorLot<GalleryPaintingInstance>>;
 };
 
 type AuctionBiddingConfig = {
@@ -259,6 +281,10 @@ export function defaultGalleryContent(
     brokerageEnabled:
       overrides?.brokerageEnabled ?? seats >= 3,
     brokerSecondCutBps: overrides?.brokerSecondCutBps ?? 1000,
+    liveMultiLotFloor: overrides?.liveMultiLotFloor ?? true,
+    maxLiveLots: overrides?.maxLiveLots ?? 2,
+    negotiatedBrokerage:
+      overrides?.negotiatedBrokerage ?? seats >= 3,
   };
 }
 
@@ -298,7 +324,7 @@ export function parseGalleryTuningFromIdea(
 
 export function galleryAuctionUnsupportedNotes(): string[] {
   return [
-    "auction-bidding-v1 gallery subset: 2–5 seats, open/sealed/fixed/double + market sell + refill; simultaneous sealed commits (off-turn) + multi-party brokerage (second-place cut when >=3 seats); live negotiated multi-lot brokerage beyond award cut remains out of scope.",
+    "auction-bidding-v1 gallery subset: 2–5 seats, open/sealed/fixed/double + market sell + refill; simultaneous sealed commits (off-turn) + second-place award-cut brokerage; live multi-lot open floor + negotiated per-deal broker cut (T024).",
   ];
 }
 
@@ -375,6 +401,14 @@ function cloneGallery(g: GalleryAuctionState): GalleryAuctionState {
     brokerageEnabled: g.brokerageEnabled ?? false,
     brokerSecondCutBps: g.brokerSecondCutBps ?? 1000,
     lastBroker: g.lastBroker ? { ...g.lastBroker } : null,
+    liveMultiLotFloor: g.liveMultiLotFloor ?? true,
+    maxLiveLots: g.maxLiveLots ?? 2,
+    negotiatedBrokerage: g.negotiatedBrokerage ?? false,
+    activeFloorLots: (g.activeFloorLots ?? []).map((lot) => ({
+      ...lot,
+      passedSinceRaise: [...lot.passedSinceRaise],
+      payload: { ...lot.payload },
+    })),
   };
 }
 
@@ -543,24 +577,21 @@ function galleryAwardLot(
   const lot = g.currentLot!;
   const companion = g.companionLot;
   genre.chips[winner]! -= price;
-  // Seller (auctioneer) receives the price; optional second-place brokerage cut.
-  let toSeller = price;
   g.lastBroker = null;
-  if (
-    g.brokerageEnabled &&
-    g.playerCount >= 3 &&
-    secondSeat !== null &&
-    secondSeat !== winner &&
-    secondSeat !== g.auctioneer
-  ) {
-    const cut = Math.floor((price * g.brokerSecondCutBps) / 10000);
-    if (cut > 0 && cut < price) {
-      genre.chips[secondSeat]! += cut;
-      toSeller -= cut;
-      g.lastBroker = { seat: secondSeat, cut };
-    }
+  const split = splitBrokerageAward({
+    price,
+    seller: g.auctioneer,
+    winner,
+    second: secondSeat,
+    enabled: g.brokerageEnabled,
+    cutBps: g.brokerSecondCutBps,
+    playerCount: g.playerCount,
+  });
+  if (split.brokerSeat !== null && split.toBroker > 0) {
+    genre.chips[split.brokerSeat]! += split.toBroker;
+    g.lastBroker = { seat: split.brokerSeat, cut: split.toBroker };
   }
-  genre.chips[g.auctioneer]! += toSeller;
+  genre.chips[g.auctioneer]! += split.toSeller;
   genre.scores[winner]! += companion ? 2 : 1;
   genre.awardedTo = winner;
   genre.highBidder = winner;
@@ -614,6 +645,123 @@ function galleryUnsold(
     g.companionLot = null;
   }
   genre.awardedTo = null;
+  g.auctioneer = ((g.auctioneer + 1) % g.playerCount) as PlayerId;
+  return { ...ensureOfferReady(genre, actor), endReason: "lot_unsold" };
+}
+
+
+function pushRemainingFloorLotsToDeck(g: GalleryAuctionState): void {
+  for (const lot of g.activeFloorLots) {
+    g.deck.push(lot.payload);
+  }
+  g.activeFloorLots = [];
+}
+
+function galleryAwardFloorLot(
+  genre: AuctionBiddingGenre,
+  floorLot: LiveFloorLot<GalleryPaintingInstance>,
+  winner: PlayerId,
+  price: number,
+): {
+  genre: AuctionBiddingGenre;
+  phase: PlayPhaseId;
+  activePlayerId: PlayerId;
+  endReason: string;
+  status?: "active" | "complete";
+  winnerId?: PlayerId | null;
+} {
+  const g = genre.gallery!;
+  const lot = floorLot.payload;
+  genre.chips[winner]! -= price;
+  g.lastBroker = null;
+  let split;
+  if (
+    g.negotiatedBrokerage &&
+    floorLot.brokerSeat !== null &&
+    floorLot.brokerCutBps > 0
+  ) {
+    split = splitNegotiatedBrokerage({
+      price,
+      seller: floorLot.seller,
+      winner,
+      brokerSeat: floorLot.brokerSeat,
+      cutBps: floorLot.brokerCutBps,
+    });
+  } else {
+    split = splitBrokerageAward({
+      price,
+      seller: floorLot.seller,
+      winner,
+      second: null,
+      enabled: g.brokerageEnabled,
+      cutBps: g.brokerSecondCutBps,
+      playerCount: g.playerCount,
+    });
+  }
+  if (split.brokerSeat !== null && split.toBroker > 0) {
+    genre.chips[split.brokerSeat]! += split.toBroker;
+    g.lastBroker = { seat: split.brokerSeat, cut: split.toBroker };
+  }
+  genre.chips[floorLot.seller]! += split.toSeller;
+  genre.scores[winner]! += 1;
+  genre.awardedTo = winner;
+  genre.highBidder = winner;
+  genre.currentBid = price;
+  g.collection[winner]!.push(lot);
+  g.roundSales[lot.artistId] = (g.roundSales[lot.artistId] ?? 0) + 1;
+  g.activeFloorLots = g.activeFloorLots.filter((l) => l.lotId !== floorLot.lotId);
+  g.currentLot = null;
+  g.companionLot = null;
+  const sales = g.roundSales[lot.artistId] ?? 0;
+  if (sales >= g.salesToEndRound) {
+    pushRemainingFloorLotsToDeck(g);
+    applyGalleryMarketLadder(g);
+    g.marketPasses = 0;
+    g.lastSold = null;
+    return {
+      genre,
+      phase: "market",
+      activePlayerId: 0 as PlayerId,
+      endReason: "round_market",
+      status: "active",
+      winnerId: null,
+    };
+  }
+  if (g.activeFloorLots.length > 0) {
+    return {
+      genre,
+      phase: "live_floor",
+      activePlayerId: g.auctioneer,
+      endReason: "lot_awarded",
+      status: "active",
+      winnerId: null,
+    };
+  }
+  g.auctioneer = ((g.auctioneer + 1) % g.playerCount) as PlayerId;
+  return { ...ensureOfferReady(genre, winner), endReason: "lot_awarded" };
+}
+
+function galleryUnsoldFloorLot(
+  genre: AuctionBiddingGenre,
+  floorLot: LiveFloorLot<GalleryPaintingInstance>,
+  actor: PlayerId,
+) {
+  const g = genre.gallery!;
+  g.deck.push(floorLot.payload);
+  g.activeFloorLots = g.activeFloorLots.filter((l) => l.lotId !== floorLot.lotId);
+  g.currentLot = null;
+  g.companionLot = null;
+  genre.awardedTo = null;
+  if (g.activeFloorLots.length > 0) {
+    return {
+      genre,
+      phase: "live_floor" as PlayPhaseId,
+      activePlayerId: g.auctioneer,
+      endReason: "lot_unsold",
+      status: "active" as const,
+      winnerId: null as PlayerId | null,
+    };
+  }
   g.auctioneer = ((g.auctioneer + 1) % g.playerCount) as PlayerId;
   return { ...ensureOfferReady(genre, actor), endReason: "lot_unsold" };
 }
@@ -684,6 +832,16 @@ function parseAuctionBiddingConfig(
             : (typeof raw.playerCount === "number" ? raw.playerCount >= 3 : false),
         brokerSecondCutBps:
           typeof c.brokerSecondCutBps === "number" ? c.brokerSecondCutBps : 1000,
+        liveMultiLotFloor:
+          typeof c.liveMultiLotFloor === "boolean" ? c.liveMultiLotFloor : true,
+        maxLiveLots:
+          typeof c.maxLiveLots === "number"
+            ? Math.max(1, Math.min(4, c.maxLiveLots))
+            : 2,
+        negotiatedBrokerage:
+          typeof c.negotiatedBrokerage === "boolean"
+            ? c.negotiatedBrokerage
+            : (typeof raw.playerCount === "number" ? raw.playerCount >= 3 : false),
       };
     }
   }
@@ -749,6 +907,7 @@ export function createAuctionBiddingKernelConfig(input?: {
     phases: [
       { id: "offer", name: "Offer" },
       { id: "bidding", name: "Bidding" },
+      { id: "live_floor", name: "Live multi-lot floor" },
       { id: "sealed", name: "Sealed" },
       { id: "fixed", name: "Fixed" },
       { id: "market", name: "Market" },
@@ -809,6 +968,11 @@ function createGalleryState(
     brokerageEnabled: content.brokerageEnabled ?? playerCount >= 3,
     brokerSecondCutBps: content.brokerSecondCutBps ?? 1000,
     lastBroker: null,
+    liveMultiLotFloor: content.liveMultiLotFloor ?? true,
+    maxLiveLots: content.maxLiveLots ?? 2,
+    negotiatedBrokerage:
+      content.negotiatedBrokerage ?? playerCount >= 3,
+    activeFloorLots: [],
   };
 }
 
@@ -820,7 +984,18 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
   parseConfig: parseAuctionBiddingConfig,
   allowsOffTurnAction(state, action) {
     const g = state.genre.gallery;
-    if (!g?.simultaneousSealed || state.phase !== "sealed") return false;
+    if (!g) return false;
+    if (
+      g.liveMultiLotFloor &&
+      state.phase === "live_floor" &&
+      (action.type === "floor_raise" ||
+        action.type === "floor_pass" ||
+        action.type === "set_broker_terms" ||
+        action.type === "play_painting")
+    ) {
+      return true;
+    }
+    if (!g.simultaneousSealed || state.phase !== "sealed") return false;
     if (action.type !== "sealed_bid" && action.type !== "sealed_pass") {
       return false;
     }
@@ -905,7 +1080,13 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
           // harbor stays sequential by default; gallery drives T020
           false,
       );
-    if (!simultaneousSealed && playerId !== state.activePlayerId) {
+    const liveFloorOffTurn =
+      Boolean(gallery?.liveMultiLotFloor && state.phase === "live_floor");
+    if (
+      !simultaneousSealed &&
+      !liveFloorOffTurn &&
+      playerId !== state.activePlayerId
+    ) {
       return [];
     }
     const legal: LegalAction[] = [];
@@ -1016,6 +1197,63 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
         }
         return [];
       }
+      if (state.phase === "live_floor") {
+        for (const lot of gallery.activeFloorLots) {
+          if (playerId !== lot.seller) {
+            for (const amount of suggestRaiseAmounts(
+              lot,
+              state.genre.chips[playerId]!,
+            )) {
+              legal.push({
+                type: "floor_raise",
+                label: `加价 ${lot.payload.name} → ${amount}`,
+                payload: { lotId: lot.lotId, amount },
+              });
+            }
+          }
+          if (!lot.passedSinceRaise[playerId]) {
+            legal.push({
+              type: "floor_pass",
+              label: `过 ${lot.payload.name}`,
+              payload: { lotId: lot.lotId },
+            });
+          }
+          if (
+            gallery.negotiatedBrokerage &&
+            playerId === lot.seller &&
+            lot.highBidder === null
+          ) {
+            for (let s = 0; s < gallery.playerCount; s += 1) {
+              if (s === lot.seller) continue;
+              for (const bps of [1000, 1500, 2000]) {
+                legal.push({
+                  type: "set_broker_terms",
+                  label: `经纪席${s} · ${bps / 100}%`,
+                  payload: {
+                    lotId: lot.lotId,
+                    brokerSeat: s,
+                    cutBps: bps,
+                  },
+                });
+              }
+            }
+          }
+        }
+        if (
+          playerId === gallery.auctioneer &&
+          gallery.activeFloorLots.length < gallery.maxLiveLots
+        ) {
+          const hand = gallery.auctionHand[playerId]!;
+          for (const p of hand) {
+            legal.push({
+              type: "play_painting",
+              label: `再拍 ${p.name} · live`,
+              payload: { instanceId: p.instanceId, mode: "open" },
+            });
+          }
+        }
+        return legal;
+      }
       if (state.phase === "bidding") {
         legal.push({ type: "pass", label: "Pass" });
         const minBid = state.genre.currentBid + 1;
@@ -1080,7 +1318,18 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
       state.phase === "sealed" &&
       (action.type === "sealed_bid" || action.type === "sealed_pass") &&
       g0!.sealedBids[action.playerId] === null;
-    if (action.playerId !== state.activePlayerId && !offTurnSealed) {
+    const offTurnLive =
+      Boolean(g0?.liveMultiLotFloor) &&
+      state.phase === "live_floor" &&
+      (action.type === "floor_raise" ||
+        action.type === "floor_pass" ||
+        action.type === "set_broker_terms" ||
+        action.type === "play_painting");
+    if (
+      action.playerId !== state.activePlayerId &&
+      !offTurnSealed &&
+      !offTurnLive
+    ) {
       return null;
     }
 
@@ -1174,7 +1423,41 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
             winnerId: null,
           };
         }
-        // open
+        // open — T024 live multi-lot floor when enabled
+        if (g.liveMultiLotFloor) {
+          const brokerSeat =
+            typeof action.payload?.brokerSeat === "number"
+              ? (action.payload.brokerSeat as number)
+              : g.negotiatedBrokerage
+                ? (((g.auctioneer + 1) % n) as number)
+                : null;
+          const cutBps =
+            typeof action.payload?.cutBps === "number"
+              ? (action.payload.cutBps as number)
+              : g.negotiatedBrokerage
+                ? 1500
+                : 0;
+          const floorLot = createLiveFloorLot({
+            lotId: lot.instanceId,
+            seller: g.auctioneer,
+            reserve: lot.reserve,
+            playerCount: n,
+            payload: lot,
+            brokerSeat:
+              brokerSeat === g.auctioneer ? null : brokerSeat,
+            brokerCutBps: cutBps,
+          });
+          g.activeFloorLots.push(floorLot);
+          g.currentLot = lot;
+          genre.currentBid = floorLot.currentBid;
+          return {
+            genre,
+            phase: "live_floor" as PlayPhaseId,
+            activePlayerId: nextSeat,
+            status: "active" as const,
+            winnerId: null,
+          };
+        }
         genre.currentBid = Math.max(0, lot.reserve - 1);
         return {
           genre,
@@ -1367,6 +1650,155 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
             ...u,
             status: u.status ?? "active",
             winnerId: u.winnerId ?? null,
+            passed: true,
+          };
+        }
+        return null;
+      }
+
+      if (state.phase === "live_floor") {
+        const n = g.playerCount;
+        if (action.type === "play_painting") {
+          if (action.playerId !== g.auctioneer) return null;
+          if (g.activeFloorLots.length >= g.maxLiveLots) return null;
+          const id = action.payload?.instanceId;
+          if (typeof id !== "string") return null;
+          const mode = action.payload?.mode;
+          if (mode !== undefined && mode !== "open") return null;
+          const hand = g.auctionHand[action.playerId]!;
+          const idx = hand.findIndex((p) => p.instanceId === id);
+          if (idx < 0) return null;
+          const lot = hand.splice(idx, 1)[0]!;
+          const brokerSeat =
+            typeof action.payload?.brokerSeat === "number"
+              ? (action.payload.brokerSeat as number)
+              : g.negotiatedBrokerage
+                ? (((g.auctioneer + 1) % n) as number)
+                : null;
+          const cutBps =
+            typeof action.payload?.cutBps === "number"
+              ? (action.payload.cutBps as number)
+              : g.negotiatedBrokerage
+                ? 1500
+                : 0;
+          const floorLot = createLiveFloorLot({
+            lotId: lot.instanceId,
+            seller: g.auctioneer,
+            reserve: lot.reserve,
+            playerCount: n,
+            payload: lot,
+            brokerSeat:
+              brokerSeat === g.auctioneer ? null : brokerSeat,
+            brokerCutBps: cutBps,
+          });
+          g.activeFloorLots.push(floorLot);
+          g.currentLot = lot;
+          g.currentMode = "open";
+          genre.lotId = lot.id;
+          return {
+            genre,
+            phase: "live_floor" as PlayPhaseId,
+            activePlayerId: state.activePlayerId,
+            status: "active" as const,
+            winnerId: null,
+          };
+        }
+        if (action.type === "set_broker_terms") {
+          const lotId = action.payload?.lotId;
+          if (typeof lotId !== "string") return null;
+          const floorLot = g.activeFloorLots.find((l) => l.lotId === lotId);
+          if (!floorLot) return null;
+          if (action.playerId !== floorLot.seller) return null;
+          const brokerSeatRaw = action.payload?.brokerSeat;
+          const brokerSeat =
+            brokerSeatRaw === null || brokerSeatRaw === undefined
+              ? null
+              : (brokerSeatRaw as number);
+          const cutBps = action.payload?.cutBps;
+          if (!Number.isSafeInteger(cutBps)) return null;
+          if (
+            !setLiveLotBrokerTerms(
+              floorLot,
+              typeof brokerSeat === "number" ? brokerSeat : null,
+              cutBps as number,
+              n,
+            )
+          ) {
+            return null;
+          }
+          return {
+            genre,
+            phase: "live_floor" as PlayPhaseId,
+            activePlayerId: state.activePlayerId,
+            status: "active" as const,
+            winnerId: null,
+          };
+        }
+        if (action.type === "floor_raise") {
+          const lotId = action.payload?.lotId;
+          const amount = action.payload?.amount;
+          if (typeof lotId !== "string" || !Number.isSafeInteger(amount)) {
+            return null;
+          }
+          const floorLot = g.activeFloorLots.find((l) => l.lotId === lotId);
+          if (!floorLot) return null;
+          if (
+            !raiseOnLiveLot(
+              floorLot,
+              action.playerId,
+              amount as number,
+              genre.chips[action.playerId]!,
+            )
+          ) {
+            return null;
+          }
+          genre.currentBid = floorLot.currentBid;
+          genre.highBidder = floorLot.highBidder;
+          const next = ((action.playerId + 1) % n) as PlayerId;
+          return {
+            genre,
+            phase: "live_floor" as PlayPhaseId,
+            activePlayerId: next,
+            status: "active" as const,
+            winnerId: null,
+          };
+        }
+        if (action.type === "floor_pass") {
+          const lotId = action.payload?.lotId;
+          if (typeof lotId !== "string") return null;
+          const floorLot = g.activeFloorLots.find((l) => l.lotId === lotId);
+          if (!floorLot) return null;
+          const settle = passOnLiveLot(floorLot, action.playerId, n);
+          if (settle === "award") {
+            const awarded = galleryAwardFloorLot(
+              genre,
+              floorLot,
+              floorLot.highBidder as PlayerId,
+              floorLot.currentBid,
+            );
+            return {
+              ...awarded,
+              status: awarded.status ?? "active",
+              winnerId: awarded.winnerId ?? null,
+              passed: true,
+            };
+          }
+          if (settle === "unsold") {
+            const u = galleryUnsoldFloorLot(genre, floorLot, action.playerId);
+            return {
+              ...u,
+              status: u.status ?? "active",
+              winnerId: u.winnerId ?? null,
+              passed: true,
+            };
+          }
+          const next = ((action.playerId + 1) % n) as PlayerId;
+          return {
+            genre,
+            phase: "live_floor" as PlayPhaseId,
+            activePlayerId: next,
+            status: "active" as const,
+            winnerId: null,
             passed: true,
           };
         }
@@ -1763,6 +2195,54 @@ export function pickAuctionBiddingBotAction(
         return { type: skip.type, playerId: state.activePlayerId };
       }
     }
+    if (state.phase === "live_floor") {
+      const raises = legal.filter((a) => a.type === "floor_raise");
+      const passes = legal.filter((a) => a.type === "floor_pass");
+      const adds = legal.filter((a) => a.type === "play_painting");
+      // Prefer settling existing lots over opening more / tweaking broker terms.
+      if (raises.length && rng.at(state.sequence + 7) % 5 !== 0) {
+        const choice = raises[rng.at(state.sequence + 8) % raises.length]!;
+        return {
+          type: choice.type,
+          playerId: state.activePlayerId,
+          payload: { ...choice.payload },
+        };
+      }
+      if (passes.length) {
+        const choice = passes[rng.at(state.sequence + 9) % passes.length]!;
+        return {
+          type: choice.type,
+          playerId: state.activePlayerId,
+          payload: { ...choice.payload },
+        };
+      }
+      if (adds.length && rng.at(state.sequence + 10) % 4 === 0) {
+        const choice = adds[0]!;
+        return {
+          type: choice.type,
+          playerId: state.activePlayerId,
+          payload: { ...choice.payload },
+        };
+      }
+      if (passes.length === 0 && raises.length === 0 && adds.length) {
+        const choice = adds[0]!;
+        return {
+          type: choice.type,
+          playerId: state.activePlayerId,
+          payload: { ...choice.payload },
+        };
+      }
+      // Avoid set_broker_terms spam — fall through only if nothing else.
+      const nonBroker = legal.filter((a) => a.type !== "set_broker_terms");
+      if (nonBroker.length) {
+        const choice = nonBroker[rng.at(state.sequence + 11) % nonBroker.length]!;
+        return {
+          type: choice.type,
+          playerId: state.activePlayerId,
+          ...(choice.payload ? { payload: { ...choice.payload } } : {}),
+        };
+      }
+    }
     if (state.phase === "fixed") {
       const buy = legal.find(
         (a) => a.type === "buy_fixed" || a.type === "buy_own",
@@ -1834,7 +2314,7 @@ export function autoPlayAuctionBiddingGame(
   const actions: PlayAction[] = [];
   const gallery = Boolean(config.adapter?.gallery);
   const harbor = Boolean(config.adapter?.harbor);
-  const max = gallery ? 400 : harbor ? 200 : 44;
+  const max = gallery ? 700 : harbor ? 200 : 44;
   while (state.status === "active" && actions.length < max) {
     const action = pickAuctionBiddingBotAction(state, seed, config);
     const result = applyAction(auctionBiddingAdapter, state, action, config);

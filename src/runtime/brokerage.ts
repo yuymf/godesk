@@ -1,7 +1,8 @@
 /**
- * Shared multi-party brokerage helpers (T020 / T023).
- * Generic award-cut: winner pays `price`; optional second seat takes a cut;
- * remainder goes to seller. No sample IP special-cases.
+ * Shared multi-party brokerage helpers (T020 / T023 / T024).
+ * - award-cut: second seat takes fixed bps of winning price
+ * - negotiated: explicit broker seat + per-deal cut (beyond fixed award-cut)
+ * No sample IP special-cases.
  */
 
 export type BrokerageSplit = {
@@ -35,6 +36,35 @@ export function splitBrokerageAward(input: {
     return { toSeller: price, toBroker: 0, brokerSeat: null };
   }
   return { toSeller: price - cut, toBroker: cut, brokerSeat: input.second };
+}
+
+/**
+ * Beyond fixed second-place award-cut: seller/table names an explicit broker
+ * seat and a per-deal cut in basis points.
+ */
+export function splitNegotiatedBrokerage(input: {
+  price: number;
+  seller: number;
+  winner: number;
+  brokerSeat: number | null;
+  cutBps: number;
+}): BrokerageSplit {
+  const price = Math.max(0, Math.floor(input.price));
+  const broker = input.brokerSeat;
+  const cutBps = Math.max(0, Math.floor(input.cutBps));
+  if (
+    broker === null ||
+    broker === input.seller ||
+    broker === input.winner ||
+    cutBps <= 0
+  ) {
+    return { toSeller: price, toBroker: 0, brokerSeat: null };
+  }
+  const cut = Math.floor((price * cutBps) / 10000);
+  if (cut <= 0 || cut >= price) {
+    return { toSeller: price, toBroker: 0, brokerSeat: null };
+  }
+  return { toSeller: price - cut, toBroker: cut, brokerSeat: broker };
 }
 
 /** Highest unique bid wins; ties broken by seatOrder index (lower first). */

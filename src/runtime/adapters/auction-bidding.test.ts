@@ -235,31 +235,40 @@ describe("auction-bidding-v1 gallery subset (T012)", () => {
     expect(play.ok).toBe(true);
     if (!play.ok) return;
     state = play.state;
-    expect(state.phase).toBe("bidding");
+    expect(state.phase).toBe("live_floor");
+    const lotId = state.genre.gallery!.activeFloorLots[0]!.lotId;
     const bidder = state.activePlayerId;
-    const reserve = state.genre.gallery!.currentLot!.reserve;
+    const reserve = state.genre.gallery!.activeFloorLots[0]!.reserve;
     const bid = applyAction(
       auctionBiddingAdapter,
       state,
-      { type: "bid", playerId: bidder, payload: { amount: reserve } },
+      {
+        type: "floor_raise",
+        playerId: bidder,
+        payload: { lotId, amount: reserve },
+      },
       galleryCfg,
     );
     expect(bid.ok).toBe(true);
     if (!bid.ok) return;
     state = bid.state;
-    const passer = state.activePlayerId;
-    const pass = applyAction(
-      auctionBiddingAdapter,
-      state,
-      { type: "pass", playerId: passer },
-      galleryCfg,
-    );
-    expect(pass.ok).toBe(true);
-    if (!pass.ok) return;
-    state = pass.state;
+    // Seller (and any other seats) pass to settle.
+    for (const s of [0, 1]) {
+      if (!state.genre.gallery!.activeFloorLots.some((l) => l.lotId === lotId)) break;
+      if (s === bidder) continue;
+      const pass = applyAction(
+        auctionBiddingAdapter,
+        state,
+        { type: "floor_pass", playerId: s, payload: { lotId } },
+        galleryCfg,
+      );
+      expect(pass.ok).toBe(true);
+      if (!pass.ok) return;
+      state = pass.state;
+    }
     expect(state.genre.gallery!.collection[bidder]!.length).toBe(1);
     // salesToEndRound=2 — need second sale of same artist or keep going
-    expect(["offer", "market"]).toContain(state.phase);
+    expect(["offer", "market", "live_floor"]).toContain(state.phase);
   });
 
   it("fixed mode lets other seat buy_fixed", () => {
@@ -599,5 +608,155 @@ describe("auction-bidding-v1 gallery T020 simultaneous sealed + brokerage", () =
     expect(state.genre.gallery!.lastBroker?.seat).toBe(2);
     const cut = Math.floor(((floor + 10) * 2000) / 10000);
     expect(state.genre.gallery!.lastBroker?.cut).toBe(cut);
+  });
+});
+
+describe("auction-bidding-v1 gallery T024 live multi-lot + negotiated brokerage", () => {
+  it("keeps two lots live and settles with negotiated broker cut", () => {
+    const config = createAuctionBiddingKernelConfig({
+      playerCount: 3,
+      galleryContent: defaultGalleryContent({
+        playerCount: 3,
+        startingFunds: 120,
+        salesToEndRound: 9,
+        modes: ["open"],
+        liveMultiLotFloor: true,
+        maxLiveLots: 2,
+        negotiatedBrokerage: true,
+        brokerageEnabled: false,
+      }),
+    });
+    let state = createInitialState(auctionBiddingAdapter, config, 11);
+    const a = state.genre.gallery!.auctioneer;
+    const hand = state.genre.gallery!.auctionHand[a]!;
+    const p0 = hand[0]!;
+    const p1 = hand[1]!;
+    let r = applyAction(
+      auctionBiddingAdapter,
+      state,
+      {
+        type: "play_painting",
+        playerId: a,
+        payload: {
+          instanceId: p0.instanceId,
+          mode: "open",
+          brokerSeat: ((a + 2) % 3),
+          cutBps: 1500,
+        },
+      },
+      config,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    expect(state.phase).toBe("live_floor");
+    expect(state.genre.gallery!.activeFloorLots).toHaveLength(1);
+    // Auctioneer adds second lot while first still live (off-turn / same phase).
+    r = applyAction(
+      auctionBiddingAdapter,
+      state,
+      {
+        type: "play_painting",
+        playerId: a,
+        payload: {
+          instanceId: p1.instanceId,
+          mode: "open",
+          brokerSeat: ((a + 2) % 3),
+          cutBps: 2000,
+        },
+      },
+      config,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    expect(state.genre.gallery!.activeFloorLots.length).toBe(2);
+    const lotA = state.genre.gallery!.activeFloorLots[0]!;
+    const bidder = ((a + 1) % 3) as number;
+    const amount = lotA.currentBid + 3;
+    r = applyAction(
+      auctionBiddingAdapter,
+      state,
+      {
+        type: "floor_raise",
+        playerId: bidder,
+        payload: { lotId: lotA.lotId, amount },
+      },
+      config,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    // Remaining seats pass on lotA → award with negotiated broker (seat a+2)
+    for (const s of [0, 1, 2]) {
+      if (s === bidder) continue;
+      if (!state.genre.gallery!.activeFloorLots.some((l) => l.lotId === lotA.lotId)) {
+        break;
+      }
+      r = applyAction(
+        auctionBiddingAdapter,
+        state,
+        {
+          type: "floor_pass",
+          playerId: s,
+          payload: { lotId: lotA.lotId },
+        },
+        config,
+      );
+      expect(r.ok).toBe(true);
+      if (!r.ok) return;
+      state = r.state;
+    }
+    expect(state.genre.gallery!.lastBroker?.seat).toBe((a + 2) % 3);
+    expect(state.genre.gallery!.lastBroker?.cut).toBe(
+      Math.floor((amount * 1500) / 10000),
+    );
+    expect(state.genre.gallery!.activeFloorLots.length).toBe(1);
+  });
+
+  it("set_broker_terms changes cut before first raise", () => {
+    const config = createAuctionBiddingKernelConfig({
+      playerCount: 3,
+      galleryContent: defaultGalleryContent({
+        playerCount: 3,
+        modes: ["open"],
+        liveMultiLotFloor: true,
+        negotiatedBrokerage: true,
+        salesToEndRound: 9,
+      }),
+    });
+    let state = createInitialState(auctionBiddingAdapter, config, 3);
+    const a = state.genre.gallery!.auctioneer;
+    const p = state.genre.gallery!.auctionHand[a]![0]!;
+    let r = applyAction(
+      auctionBiddingAdapter,
+      state,
+      {
+        type: "play_painting",
+        playerId: a,
+        payload: { instanceId: p.instanceId, mode: "open" },
+      },
+      config,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    const lotId = state.genre.gallery!.activeFloorLots[0]!.lotId;
+    const broker = ((a + 2) % 3) as number;
+    r = applyAction(
+      auctionBiddingAdapter,
+      state,
+      {
+        type: "set_broker_terms",
+        playerId: a,
+        payload: { lotId, brokerSeat: broker, cutBps: 2500 },
+      },
+      config,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    expect(state.genre.gallery!.activeFloorLots[0]!.brokerCutBps).toBe(2500);
+    expect(state.genre.gallery!.activeFloorLots[0]!.brokerSeat).toBe(broker);
   });
 });

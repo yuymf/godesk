@@ -4,21 +4,18 @@
 | --- | --- |
 | 回归靶 | H05 |
 | 层 | **内核**（auction-bidding-v1 及可共享成交原语） |
-| 状态 | **开 · 未排刀**（T023 交判后再裁是否动刀） |
-| 证据 | （未实现） |
+| 状态 | **闭** |
+| 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H05-t024/` |
 
-## 现象
-T020 已落地同时密封出价与成交次高分成（`splitBrokerageAward` / award-cut）。T023 在 hex-settlement 复用该原语做国内密封短拍。仍缺：**超出单次 award-cut** 的实时多拍经纪——多标的并行、连续议价轮、多方实时改价/抽成矩阵。
+## 落地
+1. **Live multi-lot floor**（共享 `src/runtime/auction-floor.ts`）：多标的可同时 `live_floor`；`floor_raise` / `floor_pass` 实时结算；拍卖官可在 cap 内再拍。
+2. **Negotiated brokerage**（`splitNegotiatedBrokerage`）：显式经纪席 + 每单 cutBps，超出固定次高 award-cut。
+3. Gallery 默认启用 `liveMultiLotFloor` + `negotiatedBrokerage`（≥3 席）。
 
-## 期望（通用能力 · 草案，本票不实现）
-1. 多标的可同时处于竞价中（非单 pending lot）。
-2. 实时（非仅齐后揭示）的多方出价/改价与中介抽成。
-3. 共享层可被 auction-bidding 与 hex 国内拍卖复用；无样例 IP 特判。
-
-## 验收（待排刀后）
-- H05 冷启动：能力可执行或 unsupported 精确收窄；floors 不回退。
-- 单测：实时多拍路径 ≥1 绿；超出固定 award-cut 的经纪路径 ≥1 绿。
-- 无样例 IP 特判；不借机合 #179；Collecta 不碰。
+## 验收对照
+- [x] H05 冷启动：floors 不回退；unsupported 收窄
+- [x] 单测：实时多拍 ≥1 绿；协商经纪 ≥1 绿
+- [x] 无样例 IP 特判；未合 #179；Collecta 未动
 
 ## Out of scope
 - T021；合 #179
