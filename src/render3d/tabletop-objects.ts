@@ -43,6 +43,7 @@ import type { SceneNode } from "./scene-model";
 import type { MaterialToken } from "./tokens";
 import type { TierCaps } from "./tiers";
 import { parseFaceSchema } from "./mappers/tabletop-face-schema";
+import { paintCardFace, paintIllustrationBand } from "./mappers/tabletop-card-face-t048";
 
 export type TabletopObjectContext = {
   library: MaterialLibrary;
@@ -327,6 +328,8 @@ function plaqueWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
       g.strokeStyle = "#c4a574";
       g.lineWidth = 4;
       g.strokeRect(28, 28, W - 56, H - 56);
+      // T048: shared illustration strip on plaque (procedural, no external art)
+      paintIllustrationBand(g, { x: 36, y: 36, w: W - 72, h: 52 }, { title, base: "#c4a574" });
       if (prestige != null) {
         g.fillStyle = "#fbbf24";
         g.beginPath();
@@ -342,12 +345,12 @@ function plaqueWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
       g.font = '700 34px "Noto Serif CJK SC","Songti SC",serif';
       g.textAlign = "center";
       g.textBaseline = "middle";
-      g.fillText(title.slice(0, 8), W / 2, 88);
+      g.fillText(title.slice(0, 8), W / 2, 108);
       // requirement dots
       const entries = Object.entries(reqs).filter(([, n]) => n > 0);
       entries.forEach(([color, n], i) => {
         const cx = 56 + i * 52;
-        const cy = 148;
+        const cy = 158;
         g.fillStyle = chipColors[color] ?? "#a78bfa";
         g.beginPath();
         g.arc(cx, cy, 16, 0, Math.PI * 2);
@@ -409,7 +412,7 @@ function glazedTileWithFace(node: SceneNode, ctx: TabletopObjectContext): Object
   return group;
 }
 
-/** T037 · card face schema: large prestige + cost gem dots + reward corner + tier watermark. */
+/** T037/T048 · card face: illustration band + reward bar + cost + prestige (shared atlas). */
 function cardWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const group = new Group();
   const stock = new Mesh(cardStock(), materialFor(node, ctx));
@@ -426,9 +429,6 @@ function cardWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const title = isCard && parsed && parsed.kind === "card" ? parsed.title : undefined;
   // Forbid drawing debug strings like T1+0|green on the face.
   const showTitle = title && !/^T\d\+/i.test(title) ? title : undefined;
-  const chipColors: Record<string, string> = {
-    white: "#f4efe6", blue: "#3b82f6", green: "#22c55e", red: "#ef4444", black: "#1f2937", gold: "#eab308",
-  };
   const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
   if (canvas) {
     const W = 280, H = 400;
@@ -439,75 +439,15 @@ function cardWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
       const base = node.material && ctx.materials[node.material]?.base
         ? ctx.materials[node.material]!.base
         : "#c4b5a5";
-      g.fillStyle = "#fbf6ec";
-      g.fillRect(0, 0, W, H);
-      g.strokeStyle = "#5b3a1a";
-      g.lineWidth = 10;
-      g.strokeRect(14, 14, W - 28, H - 28);
-      g.strokeStyle = "#d4b896";
-      g.lineWidth = 3;
-      g.strokeRect(24, 24, W - 48, H - 48);
-      // tier watermark (subtle, not debug text)
-      if (tier != null) {
-        g.fillStyle = "rgba(55,40,25,0.10)";
-        g.font = "700 120px serif";
-        g.textAlign = "center";
-        g.textBaseline = "middle";
-        g.fillText(String(tier), W / 2, H / 2 + 20);
-      }
-      // reward color corner
-      const rewardColor = reward ? (chipColors[reward] ?? base) : base;
-      g.fillStyle = rewardColor;
-      g.beginPath();
-      g.moveTo(W - 24, 24);
-      g.lineTo(W - 24, 100);
-      g.lineTo(W - 100, 24);
-      g.closePath();
-      g.fill();
-      // large prestige number
-      if (prestige != null) {
-        g.fillStyle = "#fbbf24";
-        g.beginPath();
-        g.arc(W / 2, 110, 48, 0, Math.PI * 2);
-        g.fill();
-        g.strokeStyle = "#92400e";
-        g.lineWidth = 4;
-        g.stroke();
-        g.fillStyle = "#78350f";
-        g.font = "700 64px serif";
-        g.textAlign = "center";
-        g.textBaseline = "middle";
-        g.fillText(String(prestige), W / 2, 112);
-      } else if (showTitle) {
-        g.fillStyle = "#1f2937";
-        g.font = '700 32px "Noto Serif CJK SC","Songti SC",serif';
-        g.textAlign = "center";
-        g.textBaseline = "middle";
-        g.fillText(showTitle.slice(0, 10), W / 2, 90);
-      }
-      // cost gem dots
-      const costEntries = Object.entries(cost).filter(([, n]) => n > 0);
-      costEntries.forEach(([color, n], i) => {
-        const col = i % 4;
-        const row = Math.floor(i / 4);
-        const cx = 56 + col * 52;
-        const cy = 210 + row * 52;
-        g.fillStyle = chipColors[color] ?? base;
-        g.beginPath();
-        g.arc(cx, cy, 20, 0, Math.PI * 2);
-        g.fill();
-        g.strokeStyle = "rgba(0,0,0,0.35)";
-        g.lineWidth = 2;
-        g.stroke();
-        g.fillStyle = color === "white" || color === "gold" ? "#1f2937" : "#fff";
-        g.font = "700 22px sans-serif";
-        g.textAlign = "center";
-        g.textBaseline = "middle";
-        g.fillText(String(n), cx, cy);
+      // T048: shared zone painter — illustration band + reward bar + cost + prestige (no center-number-only).
+      paintCardFace(g, W, H, {
+        tier,
+        prestige,
+        reward,
+        cost,
+        title: showTitle,
+        base,
       });
-      // footer rule
-      g.fillStyle = "rgba(55,40,25,0.45)";
-      g.fillRect(48, H - 52, W - 96, 8);
     }
     const tex = new CanvasTexture(canvas);
     tex.colorSpace = SRGBColorSpace;
