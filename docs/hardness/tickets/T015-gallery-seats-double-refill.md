@@ -6,7 +6,7 @@
 | 层 | **内核**（auction-bidding-v1 gallery 同层扩） |
 | 状态 | **已关** |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H05-probe4/` |
-| sha | （commit 后回填） |
+| sha | `0410664` |
 
 ## 现象（T012 后 Open）
 gallery 子集已有 open/sealed/fixed + 行情卖出；仍缺 3–5 席、双画固定价、精确补牌时序。
