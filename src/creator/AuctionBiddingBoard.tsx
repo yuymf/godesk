@@ -16,31 +16,51 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
 }) {
   const [amount, setAmount] = useState(1);
   const harbor = auction.harbor ?? null;
+  const gallery = auction.gallery ?? null;
   const phase = auction.phase ?? "bidding";
-  const currentName = harbor?.currentLot?.name
+  const currentName = gallery?.currentLot?.name
+    ?? harbor?.currentLot?.name
     ?? (auction.lotId === "amber" ? "琥珀" : auction.lotId === "jade" ? "青玉" : String(auction.lotId));
   const minimum = auction.currentBid + 1;
   const canAct = enabled && !busy && !readOnly && status === "active" && viewerSeat === activeSeat;
   const canBid = canAct && phase === "bidding" && Number.isSafeInteger(amount) &&
     amount >= minimum && amount <= auction.chips[activeSeat];
   const canPass = canAct && phase === "bidding";
-  const myHand = viewerSeat !== null && harbor ? harbor.hand[viewerSeat] ?? [] : [];
+  const myHarborHand = viewerSeat !== null && harbor ? harbor.hand[viewerSeat] ?? [] : [];
+  const myOfferHand = viewerSeat !== null && gallery ? gallery.auctionHand[viewerSeat] ?? [] : [];
+  const myCollection = viewerSeat !== null && gallery ? gallery.collection[viewerSeat] ?? [] : [];
+
+  const modeLabel = gallery
+    ? gallery.currentMode === "sealed"
+      ? "一次暗标"
+      : gallery.currentMode === "fixed"
+        ? "定价购买"
+        : "公开加价"
+    : null;
 
   return (
     <section aria-label="拍卖竞价桌" className="auction-board">
       <header className="auction-heading auction-lot-card">
         <div>
           <span className="auction-kicker">
-            {harbor
-              ? (harbor.bidVisibility === "sealed" ? "密封竞价 · 多拍品" : "公开竞价 · 多拍品")
-              : "公开竞价 · 单件拍品"}
+            {gallery
+              ? `画廊竞拍 · ${modeLabel ?? "选拍"} · 第 ${gallery.round}/${gallery.roundsToEnd} 轮`
+              : harbor
+                ? (harbor.bidVisibility === "sealed" ? "密封竞价 · 多拍品" : "公开竞价 · 多拍品")
+                : "公开竞价 · 单件拍品"}
           </span>
           <h2>
-            {harbor?.currentLot
-              ? `${currentName} · 底价 ${harbor.currentLot.reserve} · 黑市×${harbor.currentLot.marketMult}`
-              : phase === "market"
-                ? "黑市转售"
-                : `${currentName}拍品 · 价值 ${auction.lotValue}`}
+            {gallery?.currentLot
+              ? `${currentName} · 底价/定价 ${gallery.currentLot.reserve}`
+              : gallery && phase === "offer"
+                ? "拍卖官打出画作并选择拍卖方式"
+                : gallery && phase === "market"
+                  ? "行情卖出"
+                  : harbor?.currentLot
+                    ? `${currentName} · 底价 ${harbor.currentLot.reserve} · 黑市×${harbor.currentLot.marketMult}`
+                    : phase === "market"
+                      ? "黑市转售"
+                      : `${currentName}拍品 · 价值 ${auction.lotValue}`}
           </h2>
         </div>
         <svg className="auction-mark" width="76" height="76" viewBox="0 0 76 76" role="img" aria-label="拍卖槌"><rect width="76" height="76" rx="16"/><path d="m16 20 10-10 25 25-10 10zm28 20 5-5 18 18-5 5zM12 60h51" fill="none" strokeWidth="6" strokeLinecap="round"/></svg>
@@ -48,16 +68,22 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
       <section aria-label="拍卖状态" aria-live="polite" className={`auction-status${status === "complete" ? " is-complete" : " is-live"}`}>
         <strong>
           {status === "complete"
-            ? auction.awardedTo === null && !harbor
+            ? auction.awardedTo === null && !harbor && !gallery
               ? "流拍 · 双方放弃"
-              : harbor
+              : harbor || gallery
                 ? `终局 · 资金最高者获胜`
                 : `成交 · 座位 ${auction.awardedTo} 获得拍品`
             : phase === "market"
-              ? `黑市阶段 · 座位 ${activeSeat} 可出售手牌或跳过`
+              ? gallery
+                ? `行情阶段 · 座位 ${activeSeat} 可按画家行情卖出或跳过`
+                : `黑市阶段 · 座位 ${activeSeat} 可出售手牌或跳过`
               : phase === "sealed"
                 ? `密封出价 · 座位 ${activeSeat}`
-                : `轮到座位 ${activeSeat} 出价或放弃`}
+                : phase === "fixed"
+                  ? `定价购买 · 座位 ${activeSeat} · 标价 ${gallery?.fixedPrice ?? auction.currentBid}`
+                  : phase === "offer"
+                    ? `拍卖官座位 ${gallery?.auctioneer ?? activeSeat} 出牌选模式`
+                    : `轮到座位 ${activeSeat} 出价或放弃`}
         </strong>
         <div className="auction-status-facts">
           {phase === "bidding" || phase === "sealed" ? (
@@ -71,11 +97,34 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
               牌库剩余 {harbor.deck.length} · 弃牌 {harbor.discard.length} · 手牌 0={harbor.hand[0].length} / 1={harbor.hand[1].length}
             </p>
           ) : null}
+          {gallery ? (
+            <p aria-label="gallery-market">
+              手牌 0={gallery.auctionHand[0].length} / 1={gallery.auctionHand[1].length}
+              {" · "}藏品 0={gallery.collection[0].length} / 1={gallery.collection[1].length}
+              {" · "}牌库 {gallery.deck.length}
+            </p>
+          ) : null}
           {harbor?.lastSold ? (
             <p>最近黑市：座位 {harbor.lastSold.seat} 出售 {harbor.lastSold.name} +{harbor.lastSold.payout}</p>
           ) : null}
+          {gallery?.lastSold ? (
+            <p>最近行情：座位 {gallery.lastSold.seat} 出售 {gallery.lastSold.name} +{gallery.lastSold.payout}</p>
+          ) : null}
         </div>
       </section>
+      {gallery ? (
+        <div className="auction-gallery" aria-label="gallery-prices">
+          <p>画家行情（累计）</p>
+          <ul>
+            {gallery.artists.map((a) => (
+              <li key={a.id}>
+                {a.name}：{gallery.marketPrices[a.id] ?? 0}
+                {" · 本轮售出 "}{gallery.roundSales[a.id] ?? 0}/{gallery.salesToEndRound}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {harbor ? (
         <div className="auction-harbor" aria-label="harbor">
           <p>资金决胜 · 拍得后可在黑市按倍率变现</p>
@@ -85,9 +134,24 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
         {([0, 1] as const).map((seat) => <div key={seat} className={`auction-seat${seat === activeSeat && status === "active" ? " is-active" : ""}`}>
           <strong>座位 {seat}</strong>
           <span>筹码 <b>{auction.chips[seat]}</b></span>
-          <span>{harbor ? "拍得" : "得分"} <b>{auction.scores[seat]}</b></span>
+          <span>{harbor || gallery ? "拍得" : "得分"} <b>{auction.scores[seat]}</b></span>
         </div>)}
       </div>
+      {!readOnly && status === "active" && phase === "offer" && canAct && gallery ? (
+        <div className="auction-actions" aria-label="出牌选模式">
+          {myOfferHand.flatMap((p) =>
+            gallery.modes.map((mode) => (
+              <button
+                key={`${p.instanceId}-${mode}`}
+                type="button"
+                onClick={() => onAct?.("play_painting", { instanceId: p.instanceId, mode })}
+              >
+                {p.name} · {mode === "open" ? "公开加价" : mode === "sealed" ? "一次暗标" : "定价购买"}
+              </button>
+            )),
+          )}
+        </div>
+      ) : null}
       {!readOnly && status === "active" && phase === "bidding" ? (
         <div className="auction-actions" aria-label="竞价操作">
           <label>出价金额<input aria-label="出价金额" type="number" min={minimum} max={auction.chips[activeSeat]} step="1" value={amount} disabled={!canPass} onChange={(event) => setAmount(Number(event.target.value))} /></label>
@@ -97,28 +161,50 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
       ) : null}
       {!readOnly && status === "active" && phase === "sealed" && canAct ? (
         <div className="auction-actions" aria-label="密封出价">
-          <button type="button" onClick={() => onAct?.("sealed_bid", { amount: Math.max(minimum, harbor?.currentLot?.reserve ?? 1) })}>
+          <button type="button" onClick={() => onAct?.("sealed_bid", { amount: Math.max(minimum, gallery?.currentLot?.reserve ?? harbor?.currentLot?.reserve ?? 1) })}>
             密封出价（底价）
           </button>
           <button type="button" onClick={() => onAct?.("sealed_pass")}>密封放弃</button>
         </div>
       ) : null}
-      {!readOnly && status === "active" && phase === "market" && canAct ? (
-        <div className="auction-actions" aria-label="黑市操作">
-          {myHand.map((lot) => (
-            <button
-              key={lot.instanceId}
-              type="button"
-              onClick={() => onAct?.("sell", { instanceId: lot.instanceId })}
-            >
-              出售 {lot.name}（×{lot.marketMult}）
-            </button>
-          ))}
-          <button type="button" onClick={() => onAct?.("pass_market")}>跳过黑市</button>
+      {!readOnly && status === "active" && phase === "fixed" && canAct ? (
+        <div className="auction-actions" aria-label="定价购买">
+          <button type="button" onClick={() => onAct?.("buy_fixed")}>定价购入</button>
+          <button type="button" onClick={() => onAct?.("pass_fixed")}>不买</button>
+          <button type="button" onClick={() => onAct?.("buy_own")}>自购</button>
+          <button type="button" onClick={() => onAct?.("decline_own")}>流拍</button>
         </div>
       ) : null}
-      {readOnly && harbor?.currentLot ? (
-        <p className="auction-readonly-lot">当前拍品：{harbor.currentLot.name}</p>
+      {!readOnly && status === "active" && phase === "market" && canAct ? (
+        <div className="auction-actions" aria-label={gallery ? "行情操作" : "黑市操作"}>
+          {gallery
+            ? myCollection.map((lot) => {
+                const price = gallery.marketPrices[lot.artistId] ?? 0;
+                if (price <= 0) return null;
+                return (
+                  <button
+                    key={lot.instanceId}
+                    type="button"
+                    onClick={() => onAct?.("sell", { instanceId: lot.instanceId })}
+                  >
+                    出售 {lot.name}（+{price}）
+                  </button>
+                );
+              })
+            : myHarborHand.map((lot) => (
+              <button
+                key={lot.instanceId}
+                type="button"
+                onClick={() => onAct?.("sell", { instanceId: lot.instanceId })}
+              >
+                出售 {lot.name}（×{lot.marketMult}）
+              </button>
+            ))}
+          <button type="button" onClick={() => onAct?.("pass_market")}>{gallery ? "跳过行情" : "跳过黑市"}</button>
+        </div>
+      ) : null}
+      {readOnly && (harbor?.currentLot || gallery?.currentLot) ? (
+        <p className="auction-readonly-lot">当前拍品：{currentName}</p>
       ) : null}
     </section>
   );

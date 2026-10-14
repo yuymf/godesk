@@ -138,8 +138,12 @@ import {
 } from "../src/runtime/adapters/network-route";
 import {
   defaultHarborContent,
+  defaultGalleryContent,
+  galleryAuctionUnsupportedNotes,
   harborAuctionUnsupportedNotes,
+  ideaRequestsGalleryAuction,
   ideaRequestsHarborAuction,
+  parseGalleryTuningFromIdea,
   parseHarborTuningFromIdea,
 } from "../src/runtime/adapters/auction-bidding";
 import {
@@ -631,7 +635,24 @@ export async function runCreatorJob(
         ? (() => { const ab = autoBattlerProposedRuntime(idea); autoBattlerAssetIntents = ab.assetIntents; return ab.configure; })()
         : auctionBiddingRuntimeConfigured
         ? (() => {
-            const harbor = ideaRequestsHarborAuction(idea);
+            const gallery = ideaRequestsGalleryAuction(idea);
+            const harbor = !gallery && ideaRequestsHarborAuction(idea);
+            if (gallery) {
+              const tuning = parseGalleryTuningFromIdea(idea);
+              const galleryContent = defaultGalleryContent(tuning);
+              return {
+                op: "configure_auction_bidding" as const,
+                config: {
+                  playerCount: 2,
+                  gallery: true as const,
+                  galleryContent,
+                  unsupported: [
+                    "auction-bidding-v1 gallery subset: open/sealed/fixed modes + artist market-ladder sell scoring; 仅部分能力.",
+                    ...galleryAuctionUnsupportedNotes(),
+                  ],
+                },
+              };
+            }
             const tuning = harbor ? parseHarborTuningFromIdea(idea) : {};
             const content = harbor ? defaultHarborContent(tuning) : undefined;
             const unsupported = harbor

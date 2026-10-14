@@ -4,7 +4,8 @@ import { applyAction, createInitialState, hashPlayState, listLegalActions,
 import { KERNEL_CAPABILITIES, MECHANIC_CAPABILITIES } from "../../creator/kernel-capabilities";
 import { auctionBiddingAdapter, autoPlayAuctionBiddingGame,
   bindAuctionBiddingFromRuntimeKernel, createAuctionBiddingKernelConfig,
-  defaultHarborContent, ideaRequestsHarborAuction, parseHarborTuningFromIdea,
+  defaultGalleryContent, defaultHarborContent, ideaRequestsGalleryAuction,
+  ideaRequestsHarborAuction, parseHarborTuningFromIdea,
 } from "./auction-bidding";
 import { readFileSync } from "node:fs";
 
@@ -179,11 +180,131 @@ describe("auction-bidding-v1 harbor subset (T007)", () => {
 
   it("detects H03 INPUT as harbor auction cues", () => {
     const idea = readFileSync(
-      "docs/hardness/suites/H03-dark-harbor-auction/INPUT.md",
+      "docs/hardness/suites/_archive-fictional/H03-dark-harbor-auction/INPUT.md",
       "utf8",
     );
     expect(ideaRequestsHarborAuction(idea)).toBe(true);
     const tuning = parseHarborTuningFromIdea(idea);
     expect(tuning.startingFunds).toBe(30);
+  });
+});
+
+describe("auction-bidding-v1 gallery subset (T012)", () => {
+  const galleryCfg = createAuctionBiddingKernelConfig({
+    galleryContent: defaultGalleryContent({ startingFunds: 100, salesToEndRound: 2 }),
+  });
+
+  it("detects H05 INPUT as gallery (prefer over harbor 流拍)", () => {
+    const idea = readFileSync(
+      "docs/hardness/suites/H05-modern-art/INPUT.md",
+      "utf8",
+    );
+    expect(ideaRequestsGalleryAuction(idea)).toBe(true);
+    expect(ideaRequestsHarborAuction(idea)).toBe(true); // 流拍 etc.
+  });
+
+  it("starts in offer with dealt hands and zero market prices", () => {
+    const state = createInitialState(auctionBiddingAdapter, galleryCfg, 7);
+    expect(state.phase).toBe("offer");
+    expect(state.genre.gallery).not.toBeNull();
+    expect(state.genre.harbor).toBeNull();
+    expect(state.genre.chips).toEqual([100, 100]);
+    expect(state.genre.gallery!.auctionHand[0].length).toBeGreaterThan(0);
+    expect(state.genre.gallery!.modes).toEqual(
+      expect.arrayContaining(["open", "sealed", "fixed"]),
+    );
+    for (const a of state.genre.gallery!.artists) {
+      expect(state.genre.gallery!.marketPrices[a.id]).toBe(0);
+    }
+  });
+
+  it("open mode awards into collection then ends round into market sell", () => {
+    let state = createInitialState(auctionBiddingAdapter, galleryCfg, 3);
+    const seat = state.activePlayerId;
+    const painting = state.genre.gallery!.auctionHand[seat]![0]!;
+    const play = applyAction(
+      auctionBiddingAdapter,
+      state,
+      {
+        type: "play_painting",
+        playerId: seat,
+        payload: { instanceId: painting.instanceId, mode: "open" },
+      },
+      galleryCfg,
+    );
+    expect(play.ok).toBe(true);
+    if (!play.ok) return;
+    state = play.state;
+    expect(state.phase).toBe("bidding");
+    const bidder = state.activePlayerId;
+    const reserve = state.genre.gallery!.currentLot!.reserve;
+    const bid = applyAction(
+      auctionBiddingAdapter,
+      state,
+      { type: "bid", playerId: bidder, payload: { amount: reserve } },
+      galleryCfg,
+    );
+    expect(bid.ok).toBe(true);
+    if (!bid.ok) return;
+    state = bid.state;
+    const passer = state.activePlayerId;
+    const pass = applyAction(
+      auctionBiddingAdapter,
+      state,
+      { type: "pass", playerId: passer },
+      galleryCfg,
+    );
+    expect(pass.ok).toBe(true);
+    if (!pass.ok) return;
+    state = pass.state;
+    expect(state.genre.gallery!.collection[bidder]!.length).toBe(1);
+    // salesToEndRound=2 — need second sale of same artist or keep going
+    expect(["offer", "market"]).toContain(state.phase);
+  });
+
+  it("fixed mode lets other seat buy_fixed", () => {
+    let state = createInitialState(auctionBiddingAdapter, galleryCfg, 11);
+    const auctioneer = state.activePlayerId;
+    const painting = state.genre.gallery!.auctionHand[auctioneer]![0]!;
+    const play = applyAction(
+      auctionBiddingAdapter,
+      state,
+      {
+        type: "play_painting",
+        playerId: auctioneer,
+        payload: { instanceId: painting.instanceId, mode: "fixed" },
+      },
+      galleryCfg,
+    );
+    expect(play.ok).toBe(true);
+    if (!play.ok) return;
+    state = play.state;
+    expect(state.phase).toBe("fixed");
+    const buyer = state.activePlayerId;
+    expect(buyer).not.toBe(auctioneer);
+    const buy = applyAction(
+      auctionBiddingAdapter,
+      state,
+      { type: "buy_fixed", playerId: buyer },
+      galleryCfg,
+    );
+    expect(buy.ok).toBe(true);
+    if (!buy.ok) return;
+    expect(buy.state.genre.gallery!.collection[buyer]!.some((p) => p.id === painting.id)).toBe(true);
+  });
+
+  it("gallery auto-play completes without illegal actions", () => {
+    const { state, actions } = autoPlayAuctionBiddingGame(42, galleryCfg);
+    expect(actions.length).toBeGreaterThan(8);
+    expect(state.status).toBe("complete");
+  });
+
+  it("H03 harbor idea is not gallery", () => {
+    const idea = readFileSync(
+      "docs/hardness/suites/_archive-fictional/H03-dark-harbor-auction/INPUT.md",
+      "utf8",
+    );
+    expect(ideaRequestsGalleryAuction(idea)).toBe(false);
+    expect(ideaRequestsHarborAuction(idea)).toBe(true);
   });
 });

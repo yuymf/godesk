@@ -303,6 +303,7 @@ export interface RuleSystem {
               type: "auction-bidding-v1";
               playerCount: number;
               harbor?: boolean;
+              gallery?: boolean;
               content?: {
                 lots: Array<{
                   id: string;
@@ -312,6 +313,21 @@ export interface RuleSystem {
                 }>;
                 startingFunds: number;
                 bidVisibility: "open" | "sealed";
+              };
+              galleryContent?: {
+                artists: Array<{ id: string; name: string }>;
+                paintings: Array<{
+                  id: string;
+                  name: string;
+                  artistId: string;
+                  reserve: number;
+                }>;
+                startingFunds: number;
+                modes: Array<"open" | "sealed" | "fixed">;
+                salesToEndRound: number;
+                marketLadder: number[];
+                handSize: number;
+                roundsToEnd: number;
               };
             }
           | {
@@ -705,6 +721,7 @@ export type ProjectChangeOperation =
       config: {
         playerCount: number;
         harbor?: boolean;
+        gallery?: boolean;
         content?: {
           lots: Array<{
             id: string;
@@ -714,6 +731,21 @@ export type ProjectChangeOperation =
           }>;
           startingFunds: number;
           bidVisibility: "open" | "sealed";
+        };
+        galleryContent?: {
+          artists: Array<{ id: string; name: string }>;
+          paintings: Array<{
+            id: string;
+            name: string;
+            artistId: string;
+            reserve: number;
+          }>;
+          startingFunds: number;
+          modes: Array<"open" | "sealed" | "fixed">;
+          salesToEndRound: number;
+          marketLadder: number[];
+          handSize: number;
+          roundsToEnd: number;
         };
         unsupported?: string[];
       };
@@ -1113,6 +1145,31 @@ export interface SessionState {
       ];
       sealedBids: [number | null, number | null];
       lastSold: { seat: number; name: string; payout: number } | null;
+    } | null;
+    gallery?: {
+      artists: Array<{ id: string; name: string }>;
+      modes: Array<"open" | "sealed" | "fixed">;
+      currentMode: "open" | "sealed" | "fixed";
+      salesToEndRound: number;
+      marketLadder: number[];
+      roundsToEnd: number;
+      round: number;
+      auctioneer: number;
+      auctionHand: [
+        Array<{ id: string; name: string; artistId: string; reserve: number; instanceId: string }>,
+        Array<{ id: string; name: string; artistId: string; reserve: number; instanceId: string }>,
+      ];
+      collection: [
+        Array<{ id: string; name: string; artistId: string; reserve: number; instanceId: string }>,
+        Array<{ id: string; name: string; artistId: string; reserve: number; instanceId: string }>,
+      ];
+      deck: Array<{ id: string; name: string; artistId: string; reserve: number; instanceId: string }>;
+      currentLot: { id: string; name: string; artistId: string; reserve: number; instanceId: string } | null;
+      sealedBids: [number | null, number | null];
+      fixedPrice: number;
+      roundSales: Record<string, number>;
+      marketPrices: Record<string, number>;
+      lastSold: { seat: number; name: string; payout: number; artistId: string } | null;
     } | null;
   };
   /** Present when the build kernel is gem-engine-v1. */

@@ -379,7 +379,9 @@ export function initialSessionState(
       bindAuctionBiddingFromRuntimeKernel({
         playerCount: runtime.kernel.playerCount,
         harbor: runtime.kernel.harbor === true,
+        gallery: runtime.kernel.gallery === true,
         content: runtime.kernel.content ?? null,
+        galleryContent: runtime.kernel.galleryContent ?? null,
       }), _seed);
     return auctionBiddingToSessionFields(play);
   }
@@ -1103,9 +1105,11 @@ export function acceptIntent(
     const kernelConfig = bindAuctionBiddingFromRuntimeKernel({
       playerCount: runtime.kernel.playerCount,
       harbor: runtime.kernel.harbor === true,
+      gallery: runtime.kernel.gallery === true,
       content: runtime.kernel.content ?? null,
+      galleryContent: runtime.kernel.galleryContent ?? null,
     });
-    const phase = (state.auctionBidding.phase ?? "bidding") as "bidding" | "sealed" | "market" | "ended";
+    const phase = (state.auctionBidding.phase ?? "bidding") as "offer" | "bidding" | "sealed" | "fixed" | "market" | "ended";
     const playState = {
       seed, sequence: state.turn, phase,
       activePlayerId: state.activeSeat, playerCount: runtime.kernel.playerCount,
@@ -1122,6 +1126,9 @@ export function acceptIntent(
         seatOrder: [...state.auctionBidding.seatOrder] as [number, number],
         harbor: state.auctionBidding.harbor
           ? structuredClone(state.auctionBidding.harbor)
+          : null,
+        gallery: state.auctionBidding.gallery
+          ? structuredClone(state.auctionBidding.gallery)
           : null,
       } satisfies AuctionBiddingGenre,
     };
@@ -1570,13 +1577,15 @@ export function runBotSimulation(
     const kernelConfig = bindAuctionBiddingFromRuntimeKernel({
       playerCount: runtime.kernel.playerCount,
       harbor: runtime.kernel.harbor === true,
+      gallery: runtime.kernel.gallery === true,
       content: runtime.kernel.content ?? null,
+      galleryContent: runtime.kernel.galleryContent ?? null,
     });
     let guard = 0;
-    const limit = runtime.kernel.harbor ? 240 : 44;
+    const limit = runtime.kernel.gallery ? 480 : runtime.kernel.harbor ? 240 : 44;
     while (state.status === "active" && state.auctionBidding && guard < limit) {
       guard += 1;
-      const phase = (state.auctionBidding.phase ?? "bidding") as "bidding" | "sealed" | "market" | "ended";
+      const phase = (state.auctionBidding.phase ?? "bidding") as "offer" | "bidding" | "sealed" | "fixed" | "market" | "ended";
       const playState = {
         seed, sequence: state.turn, phase,
         activePlayerId: state.activeSeat, playerCount: runtime.kernel.playerCount,
@@ -1593,6 +1602,9 @@ export function runBotSimulation(
           seatOrder: [...state.auctionBidding.seatOrder] as [number, number],
           harbor: state.auctionBidding.harbor
             ? structuredClone(state.auctionBidding.harbor)
+            : null,
+          gallery: state.auctionBidding.gallery
+            ? structuredClone(state.auctionBidding.gallery)
             : null,
         } satisfies AuctionBiddingGenre,
       };

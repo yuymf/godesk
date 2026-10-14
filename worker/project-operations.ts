@@ -556,14 +556,43 @@ function configureDedicatedKernel(
         ],
       },
     } : kernel.type === "auction-bidding-v1" ? {
-      actions: [
+      actions: kernel.gallery ? [
+        { id: "play_painting", label: "打出画作并选拍卖方式", description: "拍卖官从手牌打出一张画作，并指定公开加价 / 一次暗标 / 定价购买。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "bid", label: "出价", description: "公开加价时报出更高价。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "pass", label: "放弃", description: "公开加价时放弃；已有出价则落槌。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "sealed_bid", label: "暗标出价", description: "一次暗标提交密封出价。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "buy_fixed", label: "定价购买", description: "按拍卖官标价买入。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "sell", label: "行情卖出", description: "按画家行情价将藏品卖给银行。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "pass_market", label: "跳过卖出", description: "本轮行情阶段不卖出。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+      ] : [
         { id: "bid", label: "出价", description: "报出高于当前价且不超过持有筹码的整数。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
         { id: "pass", label: "放弃", description: "若已有出价，拍品归最高出价者；双方均放弃则流拍。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
       ],
       participants: { ...record.ruleSystem.participants, min: 2, max: 2, default: 2 },
-      playSurface: { kind: "table" as const, layout: "auction-table", regions: [{ id: "lot", name: "拍品", description: "公开叫价与筹码" }] },
-      stages: [{ id: "bidding", name: "竞价" }, { id: "ended", name: "结算" }],
-      outcomes: [{ id: "award", name: "最高有效出价获得拍品" }, { id: "unsold", name: "无人出价则流拍" }],
+      playSurface: { kind: "table" as const, layout: "auction-table", regions: kernel.gallery
+        ? [
+            { id: "lot", name: "拍卖台", description: "多模式拍卖与当前画作" },
+            { id: "market", name: "行情表", description: "画家行情与卖出" },
+            { id: "hand", name: "画作手牌", description: "拍卖官打出的手牌" },
+          ]
+        : [{ id: "lot", name: "拍品", description: "公开叫价与筹码" }] },
+      stages: kernel.gallery
+        ? [
+            { id: "offer", name: "拍卖官出牌" },
+            { id: "bidding", name: "公开加价" },
+            { id: "sealed", name: "一次暗标" },
+            { id: "fixed", name: "定价购买" },
+            { id: "market", name: "行情卖出" },
+            { id: "ended", name: "结算" },
+          ]
+        : [{ id: "bidding", name: "竞价" }, { id: "ended", name: "结算" }],
+      outcomes: kernel.gallery
+        ? [
+            { id: "award", name: "拍得画作入藏" },
+            { id: "market_sell", name: "按画家行情卖出得分" },
+            { id: "unsold", name: "无人购买则流拍" },
+          ]
+        : [{ id: "award", name: "最高有效出价获得拍品" }, { id: "unsold", name: "无人出价则流拍" }],
     } : kernel.type === "gem-engine-v1" ? {
       actions: [
         { id: "take_diverse", label: "拿三色宝石", description: "从供应堆拿三枚不同颜色的基本宝石。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
@@ -750,8 +779,12 @@ function configureRuntimeKernel(
   if (configuration.op === "configure_auction_bidding") {
     configureDedicatedKernel(record, configuration.op, {
       type: "auction-bidding-v1", playerCount: configuration.config.playerCount,
-      ...(configuration.config.harbor ? { harbor: true } : {}),
-      ...(configuration.config.content
+      ...(configuration.config.gallery ? { gallery: true } : {}),
+      ...(configuration.config.harbor && !configuration.config.gallery ? { harbor: true } : {}),
+      ...(configuration.config.galleryContent
+        ? { galleryContent: structuredClone(configuration.config.galleryContent) }
+        : {}),
+      ...(configuration.config.content && !configuration.config.gallery
         ? { content: structuredClone(configuration.config.content) }
         : {}),
     }, configuration.config.unsupported?.map((item) => item.trim()) ?? [], configuration.config, affectedEntities);
