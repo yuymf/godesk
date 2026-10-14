@@ -432,16 +432,15 @@ export function NetworkRouteBoard({
       />
       <div className="desk-stage-hud" aria-live="polite">
         <span className="desk-stage-hud-kicker">{copy.active}</span>
-        <strong className="desk-stage-hud-turn">
-          {copy.seat} {activeSeat} · {statusLine}
-        </strong>
+        <strong className="desk-stage-hud-turn">{statusLine}</strong>
         <span className="desk-stage-hud-supply">
-          {copy.routes}: 0={count0} · 1={count1} · {lastLine}
+          {copy.routes} {count0}:{count1}
         </span>
       </div>
+      {/* T071 · production action chip */}
       <details className="desk-chrome desk-action-drawer">
         <summary className="desk-action-drawer-summary">
-          桌面行动（主交互在 3D；点此展开按钮）
+          行动
         </summary>
         <div className="desk-action-drawer-body">
           <p className="network-route-terminals">{terminalsLine}</p>

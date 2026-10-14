@@ -76,9 +76,8 @@ export function GemEngineBoard({
   const own = viewerSeat !== null ? gem.seats[viewerSeat] : null;
   const pendingDiscard =
     (gem as { pendingDiscardSeat?: number | null }).pendingDiscardSeat === viewerSeat;
-  const bankLine = Object.entries(gem.bank)
-    .map(([c, n]) => `${COLOR_LABEL[c] ?? c}${n}`)
-    .join(" · ");
+  // T071 · short supply chip (no color-by-color debug dump)
+  const bankLine = `库存 ${Object.values(gem.bank).reduce((a, n) => a + Number(n || 0), 0)}`;
   const reserved = (own as { reserved?: Array<{ id?: string; discount?: string; prestige?: number }> } | null)?.reserved ?? [];
   const seats = gem.seats as Array<{
     prestige: number;
@@ -127,8 +126,9 @@ export function GemEngineBoard({
         </strong>
         <span className="desk-stage-hud-supply" aria-label="gem-bank">{bankLine}</span>
       </div>
+      {/* T071 */}
       <details className="desk-chrome desk-action-drawer">
-        <summary className="desk-action-drawer-summary">桌面行动（主交互在 3D；点此展开按钮）</summary>
+        <summary className="desk-action-drawer-summary">行动</summary>
         <div className="desk-action-drawer-body">
       <div role="region" aria-label="贵族" className="gem-nobles">
         {gem.nobles.map((n, i) => (

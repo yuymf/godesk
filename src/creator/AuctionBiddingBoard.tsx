@@ -88,12 +88,11 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
             : harbor?.currentLot
               ? `底价 ${harbor.currentLot.reserve}`
               : `价值 ${auction.lotValue}`}
-          {gallery ? ` · ${phase}` : ""}
-          {` · 筹码 ${auction.chips.map((c, i) => `${i}:${c}`).join(" / ")}`}
         </span>
       </div>
+      {/* T071 */}
       <details className="desk-chrome desk-action-drawer">
-        <summary className="desk-action-drawer-summary">桌面行动（主交互在 3D；点此展开按钮）</summary>
+        <summary className="desk-action-drawer-summary">行动</summary>
         <div className="desk-action-drawer-body">
       <section aria-label="拍卖状态" aria-live="polite" className={`auction-status${status === "complete" ? " is-complete" : " is-live"}`}>
         <strong>
