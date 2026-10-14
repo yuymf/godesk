@@ -485,7 +485,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       Object.assign(render.materials, {
         board: material("#1a8644", "cloth", 0.99, 0, undefined, 0.58),  // T044 pattern felt
         piece: material("#f8fafc", "none", 0.4, 0.05, 0.32),
+        slot: material("#3f3f46", "none", 0.82, 0.05, 0.12),  // T050 recessed empty slots
       });
+      // T050: empty pattern/wall slots (not blank marble region boards)
+      render.bindings = [
+        ...render.bindings.filter((b) => b.objectKind !== "slot"),
+        binding("slot", "disc", "slot", 0.7),
+      ];
     }
     return;
   }

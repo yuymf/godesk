@@ -85,7 +85,9 @@ export function networkRouteLayout(
   const pieces: TabletopPiece[] = state.cities.map((city) => {
     const [x, z] = position.get(city.id)!;
     const terminal = city.id === state.terminalFrom || city.id === state.terminalTo;
-    return { id: city.id, objectKind: "station", x, z, size: terminal ? 0.62 : 0.42, label: city.name, ...(terminal ? { emphasis: true } : {}) };
+    // T051: readable station plaque tag (hub:Name / Name) — not faint debug mush.
+    const label = terminal ? `hub:${city.name}` : city.name;
+    return { id: city.id, objectKind: "station", x, z, size: terminal ? 0.62 : 0.42, label };
   });
   const links: TabletopLink[] = [];
   const hints: TabletopHint[] = [];
@@ -640,6 +642,7 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
   }
 
   const seatCount = state.seats.length;
+  const WALL_N = 5;
   state.seats.forEach((seat, seatId) => {
     const x0 = -3.8 + (seatId - (seatCount - 1) / 2) * Math.min(2.6, 9 / Math.max(seatCount, 1));
     const z0 = 2.4;
@@ -653,56 +656,53 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
       seat: seatId,
       ...(seat.hasMarker ? { emphasis: true } : {}),
     });
-    // Pattern lines (capacity 1..5)
-    seat.lines.forEach((line, li) => {
+    // T050 · pattern lines (capacity 1..5): empty = recessed slot, filled = glazed tile.
+    // Forbid blank solid boards posing as the personal board.
+    const lines = seat.lines.length > 0
+      ? seat.lines
+      : Array.from({ length: WALL_N }, (_, li) => ({
+        color: null as string | null,
+        tiles: [] as string[],
+        capacity: li + 1,
+      }));
+    lines.forEach((line, li) => {
       const lz = z0 - li * 0.28;
-      for (let c = 0; c < line.capacity; c++) {
+      const cap = Math.max(line.capacity, li + 1, 1);
+      for (let c = 0; c < cap; c++) {
         const filled = c < line.tiles.length;
         pieces.push({
           id: `seat:${seatId}:line:${li}:${c}`,
-          objectKind: filled ? "tile" : "cell",
-          x: x0 - 0.9 + c * 0.22,
+          objectKind: filled ? "tile" : "slot",
+          x: x0 - 1.05 + c * 0.24,
           z: lz,
-          y: filled ? 0.08 : 0.02,
-          size: filled ? 0.22 : 0.18,
+          y: filled ? 0.08 : 0.03,
+          size: filled ? 0.22 : 0.2,
           seat: seatId,
-          tint: filled
-            ? PATTERN_TINT[line.tiles[c]!] ?? "#a8a29e"
-            : "#e7e5e4",
+          ...(filled
+            ? { tint: PATTERN_TINT[line.tiles[c]!] ?? "#a8a29e" }
+            : { tint: "#3f3f46" }),
         });
       }
     });
-    // T036: wall — glazed tiles seated in filled cells only (no empty wall frames).
+    // T050 · 5×5 wall grid: empty slots readable; placed tiles color-countable glazed.
+    // No solid marble `wall:board` region slab (that read as blank seat boards).
     const wall = seat.wall;
-    const wallRows = wall.length;
-    const wallCols = Math.max(0, ...wall.map((row) => row.length));
-    if (wallRows > 0 && wallCols > 0) {
-      pieces.push({
-        id: `seat:${seatId}:wall:board`,
-        objectKind: "region",
-        x: x0 + 0.55 + (wallCols - 1) * 0.09,
-        z: z0 - (wallRows - 1) * 0.09,
-        y: 0.005,
-        size: Math.max(wallCols, wallRows) * 0.2,
-        seat: seatId,
-        tint: "#e7e5e4",
-        materialKey: "board",
-      });
-    }
-    for (let r = 0; r < wall.length; r++) {
+    for (let r = 0; r < WALL_N; r++) {
       const row = wall[r] ?? [];
-      for (let c = 0; c < row.length; c++) {
-        const cell = row[c];
-        if (!cell) continue;
+      for (let c = 0; c < WALL_N; c++) {
+        const cell = row[c] ?? null;
+        const filled = Boolean(cell);
         pieces.push({
           id: `seat:${seatId}:wall:${r}:${c}`,
-          objectKind: "tile",
-          x: x0 + 0.55 + c * 0.18,
-          z: z0 - r * 0.18,
-          y: 0.06,
-          size: 0.17,
+          objectKind: filled ? "tile" : "slot",
+          x: x0 + 0.45 + c * 0.2,
+          z: z0 - r * 0.2,
+          y: filled ? 0.07 : 0.025,
+          size: filled ? 0.18 : 0.16,
           seat: seatId,
-          tint: PATTERN_TINT[cell] ?? "#a8a29e",
+          ...(filled
+            ? { tint: PATTERN_TINT[cell!] ?? "#a8a29e" }
+            : { tint: "#292524" }),
         });
       }
     }
@@ -711,7 +711,7 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
       pieces.push({
         id: `seat:${seatId}:floor:${fi}`,
         objectKind: "disc",
-        x: x0 - 0.9 + fi * 0.2,
+        x: x0 - 1.05 + fi * 0.2,
         z: z0 + 0.7,
         y: 0.05,
         size: 0.18,
