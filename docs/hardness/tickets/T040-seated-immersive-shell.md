@@ -4,8 +4,8 @@
 | --- | --- |
 | 回归靶 | H03 / H04 / H05 Room chromeH↓ / stageTop↑ |
 | 层 | **Room 壳 / 呈现**（header + invitation + stage overlay） |
-| 状态 | **开** |
-| tip | （实现后填） |
+| 状态 | **关** |
+| tip | `fb09cc5` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t040/` |
 
 ## 现象
@@ -17,5 +17,5 @@
 3. 证据三套 before/after + `chromeH` / `stageTop` 指标。无样例特判。**不**自宣 ≥9。
 
 ## 验收对照
-- [ ] 三套 chrome 高度↓、stageTop 更靠上
-- [ ] 无大白页头挡桌
+- [x] 三套 chrome 高度↓、stageTop 更靠上
+- [x] 无大白页头挡桌
