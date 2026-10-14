@@ -4,8 +4,8 @@
 | --- | --- |
 | 回归靶 | H03 / H04 / H05 Room 同机位近距毡面框 |
 | 层 | **共享呈现**（tabletop board rim / felt / vignette） |
-| 状态 | **开** |
-| tip | （实现后填） |
+| 状态 | **关** |
+| tip | `2993ffd19fdf8fcf57e172b14c1b446a1332260c` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t041/` |
 
 ## 现象
@@ -17,5 +17,5 @@
 3. 与 T038 contact shadow 共存。无样例特判。**不**自宣 ≥9。
 
 ## 验收对照
-- [ ] H03/H04/H05 before(T039)/after 同机位近距
-- [ ] 单测不回退
+- [x] H03/H04/H05 before(T039)/after 同机位近距
+- [x] 单测不回退
