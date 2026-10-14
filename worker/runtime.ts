@@ -368,7 +368,11 @@ export function initialSessionState(
   }
   if (runtime?.kernel.type === "auction-bidding-v1") {
     const play = createInitialState(auctionBiddingAdapter,
-      bindAuctionBiddingFromRuntimeKernel({ playerCount: runtime.kernel.playerCount }), _seed);
+      bindAuctionBiddingFromRuntimeKernel({
+        playerCount: runtime.kernel.playerCount,
+        harbor: runtime.kernel.harbor === true,
+        content: runtime.kernel.content ?? null,
+      }), _seed);
     return auctionBiddingToSessionFields(play);
   }
   if (runtime?.kernel.type === "auto-battler-v1") {
@@ -1077,16 +1081,29 @@ export function acceptIntent(
 
   if (runtime.kernel.type === "auction-bidding-v1") {
     if (state.status !== "active" || !state.auctionBidding || intent.seat !== state.activeSeat) return null;
-    const kernelConfig = bindAuctionBiddingFromRuntimeKernel({ playerCount: runtime.kernel.playerCount });
+    const kernelConfig = bindAuctionBiddingFromRuntimeKernel({
+      playerCount: runtime.kernel.playerCount,
+      harbor: runtime.kernel.harbor === true,
+      content: runtime.kernel.content ?? null,
+    });
+    const phase = (state.auctionBidding.phase ?? "bidding") as "bidding" | "sealed" | "market" | "ended";
     const playState = {
-      seed, sequence: state.turn, phase: "bidding" as const,
+      seed, sequence: state.turn, phase,
       activePlayerId: state.activeSeat, playerCount: runtime.kernel.playerCount,
       status: state.status, winnerId: state.winnerSeat, events: [] as const,
       genre: {
-        ...state.auctionBidding,
+        lotId: state.auctionBidding.lotId,
         chips: [...state.auctionBidding.chips] as [number, number],
         scores: [...state.auctionBidding.scores] as [number, number],
+        lotValue: state.auctionBidding.lotValue,
+        currentBid: state.auctionBidding.currentBid,
+        highBidder: state.auctionBidding.highBidder,
+        passedWithoutBid: state.auctionBidding.passedWithoutBid,
+        awardedTo: state.auctionBidding.awardedTo,
         seatOrder: [...state.auctionBidding.seatOrder] as [number, number],
+        harbor: state.auctionBidding.harbor
+          ? structuredClone(state.auctionBidding.harbor)
+          : null,
       } satisfies AuctionBiddingGenre,
     };
     const result = applyAction(auctionBiddingAdapter, playState,
@@ -1499,20 +1516,36 @@ export function runBotSimulation(
   }
 
   if (runtime.kernel.type === "auction-bidding-v1") {
+    const kernelConfig = bindAuctionBiddingFromRuntimeKernel({
+      playerCount: runtime.kernel.playerCount,
+      harbor: runtime.kernel.harbor === true,
+      content: runtime.kernel.content ?? null,
+    });
     let guard = 0;
-    while (state.status === "active" && state.auctionBidding && guard < 44) {
+    const limit = runtime.kernel.harbor ? 240 : 44;
+    while (state.status === "active" && state.auctionBidding && guard < limit) {
       guard += 1;
+      const phase = (state.auctionBidding.phase ?? "bidding") as "bidding" | "sealed" | "market" | "ended";
       const playState = {
-        seed, sequence: state.turn, phase: "bidding" as const,
+        seed, sequence: state.turn, phase,
         activePlayerId: state.activeSeat, playerCount: runtime.kernel.playerCount,
         status: state.status, winnerId: state.winnerSeat, events: [] as const,
-        genre: { ...state.auctionBidding,
+        genre: {
+          lotId: state.auctionBidding.lotId,
           chips: [...state.auctionBidding.chips] as [number, number],
           scores: [...state.auctionBidding.scores] as [number, number],
+          lotValue: state.auctionBidding.lotValue,
+          currentBid: state.auctionBidding.currentBid,
+          highBidder: state.auctionBidding.highBidder,
+          passedWithoutBid: state.auctionBidding.passedWithoutBid,
+          awardedTo: state.auctionBidding.awardedTo,
           seatOrder: [...state.auctionBidding.seatOrder] as [number, number],
+          harbor: state.auctionBidding.harbor
+            ? structuredClone(state.auctionBidding.harbor)
+            : null,
         } satisfies AuctionBiddingGenre,
       };
-      const bot = pickAuctionBiddingBotAction(playState, seed);
+      const bot = pickAuctionBiddingBotAction(playState, seed, kernelConfig);
       const accepted = acceptIntent(state, runtime, {
         intentId: `bot_${acceptedActions.length + 1}`, seat: state.activeSeat,
         actionId: bot.type, payload: bot.payload,

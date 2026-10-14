@@ -199,9 +199,20 @@ export function isNetworkRoute(ruleSystem: RuleSystem): boolean {
   return Boolean(networkRouteKernel(ruleSystem));
 }
 
-export function isAuctionBidding(ruleSystem: RuleSystem): boolean {
+export function auctionBiddingKernel(
+  ruleSystem: RuleSystem,
+): Extract<
+  Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
+  { type: "auction-bidding-v1" }
+> | null {
   return ruleSystem.runtimeSupport.status === "executable" &&
-    ruleSystem.runtimeSupport.kernel.type === "auction-bidding-v1";
+    ruleSystem.runtimeSupport.kernel.type === "auction-bidding-v1"
+    ? ruleSystem.runtimeSupport.kernel
+    : null;
+}
+
+export function isAuctionBidding(ruleSystem: RuleSystem): boolean {
+  return Boolean(auctionBiddingKernel(ruleSystem));
 }
 
 export function isAutoBattler(ruleSystem: RuleSystem): boolean {

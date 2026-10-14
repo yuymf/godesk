@@ -135,6 +135,12 @@ import {
   ideaRequestsFreightLogistics,
   parseFreightTuningFromIdea,
 } from "../src/runtime/adapters/network-route";
+import {
+  defaultHarborContent,
+  harborAuctionUnsupportedNotes,
+  ideaRequestsHarborAuction,
+  parseHarborTuningFromIdea,
+} from "../src/runtime/adapters/auction-bidding";
 
 interface CreatorJobHost {
   ctx: DurableObjectState;
@@ -583,13 +589,28 @@ export async function runCreatorJob(
         : autoBattlerRuntimeConfigured
         ? (() => { const ab = autoBattlerProposedRuntime(idea); autoBattlerAssetIntents = ab.assetIntents; return ab.configure; })()
         : auctionBiddingRuntimeConfigured
-        ? {
-            op: "configure_auction_bidding" as const,
-            config: {
-              playerCount: 2,
-              unsupported: ["auction-bidding-v1 plays one open lot with alternate raise/pass, 20 chips per seat, and award or unsold resolution; multi-lot economies and sealed bids are unsupported."],
-            },
-          }
+        ? (() => {
+            const harbor = ideaRequestsHarborAuction(idea);
+            const tuning = harbor ? parseHarborTuningFromIdea(idea) : {};
+            const content = harbor ? defaultHarborContent(tuning) : undefined;
+            const unsupported = harbor
+              ? [
+                  "auction-bidding-v1 harbor subset: multi-lot queue + open/sealed resolve + black-market resale; 3–4 seats / live simultaneous sealed / negotiated trades unsupported.",
+                  ...harborAuctionUnsupportedNotes(),
+                ]
+              : [
+                  "auction-bidding-v1 plays one open lot with alternate raise/pass, 20 chips per seat, and award or unsold resolution; multi-lot economies and sealed bids are unsupported.",
+                ];
+            return {
+              op: "configure_auction_bidding" as const,
+              config: {
+                playerCount: 2,
+                ...(harbor ? { harbor: true as const } : {}),
+                ...(content ? { content } : {}),
+                unsupported,
+              },
+            };
+          })()
         : hiddenRoleRuntimeConfigured
         ? {
             op: "configure_hidden_role" as const,

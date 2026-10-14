@@ -3,7 +3,10 @@ import { applyAction, createInitialState, hashPlayState, listLegalActions,
   PUBLIC_LAYER_FORBIDDEN_REQUIRED_KEYS, replay } from "../play-kernel";
 import { KERNEL_CAPABILITIES, MECHANIC_CAPABILITIES } from "../../creator/kernel-capabilities";
 import { auctionBiddingAdapter, autoPlayAuctionBiddingGame,
-  bindAuctionBiddingFromRuntimeKernel, createAuctionBiddingKernelConfig } from "./auction-bidding";
+  bindAuctionBiddingFromRuntimeKernel, createAuctionBiddingKernelConfig,
+  defaultHarborContent, ideaRequestsHarborAuction, parseHarborTuningFromIdea,
+} from "./auction-bidding";
+import { readFileSync } from "node:fs";
 
 const config = createAuctionBiddingKernelConfig();
 const initial = (seed = 42) => createInitialState(auctionBiddingAdapter, config, seed);
@@ -73,5 +76,114 @@ describe("auction-bidding-v1", () => {
     expect(hashPlayState(replay(auctionBiddingAdapter, config, 99, actions))).toBe(hashPlayState(state));
     expect(initial(99).genre.seatOrder).toEqual(initial(99).genre.seatOrder);
     expect(initial(1).genre.lotId).not.toBe(initial(2).genre.lotId);
+  });
+});
+
+
+describe("auction-bidding-v1 harbor subset (T007)", () => {
+  const harborCfg = createAuctionBiddingKernelConfig({
+    content: defaultHarborContent({ startingFunds: 30, bidVisibility: "open" }),
+  });
+
+  it("starts with multi-lot deck, funds 30, and a current lot", () => {
+    const state = createInitialState(auctionBiddingAdapter, harborCfg, 7);
+    expect(state.genre.harbor).not.toBeNull();
+    expect(state.genre.chips).toEqual([30, 30]);
+    expect(state.genre.harbor!.currentLot).not.toBeNull();
+    expect(state.genre.harbor!.deck.length).toBe(7);
+    expect(state.phase).toBe("bidding");
+  });
+
+  it("awards a lot into hand then allows black-market sell", () => {
+    let state = createInitialState(auctionBiddingAdapter, harborCfg, 3);
+    const reserve = state.genre.harbor!.currentLot!.reserve;
+    const seat = state.activePlayerId;
+    const bid = applyAction(
+      auctionBiddingAdapter,
+      state,
+      { type: "bid", playerId: seat, payload: { amount: reserve } },
+      harborCfg,
+    );
+    expect(bid.ok).toBe(true);
+    if (!bid.ok) return;
+    state = bid.state;
+    const other = state.activePlayerId;
+    const pass = applyAction(
+      auctionBiddingAdapter,
+      state,
+      { type: "pass", playerId: other },
+      harborCfg,
+    );
+    expect(pass.ok).toBe(true);
+    if (!pass.ok) return;
+    state = pass.state;
+    expect(state.phase).toBe("market");
+    expect(state.genre.harbor!.hand[seat]!.length).toBe(1);
+    const lot = state.genre.harbor!.hand[seat]![0]!;
+    const sell = applyAction(
+      auctionBiddingAdapter,
+      state,
+      { type: "sell", playerId: seat, payload: { instanceId: lot.instanceId } },
+      harborCfg,
+    );
+    expect(sell.ok).toBe(true);
+    if (!sell.ok) return;
+    expect(sell.state.genre.chips[seat]!).toBeGreaterThan(30 - reserve);
+    const skip = applyAction(
+      auctionBiddingAdapter,
+      sell.state,
+      { type: "pass_market", playerId: seat },
+      harborCfg,
+    );
+    expect(skip.ok).toBe(true);
+    if (!skip.ok) return;
+    expect(skip.state.phase).toMatch(/bidding|sealed/);
+    expect(skip.state.genre.harbor!.currentLot).not.toBeNull();
+  });
+
+  it("sealed mode resolves both commits then enters market", () => {
+    const cfg = createAuctionBiddingKernelConfig({
+      content: defaultHarborContent({ bidVisibility: "sealed", startingFunds: 30 }),
+    });
+    let state = createInitialState(auctionBiddingAdapter, cfg, 11);
+    expect(state.phase).toBe("sealed");
+    const reserve = state.genre.harbor!.currentLot!.reserve;
+    const a0 = state.activePlayerId;
+    const r0 = applyAction(
+      auctionBiddingAdapter,
+      state,
+      { type: "sealed_bid", playerId: a0, payload: { amount: reserve + 1 } },
+      cfg,
+    );
+    expect(r0.ok).toBe(true);
+    if (!r0.ok) return;
+    state = r0.state;
+    const a1 = state.activePlayerId;
+    const r1 = applyAction(
+      auctionBiddingAdapter,
+      state,
+      { type: "sealed_pass", playerId: a1 },
+      cfg,
+    );
+    expect(r1.ok).toBe(true);
+    if (!r1.ok) return;
+    expect(r1.state.phase).toBe("market");
+    expect(r1.state.genre.awardedTo).toBe(a0);
+  });
+
+  it("harbor auto-play exhausts deck without illegal actions", () => {
+    const { state, actions } = autoPlayAuctionBiddingGame(42, harborCfg);
+    expect(actions.length).toBeGreaterThan(5);
+    expect(state.status).toBe("complete");
+  });
+
+  it("detects H03 INPUT as harbor auction cues", () => {
+    const idea = readFileSync(
+      "docs/hardness/suites/H03-dark-harbor-auction/INPUT.md",
+      "utf8",
+    );
+    expect(ideaRequestsHarborAuction(idea)).toBe(true);
+    const tuning = parseHarborTuningFromIdea(idea);
+    expect(tuning.startingFunds).toBe(30);
   });
 });

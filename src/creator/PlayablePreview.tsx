@@ -11,6 +11,7 @@ import {
   isHexSettlement,
   isNetworkRoute,
   isAuctionBidding,
+  auctionBiddingKernel,
   isAutoBattler,
   isHarborVoyage,
   networkRouteKernel,
@@ -31,7 +32,7 @@ import { createInitialHexIslandSessionSlice } from "./hex-settlement-session";
 import { NetworkRouteBoard } from "./NetworkRouteBoard";
 import { createInitialNetworkRouteSessionSlice } from "./network-route-thumbnail";
 import { AuctionBiddingBoard } from "./AuctionBiddingBoard";
-import { auctionBiddingAdapter, createAuctionBiddingKernelConfig, auctionBiddingToSessionFields } from "../runtime/adapters/auction-bidding";
+import { auctionBiddingAdapter, bindAuctionBiddingFromRuntimeKernel, auctionBiddingToSessionFields } from "../runtime/adapters/auction-bidding";
 import { TideArenaBoard } from "./TideArenaBoard";
 import { autoBattlerAdapter, createAutoBattlerKernelConfig, autoBattlerToSessionFields } from "../runtime/adapters/auto-battler";
 import { createInitialState } from "../runtime/play-kernel";
@@ -95,6 +96,7 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
   const networkRoute = isNetworkRoute(build.ruleSystem);
   const networkKernel = networkRouteKernel(build.ruleSystem);
   const auction = isAuctionBidding(build.ruleSystem);
+  const auctionKernel = auctionBiddingKernel(build.ruleSystem);
   const autoBattler = isAutoBattler(build.ruleSystem);
   const scoreTrackSurface = usesScoreTrackSurface(build.ruleSystem);
   const runtimeValues = new Map(
@@ -203,11 +205,19 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
             viewerSeat={0}
           />
         </section>
-      ) : auction ? (
+      ) : auction && auctionKernel ? (
         <section className="preview-board" aria-label="拍卖竞价可玩桌面">
           <AuctionBiddingBoard
-            auction={auctionBiddingToSessionFields(createInitialState(auctionBiddingAdapter, createAuctionBiddingKernelConfig(), 42)).auctionBidding}
-            activeSeat={0} enabled={false} readOnly status="active" viewerSeat={null}
+            auction={auctionBiddingToSessionFields(createInitialState(
+              auctionBiddingAdapter,
+              bindAuctionBiddingFromRuntimeKernel({
+                playerCount: auctionKernel.playerCount,
+                harbor: auctionKernel.harbor === true,
+                content: auctionKernel.content ?? null,
+              }),
+              42,
+            )).auctionBidding!}
+            activeSeat={0} enabled={false} readOnly status="active" viewerSeat={0}
           />
         </section>
       ) : autoBattler ? (

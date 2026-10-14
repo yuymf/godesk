@@ -733,6 +733,10 @@ function configureRuntimeKernel(
   if (configuration.op === "configure_auction_bidding") {
     configureDedicatedKernel(record, configuration.op, {
       type: "auction-bidding-v1", playerCount: configuration.config.playerCount,
+      ...(configuration.config.harbor ? { harbor: true } : {}),
+      ...(configuration.config.content
+        ? { content: structuredClone(configuration.config.content) }
+        : {}),
     }, configuration.config.unsupported?.map((item) => item.trim()) ?? [], configuration.config, affectedEntities);
     return;
   }

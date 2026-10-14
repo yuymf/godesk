@@ -302,6 +302,17 @@ export interface RuleSystem {
           | {
               type: "auction-bidding-v1";
               playerCount: number;
+              harbor?: boolean;
+              content?: {
+                lots: Array<{
+                  id: string;
+                  name: string;
+                  reserve: number;
+                  marketMult: number;
+                }>;
+                startingFunds: number;
+                bidVisibility: "open" | "sealed";
+              };
             }
           | {
               type: "auto-battler-v1";
@@ -682,7 +693,21 @@ export type ProjectChangeOperation =
     }
   | {
       op: "configure_auction_bidding";
-      config: { playerCount: number; unsupported?: string[] };
+      config: {
+        playerCount: number;
+        harbor?: boolean;
+        content?: {
+          lots: Array<{
+            id: string;
+            name: string;
+            reserve: number;
+            marketMult: number;
+          }>;
+          startingFunds: number;
+          bidVisibility: "open" | "sealed";
+        };
+        unsupported?: string[];
+      };
     }
   | {
       op: "configure_auto_battler";
@@ -1046,7 +1071,7 @@ export interface SessionState {
     } | null;
   };
   auctionBidding?: {
-    lotId: "amber" | "jade";
+    lotId: string;
     chips: [number, number];
     scores: [number, number];
     lotValue: number;
@@ -1055,6 +1080,19 @@ export interface SessionState {
     passedWithoutBid: number;
     awardedTo: number | null;
     seatOrder: [number, number];
+    phase?: string;
+    harbor?: {
+      bidVisibility: "open" | "sealed";
+      deck: Array<{ id: string; name: string; reserve: number; marketMult: number; instanceId: string }>;
+      discard: Array<{ id: string; name: string; reserve: number; marketMult: number; instanceId: string }>;
+      currentLot: { id: string; name: string; reserve: number; marketMult: number; instanceId: string } | null;
+      hand: [
+        Array<{ id: string; name: string; reserve: number; marketMult: number; instanceId: string }>,
+        Array<{ id: string; name: string; reserve: number; marketMult: number; instanceId: string }>,
+      ];
+      sealedBids: [number | null, number | null];
+      lastSold: { seat: number; name: string; payout: number } | null;
+    } | null;
   };
   /** Present when the build kernel is auto-battler-v1 (generic shop/bench/combat). */
   autoBattler?: {
