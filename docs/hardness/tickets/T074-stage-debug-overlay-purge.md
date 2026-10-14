@@ -4,8 +4,8 @@
 | --- | --- |
 | 回归靶 | H03 + ≥1 其他 suite before/after；unit |
 | 层 | **共享呈现** |
-| 状态 | **开** |
-| tip | pending |
+| 状态 | **关** |
+| tip | `425ec52` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t074/` |
 
 ## 问题

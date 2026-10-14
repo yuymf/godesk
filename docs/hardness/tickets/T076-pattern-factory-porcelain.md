@@ -4,8 +4,8 @@
 | --- | --- |
 | 回归靶 | H04 stage-close；T047 守卫绿；force-draft 不回退 |
 | 层 | **共享呈现** |
-| 状态 | **开** |
-| tip | pending |
+| 状态 | **关** |
+| tip | `1289007` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t076/` |
 
 ## 问题

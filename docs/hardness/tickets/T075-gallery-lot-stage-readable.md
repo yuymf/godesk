@@ -4,8 +4,8 @@
 | --- | --- |
 | 回归靶 | H05 stage-close；vs T072/T066 ≥一闸；motif/unit 不回退 |
 | 层 | **共享呈现** |
-| 状态 | **开** |
-| tip | pending |
+| 状态 | **关** |
+| tip | `f676539` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t075/` |
 
 ## 问题
