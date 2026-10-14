@@ -62,6 +62,12 @@ export type GalleryAuctionContent = {
   marketLadder: number[];
   handSize: number;
   roundsToEnd: number;
+  /** Simultaneous sealed: any uncommitted seat may commit (off-turn). */
+  simultaneousSealed: boolean;
+  /** Multi-party brokerage: second-highest gets a cut of the award. */
+  brokerageEnabled: boolean;
+  /** Basis points of winning price to second place (1000 = 10%). */
+  brokerSecondCutBps: number;
 };
 
 export type GalleryAuctionState = {
@@ -94,6 +100,10 @@ export type GalleryAuctionState = {
     artistId: string;
   } | null;
   marketPasses: number;
+  simultaneousSealed: boolean;
+  brokerageEnabled: boolean;
+  brokerSecondCutBps: number;
+  lastBroker: { seat: number; cut: number } | null;
 };
 
 type AuctionBiddingConfig = {
@@ -245,6 +255,10 @@ export function defaultGalleryContent(
     marketLadder: overrides?.marketLadder ?? [30, 20, 10, 0],
     handSize: overrides?.handSize ?? 4,
     roundsToEnd: overrides?.roundsToEnd ?? 4,
+    simultaneousSealed: overrides?.simultaneousSealed ?? true,
+    brokerageEnabled:
+      overrides?.brokerageEnabled ?? seats >= 3,
+    brokerSecondCutBps: overrides?.brokerSecondCutBps ?? 1000,
   };
 }
 
@@ -253,7 +267,8 @@ export function parseGallerySeatsFromIdea(idea: string): number | null {
     /(\d+)\s*[-–—－]\s*(\d+)\s*(?:人|理想|players?|席|位)?/i,
   );
   if (range) {
-    return Math.max(2, Math.min(5, Number(range[1])));
+    const hi = Math.max(Number(range[1]), Number(range[2]));
+    return Math.max(2, Math.min(5, hi));
   }
   const single = idea.match(/(\d+)\s*(?:[-–—－]?\s*)?(?:人|玩家|players?)/i);
   if (single) return Math.max(2, Math.min(5, Number(single[1])));
@@ -283,7 +298,7 @@ export function parseGalleryTuningFromIdea(
 
 export function galleryAuctionUnsupportedNotes(): string[] {
   return [
-    "auction-bidding-v1 gallery subset: 2–5 seats, open/sealed/fixed/double-fixed + artist market-ladder sell + round-start hand refill; simultaneous live sealed / multi-party brokerage unsupported — 仅部分能力.",
+    "auction-bidding-v1 gallery subset: 2–5 seats, open/sealed/fixed/double + market sell + refill; simultaneous sealed commits (off-turn) + multi-party brokerage (second-place cut when >=3 seats); live negotiated multi-lot brokerage beyond award cut remains out of scope.",
   ];
 }
 
@@ -356,6 +371,10 @@ function cloneGallery(g: GalleryAuctionState): GalleryAuctionState {
     marketPrices: { ...g.marketPrices },
     lastSold: g.lastSold ? { ...g.lastSold } : null,
     marketPasses: g.marketPasses,
+    simultaneousSealed: g.simultaneousSealed ?? true,
+    brokerageEnabled: g.brokerageEnabled ?? false,
+    brokerSecondCutBps: g.brokerSecondCutBps ?? 1000,
+    lastBroker: g.lastBroker ? { ...g.lastBroker } : null,
   };
 }
 
@@ -513,6 +532,7 @@ function galleryAwardLot(
   genre: AuctionBiddingGenre,
   winner: PlayerId,
   price: number,
+  secondSeat: PlayerId | null = null,
 ): {
   genre: AuctionBiddingGenre;
   phase: PlayPhaseId;
@@ -523,6 +543,24 @@ function galleryAwardLot(
   const lot = g.currentLot!;
   const companion = g.companionLot;
   genre.chips[winner]! -= price;
+  // Seller (auctioneer) receives the price; optional second-place brokerage cut.
+  let toSeller = price;
+  g.lastBroker = null;
+  if (
+    g.brokerageEnabled &&
+    g.playerCount >= 3 &&
+    secondSeat !== null &&
+    secondSeat !== winner &&
+    secondSeat !== g.auctioneer
+  ) {
+    const cut = Math.floor((price * g.brokerSecondCutBps) / 10000);
+    if (cut > 0 && cut < price) {
+      genre.chips[secondSeat]! += cut;
+      toSeller -= cut;
+      g.lastBroker = { seat: secondSeat, cut };
+    }
+  }
+  genre.chips[g.auctioneer]! += toSeller;
   genre.scores[winner]! += companion ? 2 : 1;
   genre.awardedTo = winner;
   genre.highBidder = winner;
@@ -636,6 +674,16 @@ function parseAuctionBiddingConfig(
           : [30, 20, 10, 0],
         handSize: typeof c.handSize === "number" ? c.handSize : 4,
         roundsToEnd: typeof c.roundsToEnd === "number" ? c.roundsToEnd : 4,
+        simultaneousSealed:
+          typeof c.simultaneousSealed === "boolean"
+            ? c.simultaneousSealed
+            : true,
+        brokerageEnabled:
+          typeof c.brokerageEnabled === "boolean"
+            ? c.brokerageEnabled
+            : (typeof raw.playerCount === "number" ? raw.playerCount >= 3 : false),
+        brokerSecondCutBps:
+          typeof c.brokerSecondCutBps === "number" ? c.brokerSecondCutBps : 1000,
       };
     }
   }
@@ -757,6 +805,10 @@ function createGalleryState(
     marketPrices: prices,
     lastSold: null,
     marketPasses: 0,
+    simultaneousSealed: content.simultaneousSealed ?? true,
+    brokerageEnabled: content.brokerageEnabled ?? playerCount >= 3,
+    brokerSecondCutBps: content.brokerSecondCutBps ?? 1000,
+    lastBroker: null,
   };
 }
 
@@ -766,6 +818,14 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
 > = {
   kernelType: AUCTION_BIDDING_KERNEL_TYPE,
   parseConfig: parseAuctionBiddingConfig,
+  allowsOffTurnAction(state, action) {
+    const g = state.genre.gallery;
+    if (!g?.simultaneousSealed || state.phase !== "sealed") return false;
+    if (action.type !== "sealed_bid" && action.type !== "sealed_pass") {
+      return false;
+    }
+    return g.sealedBids[action.playerId] === null;
+  },
   createGenreState(config, seed) {
     const n = config.playerCount;
     const first = (createSeededRng(seed).at(1) % n) as PlayerId;
@@ -834,12 +894,21 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
     return "bidding";
   },
   listLegalActions(state, playerId) {
-    if (state.status !== "active" || playerId !== state.activePlayerId) {
+    if (state.status !== "active") return [];
+    const gallery = state.genre.gallery;
+    const harbor = state.genre.harbor;
+    const simultaneousSealed =
+      Boolean(gallery?.simultaneousSealed && state.phase === "sealed") ||
+      Boolean(
+        harbor?.bidVisibility === "sealed" &&
+          state.phase === "sealed" &&
+          // harbor stays sequential by default; gallery drives T020
+          false,
+      );
+    if (!simultaneousSealed && playerId !== state.activePlayerId) {
       return [];
     }
     const legal: LegalAction[] = [];
-    const gallery = state.genre.gallery;
-    const harbor = state.genre.harbor;
 
     // ---- Gallery ----
     if (gallery) {
@@ -1004,7 +1073,14 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
     return legal;
   },
   reduce(state, action) {
-    if (state.status !== "active" || action.playerId !== state.activePlayerId) {
+    if (state.status !== "active") return null;
+    const g0 = state.genre.gallery;
+    const offTurnSealed =
+      Boolean(g0?.simultaneousSealed) &&
+      state.phase === "sealed" &&
+      (action.type === "sealed_bid" || action.type === "sealed_pass") &&
+      g0!.sealedBids[action.playerId] === null;
+    if (action.playerId !== state.activePlayerId && !offTurnSealed) {
       return null;
     }
 
@@ -1169,7 +1245,15 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
           return null;
         }
         if (g.sealedBids.some((b) => b === null)) {
-          const next = ((action.playerId + 1) % g.playerCount) as PlayerId;
+          let next = ((action.playerId + 1) % g.playerCount) as PlayerId;
+          // Prefer next uncommitted seat (simultaneous commit window).
+          for (let step = 0; step < g.playerCount; step += 1) {
+            const s = ((action.playerId + 1 + step) % g.playerCount) as PlayerId;
+            if (g.sealedBids[s] === null) {
+              next = s;
+              break;
+            }
+          }
           return {
             genre,
             phase: "sealed" as PlayPhaseId,
@@ -1199,7 +1283,8 @@ export const auctionBiddingAdapter: PlayKernelAdapter<
           );
         });
         const winner = cand[0]!;
-        const awarded = galleryAwardLot(genre, winner.seat, winner.bid);
+        const second = cand.length >= 2 ? cand[1]!.seat : null;
+        const awarded = galleryAwardLot(genre, winner.seat, winner.bid, second);
         return {
           ...awarded,
           status: (awarded as { status?: "active" | "complete" }).status ?? "active",

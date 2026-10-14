@@ -659,10 +659,17 @@ export async function runCreatorJob(
                 : [
                     "network-route-v1 executes a fixed city graph with alternate-turn route claims and first-to-connect terminal hubs on the public play-kernel; a minimal original route game (no tickets deck / multi-color routes / scoring table).",
                   ];
+            const playerCount = resolveSeatCount({
+              idea,
+              capacity: SEAT_CAPACITY["network-route-v1"],
+              participantsDefault: generatedRuleSystem.participants.default,
+              participantsMax: generatedRuleSystem.participants.max,
+              participantsMin: generatedRuleSystem.participants.min,
+            });
             return {
               op: "configure_network_route" as const,
               config: {
-                playerCount: 2,
+                playerCount,
                 ...(freight ? { freight: true as const } : {}),
                 ...(tickets ? { tickets: true as const } : {}),
                 ...(content ? { content } : {}),
@@ -698,7 +705,6 @@ export async function runCreatorJob(
                   gallery: true as const,
                   galleryContent,
                   unsupported: [
-                    "auction-bidding-v1 gallery subset: 2–5 seats, open/sealed/fixed/double-fixed + market sell + round-start refill; 仅部分能力.",
                     ...galleryAuctionUnsupportedNotes(),
                   ],
                 },

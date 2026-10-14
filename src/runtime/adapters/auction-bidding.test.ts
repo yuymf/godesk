@@ -480,3 +480,124 @@ describe("auction-bidding-v1 gallery T015 seats/double/refill", () => {
     expect(state.genre.chips).toHaveLength(3);
   });
 });
+
+
+describe("auction-bidding-v1 gallery T020 simultaneous sealed + brokerage", () => {
+  it("allows off-turn sealed commits then reveals together", () => {
+    const config = createAuctionBiddingKernelConfig({
+      playerCount: 3,
+      galleryContent: defaultGalleryContent({
+        playerCount: 3,
+        startingFunds: 100,
+        salesToEndRound: 9,
+        modes: ["sealed"],
+        simultaneousSealed: true,
+        brokerageEnabled: true,
+        brokerSecondCutBps: 1000,
+      }),
+    });
+    let state = createInitialState(auctionBiddingAdapter, config, 5);
+    const auctioneer = state.genre.gallery!.auctioneer;
+    const painting = state.genre.gallery!.auctionHand[auctioneer]![0]!;
+    const played = applyAction(
+      auctionBiddingAdapter,
+      state,
+      {
+        type: "play_painting",
+        playerId: auctioneer,
+        payload: { instanceId: painting.instanceId, mode: "sealed" },
+      },
+      config,
+    );
+    expect(played.ok).toBe(true);
+    if (!played.ok) return;
+    state = played.state;
+    expect(state.phase).toBe("sealed");
+    const floor = state.genre.gallery!.currentLot!.reserve;
+    // Seat 2 commits while active may still be auctioneer/another — off-turn OK.
+    const offSeat = ((auctioneer + 2) % 3) as number;
+    const off = applyAction(
+      auctionBiddingAdapter,
+      state,
+      {
+        type: "sealed_bid",
+        playerId: offSeat,
+        payload: { amount: floor + 4 },
+      },
+      config,
+    );
+    expect(off.ok).toBe(true);
+    if (!off.ok) return;
+    state = off.state;
+    expect(state.genre.gallery!.sealedBids[offSeat]).toBe(floor + 4);
+    // Remaining seats commit
+    for (let s = 0; s < 3; s += 1) {
+      if (state.genre.gallery!.sealedBids[s] !== null) continue;
+      const amount = s === auctioneer ? floor + 1 : floor + 8;
+      const r = applyAction(
+        auctionBiddingAdapter,
+        state,
+        {
+          type: "sealed_bid",
+          playerId: s,
+          payload: { amount },
+        },
+        config,
+      );
+      expect(r.ok).toBe(true);
+      if (!r.ok) return;
+      state = r.state;
+    }
+    expect(state.phase).not.toBe("sealed");
+    // Highest (floor+8) won; second (floor+4) got brokerage cut
+    expect(state.genre.gallery!.lastBroker).not.toBeNull();
+    expect(state.genre.gallery!.lastBroker!.cut).toBeGreaterThan(0);
+  });
+
+  it("brokerage pays second place a cut of the sealed award", () => {
+    const config = createAuctionBiddingKernelConfig({
+      playerCount: 3,
+      galleryContent: defaultGalleryContent({
+        playerCount: 3,
+        startingFunds: 80,
+        salesToEndRound: 9,
+        modes: ["sealed"],
+        brokerageEnabled: true,
+        brokerSecondCutBps: 2000,
+      }),
+    });
+    let state = createInitialState(auctionBiddingAdapter, config, 9);
+    const a = state.genre.gallery!.auctioneer;
+    const painting = state.genre.gallery!.auctionHand[a]![0]!;
+    let r = applyAction(
+      auctionBiddingAdapter,
+      state,
+      {
+        type: "play_painting",
+        playerId: a,
+        payload: { instanceId: painting.instanceId, mode: "sealed" },
+      },
+      config,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    const floor = state.genre.gallery!.currentLot!.reserve;
+    const bids = [floor + 2, floor + 10, floor + 6];
+    for (let s = 0; s < 3; s += 1) {
+      r = applyAction(
+        auctionBiddingAdapter,
+        state,
+        { type: "sealed_bid", playerId: s, payload: { amount: bids[s] } },
+        config,
+      );
+      expect(r.ok).toBe(true);
+      if (!r.ok) return;
+      state = r.state;
+    }
+    // Winner seat 1 paid 10+floor; second seat 2 gets 20% cut
+    expect(state.genre.gallery!.lastBroker?.seat).toBe(2);
+    const cut = Math.floor(((floor + 10) * 2000) / 10000);
+    expect(state.genre.gallery!.lastBroker?.cut).toBe(cut);
+  });
+});

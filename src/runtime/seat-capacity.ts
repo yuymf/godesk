@@ -10,7 +10,7 @@ export const SEAT_CAPACITY = {
   "hex-settlement-v1": { min: 2, max: 4 },
   "gem-engine-v1": { min: 2, max: 4 },
   "pattern-draft-v1": { min: 2, max: 4 },
-  "network-route-v1": { min: 2, max: 4 },
+  "network-route-v1": { min: 2, max: 5 },
   "auction-bidding-v1-gallery": { min: 2, max: 5 },
 } as const;
 

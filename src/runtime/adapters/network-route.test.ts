@@ -151,13 +151,17 @@ describe("network-route-v1 adapter", () => {
     expect(snapshotBody(replayed)).toEqual(snapshotBody(state));
   });
 
-  it("bindNetworkRouteFromRuntimeKernel requires two players", () => {
+  it("bindNetworkRouteFromRuntimeKernel clamps into 2–5 seats", () => {
     expect(bindNetworkRouteFromRuntimeKernel({}).kernelType).toBe(
       NETWORK_ROUTE_KERNEL_TYPE,
     );
     expect(() =>
       bindNetworkRouteFromRuntimeKernel({ playerCount: 3 }),
-    ).toThrow(/two_players/);
+    ).not.toThrow();
+    expect(() =>
+      bindNetworkRouteFromRuntimeKernel({ playerCount: 6 }),
+    ).not.toThrow(); // clamp to max 5
+    expect(bindNetworkRouteFromRuntimeKernel({ playerCount: 6 }).playerCount).toBe(5);
   });
 });
 
@@ -398,5 +402,22 @@ describe("network-route tickets subset (T016)", () => {
     const { state, actions } = autoPlayNetworkRouteGame(99, cfg);
     expect(actions.length).toBeGreaterThan(0);
     expect(["active", "complete"]).toContain(state.status);
+  });
+});
+
+describe("network-route-v1 multi-seat (T019b / T020 companion)", () => {
+  it("boots tickets at 3–5 seats via seat-capacity", () => {
+    for (const n of [3, 4, 5] as const) {
+      const cfg = createNetworkRouteKernelConfig({
+        playerCount: n,
+        tickets: true,
+        ticketsContent: defaultTicketsContent(),
+      });
+      const state = createInitialState(networkRouteAdapter, cfg, 3);
+      expect(state.playerCount).toBe(n);
+      expect(state.genre.tickets!.trainsLeft).toHaveLength(n);
+      expect(state.genre.tickets!.ticketHand).toHaveLength(n);
+      expect(state.genre.routeCounts).toHaveLength(n);
+    }
   });
 });

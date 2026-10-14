@@ -74,15 +74,15 @@ export type HandCounts = Record<TrainCardColor, number>;
 export type NetworkRouteTicketsState = {
   edgeMeta: Record<string, EdgeColorMeta>;
   lengthScores: Record<number, number> & Record<string, number>;
-  trainHand: [HandCounts, HandCounts];
+  trainHand: HandCounts[];
   trainDeck: TrainCardColor[];
   trainDiscard: TrainCardColor[];
   faceUp: TrainCardColor[];
-  ticketHand: [DestinationTicketInstance[], DestinationTicketInstance[]];
+  ticketHand: DestinationTicketInstance[][];
   ticketDeck: DestinationTicketInstance[];
-  trainsLeft: [number, number];
-  routeScore: [number, number];
-  finalScore: [number, number] | null;
+  trainsLeft: number[];
+  routeScore: number[];
+  finalScore: number[] | null;
   /** After a seat hits train threshold, remaining turns including others. */
   finalTurnsLeft: number | null;
   lastEvent: string | null;
@@ -210,7 +210,7 @@ export function defaultTicketsContent(
 
 export function ticketsUnsupportedNotes(): string[] {
   return [
-    "network-route-v1 tickets subset: destination tickets deck + multi-color length claim + length scoring table; 3–5 seats / face-up rainbow take limits / longest-path bonus unsupported.",
+    "network-route-v1 tickets subset: 2–5 seats (shared seat-capacity), destination tickets, multi-color length claims, length scoring; face-up rainbow take limits / longest-path bonus unsupported.",
   ];
 }
 
@@ -255,25 +255,27 @@ function refillFaceUpTo(
 export function buildTicketsState(
   content: NetworkRouteTicketsContent,
   seed: number,
+  playerCount = 2,
 ): NetworkRouteTicketsState {
+  const n = Math.max(2, Math.min(5, playerCount));
   const trainDeck = buildTrainDeck(content, seed);
   const trainDiscard: TrainCardColor[] = [];
-  const hands: [HandCounts, HandCounts] = [emptyHand(), emptyHand()];
-  for (const seat of [0, 1] as const) {
+  const hands: HandCounts[] = Array.from({ length: n }, () => emptyHand());
+  for (let seat = 0; seat < n; seat += 1) {
     for (let i = 0; i < content.startingTrainCards; i += 1) {
       const card = drawOne(trainDeck, trainDiscard, seed + seat * 17 + i);
-      if (card) hands[seat][card] = (hands[seat][card] ?? 0) + 1;
+      if (card) hands[seat]![card] = (hands[seat]![card] ?? 0) + 1;
     }
   }
   const ticketPool = shuffleWithSeed(
     content.tickets.map((t, i) => ({ ...t, instanceId: `${t.id}#${i}` })),
     seed ^ 0xc0ffee,
   );
-  const ticketHand: [DestinationTicketInstance[], DestinationTicketInstance[]] = [
-    [],
-    [],
-  ];
-  for (const seat of [0, 1] as const) {
+  const ticketHand: DestinationTicketInstance[][] = Array.from(
+    { length: n },
+    () => [],
+  );
+  for (let seat = 0; seat < n; seat += 1) {
     const drawn: DestinationTicketInstance[] = [];
     for (let i = 0; i < content.startingTicketDraw && ticketPool.length; i += 1) {
       drawn.push(ticketPool.shift()!);
@@ -282,7 +284,6 @@ export function buildTicketsState(
     const keep = drawn.slice(0, content.startingTicketKeep);
     const discard = drawn.slice(content.startingTicketKeep);
     ticketHand[seat] = keep;
-    // discarded tickets go under deck
     ticketPool.push(...discard);
   }
   const tickets: NetworkRouteTicketsState = {
@@ -294,8 +295,8 @@ export function buildTicketsState(
     faceUp: [],
     ticketHand,
     ticketDeck: ticketPool,
-    trainsLeft: [content.startingTrains, content.startingTrains],
-    routeScore: [0, 0],
+    trainsLeft: Array.from({ length: n }, () => content.startingTrains),
+    routeScore: Array.from({ length: n }, () => 0),
     finalScore: null,
     finalTurnsLeft: null,
     lastEvent: "tickets_dealt",
@@ -310,18 +311,15 @@ export function cloneTicketsState(
   return {
     edgeMeta: { ...t.edgeMeta },
     lengthScores: { ...t.lengthScores },
-    trainHand: [cloneHand(t.trainHand[0]), cloneHand(t.trainHand[1])],
+    trainHand: t.trainHand.map(cloneHand),
     trainDeck: [...t.trainDeck],
     trainDiscard: [...t.trainDiscard],
     faceUp: [...t.faceUp],
-    ticketHand: [
-      t.ticketHand[0].map((x) => ({ ...x })),
-      t.ticketHand[1].map((x) => ({ ...x })),
-    ],
+    ticketHand: t.ticketHand.map((hand) => hand.map((x) => ({ ...x }))),
     ticketDeck: t.ticketDeck.map((x) => ({ ...x })),
-    trainsLeft: [...t.trainsLeft] as [number, number],
-    routeScore: [...t.routeScore] as [number, number],
-    finalScore: t.finalScore ? ([...t.finalScore] as [number, number]) : null,
+    trainsLeft: [...t.trainsLeft],
+    routeScore: [...t.routeScore],
+    finalScore: t.finalScore ? [...t.finalScore] : null,
     finalTurnsLeft: t.finalTurnsLeft,
     lastEvent: t.lastEvent,
   };
@@ -389,14 +387,20 @@ export function computeFinalScores(
     from: string,
     to: string,
   ) => boolean,
-): [number, number] {
-  const s0 =
-    tickets.routeScore[0] +
-    scoreTicketsForSeat(claims, edges, connects, 0, tickets.ticketHand[0]);
-  const s1 =
-    tickets.routeScore[1] +
-    scoreTicketsForSeat(claims, edges, connects, 1, tickets.ticketHand[1]);
-  return [s0, s1];
+): number[] {
+  const n = tickets.routeScore.length;
+  return Array.from({ length: n }, (_, seat) => {
+    return (
+      tickets.routeScore[seat]! +
+      scoreTicketsForSeat(
+        claims,
+        edges,
+        connects,
+        seat,
+        tickets.ticketHand[seat]!,
+      )
+    );
+  });
 }
 
 export function applyDrawTrains(

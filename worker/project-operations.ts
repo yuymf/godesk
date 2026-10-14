@@ -673,8 +673,8 @@ function configureDedicatedKernel(
       participants: {
         ...record.ruleSystem.participants,
         min: 2,
-        max: 2,
-        default: 2,
+        max: 5,
+        default: kernel.playerCount,
       },
       playSurface: {
         kind: "table" as const,
@@ -1722,7 +1722,8 @@ const RUNTIME_HANDLERS: {
       Boolean(config) &&
       typeof config === "object" &&
       Number.isInteger(config.playerCount) &&
-      config.playerCount === 2 &&
+      config.playerCount >= 2 &&
+      config.playerCount <= 5 &&
       (config.terminalFrom === undefined ||
         typeof config.terminalFrom === "string") &&
       (config.terminalTo === undefined ||

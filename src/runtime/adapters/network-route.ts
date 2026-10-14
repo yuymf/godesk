@@ -24,6 +24,12 @@ import {
   type PlayerId,
 } from "../play-kernel";
 import {
+  SEAT_CAPACITY,
+  clampSeatCount,
+  makeSeatArray,
+  winnerByHighestScore,
+} from "../seat-capacity";
+import {
   createGraphTopologyStub,
   type GraphTopologyStub,
 } from "../topology-stub";
@@ -143,11 +149,11 @@ export type FreightContractInstance = FreightContractDef & {
 };
 
 export type NetworkRouteFreightState = {
-  funds: [number, number];
-  reputation: [number, number];
+  funds: number[];
+  reputation: number[];
   /** Ship def ids owned per seat (starts with one). */
-  shipIds: [string[], string[]];
-  hand: [FreightContractInstance[], FreightContractInstance[]];
+  shipIds: string[][];
+  hand: FreightContractInstance[][];
   market: FreightContractInstance[];
   deck: FreightContractInstance[];
   winReputation: number;
@@ -180,7 +186,7 @@ export type NetworkRouteGenre = {
   terminalFrom: string;
   terminalTo: string;
   lastClaim: { edgeId: string; playerId: PlayerId } | null;
-  routeCounts: [number, number];
+  routeCounts: number[];
   freight: NetworkRouteFreightState | null;
   tickets: NetworkRouteTicketsState | null;
 };
@@ -314,16 +320,10 @@ function tryDeliveries(
 ): NetworkRouteFreightState {
   const next: NetworkRouteFreightState = {
     ...freight,
-    funds: [...freight.funds] as [number, number],
-    reputation: [...freight.reputation] as [number, number],
-    shipIds: [freight.shipIds[0].slice(), freight.shipIds[1].slice()] as [
-      string[],
-      string[],
-    ],
-    hand: [freight.hand[0].slice(), freight.hand[1].slice()] as [
-      FreightContractInstance[],
-      FreightContractInstance[],
-    ],
+    funds: [...freight.funds],
+    reputation: [...freight.reputation],
+    shipIds: freight.shipIds.map((s) => s.slice()),
+    hand: freight.hand.map((h) => h.slice()),
     market: freight.market.map((c) => ({ ...c })),
     deck: freight.deck.map((c) => ({ ...c })),
     shipsCatalog: freight.shipsCatalog.map((s) => ({ ...s })),
@@ -371,9 +371,11 @@ export function parseNetworkRouteConfig(
     typeof raw.terminalTo === "string"
       ? raw.terminalTo
       : NETWORK_ROUTE_TERMINALS[1];
+  const cap = SEAT_CAPACITY["network-route-v1"];
   if (
     !Number.isInteger(playerCount) ||
-    (playerCount as number) !== 2 ||
+    (playerCount as number) < cap.min ||
+    (playerCount as number) > cap.max ||
     !terminalFrom ||
     !terminalTo ||
     terminalFrom === terminalTo
@@ -418,7 +420,7 @@ export function parseNetworkRouteConfig(
     ticketsContent = defaultTicketsContent();
   }
   return {
-    playerCount: playerCount as number,
+    playerCount: clampSeatCount(playerCount as number, cap),
     terminalFrom,
     terminalTo,
     freight,
@@ -446,12 +448,16 @@ export function createNetworkRouteKernelConfig(input?: {
       ? input?.ticketsContent ?? defaultTicketsContent()
       : null;
   const tickets = !freight && (input?.tickets === true || ticketsContent !== null);
+  const playerCount = clampSeatCount(
+    input?.playerCount ?? 2,
+    SEAT_CAPACITY["network-route-v1"],
+  );
   return {
     kernelType: NETWORK_ROUTE_KERNEL_TYPE,
-    playerCount: input?.playerCount ?? 2,
+    playerCount,
     phases: NETWORK_ROUTE_PHASES.map((phase) => ({ ...phase })),
     adapter: {
-      playerCount: input?.playerCount ?? 2,
+      playerCount,
       terminalFrom: input?.terminalFrom ?? NETWORK_ROUTE_TERMINALS[0],
       terminalTo: input?.terminalTo ?? NETWORK_ROUTE_TERMINALS[1],
       freight,
@@ -503,14 +509,15 @@ export function playerConnectsTerminals(
 
 export function countClaims(
   claims: Record<string, PlayerId | null>,
-): [number, number] {
-  let a = 0;
-  let b = 0;
+  playerCount = 2,
+): number[] {
+  const counts = Array.from({ length: playerCount }, () => 0);
   for (const owner of Object.values(claims)) {
-    if (owner === 0) a += 1;
-    else if (owner === 1) b += 1;
+    if (typeof owner === "number" && owner >= 0 && owner < playerCount) {
+      counts[owner]! += 1;
+    }
   }
-  return [a, b];
+  return counts;
 }
 
 function payloadEdgeId(action: PlayAction): string | null {
@@ -526,15 +533,17 @@ function payloadContractInstanceId(action: PlayAction): string | null {
 function buildFreightState(
   content: NetworkRouteContent,
   seed: number,
+  playerCount = 2,
 ): NetworkRouteFreightState {
+  const n = clampSeatCount(playerCount, SEAT_CAPACITY["network-route-v1"]);
   const deck = instantiateDeck(content.contracts, seed ^ 0x9e3779b9);
   const starter = content.ships[0]?.id ?? "barge";
   const startRep = content.startingReputation ?? 0;
   const freight: NetworkRouteFreightState = {
-    funds: [content.startingFunds, content.startingFunds],
-    reputation: [startRep, startRep],
-    shipIds: [[starter], [starter]],
-    hand: [[], []],
+    funds: Array.from({ length: n }, () => content.startingFunds),
+    reputation: Array.from({ length: n }, () => startRep),
+    shipIds: Array.from({ length: n }, () => [starter]),
+    hand: Array.from({ length: n }, () => []),
     market: [],
     deck,
     winReputation: content.winReputation,
@@ -554,16 +563,20 @@ export const networkRouteAdapter: PlayKernelAdapter<
 
   parseConfig: parseNetworkRouteConfig,
 
-  createGenreState(config, seed) {
+  createGenreState(config, seed, playerCount) {
+    const seats = clampSeatCount(
+      playerCount,
+      SEAT_CAPACITY["network-route-v1"],
+    );
     const cities = DEFAULT_NETWORK_CITIES.map((city) => ({ ...city }));
     const edges = DEFAULT_NETWORK_EDGES.map((edge) => ({ ...edge }));
     const freight =
       config.freight && config.content
-        ? buildFreightState(config.content, seed)
+        ? buildFreightState(config.content, seed, seats)
         : null;
     const tickets =
       !freight && config.tickets && config.ticketsContent
-        ? buildTicketsState(config.ticketsContent, seed)
+        ? buildTicketsState(config.ticketsContent, seed, seats)
         : null;
     return {
       cities,
@@ -572,7 +585,7 @@ export const networkRouteAdapter: PlayKernelAdapter<
       terminalFrom: config.terminalFrom,
       terminalTo: config.terminalTo,
       lastClaim: null,
-      routeCounts: [0, 0],
+      routeCounts: Array.from({ length: seats }, () => 0),
       freight,
       tickets,
     };
@@ -696,10 +709,7 @@ export const networkRouteAdapter: PlayKernelAdapter<
           playerConnectsTerminals,
         );
         tickets = { ...tickets, finalScore: scores, finalTurnsLeft: 0 };
-        const winnerId =
-          scores[0] === scores[1]
-            ? null
-            : ((scores[0] > scores[1] ? 0 : 1) as PlayerId | null);
+        const winnerId = winnerByHighestScore(scores) as PlayerId | null;
         return {
           genre: { ...genre, tickets },
           phase: "ended" as PlayPhaseId,
@@ -736,7 +746,7 @@ export const networkRouteAdapter: PlayKernelAdapter<
           lastClaim: state.genre.lastClaim
             ? { ...state.genre.lastClaim }
             : null,
-          routeCounts: [...state.genre.routeCounts] as [number, number],
+          routeCounts: [...state.genre.routeCounts],
           freight: null,
           tickets: nextTickets,
         };
@@ -757,7 +767,7 @@ export const networkRouteAdapter: PlayKernelAdapter<
           lastClaim: state.genre.lastClaim
             ? { ...state.genre.lastClaim }
             : null,
-          routeCounts: [...state.genre.routeCounts] as [number, number],
+          routeCounts: [...state.genre.routeCounts],
           freight: null,
           tickets: nextTickets,
         };
@@ -777,7 +787,7 @@ export const networkRouteAdapter: PlayKernelAdapter<
         );
         if (!nextTickets) return null;
         const claims = { ...state.genre.claims, [edgeId]: action.playerId };
-        const routeCounts = countClaims(claims);
+        const routeCounts = countClaims(claims, state.playerCount);
         const genre: NetworkRouteGenre = {
           cities: state.genre.cities.map((c) => ({ ...c })),
           edges: state.genre.edges.map((e) => ({ ...e })),
@@ -809,16 +819,10 @@ export const networkRouteAdapter: PlayKernelAdapter<
 
       const nextFreight: NetworkRouteFreightState = {
         ...freight,
-        funds: [...freight.funds] as [number, number],
-        reputation: [...freight.reputation] as [number, number],
-        shipIds: [
-          freight.shipIds[0].slice(),
-          freight.shipIds[1].slice(),
-        ] as [string[], string[]],
-        hand: [
-          freight.hand[0].slice(),
-          freight.hand[1].slice(),
-        ] as [FreightContractInstance[], FreightContractInstance[]],
+        funds: [...freight.funds],
+        reputation: [...freight.reputation],
+        shipIds: freight.shipIds.map((s) => s.slice()),
+        hand: freight.hand.map((h) => h.slice()),
         market: freight.market.map((c) => ({ ...c })),
         deck: freight.deck.map((c) => ({ ...c })),
         shipsCatalog: freight.shipsCatalog.map((s) => ({ ...s })),
@@ -838,7 +842,7 @@ export const networkRouteAdapter: PlayKernelAdapter<
         lastClaim: state.genre.lastClaim
           ? { ...state.genre.lastClaim }
           : null,
-        routeCounts: [...state.genre.routeCounts] as [number, number],
+        routeCounts: [...state.genre.routeCounts],
         freight: nextFreight,
         tickets: null,
       };
@@ -864,16 +868,10 @@ export const networkRouteAdapter: PlayKernelAdapter<
       if (freight.funds[action.playerId]! < toll) return null;
       freight = {
         ...freight,
-        funds: [...freight.funds] as [number, number],
-        reputation: [...freight.reputation] as [number, number],
-        shipIds: [
-          freight.shipIds[0].slice(),
-          freight.shipIds[1].slice(),
-        ] as [string[], string[]],
-        hand: [
-          freight.hand[0].slice(),
-          freight.hand[1].slice(),
-        ] as [FreightContractInstance[], FreightContractInstance[]],
+        funds: [...freight.funds],
+        reputation: [...freight.reputation],
+        shipIds: freight.shipIds.map((s) => s.slice()),
+        hand: freight.hand.map((h) => h.slice()),
         market: freight.market.map((c) => ({ ...c })),
         deck: freight.deck.map((c) => ({ ...c })),
         shipsCatalog: freight.shipsCatalog.map((s) => ({ ...s })),
@@ -885,7 +883,7 @@ export const networkRouteAdapter: PlayKernelAdapter<
     }
 
     const claims = { ...state.genre.claims, [edgeId]: action.playerId };
-    const routeCounts = countClaims(claims);
+    const routeCounts = countClaims(claims, state.playerCount);
 
     if (freight) {
       freight = tryDeliveries(
@@ -1003,7 +1001,7 @@ export function networkRouteToSessionFields(
     terminalFrom: string;
     terminalTo: string;
     lastClaim: { edgeId: string; playerId: number } | null;
-    routeCounts: [number, number];
+    routeCounts: number[];
     freight: NetworkRouteFreightState | null;
     tickets: NetworkRouteTicketsState | null;
   };
@@ -1032,12 +1030,12 @@ export function networkRouteToSessionFields(
       lastClaim: state.genre.lastClaim
         ? { ...state.genre.lastClaim }
         : null,
-      routeCounts: [...state.genre.routeCounts] as [number, number],
+      routeCounts: [...state.genre.routeCounts],
       freight: freight
         ? {
             ...freight,
-            funds: [...freight.funds] as [number, number],
-            reputation: [...freight.reputation] as [number, number],
+            funds: [...freight.funds],
+            reputation: [...freight.reputation],
             shipIds: [
               freight.shipIds[0].slice(),
               freight.shipIds[1].slice(),
@@ -1045,9 +1043,6 @@ export function networkRouteToSessionFields(
             hand: [
               freight.hand[0].map((c) => ({ ...c })),
               freight.hand[1].map((c) => ({ ...c })),
-            ] as [
-              FreightContractInstance[],
-              FreightContractInstance[],
             ],
             market: freight.market.map((c) => ({ ...c })),
             deck: freight.deck.map((c) => ({ ...c })),
@@ -1072,10 +1067,10 @@ export function bindNetworkRouteFromRuntimeKernel(input: {
   content?: NetworkRouteContent | null;
   ticketsContent?: NetworkRouteTicketsContent | null;
 }): PlayKernelConfig {
-  const playerCount = input.playerCount ?? 2;
-  if (playerCount !== 2) {
-    throw new Error("network_route_requires_two_players");
-  }
+  const playerCount = clampSeatCount(
+    input.playerCount ?? 2,
+    SEAT_CAPACITY["network-route-v1"],
+  );
   return createNetworkRouteKernelConfig({
     playerCount,
     terminalFrom: input.terminalFrom ?? NETWORK_ROUTE_TERMINALS[0],
