@@ -360,7 +360,7 @@ describe("hex-settlement-v1 domestic auction + brokerage (T023)", () => {
       {
         type: "start_domestic_auction",
         playerId: 0,
-        payload: { resource: "wood", qty: 1, reserve: 1 },
+        payload: { resource: "wood", qty: 1, reserve: 1, mode: "sealed" },
       },
       config,
     );
@@ -429,7 +429,7 @@ describe("hex-settlement-v1 domestic auction + brokerage (T023)", () => {
       {
         type: "start_domestic_auction",
         playerId: 0,
-        payload: { resource: "wood", qty: 1, reserve: 1 },
+        payload: { resource: "wood", qty: 1, reserve: 1, mode: "sealed" },
       },
       config,
     );
@@ -459,5 +459,151 @@ describe("hex-settlement-v1 domestic auction + brokerage (T023)", () => {
     expect(state.genre.players[0].resources.wheat).toBe(9); // seller 10-1
     expect(state.genre.players[1].resources.wheat).toBe(0); // winner paid 10
     expect(state.genre.players[1].resources.wood).toBe(1);
+  });
+});
+
+describe("hex-settlement-v1 domestic live multi-lot + negotiated brokerage (T025)", () => {
+  function stockedMain(seed: number, playerCount = 3) {
+    const config = createHexIslandKernelConfig({ playerCount });
+    let state = createInitialState(hexIslandAdapter, config, seed);
+    state = {
+      ...state,
+      phase: "main",
+      activePlayerId: 0,
+      status: "active",
+      genre: {
+        ...state.genre,
+        setupStep: playerCount * 4,
+        pendingRoadVertex: null,
+        turnPlayer: 0,
+        activeFloorLots: [],
+        lastFloorBroker: null,
+        players: state.genre.players.map((p, i) => ({
+          ...p,
+          resources: {
+            wood: i === 0 ? 3 : 0,
+            brick: i === 0 ? 1 : 0,
+            sheep: 0,
+            wheat: i === 0 ? 0 : 12,
+            ore: 0,
+          },
+        })),
+      },
+    };
+    return { config, state };
+  }
+
+  it("runs two concurrent live lots and awards with negotiated broker cut", () => {
+    let { config, state } = stockedMain(17);
+    let r = applyAction(
+      hexIslandAdapter,
+      state,
+      {
+        type: "start_domestic_auction",
+        playerId: 0,
+        payload: {
+          resource: "wood",
+          qty: 1,
+          reserve: 1,
+          mode: "live",
+          brokerSeat: 2,
+          cutBps: 1500,
+        },
+      },
+      config,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    expect(state.phase).toBe("domestic_live_floor");
+    expect(state.genre.activeFloorLots).toHaveLength(1);
+    // Add second lot while first is live
+    r = applyAction(
+      hexIslandAdapter,
+      state,
+      {
+        type: "start_domestic_auction",
+        playerId: 0,
+        payload: {
+          resource: "brick",
+          qty: 1,
+          reserve: 1,
+          mode: "live",
+          brokerSeat: 2,
+          cutBps: 2000,
+        },
+      },
+      config,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    expect(state.genre.activeFloorLots).toHaveLength(2);
+    const lotA = state.genre.activeFloorLots[0]!;
+    const amount = Math.max(lotA.currentBid + 1, 10);
+    r = applyAction(
+      hexIslandAdapter,
+      state,
+      {
+        type: "floor_raise",
+        playerId: 1,
+        payload: { lotId: lotA.lotId, amount },
+      },
+      config,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    for (const s of [0, 2]) {
+      if (!state.genre.activeFloorLots.some((l) => l.lotId === lotA.lotId)) break;
+      r = applyAction(
+        hexIslandAdapter,
+        state,
+        { type: "floor_pass", playerId: s, payload: { lotId: lotA.lotId } },
+        config,
+      );
+      expect(r.ok).toBe(true);
+      if (!r.ok) return;
+      state = r.state;
+    }
+    expect(state.genre.lastFloorBroker?.seat).toBe(2);
+    expect(state.genre.lastFloorBroker?.cut).toBe(
+      Math.floor((amount * 1500) / 10000),
+    );
+    expect(state.genre.activeFloorLots).toHaveLength(1);
+    expect(state.genre.players[1].resources.wood).toBe(1);
+  });
+
+  it("set_broker_terms updates negotiated cut before first raise", () => {
+    let { config, state } = stockedMain(9);
+    let r = applyAction(
+      hexIslandAdapter,
+      state,
+      {
+        type: "start_domestic_auction",
+        playerId: 0,
+        payload: { resource: "wood", qty: 1, reserve: 1, mode: "live" },
+      },
+      config,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    const lotId = state.genre.activeFloorLots[0]!.lotId;
+    r = applyAction(
+      hexIslandAdapter,
+      state,
+      {
+        type: "set_broker_terms",
+        playerId: 0,
+        payload: { lotId, brokerSeat: 2, cutBps: 2500 },
+      },
+      config,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    expect(state.genre.activeFloorLots[0]!.brokerSeat).toBe(2);
+    expect(state.genre.activeFloorLots[0]!.brokerCutBps).toBe(2500);
   });
 });
