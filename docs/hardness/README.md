@@ -7,3 +7,6 @@
 **禁止**粘贴出版社规则原文；**禁止**为过闸放宽 SUCCESS。
 
 归档：`suites/_archive-fictional/`（旧虚构题材，仅参考）。
+
+## 探针（T031）
+冷启动默认走可分享 Room：`scripts/hardness-real-probe.mjs`（仓内）在 floors 通过后 `POST /api/builds/:id/sessions` → 入座 → 截 `03-play` / `15-room-stage`（hasStage / g3d-scene-host / canvas）。证据仓外：`/workspace/g3d-evidence/…/hardness-real/`。
