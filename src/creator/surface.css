@@ -4912,6 +4912,18 @@ summary:focus-visible {
 .room-view-network .network-route-board {
   max-width: 720px;
 }
+/* T062 · tabletop-first network: stage fills viewport; drop narrow HTML board cap */
+.room-view-network.room-view-tabletop-immersive .network-route-board,
+.network-route-board.room-view-tabletop-immersive {
+  max-width: none;
+  width: 100%;
+}
+.room-view-network.room-view-tabletop-immersive.room-view-seated .tabletop-stage,
+.room-view-network.room-view-tabletop-immersive.room-view-seated .g3d-stage,
+.network-route-board.room-view-tabletop-immersive .tabletop-stage {
+  height: clamp(480px, 68vh, 860px);
+  min-height: 460px;
+}
 
 @media (max-width: 720px) {
   .network-route-hud {

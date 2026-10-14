@@ -257,9 +257,7 @@ export function NetworkRouteBoard({
     linked0 ? copy.linked : copy.unlinked
   } · ${copy.seat} 1 ${linked1 ? copy.linked : copy.unlinked}`;
 
-  const width = 400;
-  const height = 360;
-
+  // T062: SVG board retired from primary return; wood chrome keeps TabletopGameScreen.
   if (render?.chrome === "wood") {
     const cityName = (id: string) => cityById(networkRoute.cities, id)?.name ?? id;
     const edgeName = (edgeId: string) => {
@@ -415,225 +413,94 @@ export function NetworkRouteBoard({
     );
   }
 
+  // T062 · tabletop-first: 3D canvas primary; HTML HUD collapsed to drawer (not the board).
   return (
-    <div
+    <section
       aria-label={copy.board}
-      className="network-route-board"
+      className="network-route-board room-view-tabletop-immersive"
       data-status={status}
+      data-kernel="network-route-v1"
       role="region"
     >
-      <section aria-label={copy.hud} className="network-route-hud">
-        <div className="network-route-hud-status">
-          <span className="network-route-kicker">{copy.active}</span>
-          <strong>
-            {copy.seat} {activeSeat}
-          </strong>
-          <p>{statusLine}</p>
+      <TabletopStage
+        kernel="network-route-v1"
+        legal={[...legalEdges]}
+        onAct={showLegal ? onAct : undefined}
+        render={render}
+        state={networkRoute}
+        importedModels={importedModels}
+      />
+      <div className="desk-stage-hud" aria-live="polite">
+        <span className="desk-stage-hud-kicker">{copy.active}</span>
+        <strong className="desk-stage-hud-turn">
+          {copy.seat} {activeSeat} · {statusLine}
+        </strong>
+        <span className="desk-stage-hud-supply">
+          {copy.routes}: 0={count0} · 1={count1} · {lastLine}
+        </span>
+      </div>
+      <details className="desk-chrome desk-action-drawer">
+        <summary className="desk-action-drawer-summary">
+          桌面行动（主交互在 3D；点此展开按钮）
+        </summary>
+        <div className="desk-action-drawer-body">
+          <p className="network-route-terminals">{terminalsLine}</p>
+          <p className="network-route-goal">{goalLine}</p>
           <p className="network-route-hint">{copy.connectHint}</p>
-        </div>
-        <div className="network-route-hud-scores" aria-label={copy.routes}>
-          <div className="network-route-score">
-            <span
-              aria-hidden="true"
-              className="network-route-swatch"
-              style={{ background: SEAT_COLOR[0] }}
-            />
-            <b>
-              {copy.seat} 0 · {count0}
-            </b>
-          </div>
-          <div className="network-route-score">
-            <span
-              aria-hidden="true"
-              className="network-route-swatch"
-              style={{ background: SEAT_COLOR[1] }}
-            />
-            <b>
-              {copy.seat} 1 · {count1}
-            </b>
-          </div>
-        </div>
-        <p className="network-route-hud-last">{lastLine}</p>
-        <p aria-label={copy.terminals} className="network-route-terminals">
-          {terminalsLine}
-        </p>
-        <p aria-label={copy.goal} className="network-route-goal">
-          {goalLine}
-        </p>
-        {networkRoute.tickets ? (
-          <div className="network-route-tickets" aria-label="tickets">
-            <p className="network-route-hint">{copy.ticketsHint}</p>
-            <p>
-              {copy.routePts}: 0={networkRoute.tickets.routeScore[0]} · 1={networkRoute.tickets.routeScore[1]} · {copy.trainsLeft}: 0={networkRoute.tickets.trainsLeft[0]} · 1={networkRoute.tickets.trainsLeft[1]}
-            </p>
-            {viewerSeat !== null ? (
-              <p aria-label={copy.tickets}>
-                {copy.tickets}: {(networkRoute.tickets.ticketHand[viewerSeat] ?? []).map((c) => `${c.name}(${c.points})`).join(" · ") || "—"}
+          {networkRoute.tickets ? (
+            <div className="network-route-tickets" aria-label="tickets">
+              <p>
+                {copy.routePts}: 0={networkRoute.tickets.routeScore[0]} · 1=
+                {networkRoute.tickets.routeScore[1]} · {copy.trainsLeft}: 0=
+                {networkRoute.tickets.trainsLeft[0]} · 1={networkRoute.tickets.trainsLeft[1]}
               </p>
-            ) : null}
-            {showLegal ? (
-              <div className="network-route-tickets-actions">
-                {legalActions
-                  .filter((a) => a.type === "draw_trains" || a.type === "draw_tickets")
-                  .map((a) => (
-                    <button key={a.type} type="button" onClick={() => onAct?.(a.type, {})}>
-                      {a.type === "draw_trains" ? copy.drawTrains : copy.drawTickets}
-                    </button>
-                  ))}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-        {networkRoute.freight ? (
-          <div className="network-route-freight" aria-label="freight">
-            <p className="network-route-hint">{copy.freightHint}</p>
-            <p>
-              {copy.funds}: 0={networkRoute.freight.funds[0]} · 1={networkRoute.freight.funds[1]} · {copy.reputation}: 0={networkRoute.freight.reputation[0]} · 1={networkRoute.freight.reputation[1]} · {copy.winRep} {networkRoute.freight.winReputation}
-            </p>
-            <p>
-              {copy.ships}: {networkRoute.freight.shipsCatalog.map((s) => s.name).join(" / ")}
-            </p>
-            <p aria-label={copy.market}>
-              {copy.market}: {networkRoute.freight.market.map((c) => c.name).join(" · ") || "—"}
-            </p>
-            {viewerSeat !== null ? (
-              <p aria-label={copy.hand}>
-                {copy.hand}: {(networkRoute.freight.hand[viewerSeat] ?? []).map((c) => c.name).join(" · ") || "—"}
-              </p>
-            ) : null}
-            {showLegal ? (
-              <div className="network-route-freight-actions">
-                {legalActions
-                  .filter((a) => a.type === "accept_contract")
-                  .map((a) => (
-                    <button
-                      key={String(a.payload?.instanceId)}
-                      type="button"
-                      onClick={() =>
-                        onAct?.("accept_contract", {
-                          instanceId: a.payload?.instanceId,
-                        })
-                      }
-                    >
-                      {copy.accept} · {a.label}
-                    </button>
-                  ))}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-      </section>
-
-      <TabletopStage kernel="network-route-v1" legal={[...legalEdges]} onAct={showLegal ? onAct : undefined} render={render} state={networkRoute} importedModels={importedModels} />
-
-      <svg
-        aria-label={copy.board}
-        className="network-route-svg"
-        height={height}
-        role="img"
-        viewBox={`0 0 ${width} ${height}`}
-        width="100%"
-      >
-        {networkRoute.edges.map((edge) => {
-          const from = cityById(networkRoute.cities, edge.from);
-          const to = cityById(networkRoute.cities, edge.to);
-          if (!from || !to) return null;
-          const owner = networkRoute.claims[edge.id];
-          const legal = showLegal && legalEdges.has(edge.id);
-          const isLast = networkRoute.lastClaim?.edgeId === edge.id;
-          const stroke =
-            owner === 0 || owner === 1
-              ? SEAT_COLOR[owner]
-              : legal
-                ? "#16a34a"
-                : "#94a3b8";
-          const clickable = legal && interactive;
-          return (
-            <g key={edge.id}>
-              <line
-                stroke={stroke}
-                strokeLinecap="round"
-                strokeWidth={owner !== null ? 8 : legal ? 6 : 4}
-                x1={from.x}
-                x2={to.x}
-                y1={from.y}
-                y2={to.y}
-                opacity={owner === null && !legal ? 0.55 : 1}
-              />
-              {isLast && (
-                <line
-                  stroke="#fbbf24"
-                  strokeDasharray="4 4"
-                  strokeLinecap="round"
-                  strokeWidth={2}
-                  x1={from.x}
-                  x2={to.x}
-                  y1={from.y}
-                  y2={to.y}
-                />
-              )}
-              {clickable && (
-                <line
-                  aria-label={`${copy.claim} ${edge.from}-${edge.to}`}
-                  className="network-route-hit"
-                  onClick={() => onAct?.("claim", { edgeId: edge.id })}
-                  role="button"
-                  stroke="transparent"
-                  strokeWidth={18}
-                  style={{ cursor: "pointer" }}
-                  tabIndex={0}
-                  x1={from.x}
-                  x2={to.x}
-                  y1={from.y}
-                  y2={to.y}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      onAct?.("claim", { edgeId: edge.id });
-                    }
-                  }}
-                />
-              )}
-            </g>
-          );
-        })}
-        {networkRoute.cities.map((city) => {
-          const terminal =
-            city.id === networkRoute.terminalFrom ||
-            city.id === networkRoute.terminalTo;
-          return (
-            <g key={city.id}>
-              <circle
-                cx={city.x}
-                cy={city.y}
-                fill={terminal ? "#0f172a" : "#1e293b"}
-                r={terminal ? 16 : 12}
-                stroke={terminal ? "#fbbf24" : "#cbd5e1"}
-                strokeWidth={terminal ? 3 : 2}
-              />
-              <text
-                fill="#f8fafc"
-                fontSize={11}
-                fontWeight={700}
-                textAnchor="middle"
-                x={city.x}
-                y={city.y + 4}
-              >
-                {city.id}
-              </text>
-              <text
-                fill="#334155"
-                fontSize={10}
-                textAnchor="middle"
-                x={city.x}
-                y={city.y + 28}
-              >
-                {city.name}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-    </div>
+              {showLegal ? (
+                <div className="network-route-tickets-actions">
+                  {legalActions
+                    .filter((a) => a.type === "draw_trains" || a.type === "draw_tickets")
+                    .map((a) => (
+                      <button key={a.type} type="button" onClick={() => onAct?.(a.type, {})}>
+                        {a.type === "draw_trains" ? copy.drawTrains : copy.drawTickets}
+                      </button>
+                    ))}
+                  {legalActions
+                    .filter((a) => a.type === "claim")
+                    .slice(0, 8)
+                    .map((a) => (
+                      <button
+                        key={String(a.payload?.edgeId)}
+                        type="button"
+                        onClick={() =>
+                          onAct?.("claim", {
+                            edgeId: a.payload?.edgeId,
+                            ...(a.payload?.payColor ? { payColor: a.payload.payColor } : {}),
+                          })
+                        }
+                      >
+                        {copy.claim} · {String(a.payload?.edgeId)}
+                      </button>
+                    ))}
+                </div>
+              ) : null}
+            </div>
+          ) : showLegal ? (
+            <div className="network-route-tickets-actions">
+              {legalActions
+                .filter((a) => a.type === "claim")
+                .slice(0, 8)
+                .map((a) => (
+                  <button
+                    key={String(a.payload?.edgeId)}
+                    type="button"
+                    onClick={() => onAct?.("claim", { edgeId: a.payload?.edgeId })}
+                  >
+                    {copy.claim} · {String(a.payload?.edgeId)}
+                  </button>
+                ))}
+            </div>
+          ) : null}
+        </div>
+      </details>
+    </section>
   );
 }

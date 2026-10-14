@@ -734,16 +734,16 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     group.add(bed, sleepers, rails);
     // T046/T049 · countable seat-colored train/wagon segments (distinct from unclaimed weak slots).
     const carMat = materialFor(node, ctx);
-    const carCount = Math.max(2, Math.min(6, Math.round(usable / 0.42)));
+    // T062 · taller/wider seat-colored cars so claimed routes dominate Room close-ups
+    const carCount = Math.max(2, Math.min(6, Math.round(usable / 0.38)));
     const carStep = usable / carCount;
     const cars: Geometry[] = [];
     for (let i = 0; i < carCount; i += 1) {
       const cx = -usable / 2 + carStep * (i + 0.5);
-      // taller body + end caps so Room close-ups read as cars, not rail paint
-      const body = boxAt(carStep * 0.78, 0.14, gauge * 0.92, cx, 0.16, 0);
+      const body = boxAt(carStep * 0.82, 0.22, gauge * 1.15, cx, 0.2, 0);
       cars.push(body);
-      cars.push(boxAt(carStep * 0.74, 0.04, gauge * 0.62, cx, 0.24, 0)); // roof
-      cars.push(boxAt(0.03, 0.08, gauge * 0.7, cx - carStep * 0.32, 0.17, 0)); // coupler hint
+      cars.push(boxAt(carStep * 0.78, 0.06, gauge * 0.85, cx, 0.34, 0)); // roof
+      cars.push(boxAt(0.04, 0.1, gauge * 0.85, cx - carStep * 0.34, 0.22, 0)); // coupler
     }
     const train = new Mesh(mergeGeometries(cars) ?? cars[0]!, carMat);
     train.castShadow = true;

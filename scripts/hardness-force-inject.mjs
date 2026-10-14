@@ -567,3 +567,100 @@ export async function forceDraftPattern(page, tokens, { minLineTiles = 2, minFlo
     return { ok: stats.lineTiles >= minLineTiles && stats.floor >= minFloor, ...stats, log };
   }, { tokens, minLineTiles, minFloor, maxSteps });
 }
+
+/**
+ * Force ≥1 claimed colored train route on network-route-v1 via draw_trains + claim.
+ * Generic intents — no pack / city-name hardcodes.
+ */
+export async function forceClaimNetwork(page, tokens, { minClaims = 1, maxRounds = 12 } = {}) {
+  return page.evaluate(async ({ tokens, minClaims, maxRounds }) => {
+    const m = location.pathname.match(/room\/([^/?]+)/);
+    const sid = m?.[1];
+    const share = new URLSearchParams(location.search).get("share");
+    const q = share ? `?share=${encodeURIComponent(share)}` : "";
+    const tok = (s) => tokens[String(s)];
+    const intent = async (seat, actionId, payload) => {
+      const r = await fetch(`/chatgpt-plugin/api/sessions/${sid}/intents${q}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          intentId: crypto.randomUUID(),
+          seat,
+          seatToken: tok(seat),
+          actionId,
+          ...(payload ? { payload } : {}),
+        }),
+      });
+      const text = await r.text();
+      let j = null;
+      try { j = JSON.parse(text); } catch {}
+      return { status: r.status, ok: r.ok, err: j?.error, state: j?.state };
+    };
+    const get = async () => {
+      const j = await (await fetch(`/chatgpt-plugin/api/sessions/${sid}${q}`)).json();
+      const s = j.session || j;
+      return s.state || s;
+    };
+    const countClaims = (nr) => Object.values(nr.claims || {}).filter((v) => v != null).length;
+    const log = [];
+    for (let round = 0; round < maxRounds; round++) {
+      const st = await get();
+      if (st.status !== "active") return { ok: false, err: "dead", log };
+      const nr = st.networkRoute;
+      if (!nr) return { ok: false, err: "no-networkRoute", log };
+      const claimed = countClaims(nr);
+      if (claimed >= minClaims) {
+        return { ok: true, claimed, claims: nr.claims, steps: round, log };
+      }
+      const active = st.activeSeat;
+      // Try claim any legal edge for active seat
+      const tickets = nr.tickets;
+      let claimedNow = false;
+      if (tickets) {
+        const hand = tickets.trainHand?.[active] || {};
+        const colors = ["red","orange","yellow","green","blue","purple","black","white"];
+        for (const edge of nr.edges || []) {
+          if (nr.claims[edge.id] != null) continue;
+          const meta = tickets.edgeMeta?.[edge.id];
+          if (!meta) continue;
+          if ((tickets.trainsLeft?.[active] ?? 0) < meta.length) continue;
+          const payColors = meta.color === "gray" ? colors : [meta.color];
+          for (const c of payColors) {
+            const colored = hand[c] ?? 0;
+            const wild = hand.wild ?? 0;
+            if (colored + wild >= meta.length) {
+              const r = await intent(active, "claim", { edgeId: edge.id, payColor: c });
+              log.push({ round, try: "claim", edgeId: edge.id, payColor: c, ok: r.ok, err: r.err });
+              if (r.ok) { claimedNow = true; break; }
+            }
+          }
+          if (claimedNow) break;
+        }
+      } else {
+        for (const edge of nr.edges || []) {
+          if (nr.claims[edge.id] != null) continue;
+          const r = await intent(active, "claim", { edgeId: edge.id });
+          log.push({ round, try: "claim", edgeId: edge.id, ok: r.ok, err: r.err });
+          if (r.ok) { claimedNow = true; break; }
+        }
+      }
+      if (claimedNow) continue;
+      // Draw trains to build hand
+      const draw = await intent(active, "draw_trains", {
+        picks: [{ source: "deck" }, { source: "deck" }],
+      });
+      log.push({ round, try: "draw_trains", ok: draw.ok, err: draw.err });
+      if (!draw.ok) {
+        // try draw_tickets or skip by drawing one
+        const d2 = await intent(active, "draw_tickets", {});
+        log.push({ round, try: "draw_tickets", ok: d2.ok, err: d2.err });
+        if (!d2.ok) {
+          return { ok: false, err: "stuck", claimed: countClaims((await get()).networkRoute), log };
+        }
+      }
+    }
+    const st = await get();
+    const claimed = countClaims(st.networkRoute || {});
+    return { ok: claimed >= minClaims, claimed, claims: st.networkRoute?.claims, log };
+  }, { tokens, minClaims, maxRounds });
+}

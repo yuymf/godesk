@@ -422,7 +422,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   const gemEngine = isGemEngine(build.ruleSystem) && Boolean(gemEngineState);
   const patternDraftState = room.state.patternDraft;
   const patternDraft = isPatternDraft(build.ruleSystem) && Boolean(patternDraftState);
-  const deskTabletop = Boolean(gemEngine || patternDraft || auction || discFlipping || workerPlacement || harbor);
+  const deskTabletop = Boolean(gemEngine || patternDraft || auction || discFlipping || workerPlacement || harbor || networkRoute); // T062 · network tabletop-first
   const tabletopImmersive = woodChrome || deskTabletop;
   const autoBattlerState = room.state.autoBattler;
   const autoBattler = isAutoBattler(build.ruleSystem) && Boolean(autoBattlerState);

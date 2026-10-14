@@ -105,7 +105,7 @@ export function networkRouteLayout(
       objectKind: claimed ? "claim" : "route",
       from,
       to,
-      width: claimed ? 0.26 : 0.12,
+      width: claimed ? 0.38 : 0.12, // T062 · thicker claimed car corridor
       seat: claimed ? owner : null,
       ...(action ? { action } : {}),
     });
