@@ -5,7 +5,7 @@
 | 回归靶 | H05 Room 宽+近；H03/H04 smoke |
 | 层 | **共享呈现**（auction lot + market track；phase→HUD） |
 | 状态 | **关** |
-| tip | （feat commit 后填） |
+| tip | `b8a5438290e49a164a5398fa31a5455373d8b6c6` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t043/` |
 
 ## 现象
