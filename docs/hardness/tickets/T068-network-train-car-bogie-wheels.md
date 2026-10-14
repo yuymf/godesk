@@ -5,7 +5,7 @@
 | 回归靶 | H02 force-claim≥2；map-close pixel；unit |
 | 层 | **共享呈现**（network rolling-stock） |
 | 状态 | **开** |
-| tip | pending |
+| tip | `1e30315` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t068/` |
 
 ## 问题

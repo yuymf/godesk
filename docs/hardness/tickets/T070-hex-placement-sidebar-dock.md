@@ -5,7 +5,7 @@
 | 回归靶 | H01 targetsOpen=true 时 canvas share≥0.60；侧栏贴边细条；默认折叠；rejectedShell=false |
 | 层 | **共享呈现 / Room chrome** |
 | 状态 | **开** |
-| tip | pending |
+| tip | `8fe0de9` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t070/` |
 
 ## 问题
