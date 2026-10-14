@@ -368,8 +368,8 @@ function houseParts({ width, depth, wallHeight, ridgeHeight, base, wall, roof, s
  * (no cottage/manor glTF suitable for InstancedMesh+vertexColors) — keep
  * procedural miniatures; survey noted in assets/LICENSES.md.
  */
-export const SETTLEMENT_SCALE = 1.62;
-export const CITY_SCALE = 1.95;
+export const SETTLEMENT_SCALE = 1.72; // T060 · taller pitched cottage
+export const CITY_SCALE = 2.12; // T060 · taller keep silhouette
 
 function scaled(geom: BufferGeometry, s: number): BufferGeometry {
   geom.scale(s, s, s);
@@ -389,7 +389,7 @@ export function buildSettlementGeometry(seat: number): BufferGeometry {
   parts.push(paintPart(new BoxGeometry(0.018, 0.05, 0.018), PIECE_PALETTE.timber, { pos: [0.04, 0.04, 0.13] }));
   parts.push(paintPart(new BoxGeometry(0.11, 0.012, 0.018), PIECE_PALETTE.timber, { pos: [0, 0.068, 0.13] }));
   parts.push(
-    ...houseParts({ width: 0.24, depth: 0.175, wallHeight: 0.135, ridgeHeight: 0.105, base: [0, 0, 0], wall, roof }),
+    ...houseParts({ width: 0.26, depth: 0.185, wallHeight: 0.14, ridgeHeight: 0.125, base: [0, 0, 0], wall, roof }),
   );
   const frontZ = 0.08;
   parts.push(...frontDoor(0.048, 0.082, -0.03, 0.032, frontZ));
@@ -469,16 +469,16 @@ export function buildCityGeometry(seat: number): BufferGeometry {
   return scaled(bakeShading(mergeParts(parts), 0.3), CITY_SCALE);
 }
 
-export const ROAD_LENGTH = 0.56;
+export const ROAD_LENGTH = 0.82; // T060 · edge-aligned prism span
 
 export function buildRoadGeometry(seat: number): BufferGeometry {
   const main = seatColor(seat);
   const parts: BufferGeometry[] = [];
   const plankCount = 5;
   const plankLen = ROAD_LENGTH - 0.06;
-  const plankW = 0.034;
-  const plankH = 0.028;
-  const span = 0.175;
+  const plankW = 0.038;
+  const plankH = 0.036;
+  const span = 0.2;
   // Sleepers under the planks.
   for (const x of [-plankLen * 0.42, -plankLen * 0.14, plankLen * 0.14, plankLen * 0.42]) {
     parts.push(paintPart(new BoxGeometry(0.04, 0.02, span + 0.02), PIECE_PALETTE.beamWoodDark, { pos: [x, 0.01, 0] }));

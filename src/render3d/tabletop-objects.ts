@@ -73,16 +73,18 @@ function hexPrism(): Geometry {
   return geom;
 }
 
+/** T060 · pitched-roof cottage silhouette (generic house mesh; hex uses pieces.ts). */
 function house(): Geometry {
   const shape = new Shape();
-  shape.moveTo(-0.32, 0);
-  shape.lineTo(0.32, 0);
-  shape.lineTo(0.32, 0.42);
-  shape.lineTo(0, 0.7);
-  shape.lineTo(-0.32, 0.42);
+  // Base → eaves → ridge (readable pitched roof, not a toy block)
+  shape.moveTo(-0.36, 0);
+  shape.lineTo(0.36, 0);
+  shape.lineTo(0.36, 0.38);
+  shape.lineTo(0, 0.78);
+  shape.lineTo(-0.36, 0.38);
   shape.closePath();
-  const geom = new ExtrudeGeometry(shape, { depth: 0.46, bevelEnabled: false });
-  geom.translate(0, 0, -0.23);
+  const geom = new ExtrudeGeometry(shape, { depth: 0.5, bevelEnabled: false });
+  geom.translate(0, 0, -0.25);
   return geom;
 }
 
@@ -478,8 +480,10 @@ function cardWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
 function geometryFor(mesh: string): Geometry {
   switch (mesh) {
     case "tile-square":
-    case "road-bar":
       return new BoxGeometry(1, 1, 1);
+    case "road-bar":
+      // T060 · edge-aligned prism (length X, shallow Y, narrow Z); base at y=0
+      return translated(new BoxGeometry(1, 0.18, 0.32), 0.09);
     case "hex-prism":
       return hexPrism();
     case "disc":
@@ -497,7 +501,8 @@ function geometryFor(mesh: string): Geometry {
     case "house":
       return house();
     case "tower":
-      return translated(new CylinderGeometry(0.26, 0.32, 0.9, 10), 0.45);
+      // T060 · taller keep silhouette vs cottage
+      return translated(new CylinderGeometry(0.24, 0.34, 1.25, 8), 0.62);
     case "card":
       // T030: thicker card stock with tiny bevel (reads as cardboard, not a paper plane).
       return cardStock();
