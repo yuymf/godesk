@@ -36,14 +36,14 @@ describe("T036 piece stacking fidelity", () => {
     });
     const whiteStack = layout.pieces.filter((p) => p.id.startsWith("bank:white:") && p.objectKind === "resource");
     expect(whiteStack.length).toBeGreaterThan(1);
-    expect(whiteStack.some((p) => p.label === "7")).toBe(true);
+    expect(whiteStack.length).toBeGreaterThanOrEqual(2); // countable tower; tip digits not desk billboards (T045)
     expect(layout.pieces.some((p) => p.id === "bank:blue:slot" && p.objectKind === "cell")).toBe(true);
     expect(layout.pieces.some((p) => p.id.startsWith("bank:blue:") && p.objectKind === "resource")).toBe(false);
 
     const seatWhite = layout.pieces.filter((p) => p.id.startsWith("seat:0:gem:white:"));
     expect(seatWhite.every((p) => p.objectKind === "resource")).toBe(true);
     expect(seatWhite.length).toBeGreaterThan(1);
-    expect(seatWhite.some((p) => p.label === "4")).toBe(true);
+    expect(seatWhite.every((p) => !p.label || !/^\d+$/.test(String(p.label)))).toBe(true);
   });
 
   it("auction chip piles stack with count tip", () => {
@@ -54,6 +54,7 @@ describe("T036 piece stacking fidelity", () => {
     const chips = layout.pieces.filter((p) => p.id.startsWith("seat:0:chip:"));
     expect(chips.length).toBeGreaterThan(1);
     expect(chips.every((p) => p.objectKind === "resource")).toBe(true);
-    expect(chips.some((p) => p.label === "100")).toBe(true);
+    // T045: cash count is HUD / tower height only — no translucent "100" billboard.
+    expect(chips.every((p) => !p.label || !/^\d+$/.test(p.label))).toBe(true);
   });
 });

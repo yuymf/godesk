@@ -124,7 +124,6 @@ export function networkRouteLayout(
       size: 0.5,
       rotationY: Math.PI,
       seat: seatId,
-      label: `S${seatId}:${counts[seatId] ?? 0}`,
     });
   }
 
@@ -375,7 +374,6 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
           y: 0.08 + s * 0.14,
           size: 0.58,
           tint: GEM_TINT[color],
-          label: top ? String(count) : undefined,
           ...(top && takePair ? { action: { type: "take_pair", payload: { color } }, emphasis: true } : {}),
         });
       }
@@ -468,7 +466,6 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
       size: 0.55,
       rotationY: Math.PI,
       seat: seatId,
-      label: `S${seatId}:${seat.prestige}`,
     });
     // T036: seat supply = vertical resource stacks + count tip (not one disc for whole pile).
     let gemSlot = 0;
@@ -489,7 +486,6 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
           size: 0.3,
           seat: seatId,
           tint: GEM_TINT[color],
-          label: top ? String(n) : undefined,
         });
       }
       gemSlot += 1;
@@ -655,7 +651,6 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
       size: 0.5,
       rotationY: Math.PI,
       seat: seatId,
-      label: `S${seatId}:${seat.score}`,
       ...(seat.hasMarker ? { emphasis: true } : {}),
     });
     // Pattern lines (capacity 1..5)
@@ -899,7 +894,6 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
       z: 0.55,
       size: 0.38,
       tint: "#eab308",
-      label: String(state.currentBid),
       emphasis: true,
     });
   }
@@ -917,7 +911,6 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
       size: high ? 0.6 : 0.5,
       rotationY: Math.PI,
       seat: seatId,
-      label: `S${seatId}:$${chips}`,
       ...(high ? { emphasis: true } : {}),
       ...(gallery?.auctioneer === seatId ? { tint: "#f59e0b" } : {}),
     });
@@ -935,7 +928,6 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
           size: 0.3,
           seat: seatId,
           tint: "#eab308",
-          label: top ? String(chips) : undefined,
         });
       }
     }

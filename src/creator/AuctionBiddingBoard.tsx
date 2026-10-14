@@ -89,6 +89,7 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
               ? `底价 ${harbor.currentLot.reserve}`
               : `价值 ${auction.lotValue}`}
           {gallery ? ` · ${phase}` : ""}
+          {` · 筹码 ${auction.chips.map((c, i) => `${i}:${c}`).join(" / ")}`}
         </span>
       </div>
       <details className="desk-chrome desk-action-drawer">
