@@ -458,27 +458,25 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
 
   const seatCount = state.seats.length;
   state.seats.forEach((seat, seatId) => {
-    const x0 = -3.6 + (seatId - (seatCount - 1) / 2) * Math.min(2.4, 8 / Math.max(seatCount, 1));
-    const z0 = 2.6;
+    const { x0, zMeeple, zOwned } = seatTableauOrigin(seatId, seatCount, { span: 2.4, zMeeple: 2.6, depth: 0.75 });
     pieces.push({
       id: `seat:${seatId}:marker`,
       objectKind: "worker",
       x: x0,
-      z: z0 + 0.9,
+      z: zMeeple + 0.55,
       size: 0.55,
       rotationY: Math.PI,
       seat: seatId,
     });
-    // T036: seat supply = vertical resource stacks + count tip (not one disc for whole pile).
+    // T036/T052: gem supply stacks in seat-front tableau (not hidden behind meeple).
     let gemSlot = 0;
     for (const color of GEM_BANK_ORDER) {
       const n = Math.max(0, Math.floor(Number(seat.gems[color] ?? 0)));
       if (n <= 0) continue;
       const show = Math.min(n, 5);
-      const gx = x0 - 0.7 + (gemSlot % 4) * 0.35;
-      const gz = z0 - Math.floor(gemSlot / 4) * 0.35;
+      const gx = x0 - 0.85 + (gemSlot % 4) * 0.32;
+      const gz = zOwned + 0.35 - Math.floor(gemSlot / 4) * 0.32;
       for (let s = 0; s < show; s++) {
-        const top = s === show - 1;
         pieces.push({
           id: `seat:${seatId}:gem:${color}:${s}`,
           objectKind: "resource",
@@ -492,16 +490,25 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
       }
       gemSlot += 1;
     }
+    // T052 · purchased development cards fan in seat-front owned zone (shared tableau).
     (seat.cards ?? []).slice(0, 6).forEach((card, ci) => {
+      const reward = String(card.discount ?? "");
       pieces.push({
         id: `seat:${seatId}:card:${ci}`,
         objectKind: "card",
-        x: x0 + 0.9,
-        z: z0 - 0.2 - ci * 0.12,
-        y: 0.04 + ci * 0.02,
-        size: 0.4,
+        x: x0 - 0.35 + ci * 0.28,
+        z: zOwned - 0.15,
+        y: 0.05 + ci * 0.015,
+        size: 0.48,
         seat: seatId,
-        tint: GEM_TINT[String(card.discount ?? "")] ?? "#e7e5e4",
+        rotationY: (ci - 2.5) * 0.06,
+        tint: GEM_TINT[reward] ?? "#e7e5e4",
+        label: encodeCardFace({
+          tier: card.tier,
+          prestige: card.prestige,
+          reward: reward || undefined,
+          cost: card.cost,
+        }),
       });
     });
   });
@@ -531,6 +538,20 @@ export type PatternDraftTabletopInput = {
     score: number;
   }>;
 };
+
+
+/** T052 · shared seat-front tableau origin (toward board center from meeple). Generic — no sample layout. */
+export function seatTableauOrigin(
+  seatId: number,
+  seatCount: number,
+  opts?: { span?: number; zMeeple?: number; depth?: number },
+): { x0: number; zMeeple: number; zOwned: number } {
+  const span = opts?.span ?? 2.4;
+  const zMeeple = opts?.zMeeple ?? 2.55;
+  const depth = opts?.depth ?? 0.7;
+  const x0 = -3.6 + (seatId - (seatCount - 1) / 2) * Math.min(span, 9 / Math.max(seatCount, 1));
+  return { x0, zMeeple, zOwned: zMeeple - depth };
+}
 
 const PATTERN_TINT: Record<string, string> = {
   blue: "#3b82f6",
@@ -900,30 +921,28 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
 
   const seatCount = state.chips.length;
   state.chips.forEach((chips, seatId) => {
-    const x0 = -3.6 + (seatId - (seatCount - 1) / 2) * Math.min(2.2, 9 / Math.max(seatCount, 1));
-    const z0 = 2.5;
+    const { x0, zMeeple, zOwned } = seatTableauOrigin(seatId, seatCount, { span: 2.2, zMeeple: 2.5, depth: 0.7 });
     const high = state.highBidder === seatId;
     pieces.push({
       id: `seat:${seatId}:marker`,
       objectKind: "worker",
       x: x0,
-      z: z0 + 0.95,
+      z: zMeeple + 0.55,
       size: high ? 0.6 : 0.5,
       rotationY: Math.PI,
       seat: seatId,
       ...(high ? { emphasis: true } : {}),
       ...(gallery?.auctioneer === seatId ? { tint: "#f59e0b" } : {}),
     });
-    // T036: chip supply as vertical stack + readable count (not one disc for whole pile).
+    // T036: chip towers beside tableau
     const stack = Math.max(1, Math.min(Math.max(1, Math.floor(chips / 20) || (chips > 0 ? 1 : 0)), 6));
     if (chips > 0) {
       for (let s = 0; s < stack; s++) {
-        const top = s === stack - 1;
         pieces.push({
           id: `seat:${seatId}:chip:${s}`,
           objectKind: "resource",
-          x: x0 - 0.55,
-          z: z0,
+          x: x0 - 0.95,
+          z: zOwned + 0.2,
           y: 0.05 + s * 0.07,
           size: 0.3,
           seat: seatId,
@@ -931,18 +950,18 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
         });
       }
     }
+    // T052 · owned lot thumbnails in seat-front (framed-art), not meeple-only.
     const collection = gallery?.collection?.[seatId] ?? [];
     collection.slice(0, 5).forEach((painting, pi) => {
       pieces.push({
         id: `seat:${seatId}:coll:${pi}`,
-        objectKind: "card",
-        x: x0 + 0.55,
-        z: z0 - pi * 0.12,
-        y: 0.04 + pi * 0.02,
-        size: 0.35,
+        objectKind: "lot",
+        x: x0 - 0.4 + pi * 0.35,
+        z: zOwned - 0.1,
+        y: 0.06,
+        size: 0.42,
         seat: seatId,
-        tint: "#fdba74",
-        label: pi === 0 ? encodeCardFace({ title: String(painting.name ?? "藏品") }) : undefined,
+        label: encodeLotArt({ title: String(painting.name ?? "藏品"), artistId: painting.artistId }),
       });
     });
     const hand = gallery?.auctionHand?.[seatId] ?? [];
@@ -950,11 +969,13 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
       pieces.push({
         id: `seat:${seatId}:hand:${hi}`,
         objectKind: "card",
-        x: x0 - 0.4 + hi * 0.25,
-        z: z0 + 0.45,
-        size: 0.32,
+        x: x0 - 0.35 + hi * 0.28,
+        z: zOwned + 0.35,
+        y: 0.05,
+        size: 0.36,
         seat: seatId,
         tint: "#bfdbfe",
+        label: encodeCardFace({ title: String(painting.name ?? "手牌") }),
       });
     });
   });
