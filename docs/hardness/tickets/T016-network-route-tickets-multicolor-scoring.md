@@ -5,7 +5,7 @@
 | 回归靶 | H02（harness only） |
 | 层 | **内核**（network-route-v1 同层扩 · tickets 子集） |
 | 状态 | **已关** |
-| sha |  |
+| sha | `846c05c07bc30fadf95a702dc69edd0441be8aa7` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H02-t016/` |
 
 ## 现象（Open · regress-t015）
