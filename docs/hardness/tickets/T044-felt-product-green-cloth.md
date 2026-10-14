@@ -5,7 +5,7 @@
 | 回归靶 | H03 / H04 / H05 Room 同机位 |
 | 层 | **共享呈现**（MaterialLibrary / felt-inset / board cloth） |
 | 状态 | **关** |
-| tip | （feat commit 后填） |
+| tip | `765e2ef26abd88331bb65513b7093b3f65a29e17` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t044/` |
 
 ## 实现（通用）
