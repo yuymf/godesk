@@ -5,11 +5,13 @@ import type { TabletopLayout, TabletopRenderInput } from "../render3d/mappers/ta
 import {
   discFlippingLayout,
   gemEngineLayout,
+  patternDraftLayout,
   harborVoyageLayout,
   networkRouteLayout,
   workerPlacementLayout,
   type DiscFlippingTabletopInput,
   type GemEngineTabletopInput,
+  type PatternDraftTabletopInput,
   type NetworkRouteTabletopInput,
 } from "../render3d/mappers/tabletop-kernels";
 import { SCENE_TOKENS, SEAT_COLORS } from "../render3d/tokens";
@@ -76,5 +78,7 @@ export function layoutForStage({ kernel, state, legal, onAct }: Pick<TabletopSta
     }
     case "gem-engine-v1":
       return gemEngineLayout(state as GemEngineTabletopInput);
+    case "pattern-draft-v1":
+      return patternDraftLayout(state as PatternDraftTabletopInput);
   }
 }

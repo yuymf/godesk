@@ -732,6 +732,8 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       ) : patternDraft && patternDraftState ? (
         <PatternDraftBoard draft={patternDraftState} activeSeat={activeSeat}
           enabled={isMyTurn} busy={busy} status={room.state.status} viewerSeat={seat}
+          render={build.ruleSystem.presentation.render}
+          importedModels={importedModels}
           onAct={(actionId, payload) => { void act(actionId, -1, payload); }} />
       ) : gemEngine && gemEngineState ? (
         <GemEngineBoard gem={gemEngineState} activeSeat={activeSeat}

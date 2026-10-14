@@ -440,3 +440,182 @@ export function gemEngineLayout(state: GemEngineTabletopInput): TabletopLayout {
     hints,
   };
 }
+
+
+/** Factory draft / pattern lines / wall / floor (T027). Generic; not IP-specific. */
+export type PatternDraftTabletopInput = {
+  factories: ReadonlyArray<ReadonlyArray<string>>;
+  center: ReadonlyArray<string>;
+  markerInCenter?: boolean;
+  round?: number;
+  seats: ReadonlyArray<{
+    lines: ReadonlyArray<{ color: string | null; tiles: ReadonlyArray<string>; capacity: number }>;
+    wall: ReadonlyArray<ReadonlyArray<string | null>>;
+    floor: ReadonlyArray<string>;
+    hasMarker?: boolean;
+    score: number;
+  }>;
+};
+
+const PATTERN_TINT: Record<string, string> = {
+  blue: "#3b82f6",
+  yellow: "#eab308",
+  red: "#ef4444",
+  black: "#1f2937",
+  white: "#f4efe6",
+};
+
+export function patternDraftLayout(state: PatternDraftTabletopInput): TabletopLayout {
+  const pieces: TabletopPiece[] = [];
+  const hints: TabletopHint[] = [];
+  const factoryCount = state.factories.length;
+  const factoryRadius = 2.8;
+  state.factories.forEach((tiles, fi) => {
+    const angle = (Math.PI * 2 * fi) / Math.max(factoryCount, 1) - Math.PI / 2;
+    const fx = Math.cos(angle) * factoryRadius;
+    const fz = Math.sin(angle) * factoryRadius * 0.75 - 1.2;
+    pieces.push({
+      id: `factory:${fi}:disc`,
+      objectKind: "region",
+      x: fx,
+      z: fz,
+      size: 1.1,
+      tint: "#d6d3d1",
+      label: `F${fi}`,
+    });
+    tiles.forEach((color, ti) => {
+      const a = (Math.PI * 2 * ti) / Math.max(tiles.length, 1);
+      const x = fx + Math.cos(a) * 0.32;
+      const z = fz + Math.sin(a) * 0.32;
+      pieces.push({
+        id: `factory:${fi}:tile:${ti}`,
+        objectKind: "disc",
+        x,
+        z,
+        y: 0.08,
+        size: 0.28,
+        tint: PATTERN_TINT[color] ?? "#a8a29e",
+      });
+    });
+    for (const color of new Set(tiles)) {
+      hints.push({
+        id: `draft:factory:${fi}:${color}`,
+        x: fx,
+        z: fz,
+        radius: 0.4,
+        action: { type: "draft", payload: { source: "factory", factoryId: fi, color, line: 0 } },
+      });
+    }
+  });
+
+  // Center pile
+  state.center.forEach((color, i) => {
+    const col = i % 5;
+    const row = Math.floor(i / 5);
+    pieces.push({
+      id: `center:${i}`,
+      objectKind: "disc",
+      x: -0.6 + col * 0.3,
+      z: -0.3 + row * 0.3,
+      y: 0.08,
+      size: 0.26,
+      tint: PATTERN_TINT[color] ?? "#a8a29e",
+    });
+  });
+  if (state.markerInCenter) {
+    pieces.push({
+      id: "center:marker",
+      objectKind: "token",
+      x: 0.9,
+      z: -0.1,
+      size: 0.35,
+      tint: "#f97316",
+      label: "1st",
+      emphasis: true,
+    });
+  }
+  for (const color of new Set(state.center)) {
+    hints.push({
+      id: `draft:center:${color}`,
+      x: 0,
+      z: -0.2,
+      radius: 0.45,
+      action: { type: "draft", payload: { source: "center", color, line: 0 } },
+    });
+  }
+
+  const seatCount = state.seats.length;
+  state.seats.forEach((seat, seatId) => {
+    const x0 = -3.8 + (seatId - (seatCount - 1) / 2) * Math.min(2.6, 9 / Math.max(seatCount, 1));
+    const z0 = 2.4;
+    pieces.push({
+      id: `seat:${seatId}:marker`,
+      objectKind: "building",
+      x: x0,
+      z: z0 + 1.15,
+      size: 0.4,
+      seat: seatId,
+      label: `S${seatId}:${seat.score}`,
+      ...(seat.hasMarker ? { emphasis: true } : {}),
+    });
+    // Pattern lines (capacity 1..5)
+    seat.lines.forEach((line, li) => {
+      const lz = z0 - li * 0.28;
+      for (let c = 0; c < line.capacity; c++) {
+        const filled = c < line.tiles.length;
+        pieces.push({
+          id: `seat:${seatId}:line:${li}:${c}`,
+          objectKind: filled ? "disc" : "cell",
+          x: x0 - 0.9 + c * 0.22,
+          z: lz,
+          y: filled ? 0.06 : 0.02,
+          size: filled ? 0.2 : 0.18,
+          seat: seatId,
+          tint: filled
+            ? PATTERN_TINT[line.tiles[c]!] ?? "#a8a29e"
+            : "#e7e5e4",
+        });
+      }
+    });
+    // Wall 5x5 (compact)
+    const wall = seat.wall;
+    for (let r = 0; r < wall.length; r++) {
+      const row = wall[r] ?? [];
+      for (let c = 0; c < row.length; c++) {
+        const cell = row[c];
+        pieces.push({
+          id: `seat:${seatId}:wall:${r}:${c}`,
+          objectKind: cell ? "disc" : "cell",
+          x: x0 + 0.55 + c * 0.18,
+          z: z0 - r * 0.18,
+          y: cell ? 0.05 : 0.01,
+          size: 0.16,
+          seat: seatId,
+          tint: cell ? PATTERN_TINT[cell] ?? "#a8a29e" : "#f5f5f4",
+        });
+      }
+    }
+    // Floor penalties
+    seat.floor.forEach((color, fi) => {
+      pieces.push({
+        id: `seat:${seatId}:floor:${fi}`,
+        objectKind: "disc",
+        x: x0 - 0.9 + fi * 0.2,
+        z: z0 + 0.7,
+        y: 0.05,
+        size: 0.18,
+        seat: seatId,
+        tint: PATTERN_TINT[color] ?? "#a8a29e",
+      });
+    });
+  });
+
+  return {
+    kernelType: "pattern-draft-v1",
+    board: { objectKind: "region", materialKey: "table", width: BOARD_SPAN + 1.6, depth: BOARD_SPAN + 0.8 },
+    cells: [],
+    pieces,
+    links: [],
+    hints,
+  };
+}

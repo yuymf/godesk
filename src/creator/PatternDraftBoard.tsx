@@ -1,4 +1,6 @@
 import type { SessionState } from "./project-contract";
+import type { RenderSpec } from "./render-spec";
+import { TabletopStage } from "./TabletopStage";
 
 type PatternDraftBoardState = NonNullable<SessionState["patternDraft"]>;
 
@@ -15,6 +17,8 @@ export function PatternDraftBoard({
   status,
   viewerSeat,
   onAct,
+  render,
+  importedModels,
 }: {
   draft: PatternDraftBoardState;
   activeSeat: number;
@@ -24,10 +28,24 @@ export function PatternDraftBoard({
   status: "active" | "complete";
   viewerSeat: number | null;
   onAct?: (actionId: string, payload?: Record<string, unknown>) => void;
+  /** ADR 0014 / T027: optional RenderSpec for shared TabletopStage. */
+  render?: RenderSpec;
+  importedModels?: ReadonlyArray<{ id: string; url: string; title?: string }>;
 }) {
   const canAct =
     enabled && !busy && !readOnly && status === "active" && viewerSeat === activeSeat;
   const own = viewerSeat !== null ? draft.seats[viewerSeat] : null;
+  const seats = draft.seats as Array<{
+    lines: Array<{ color: string | null; tiles: string[]; capacity: number }>;
+    wall: Array<Array<string | null>>;
+    floor: string[];
+    hasMarker: boolean;
+    score: number;
+  }>;
+  const leader = seats.reduce(
+    (best, seat, index) => (seat.score > (seats[best]?.score ?? -Infinity) ? index : best),
+    0,
+  );
 
   const draftFromFactory = (factoryId: number, color: string, line: number | "floor") => {
     onAct?.("draft", { source: "factory", factoryId, color, line });
@@ -36,13 +54,30 @@ export function PatternDraftBoard({
     onAct?.("draft", { source: "center", color, line });
   };
 
+  const stageOnAct = canAct
+    ? (actionId: string, payload?: Record<string, unknown>) => {
+        onAct?.(actionId, payload);
+      }
+    : undefined;
+
   return (
-    <section aria-label="瓷砖工坊桌" className="pattern-draft-board" data-end-bonuses="row2-col7-color10">
+    <section
+      aria-label="瓷砖工坊桌"
+      className="pattern-draft-board room-view-tabletop-immersive"
+      data-end-bonuses="row2-col7-color10"
+    >
+      <TabletopStage
+        kernel="pattern-draft-v1"
+        state={draft}
+        render={render}
+        importedModels={importedModels}
+        onAct={stageOnAct}
+      />
       <header>
         <span className="auction-kicker">工厂草稿 · 第 {draft.round} 轮</span>
         <h2>
           {status === "complete"
-            ? `终局 · 座位 ${draft.seats[0].score >= draft.seats[1].score ? 0 : 1} 领先`
+            ? `终局 · 座位 ${leader} 领先`
             : `轮到座位 ${activeSeat} 拿色`}
         </h2>
         <p aria-label="pattern-bag">
@@ -100,26 +135,23 @@ export function PatternDraftBoard({
           )}
       </div>
       <div role="region" aria-label="席位">
-        {([0, 1] as const).map((seat) => {
-          const s = draft.seats[seat];
-          return (
-            <div key={seat} className={seat === activeSeat ? "is-active" : ""}>
-              <strong>座位 {seat}</strong> 分 {s.score}
-              {s.hasMarker ? " · 先手" : ""}
-              <div>
-                准备行：
-                {s.lines.map((line, i) => (
-                  <span key={i}>
-                    [{i + 1}:{line.tiles.map((t) => COLOR_LABEL[t] ?? t).join("") || "·"}]
-                  </span>
-                ))}
-              </div>
-              <div>
-                地板：{s.floor.map((t) => COLOR_LABEL[t] ?? t).join("") || "空"}
-              </div>
+        {seats.map((s, seat) => (
+          <div key={seat} className={seat === activeSeat ? "is-active" : ""}>
+            <strong>座位 {seat}</strong> 分 {s.score}
+            {s.hasMarker ? " · 先手" : ""}
+            <div>
+              准备行：
+              {s.lines.map((line, i) => (
+                <span key={i}>
+                  [{i + 1}:{line.tiles.map((t) => COLOR_LABEL[t] ?? t).join("") || "·"}]
+                </span>
+              ))}
             </div>
-          );
-        })}
+            <div>
+              地板：{s.floor.map((t) => COLOR_LABEL[t] ?? t).join("") || "空"}
+            </div>
+          </div>
+        ))}
       </div>
       {own ? (
         <p aria-label="own-wall">

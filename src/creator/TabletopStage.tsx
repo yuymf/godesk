@@ -11,7 +11,8 @@ export type TabletopKernelType =
   | "network-route-v1"
   | "worker-placement-v1"
   | "harbor-voyage-v1"
-  | "gem-engine-v1";
+  | "gem-engine-v1"
+  | "pattern-draft-v1";
 
 export type TabletopStageProps = {
   kernel: TabletopKernelType;
