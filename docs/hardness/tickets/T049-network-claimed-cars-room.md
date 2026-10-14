@@ -5,7 +5,7 @@
 | 回归靶 | H02 before(未占)/after(已占分色车厢) 成对；他套 smoke |
 | 层 | **共享呈现**（network-route claim → 车厢段） |
 | 状态 | **关** |
-| tip | pending |
+| tip | `6e36ba7` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t049/` |
 
 ## 问题
