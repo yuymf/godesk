@@ -657,7 +657,7 @@ export const KERNEL_TUNING_REGISTRY: Partial<Record<Kernel["type"], KernelTuning
       { key: "prepPlaceSeconds", label: "布阵时长", unit: "秒", subject: /(布阵|上阵|摆放|place)/i, ...lim.prepPlaceSeconds },
       { key: "prepShopSeconds", label: "商店备战时长", unit: "秒", subject: prepAny, exclude: /(商店|购买|买棋|布阵|上阵|摆放|shop|place)/i, ...lim.prepShopSeconds },
       { key: "prepPlaceSeconds", label: "布阵时长", unit: "秒", subject: prepAny, exclude: /(商店|购买|买棋|布阵|上阵|摆放|shop|place)/i, ...lim.prepPlaceSeconds },
-      { key: "startHp", label: "初始生命", unit: "", subject: /(血量|生命|血|hp)/i, exclude: /(降至|降为|低于|小于|≤|<=|地板|淘汰|战败|归零|或以下)/i, ...lim.startHp },
+      { key: "startHp", label: "初始生命", unit: "", subject: /(?:初始\s*(?:血量|生命|血|hp)|(?:血量|生命|hp).{0,8}(?:改成|改为|设为|设成|调成))/i, exclude: /(降至|降为|低于|小于|≤|<=|地板|淘汰|战败|归零|或以下|扣血|掉血|失血)/i, ...lim.startHp },
       { key: "startGold", label: "初始金币", unit: "", subject: /(金币|金钱|gold)/i, ...lim.startGold },
     ],
     parsers: [skillFxParser, boardSizeParser, addTraitParser, deleteTraitParser, assetAttachParser, themeParser, addUnitParser, deleteUnitParser, traitTierParser, starParser, editUnitParser, defaultsParser, vagueParser],

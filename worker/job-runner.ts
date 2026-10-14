@@ -51,6 +51,7 @@ import { createKernelTuningIterationPlan, parseKernelEdits } from "./kernel-tuni
 import { fulfillAssetAttachIntents } from "./auto-battler-assets";
 import { resolveAutoBattlerContent, DEFAULT_AUTO_BATTLER_CONTENT } from "../src/runtime/adapters/auto-battler-content";
 import { packToContentPatch, resolveAutoBattlerPack } from "../src/runtime/adapters/auto-battler-packs";
+import { parseRulesBookContentTables } from "./rulesbook-content-tables";
 
 const AUTO_BATTLER_BASE_UNSUPPORTED =
   "auto-battler-v1: 2-seat shop→place→combat→HP. Configurable: units/traits(add/del)/stars, boardCols/Rows 4–8×1–3, timers, HP/gold, themes, modelRef, VFX presets. Not: >2 seats, sealed shop.";
@@ -62,18 +63,34 @@ const REQUEST_LIKE = /[0-9一二三四五六七八九十]|改成|改为|加一�
 function autoBattlerProposedRuntime(idea: string) {
   const pack = resolveAutoBattlerPack(idea);
   const packContent = packToContentPatch(pack);
+  // Long-form rules book: markdown unit/trait tables override pack roster when present.
+  const tables = parseRulesBookContentTables(idea);
+  let contentBase = packContent;
+  if (tables.found && tables.patch) {
+    const merged = {
+      ...packContent,
+      ...(tables.patch.traits ? { traits: tables.patch.traits } : {}),
+      ...(tables.patch.units ? { units: tables.patch.units } : {}),
+    };
+    // If units+traits both from tables, stars still from pack/default patch shape.
+    if (resolveAutoBattlerContent(merged)) contentBase = merged;
+  }
   const seedKernel = {
     type: "auto-battler-v1" as const,
     playerCount: 2 as const,
-    content: packContent,
+    content: contentBase,
     theme: pack.theme,
     branding: pack.branding,
   };
-  const parsed = parseKernelEdits(seedKernel as never, idea);
-  const recognized = Boolean(parsed?.changes.length);
+  // Clause parsers see the idea without table rows (avoids flooding unsupported).
+  const parsed = parseKernelEdits(seedKernel as never, tables.ideaWithoutTables);
+  const recognized = Boolean(parsed?.changes.length) || tables.found;
   const leftovers = recognized ? (parsed?.unsupportedClauses ?? []).filter((c) => REQUEST_LIKE.test(c)) : [];
-  // Pack supplies default content+theme+branding; NL edits overlay when recognized.
-  const content = recognized && parsed?.contentPatch ? parsed.contentPatch : packContent;
+  // Tables override pack; NL contentPatch overlays on top when present.
+  const content =
+    recognized && parsed?.contentPatch
+      ? { ...contentBase, ...parsed.contentPatch }
+      : contentBase;
   const theme = recognized && parsed?.theme ? parsed.theme : pack.theme;
   return {
     configure: {
@@ -82,12 +99,16 @@ function autoBattlerProposedRuntime(idea: string) {
         playerCount: 2,
         unsupported: [
           AUTO_BATTLER_BASE_UNSUPPORTED,
+          ...tables.unsupported,
           ...leftovers.map((c) => `未执行的创作者要求：「${c}」——当前内核没有对应的可配置项。`),
         ],
         content,
         theme,
         branding: pack.branding,
-        ...(recognized && parsed && Object.keys(parsed.tuning).length ? { tuning: parsed.tuning } : {}),
+        ...((() => {
+          const tuning = { ...(tables.tuning ?? {}), ...(parsed?.tuning ?? {}) };
+          return Object.keys(tuning).length ? { tuning } : {};
+        })()),
       },
     },
     assetIntents: parsed?.assetIntents,

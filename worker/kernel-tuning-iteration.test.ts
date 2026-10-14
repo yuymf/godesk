@@ -35,6 +35,11 @@ describe("createKernelTuningIterationPlan", () => {
     expect(p.operations[1]).toMatchObject({ config: { tuning: { startHp: 40, startGold: 15 } } });
   });
 
+    it("does not parse 扣血…一致 as startHp=1", () => {
+    const p = plan(battler(), "结算：败方扣血（规则与现有伤害公式一致即可）。初始血量改成30")!;
+    expect(p.operations[1]).toMatchObject({ config: { tuning: { startHp: 30 } } });
+  });
+
   it("does not treat lose-condition HP 0 as startHp (hardness H01)", () => {
     const book = "做一款两人自走棋。初始生命 30。一方生命降至 0 或以下则战败。终局时 HP 地板为 0。";
     const p = plan(battler(), book)!;
