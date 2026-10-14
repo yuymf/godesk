@@ -262,7 +262,7 @@ export function harborVoyageLayout(
       objectKind: "cargo",
       x: x - 0.18,
       z,
-      y: 0.24 + 0.1 + 0.2,
+      y: 0.30,  // T047: offset above playTop (was absolute boardTop+deck)
       size: 0.36,
       ...(punt.color ? { tint: punt.color } : {}),
     });
@@ -272,7 +272,7 @@ export function harborVoyageLayout(
         objectKind: "worker",
         x: x + 0.06 + slot * 0.2,
         z,
-        y: 0.24 + 0.1 + 0.2,
+        y: 0.30,  // T047: offset above playTop (was absolute boardTop+deck)
         size: 0.38,
         seat: placement.seat,
       });
@@ -572,8 +572,8 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
         objectKind: "tile",
         x: fx + ox,
         z: fz + oz,
-        y: 0.22 + layer * 0.12,
-        size: 0.44,
+        y: 0.14 + layer * 0.12,  // T047: on-pad stack above playTop
+        size: 0.50,
         tint: PATTERN_TINT[color] ?? "#64748b",
         ...(pick ? { action: { type: pick.type, payload: { ...(pick.payload ?? {}) } }, emphasis: true } : {}),
       });

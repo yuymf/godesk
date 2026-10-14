@@ -55,7 +55,7 @@ export type TabletopPiece = {
   objectKind: string;
   x: number;
   z: number;
-  /** 底面高度（缺省：放在格位 / 底板顶面）。 */
+  /** 底面相对 playTop 的抬高（缺省 0：贴格位顶 / 毡面）。T047：不得再用绝对世界 Y。 */
   y?: number;
   /** 基准尺寸（世界单位），再乘 binding.scale。 */
   size: number;
@@ -587,7 +587,9 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
     const id = `piece:${resolved.mesh}:${piece.id}`;
     const onCell = layout.cells.some((cell) =>
       Math.abs(cell.x - piece.x) <= cell.width / 2 && Math.abs(cell.z - piece.z) <= cell.depth / 2);
-    const baseY = piece.y ?? (onCell ? playTop + CELL_THICKNESS : playTop);
+    // T047: piece.y is height ABOVE playTop (not absolute world Y). Absolute y buried
+    // glazed factory tiles under the felt after T044 raised playTop.
+    const baseY = playTop + (piece.y ?? (onCell ? CELL_THICKNESS : 0));
     // Face-schema labels win; else emphasis → major (stations); else plain label tag.
     const pieceTag = FACE_SCHEMA_KINDS.has(piece.objectKind) && piece.label
       ? piece.label
