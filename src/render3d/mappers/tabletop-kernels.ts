@@ -709,24 +709,48 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
         tiles: [] as string[],
         capacity: li + 1,
       }));
+    // T058 · pattern lines as readable trough strips (not round disc pits); distinct from T054 wall-slot squares.
     lines.forEach((line, li) => {
       const lz = z0 - li * 0.28;
       const cap = Math.max(line.capacity, li + 1, 1);
+      // Recessed trough bed under the whole line capacity
+      pieces.push({
+        id: `seat:${seatId}:line:${li}:trough`,
+        objectKind: "line-trough",
+        x: x0 - 1.05 + ((cap - 1) * 0.24) / 2,
+        z: lz,
+        y: 0.012,
+        size: Math.max(0.28, cap * 0.24 + 0.06),
+        seat: seatId,
+        materialKey: "line-trough",
+        tint: "#44403c",
+      });
       for (let c = 0; c < cap; c++) {
         const filled = c < line.tiles.length;
+        if (!filled) continue; // empty = trough bed only (no round pits)
         pieces.push({
           id: `seat:${seatId}:line:${li}:${c}`,
-          objectKind: filled ? "tile" : "slot",
+          objectKind: "tile",
           x: x0 - 1.05 + c * 0.24,
           z: lz,
-          y: filled ? 0.08 : 0.03,
-          size: filled ? 0.22 : 0.2,
+          y: 0.08,
+          size: 0.22,
           seat: seatId,
-          ...(filled
-            ? { tint: PATTERN_TINT[line.tiles[c]!] ?? "#a8a29e" }
-            : { tint: "#3f3f46" }),
+          tint: PATTERN_TINT[line.tiles[c]!] ?? "#a8a29e",
         });
       }
+    });
+    // T058 · floor row: elongated trough under floor penalty discs
+    pieces.push({
+      id: `seat:${seatId}:floor:trough`,
+      objectKind: "line-trough",
+      x: x0 - 0.55,
+      z: z0 + 0.7,
+      y: 0.01,
+      size: 1.4,
+      seat: seatId,
+      materialKey: "line-trough",
+      tint: "#57534e",
     });
     // T050/T054 · 5×5 wall grid: empty = hue print squares (not black disc pits);
     // glazed-on-wall tiles stay color-countable and distinct from empty print.

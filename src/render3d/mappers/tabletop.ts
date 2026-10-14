@@ -133,6 +133,7 @@ const FALLBACK_MESH: Record<string, string> = {
   tile: "glazed-tile",
   plaque: "plaque",
   lot: "framed-art",
+  "line-trough": "line-trough",
   building: "house",
   ship: "ship",
   route: "road-bar",

@@ -32,11 +32,13 @@ describe("T050 pattern seat board — lines + 5×5 wall slots", () => {
     expect(layout.pieces.some((p) => p.id === "seat:0:wall:board")).toBe(false);
     expect(layout.pieces.some((p) => p.objectKind === "region" && p.id.includes(":wall:"))).toBe(false);
 
-    const lineSlots = layout.pieces.filter((p) => p.id.startsWith("seat:0:line:") && p.objectKind === "slot");
+    const lineTroughs = layout.pieces.filter((p) => /^seat:0:line:\d+:trough$/.test(p.id));
     const lineTiles = layout.pieces.filter((p) => p.id.startsWith("seat:0:line:") && p.objectKind === "tile");
-    // capacities 1+2+3+4+5 = 15; filled: 1+0+2+0+0 = 3
+    // T058: 5 trough beds + filled glazed tiles only (no round empty pits)
+    expect(lineTroughs).toHaveLength(5);
     expect(lineTiles).toHaveLength(3);
-    expect(lineSlots.length + lineTiles.length).toBe(15);
+    expect(layout.pieces.some((p) => p.id.startsWith("seat:0:line:") && p.objectKind === "slot")).toBe(false);
+    expect(layout.pieces.some((p) => p.id === "seat:0:floor:trough")).toBe(true);
 
     const wall = layout.pieces.filter((p) => /^seat:0:wall:\d+:\d+$/.test(p.id));
     expect(wall).toHaveLength(25);
@@ -60,6 +62,7 @@ describe("T050 pattern seat board — lines + 5×5 wall slots", () => {
     });
     expect(layout.pieces.some((p) => p.id.includes("wall:board"))).toBe(false);
     expect(layout.pieces.filter((p) => /^seat:0:wall:\d+:\d+$/.test(p.id))).toHaveLength(25);
-    expect(layout.pieces.filter((p) => p.id.startsWith("seat:0:line:")).length).toBe(15);
+    expect(layout.pieces.filter((p) => /^seat:0:line:\d+:trough$/.test(p.id)).length).toBe(5);
+    expect(layout.pieces.some((p) => p.id === "seat:0:floor:trough")).toBe(true);
   });
 });

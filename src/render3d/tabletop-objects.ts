@@ -269,6 +269,12 @@ function gemChip(): Geometry {
 }
 
 /** T034 · beveled glazed tile (color face + micro clearcoat feel via physical material). */
+/** T058 · elongated recessed trough for pattern lines / floor row (not a round pit). */
+function lineTroughGeom(): Geometry {
+  // Unit footprint: length along X, shallow Y, narrow Z — scaled by node.scale[0].
+  return translated(new BoxGeometry(1, 0.08, 0.34), 0.04);
+}
+
 function glazedTileGeom(): Geometry {
   const shape = new Shape();
   const s = 0.42;
@@ -511,6 +517,8 @@ function geometryFor(mesh: string): Geometry {
       const g = new SphereGeometry(0.5, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2);
       return g;
     }
+    case "line-trough":
+      return lineTroughGeom();
     case "framed-art":
       return translated(new BoxGeometry(0.95, 0.08, 1.2), 0.04);
     case "meeple":
@@ -1261,6 +1269,11 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = feltStitchMesh();
   } else if (mesh === "table-vignette") {
     object = tableVignetteMesh();
+  } else if (mesh === "line-trough") {
+    const built = new Mesh(lineTroughGeom(), materialFor(node, ctx));
+    built.castShadow = false;
+    built.receiveShadow = true;
+    object = built;
   } else if (mesh === "framed-art") {
     object = framedArtWithFace(node, ctx);
   } else if (mesh === "meeple") {
