@@ -5,7 +5,7 @@
 | 回归靶 | H02 before/after close（站名+长度）；他套 smoke |
 | 层 | **共享呈现**（station plaque + unclaimed length slots） |
 | 状态 | **关** |
-| tip | pending |
+| tip | `d630c40` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t051/` |
 
 ## 问题
