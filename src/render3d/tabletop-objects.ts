@@ -32,6 +32,7 @@ import {
   Group,
   PlaneGeometry,
   SRGBColorSpace,
+  RepeatWrapping,
   Vector2,
   type BufferGeometry as Geometry,
   type Material,
@@ -777,7 +778,24 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     bed.receiveShadow = true;
     bed.castShadow = true;
     group.add(bed, sleepers, rails);
+    // T046 · countable train/wagon segments along claimed edges (seat-colored bodies).
+    const carMat = materialFor(node, ctx);
+    const carCount = Math.max(2, Math.min(6, Math.round(usable / 0.42)));
+    const carStep = usable / carCount;
+    const cars: Geometry[] = [];
+    for (let i = 0; i < carCount; i += 1) {
+      const cx = -usable / 2 + carStep * (i + 0.5);
+      const body = boxAt(carStep * 0.72, 0.11, gauge * 0.85, cx, 0.14, 0);
+      cars.push(body);
+      // tiny roof ridge
+      cars.push(boxAt(carStep * 0.68, 0.03, gauge * 0.55, cx, 0.205, 0));
+    }
+    const train = new Mesh(mergeGeometries(cars) ?? cars[0]!, carMat);
+    train.castShadow = true;
+    train.receiveShadow = true;
+    group.add(train);
   } else {
+    // Unclaimed: faint empty track slots (ties only, weaker rails).
     group.add(sleepers, rails);
   }
   const hit = new Mesh(new BoxGeometry(usable, 0.1, gauge * 1.7), new MeshBasicMaterial({ visible: false }));
@@ -957,6 +975,42 @@ function feltWoodRim(): Geometry {
   const outer = new BoxGeometry(1, 1, 1);
   // Bevel cue: thinner top lip via a second box slightly inset on Y.
   return outer;
+}
+
+
+/** T044 · product green felt pile: dark cloth + micro-noise map (shared desk cloth look). */
+function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material {
+  const token = node.material ? ctx.materials[node.material] : undefined;
+  const base = token?.base ?? "#1a8a45";
+  const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
+  if (canvas) {
+    const W = 128, H = 128;
+    canvas.width = W; canvas.height = H;
+    const g = canvas.getContext("2d");
+    if (g) {
+      g.fillStyle = base;
+      g.fillRect(0, 0, W, H);
+      for (let i = 0; i < 2200; i += 1) {
+        const x = Math.random() * W;
+        const y = Math.random() * H;
+        const a = 0.04 + Math.random() * 0.08;
+        g.fillStyle = Math.random() < 0.5 ? `rgba(0,0,0,${a})` : `rgba(255,255,255,${a * 0.7})`;
+        g.fillRect(x, y, 1 + Math.random() * 1.5, 1 + Math.random() * 2.5);
+      }
+    }
+  }
+  const map = canvas ? new CanvasTexture(canvas) : null;
+  if (map) {
+    map.wrapS = map.wrapT = RepeatWrapping;
+    map.repeat.set(6, 6);
+    map.colorSpace = SRGBColorSpace;
+  }
+  return new MeshStandardMaterial({
+    color: base,
+    map: map ?? undefined,
+    roughness: Math.max(0.95, token?.roughness ?? 0.99),
+    metalness: 0,
+  });
 }
 
 function feltInsetGeom(): Geometry {
@@ -1174,10 +1228,22 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     const sz = Math.max(0.2, Math.abs(node.scale?.[2] ?? sx));
     object = softContactShadow(sx, sz);
   } else if (mesh === "felt-wood-rim") {
-    const built = new Mesh(feltWoodRim(), materialFor(node, ctx));
-    built.castShadow = true;
-    built.receiveShadow = true;
-    object = built;
+    // T044: hollow wood frame — solid box was burying the green felt inset.
+    const group = new Group();
+    const mat = materialFor(node, ctx);
+    const t = 0.085; // frame thickness in unit UV
+    const mk = (sx: number, sy: number, sz: number, x: number, y: number, z: number) => {
+      const m = new Mesh(new BoxGeometry(sx, sy, sz), mat);
+      m.position.set(x, y, z);
+      m.castShadow = true;
+      m.receiveShadow = true;
+      group.add(m);
+    };
+    mk(1, 1, t, 0, 0, 0.5 - t / 2);
+    mk(1, 1, t, 0, 0, -0.5 + t / 2);
+    mk(t, 1, 1 - 2 * t, 0.5 - t / 2, 0, 0);
+    mk(t, 1, 1 - 2 * t, -0.5 + t / 2, 0, 0);
+    object = group;
   } else if (mesh === "felt-wood-lip") {
     const built = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial({
       color: "#8b5a2b",
@@ -1188,7 +1254,7 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     built.receiveShadow = true;
     object = built;
   } else if (mesh === "felt-inset") {
-    const built = new Mesh(feltInsetGeom(), materialFor(node, ctx));
+    const built = new Mesh(feltInsetGeom(), feltPileMaterial(node, ctx));
     built.castShadow = false;
     built.receiveShadow = true;
     object = built;

@@ -53,7 +53,7 @@ describe("defaultRenderSpec", () => {
     ]));
     expect(render("disc-flipping-v1").water.enabled).toBe(false);
     expect(render("disc-flipping-v1").bindings.map((binding) => binding.objectKind)).toEqual(["cell", "disc"]);
-    expect(render("network-route-v1").preset).toBe("parchment-map");
+    expect(render("network-route-v1").preset).toBe("tabletop-day"); // T046 train-route desk, not parchment pad
     expect(render(null).bindings.map((binding) => binding.objectKind)).toEqual(expect.arrayContaining([
       "region", "resource", "card", "character", "token", "location", "concept", "object",
     ]));

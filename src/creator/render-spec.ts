@@ -38,6 +38,7 @@ export const materialSchema = z.strictObject({
   clearcoat: unit.optional(),
   pattern: z.enum(["none", "grain", "cloth", "stone", "grass", "sand"]),
   texture: assetId.optional(),
+  brush: unit.optional(),
 });
 
 export const renderSpecSchema = z.strictObject({
@@ -247,6 +248,7 @@ function material(
   roughness = 0.6,
   metalness = 0,
   clearcoat?: number,
+  brush?: number,
 ): RenderSpec["materials"][string] {
   return {
     base,
@@ -254,6 +256,7 @@ function material(
     metalness,
     ...(clearcoat === undefined ? {} : { clearcoat }),
     pattern,
+    ...(brush === undefined ? {} : { brush }),
   };
 }
 
@@ -419,16 +422,21 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     return;
   }
   if (kernelType === "network-route-v1") {
+    // T046 · shared train-route presentation (not parchment sticky-pad graph).
+    render.preset = "tabletop-day";
+    render.camera = { ...render.camera, fovDeg: 32, distance: 14, minPolarDeg: 28, maxPolarDeg: 58, polarDeg: 46 };
     Object.assign(render.materials, {
-      map: material("#c9b68a", "none", 0.86),
+      map: material("#1f6b45", "cloth", 0.94, 0, undefined, 0.4),
+      table: material("#7a4e28", "grain", 0.92),
       ink: material("#40505a", "none", 0.58),
       piece: material("#f7f1e6", "none", 0.42, 0.08, 0.35),
     });
     render.bindings = [
-      binding("station", "disc", "ink", 0.78),
-      binding("route", "road-bar", "ink", 0.72),
-      binding("claim", "road-bar", "ink", 0.72),
+      binding("station", "station", "ink", 1.2),
+      binding("route", "rail-track", "ink", 1.7),
+      binding("claim", "rail-track", "ink", 1.2),
       binding("worker", "meeple", "piece", 0.95),
+      binding("map", "tile-square", "map", 1),
     ];
     return;
   }
@@ -443,7 +451,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       exposure: 1.06,
     };
     Object.assign(render.materials, {
-      board: material("#556354", "cloth", 0.94),
+      board: material("#1a8a45", "cloth", 0.99, 0, undefined, 0.62),  // T044 product green felt
       table: material("#7a4e28", "grain", 0.92),
       piece: material("#f7f1e6", "none", 0.4, 0.08, 0.38),
       card: material("#f3e7d3", "none", 0.55, 0, 0.2),
@@ -469,13 +477,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     ];
     if (kernelType === "auction-bidding-v1") {
       Object.assign(render.materials, {
-        board: material("#6b5f4e", "cloth", 0.93),
+        board: material("#1c7d42", "cloth", 0.99, 0, undefined, 0.55),  // T044 auction felt
         card: material("#fff7ed", "none", 0.68, 0, 0.1),
       });
     }
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
-        board: material("#4a6741", "cloth", 0.95),
+        board: material("#1a8644", "cloth", 0.99, 0, undefined, 0.58),  // T044 pattern felt
         piece: material("#f8fafc", "none", 0.4, 0.05, 0.32),
       });
     }

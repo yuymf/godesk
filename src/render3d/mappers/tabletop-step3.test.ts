@@ -89,9 +89,10 @@ describe("step3 · configure_render: ortho camera / wood chrome / decor / track 
     const shore = scene.model.nodes.find((n) => n.id === "shore")!;
     const board = scene.model.nodes.find((n) => n.id === "board")!;
     expect(table.tag).toBe("sea");
-    expect(shore.scale![0]).toBeCloseTo(board.scale![0] + 1.8, 5);
-    expect(shore.position[1] + shore.scale![1] / 2).toBeLessThan(board.position[1] + board.scale![1] / 2);
     const { board: b } = layout();
+    // T046: felt-inset shrinks the board node; shore still tracks layout board span.
+    expect(shore.scale![0]).toBeCloseTo(b.width + 1.8, 2);
+    expect(shore.position[1] + shore.scale![1] / 2).toBeLessThan(board.position[1] + board.scale![1] / 2);
     const rim = scatterSurround(layout(), spec.surround, 0.17);
     expect(rim.length).toBeGreaterThan(10);
     for (const p of rim) expect(Math.abs(p.x) > b.width / 2 || Math.abs(p.z) > b.depth / 2).toBe(true);

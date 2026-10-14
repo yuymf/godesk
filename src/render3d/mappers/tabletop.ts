@@ -456,8 +456,13 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
   const boardMatKey = board.materialKey ?? boardBinding.materialKey;
   // T033 · when RenderSpec has cloth board + wood table, emit wood rim + felt inset
   // (desk layouts often mark the slab as materialKey "table"; still prefer felt center).
-  const feltInset = Boolean(render.materials.table && render.materials.board?.pattern === "cloth");
-  if (feltInset) {
+  const clothKey = render.materials.board?.pattern === "cloth"
+    ? "board"
+    : render.materials.map?.pattern === "cloth"
+      ? "map"
+      : null;
+  const feltInset = Boolean(render.materials.table && clothKey);
+  if (feltInset && clothKey) {
     // T041 · product frame: wood-edge bevel rim + cloth inset + stitch lip + soft vignette corners.
     const rim = 0.72;
     const feltShrink = 0.38;
@@ -477,19 +482,20 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
       position: [0, boardTop + 0.02, 0],
       scale: [round(board.width + rim * 0.92), 0.045, round(board.depth + rim * 0.92)],
     });
+    // T044: felt must sit ABOVE solid wood rim top (rim top ≈ boardTop+0.02).
     nodes.push({
       id: "board",
       kind: "cell",
       mesh: "felt-inset",
-      position: [0, boardTop / 2 + 0.04, 0],
-      scale: [round(board.width - feltShrink), BOARD_THICKNESS * 0.42, round(board.depth - feltShrink)],
-      material: libraryKey("board", undefined, Math.max(board.width, board.depth)),
+      position: [0, boardTop + 0.12, 0],
+      scale: [round(board.width - feltShrink), 0.08, round(board.depth - feltShrink)],
+      material: libraryKey(clothKey, undefined, Math.max(board.width, board.depth)),
     });
     nodes.push({
       id: "board-stitch",
       kind: "cell",
       mesh: "felt-stitch",
-      position: [0, boardTop + 0.055, 0],
+      position: [0, boardTop + 0.17, 0],
       scale: [round(board.width - feltShrink + 0.08), 1, round(board.depth - feltShrink + 0.08)],
       material: libraryKey("ink", render.materials.ink ?? { base: "#3f3428", roughness: 0.85, metalness: 0.05, pattern: "none" }),
     });
@@ -510,6 +516,9 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
       material: libraryKey(boardMatKey, undefined, Math.max(board.width, board.depth)),
     });
   }
+
+  // Play surface Y: with felt inset, pieces sit on felt top (not buried under wood rim).
+  const playTop = feltInset ? boardTop + 0.16 : boardTop;
 
   let grid: TabletopScene["grid"] = null;
   if (board.grid) {
@@ -537,7 +546,7 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
       id,
       kind: "cell",
       mesh,
-      position: [round(cell.x), boardTop + CELL_THICKNESS / 2, round(cell.z)],
+      position: [round(cell.x), playTop + CELL_THICKNESS / 2, round(cell.z)],
       scale: [round(cell.width), CELL_THICKNESS, round(cell.depth)],
       material: libraryKey(resolved.materialKey),
     });
@@ -545,7 +554,7 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
   }
 
   if (render.decor?.ground === "varied") {
-    for (const g of groundVariation(layout, render.decor.seed || 1, boardTop, surround?.kind === "sea")) {
+    for (const g of groundVariation(layout, render.decor.seed || 1, playTop, surround?.kind === "sea")) {
       nodes.push({ id: g.id, kind: "piece", mesh: g.mesh, position: [g.x, g.y, g.z], rotationY: g.r, scale: [g.sx, g.sy, g.sz], material: libraryKey(g.key) });
     }
   }
@@ -557,16 +566,18 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
     if (!piece.label) continue;
     // T037: card/plaque labels are face schema tags — do not spawn debug parchment nameplates.
     if (FACE_SCHEMA_KINDS.has(piece.objectKind)) continue;
-    // T039: forbid persistent Eng pad boards (F0/F1) and seat debug plates; tip counts stay faint via label mesh.
+    // T039: forbid persistent Eng pad boards (F0/F1) and seat debug plates.
     if (/^F\d+$/i.test(piece.label)) continue;
     if (/^S\d+:/i.test(piece.label)) continue;
+    // T045: forbid translucent numeric cash/score billboards on the desk (cash → chip towers or HUD only).
+    if (/^\$?\d+(\.\d+)?$/.test(piece.label.trim())) continue;
     // 名牌：平放在棋子南侧（朝向默认机位），羊皮纸底 + 墨字（tabletop-objects `label` 网格）。
     nodes.push({
       id: `label:${piece.id}`,
       kind: "label",
       mesh: "label",
       tag: piece.label,
-      position: [round(piece.x), boardTop + 0.02, round(piece.z + piece.size * 0.9 + 0.3)],
+      position: [round(piece.x), playTop + 0.02, round(piece.z + piece.size * 0.9 + 0.3)],
       scale: [1, 1, 1],
     });
   }
@@ -576,7 +587,7 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
     const id = `piece:${resolved.mesh}:${piece.id}`;
     const onCell = layout.cells.some((cell) =>
       Math.abs(cell.x - piece.x) <= cell.width / 2 && Math.abs(cell.z - piece.z) <= cell.depth / 2);
-    const baseY = piece.y ?? (onCell ? boardTop + CELL_THICKNESS : boardTop);
+    const baseY = piece.y ?? (onCell ? playTop + CELL_THICKNESS : playTop);
     // Face-schema labels win; else emphasis → major (stations); else plain label tag.
     const pieceTag = FACE_SCHEMA_KINDS.has(piece.objectKind) && piece.label
       ? piece.label
@@ -630,7 +641,7 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
       mesh: linkMesh,
       // rail-track：几何按长度生成（枕木间距不随缩放拉伸），tag 带长度 / 轨距，scale 保持 1。
       ...(track ? { tag: `${round(length)}:${round(width)}` } : {}),
-      position: [round((link.from[0] + link.to[0]) / 2), round(track ? boardTop : boardTop + width * 0.3), round((link.from[1] + link.to[1]) / 2)],
+      position: [round((link.from[0] + link.to[0]) / 2), round(track ? playTop : playTop + width * 0.3), round((link.from[1] + link.to[1]) / 2)],
       rotationY: round(-Math.atan2(dz, dx)),
       scale: track ? [1, 1, 1] : [round(length), round(width * 0.6), round(width)],
       ...(link.seat !== null && link.seat !== undefined ? { seat: link.seat } : {}),
@@ -645,7 +656,7 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
       id,
       kind: "hint",
       mesh: "ring",
-      position: [round(hint.x), boardTop + CELL_THICKNESS + 0.03, round(hint.z)],
+      position: [round(hint.x), playTop + CELL_THICKNESS + 0.03, round(hint.z)],
       scale: [round(hint.radius), 1, round(hint.radius)],
     });
     actions[id] = hint.action;
