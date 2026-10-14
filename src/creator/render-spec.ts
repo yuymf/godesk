@@ -20,6 +20,7 @@ const builtInMesh = z.enum([
   "glazed-tile",
   "plaque",
   "framed-art",
+  "line-trough",
   "card",
   "die",
   "ship",
