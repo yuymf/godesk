@@ -125,7 +125,7 @@ const FALLBACK_MESH: Record<string, string> = {
   map: "tile-square",
   disc: "disc",
   station: "disc",
-  resource: "disc",
+  resource: "gem-chip",
   cargo: "disc",
   worker: "pawn",
   token: "disc",
@@ -449,14 +449,38 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
   }
 
   const boardBinding = bindingFor(render, board.objectKind);
-  nodes.push({
-    id: "board",
-    kind: "cell",
-    mesh: "tile-square",
-    position: [0, boardTop / 2, 0],
-    scale: [round(board.width), BOARD_THICKNESS, round(board.depth)],
-    material: libraryKey(board.materialKey ?? boardBinding.materialKey, undefined, Math.max(board.width, board.depth)),
-  });
+  const boardMatKey = board.materialKey ?? boardBinding.materialKey;
+  // T033 · when RenderSpec has cloth board + wood table, emit wood rim + felt inset
+  // (desk layouts often mark the slab as materialKey "table"; still prefer felt center).
+  const feltInset = Boolean(render.materials.table && render.materials.board?.pattern === "cloth");
+  if (feltInset) {
+    const rim = 0.55;
+    nodes.push({
+      id: "board-rim",
+      kind: "cell",
+      mesh: "tile-square",
+      position: [0, boardTop / 2 - 0.02, 0],
+      scale: [round(board.width + rim), BOARD_THICKNESS + 0.04, round(board.depth + rim)],
+      material: libraryKey("table", undefined, Math.max(board.width, board.depth) + rim),
+    });
+    nodes.push({
+      id: "board",
+      kind: "cell",
+      mesh: "tile-square",
+      position: [0, boardTop / 2 + 0.02, 0],
+      scale: [round(board.width - 0.25), BOARD_THICKNESS * 0.55, round(board.depth - 0.25)],
+      material: libraryKey("board", undefined, Math.max(board.width, board.depth)),
+    });
+  } else {
+    nodes.push({
+      id: "board",
+      kind: "cell",
+      mesh: "tile-square",
+      position: [0, boardTop / 2, 0],
+      scale: [round(board.width), BOARD_THICKNESS, round(board.depth)],
+      material: libraryKey(boardMatKey, undefined, Math.max(board.width, board.depth)),
+    });
+  }
 
   let grid: TabletopScene["grid"] = null;
   if (board.grid) {
@@ -524,7 +548,7 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
       kind: "piece",
       mesh: resolved.mesh,
       position: [round(piece.x), round(baseY), round(piece.z)],
-      ...(piece.emphasis ? { tag: "major" } : {}),
+      ...(piece.label ? { tag: piece.label } : piece.emphasis ? { tag: "major" } : {}),
       ...(piece.rotationY ? { rotationY: round(piece.rotationY) } : {}),
       scale: [size, size, size],
       ...(piece.seat !== null && piece.seat !== undefined ? { seat: piece.seat } : {}),

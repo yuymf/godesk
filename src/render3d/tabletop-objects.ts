@@ -17,6 +17,7 @@ import {
   LineSegments,
   Mesh,
   MeshBasicMaterial,
+  MeshStandardMaterial,
   Object3D,
   RingGeometry,
   Shape,
@@ -183,6 +184,70 @@ function cardStock(): Geometry {
   return geom;
 }
 
+
+/** T033 · cut gem chip: short faceted cylinder (reads as varnished token, not a plastic slug). */
+function gemChip(): Geometry {
+  const geom = new CylinderGeometry(0.42, 0.46, 0.18, 8);
+  geom.translate(0, 0.09, 0);
+  return geom;
+}
+
+/** T033 · card face plate: parchment + color band + mark text. */
+function cardWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
+  const group = new Group();
+  const stock = new Mesh(cardStock(), materialFor(node, ctx));
+  stock.castShadow = true;
+  stock.receiveShadow = true;
+  group.add(stock);
+  const mark = (node.tag && node.tag !== "major" ? node.tag : "").slice(0, 10);
+  const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
+  if (canvas) {
+    const W = 256, H = 360;
+    canvas.width = W;
+    canvas.height = H;
+    const g = canvas.getContext("2d");
+    if (g) {
+      g.fillStyle = "#f7efe2";
+      g.fillRect(0, 0, W, H);
+      g.strokeStyle = "rgba(60,40,20,0.35)";
+      g.lineWidth = 8;
+      g.strokeRect(10, 10, W - 20, H - 20);
+      // color plate from material base
+      const base = node.material && ctx.materials[node.material]?.base
+        ? ctx.materials[node.material]!.base
+        : "#c4b5a5";
+      g.fillStyle = base;
+      g.fillRect(28, 28, W - 56, 110);
+      g.fillStyle = "rgba(255,255,255,0.22)";
+      g.fillRect(28, 28, W - 56, 28);
+      if (mark) {
+        g.fillStyle = "#1f2937";
+        g.font = '700 42px "Noto Serif CJK SC","Songti SC",serif';
+        g.textAlign = "center";
+        g.textBaseline = "middle";
+        g.fillText(mark, W / 2, 220);
+      }
+      g.fillStyle = "rgba(55,40,25,0.55)";
+      g.fillRect(40, H - 48, W - 80, 10);
+    }
+    const tex = new CanvasTexture(canvas);
+    tex.colorSpace = SRGBColorSpace;
+    tex.anisotropy = 4;
+    const face = new Mesh(
+      (() => {
+        const plane = new PlaneGeometry(0.58, 0.82);
+        plane.rotateX(-Math.PI / 2);
+        plane.translate(0, 0.05, 0);
+        return plane;
+      })(),
+      new MeshStandardMaterial({ map: tex, roughness: 0.78, metalness: 0.02 }),
+    );
+    face.receiveShadow = true;
+    group.add(face);
+  }
+  return group;
+}
+
 function geometryFor(mesh: string): Geometry {
   switch (mesh) {
     case "tile-square":
@@ -193,6 +258,8 @@ function geometryFor(mesh: string): Geometry {
     case "disc":
       // T030: slightly crowned chip (not a flat plastic slug).
       return translated(new CylinderGeometry(0.46, 0.44, 0.14, 40), 0.07);
+    case "gem-chip":
+      return gemChip();
     case "house":
       return house();
     case "tower":
@@ -585,6 +652,8 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = shoreNatural(node, ctx);
   } else if (mesh === "label") {
     object = label(node);
+  } else if (mesh === "card") {
+    object = cardWithFace(node, ctx);
   } else if (INSTANCED_MESHES.has(mesh)) {
     object = createInstanceProxy(mesh, node, ctx);
   } else {

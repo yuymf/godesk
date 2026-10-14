@@ -15,6 +15,7 @@ const builtInMesh = z.enum([
   "road-bar",
   "pawn",
   "disc",
+  "gem-chip",
   "card",
   "die",
   "ship",
@@ -427,13 +428,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
   }
   if (kernelType === "gem-engine-v1" || kernelType === "pattern-draft-v1" || kernelType === "auction-bidding-v1") {
     // T030 · desk-kernel visual baseline: felt board, wood table, clearcoat pieces, card stock.
-    render.camera = { ...render.camera, fovDeg: 32, distance: 14, minPolarDeg: 28, maxPolarDeg: 68 };
+    render.camera = { ...render.camera, fovDeg: 30, distance: 12.5, minPolarDeg: 32, maxPolarDeg: 62, polarDeg: 48 };
     Object.assign(render.materials, {
       board: material("#5c6b58", "cloth", 0.88),
       table: material("#7a4e28", "grain", 0.92),
       piece: material("#f7f1e6", "none", 0.42, 0.08, 0.35),
-      card: material("#f3e7d3", "none", 0.72, 0, 0.08),
-      resource: material("#e8d9b8", "none", 0.48, 0.12, 0.28),
+      card: material("#f3e7d3", "none", 0.62, 0, 0.18),
+      resource: material("#e8d9b8", "none", 0.28, 0.22, 0.72),
       token: material("#c4b5fd", "none", 0.4, 0.15, 0.4),
       ink: material("#334155", "none", 0.55),
     });
@@ -443,7 +444,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       binding("map", "tile-square", "board"),
       binding("card", "card", "card", 1),
       binding("disc", "disc", "piece", 0.9),
-      binding("resource", "disc", "resource", 0.85),
+      binding("resource", "gem-chip", "resource", 0.9),
       binding("token", "disc", "token", 0.75),
       binding("building", "house", "piece", 0.9),
       binding("station", "disc", "ink", 0.8),

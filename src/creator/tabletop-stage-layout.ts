@@ -34,7 +34,7 @@ export function fallbackTabletopRender(kernel: TabletopStageProps["kernel"]): Ta
   const desk = kernel === "gem-engine-v1" || kernel === "pattern-draft-v1" || kernel === "auction-bidding-v1";
   const boardBase = kernel === "disc-flipping-v1" ? "#1f6b4a" : desk ? "#5c6b58" : "#b9a77d";
   return {
-    camera: { ...SCENE_TOKENS.camera, ...(desk ? { fovDeg: 32, distance: 14 } : {}), pan: false },
+    camera: { ...SCENE_TOKENS.camera, ...(desk ? { fovDeg: 30, distance: 12.5 } : {}), pan: false },
     lighting: SCENE_TOKENS.lighting,
     water: { enabled: kernel === "harbor-voyage-v1", shallow: "#4aa8a8", deep: "#0e3a55" },
     materials: {
@@ -52,7 +52,7 @@ export function fallbackTabletopRender(kernel: TabletopStageProps["kernel"]): Ta
           { objectKind: "cell", mesh: "tile-square", material: "board", scale: 1 },
           { objectKind: "card", mesh: "card", material: "card", scale: 1 },
           { objectKind: "disc", mesh: "disc", material: "piece", scale: 0.9 },
-          { objectKind: "resource", mesh: "disc", material: "resource", scale: 0.85 },
+          { objectKind: "resource", mesh: "gem-chip", material: "resource", scale: 0.9 },
           { objectKind: "token", mesh: "disc", material: "token", scale: 0.75 },
           { objectKind: "building", mesh: "house", material: "piece", scale: 0.9 },
         ]
