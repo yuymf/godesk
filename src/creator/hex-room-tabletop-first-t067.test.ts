@@ -14,13 +14,14 @@ describe("T067 hex Room tabletop-first", () => {
 
   it("open board-targets is side drawer, not centered fullscreen overlay", () => {
     const css = readFileSync("src/creator/tidewell-game-screen.css", "utf8");
-    expect(css).toContain("T067");
+    // T070 supersedes T067 open sizes; still must not be centered fullscreen
+    expect(css).toMatch(/T070|T067/);
     const openBlock = css.slice(
       css.indexOf(".hex-settlement-board-targets[open]"),
-      css.indexOf(".hex-settlement-board-targets[open]") + 500,
+      css.indexOf(".hex-settlement-board-targets[open]") + 550,
     );
     expect(openBlock).not.toMatch(/left:\s*50%/);
     expect(openBlock).not.toMatch(/transform:\s*translate\(-50%/);
-    expect(openBlock).toMatch(/max-height:\s*min\(42vh/);
+    expect(openBlock).toMatch(/max-height:\s*min\((?:26|42)vh/);
   });
 });

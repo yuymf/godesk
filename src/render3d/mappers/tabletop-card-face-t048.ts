@@ -138,6 +138,78 @@ export function paintIllustrationBand(
   g.closePath();
   g.fill();
 
+  // T069 · readable motifs (gem / building silhouettes) — not pure gradient
+  const motifKind = Math.floor(rnd() * 3); // 0 gem, 1 building, 2 stacked gems
+  g.globalAlpha = 0.95;
+  if (motifKind === 0 || motifKind === 2) {
+    // large gem / diamond — high-contrast fill vs wash
+    const gx = box.x + box.w * 0.62;
+    const gy = box.y + box.h * 0.42;
+    const gw = box.w * 0.32;
+    const gh = box.h * 0.48;
+    g.fillStyle = mix(rgb, shadow, 0.05);
+    g.beginPath();
+    g.moveTo(gx, gy - gh * 0.55);
+    g.lineTo(gx + gw * 0.55, gy);
+    g.lineTo(gx, gy + gh * 0.55);
+    g.lineTo(gx - gw * 0.55, gy);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = mix(parchment, accent, 0.2);
+    g.lineWidth = 3;
+    g.stroke();
+    // bright crown facet
+    g.fillStyle = mix(accent, parchment, 0.55);
+    g.beginPath();
+    g.moveTo(gx - gw * 0.28, gy - gh * 0.12);
+    g.lineTo(gx + gw * 0.28, gy - gh * 0.12);
+    g.lineTo(gx, gy + gh * 0.12);
+    g.closePath();
+    g.fill();
+    // side facets
+    g.fillStyle = mix(rgb, accent, 0.55);
+    g.beginPath();
+    g.moveTo(gx - gw * 0.55, gy);
+    g.lineTo(gx - gw * 0.18, gy - gh * 0.08);
+    g.lineTo(gx, gy + gh * 0.55);
+    g.closePath();
+    g.fill();
+    if (motifKind === 2) {
+      const gx2 = gx - box.w * 0.28;
+      const gy2 = gy + box.h * 0.08;
+      const gw2 = gw * 0.55;
+      const gh2 = gh * 0.55;
+      g.fillStyle = mix(rgb, shadow, 0.4);
+      g.beginPath();
+      g.moveTo(gx2, gy2 - gh2 * 0.5);
+      g.lineTo(gx2 + gw2 * 0.5, gy2);
+      g.lineTo(gx2, gy2 + gh2 * 0.5);
+      g.lineTo(gx2 - gw2 * 0.5, gy2);
+      g.closePath();
+      g.fill();
+    }
+  } else {
+    // building silhouette: tall base + pitched roof (dominant in band)
+    const bx = box.x + box.w * 0.58;
+    const by = box.y + box.h * 0.72;
+    const bw = box.w * 0.4;
+    const bh = box.h * 0.42;
+    g.fillStyle = mix(rgb, shadow, 0.2);
+    g.fillRect(bx - bw / 2, by - bh * 0.7, bw, bh * 0.7);
+    g.beginPath();
+    g.moveTo(bx - bw * 0.62, by - bh * 0.7);
+    g.lineTo(bx, by - bh * 1.15);
+    g.lineTo(bx + bw * 0.62, by - bh * 0.7);
+    g.closePath();
+    g.fillStyle = mix(rgb, accent, 0.35);
+    g.fill();
+    g.fillStyle = mix(shadow, rgb, 0.55);
+    g.fillRect(bx - bw * 0.1, by - bh * 0.45, bw * 0.2, bh * 0.42);
+    g.fillStyle = mix(parchment, accent, 0.35);
+    g.fillRect(bx - bw * 0.38, by - bh * 0.55, bw * 0.14, bh * 0.14);
+    g.fillRect(bx + bw * 0.24, by - bh * 0.55, bw * 0.14, bh * 0.14);
+  }
+
   g.globalAlpha = 1;
   g.strokeStyle = "rgba(55,40,25,0.45)";
   g.lineWidth = 3;
