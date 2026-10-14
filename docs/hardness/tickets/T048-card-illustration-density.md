@@ -5,7 +5,7 @@
 | 回归靶 | H03 before/after close；H05 smoke；zone schema 单测 |
 | 层 | **共享呈现**（card atlas / plaqueWithFace；叠 T034/T037） |
 | 状态 | **关** |
-| tip | pending |
+| tip | `d64c9da` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t048/` |
 
 ## 问题
