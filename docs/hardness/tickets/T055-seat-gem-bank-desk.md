@@ -5,7 +5,7 @@
 | 回归靶 | H03 seat-close gems>0→nodes；可与 T053 force-buy 同跑；他套 smoke |
 | 层 | **共享呈现**（seat gem stacks） |
 | 状态 | **关** |
-| tip | pending |
+| tip | `19594e6` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t055/` |
 
 ## 问题
