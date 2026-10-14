@@ -746,12 +746,23 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
       const cx = -usable / 2 + carStep * (i + 0.5);
       const cw = carStep * 0.78;
       const cd = gauge * 1.05;
-      // undercarriage / chassis plate + wheel nubs
+      // undercarriage / chassis plate
       chassis.push(boxAt(cw * 0.95, 0.05, cd * 0.95, cx, 0.08, 0));
-      chassis.push(boxAt(0.06, 0.06, 0.06, cx - cw * 0.28, 0.05, cd * 0.38));
-      chassis.push(boxAt(0.06, 0.06, 0.06, cx + cw * 0.28, 0.05, cd * 0.38));
-      chassis.push(boxAt(0.06, 0.06, 0.06, cx - cw * 0.28, 0.05, -cd * 0.38));
-      chassis.push(boxAt(0.06, 0.06, 0.06, cx + cw * 0.28, 0.05, -cd * 0.38));
+      // T068 · bogies: axle + dual wheel disks (reads as 车, not a slider)
+      const wheelR = 0.055;
+      const wheelT = 0.028;
+      for (const bogieX of [cx - cw * 0.28, cx + cw * 0.28]) {
+        // bogie frame
+        chassis.push(boxAt(cw * 0.22, 0.03, cd * 0.7, bogieX, 0.055, 0));
+        // axle across gauge
+        chassis.push(boxAt(0.02, 0.02, cd * 0.85, bogieX, 0.045, 0));
+        for (const side of [1, -1] as const) {
+          const disk = new CylinderGeometry(wheelR, wheelR, wheelT, 8);
+          disk.rotateX(Math.PI / 2);
+          disk.translate(bogieX, wheelR * 0.85, side * (cd * 0.42));
+          chassis.push(disk);
+        }
+      }
       // seat-colored body
       bodies.push(boxAt(cw, 0.16, cd, cx, 0.18, 0));
       bodies.push(boxAt(cw * 0.96, 0.05, cd * 0.92, cx, 0.28, 0)); // roof lip
