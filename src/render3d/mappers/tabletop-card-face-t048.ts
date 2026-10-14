@@ -80,32 +80,66 @@ export function paintIllustrationBand(
   const rewardHex = (opts.reward && CHIP[opts.reward]) || opts.base || "#8b5a2b";
   const rgb = hexToRgb(rewardHex.startsWith("#") ? rewardHex : "#8b5a2b");
   const parchment: [number, number, number] = [251, 246, 236];
-  // soft gradient wash
+  const shadow: [number, number, number] = [40, 30, 20];
+  const accent: [number, number, number] = [
+    Math.min(255, rgb[0] + 40),
+    Math.min(255, rgb[1] + 20),
+    Math.max(0, rgb[2] - 10),
+  ];
+  // T066 · structured hue+value fill (not flat wash / faint noise)
   const grad = g.createLinearGradient(box.x, box.y, box.x + box.w, box.y + box.h);
-  grad.addColorStop(0, mix(parchment, rgb, 0.35));
-  grad.addColorStop(0.55, mix(parchment, rgb, 0.55));
-  grad.addColorStop(1, mix(rgb, [40, 30, 20], 0.25));
+  grad.addColorStop(0, mix(parchment, rgb, 0.42));
+  grad.addColorStop(0.45, mix(rgb, accent, 0.35));
+  grad.addColorStop(1, mix(rgb, shadow, 0.45));
   g.fillStyle = grad;
   g.fillRect(box.x, box.y, box.w, box.h);
-  // brush strokes
-  for (let i = 0; i < 14; i += 1) {
-    const y = box.y + box.h * (0.12 + rnd() * 0.76);
-    const x0 = box.x + box.w * (0.05 + rnd() * 0.2);
-    const x1 = box.x + box.w * (0.55 + rnd() * 0.4);
-    g.strokeStyle = mix(rgb, parchment, 0.15 + rnd() * 0.5);
-    g.globalAlpha = 0.35 + rnd() * 0.45;
-    g.lineWidth = 3 + rnd() * 10;
+
+  // large theme color blocks — readable silhouettes
+  g.globalAlpha = 0.78;
+  for (let i = 0; i < 5; i += 1) {
+    const bw = box.w * (0.22 + rnd() * 0.28);
+    const bh = box.h * (0.28 + rnd() * 0.35);
+    const bx = box.x + box.w * (0.05 + rnd() * 0.55);
+    const by = box.y + box.h * (0.08 + rnd() * 0.45);
+    g.fillStyle = mix(rgb, i % 2 === 0 ? accent : shadow, 0.25 + rnd() * 0.45);
+    if (rnd() > 0.45) {
+      g.beginPath();
+      g.ellipse(bx + bw / 2, by + bh / 2, bw / 2, bh / 2, rnd() * 0.4, 0, Math.PI * 2);
+      g.fill();
+    } else {
+      g.fillRect(bx, by, bw, bh);
+    }
+  }
+
+  // mid-tone ridges (value structure across band)
+  for (let i = 0; i < 10; i += 1) {
+    const y = box.y + box.h * (0.1 + rnd() * 0.8);
+    const x0 = box.x + box.w * (0.04 + rnd() * 0.15);
+    const x1 = box.x + box.w * (0.6 + rnd() * 0.35);
+    g.strokeStyle = mix(rgb, parchment, 0.1 + rnd() * 0.4);
+    g.globalAlpha = 0.55 + rnd() * 0.35;
+    g.lineWidth = 4 + rnd() * 14;
     g.lineCap = "round";
     g.beginPath();
     g.moveTo(x0, y);
     const midX = (x0 + x1) / 2;
-    const midY = y + (rnd() - 0.5) * box.h * 0.35;
-    g.quadraticCurveTo(midX, midY, x1, y + (rnd() - 0.5) * 8);
+    const midY = y + (rnd() - 0.5) * box.h * 0.4;
+    g.quadraticCurveTo(midX, midY, x1, y + (rnd() - 0.5) * 10);
     g.stroke();
   }
+
+  // bright highlight wedge (hue contrast)
+  g.globalAlpha = 0.55;
+  g.fillStyle = mix(parchment, accent, 0.55);
+  g.beginPath();
+  g.moveTo(box.x + box.w * 0.08, box.y + box.h * 0.15);
+  g.lineTo(box.x + box.w * 0.42, box.y + box.h * 0.08);
+  g.lineTo(box.x + box.w * 0.35, box.y + box.h * 0.48);
+  g.closePath();
+  g.fill();
+
   g.globalAlpha = 1;
-  // vignette frame inside band
-  g.strokeStyle = "rgba(55,40,25,0.35)";
+  g.strokeStyle = "rgba(55,40,25,0.45)";
   g.lineWidth = 3;
   g.strokeRect(box.x + 4, box.y + 4, box.w - 8, box.h - 8);
 }
