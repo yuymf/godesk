@@ -10,6 +10,7 @@ import {
   type UnitDef,
   type UnitShapePreset,
 } from "../src/runtime/adapters/auto-battler-content";
+import type { AutoBattlerBranding } from "../src/runtime/adapters/auto-battler-packs";
 
 export type RulesBookTableParse = {
   /** Content fields extracted from tables (units and/or traits). */
@@ -432,4 +433,32 @@ export function parseRulesBookContentTables(idea: string): RulesBookTableParse {
     return { unsupported, found: false, ideaWithoutTables };
   }
   return { patch, ...(Object.keys(tuning).length ? { tuning } : {}), unsupported, found: true, ideaWithoutTables };
+}
+
+
+/** Pull shell title / seat labels from rules-book H1 or 「产品称呼」lines (T005). */
+export function inferBrandingFromRulesBook(
+  idea: string,
+  fallback: AutoBattlerBranding,
+): AutoBattlerBranding {
+  const h1Raw = idea.match(/^#\s+([^\n]+)/m)?.[1]?.trim();
+  const h1Title = h1Raw?.split(/\s*[—–\-]\s*/)[0]?.replace(/[《》【】]/g, "").trim();
+  // Allow markdown emphasis between 称呼 and colon: **产品称呼**：灰烬…
+  const product = idea.match(/产品称呼[*_]*[：:]\s*([^\n；;。]+)/)?.[1]?.trim();
+  const productTitle = product?.split(/[；;]/)[0]?.replace(/[*_]/g, "").trim();
+  // Prefer explicit 产品称呼 over H1.
+  const title =
+    productTitle && productTitle.length >= 2 && productTitle.length <= 24
+      ? productTitle
+      : h1Title && h1Title.length >= 2 && h1Title.length <= 24
+        ? h1Title
+        : undefined;
+  const own = idea.match(/我方席[「"『]?([^」"』\n；;]{1,16})/)?.[1]?.trim();
+  const enemy = idea.match(/对手席[「"『]?([^」"』\n；;]{1,16})/)?.[1]?.trim();
+  if (!title && !own && !enemy) return fallback;
+  return {
+    title: title || fallback.title,
+    ownSeat: own || fallback.ownSeat,
+    enemySeat: enemy || fallback.enemySeat,
+  };
 }

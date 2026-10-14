@@ -92,6 +92,27 @@ describe("inferRequestedMechanics — baseline vs unseen", () => {
 });
 
 
+describe("T004 mechanics cue negation", () => {
+  it("does not infer auto-battler from 非自走棋 / 不是 auto-battler", () => {
+    expect(inferRequestedMechanics("星际物流竞速（非自走棋默认包、非潮汐）。星港节点派车运货")).not.toContain("auto-battler");
+    expect(inferRequestedMechanics("这不是已有 auto-battler 默认包；星港物流车队")).not.toContain("auto-battler");
+    expect(inferRequestedMechanics("非棋盘自走棋 HUD；星图节点路线")).not.toContain("auto-battler");
+  });
+  it("binds H02-like logistics corpus to route-network only", () => {
+    const m = inferRequestedMechanics(
+      "星港车队。星际物流竞速（非自走棋、非潮汐棋盘）。玩家在星港节点间派车运货，货运合约。星图节点 + 路线高亮。",
+    );
+    expect(m).toEqual(["route-network"]);
+    expect(m).not.toContain("auto-battler");
+  });
+  it("does not infer hex from 非六角结算-style negation when no positive hex cue", () => {
+    expect(inferRequestedMechanics("做一款竞速，非六角资源建造")).not.toContain("hex-settlement");
+  });
+  it("does not infer auction from 不是拍卖 when no positive auction cue", () => {
+    expect(inferRequestedMechanics("做一款竞速，不是拍卖竞价")).not.toContain("auction-bidding");
+  });
+});
+
 describe("Tide Arena / auto-battler mechanics", () => {
   it("binds 自走棋 / 潮阵 / 机甲 cues to auto-battler only", () => {
     for (const prompt of [

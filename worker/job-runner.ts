@@ -51,7 +51,7 @@ import { createKernelTuningIterationPlan, parseKernelEdits } from "./kernel-tuni
 import { fulfillAssetAttachIntents } from "./auto-battler-assets";
 import { resolveAutoBattlerContent, DEFAULT_AUTO_BATTLER_CONTENT } from "../src/runtime/adapters/auto-battler-content";
 import { packToContentPatch, resolveAutoBattlerPack } from "../src/runtime/adapters/auto-battler-packs";
-import { parseRulesBookContentTables } from "./rulesbook-content-tables";
+import { parseRulesBookContentTables, inferBrandingFromRulesBook } from "./rulesbook-content-tables";
 
 const AUTO_BATTLER_BASE_UNSUPPORTED =
   "auto-battler-v1: 2-seat shop→place→combat→HP. Configurable: units/traits(add/del)/stars, boardCols/Rows 4–8×1–3, timers, HP/gold, themes, modelRef, VFX presets. Not: >2 seats, sealed shop.";
@@ -75,12 +75,13 @@ function autoBattlerProposedRuntime(idea: string) {
     // If units+traits both from tables, stars still from pack/default patch shape.
     if (resolveAutoBattlerContent(merged)) contentBase = merged;
   }
+  const branding = inferBrandingFromRulesBook(idea, pack.branding);
   const seedKernel = {
     type: "auto-battler-v1" as const,
     playerCount: 2 as const,
     content: contentBase,
     theme: pack.theme,
-    branding: pack.branding,
+    branding,
   };
   // Clause parsers see the idea without table rows (avoids flooding unsupported).
   const parsed = parseKernelEdits(seedKernel as never, tables.ideaWithoutTables);
@@ -104,7 +105,7 @@ function autoBattlerProposedRuntime(idea: string) {
         ],
         content,
         theme,
-        branding: pack.branding,
+        branding,
         ...((() => {
           const tuning = { ...(tables.tuning ?? {}), ...(parsed?.tuning ?? {}) };
           return Object.keys(tuning).length ? { tuning } : {};

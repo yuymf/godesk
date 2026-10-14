@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveAutoBattlerContent } from "../src/runtime/adapters/auto-battler-content";
-import { extractMarkdownTables, parseRulesBookContentTables } from "./rulesbook-content-tables";
+import { extractMarkdownTables, parseRulesBookContentTables, inferBrandingFromRulesBook } from "./rulesbook-content-tables";
 
 /** Minimal rules book shaped like H01 (inline — worker pool cannot read docs/). */
 const ASH_BOOK = `
@@ -113,5 +113,22 @@ describe("parseRulesBookContentTables", () => {
   it("empty table body does not invent units", () => {
     const r = parseRulesBookContentTables("| 名称 | 费 | 攻 | 血 |\n| --- | --- | --- | --- |\n");
     expect(r.found).toBe(false);
+  });
+});
+
+describe("inferBrandingFromRulesBook (T005)", () => {
+  const fb = { title: "潮阵", ownSeat: "汐屿·我方", enemySeat: "珊瑚港·对手" };
+  it("reads H1 title", () => {
+    expect(inferBrandingFromRulesBook("# 星港车队 — 规则书\n正文", fb).title).toBe("星港车队");
+  });
+  it("reads 产品称呼 and seats", () => {
+    const b = inferBrandingFromRulesBook(
+      "# x\n- **产品称呼**：灰烬佣兵团；我方席「余烬营地」；对手席「黑岩佣兵」。",
+      fb,
+    );
+    expect(b).toEqual({ title: "灰烬佣兵团", ownSeat: "余烬营地", enemySeat: "黑岩佣兵" });
+  });
+  it("keeps fallback when no title", () => {
+    expect(inferBrandingFromRulesBook("做一款自走棋", fb)).toEqual(fb);
   });
 });

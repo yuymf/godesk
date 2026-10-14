@@ -1,5 +1,6 @@
 import type { RuleSystem } from "./project-contract";
 import { packMentionsAutoBattler } from "../runtime/adapters/auto-battler-packs";
+import { cueMatchIsPositive } from "./cue-negation";
 
 type KernelType = Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"]["type"];
 
@@ -65,26 +66,30 @@ export function mechanicsCapabilityGap(mechanics: readonly string[], kernelType?
 }
 
 /** Existing source guards now produce declarations consumed by the same registry. */
+/** Mechanic cue patterns — matched only when cueMatchIsPositive (T004 negation). */
+const MECHANIC_CUES: Array<{ id: string; cues: RegExp }> = [
+  { id: "auction-bidding", cues: /拍卖|竞价|出价|\bauction\b|\bbid(?:s|ding)?\b/i },
+  { id: "hex-settlement", cues: /汐屿|\btidewell\b|hex[- ]?island|六角.*(?:资源|建造)|hex.*(?:resource|build)/i },
+  { id: "disc-flipping", cues: /\bothello\b|\breversi\b|黑白棋|翻转棋|翻子|flipp?ing.*dis[ck]|dis[ck].*flipp?ing/i },
+  // Line / route / logistics network (PR11 + hardness H02).
+  {
+    id: "route-network",
+    cues: /线路网络|路线连接|铺设路线|连接城市|星港|物流|货运|运货|派车|星图节点|route\s*network|connect(?:ing)?\s+cities|claim(?:ing)?\s+routes|\blogistics\b|\bconvoy\b/i,
+  },
+  {
+    id: "hand-play",
+    cues: /卡牌区域控制|出牌争夺区域|区域控制.*(?:卡牌|出牌)|area[- ]?control|play(?:ing)? cards?.*(area|region|zone)|claim(?:ing)? areas? with cards?/i,
+  },
+];
+
 export function inferRequestedMechanics(corpus: string): string[] {
   const mechanics: string[] = [];
-  if (/拍卖|竞价|出价|\bauction\b|\bbid(?:s|ding)?\b/i.test(corpus)) mechanics.push("auction-bidding");
-  // Registrable auto-battler cues (packs + mechanic phrases) — not a tide-only branch.
+  // Registrable auto-battler cues (packs + mechanic phrases) — negation-aware via packMentionsAutoBattler.
   if (packMentionsAutoBattler(corpus)) {
     mechanics.push("auto-battler");
   }
-  if (/汐屿|\btidewell\b|hex[- ]?island|六角.*(?:资源|建造)|hex.*(?:resource|build)/i.test(corpus)) mechanics.push("hex-settlement");
-  if (/\bothello\b|\breversi\b|黑白棋|翻转棋|翻子|flipp?ing.*dis[ck]|dis[ck].*flipp?ing/i.test(corpus)) mechanics.push("disc-flipping");
-  // Line / route network (PR11) — must not also match hex or disc cues above.
-  if (/线路网络|路线连接|铺设路线|连接城市|route\s*network|connect(?:ing)?\s+cities|claim(?:ing)?\s+routes/i.test(corpus)) {
-    mechanics.push("route-network");
-  }
-  // Card / area-control (PR12) — reuse hand-play-v1; never also match hex/disc/route above.
-  if (
-    /卡牌区域控制|出牌争夺区域|区域控制.*(?:卡牌|出牌)|area[- ]?control|play(?:ing)? cards?.*(area|region|zone)|claim(?:ing)? areas? with cards?/i.test(
-      corpus,
-    )
-  ) {
-    mechanics.push("hand-play");
+  for (const { id, cues } of MECHANIC_CUES) {
+    if (cueMatchIsPositive(corpus, cues)) mechanics.push(id);
   }
   return mechanics;
 }
