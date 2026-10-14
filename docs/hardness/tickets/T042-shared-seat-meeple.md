@@ -5,7 +5,7 @@
 | 回归靶 | H03 / H04 / H05 Room 同机位近距席位子 |
 | 层 | **共享呈现**（tabletop seat marker mesh） |
 | 状态 | **关** |
-| tip | （feat commit 后填） |
+| tip | `f9973961f2e43ed30906b343371f038abe29a55d` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t042/` |
 
 ## 现象
