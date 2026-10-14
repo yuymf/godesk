@@ -1,10 +1,12 @@
 import { useState } from "react";
 import type { SessionState } from "./project-contract";
+import type { RenderSpec } from "./render-spec";
+import { TabletopStage } from "./TabletopStage";
 
 type AuctionBiddingBoardState = NonNullable<SessionState["auctionBidding"]>;
 
 export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false, readOnly = false,
-  status, viewerSeat, onAct }: {
+  status, viewerSeat, onAct, render, importedModels }: {
   auction: AuctionBiddingBoardState;
   activeSeat: number;
   enabled: boolean;
@@ -13,6 +15,9 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
   status: "active" | "complete";
   viewerSeat: number | null;
   onAct?: (actionId: string, payload?: Record<string, unknown>) => void;
+  /** ADR 0014 / T028: optional RenderSpec for shared TabletopStage. */
+  render?: RenderSpec;
+  importedModels?: ReadonlyArray<{ id: string; url: string; title?: string }>;
 }) {
   const [amount, setAmount] = useState(1);
   const harbor = auction.harbor ?? null;
@@ -41,8 +46,21 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
     : null;
   const seatCount = auction.chips.length;
 
+  const stageOnAct = canAct
+    ? (actionId: string, payload?: Record<string, unknown>) => {
+        onAct?.(actionId, payload);
+      }
+    : undefined;
+
   return (
-    <section aria-label="拍卖竞价桌" className="auction-board">
+    <section aria-label="拍卖竞价桌" className="auction-board room-view-tabletop-immersive">
+      <TabletopStage
+        kernel="auction-bidding-v1"
+        state={auction}
+        render={render}
+        importedModels={importedModels}
+        onAct={stageOnAct}
+      />
       <header className="auction-heading auction-lot-card">
         <div>
           <span className="auction-kicker">

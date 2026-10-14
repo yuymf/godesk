@@ -619,3 +619,170 @@ export function patternDraftLayout(state: PatternDraftTabletopInput): TabletopLa
     hints,
   };
 }
+
+
+/** Gallery / classic auction table (T028). Generic; harbor remains a side-branch. */
+export type AuctionBiddingTabletopInput = {
+  chips: ReadonlyArray<number>;
+  scores?: ReadonlyArray<number>;
+  currentBid?: number;
+  highBidder?: number | null;
+  phase?: string;
+  lotId?: string;
+  gallery?: {
+    currentLot?: { id?: string; name?: string; artistId?: string; reserve?: number } | null;
+    companionLot?: { id?: string; name?: string; artistId?: string; reserve?: number } | null;
+    currentMode?: string;
+    round?: number;
+    roundsToEnd?: number;
+    auctionHand?: ReadonlyArray<ReadonlyArray<{ id?: string; name?: string; artistId?: string }>>;
+    collection?: ReadonlyArray<ReadonlyArray<{ id?: string; name?: string; artistId?: string }>>;
+    artists?: ReadonlyArray<{ id?: string; name?: string }>;
+    marketPrices?: Readonly<Record<string, number>>;
+    auctioneer?: number;
+  } | null;
+  harbor?: {
+    currentLot?: { id?: string; name?: string; reserve?: number } | null;
+  } | null;
+};
+
+const ARTIST_TINT = ["#38bdf8", "#f472b6", "#a3e635", "#fbbf24", "#c084fc", "#fb7185"];
+
+export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): TabletopLayout {
+  const pieces: TabletopPiece[] = [];
+  const hints: TabletopHint[] = [];
+  const gallery = state.gallery ?? null;
+  const lot = gallery?.currentLot ?? state.harbor?.currentLot ?? null;
+  const companion = gallery?.companionLot ?? null;
+
+  if (lot) {
+    pieces.push({
+      id: `lot:${lot.id ?? "main"}`,
+      objectKind: "card",
+      x: companion ? -0.7 : 0,
+      z: -0.4,
+      size: 1.2,
+      tint: "#fef3c7",
+      label: String(lot.name ?? state.lotId ?? "lot"),
+      emphasis: true,
+      action: { type: "bid", payload: { amount: Math.max(1, (state.currentBid ?? 0) + 1) } },
+    });
+    hints.push({
+      id: "bid:lot",
+      x: companion ? -0.7 : 0,
+      z: -0.4,
+      radius: 0.5,
+      action: { type: "bid", payload: { amount: Math.max(1, (state.currentBid ?? 0) + 1) } },
+    });
+    hints.push({
+      id: "pass:lot",
+      x: companion ? -0.7 : 0,
+      z: 0.5,
+      radius: 0.35,
+      action: { type: "pass", payload: {} },
+    });
+  }
+  if (companion) {
+    pieces.push({
+      id: `lot:${companion.id ?? "companion"}`,
+      objectKind: "card",
+      x: 0.7,
+      z: -0.4,
+      size: 1.05,
+      tint: "#ede9fe",
+      label: String(companion.name ?? "pair"),
+    });
+  }
+
+  // Mode / round marker
+  pieces.push({
+    id: "auction:mode",
+    objectKind: "token",
+    x: 0,
+    z: -2.2,
+    size: 0.55,
+    tint: "#94a3b8",
+    label: `${gallery?.currentMode ?? state.phase ?? "bid"} r${gallery?.round ?? 1}`,
+  });
+
+  // Artist market price chips
+  (gallery?.artists ?? []).forEach((artist, i) => {
+    const price = gallery?.marketPrices?.[artist.id ?? ""] ?? 0;
+    pieces.push({
+      id: `artist:${artist.id ?? i}`,
+      objectKind: "disc",
+      x: -3.2 + i * 1.5,
+      z: -3.2,
+      size: 0.45,
+      tint: ARTIST_TINT[i % ARTIST_TINT.length],
+      label: `${artist.name ?? artist.id}:${price}`,
+    });
+  });
+
+  const seatCount = state.chips.length;
+  state.chips.forEach((chips, seatId) => {
+    const x0 = -3.6 + (seatId - (seatCount - 1) / 2) * Math.min(2.2, 9 / Math.max(seatCount, 1));
+    const z0 = 2.5;
+    const high = state.highBidder === seatId;
+    pieces.push({
+      id: `seat:${seatId}:marker`,
+      objectKind: "building",
+      x: x0,
+      z: z0 + 0.95,
+      size: high ? 0.5 : 0.4,
+      seat: seatId,
+      label: `S${seatId}:$${chips}`,
+      ...(high ? { emphasis: true } : {}),
+      ...(gallery?.auctioneer === seatId ? { tint: "#f59e0b" } : {}),
+    });
+    // Chip stack
+    const stack = Math.min(Math.max(1, Math.floor(chips / 20)), 5);
+    for (let s = 0; s < stack; s++) {
+      pieces.push({
+        id: `seat:${seatId}:chip:${s}`,
+        objectKind: "disc",
+        x: x0 - 0.55,
+        z: z0,
+        y: 0.05 + s * 0.06,
+        size: 0.28,
+        seat: seatId,
+        tint: "#eab308",
+      });
+    }
+    const collection = gallery?.collection?.[seatId] ?? [];
+    collection.slice(0, 5).forEach((painting, pi) => {
+      pieces.push({
+        id: `seat:${seatId}:coll:${pi}`,
+        objectKind: "card",
+        x: x0 + 0.55,
+        z: z0 - pi * 0.12,
+        y: 0.04 + pi * 0.02,
+        size: 0.35,
+        seat: seatId,
+        tint: "#fdba74",
+        label: pi === 0 ? String(painting.name ?? "art") : undefined,
+      });
+    });
+    const hand = gallery?.auctionHand?.[seatId] ?? [];
+    hand.slice(0, 4).forEach((painting, hi) => {
+      pieces.push({
+        id: `seat:${seatId}:hand:${hi}`,
+        objectKind: "card",
+        x: x0 - 0.4 + hi * 0.25,
+        z: z0 + 0.45,
+        size: 0.32,
+        seat: seatId,
+        tint: "#bfdbfe",
+      });
+    });
+  });
+
+  return {
+    kernelType: "auction-bidding-v1",
+    board: { objectKind: "region", materialKey: "table", width: BOARD_SPAN + 1.4, depth: BOARD_SPAN + 0.6 },
+    cells: [],
+    pieces,
+    links: [],
+    hints,
+  };
+}

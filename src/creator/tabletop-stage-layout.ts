@@ -6,12 +6,14 @@ import {
   discFlippingLayout,
   gemEngineLayout,
   patternDraftLayout,
+  auctionBiddingLayout,
   harborVoyageLayout,
   networkRouteLayout,
   workerPlacementLayout,
   type DiscFlippingTabletopInput,
   type GemEngineTabletopInput,
   type PatternDraftTabletopInput,
+  type AuctionBiddingTabletopInput,
   type NetworkRouteTabletopInput,
 } from "../render3d/mappers/tabletop-kernels";
 import { SCENE_TOKENS, SEAT_COLORS } from "../render3d/tokens";
@@ -80,5 +82,7 @@ export function layoutForStage({ kernel, state, legal, onAct }: Pick<TabletopSta
       return gemEngineLayout(state as GemEngineTabletopInput);
     case "pattern-draft-v1":
       return patternDraftLayout(state as PatternDraftTabletopInput);
+    case "auction-bidding-v1":
+      return auctionBiddingLayout(state as AuctionBiddingTabletopInput);
   }
 }
