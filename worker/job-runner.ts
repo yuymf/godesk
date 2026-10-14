@@ -129,6 +129,12 @@ import {
   type ProjectRecord,
   type StoredPlayableBuild,
 } from "./project-operations";
+import {
+  defaultFreightContent,
+  freightUnsupportedNotes,
+  ideaRequestsFreightLogistics,
+  parseFreightTuningFromIdea,
+} from "../src/runtime/adapters/network-route";
 
 interface CreatorJobHost {
   ctx: DurableObjectState;
@@ -552,15 +558,28 @@ export async function runCreatorJob(
             },
           }
         : networkRouteRuntimeConfigured
-        ? {
-            op: "configure_network_route" as const,
-            config: {
-              playerCount: 2,
-              unsupported: [
-                "network-route-v1 executes a fixed city graph with alternate-turn route claims and first-to-connect terminal hubs on the public play-kernel; a minimal original route game (no tickets deck / multi-color routes / scoring table).",
-              ],
-            },
-          }
+        ? (() => {
+            const freight = ideaRequestsFreightLogistics(idea);
+            const tuning = freight ? parseFreightTuningFromIdea(idea) : {};
+            const content = freight ? defaultFreightContent(tuning) : undefined;
+            const unsupported = freight
+              ? [
+                  "network-route-v1 freight subset: claim-graph cargo contracts + ship cargo slots + funds/reputation win; multi-color routes / tickets deck scoring table / per-step sailing / pirate·storm events unsupported.",
+                  ...freightUnsupportedNotes(),
+                ]
+              : [
+                  "network-route-v1 executes a fixed city graph with alternate-turn route claims and first-to-connect terminal hubs on the public play-kernel; a minimal original route game (no tickets deck / multi-color routes / scoring table).",
+                ];
+            return {
+              op: "configure_network_route" as const,
+              config: {
+                playerCount: 2,
+                ...(freight ? { freight: true as const } : {}),
+                ...(content ? { content } : {}),
+                unsupported,
+              },
+            };
+          })()
         : autoBattlerRuntimeConfigured
         ? (() => { const ab = autoBattlerProposedRuntime(idea); autoBattlerAssetIntents = ab.assetIntents; return ab.configure; })()
         : auctionBiddingRuntimeConfigured

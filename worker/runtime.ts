@@ -351,6 +351,8 @@ export function initialSessionState(
         playerCount: runtime.kernel.playerCount,
         terminalFrom: runtime.kernel.terminalFrom,
         terminalTo: runtime.kernel.terminalTo,
+        freight: runtime.kernel.freight === true,
+        content: runtime.kernel.content ?? null,
       }),
       _seed,
     );
@@ -1020,6 +1022,8 @@ export function acceptIntent(
       playerCount: runtime.kernel.playerCount,
       terminalFrom: runtime.kernel.terminalFrom,
       terminalTo: runtime.kernel.terminalTo,
+      freight: runtime.kernel.freight === true,
+      content: runtime.kernel.content ?? null,
     });
     const playState = {
       seed,
@@ -1040,6 +1044,9 @@ export function acceptIntent(
           ? { ...state.networkRoute.lastClaim }
           : null,
         routeCounts: [...state.networkRoute.routeCounts] as [number, number],
+        freight: state.networkRoute.freight
+          ? structuredClone(state.networkRoute.freight)
+          : null,
       } satisfies NetworkRouteGenre,
     };
     const result = applyAction(
@@ -1320,6 +1327,8 @@ export function pickBotIntent(
       playerCount: runtime.kernel.playerCount,
       terminalFrom: runtime.kernel.terminalFrom,
       terminalTo: runtime.kernel.terminalTo,
+      freight: runtime.kernel.freight === true,
+      content: runtime.kernel.content ?? null,
     });
     const playState = {
       seed,
@@ -1338,6 +1347,9 @@ export function pickBotIntent(
         terminalTo: state.networkRoute.terminalTo,
         lastClaim: state.networkRoute.lastClaim ? { ...state.networkRoute.lastClaim } : null,
         routeCounts: [...state.networkRoute.routeCounts] as [number, number],
+        freight: state.networkRoute.freight
+          ? structuredClone(state.networkRoute.freight)
+          : null,
       } satisfies NetworkRouteGenre,
     };
     const bot = pickNetworkRouteBotAction(playState, kernelConfig, seed, state.turn + 1);
@@ -1425,6 +1437,8 @@ export function runBotSimulation(
       playerCount: runtime.kernel.playerCount,
       terminalFrom: runtime.kernel.terminalFrom,
       terminalTo: runtime.kernel.terminalTo,
+      freight: runtime.kernel.freight === true,
+      content: runtime.kernel.content ?? null,
     });
     let guard = 0;
     while (state.status === "active" && state.networkRoute && guard < 64) {
@@ -1448,6 +1462,9 @@ export function runBotSimulation(
             ? { ...state.networkRoute.lastClaim }
             : null,
           routeCounts: [...state.networkRoute.routeCounts] as [number, number],
+          freight: state.networkRoute.freight
+            ? structuredClone(state.networkRoute.freight)
+            : null,
         } satisfies NetworkRouteGenre,
       };
       const bot = pickNetworkRouteBotAction(

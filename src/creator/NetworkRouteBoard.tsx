@@ -23,6 +23,7 @@ export type NetworkRouteBoardState = {
   terminalTo: string;
   lastClaim: { edgeId: string; playerId: number } | null;
   routeCounts: [number, number];
+  freight?: NetworkRouteGenre["freight"];
 };
 
 const COPY = {
@@ -45,6 +46,14 @@ const COPY = {
     linked: "已连通",
     unlinked: "未连通",
     connectHint: "先连通南北枢纽获胜",
+    funds: "资金",
+    reputation: "信誉",
+    market: "货运市场",
+    hand: "我的合约",
+    ships: "船队",
+    accept: "接合约",
+    freightHint: "接合约 → 铺线连通起终点 → 交付赚信誉；先到目标信誉获胜",
+    winRep: "目标信誉",
   },
   en: {
     board: "Route network board",
@@ -65,6 +74,14 @@ const COPY = {
     linked: "linked",
     unlinked: "open",
     connectHint: "Connect the terminal hubs to win",
+    funds: "Funds",
+    reputation: "Reputation",
+    market: "Cargo market",
+    hand: "My contracts",
+    ships: "Fleet",
+    accept: "Accept",
+    freightHint: "Accept a contract, claim a path, deliver for reputation",
+    winRep: "Rep to win",
   },
 } as const;
 
@@ -79,6 +96,7 @@ function toGenre(board: NetworkRouteBoardState): NetworkRouteGenre {
     terminalTo: board.terminalTo,
     lastClaim: board.lastClaim ? { ...board.lastClaim } : null,
     routeCounts: [...board.routeCounts] as [number, number],
+    freight: board.freight ?? null,
   };
 }
 
@@ -280,7 +298,7 @@ export function NetworkRouteBoard({
           stage={<TabletopStage kernel="network-route-v1" legal={[...legalEdges]} onAct={showLegal ? onAct : undefined} render={render} state={networkRoute} importedModels={importedModels} />}
           turnTitle={zh ? "本回合" : "This turn"}
           turnBlurb={statusLine}
-          turnDetail={copy.connectHint}
+          turnDetail={networkRoute.freight ? copy.freightHint : copy.connectHint}
           primary={null}
           idleLine={showLegal ? (zh ? "点地图上的虚线路段，或在下方选一段铺设。" : "Tap a dashed route on the map, or pick one below.") : copy.waiting}
           chronicle={chronicle}
@@ -290,18 +308,51 @@ export function NetworkRouteBoard({
             { key: "rival", label: zh ? "对手铁轨" : "Rival track", value: viewerSeat === null ? "—" : viewerSeat === 0 ? count1 : count0, color: color(viewerSeat === null ? 1 : 1 - viewerSeat), glyph: "敌", art: seatPortrait(render.hud, viewerSeat === null ? 1 : 1 - viewerSeat) },
             { key: "open", label: zh ? "剩余路线" : "Open", value: open, glyph: "路", art: actionCardArt(render.hud, "open-routes") },
             { key: "goal", label: zh ? "连通" : "Linked", value: viewerSeat === null ? "—" : linked[viewerSeat] ? "✓" : "✗", glyph: "枢", art: actionCardArt(render.hud, "terminals") },
+            ...(networkRoute.freight
+              ? [
+                  {
+                    key: "rep",
+                    label: copy.reputation,
+                    value: viewerSeat === null ? "—" : networkRoute.freight.reputation[viewerSeat],
+                    glyph: "信",
+                    art: actionCardArt(render.hud, "terminals"),
+                  },
+                  {
+                    key: "funds",
+                    label: copy.funds,
+                    value: viewerSeat === null ? "—" : networkRoute.freight.funds[viewerSeat],
+                    glyph: "资",
+                    art: actionCardArt(render.hud, "open-routes"),
+                  },
+                ]
+              : []),
           ]}
           actionsLabel={zh ? "可铺路线" : "Claimable"}
-          actions={networkRoute.edges
-            .filter((edge) => networkRoute.claims[edge.id] === null || networkRoute.claims[edge.id] === undefined)
-            .map((edge) => ({
-              key: edge.id,
-              label: edgeName(edge.id),
-              detail: `${copy.claim} · ${edge.from}–${edge.to}`,
-              enabled: showLegal && legalEdges.has(edge.id),
-              onClick: () => onAct?.("claim", { edgeId: edge.id }),
-              art: actionCardArt(render.hud, edge.id),
-            }))}
+          actions={[
+            ...legalActions
+              .filter((a) => a.type === "accept_contract")
+              .map((a) => ({
+                key: String(a.payload?.instanceId ?? a.label),
+                label: a.label,
+                detail: copy.accept,
+                enabled: showLegal,
+                onClick: () =>
+                  onAct?.("accept_contract", {
+                    instanceId: a.payload?.instanceId,
+                  }),
+                art: actionCardArt(render.hud, "open-routes"),
+              })),
+            ...networkRoute.edges
+              .filter((edge) => networkRoute.claims[edge.id] === null || networkRoute.claims[edge.id] === undefined)
+              .map((edge) => ({
+                key: edge.id,
+                label: edgeName(edge.id),
+                detail: `${copy.claim} · ${edge.from}–${edge.to}`,
+                enabled: showLegal && legalEdges.has(edge.id),
+                onClick: () => onAct?.("claim", { edgeId: edge.id }),
+                art: actionCardArt(render.hud, edge.id),
+              })),
+          ]}
           emptyActions={copy.noLast}
         />
       </Suspense>
@@ -353,6 +404,44 @@ export function NetworkRouteBoard({
         <p aria-label={copy.goal} className="network-route-goal">
           {goalLine}
         </p>
+        {networkRoute.freight ? (
+          <div className="network-route-freight" aria-label="freight">
+            <p className="network-route-hint">{copy.freightHint}</p>
+            <p>
+              {copy.funds}: 0={networkRoute.freight.funds[0]} · 1={networkRoute.freight.funds[1]} · {copy.reputation}: 0={networkRoute.freight.reputation[0]} · 1={networkRoute.freight.reputation[1]} · {copy.winRep} {networkRoute.freight.winReputation}
+            </p>
+            <p>
+              {copy.ships}: {networkRoute.freight.shipsCatalog.map((s) => s.name).join(" / ")}
+            </p>
+            <p aria-label={copy.market}>
+              {copy.market}: {networkRoute.freight.market.map((c) => c.name).join(" · ") || "—"}
+            </p>
+            {viewerSeat !== null ? (
+              <p aria-label={copy.hand}>
+                {copy.hand}: {(networkRoute.freight.hand[viewerSeat] ?? []).map((c) => c.name).join(" · ") || "—"}
+              </p>
+            ) : null}
+            {showLegal ? (
+              <div className="network-route-freight-actions">
+                {legalActions
+                  .filter((a) => a.type === "accept_contract")
+                  .map((a) => (
+                    <button
+                      key={String(a.payload?.instanceId)}
+                      type="button"
+                      onClick={() =>
+                        onAct?.("accept_contract", {
+                          instanceId: a.payload?.instanceId,
+                        })
+                      }
+                    >
+                      {copy.accept} · {a.label}
+                    </button>
+                  ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </section>
 
       <TabletopStage kernel="network-route-v1" legal={[...legalEdges]} onAct={showLegal ? onAct : undefined} render={render} state={networkRoute} importedModels={importedModels} />

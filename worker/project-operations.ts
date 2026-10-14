@@ -719,6 +719,10 @@ function configureRuntimeKernel(
         ...(configuration.config.terminalTo
           ? { terminalTo: configuration.config.terminalTo }
           : {}),
+        ...(configuration.config.freight ? { freight: true } : {}),
+        ...(configuration.config.content
+          ? { content: structuredClone(configuration.config.content) }
+          : {}),
       },
       configuration.config.unsupported?.map((item) => item.trim()) ?? [],
       configuration.config,

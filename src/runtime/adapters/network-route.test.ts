@@ -24,8 +24,12 @@ import {
   networkRouteAdapter,
   networkRouteGraphTopology,
   playerConnectsTerminals,
+  defaultFreightContent,
+  ideaRequestsFreightLogistics,
+  parseFreightTuningFromIdea,
   type NetworkRouteGenre,
 } from "./network-route";
+import { readFileSync } from "node:fs";
 
 const config = createNetworkRouteKernelConfig();
 
@@ -152,5 +156,142 @@ describe("network-route-v1 adapter", () => {
     expect(() =>
       bindNetworkRouteFromRuntimeKernel({ playerCount: 3 }),
     ).toThrow(/two_players/);
+  });
+});
+
+describe("network-route-v1 freight subset (T006)", () => {
+  const freightConfig = createNetworkRouteKernelConfig({
+    content: defaultFreightContent({ winReputation: 3, startingFunds: 20 }),
+  });
+
+  it("starts with funds, reputation, ships, and a 3-card market", () => {
+    const state = createInitialState(networkRouteAdapter, freightConfig, 11);
+    expect(state.genre.freight).not.toBeNull();
+    const f = state.genre.freight!;
+    expect(f.funds).toEqual([20, 20]);
+    expect(f.reputation).toEqual([0, 0]);
+    expect(f.shipIds[0]).toEqual(["barge"]);
+    expect(f.market).toHaveLength(3);
+    expect(f.winReputation).toBe(3);
+  });
+
+  it("accepts a contract into hand then claims toward delivery", () => {
+    let state = createInitialState(networkRouteAdapter, freightConfig, 5);
+    const market0 = state.genre.freight!.market[0]!;
+    const accept = applyAction(
+      networkRouteAdapter,
+      state,
+      {
+        type: "accept_contract",
+        playerId: 0,
+        payload: { instanceId: market0.instanceId },
+      },
+      freightConfig,
+    );
+    expect(accept.ok).toBe(true);
+    if (!accept.ok) return;
+    state = accept.state;
+    expect(state.genre.freight!.hand[0]).toHaveLength(1);
+    expect(state.activePlayerId).toBe(1);
+
+    // seat 1 also accepts something / or claims
+    const legal1 = listLegalActions(networkRouteAdapter, state, 1, freightConfig);
+    expect(legal1.length).toBeGreaterThan(0);
+    const act1 = legal1.find((a) => a.type === "claim") ?? legal1[0]!;
+    const r1 = applyAction(
+      networkRouteAdapter,
+      state,
+      { type: act1.type, playerId: 1, payload: act1.payload },
+      freightConfig,
+    );
+    expect(r1.ok).toBe(true);
+    if (!r1.ok) return;
+    state = r1.state;
+  });
+
+  it("delivers when claims connect contract endpoints and can win on reputation", () => {
+    // Force a short contract A→B (direct edge) via custom content
+    const content = defaultFreightContent({
+      winReputation: 1,
+      startingFunds: 50,
+      contracts: [
+        {
+          id: "c_ab",
+          name: "短途·北港→西岭",
+          from: "A",
+          to: "B",
+          reward: 5,
+          reputation: 1,
+          kind: "普通货",
+        },
+      ],
+      edgeTolls: {},
+    });
+    const cfg = createNetworkRouteKernelConfig({ content });
+    let state = createInitialState(networkRouteAdapter, cfg, 1);
+    const inst = state.genre.freight!.market[0]!;
+    const a0 = applyAction(
+      networkRouteAdapter,
+      state,
+      { type: "accept_contract", playerId: 0, payload: { instanceId: inst.instanceId } },
+      cfg,
+    );
+    expect(a0.ok).toBe(true);
+    if (!a0.ok) return;
+    state = a0.state;
+    // seat1 claims distractor
+    const a1 = applyAction(
+      networkRouteAdapter,
+      state,
+      { type: "claim", playerId: 1, payload: { edgeId: "E|F" } },
+      cfg,
+    );
+    expect(a1.ok).toBe(true);
+    if (!a1.ok) return;
+    state = a1.state;
+    const deliver = applyAction(
+      networkRouteAdapter,
+      state,
+      { type: "claim", playerId: 0, payload: { edgeId: "A|B" } },
+      cfg,
+    );
+    expect(deliver.ok).toBe(true);
+    if (!deliver.ok) return;
+    state = deliver.state;
+    expect(state.genre.freight!.reputation[0]).toBeGreaterThanOrEqual(1);
+    expect(state.genre.freight!.lastDelivery?.contractId).toBe("c_ab");
+    expect(state.status).toBe("complete");
+    expect(state.winnerId).toBe(0);
+  });
+
+  it("freight auto-play terminates without illegal actions", () => {
+    const cfg = createNetworkRouteKernelConfig({
+      content: defaultFreightContent({ winReputation: 4 }),
+    });
+    const { state, actions } = autoPlayNetworkRouteGame(77, cfg);
+    expect(actions.length).toBeGreaterThan(0);
+    expect(["active", "complete"]).toContain(state.status);
+  });
+});
+
+
+describe("freight cues for H02", () => {
+  it("detects logistics freight from H02 INPUT", () => {
+    const idea = readFileSync(
+      "docs/hardness/suites/H02-starport-convoy/INPUT.md",
+      "utf8",
+    );
+    expect(ideaRequestsFreightLogistics(idea)).toBe(true);
+    const tuning = parseFreightTuningFromIdea(idea);
+    expect(tuning.winReputation).toBe(10);
+    expect(tuning.startingFunds).toBe(20);
+    const content = defaultFreightContent(tuning);
+    expect(content.ships.map((s) => s.name)).toEqual([
+      "驳船",
+      "快艇",
+      "武装商船",
+      "巨型矿驳",
+    ]);
+    expect(content.contracts.length).toBeGreaterThanOrEqual(8);
   });
 });

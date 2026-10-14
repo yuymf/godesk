@@ -275,6 +275,29 @@ export interface RuleSystem {
               playerCount: number;
               terminalFrom?: string;
               terminalTo?: string;
+              freight?: boolean;
+              content?: {
+                contracts: Array<{
+                  id: string;
+                  name: string;
+                  from: string;
+                  to: string;
+                  reward: number;
+                  reputation: number;
+                  kind?: string;
+                }>;
+                ships: Array<{
+                  id: string;
+                  name: string;
+                  cargo: number;
+                  speed: number;
+                  armor: number;
+                }>;
+                winReputation: number;
+                startingFunds: number;
+                startingReputation?: number;
+                edgeTolls?: Record<string, number>;
+              };
             }
           | {
               type: "auction-bidding-v1";
@@ -631,6 +654,29 @@ export type ProjectChangeOperation =
         playerCount: number;
         terminalFrom?: string;
         terminalTo?: string;
+        freight?: boolean;
+        content?: {
+          contracts: Array<{
+            id: string;
+            name: string;
+            from: string;
+            to: string;
+            reward: number;
+            reputation: number;
+            kind?: string;
+          }>;
+          ships: Array<{
+            id: string;
+            name: string;
+            cargo: number;
+            speed: number;
+            armor: number;
+          }>;
+          winReputation: number;
+          startingFunds: number;
+          startingReputation?: number;
+          edgeTolls?: Record<string, number>;
+        };
         unsupported?: string[];
       };
     }
@@ -947,6 +993,57 @@ export interface SessionState {
     terminalTo: string;
     lastClaim: { edgeId: string; playerId: number } | null;
     routeCounts: [number, number];
+    freight?: {
+      funds: [number, number];
+      reputation: [number, number];
+      shipIds: [string[], string[]];
+      hand: Array<Array<{
+        id: string;
+        name: string;
+        from: string;
+        to: string;
+        reward: number;
+        reputation: number;
+        kind?: string;
+        instanceId: string;
+      }>>;
+      market: Array<{
+        id: string;
+        name: string;
+        from: string;
+        to: string;
+        reward: number;
+        reputation: number;
+        kind?: string;
+        instanceId: string;
+      }>;
+      deck: Array<{
+        id: string;
+        name: string;
+        from: string;
+        to: string;
+        reward: number;
+        reputation: number;
+        kind?: string;
+        instanceId: string;
+      }>;
+      winReputation: number;
+      shipsCatalog: Array<{
+        id: string;
+        name: string;
+        cargo: number;
+        speed: number;
+        armor: number;
+      }>;
+      edgeTolls: Record<string, number>;
+      lastDelivery: {
+        playerId: number;
+        contractId: string;
+        name: string;
+        reward: number;
+        reputation: number;
+      } | null;
+    } | null;
   };
   auctionBidding?: {
     lotId: "amber" | "jade";

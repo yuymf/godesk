@@ -7,10 +7,15 @@ import {
   DEFAULT_NETWORK_CITIES,
   DEFAULT_NETWORK_EDGES,
   NETWORK_ROUTE_TERMINALS,
+  bindNetworkRouteFromRuntimeKernel,
   createDefaultClaims,
+  networkRouteAdapter,
+  networkRouteToSessionFields,
   type NetworkCity,
   type NetworkEdgeDef,
+  type NetworkRouteContent,
 } from "../runtime/adapters/network-route";
+import { createInitialState } from "../runtime/play-kernel";
 
 type NetworkRouteSessionSlice = {
   cities: NetworkCity[];
@@ -20,9 +25,29 @@ type NetworkRouteSessionSlice = {
   terminalTo: string;
   lastClaim: { edgeId: string; playerId: number } | null;
   routeCounts: [number, number];
+  freight?: ReturnType<typeof networkRouteToSessionFields>["networkRoute"]["freight"];
 };
 
-export function createInitialNetworkRouteSessionSlice(): NetworkRouteSessionSlice {
+export function createInitialNetworkRouteSessionSlice(input?: {
+  playerCount?: number;
+  terminalFrom?: string;
+  terminalTo?: string;
+  freight?: boolean;
+  content?: NetworkRouteContent | null;
+}): NetworkRouteSessionSlice {
+  if (input?.content || input?.freight) {
+    const cfg = bindNetworkRouteFromRuntimeKernel({
+      playerCount: input.playerCount ?? 2,
+      terminalFrom: input.terminalFrom,
+      terminalTo: input.terminalTo,
+      freight: input.freight === true || Boolean(input.content),
+      content: input.content ?? null,
+    });
+    const fields = networkRouteToSessionFields(
+      createInitialState(networkRouteAdapter, cfg, 42),
+    );
+    return fields.networkRoute;
+  }
   const cities = DEFAULT_NETWORK_CITIES.map((city) => ({ ...city }));
   const edges = DEFAULT_NETWORK_EDGES.map((edge) => ({ ...edge }));
   return {
@@ -33,6 +58,7 @@ export function createInitialNetworkRouteSessionSlice(): NetworkRouteSessionSlic
     terminalTo: NETWORK_ROUTE_TERMINALS[1],
     lastClaim: null,
     routeCounts: [0, 0],
+    freight: null,
   };
 }
 

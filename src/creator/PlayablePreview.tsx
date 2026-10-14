@@ -191,10 +191,16 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
             activeSeat={0}
             enabled={false}
             importedModels={importedModels}
-            networkRoute={createInitialNetworkRouteSessionSlice()}
+            networkRoute={createInitialNetworkRouteSessionSlice({
+              playerCount: networkKernel.playerCount,
+              terminalFrom: networkKernel.terminalFrom,
+              terminalTo: networkKernel.terminalTo,
+              freight: networkKernel.freight === true,
+              content: networkKernel.content ?? null,
+            })}
             readOnly
             status="active"
-            viewerSeat={null}
+            viewerSeat={0}
           />
         </section>
       ) : auction ? (
