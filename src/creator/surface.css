@@ -6139,3 +6139,10 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   height: clamp(480px, 72vh, 860px);
   min-height: 460px;
 }
+
+/* T039 · even before seat claim, collapsed drawer frees vertical space for the stage. */
+.room-view-tabletop-immersive:has(.desk-action-drawer:not([open])) .tabletop-stage,
+.room-view-tabletop-immersive:has(.desk-action-drawer:not([open])) .g3d-stage {
+  height: clamp(480px, 72vh, 860px);
+  min-height: 460px;
+}
