@@ -5,7 +5,7 @@
 | 回归靶 | H02 wide+close；他套 smoke |
 | 层 | **共享呈现**（network-route claim → 车厢段网格） |
 | 状态 | **关** |
-| tip | （feat commit 后填） |
+| tip | `9645fbd86e3cf6da7a3dc9921f843319ec8177a3` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t046/` |
 
 ## 实现（通用）
