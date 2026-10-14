@@ -5,7 +5,7 @@
 | 回归靶 | H04 before/after wide+close（工厂特写）；T036 守卫；Room guard JSON |
 | 层 | **共享呈现**（pattern-draft / tabletop stacking；piece.y = playTop 抬高） |
 | 状态 | **关** |
-| tip | pending |
+| tip | `5719453` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t047/` |
 
 ## 问题
