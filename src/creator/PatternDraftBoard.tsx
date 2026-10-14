@@ -121,21 +121,21 @@ export function PatternDraftBoard({
         importedModels={importedModels}
         onAct={stageOnAct}
       />
-      <details className="desk-chrome desk-action-drawer">
-        <summary className="desk-action-drawer-summary">桌面行动（主交互在 3D；点此展开按钮）</summary>
-        <div className="desk-action-drawer-body">
-      <header>
-        <span className="auction-kicker">工厂草稿 · 第 {draft.round} 轮</span>
-        <h2>
+      <div className="desk-stage-hud" aria-live="polite">
+        <span className="desk-stage-hud-kicker">工厂草稿 · 第 {draft.round} 轮</span>
+        <strong className="desk-stage-hud-turn">
           {status === "complete"
             ? `终局 · 座位 ${leader} 领先`
             : `轮到座位 ${activeSeat} 拿色`}
-        </h2>
-        <p aria-label="pattern-bag">
+        </strong>
+        <span className="desk-stage-hud-supply" aria-label="pattern-bag">
           袋 {draft.bagCount ?? draft.bag?.length ?? 0} · 盖 {draft.lidCount ?? draft.lid?.length ?? 0}
-          {draft.markerInCenter ? " · 先手标记在中心" : ""}
-        </p>
-      </header>
+          {draft.markerInCenter ? " · 先手" : ""}
+        </span>
+      </div>
+      <details className="desk-chrome desk-action-drawer">
+        <summary className="desk-action-drawer-summary">桌面行动（主交互在 3D；点此展开按钮）</summary>
+        <div className="desk-action-drawer-body">
       <div role="region" aria-label="工厂展示">
         {draft.factories.map((factory, fi) => {
           const colors = [...new Set(factory)];

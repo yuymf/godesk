@@ -61,34 +61,38 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
         importedModels={importedModels}
         onAct={stageOnAct}
       />
+      <div className="desk-stage-hud" aria-live="polite">
+        <span className="desk-stage-hud-kicker">
+          {gallery
+            ? `画廊 · ${modeLabel ?? "选拍"} · ${gallery.round}/${gallery.roundsToEnd}`
+            : harbor
+              ? (harbor.bidVisibility === "sealed" ? "密封竞价" : "公开竞价")
+              : "公开竞价"}
+        </span>
+        <strong className="desk-stage-hud-turn">
+          {gallery?.currentLot
+            ? `${currentName}${gallery.companionLot ? `+${gallery.companionLot.name}` : ""}`
+            : gallery && phase === "offer"
+              ? "出牌选模式"
+              : gallery && phase === "market"
+                ? "行情卖出"
+                : harbor?.currentLot
+                  ? currentName
+                  : phase === "market"
+                    ? "黑市转售"
+                    : currentName}
+        </strong>
+        <span className="desk-stage-hud-supply">
+          {gallery?.currentLot
+            ? `底价 ${gallery.fixedPrice || gallery.currentLot.reserve}`
+            : harbor?.currentLot
+              ? `底价 ${harbor.currentLot.reserve}`
+              : `价值 ${auction.lotValue}`}
+        </span>
+      </div>
       <details className="desk-chrome desk-action-drawer">
         <summary className="desk-action-drawer-summary">桌面行动（主交互在 3D；点此展开按钮）</summary>
         <div className="desk-action-drawer-body">
-      <header className="auction-heading auction-lot-card">
-        <div>
-          <span className="auction-kicker">
-            {gallery
-              ? `画廊竞拍 · ${modeLabel ?? "选拍"} · 第 ${gallery.round}/${gallery.roundsToEnd} 轮`
-              : harbor
-                ? (harbor.bidVisibility === "sealed" ? "密封竞价 · 多拍品" : "公开竞价 · 多拍品")
-                : "公开竞价 · 单件拍品"}
-          </span>
-          <h2>
-            {gallery?.currentLot
-              ? `${currentName}${gallery.companionLot ? `+${gallery.companionLot.name}` : ""} · 底价/定价 ${gallery.fixedPrice || gallery.currentLot.reserve}`
-              : gallery && phase === "offer"
-                ? "拍卖官打出画作并选择拍卖方式"
-                : gallery && phase === "market"
-                  ? "行情卖出"
-                  : harbor?.currentLot
-                    ? `${currentName} · 底价 ${harbor.currentLot.reserve} · 黑市×${harbor.currentLot.marketMult}`
-                    : phase === "market"
-                      ? "黑市转售"
-                      : `${currentName}拍品 · 价值 ${auction.lotValue}`}
-          </h2>
-        </div>
-        <svg className="auction-mark" width="76" height="76" viewBox="0 0 76 76" role="img" aria-label="拍卖槌"><rect width="76" height="76" rx="16"/><path d="m16 20 10-10 25 25-10 10zm28 20 5-5 18 18-5 5zM12 60h51" fill="none" strokeWidth="6" strokeLinecap="round"/></svg>
-      </header>
       <section aria-label="拍卖状态" aria-live="polite" className={`auction-status${status === "complete" ? " is-complete" : " is-live"}`}>
         <strong>
           {status === "complete"

@@ -116,20 +116,20 @@ export function GemEngineBoard({
         importedModels={importedModels}
         onAct={stageOnAct}
       />
-      <details className="desk-chrome desk-action-drawer">
-        <summary className="desk-action-drawer-summary">桌面行动（主交互在 3D；点此展开按钮）</summary>
-        <div className="desk-action-drawer-body">
-      <header>
-        <span className="auction-kicker">宝石引擎 · 声望竞速</span>
-        <h2>
+      <div className="desk-stage-hud" aria-live="polite">
+        <span className="desk-stage-hud-kicker">宝石引擎</span>
+        <strong className="desk-stage-hud-turn">
           {status === "complete"
             ? `终局 · 座位 ${leader} 领先`
             : pendingDiscard
-              ? `座位 ${activeSeat} · 弃回溢出代币（上限 10）`
+              ? `座位 ${activeSeat} · 弃回溢出`
               : `轮到座位 ${activeSeat}`}
-        </h2>
-        <p aria-label="gem-bank">供应堆：{bankLine}</p>
-      </header>
+        </strong>
+        <span className="desk-stage-hud-supply" aria-label="gem-bank">{bankLine}</span>
+      </div>
+      <details className="desk-chrome desk-action-drawer">
+        <summary className="desk-action-drawer-summary">桌面行动（主交互在 3D；点此展开按钮）</summary>
+        <div className="desk-action-drawer-body">
       <div role="region" aria-label="贵族" className="gem-nobles">
         {gem.nobles.map((n, i) => (
           <span key={i}>{String((n as { name?: string }).name ?? "贵族")}</span>
