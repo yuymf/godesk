@@ -1,0 +1,104 @@
+[
+  {
+    "suite": "H01",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 0,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 0
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS（可玩子集）",
+    "kernelType": "hex-settlement-v1",
+    "sessionOk": true
+  },
+  {
+    "suite": "H02",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS（可玩子集）",
+    "kernelType": "network-route-v1",
+    "sessionOk": true
+  },
+  {
+    "suite": "H03",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS（可玩子集）",
+    "kernelType": "gem-engine-v1",
+    "sessionOk": true
+  },
+  {
+    "suite": "H04",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS（可玩子集）",
+    "kernelType": "pattern-draft-v1",
+    "sessionOk": true,
+    "t036TileGuard": {
+      "ok": true,
+      "via": "vitest tabletop-stacking-t036 + tabletop-factory-glaze-t047",
+      "tip": "7764c30+fix"
+    },
+    "t047FactoryGlazeGuard": {
+      "ok": true
+    },
+    "t058LineTroughGuard": {
+      "ok": true,
+      "note": "builtInMesh includes line-trough (fix cold gamespec_invalid)"
+    }
+  },
+  {
+    "suite": "H05",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS（可玩子集）",
+    "kernelType": "auction-bidding-v1",
+    "sessionOk": true
+  }
+]
