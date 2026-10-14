@@ -5,7 +5,7 @@
 | 回归靶 | H03 / H04 / H05 Room 入座后台面高度 |
 | 层 | **Room 壳 / 呈现**（tabletop-3d / SceneHost） |
 | 状态 | **关** |
-| tip | `a66fcb0c1bae2e28de41456973d2d11953d426be` |
+| tip | `f16dcc350886e5d050f5f1a5935d1805a6ac71f8` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t035/` |
 
 ## 现象
