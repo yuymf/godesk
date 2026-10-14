@@ -5,7 +5,7 @@
 | 回归靶 | H03+H05 card-close；像素门或 art-fill unit；与 T048/T063 共存 |
 | 层 | **共享呈现**（illustration fill） |
 | 状态 | **开** |
-| tip | pending |
+| tip | `85f2525` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t066/` |
 
 ## 问题

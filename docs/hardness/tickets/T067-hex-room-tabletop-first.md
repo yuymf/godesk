@@ -5,7 +5,7 @@
 | 回归靶 | H01 stage before/after；canvas share≥0.60；岛面可读；T064 sidecar 拒错壳 |
 | 层 | **共享呈现 / Room chrome** |
 | 状态 | **开** |
-| tip | pending |
+| tip | `f9a7cd6` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t067/` |
 
 ## 问题
