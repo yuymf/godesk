@@ -384,6 +384,9 @@ type RuntimeConfiguration =
   | Extract<ProjectChangeOperation, { op: "configure_network_route" }> & {
       op: "configure_network_route";
     }
+  | Extract<ProjectChangeOperation, { op: "configure_gem_engine" }> & {
+      op: "configure_gem_engine";
+    }
   | Extract<ProjectChangeOperation, { op: "configure_auction_bidding" }> & {
       op: "configure_auction_bidding";
     }
@@ -396,7 +399,7 @@ function configureDedicatedKernel(
   op: string,
   kernel: Extract<
     Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
-    { type: "harbor-voyage-v1" | "worker-placement-v1" | "hidden-role-v1" | "hand-play-v1" | "conversation-relay-v1" | "disc-flipping-v1" | "hex-settlement-v1" | "network-route-v1" | "auction-bidding-v1" | "auto-battler-v1" }
+    { type: "harbor-voyage-v1" | "worker-placement-v1" | "hidden-role-v1" | "hand-play-v1" | "conversation-relay-v1" | "disc-flipping-v1" | "hex-settlement-v1" | "network-route-v1" | "auction-bidding-v1" | "gem-engine-v1" | "auto-battler-v1" }
   >,
   unsupported: string[],
   config: unknown,
@@ -561,6 +564,20 @@ function configureDedicatedKernel(
       playSurface: { kind: "table" as const, layout: "auction-table", regions: [{ id: "lot", name: "拍品", description: "公开叫价与筹码" }] },
       stages: [{ id: "bidding", name: "竞价" }, { id: "ended", name: "结算" }],
       outcomes: [{ id: "award", name: "最高有效出价获得拍品" }, { id: "unsold", name: "无人出价则流拍" }],
+    } : kernel.type === "gem-engine-v1" ? {
+      actions: [
+        { id: "take_diverse", label: "拿三色宝石", description: "从供应堆拿三枚不同颜色的基本宝石。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "take_pair", label: "拿两枚同色", description: "当某色堆足够多时拿两枚同色基本宝石。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "buy", label: "购买发展牌", description: "支付宝石（可用永久折扣抵扣）购买一张可见发展牌。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+      ],
+      participants: { ...record.ruleSystem.participants, min: 2, max: 2, default: 2 },
+      playSurface: { kind: "table" as const, layout: "gem-engine-table", regions: [
+        { id: "bank", name: "宝石供应", description: "基本色与黄金代币堆" },
+        { id: "market", name: "发展牌列", description: "三级可见发展牌" },
+        { id: "nobles", name: "贵族", description: "满足永久折扣需求时自动拜访" },
+      ] },
+      stages: [{ id: "main", name: "回合" }, { id: "ended", name: "终局" }],
+      outcomes: [{ id: "prestige", name: "先到声望目标者获胜" }],
     } : kernel.type === "auto-battler-v1" ? {
       actions: [
         { id: "buy", label: "购买", description: "从商店购买单位到备战席。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
@@ -734,6 +751,15 @@ function configureRuntimeKernel(
     configureDedicatedKernel(record, configuration.op, {
       type: "auction-bidding-v1", playerCount: configuration.config.playerCount,
       ...(configuration.config.harbor ? { harbor: true } : {}),
+      ...(configuration.config.content
+        ? { content: structuredClone(configuration.config.content) }
+        : {}),
+    }, configuration.config.unsupported?.map((item) => item.trim()) ?? [], configuration.config, affectedEntities);
+    return;
+  }
+  if (configuration.op === "configure_gem_engine") {
+    configureDedicatedKernel(record, configuration.op, {
+      type: "gem-engine-v1", playerCount: configuration.config.playerCount,
       ...(configuration.config.content
         ? { content: structuredClone(configuration.config.content) }
         : {}),
@@ -1624,6 +1650,10 @@ const RUNTIME_HANDLERS: {
       validUnsupported(config.unsupported),
   },
   configure_auction_bidding: {
+    validate: (config) => Boolean(config) && typeof config === "object" &&
+      config.playerCount === 2 && validUnsupported(config.unsupported),
+  },
+  configure_gem_engine: {
     validate: (config) => Boolean(config) && typeof config === "object" &&
       config.playerCount === 2 && validUnsupported(config.unsupported),
   },

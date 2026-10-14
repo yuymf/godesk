@@ -148,3 +148,13 @@ describe("T008 route-network ticket/rail cues", () => {
     expect(inferRequestedMechanics("认领路线并铺线，用车厢与车票连通城市")).toEqual(["route-network"]);
   });
 });
+
+
+describe("T010 gem-engine cues", () => {
+  it("binds gem-token / development / noble corpus to gem-engine", () => {
+    const m = inferRequestedMechanics(
+      "宝石作坊。拿宝石代币买发展牌获得永久折扣，贵族拜访，先到声望15。",
+    );
+    expect(m).toEqual(["gem-engine"]);
+  });
+});

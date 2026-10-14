@@ -315,6 +315,15 @@ export interface RuleSystem {
               };
             }
           | {
+              type: "gem-engine-v1";
+              playerCount: number;
+              content?: {
+                prestigeToWin?: number;
+                bankPerBasic?: number;
+                bankGold?: number;
+              };
+            }
+          | {
               type: "auto-battler-v1";
               playerCount: number;
               /** Creator tuning (prep timers, starting HP/gold); omitted → kernel defaults. */
@@ -710,6 +719,18 @@ export type ProjectChangeOperation =
       };
     }
   | {
+      op: "configure_gem_engine";
+      config: {
+        playerCount: number;
+        content?: {
+          prestigeToWin?: number;
+          bankPerBasic?: number;
+          bankGold?: number;
+        };
+        unsupported?: string[];
+      };
+    }
+  | {
       op: "configure_auto_battler";
       config: { playerCount: number; unsupported?: string[]; tuning?: { prepShopSeconds?: number; prepPlaceSeconds?: number; startHp?: number; startGold?: number; boardCols?: number; boardRows?: number }; content?: AutoBattlerContentPatch; theme?: AutoBattlerThemePatch; branding?: AutoBattlerBranding };
     }
@@ -1093,6 +1114,32 @@ export interface SessionState {
       sealedBids: [number | null, number | null];
       lastSold: { seat: number; name: string; payout: number } | null;
     } | null;
+  };
+  /** Present when the build kernel is gem-engine-v1. */
+  gemEngine?: {
+    phase?: string;
+    bank: Record<string, number>;
+    market: [Array<Record<string, unknown>>, Array<Record<string, unknown>>, Array<Record<string, unknown>>];
+    decks: [Array<Record<string, unknown>>, Array<Record<string, unknown>>, Array<Record<string, unknown>>];
+    nobles: Array<Record<string, unknown>>;
+    seats: [
+      {
+        gems: Record<string, number>;
+        discounts: Record<string, number>;
+        prestige: number;
+        cards: Array<Record<string, unknown>>;
+        nobles: Array<Record<string, unknown>>;
+      },
+      {
+        gems: Record<string, number>;
+        discounts: Record<string, number>;
+        prestige: number;
+        cards: Array<Record<string, unknown>>;
+        nobles: Array<Record<string, unknown>>;
+      },
+    ];
+    lastEvent: string | null;
+    prestigeToWin?: number;
   };
   /** Present when the build kernel is auto-battler-v1 (generic shop/bench/combat). */
   autoBattler?: {

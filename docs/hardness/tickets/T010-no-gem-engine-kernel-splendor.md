@@ -4,7 +4,8 @@
 | --- | --- |
 | 套件 | H03-splendor probe1 |
 | 层 | **内核** |
-| 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H03-probe1/` |
+| 状态 | **已关** · gem-engine-v1 · H03-probe2 PASS |
+| 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H03-probe2/` |
 
 ## 现象
 draft，mechanics=[]。规则书要宝石代币、三级发展牌、永久折扣、贵族、声望 15。
@@ -14,3 +15,7 @@ draft，mechanics=[]。规则书要宝石代币、三级发展牌、永久折扣
 
 ## 最小通用修法
 注册 gem-engine mechanic + kernel，或 Plan 文案模板点名缺失。
+
+## 关闭（probe2）
+注册通用 mechanic `gem-engine` + kernel `gem-engine-v1`（代币 / 发展牌永久折扣 / 贵族 / 声望胜）。
+冷启动 H03-probe2：executable + floor passed + playableUrl。T012 未开。

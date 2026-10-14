@@ -142,6 +142,10 @@ import {
   ideaRequestsHarborAuction,
   parseHarborTuningFromIdea,
 } from "../src/runtime/adapters/auction-bidding";
+import {
+  defaultGemEngineContent,
+  gemEngineUnsupportedNotes,
+} from "../src/runtime/adapters/gem-engine";
 
 interface CreatorJobHost {
   ctx: DurableObjectState;
@@ -418,7 +422,7 @@ export async function runCreatorJob(
       const autoBattlerRuntimeConfigured =
         requestedMechanics.includes("auto-battler") &&
         !requestedMechanics.some((mechanic) =>
-          ["hex-settlement", "disc-flipping", "route-network"].includes(mechanic),
+          ["hex-settlement", "disc-flipping", "route-network", "gem-engine"].includes(mechanic),
         );
       // T008: hand-play must not steal route-network / hex subjects (even when corpus says 手牌).
       const handPlayRuntimeConfigured =
@@ -430,7 +434,8 @@ export async function runCreatorJob(
         !requestedMechanics.includes("route-network") &&
         !requestedMechanics.includes("hex-settlement") &&
         !requestedMechanics.includes("disc-flipping") &&
-        !requestedMechanics.includes("auction-bidding");
+        !requestedMechanics.includes("auction-bidding") &&
+        !requestedMechanics.includes("gem-engine");
       const harborLikePlacement =
         sourceGenre === "placement" && isHarborLikeCorpus(authoredMaterial);
       const workerPlacementRuntimeConfigured =
@@ -453,7 +458,14 @@ export async function runCreatorJob(
       const auctionBiddingRuntimeConfigured =
         requestedMechanics.includes("auction-bidding") &&
         !autoBattlerRuntimeConfigured &&
-        !requestedMechanics.some((mechanic) => ["hex-settlement", "disc-flipping", "route-network", "hand-play"].includes(mechanic));
+        !requestedMechanics.some((mechanic) => ["hex-settlement", "disc-flipping", "route-network", "hand-play", "gem-engine"].includes(mechanic));
+      const gemEngineRuntimeConfigured =
+        requestedMechanics.includes("gem-engine") &&
+        !autoBattlerRuntimeConfigured &&
+        !hexSettlementRuntimeConfigured &&
+        !discFlippingRuntimeConfigured &&
+        !networkRouteRuntimeConfigured &&
+        !auctionBiddingRuntimeConfigured;
       weakGenreScoreRaceRefused =
         sourceGenre === "generic" &&
         drawAndScoreRule === null &&
@@ -506,11 +518,13 @@ export async function runCreatorJob(
         !requestedMechanics.includes("disc-flipping") &&
         !requestedMechanics.includes("auction-bidding") &&
         !requestedMechanics.includes("auto-battler") &&
+        !requestedMechanics.includes("gem-engine") &&
         !requestedMechanics.includes("hand-play") &&
         !handPlayRuntimeConfigured &&
         !hexSettlementRuntimeConfigured &&
         !networkRouteRuntimeConfigured &&
         !auctionBiddingRuntimeConfigured &&
+        !gemEngineRuntimeConfigured &&
         !autoBattlerRuntimeConfigured;
       const turnTakingRuntimeConfigured =
         !sharedGoal &&
@@ -531,6 +545,7 @@ export async function runCreatorJob(
         networkRouteRuntimeConfigured ||
         autoBattlerRuntimeConfigured ||
         auctionBiddingRuntimeConfigured ||
+        gemEngineRuntimeConfigured ||
         hiddenRoleRuntimeConfigured ||
         handPlayRuntimeConfigured ||
         harborVoyageRuntimeConfigured ||
@@ -637,6 +652,18 @@ export async function runCreatorJob(
               },
             };
           })()
+        : gemEngineRuntimeConfigured
+        ? {
+            op: "configure_gem_engine" as const,
+            config: {
+              playerCount: 2,
+              content: defaultGemEngineContent(),
+              unsupported: [
+                "gem-engine-v1 executes a 2-seat gem-token / development-card / noble prestige loop on the public play-kernel.",
+                ...gemEngineUnsupportedNotes(),
+              ],
+            },
+          }
         : hiddenRoleRuntimeConfigured
         ? {
             op: "configure_hidden_role" as const,
@@ -1235,6 +1262,8 @@ export async function runCreatorJob(
           ? "规则结构来自体裁识别；两人商店买棋、备战上阵与自动战斗将在批准 Generation Plan 后配置为 auto-battler-v1。"
           : proposedRuntime?.op === "configure_auction_bidding"
           ? "规则结构来自体裁识别；两人公开轮流出价或放弃，最高有效出价获得拍品，将在批准 Generation Plan 后配置为 auction-bidding-v1。"
+          : proposedRuntime?.op === "configure_gem_engine"
+          ? "规则结构来自体裁识别；宝石代币、发展牌永久折扣与贵族声望将在批准 Generation Plan 后配置为 gem-engine-v1。"
           : proposedRuntime?.op === "configure_hidden_role"
           ? "规则结构来自体裁识别；秘密身份、公开发言与指控将在批准 Generation Plan 后配置为 hidden-role-v1。"
           : proposedRuntime?.op === "configure_hand_play"

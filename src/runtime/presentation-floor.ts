@@ -62,6 +62,7 @@ export const KERNEL_PRESENTATION = {
   "network-route-v1": "dedicated-board",
   "auction-bidding-v1": "dedicated-board",
   "auto-battler-v1": "dedicated-board",
+  "gem-engine-v1": "dedicated-board",
 } satisfies Record<KernelType, BoardPresentation>;
 
 export const UNPRESENTED_PREFIX = "未呈现";

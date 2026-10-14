@@ -23,7 +23,7 @@ export function inferSourceGenre(corpus: string): SourceGenre {
   // T008/T011: board mechanics that mention 手牌/车厢牌 as resources must not steal
   // the hand-play genre (route-network / hex-settlement / auction / disc).
   const boardMechanics = inferRequestedMechanics(text).some((m) =>
-    ["route-network", "hex-settlement", "disc-flipping", "auction-bidding", "auto-battler"].includes(m),
+    ["route-network", "hex-settlement", "disc-flipping", "auction-bidding", "auto-battler", "gem-engine"].includes(m),
   );
   if (
     !boardMechanics &&

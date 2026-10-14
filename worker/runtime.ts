@@ -77,6 +77,14 @@ import {
   playActionFromAuctionBiddingIntent, type AuctionBiddingGenre,
 } from "../src/runtime/adapters/auction-bidding";
 import {
+  gemEngineAdapter,
+  gemEngineToSessionFields,
+  bindGemEngineFromRuntimeKernel,
+  pickGemEngineBotAction,
+  playActionFromGemEngineIntent,
+  type GemEngineGenre,
+} from "../src/runtime/adapters/gem-engine";
+import {
   autoBattlerAdapter,
   autoBattlerNow,
   setAutoBattlerNow,
@@ -374,6 +382,17 @@ export function initialSessionState(
         content: runtime.kernel.content ?? null,
       }), _seed);
     return auctionBiddingToSessionFields(play);
+  }
+  if (runtime?.kernel.type === "gem-engine-v1") {
+    const play = createInitialState(
+      gemEngineAdapter,
+      bindGemEngineFromRuntimeKernel({
+        playerCount: runtime.kernel.playerCount,
+        content: runtime.kernel.content ?? null,
+      }),
+      _seed,
+    );
+    return gemEngineToSessionFields(play);
   }
   if (runtime?.kernel.type === "auto-battler-v1") {
     const play = createInitialState(
@@ -1112,6 +1131,38 @@ export function acceptIntent(
     return {
       sequence, intentId: intent.intentId, seat: intent.seat, actionId: intent.actionId,
       points: 0, payload: intent.payload, state: auctionBiddingToSessionFields(result.state),
+    };
+  }
+
+  if (runtime.kernel.type === "gem-engine-v1") {
+    if (state.status !== "active" || !state.gemEngine || intent.seat !== state.activeSeat) return null;
+    const kernelConfig = bindGemEngineFromRuntimeKernel({
+      playerCount: runtime.kernel.playerCount,
+      content: runtime.kernel.content ?? null,
+    });
+    const playState = {
+      seed, sequence: state.turn, phase: (state.gemEngine.phase ?? "main") as string,
+      activePlayerId: state.activeSeat, playerCount: runtime.kernel.playerCount,
+      status: state.status, winnerId: state.winnerSeat, events: [] as const,
+      genre: {
+        bank: { ...state.gemEngine.bank },
+        market: structuredClone(state.gemEngine.market) as GemEngineGenre["market"],
+        decks: structuredClone(state.gemEngine.decks ?? [[], [], []]) as GemEngineGenre["decks"],
+        nobles: structuredClone(state.gemEngine.nobles) as GemEngineGenre["nobles"],
+        seats: structuredClone(state.gemEngine.seats) as GemEngineGenre["seats"],
+        lastEvent: state.gemEngine.lastEvent,
+      } satisfies GemEngineGenre,
+    };
+    const result = applyAction(
+      gemEngineAdapter,
+      playState,
+      playActionFromGemEngineIntent(intent.seat, intent.actionId, intent.payload),
+      kernelConfig,
+    );
+    if (!result.ok) return null;
+    return {
+      sequence, intentId: intent.intentId, seat: intent.seat, actionId: intent.actionId,
+      points: 0, payload: intent.payload, state: gemEngineToSessionFields(result.state),
     };
   }
 

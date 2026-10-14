@@ -23,6 +23,7 @@ export const KERNEL_CAPABILITIES = {
   "network-route-v1": ["graph-topology", "route-claiming", "path-connectivity"],
   "auction-bidding-v1": ["bid-pass-resolution", "award-selection", "seeded-draw"],
   "auto-battler-v1": ["shop-economy", "bench-board", "seeded-combat", "trait-synergy"],
+  "gem-engine-v1": ["gem-tokens", "development-discounts", "noble-prestige"],
 } satisfies Record<KernelType, readonly string[]>;
 
 /** Mechanics are declarations, independent of a game's title or source language. */
@@ -44,6 +45,7 @@ export const MECHANIC_CAPABILITIES: Record<string, readonly string[]> = {
   "route-network": ["graph-topology", "route-claiming", "path-connectivity"],
   "auction-bidding": ["bid-pass-resolution", "award-selection", "seeded-draw"],
   "auto-battler": ["shop-economy", "bench-board", "seeded-combat", "trait-synergy"],
+  "gem-engine": ["gem-tokens", "development-discounts", "noble-prestige"],
 };
 
 export function kernelCapabilities(kernelType: string): readonly string[] | undefined {
@@ -69,6 +71,8 @@ export function mechanicsCapabilityGap(mechanics: readonly string[], kernelType?
 /** Mechanic cue patterns — matched only when cueMatchIsPositive (T004 negation). */
 const MECHANIC_CUES: Array<{ id: string; cues: RegExp }> = [
   { id: "auction-bidding", cues: /拍卖|竞价|出价|\bauction\b|\bbid(?:s|ding)?\b/i },
+  // T010: gem-token / development-discount / noble prestige engine.
+  { id: "gem-engine", cues: /宝石(?:代币|引擎)?|发展牌|永久折扣|贵族|声望\s*\d*|gem\s*engine|prestige\s*(?:points?|target)|development\s*cards?|nobles?\b/i },
   { id: "hex-settlement", cues: /汐屿|\btidewell\b|hex[- ]?island|六角.*(?:资源|建造)|hex.*(?:resource|build)/i },
   { id: "disc-flipping", cues: /\bothello\b|\breversi\b|黑白棋|翻转棋|翻子|flipp?ing.*dis[ck]|dis[ck].*flipp?ing/i },
   // Line / route / logistics network (PR11 + hardness H02).

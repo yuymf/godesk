@@ -215,6 +215,22 @@ export function isAuctionBidding(ruleSystem: RuleSystem): boolean {
   return Boolean(auctionBiddingKernel(ruleSystem));
 }
 
+export function gemEngineKernel(
+  ruleSystem: RuleSystem,
+): Extract<
+  Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
+  { type: "gem-engine-v1" }
+> | null {
+  return ruleSystem.runtimeSupport.status === "executable" &&
+    ruleSystem.runtimeSupport.kernel.type === "gem-engine-v1"
+    ? ruleSystem.runtimeSupport.kernel
+    : null;
+}
+
+export function isGemEngine(ruleSystem: RuleSystem): boolean {
+  return Boolean(gemEngineKernel(ruleSystem));
+}
+
 export function isAutoBattler(ruleSystem: RuleSystem): boolean {
   return ruleSystem.runtimeSupport.status === "executable" &&
     ruleSystem.runtimeSupport.kernel.type === "auto-battler-v1";

@@ -48,6 +48,7 @@ const MECHANIC_ALIGNED_KERNEL: Record<string, string> = {
   "disc-flipping": "disc-flipping-v1",
   "auction-bidding": "auction-bidding-v1",
   "auto-battler": "auto-battler-v1",
+  "gem-engine": "gem-engine-v1",
 };
 
 function mechanicsAlignWithKernel(
@@ -187,6 +188,18 @@ export function playabilityFloor(ruleSystem: RuleSystem): PlayabilityFloorReadin
     }
     // Intentionally NOT in SHAREABLE_KERNELS yet — decision-density share gate TBD.
   }
+  if (ruleSystem.generation?.requestedMechanics?.includes("gem-engine") &&
+      kernelType !== "gem-engine-v1") {
+    return { status: "failed", reason: "宝石引擎来源需要 gem-engine-v1 的代币/发展牌/贵族声望环。", genre, kernelType };
+  }
+  if (kernelType === "gem-engine-v1") {
+    const hasTake = ruleSystem.actions.some((action) => action.id === "take_diverse" || action.id === "take_gems");
+    const hasBuy = ruleSystem.actions.some((action) => action.id === "buy" || action.id === "buy_card");
+    if (ruleSystem.playSurface.kind !== "table" || !hasTake || !hasBuy ||
+        ruleSystem.runtimeSupport.kernel.playerCount !== 2) {
+      return { status: "failed", reason: "gem-engine-v1 需要双人桌面与拿取代币/购买发展牌动作。", genre, kernelType };
+    }
+  }
   const aligned = mechanicsAlignWithKernel(
     ruleSystem.generation?.requestedMechanics,
     kernelType,
@@ -310,7 +323,8 @@ export function playabilityFloor(ruleSystem: RuleSystem): PlayabilityFloorReadin
         kernelType === "network-route-v1" ||
         kernelType === "disc-flipping-v1" ||
         kernelType === "auction-bidding-v1" ||
-        kernelType === "auto-battler-v1"
+        kernelType === "auto-battler-v1" ||
+        kernelType === "gem-engine-v1"
       )
     ) {
       return {
