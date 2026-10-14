@@ -5,7 +5,7 @@
 | 回归靶 | H03 / H04（及 H05）共享 3D 桌面观感 |
 | 层 | **共享呈现**（`defaultRenderSpec` / `tabletop-objects` / materials） |
 | 状态 | **关** |
-| tip | `e18afd1108414576b10fe89682125ab4867899e6` |
+| tip | `4686cd31ba4f4d2d43226eeed9f9cb1b1075150e` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t030/` |
 
 ## 现象
