@@ -5,7 +5,7 @@
 | 回归靶 | H05 before/after seat-close 像素差明显；≥2 framed-art；禁中心画廊冒充 |
 | 层 | **共享呈现**（auction seat collection mesh/scale/camera） |
 | 状态 | **关** |
-| tip | pending |
+| tip | `bd130d3` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t056/` |
 
 ## 问题
