@@ -66,3 +66,131 @@ describe("gem-engine-v1 adapter (T010)", () => {
     expect(discounts.some((n) => n > 0) || state.genre.seats.some((s) => s.cards.length > 0)).toBe(true);
   });
 });
+
+describe("gem-engine-v1 reserve + overflow (T017)", () => {
+  it("reserves a market card and may take gold", () => {
+    const config = createGemEngineKernelConfig({
+      content: { bankGold: 5, prestigeToWin: 99 },
+    });
+    let state = createInitialState(gemEngineAdapter, config, 5);
+    const beforeGold = state.genre.bank.gold;
+    const card = state.genre.market[0][0]!;
+    const result = applyAction(
+      gemEngineAdapter,
+      state,
+      { type: "reserve", playerId: 0, payload: { tier: 1, index: 0 } },
+      config,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    state = result.state;
+    expect(state.genre.seats[0].reserved.map((c) => c.id)).toContain(card.id);
+    expect(state.genre.seats[0].reserved.length).toBe(1);
+    if (beforeGold > 0) {
+      expect(state.genre.seats[0].gems.gold).toBe(1);
+      expect(state.genre.bank.gold).toBe(beforeGold - 1);
+    }
+    expect(state.activePlayerId).toBe(1);
+  });
+
+  it("forces discard when gem total exceeds 10", () => {
+    const config = createGemEngineKernelConfig({
+      content: { bankPerBasic: 7, prestigeToWin: 99 },
+    });
+    let state = createInitialState(gemEngineAdapter, config, 9);
+    // Fill seat 0 to 9 gems, then take 3 → 12, pending discard.
+    state = {
+      ...state,
+      genre: {
+        ...state.genre,
+        seats: [
+          {
+            ...state.genre.seats[0],
+            gems: { white: 2, blue: 2, green: 2, red: 2, black: 1, gold: 0 },
+            reserved: [],
+          },
+          { ...state.genre.seats[1], reserved: [] },
+        ],
+      },
+    };
+    const take = applyAction(
+      gemEngineAdapter,
+      state,
+      {
+        type: "take_diverse",
+        playerId: 0,
+        payload: { colors: ["white", "blue", "green"] },
+      },
+      config,
+    );
+    expect(take.ok).toBe(true);
+    if (!take.ok) return;
+    state = take.state;
+    expect(state.genre.pendingDiscardSeat).toBe(0);
+    expect(state.activePlayerId).toBe(0);
+    const legal = listLegalActions(gemEngineAdapter, state, 0, config);
+    expect(legal.every((a) => a.type === "discard_gems")).toBe(true);
+    // Discard until ≤10
+    while (state.genre.pendingDiscardSeat === 0) {
+      const acts = listLegalActions(gemEngineAdapter, state, 0, config);
+      const d = acts.find((a) => a.type === "discard_gems");
+      expect(d).toBeTruthy();
+      const r = applyAction(
+        gemEngineAdapter,
+        state,
+        {
+          type: "discard_gems",
+          playerId: 0,
+          payload: { ...(d!.payload ?? {}) },
+        },
+        config,
+      );
+      expect(r.ok).toBe(true);
+      if (!r.ok) return;
+      state = r.state;
+    }
+    const total =
+      Object.values(state.genre.seats[0].gems).reduce((a, b) => a + b, 0);
+    expect(total).toBeLessThanOrEqual(10);
+    expect(state.activePlayerId).toBe(1);
+  });
+
+  it("buys from reserved hand", () => {
+    const config = createGemEngineKernelConfig({
+      content: { bankPerBasic: 7, prestigeToWin: 99 },
+    });
+    let state = createInitialState(gemEngineAdapter, config, 11);
+    const card = state.genre.market[0][0]!;
+    // Force reserve without gold complication
+    state = {
+      ...state,
+      genre: {
+        ...state.genre,
+        bank: { ...state.genre.bank, gold: 0 },
+        seats: [
+          {
+            ...state.genre.seats[0],
+            gems: { white: 4, blue: 4, green: 4, red: 4, black: 4, gold: 2 },
+            reserved: [{ ...card, cost: { ...card.cost } }],
+          },
+          { ...state.genre.seats[1], reserved: [] },
+        ],
+        market: [
+          state.genre.market[0].filter((c) => c.id !== card.id),
+          state.genre.market[1],
+          state.genre.market[2],
+        ],
+      },
+    };
+    const result = applyAction(
+      gemEngineAdapter,
+      state,
+      { type: "buy_reserved", playerId: 0, payload: { index: 0 } },
+      config,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.genre.seats[0].reserved.length).toBe(0);
+    expect(result.state.genre.seats[0].cards.some((c) => c.id === card.id)).toBe(true);
+  });
+});

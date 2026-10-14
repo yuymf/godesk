@@ -4,24 +4,20 @@
 | --- | --- |
 | 回归靶 | H03（harness only） |
 | 层 | **内核**（gem-engine-v1 同层扩） |
-| 状态 | **开** |
-| 证据 | （待） |
+| 状态 | **已关** |
+| 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H03-t017/` |
 
 ## 现象（Open · regress-t015）
 gem-engine-v1 可玩子集已过 floor；仍缺 **reserve hand**、**3–4 席**、**complex gold overflow UI**（席位见 T019）。
 
-## 期望（通用能力）
-1. **Reserve hand**：从市场保留一张发展牌到手牌；后续可用折扣购买；保留位有上限。
-2. **Token overflow**：持币上限与溢出弃回银行的通用规则；wild/gold 计入上限时规则明确；UI 至少能完成弃币，不依赖题材特判文案。
+## 实现（通用）
+- **Reserve hand**：`reserve` 市场或牌库顶 → `reserved[]`（上限 3）；银行有金则拿 1 金；`buy_reserved` 支付购买
+- **Token overflow**：拿币可暂超 10；`pendingDiscardSeat` 下仅 `discard_gems` 直至 ≤10 再结束回合
+- unsupported 收窄为 **3–4 席**（→ T019）
 
-## 验收
-- 冷启动 H03：reserve + overflow 可执行或仍诚实点名剩余缺口；floors 不因本能力回退。
-- 单元覆盖 reserve / overflow；无样例 IP 特判。
+未重做贵族/牌级。无样例 IP 特判。Collecta 未动。#179 draft 未合 main。
 
-## Out of scope
-- 3–4 席（→ T019）
-- 贵族/牌级已有能力重做；Collecta；合 #179
-
-## 相关
-- 回归靶：H03
-- 前序：T010 gem-engine 内核
+## 关闭
+- H03-t017：floors passed；记分趋向 SUCCESS（可玩子集）
+- H02 smoke：无回归
+- 单元：gem-engine 7 passed（含 T017 3 例）

@@ -1182,9 +1182,13 @@ export function acceptIntent(
         market: structuredClone(state.gemEngine.market) as GemEngineGenre["market"],
         decks: structuredClone(state.gemEngine.decks ?? [[], [], []]) as GemEngineGenre["decks"],
         nobles: structuredClone(state.gemEngine.nobles) as GemEngineGenre["nobles"],
-        seats: structuredClone(state.gemEngine.seats) as GemEngineGenre["seats"],
+        seats: (structuredClone(state.gemEngine.seats) as GemEngineGenre["seats"]).map((s) => ({
+          ...s,
+          reserved: s.reserved ?? [],
+        })) as GemEngineGenre["seats"],
         lastEvent: state.gemEngine.lastEvent,
-      } satisfies GemEngineGenre,
+        pendingDiscardSeat: (state.gemEngine as { pendingDiscardSeat?: number | null }).pendingDiscardSeat ?? null,
+      } as GemEngineGenre,
     };
     const result = applyAction(
       gemEngineAdapter,

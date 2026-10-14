@@ -2,9 +2,9 @@
  * gem-engine-v1 — minimal gem-token / development-card / noble prestige engine
  * on the public play-kernel (T010). Generic; not an IP special-case.
  *
- * Subset: 2 seats, take 3-diverse or 2-same gems, buy visible tier cards with
- * permanent discounts, auto-visit nobles, first to prestige target wins.
- * Reserve hand / gold-as-wild payment beyond bank gold / 3–4 seats unsupported.
+ * Subset: 2 seats, take gems, reserve hand (≤3), buy visible/reserved,
+ * token overflow discard to 10, discounts + nobles, prestige win.
+ * 3–4 seats remain unsupported (T019).
  */
 import {
   applyAction,
@@ -53,12 +53,17 @@ type GemEngineConfig = {
   content: GemEngineContent;
 };
 
+export const MAX_GEM_TOKENS = 10;
+export const MAX_RESERVED_CARDS = 3;
+
 export type GemSeatState = {
   gems: Record<GemToken, number>;
   discounts: Record<GemColor, number>;
   prestige: number;
   cards: GemCardDef[];
   nobles: GemNobleDef[];
+  /** Reserved development cards (max MAX_RESERVED_CARDS). */
+  reserved: GemCardDef[];
 };
 
 export type GemEngineGenre = {
@@ -68,6 +73,8 @@ export type GemEngineGenre = {
   nobles: GemNobleDef[];
   seats: [GemSeatState, GemSeatState];
   lastEvent: string | null;
+  /** When set, that seat must discard down to MAX_GEM_TOKENS before the turn ends. */
+  pendingDiscardSeat: PlayerId | null;
 };
 
 /** Generic gem-engine / jewel-workshop cues (not brand-specific). */
@@ -93,6 +100,7 @@ function cloneSeat(seat: GemSeatState): GemSeatState {
     prestige: seat.prestige,
     cards: [...seat.cards],
     nobles: [...seat.nobles],
+    reserved: (seat.reserved ?? []).map((c) => ({ ...c, cost: { ...c.cost } })),
   };
 }
 
@@ -112,6 +120,7 @@ function cloneGenre(genre: GemEngineGenre): GemEngineGenre {
     nobles: [...genre.nobles],
     seats: [cloneSeat(genre.seats[0]), cloneSeat(genre.seats[1])],
     lastEvent: genre.lastEvent,
+    pendingDiscardSeat: genre.pendingDiscardSeat,
   };
 }
 
@@ -270,6 +279,31 @@ function tryVisitNobles(genre: GemEngineGenre, seatId: PlayerId) {
   genre.nobles = remaining;
 }
 
+function finishMainAction(
+  genre: GemEngineGenre,
+  seatId: PlayerId,
+  prestigeToWin: number,
+): {
+  genre: GemEngineGenre;
+  phase: PlayPhaseId;
+  activePlayerId: PlayerId;
+  status: "active" | "complete";
+  winnerId: number | null;
+} {
+  if (totalGems(genre.seats[seatId]!.gems) > MAX_GEM_TOKENS) {
+    genre.pendingDiscardSeat = seatId;
+    return {
+      genre,
+      phase: "main",
+      activePlayerId: seatId,
+      status: "active",
+      winnerId: null,
+    };
+  }
+  genre.pendingDiscardSeat = null;
+  return afterTurn(genre, seatId, prestigeToWin);
+}
+
 function afterTurn(
   genre: GemEngineGenre,
   seatId: PlayerId,
@@ -281,6 +315,7 @@ function afterTurn(
   status: "active" | "complete";
   winnerId: number | null;
 } {
+  genre.pendingDiscardSeat = null;
   tryVisitNobles(genre, seatId);
   if (genre.seats[seatId]!.prestige >= prestigeToWin) {
     return {
@@ -329,10 +364,11 @@ export const gemEngineAdapter: PlayKernelAdapter<GemEngineGenre, GemEngineConfig
       decks,
       nobles: shuffleInPlace(config.content.nobles, rng, 67).slice(0, 3),
       seats: [
-        { gems: emptyGems(), discounts: emptyDiscounts(), prestige: 0, cards: [], nobles: [] },
-        { gems: emptyGems(), discounts: emptyDiscounts(), prestige: 0, cards: [], nobles: [] },
+        { gems: emptyGems(), discounts: emptyDiscounts(), prestige: 0, cards: [], nobles: [], reserved: [] },
+        { gems: emptyGems(), discounts: emptyDiscounts(), prestige: 0, cards: [], nobles: [], reserved: [] },
       ],
       lastEvent: null,
+      pendingDiscardSeat: null,
     };
     refillMarket(genre, 0);
     refillMarket(genre, 1);
@@ -347,11 +383,29 @@ export const gemEngineAdapter: PlayKernelAdapter<GemEngineGenre, GemEngineConfig
     const actions: LegalAction[] = [];
     const genre = state.genre;
     const seat = genre.seats[playerId]!;
+    if (!seat.reserved) seat.reserved = [];
+
+    // Overflow discard phase: only discard until ≤ MAX_GEM_TOKENS.
+    if (genre.pendingDiscardSeat === playerId) {
+      const excess = totalGems(seat.gems) - MAX_GEM_TOKENS;
+      if (excess <= 0) return [];
+      for (const color of [...GEM_COLORS, "gold"] as GemToken[]) {
+        if ((seat.gems[color] ?? 0) > 0) {
+          actions.push({
+            type: "discard_gems",
+            label: `弃回 ${color}`,
+            payload: { color, count: 1 },
+          });
+        }
+      }
+      return actions;
+    }
+
     for (let i = 0; i < GEM_COLORS.length; i++) {
       for (let j = i + 1; j < GEM_COLORS.length; j++) {
         for (let k = j + 1; k < GEM_COLORS.length; k++) {
           const colors = [GEM_COLORS[i]!, GEM_COLORS[j]!, GEM_COLORS[k]!];
-          if (colors.every((c) => genre.bank[c] > 0) && totalGems(seat.gems) + 3 <= 10) {
+          if (colors.every((c) => genre.bank[c] > 0)) {
             actions.push({
               type: "take_diverse",
               label: `拿 ${colors.join("/")}`,
@@ -362,7 +416,7 @@ export const gemEngineAdapter: PlayKernelAdapter<GemEngineGenre, GemEngineConfig
       }
     }
     for (const color of GEM_COLORS) {
-      if (genre.bank[color] >= 4 && totalGems(seat.gems) + 2 <= 10) {
+      if (genre.bank[color] >= 4) {
         actions.push({
           type: "take_pair",
           label: `拿两枚${color}`,
@@ -379,14 +433,40 @@ export const gemEngineAdapter: PlayKernelAdapter<GemEngineGenre, GemEngineConfig
             payload: { tier: tier + 1, index },
           });
         }
+        if ((seat.reserved ?? []).length < MAX_RESERVED_CARDS) {
+          actions.push({
+            type: "reserve",
+            label: `保留 T${card.tier} ${card.discount}`,
+            payload: { tier: tier + 1, index },
+          });
+        }
       });
+      if ((seat.reserved ?? []).length < MAX_RESERVED_CARDS && genre.decks[tier]!.length > 0) {
+        actions.push({
+          type: "reserve",
+          label: `保留牌库顶 T${tier + 1}`,
+          payload: { tier: tier + 1, fromDeck: true },
+        });
+      }
     }
+    (seat.reserved ?? []).forEach((card, index) => {
+      if (canAfford(seat, card)) {
+        actions.push({
+          type: "buy_reserved",
+          label: `买保留 ${card.discount}+${card.prestige}`,
+          payload: { index },
+        });
+      }
+    });
     return actions;
   },
   reduce(state, action, config) {
     if (state.status !== "active" || action.playerId !== state.activePlayerId) return null;
     const prestigeToWin = config.content.prestigeToWin;
     const genre = cloneGenre(state.genre);
+    for (const s of genre.seats) {
+      if (!s.reserved) s.reserved = [];
+    }
     const seat = genre.seats[action.playerId]!;
 
     if (action.type === "take_diverse") {
@@ -396,26 +476,55 @@ export const gemEngineAdapter: PlayKernelAdapter<GemEngineGenre, GemEngineConfig
       for (const c of colors) {
         if (!GEM_COLORS.includes(c as GemColor) || genre.bank[c as GemColor] < 1) return null;
       }
-      if (totalGems(seat.gems) + 3 > 10) return null;
+      if (genre.pendingDiscardSeat !== null) return null;
       for (const c of colors as GemColor[]) {
         genre.bank[c] -= 1;
         seat.gems[c] += 1;
       }
       genre.lastEvent = `seat${action.playerId}_take_diverse`;
-      return afterTurn(genre, action.playerId, prestigeToWin);
+      return finishMainAction(genre, action.playerId, prestigeToWin);
     }
 
     if (action.type === "take_pair") {
+      if (genre.pendingDiscardSeat !== null) return null;
       const color = action.payload?.color as GemColor | undefined;
       if (!color || !GEM_COLORS.includes(color) || genre.bank[color] < 4) return null;
-      if (totalGems(seat.gems) + 2 > 10) return null;
       genre.bank[color] -= 2;
       seat.gems[color] += 2;
       genre.lastEvent = `seat${action.playerId}_take_pair_${color}`;
-      return afterTurn(genre, action.playerId, prestigeToWin);
+      return finishMainAction(genre, action.playerId, prestigeToWin);
+    }
+
+    if (action.type === "reserve") {
+      if (genre.pendingDiscardSeat !== null) return null;
+      if ((seat.reserved ?? []).length >= MAX_RESERVED_CARDS) return null;
+      const tier = Number(action.payload?.tier);
+      if (![1, 2, 3].includes(tier)) return null;
+      const tierIndex = tier - 1;
+      const fromDeck = action.payload?.fromDeck === true;
+      let card: GemCardDef | undefined;
+      if (fromDeck) {
+        card = genre.decks[tierIndex]!.shift();
+      } else {
+        const index = Number(action.payload?.index);
+        if (!Number.isInteger(index) || index < 0) return null;
+        card = genre.market[tierIndex]![index];
+        if (!card) return null;
+        genre.market[tierIndex]!.splice(index, 1);
+        refillMarket(genre, tierIndex);
+      }
+      if (!card) return null;
+      seat.reserved.push({ ...card, cost: { ...card.cost } });
+      if (genre.bank.gold > 0) {
+        genre.bank.gold -= 1;
+        seat.gems.gold += 1;
+      }
+      genre.lastEvent = `seat${action.playerId}_reserve_${card.id}`;
+      return finishMainAction(genre, action.playerId, prestigeToWin);
     }
 
     if (action.type === "buy") {
+      if (genre.pendingDiscardSeat !== null) return null;
       const tier = Number(action.payload?.tier);
       const index = Number(action.payload?.index);
       if (![1, 2, 3].includes(tier) || !Number.isInteger(index) || index < 0) return null;
@@ -429,6 +538,45 @@ export const gemEngineAdapter: PlayKernelAdapter<GemEngineGenre, GemEngineConfig
       seat.prestige += card.prestige;
       refillMarket(genre, tierIndex);
       genre.lastEvent = `seat${action.playerId}_buy_${card.id}`;
+      return afterTurn(genre, action.playerId, prestigeToWin);
+    }
+
+    if (action.type === "buy_reserved") {
+      if (genre.pendingDiscardSeat !== null) return null;
+      const index = Number(action.payload?.index);
+      if (!Number.isInteger(index) || index < 0) return null;
+      const card = seat.reserved[index];
+      if (!card || !canAfford(seat, card)) return null;
+      payForCard(genre, action.playerId, card);
+      seat.reserved.splice(index, 1);
+      seat.cards.push(card);
+      seat.discounts[card.discount] += 1;
+      seat.prestige += card.prestige;
+      genre.lastEvent = `seat${action.playerId}_buy_reserved_${card.id}`;
+      return afterTurn(genre, action.playerId, prestigeToWin);
+    }
+
+    if (action.type === "discard_gems") {
+      if (genre.pendingDiscardSeat !== action.playerId) return null;
+      const color = action.payload?.color as GemToken | undefined;
+      const count = Number(action.payload?.count ?? 1);
+      if (!color || !Number.isInteger(count) || count < 1) return null;
+      if (color !== "gold" && !GEM_COLORS.includes(color as GemColor)) return null;
+      if ((seat.gems[color] ?? 0) < count) return null;
+      seat.gems[color] -= count;
+      genre.bank[color] += count;
+      genre.lastEvent = `seat${action.playerId}_discard_${color}_${count}`;
+      if (totalGems(seat.gems) > MAX_GEM_TOKENS) {
+        genre.pendingDiscardSeat = action.playerId;
+        return {
+          genre,
+          phase: "main",
+          activePlayerId: action.playerId,
+          status: "active",
+          winnerId: null,
+        };
+      }
+      genre.pendingDiscardSeat = null;
       return afterTurn(genre, action.playerId, prestigeToWin);
     }
 
@@ -481,7 +629,19 @@ export function pickGemEngineBotAction(
     // Should not happen often; fall back to take whatever bank allows.
     return { type: "take_diverse", playerId: state.activePlayerId, payload: { colors: ["white", "blue", "green"] } };
   }
-  const buys = legal.filter((a) => a.type === "buy");
+  const discards = legal.filter((a) => a.type === "discard_gems");
+  if (discards.length) {
+    // Prefer discarding basic colors before gold.
+    const nonGold = discards.filter((a) => a.payload?.color !== "gold");
+    const pool = nonGold.length ? nonGold : discards;
+    const choice = pool[rng.at(state.sequence + 3) % pool.length]!;
+    return {
+      type: choice.type,
+      playerId: state.activePlayerId,
+      ...(choice.payload ? { payload: { ...choice.payload } } : {}),
+    };
+  }
+  const buys = legal.filter((a) => a.type === "buy" || a.type === "buy_reserved");
   if (buys.length && rng.at(state.sequence + 2) % 3 !== 0) {
     const choice = buys[rng.at(state.sequence + 5) % buys.length]!;
     return {
@@ -518,6 +678,6 @@ export function autoPlayGemEngineGame(
 
 export function gemEngineUnsupportedNotes(): string[] {
   return [
-    "gem-engine-v1 subset: 2 seats, take 3-diverse / 2-same gems, buy visible tier cards with permanent discounts + auto nobles, prestige win; reserve hand / 3–4 seats / complex gold overflow UI unsupported.",
+    "gem-engine-v1 subset: 2 seats, take gems, reserve hand (≤3) + buy reserved, token overflow discard to 10, buy visible/reserved with discounts + auto nobles, prestige win; 3–4 seats unsupported.",
   ];
 }
