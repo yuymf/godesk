@@ -5,7 +5,7 @@
 | 回归靶 | H04 before/after wall-close；unit print≠blank；T036/T047/T050 绿 |
 | 层 | **共享呈现**（pattern wall print） |
 | 状态 | **关** |
-| tip | pending |
+| tip | `2e4b6e3` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t054/` |
 
 ## 问题
