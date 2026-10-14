@@ -5,7 +5,7 @@
 | 回归靶 | H03 / H04 / H05 Room 近距可读牌面 |
 | 层 | **共享呈现**（tabletop-objects 程序化 atlas） |
 | 状态 | **关** |
-| tip | （实现后填） |
+| tip | `ebe8ca70fe0e3ba7cf565f560143cec86a291b0f` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t037/` |
 
 ## 现象
