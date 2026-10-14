@@ -24,6 +24,7 @@ export type NetworkRouteBoardState = {
   lastClaim: { edgeId: string; playerId: number } | null;
   routeCounts: [number, number];
   freight?: NetworkRouteGenre["freight"];
+  tickets?: NetworkRouteGenre["tickets"];
 };
 
 const COPY = {
@@ -53,6 +54,13 @@ const COPY = {
     ships: "船队",
     accept: "接合约",
     freightHint: "接合约 → 铺线连通起终点 → 交付赚信誉；先到目标信誉获胜",
+    ticketsHint: "抽车厢牌 / 认领彩色路线 / 抽车票；按长度表计分，车票通加分未通扣分",
+    tickets: "车票",
+    trains: "车厢牌",
+    trainsLeft: "剩余车厢",
+    routePts: "路线分",
+    drawTrains: "抽车厢",
+    drawTickets: "抽车票",
     winRep: "目标信誉",
   },
   en: {
@@ -81,6 +89,13 @@ const COPY = {
     ships: "Fleet",
     accept: "Accept",
     freightHint: "Accept a contract, claim a path, deliver for reputation",
+    ticketsHint: "Draw trains / claim colored routes / draw tickets; length table + ticket ±",
+    tickets: "Tickets",
+    trains: "Train cards",
+    trainsLeft: "Trains left",
+    routePts: "Route pts",
+    drawTrains: "Draw trains",
+    drawTickets: "Draw tickets",
     winRep: "Rep to win",
   },
 } as const;
@@ -97,6 +112,7 @@ function toGenre(board: NetworkRouteBoardState): NetworkRouteGenre {
     lastClaim: board.lastClaim ? { ...board.lastClaim } : null,
     routeCounts: [...board.routeCounts] as [number, number],
     freight: board.freight ?? null,
+    tickets: board.tickets ?? null,
   };
 }
 
@@ -298,7 +314,7 @@ export function NetworkRouteBoard({
           stage={<TabletopStage kernel="network-route-v1" legal={[...legalEdges]} onAct={showLegal ? onAct : undefined} render={render} state={networkRoute} importedModels={importedModels} />}
           turnTitle={zh ? "本回合" : "This turn"}
           turnBlurb={statusLine}
-          turnDetail={networkRoute.freight ? copy.freightHint : copy.connectHint}
+          turnDetail={networkRoute.tickets ? copy.ticketsHint : networkRoute.freight ? copy.freightHint : copy.connectHint}
           primary={null}
           idleLine={showLegal ? (zh ? "点地图上的虚线路段，或在下方选一段铺设。" : "Tap a dashed route on the map, or pick one below.") : copy.waiting}
           chronicle={chronicle}
@@ -326,9 +342,37 @@ export function NetworkRouteBoard({
                   },
                 ]
               : []),
+            ...(networkRoute.tickets
+              ? [
+                  {
+                    key: "rpts",
+                    label: copy.routePts,
+                    value: viewerSeat === null ? "—" : networkRoute.tickets.routeScore[viewerSeat],
+                    glyph: "分",
+                    art: actionCardArt(render.hud, "terminals"),
+                  },
+                  {
+                    key: "tleft",
+                    label: copy.trainsLeft,
+                    value: viewerSeat === null ? "—" : networkRoute.tickets.trainsLeft[viewerSeat],
+                    glyph: "车",
+                    art: actionCardArt(render.hud, "open-routes"),
+                  },
+                ]
+              : []),
           ]}
           actionsLabel={zh ? "可铺路线" : "Claimable"}
           actions={[
+            ...legalActions
+              .filter((a) => a.type === "draw_trains" || a.type === "draw_tickets")
+              .map((a) => ({
+                key: a.type,
+                label: a.type === "draw_trains" ? copy.drawTrains : copy.drawTickets,
+                detail: a.label,
+                enabled: showLegal,
+                onClick: () => onAct?.(a.type, {}),
+                art: actionCardArt(render.hud, "open-routes"),
+              })),
             ...legalActions
               .filter((a) => a.type === "accept_contract")
               .map((a) => ({
@@ -344,14 +388,26 @@ export function NetworkRouteBoard({
               })),
             ...networkRoute.edges
               .filter((edge) => networkRoute.claims[edge.id] === null || networkRoute.claims[edge.id] === undefined)
-              .map((edge) => ({
-                key: edge.id,
-                label: edgeName(edge.id),
-                detail: `${copy.claim} · ${edge.from}–${edge.to}`,
-                enabled: showLegal && legalEdges.has(edge.id),
-                onClick: () => onAct?.("claim", { edgeId: edge.id }),
-                art: actionCardArt(render.hud, edge.id),
-              })),
+              .map((edge) => {
+                const claimActs = legalActions.filter(
+                  (a) => a.type === "claim" && a.payload?.edgeId === edge.id,
+                );
+                const first = claimActs[0];
+                return {
+                  key: edge.id,
+                  label: edgeName(edge.id),
+                  detail: `${copy.claim} · ${edge.from}–${edge.to}`,
+                  enabled: showLegal && claimActs.length > 0,
+                  onClick: () =>
+                    onAct?.("claim", {
+                      edgeId: edge.id,
+                      ...(first?.payload?.payColor
+                        ? { payColor: first.payload.payColor }
+                        : {}),
+                    }),
+                  art: actionCardArt(render.hud, edge.id),
+                };
+              }),
           ]}
           emptyActions={copy.noLast}
         />
@@ -404,6 +460,30 @@ export function NetworkRouteBoard({
         <p aria-label={copy.goal} className="network-route-goal">
           {goalLine}
         </p>
+        {networkRoute.tickets ? (
+          <div className="network-route-tickets" aria-label="tickets">
+            <p className="network-route-hint">{copy.ticketsHint}</p>
+            <p>
+              {copy.routePts}: 0={networkRoute.tickets.routeScore[0]} · 1={networkRoute.tickets.routeScore[1]} · {copy.trainsLeft}: 0={networkRoute.tickets.trainsLeft[0]} · 1={networkRoute.tickets.trainsLeft[1]}
+            </p>
+            {viewerSeat !== null ? (
+              <p aria-label={copy.tickets}>
+                {copy.tickets}: {(networkRoute.tickets.ticketHand[viewerSeat] ?? []).map((c) => `${c.name}(${c.points})`).join(" · ") || "—"}
+              </p>
+            ) : null}
+            {showLegal ? (
+              <div className="network-route-tickets-actions">
+                {legalActions
+                  .filter((a) => a.type === "draw_trains" || a.type === "draw_tickets")
+                  .map((a) => (
+                    <button key={a.type} type="button" onClick={() => onAct?.(a.type, {})}>
+                      {a.type === "draw_trains" ? copy.drawTrains : copy.drawTickets}
+                    </button>
+                  ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         {networkRoute.freight ? (
           <div className="network-route-freight" aria-label="freight">
             <p className="network-route-hint">{copy.freightHint}</p>

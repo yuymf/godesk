@@ -368,7 +368,9 @@ export function initialSessionState(
         terminalFrom: runtime.kernel.terminalFrom,
         terminalTo: runtime.kernel.terminalTo,
         freight: runtime.kernel.freight === true,
+        tickets: runtime.kernel.tickets === true,
         content: runtime.kernel.content ?? null,
+        ticketsContent: (runtime.kernel.ticketsContent as import("../src/runtime/adapters/network-route").NetworkRouteTicketsContent | null | undefined) ?? null,
       }),
       _seed,
     );
@@ -1067,7 +1069,9 @@ export function acceptIntent(
       terminalFrom: runtime.kernel.terminalFrom,
       terminalTo: runtime.kernel.terminalTo,
       freight: runtime.kernel.freight === true,
+      tickets: runtime.kernel.tickets === true,
       content: runtime.kernel.content ?? null,
+      ticketsContent: (runtime.kernel.ticketsContent as import("../src/runtime/adapters/network-route").NetworkRouteTicketsContent | null | undefined) ?? null,
     });
     const playState = {
       seed,
@@ -1091,7 +1095,10 @@ export function acceptIntent(
         freight: state.networkRoute.freight
           ? structuredClone(state.networkRoute.freight)
           : null,
-      } satisfies NetworkRouteGenre,
+        tickets: state.networkRoute.tickets
+          ? structuredClone(state.networkRoute.tickets)
+          : null,
+      } as NetworkRouteGenre,
     };
     const result = applyAction(
       networkRouteAdapter,
@@ -1457,7 +1464,9 @@ export function pickBotIntent(
       terminalFrom: runtime.kernel.terminalFrom,
       terminalTo: runtime.kernel.terminalTo,
       freight: runtime.kernel.freight === true,
+      tickets: runtime.kernel.tickets === true,
       content: runtime.kernel.content ?? null,
+      ticketsContent: (runtime.kernel.ticketsContent as import("../src/runtime/adapters/network-route").NetworkRouteTicketsContent | null | undefined) ?? null,
     });
     const playState = {
       seed,
@@ -1479,7 +1488,10 @@ export function pickBotIntent(
         freight: state.networkRoute.freight
           ? structuredClone(state.networkRoute.freight)
           : null,
-      } satisfies NetworkRouteGenre,
+        tickets: state.networkRoute.tickets
+          ? structuredClone(state.networkRoute.tickets)
+          : null,
+      } as NetworkRouteGenre,
     };
     const bot = pickNetworkRouteBotAction(playState, kernelConfig, seed, state.turn + 1);
     if (!bot) return null;
@@ -1567,10 +1579,12 @@ export function runBotSimulation(
       terminalFrom: runtime.kernel.terminalFrom,
       terminalTo: runtime.kernel.terminalTo,
       freight: runtime.kernel.freight === true,
+      tickets: runtime.kernel.tickets === true,
       content: runtime.kernel.content ?? null,
+      ticketsContent: (runtime.kernel.ticketsContent as import("../src/runtime/adapters/network-route").NetworkRouteTicketsContent | null | undefined) ?? null,
     });
     let guard = 0;
-    while (state.status === "active" && state.networkRoute && guard < 64) {
+    while (state.status === "active" && state.networkRoute && guard < 200) {
       guard += 1;
       const playState = {
         seed,
@@ -1594,7 +1608,10 @@ export function runBotSimulation(
           freight: state.networkRoute.freight
             ? structuredClone(state.networkRoute.freight)
             : null,
-        } satisfies NetworkRouteGenre,
+          tickets: state.networkRoute.tickets
+            ? structuredClone(state.networkRoute.tickets)
+            : null,
+        } as NetworkRouteGenre,
       };
       const bot = pickNetworkRouteBotAction(
         playState,

@@ -27,6 +27,36 @@ import {
   createGraphTopologyStub,
   type GraphTopologyStub,
 } from "../topology-stub";
+import {
+  applyDrawTickets,
+  applyDrawTrains,
+  applyTicketsClaim,
+  buildTicketsState,
+  cloneTicketsState,
+  computeFinalScores,
+  defaultTicketsContent,
+  type NetworkRouteTicketsContent,
+  type NetworkRouteTicketsState,
+  type TrainColor,
+  TRAIN_COLORS,
+} from "./network-route-tickets";
+
+export {
+  defaultTicketsContent,
+  ideaRequestsTicketsRoute,
+  ticketsUnsupportedNotes,
+  defaultDestinationTickets,
+  defaultTicketsEdgeMeta,
+  DEFAULT_LENGTH_SCORES,
+  TICKETS_ROUTE_CUES,
+  TRAIN_COLORS,
+  type NetworkRouteTicketsContent,
+  type NetworkRouteTicketsState,
+  type DestinationTicketDef,
+  type TrainColor,
+  type RouteEdgeColor,
+  type TrainCardColor,
+} from "./network-route-tickets";
 
 export const NETWORK_ROUTE_KERNEL_TYPE = "network-route-v1" as const;
 
@@ -137,7 +167,9 @@ type NetworkRouteConfig = {
   terminalFrom: string;
   terminalTo: string;
   freight: boolean;
+  tickets: boolean;
   content: NetworkRouteContent | null;
+  ticketsContent: NetworkRouteTicketsContent | null;
 };
 
 export type NetworkRouteGenre = {
@@ -150,6 +182,7 @@ export type NetworkRouteGenre = {
   lastClaim: { edgeId: string; playerId: PlayerId } | null;
   routeCounts: [number, number];
   freight: NetworkRouteFreightState | null;
+  tickets: NetworkRouteTicketsState | null;
 };
 
 /** Generic logistics cues (not starport-specific). */
@@ -222,8 +255,6 @@ export function parseFreightTuningFromIdea(idea: string): Partial<NetworkRouteCo
   const out: Partial<NetworkRouteContent> = {};
   // Prefer win-condition phrasing; fall back to the largest 信誉 N in the text
   // (opening "信誉 0" must not override "先达到信誉 10").
-  const winRep =
-    idea.match(/(?:先达到|达到|目标)?信誉\s*(\d+)/g) || [];
   const repNums = [...idea.matchAll(/信誉\s*(\d+)/g)].map((m) => Number(m[1]));
   const winExplicit = idea.match(/(?:先达到|目标)\s*信誉\s*(\d+)/);
   if (winExplicit) out.winReputation = Math.max(1, Number(winExplicit[1]));
@@ -375,12 +406,25 @@ export function parseNetworkRouteConfig(
   const freight =
     raw.freight === true ||
     (content !== null && content.contracts.length > 0);
+  let ticketsContent: NetworkRouteTicketsContent | null = null;
+  const tcRaw = raw.ticketsContent;
+  if (tcRaw && typeof tcRaw === "object") {
+    ticketsContent = defaultTicketsContent(tcRaw as Partial<NetworkRouteTicketsContent>);
+  }
+  const tickets =
+    !freight &&
+    (raw.tickets === true || ticketsContent !== null);
+  if (tickets && !ticketsContent) {
+    ticketsContent = defaultTicketsContent();
+  }
   return {
     playerCount: playerCount as number,
     terminalFrom,
     terminalTo,
     freight,
+    tickets,
     content,
+    ticketsContent,
   };
 }
 
@@ -389,12 +433,19 @@ export function createNetworkRouteKernelConfig(input?: {
   terminalFrom?: string;
   terminalTo?: string;
   freight?: boolean;
+  tickets?: boolean;
   content?: NetworkRouteContent | null;
+  ticketsContent?: NetworkRouteTicketsContent | null;
 }): PlayKernelConfig {
   const content = input?.content ?? null;
   const freight =
     input?.freight === true ||
     (content !== null && content.contracts.length > 0);
+  const ticketsContent =
+    !freight && (input?.ticketsContent || input?.tickets)
+      ? input?.ticketsContent ?? defaultTicketsContent()
+      : null;
+  const tickets = !freight && (input?.tickets === true || ticketsContent !== null);
   return {
     kernelType: NETWORK_ROUTE_KERNEL_TYPE,
     playerCount: input?.playerCount ?? 2,
@@ -404,7 +455,9 @@ export function createNetworkRouteKernelConfig(input?: {
       terminalFrom: input?.terminalFrom ?? NETWORK_ROUTE_TERMINALS[0],
       terminalTo: input?.terminalTo ?? NETWORK_ROUTE_TERMINALS[1],
       freight,
+      tickets,
       ...(content ? { content } : {}),
+      ...(ticketsContent ? { ticketsContent } : {}),
     },
   };
 }
@@ -508,6 +561,10 @@ export const networkRouteAdapter: PlayKernelAdapter<
       config.freight && config.content
         ? buildFreightState(config.content, seed)
         : null;
+    const tickets =
+      !freight && config.tickets && config.ticketsContent
+        ? buildTicketsState(config.ticketsContent, seed)
+        : null;
     return {
       cities,
       edges,
@@ -517,6 +574,7 @@ export const networkRouteAdapter: PlayKernelAdapter<
       lastClaim: null,
       routeCounts: [0, 0],
       freight,
+      tickets,
     };
   },
 
@@ -530,7 +588,45 @@ export const networkRouteAdapter: PlayKernelAdapter<
     }
     const legal: LegalAction[] = [];
     const freight = state.genre.freight;
+    const tickets = state.genre.tickets;
     const funds = freight ? freight.funds[playerId]! : Infinity;
+
+    if (tickets) {
+      legal.push({
+        type: "draw_trains",
+        label: "Draw train cards",
+        payload: {},
+      });
+      if (tickets.ticketDeck.length > 0) {
+        legal.push({
+          type: "draw_tickets",
+          label: "Draw destination tickets",
+          payload: {},
+        });
+      }
+      for (const edge of state.genre.edges) {
+        if (state.genre.claims[edge.id] !== null) continue;
+        const meta = tickets.edgeMeta[edge.id];
+        if (!meta) continue;
+        if (tickets.trainsLeft[playerId]! < meta.length) continue;
+        const colors: TrainColor[] =
+          meta.color === "gray"
+            ? [...TRAIN_COLORS]
+            : [meta.color as TrainColor];
+        for (const payColor of colors) {
+          const colored = tickets.trainHand[playerId][payColor] ?? 0;
+          const wild = tickets.trainHand[playerId].wild ?? 0;
+          if (colored + wild < meta.length) continue;
+          if (meta.color !== "gray" && meta.color !== payColor) continue;
+          legal.push({
+            type: "claim",
+            label: `Claim ${edge.from}–${edge.to} (${meta.color}×${meta.length}/${payColor})`,
+            payload: { edgeId: edge.id, payColor },
+          });
+        }
+      }
+      return legal;
+    }
 
     for (const edge of state.genre.edges) {
       if (state.genre.claims[edge.id] !== null) continue;
@@ -561,6 +657,140 @@ export const networkRouteAdapter: PlayKernelAdapter<
 
   reduce(state, action) {
     if (state.status !== "active" || action.playerId !== state.activePlayerId) {
+      return null;
+    }
+
+    const finishTicketsTurn = (
+      genreBase: NetworkRouteGenre,
+      ticketsNext: NetworkRouteTicketsState,
+      actor: PlayerId,
+      claimedEdgeId: string | null,
+    ) => {
+      let tickets = ticketsNext;
+      let finalTurnsLeft = tickets.finalTurnsLeft;
+      if (
+        claimedEdgeId &&
+        tickets.trainsLeft[actor]! <= 2 &&
+        finalTurnsLeft === null
+      ) {
+        finalTurnsLeft = state.playerCount; // actor already spent this turn; count remaining incl. wrap
+        tickets = { ...tickets, finalTurnsLeft };
+      } else if (finalTurnsLeft !== null) {
+        finalTurnsLeft = finalTurnsLeft - 1;
+        tickets = { ...tickets, finalTurnsLeft };
+      }
+      const genre: NetworkRouteGenre = {
+        ...genreBase,
+        tickets,
+        freight: null,
+      };
+      const shouldEnd =
+        finalTurnsLeft !== null && finalTurnsLeft <= 0
+          ? true
+          : Object.values(genre.claims).every((o) => o !== null);
+      if (shouldEnd) {
+        const scores = computeFinalScores(
+          tickets,
+          genre.claims,
+          genre.edges,
+          playerConnectsTerminals,
+        );
+        tickets = { ...tickets, finalScore: scores, finalTurnsLeft: 0 };
+        const winnerId =
+          scores[0] === scores[1]
+            ? null
+            : ((scores[0] > scores[1] ? 0 : 1) as PlayerId | null);
+        return {
+          genre: { ...genre, tickets },
+          phase: "ended" as PlayPhaseId,
+          activePlayerId: actor,
+          status: "complete" as const,
+          winnerId,
+          endReason: "tickets_scored",
+        };
+      }
+      const nextPlayer = ((actor + 1) % state.playerCount) as PlayerId;
+      return {
+        genre,
+        phase: "play" as PlayPhaseId,
+        activePlayerId: nextPlayer,
+        status: "active" as const,
+        winnerId: null,
+      };
+    };
+
+    if (state.genre.tickets) {
+      if (action.type === "draw_trains") {
+        const nextTickets = applyDrawTrains(
+          state.genre.tickets,
+          action.playerId,
+          state.sequence + 1,
+        );
+        if (!nextTickets) return null;
+        const genre: NetworkRouteGenre = {
+          cities: state.genre.cities.map((c) => ({ ...c })),
+          edges: state.genre.edges.map((e) => ({ ...e })),
+          claims: { ...state.genre.claims },
+          terminalFrom: state.genre.terminalFrom,
+          terminalTo: state.genre.terminalTo,
+          lastClaim: state.genre.lastClaim
+            ? { ...state.genre.lastClaim }
+            : null,
+          routeCounts: [...state.genre.routeCounts] as [number, number],
+          freight: null,
+          tickets: nextTickets,
+        };
+        return finishTicketsTurn(genre, nextTickets, action.playerId, null);
+      }
+      if (action.type === "draw_tickets") {
+        const nextTickets = applyDrawTickets(
+          state.genre.tickets,
+          action.playerId,
+        );
+        if (!nextTickets) return null;
+        const genre: NetworkRouteGenre = {
+          cities: state.genre.cities.map((c) => ({ ...c })),
+          edges: state.genre.edges.map((e) => ({ ...e })),
+          claims: { ...state.genre.claims },
+          terminalFrom: state.genre.terminalFrom,
+          terminalTo: state.genre.terminalTo,
+          lastClaim: state.genre.lastClaim
+            ? { ...state.genre.lastClaim }
+            : null,
+          routeCounts: [...state.genre.routeCounts] as [number, number],
+          freight: null,
+          tickets: nextTickets,
+        };
+        return finishTicketsTurn(genre, nextTickets, action.playerId, null);
+      }
+      if (action.type === "claim") {
+        const edgeId = payloadEdgeId(action);
+        const payColor = action.payload?.payColor;
+        if (!edgeId || typeof payColor !== "string") return null;
+        if (!(edgeId in state.genre.claims)) return null;
+        if (state.genre.claims[edgeId] !== null) return null;
+        const nextTickets = applyTicketsClaim(
+          state.genre.tickets,
+          action.playerId,
+          edgeId,
+          payColor as TrainColor,
+        );
+        if (!nextTickets) return null;
+        const claims = { ...state.genre.claims, [edgeId]: action.playerId };
+        const routeCounts = countClaims(claims);
+        const genre: NetworkRouteGenre = {
+          cities: state.genre.cities.map((c) => ({ ...c })),
+          edges: state.genre.edges.map((e) => ({ ...e })),
+          claims,
+          terminalFrom: state.genre.terminalFrom,
+          terminalTo: state.genre.terminalTo,
+          lastClaim: { edgeId, playerId: action.playerId },
+          routeCounts,
+          freight: null,
+          tickets: nextTickets,
+        };
+        return finishTicketsTurn(genre, nextTickets, action.playerId, edgeId);
+      }
       return null;
     }
 
@@ -610,6 +840,7 @@ export const networkRouteAdapter: PlayKernelAdapter<
           : null,
         routeCounts: [...state.genre.routeCounts] as [number, number],
         freight: nextFreight,
+        tickets: null,
       };
       const nextPlayer = ((action.playerId + 1) % state.playerCount) as PlayerId;
       return {
@@ -674,6 +905,7 @@ export const networkRouteAdapter: PlayKernelAdapter<
       lastClaim: { edgeId, playerId: action.playerId },
       routeCounts,
       freight,
+      tickets: null,
     };
 
     // Freight mode: reputation win.
@@ -773,12 +1005,18 @@ export function networkRouteToSessionFields(
     lastClaim: { edgeId: string; playerId: number } | null;
     routeCounts: [number, number];
     freight: NetworkRouteFreightState | null;
+    tickets: NetworkRouteTicketsState | null;
   };
 } {
   const freight = state.genre.freight;
-  const scores = freight
-    ? [...freight.reputation]
-    : [...state.genre.routeCounts];
+  const tickets = state.genre.tickets;
+  const scores = tickets
+    ? tickets.finalScore
+      ? [...tickets.finalScore]
+      : [...tickets.routeScore]
+    : freight
+      ? [...freight.reputation]
+      : [...state.genre.routeCounts];
   return {
     turn: state.sequence,
     activeSeat: state.activePlayerId,
@@ -820,6 +1058,7 @@ export function networkRouteToSessionFields(
               : null,
           }
         : null,
+      tickets: tickets ? cloneTicketsState(tickets) : null,
     },
   };
 }
@@ -829,7 +1068,9 @@ export function bindNetworkRouteFromRuntimeKernel(input: {
   terminalFrom?: string;
   terminalTo?: string;
   freight?: boolean;
+  tickets?: boolean;
   content?: NetworkRouteContent | null;
+  ticketsContent?: NetworkRouteTicketsContent | null;
 }): PlayKernelConfig {
   const playerCount = input.playerCount ?? 2;
   if (playerCount !== 2) {
@@ -840,7 +1081,9 @@ export function bindNetworkRouteFromRuntimeKernel(input: {
     terminalFrom: input.terminalFrom ?? NETWORK_ROUTE_TERMINALS[0],
     terminalTo: input.terminalTo ?? NETWORK_ROUTE_TERMINALS[1],
     freight: input.freight,
+    tickets: input.tickets,
     content: input.content ?? null,
+    ticketsContent: input.ticketsContent ?? null,
   });
 }
 
@@ -872,6 +1115,22 @@ export function pickNetworkRouteBotAction(
   if (!legal.length) return null;
   const rng = createSeededRng(seed);
   const random = rng.at(Math.max(sequence, 1));
+  const tickets = state.genre.tickets;
+  if (tickets) {
+    const claims = legal.filter((a) => a.type === "claim");
+    if (claims.length) {
+      const choice = claims[random % claims.length]!;
+      return {
+        type: choice.type,
+        playerId: state.activePlayerId,
+        ...(choice.payload ? { payload: { ...choice.payload } } : {}),
+      };
+    }
+    const draws = legal.filter((a) => a.type === "draw_trains");
+    if (draws.length) {
+      return { type: "draw_trains", playerId: state.activePlayerId, payload: {} };
+    }
+  }
   // Prefer accept when hand empty and market available.
   const accepts = legal.filter((a) => a.type === "accept_contract");
   const freight = state.genre.freight;
@@ -904,7 +1163,7 @@ export function autoPlayNetworkRouteGame(
 } {
   let state = createInitialState(networkRouteAdapter, config, seed);
   const actions: PlayAction[] = [];
-  const maxPlies = DEFAULT_NETWORK_EDGES.length * 4 + 40;
+  const maxPlies = DEFAULT_NETWORK_EDGES.length * 8 + 120;
   let guard = 0;
   while (state.status === "active" && guard < maxPlies) {
     guard += 1;

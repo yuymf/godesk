@@ -132,9 +132,12 @@ import {
 } from "./project-operations";
 import {
   defaultFreightContent,
+  defaultTicketsContent,
   freightUnsupportedNotes,
   ideaRequestsFreightLogistics,
+  ideaRequestsTicketsRoute,
   parseFreightTuningFromIdea,
+  ticketsUnsupportedNotes,
 } from "../src/runtime/adapters/network-route";
 import {
   defaultHarborContent,
@@ -627,22 +630,28 @@ export async function runCreatorJob(
         : networkRouteRuntimeConfigured
         ? (() => {
             const freight = ideaRequestsFreightLogistics(idea);
+            const tickets = !freight && ideaRequestsTicketsRoute(idea);
             const tuning = freight ? parseFreightTuningFromIdea(idea) : {};
             const content = freight ? defaultFreightContent(tuning) : undefined;
+            const ticketsContent = tickets ? defaultTicketsContent() : undefined;
             const unsupported = freight
               ? [
-                  "network-route-v1 freight subset: claim-graph cargo contracts + ship cargo slots + funds/reputation win; multi-color routes / tickets deck scoring table / per-step sailing / pirate·storm events unsupported.",
+                  "network-route-v1 freight subset: claim-graph cargo contracts + ship cargo slots + funds/reputation win; per-step sailing / pirate·storm events unsupported.",
                   ...freightUnsupportedNotes(),
                 ]
-              : [
-                  "network-route-v1 executes a fixed city graph with alternate-turn route claims and first-to-connect terminal hubs on the public play-kernel; a minimal original route game (no tickets deck / multi-color routes / scoring table).",
-                ];
+              : tickets
+                ? [...ticketsUnsupportedNotes()]
+                : [
+                    "network-route-v1 executes a fixed city graph with alternate-turn route claims and first-to-connect terminal hubs on the public play-kernel; a minimal original route game (no tickets deck / multi-color routes / scoring table).",
+                  ];
             return {
               op: "configure_network_route" as const,
               config: {
                 playerCount: 2,
                 ...(freight ? { freight: true as const } : {}),
+                ...(tickets ? { tickets: true as const } : {}),
                 ...(content ? { content } : {}),
+                ...(ticketsContent ? { ticketsContent } : {}),
                 unsupported,
               },
             };

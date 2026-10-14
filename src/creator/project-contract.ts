@@ -276,6 +276,7 @@ export interface RuleSystem {
               terminalFrom?: string;
               terminalTo?: string;
               freight?: boolean;
+              tickets?: boolean;
               content?: {
                 contracts: Array<{
                   id: string;
@@ -297,6 +298,24 @@ export interface RuleSystem {
                 startingFunds: number;
                 startingReputation?: number;
                 edgeTolls?: Record<string, number>;
+              };
+              ticketsContent?: {
+                edgeMeta: Record<string, { color: string; length: number }>;
+                tickets: Array<{
+                  id: string;
+                  name: string;
+                  from: string;
+                  to: string;
+                  points: number;
+                }>;
+                lengthScores: Record<string, number>;
+                startingTrainCards: number;
+                startingTicketDraw: number;
+                startingTicketKeep: number;
+                startingTrains: number;
+                faceUpCount: number;
+                cardsPerColor: number;
+                wildCount: number;
               };
             }
           | {
@@ -701,6 +720,7 @@ export type ProjectChangeOperation =
         terminalFrom?: string;
         terminalTo?: string;
         freight?: boolean;
+        tickets?: boolean;
         content?: {
           contracts: Array<{
             id: string;
@@ -722,6 +742,24 @@ export type ProjectChangeOperation =
           startingFunds: number;
           startingReputation?: number;
           edgeTolls?: Record<string, number>;
+        };
+        ticketsContent?: {
+          edgeMeta: Record<string, { color: string; length: number }>;
+          tickets: Array<{
+            id: string;
+            name: string;
+            from: string;
+            to: string;
+            points: number;
+          }>;
+          lengthScores: Record<string, number>;
+          startingTrainCards: number;
+          startingTicketDraw: number;
+          startingTicketKeep: number;
+          startingTrains: number;
+          faceUpCount: number;
+          cardsPerColor: number;
+          wildCount: number;
         };
         unsupported?: string[];
       };
@@ -1100,6 +1138,7 @@ export interface SessionState {
     terminalTo: string;
     lastClaim: { edgeId: string; playerId: number } | null;
     routeCounts: [number, number];
+    tickets?: any;
     freight?: {
       funds: [number, number];
       reputation: [number, number];

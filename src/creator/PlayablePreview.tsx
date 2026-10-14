@@ -202,7 +202,9 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
               terminalFrom: networkKernel.terminalFrom,
               terminalTo: networkKernel.terminalTo,
               freight: networkKernel.freight === true,
+              tickets: networkKernel.tickets === true,
               content: networkKernel.content ?? null,
+              ticketsContent: (networkKernel.ticketsContent as import("../runtime/adapters/network-route").NetworkRouteTicketsContent | null | undefined) ?? null,
             })}
             readOnly
             status="active"

@@ -25,7 +25,9 @@ import {
   networkRouteGraphTopology,
   playerConnectsTerminals,
   defaultFreightContent,
+  defaultTicketsContent,
   ideaRequestsFreightLogistics,
+  ideaRequestsTicketsRoute,
   parseFreightTuningFromIdea,
   type NetworkRouteGenre,
 } from "./network-route";
@@ -278,7 +280,7 @@ describe("network-route-v1 freight subset (T006)", () => {
 describe("freight cues for H02", () => {
   it("detects logistics freight from H02 INPUT", () => {
     const idea = readFileSync(
-      "docs/hardness/suites/H02-starport-convoy/INPUT.md",
+      "docs/hardness/suites/_archive-fictional/H02-starport-convoy/INPUT.md",
       "utf8",
     );
     expect(ideaRequestsFreightLogistics(idea)).toBe(true);
@@ -293,5 +295,108 @@ describe("freight cues for H02", () => {
       "巨型矿驳",
     ]);
     expect(content.contracts.length).toBeGreaterThanOrEqual(8);
+  });
+});
+
+describe("network-route tickets subset (T016)", () => {
+  it("detects tickets cues from H02 rail rulebook without freight", () => {
+    const idea = readFileSync(
+      "docs/hardness/suites/H02-ticket-to-ride/INPUT.md",
+      "utf8",
+    );
+    expect(ideaRequestsTicketsRoute(idea)).toBe(true);
+    expect(ideaRequestsFreightLogistics(idea)).toBe(false);
+  });
+
+  it("deals destination tickets and train hands", () => {
+    const cfg = createNetworkRouteKernelConfig({
+      tickets: true,
+      ticketsContent: defaultTicketsContent(),
+    });
+    const state = createInitialState(networkRouteAdapter, cfg, 7);
+    expect(state.genre.tickets).not.toBeNull();
+    const t = state.genre.tickets!;
+    expect(t.ticketHand[0].length).toBe(2);
+    expect(t.ticketHand[1].length).toBe(2);
+    expect(Object.values(t.trainHand[0]).reduce((a, b) => a + b, 0)).toBe(4);
+    expect(t.faceUp.length).toBe(5);
+    expect(Object.keys(t.edgeMeta).length).toBe(DEFAULT_NETWORK_EDGES.length);
+  });
+
+  it("claims a colored route by paying length with scoring table", () => {
+    const cfg = createNetworkRouteKernelConfig({
+      tickets: true,
+      ticketsContent: defaultTicketsContent({
+        startingTrainCards: 0,
+        startingTrains: 45,
+      }),
+    });
+    let state = createInitialState(networkRouteAdapter, cfg, 11);
+    // Force a known hand: give seat0 enough red + wild for a red or gray edge
+    const tickets = state.genre.tickets!;
+    const edgeId = DEFAULT_NETWORK_EDGES[0]!.id; // A|B
+    const meta = tickets.edgeMeta[edgeId]!;
+    const payColor = meta.color === "gray" ? "red" : (meta.color as "red");
+    const hand0 = {
+      red: 0,
+      orange: 0,
+      yellow: 0,
+      green: 0,
+      blue: 0,
+      purple: 0,
+      black: 0,
+      white: 0,
+      wild: 0,
+    } as typeof tickets.trainHand[0];
+    hand0[payColor] = meta.length;
+    tickets.trainHand[0] = hand0;
+    state = {
+      ...state,
+      genre: { ...state.genre, tickets: { ...tickets, trainHand: [tickets.trainHand[0], tickets.trainHand[1]] } },
+    };
+    const pts = tickets.lengthScores[meta.length] ?? meta.length;
+    const result = applyAction(
+      networkRouteAdapter,
+      state,
+      {
+        type: "claim",
+        playerId: 0,
+        payload: { edgeId, payColor },
+      },
+      cfg,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.genre.claims[edgeId]).toBe(0);
+    expect(result.state.genre.tickets!.routeScore[0]).toBe(pts);
+    expect(result.state.genre.tickets!.trainsLeft[0]).toBe(45 - meta.length);
+  });
+
+  it("draw_trains and draw_tickets are legal and advance turn", () => {
+    const cfg = createNetworkRouteKernelConfig({ tickets: true });
+    let state = createInitialState(networkRouteAdapter, cfg, 3);
+    const parsed = networkRouteAdapter.parseConfig(cfg.adapter)!;
+    const legal = networkRouteAdapter.listLegalActions(state, 0, parsed);
+    expect(legal.some((a) => a.type === "draw_trains")).toBe(true);
+    const drawn = applyAction(
+      networkRouteAdapter,
+      state,
+      { type: "draw_trains", playerId: 0, payload: {} },
+      cfg,
+    );
+    expect(drawn.ok).toBe(true);
+    if (!drawn.ok) return;
+    state = drawn.state;
+    expect(state.activePlayerId).toBe(1);
+  });
+
+  it("auto-play tickets game terminates", () => {
+    const cfg = createNetworkRouteKernelConfig({
+      tickets: true,
+      ticketsContent: defaultTicketsContent({ startingTrains: 8 }),
+    });
+    const { state, actions } = autoPlayNetworkRouteGame(99, cfg);
+    expect(actions.length).toBeGreaterThan(0);
+    expect(["active", "complete"]).toContain(state.status);
   });
 });
