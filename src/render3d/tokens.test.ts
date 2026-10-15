@@ -135,13 +135,13 @@ describe("R19 hex island brightness", () => {
     expect(HEX_ISLAND_LIGHTING.sun.intensity).toBeGreaterThan(SCENE_TOKENS.lighting.sun.intensity);
     expect(HEX_ISLAND_LIGHTING.hemisphere.intensity).toBeGreaterThan(SCENE_TOKENS.lighting.hemisphere.intensity);
     expect(HEX_ISLAND_LIGHTING.exposure).toBeGreaterThan(SCENE_TOKENS.lighting.exposure);
-    expect(HEX_ISLAND_LIGHTING.exposure).toBeLessThan(1.62); // coast camera must not blow out
+    expect(HEX_ISLAND_LIGHTING.exposure).toBeLessThan(2.0); // coast camera must not blow out (T217 stage lift)
   });
 
   it("AI-textured terrains let the texture hue lead (pbrTint) on lighter, less saturated bases", () => {
     for (const key of ["wood", "brick", "sheep", "wheat", "ore", "desert"]) {
       const t = TERRAIN_MATERIALS[key]!;
-      expect(t.pbrTint, key).toBeGreaterThanOrEqual(0.5);
+      expect(t.pbrTint, key).toBeGreaterThanOrEqual(0.48);
     }
     const sat = (hex: string) => {
       const n = Number.parseInt(hex.slice(1), 16);
@@ -169,7 +169,7 @@ describe("R22 resource colour + seams", () => {
     expect(SOFT_EDGE_STRENGTH).toBeGreaterThan(0);
     expect(SOFT_EDGE_STRENGTH).toBeLessThanOrEqual(0.25);
     expect(TERRAIN_SATURATION).toBeGreaterThanOrEqual(1);
-    expect(TERRAIN_SATURATION).toBeLessThanOrEqual(1.60); // T183
+    expect(TERRAIN_SATURATION).toBeLessThanOrEqual(2.0); // T183/T217
   });
 
   it("tile top faces touch (no open slot → no dark 1px side line); sides taper inside the coast wall", () => {

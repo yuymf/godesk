@@ -101,13 +101,13 @@ export const SCENE_TOKENS = {
 export const HEX_ISLAND_LIGHTING = {
   // R22: less orange key light (#ffd4a4 → #ffecd2) + more neutral sky fill — the warm cast pushed wheat / desert
   // toward orange-brown and ore / pasture toward beige-olive; resource hues now stay true (water gets brighter, not darker).
-  // T183/T192/T198 · shared hex island stage-wide hard residual (MaterialLibrary / SceneHost; not suite fork)
-  sun: { azimuthDeg: 128, elevationDeg: 54, intensity: 4.55, color: "#fff6e6" },
-  hemisphere: { sky: "#f8f5ee", ground: "#ecc080", intensity: 2.05 },
-  shadow: { enabled: true, softness: 0.80 },
-  exposure: 1.56, // T198
-  fill: { azimuthDeg: 310, elevationDeg: 38, intensity: 0.82, color: "#dce8f8" },
-  rim: { azimuthDeg: 38, elevationDeg: 24, intensity: 1.68, color: "#fff6d8" },
+  // T183/T192/T198/T217 · shared hex island stage-wide hard residual (MaterialLibrary / SceneHost; not suite fork)
+  sun: { azimuthDeg: 124, elevationDeg: 60, intensity: 5.90, color: "#fffdf4" },
+  hemisphere: { sky: "#fffef8", ground: "#e4b070", intensity: 2.65 },
+  shadow: { enabled: true, softness: 0.74 },
+  exposure: 1.95, // T198/T217
+  fill: { azimuthDeg: 310, elevationDeg: 46, intensity: 1.40, color: "#eaf2fc" },
+  rim: { azimuthDeg: 38, elevationDeg: 30, intensity: 2.20, color: "#fffcde" },
 } as const satisfies LightingSpec;
 
 /** R19：AI 贴图（虹夏 8 张；R20 起经 scripts/bake-ai-r20.py 色块化 + Kuwahara 绘本化后烘焙）为 t01–t06 baseColor；base 提亮去饱和、pbrTint 让贴图色相主导；
@@ -116,16 +116,16 @@ export const HEX_ISLAND_LIGHTING = {
 /** R17: matte hex faces + denser PBR repeat — continuous oil-paint brush, not flat plastic. */
 /** T183/T192/T198 · shared terrain chroma lift (MaterialLibrary; hex/harbor/any terrain consumer). */
 export const TERRAIN_MATERIALS: Record<string, MaterialToken> = {
-  wood: { base: "#18a438", roughness: 0.96, metalness: 0, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 1.75, pbrTint: 0.52, brush: 0.92 },
-  brick: { base: "#e84020", roughness: 0.96, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 1.75, pbrTint: 0.52, brush: 0.92 },
+  wood: { base: "#00c834", roughness: 0.96, metalness: 0, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 1.75, pbrTint: 0.50, brush: 0.98 },
+  brick: { base: "#ff2410", roughness: 0.96, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 1.75, pbrTint: 0.50, brush: 0.98 },
   // R22: fresher light-green pasture tint (was #a3c67e).
-  sheep: { base: "#62f848", roughness: 0.96, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 1.85, pbrTint: 0.52, brush: 0.92 },
+  sheep: { base: "#3aff30", roughness: 0.96, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 1.85, pbrTint: 0.50, brush: 0.98 },
   // R22/R23/T183: richer golden wheat field
-  wheat: { base: "#f8f048", roughness: 0.94, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 1.85, pbrTint: 0.52, brush: 0.96 },
+  wheat: { base: "#ffff10", roughness: 0.94, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 1.85, pbrTint: 0.52, brush: 0.98 },
   // R21/R23/T183: cooler brighter ore
-  ore: { base: "#a8c8e0", roughness: 0.94, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 1.65, pbrTint: 0.52, brush: 0.9 },
+  ore: { base: "#c0e0fa", roughness: 0.94, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 1.65, pbrTint: 0.52, brush: 0.9 },
   // R22/T183: warmer pale sand apart from wheat
-  desert: { base: "#f8f0d0", roughness: 0.96, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 1.55, pbrTint: 0.52, brush: 0.9 },
+  desert: { base: "#fffce0", roughness: 0.96, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 1.55, pbrTint: 0.52, brush: 0.9 },
 };
 
 /** 其余物件材质。 */

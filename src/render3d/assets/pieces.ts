@@ -368,8 +368,8 @@ function houseParts({ width, depth, wallHeight, ridgeHeight, base, wall, roof, s
  * (no cottage/manor glTF suitable for InstancedMesh+vertexColors) — keep
  * procedural miniatures; survey noted in assets/LICENSES.md.
  */
-export const SETTLEMENT_SCALE = 1.72; // T060 · taller pitched cottage
-export const CITY_SCALE = 2.12; // T060 · taller keep silhouette
+export const SETTLEMENT_SCALE = 2.18; // T060/T217 · taller pitched cottage (settlement readable)
+export const CITY_SCALE = 2.58; // T060/T217 · taller keep silhouette
 
 function scaled(geom: BufferGeometry, s: number): BufferGeometry {
   geom.scale(s, s, s);
@@ -469,7 +469,7 @@ export function buildCityGeometry(seat: number): BufferGeometry {
   return scaled(bakeShading(mergeParts(parts), 0.3), CITY_SCALE);
 }
 
-export const ROAD_LENGTH = 0.82; // T060 · edge-aligned prism span
+export const ROAD_LENGTH = 0.92; // T060/T217 · edge-aligned prism span
 
 export function buildRoadGeometry(seat: number): BufferGeometry {
   const main = seatColor(seat);
@@ -502,7 +502,7 @@ export function buildRoadGeometry(seat: number): BufferGeometry {
 
 /** T123 · shared seat marker for hex layout — was meeple silhouette; T171 → seat tray on desk. */
 /** T163/T165 · dual-lip product-frame language retained on tray rim. */
-export const MEEPLE_HEX_SCALE = 1.74; // T171…T196/T198 · tray scale (shared seat marker)
+export const MEEPLE_HEX_SCALE = 1.95; // T171…T198/T217 · tray scale (shared seat marker)
 export const MEEPLE_RIM_HEX = "#f6dcb0"; // T171…T196/T198 · wood tray lip
 export const MEEPLE_RIM_UNDERCUT = "#3a2414"; // T163 · dark undercut
 
@@ -537,7 +537,7 @@ export function buildMeepleGeometry(seat = 0): BufferGeometry {
 }
 
 /** Robber ≈ hooded miniature (not a lathe cylinder). */
-export const ROBBER_SCALE = 1.55;
+export const ROBBER_SCALE = 1.78; // T217
 
 function invertHull(geom: BufferGeometry): BufferGeometry {
   for (const name of ["position", "normal", "color"]) {
