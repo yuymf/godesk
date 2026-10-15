@@ -1147,13 +1147,14 @@ function softContactShadow(
   // T079 default opacity: 0.48 (baseline for typical card footprint)
   // T096 · footprint-scaled radius/strength — large discs stay visible but not board-wide blobs
   // T106 · reopen: tighter boost/opacity for large footprints; shadows remain (T079/T081)
+  // T135 · residual polish: slightly stronger auto opacity floor/ceiling (keep T106 boost clamp)
   const area = Math.max(0.04, rx * rz);
   const autoBoost =
     opts?.boost ??
     Math.min(1.02, Math.max(0.68, 0.85 / Math.sqrt(area / 0.18)));
   const autoOpacity =
     opts?.opacity ??
-    Math.min(0.46, Math.max(0.26, 0.33 + 0.05 / Math.sqrt(area / 0.18)));
+    Math.min(0.50, Math.max(0.28, 0.35 + 0.05 / Math.sqrt(area / 0.18)));
   const opacity = autoOpacity;
   const boost = autoBoost;
   const geom = new CircleGeometry(1, 24);
@@ -1872,7 +1873,7 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = meepleFigure(node, ctx);
   } else if (mesh === "card") {
     object = cardWithFace(node, ctx);
-    (object as Group).add(softContactShadow(0.32, 0.44)); // T096/T106 card footprint
+    (object as Group).add(softContactShadow(0.32, 0.44, { opacity: 0.42 })); // T096/T106/T135 card footprint
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
     // T081 · larger local blob so small tiles still ground at H02/H03 visibility

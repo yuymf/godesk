@@ -1075,6 +1075,7 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
   });
 
   // T089 · shared gallery desk density (stands / pedestals / catalog plaques) — generic path, no sample specials
+  // T134 · auction lot / plaque density residual — denser shared dressing, no sample specials
   // Empty felt ring around the auction floor gets readable props without covering lots or seat tableaux.
   const dressSeed = (gallery?.artists?.length ?? 0) * 17 + (gallery?.round ?? 0) * 3 + seatCount * 5;
   const dressRand = (i: number) => {
@@ -1085,6 +1086,7 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
   const corners: Array<[number, number]> = [
     [-3.55, -2.35], [3.55, -2.35], [-3.7, 1.55], [3.7, 1.55],
     [-2.2, -3.0], [2.2, -3.0],
+    [-3.9, -0.4], [3.9, -0.4],
   ];
   corners.forEach(([cx, cz], i) => {
     pieces.push({
@@ -1092,7 +1094,7 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
       objectKind: "plaque",
       x: cx,
       z: cz,
-      size: 0.78 + dressRand(i) * 0.18,
+      size: 0.82 + dressRand(i) * 0.18,
       tint: ARTIST_TINT[i % ARTIST_TINT.length],
       label: encodePlaqueFace({ title: "目录", prestige: i + 1 }),
       emphasis: true,
@@ -1103,24 +1105,24 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
       x: cx,
       z: cz + 0.02,
       y: 0.02,
-      size: 0.58,
+      size: 0.62,
       tint: "#8b6914",
     });
   });
   // Mid-ring crates + token stacks — denser empty-felt fill (press T087 H05 stage-wide soft)
-  for (let i = 0; i < 14; i += 1) {
-    const a = (i / 14) * Math.PI * 2 + 0.15;
-    const r = 2.15 + dressRand(i + 20) * 0.7;
+  for (let i = 0; i < 18; i += 1) {
+    const a = (i / 18) * Math.PI * 2 + 0.15;
+    const r = 2.05 + dressRand(i + 20) * 0.75;
     const x = Math.cos(a) * r;
     const z = Math.sin(a) * r * 0.68;
-    if (Math.abs(z) > 2.15) continue;
+    if (Math.abs(z) > 2.2) continue;
     pieces.push({
       id: `gallery:crate:${i}`,
       objectKind: "building",
       x,
       z,
       y: 0.04,
-      size: 0.52 + dressRand(i + 40) * 0.22,
+      size: 0.54 + dressRand(i + 40) * 0.24,
       tint: dressRand(i) > 0.5 ? "#a67c52" : "#6b7280",
       emphasis: i % 3 === 0,
     });
@@ -1131,14 +1133,14 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
         x: x + 0.35,
         z: z - 0.1,
         y: 0.06,
-        size: 0.34,
+        size: 0.36,
         tint: "#eab308",
       });
     }
   }
   // Inner display arc (stage-wide readable framed minis) — fills center empty felt
-  for (let i = 0; i < 5; i += 1) {
-    const x = -1.8 + i * 0.9;
+  for (let i = 0; i < 7; i += 1) {
+    const x = -2.4 + i * 0.8;
     const z = 0.85 + dressRand(i + 60) * 0.15;
     pieces.push({
       id: `gallery:display:${i}`,
@@ -1146,7 +1148,7 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
       x,
       z,
       y: 0.08,
-      size: 1.18,
+      size: 1.28,
       emphasis: true,
       label: encodeLotArt({ title: `展位${i + 1}`, artistId: gallery?.artists?.[i % Math.max(1, gallery?.artists?.length ?? 1)]?.id }),
     });
@@ -1156,7 +1158,7 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
       x,
       z,
       y: 0.01,
-      size: 0.45,
+      size: 0.48,
       tint: "#7c5a2e",
     });
   }
@@ -1174,10 +1176,10 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
       tint: "#7c5a2e",
     });
   }
-  // Offer-phase hand lots: slightly larger for stage-wide (press T087 H05 soft)
+  // Offer-phase hand lots: slightly larger for stage-wide (press T087 H05 soft / T134)
   for (const piece of pieces) {
-    if (piece.id.startsWith("lot:hand:") && (piece.size ?? 0) < 1.35) {
-      piece.size = 1.4;
+    if (piece.id.startsWith("lot:hand:") && (piece.size ?? 0) < 1.45) {
+      piece.size = 1.48;
     }
   }
 

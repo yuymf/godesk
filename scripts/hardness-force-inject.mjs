@@ -370,9 +370,93 @@ export async function forceOwnAuctionLots(page, tokens, { minLots = 2, maxSteps 
  * Force hex-settlement setup until seat 0 has ≥ minSettlements + minRoads.
  * Probes place_settlement / place_road via real intents over the fixed radius-2 graph.
  */
-export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, minRoads = 2, maxSteps = 80 } = {}) {
-  const VERTEX_IDS = ["-100:-173", "-100:-346", "-100:0", "-100:173", "-100:346", "-200:-173", "-200:-346", "-200:0", "-200:173", "-200:346", "-250:-260", "-250:-87", "-250:260", "-250:87", "-350:-260", "-350:-87", "-350:260", "-350:87", "-400:-173", "-400:0", "-400:173", "-50:-260", "-50:-433", "-50:-87", "-50:260", "-50:433", "-50:87", "100:-173", "100:-346", "100:0", "100:173", "100:346", "200:-173", "200:-346", "200:0", "200:173", "200:346", "250:-260", "250:-87", "250:260", "250:87", "350:-260", "350:-87", "350:260", "350:87", "400:-173", "400:0", "400:173", "50:-260", "50:-433", "50:-87", "50:260", "50:433", "50:87"];
-  const EDGE_IDS = ["-100:-173|-200:-173", "-100:-173|-50:-260", "-100:-173|-50:-87", "-100:-346|-200:-346", "-100:-346|-50:-260", "-100:-346|-50:-433", "-100:0|-200:0", "-100:0|-50:-87", "-100:0|-50:87", "-100:173|-200:173", "-100:173|-50:260", "-100:173|-50:87", "-100:346|-200:346", "-100:346|-50:260", "-100:346|-50:433", "-200:-173|-250:-260", "-200:-173|-250:-87", "-200:-346|-250:-260", "-200:0|-250:-87", "-200:0|-250:87", "-200:173|-250:260", "-200:173|-250:87", "-200:346|-250:260", "-250:-260|-350:-260", "-250:-87|-350:-87", "-250:260|-350:260", "-250:87|-350:87", "-350:-260|-400:-173", "-350:-87|-400:-173", "-350:-87|-400:0", "-350:260|-400:173", "-350:87|-400:0", "-350:87|-400:173", "-50:-260|50:-260", "-50:-433|50:-433", "-50:-87|50:-87", "-50:260|50:260", "-50:433|50:433", "-50:87|50:87", "100:-173|200:-173", "100:-173|50:-260", "100:-173|50:-87", "100:-346|200:-346", "100:-346|50:-260", "100:-346|50:-433", "100:0|200:0", "100:0|50:-87", "100:0|50:87", "100:173|200:173", "100:173|50:260", "100:173|50:87", "100:346|200:346", "100:346|50:260", "100:346|50:433", "200:-173|250:-260", "200:-173|250:-87", "200:-346|250:-260", "200:0|250:-87", "200:0|250:87", "200:173|250:260", "200:173|250:87", "200:346|250:260", "250:-260|350:-260", "250:-87|350:-87", "250:260|350:260", "250:87|350:87", "350:-260|400:-173", "350:-87|400:-173", "350:-87|400:0", "350:260|400:173", "350:87|400:0", "350:87|400:173"];
+/** T133 · shared readiness: canvas + room chrome before force / seat-close audits. */
+export async function waitRoomCanvasReady(page, { timeoutMs = 20000 } = {}) {
+  await page.waitForSelector("canvas", { timeout: timeoutMs });
+  await page.waitForFunction(() => {
+    const c = document.querySelector("canvas");
+    if (!c) return false;
+    const b = c.getBoundingClientRect();
+    return b.width > 200 && b.height > 200;
+  }, { timeout: timeoutMs });
+  return { ok: true };
+}
+
+/**
+ * T133 · hex force with wall-clock budget + reliability metrics (shared tooling).
+ * Prefer this over bare forceBuildHexSetup + outer withTimeout.
+ */
+export async function runHexForceWithBudget(page, tokens, opts = {}) {
+  const budgetMs = opts.budgetMs ?? 45000;
+  const started = Date.now();
+  await waitRoomCanvasReady(page, { timeoutMs: Math.min(15000, budgetMs) });
+  const remaining = () => Math.max(1000, budgetMs - (Date.now() - started));
+  let result;
+  try {
+    result = await Promise.race([
+      forceBuildHexSetup(page, tokens, {
+        // T133 · glyph/seat-close audits need ≥1 settle+road; 2× setup across seats is slower/fragile
+        minSettlements: opts.minSettlements ?? 1,
+        minRoads: opts.minRoads ?? 1,
+        maxSteps: opts.maxSteps ?? 24,
+      }),
+      new Promise((_, rej) => setTimeout(() => rej(new Error(`budget ${budgetMs}ms`)), remaining())),
+    ]);
+  } catch (e) {
+    result = { ok: false, err: String(e?.message || e), timedOut: true };
+  }
+  const elapsedMs = Date.now() - started;
+  // Always allow a fresh glyph readiness window (budget may be exhausted)
+  const glyph = await awaitSeatCloseGlyphReady(page, { timeoutMs: opts.glyphTimeoutMs ?? 8000 }).catch((e) => ({
+    ok: false, err: String(e?.message || e),
+  }));
+  return {
+    ok: Boolean(result?.ok),
+    force: result,
+    glyph,
+    reliability: {
+      elapsedMs,
+      budgetMs,
+      forceOk: Boolean(result?.ok),
+      forceErr: result?.err || null,
+      forceSteps: result?.steps ?? result?.log?.length ?? null,
+      glyphOk: Boolean(glyph?.ok),
+      canvasReady: true,
+    },
+  };
+}
+
+/** T133 · seat-close glyph audit readiness (shared; not sample-specific). */
+export async function awaitSeatCloseGlyphReady(page, { timeoutMs = 10000 } = {}) {
+  const started = Date.now();
+  await waitRoomCanvasReady(page, { timeoutMs });
+  // Poll scene for number-token nodes / atlas paint via canvas still alive
+  const ok = await page.waitForFunction(() => {
+    const c = document.querySelector("canvas");
+    if (!c) return false;
+    const b = c.getBoundingClientRect();
+    if (b.width < 200 || b.height < 200) return false;
+    // Prefer live scene graph if exposed; else canvas presence is enough for shot
+    const host = document.querySelector("[data-kernel], .g3d-stage, .tabletop-stage, .tabletop-scene");
+    return Boolean(host);
+  }, { timeout: timeoutMs }).then(() => true).catch(() => false);
+  return { ok, elapsedMs: Date.now() - started };
+}
+
+export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, minRoads = 2, maxSteps = 48 } = {}) {
+  // Prefer near-origin vertices/edges first (island center) — fewer failed intents → fewer timeouts (T133).
+  const VERTEX_IDS_RAW = ["-100:-173", "-100:-346", "-100:0", "-100:173", "-100:346", "-200:-173", "-200:-346", "-200:0", "-200:173", "-200:346", "-250:-260", "-250:-87", "-250:260", "-250:87", "-350:-260", "-350:-87", "-350:260", "-350:87", "-400:-173", "-400:0", "-400:173", "-50:-260", "-50:-433", "-50:-87", "-50:260", "-50:433", "-50:87", "100:-173", "100:-346", "100:0", "100:173", "100:346", "200:-173", "200:-346", "200:0", "200:173", "200:346", "250:-260", "250:-87", "250:260", "250:87", "350:-260", "350:-87", "350:260", "350:87", "400:-173", "400:0", "400:173", "50:-260", "50:-433", "50:-87", "50:260", "50:433", "50:87"];
+  const EDGE_IDS_RAW = ["-100:-173|-200:-173", "-100:-173|-50:-260", "-100:-173|-50:-87", "-100:-346|-200:-346", "-100:-346|-50:-260", "-100:-346|-50:-433", "-100:0|-200:0", "-100:0|-50:-87", "-100:0|-50:87", "-100:173|-200:173", "-100:173|-50:260", "-100:173|-50:87", "-100:346|-200:346", "-100:346|-50:260", "-100:346|-50:433", "-200:-173|-250:-260", "-200:-173|-250:-87", "-200:-346|-250:-260", "-200:0|-250:-87", "-200:0|-250:87", "-200:173|-250:260", "-200:173|-250:87", "-200:346|-250:260", "-250:-260|-350:-260", "-250:-87|-350:-87", "-250:260|-350:260", "-250:87|-350:87", "-350:-260|-400:-173", "-350:-87|-400:-173", "-350:-87|-400:0", "-350:260|-400:173", "-350:87|-400:0", "-350:87|-400:173", "-50:-260|50:-260", "-50:-433|50:-433", "-50:-87|50:-87", "-50:260|50:260", "-50:433|50:433", "-50:87|50:87", "100:-173|200:-173", "100:-173|50:-260", "100:-173|50:-87", "100:-346|200:-346", "100:-346|50:-260", "100:-346|50:-433", "100:0|200:0", "100:0|50:-87", "100:0|50:87", "100:173|200:173", "100:173|50:260", "100:173|50:87", "100:346|200:346", "100:346|50:260", "100:346|50:433", "200:-173|250:-260", "200:-173|250:-87", "200:-346|250:-260", "200:0|250:-87", "200:0|250:87", "200:173|250:260", "200:173|250:87", "200:346|250:260", "250:-260|350:-260", "250:-87|350:-87", "250:260|350:260", "250:87|350:87", "350:-260|400:-173", "350:-87|400:-173", "350:-87|400:0", "350:260|400:173", "350:87|400:0", "350:87|400:173"];
+  const vertScore = (id) => {
+    const [a, b] = id.split(":").map(Number);
+    return Math.abs(a) + Math.abs(b);
+  };
+  const VERTEX_IDS = [...VERTEX_IDS_RAW].sort((a, b) => vertScore(a) - vertScore(b));
+  const EDGE_IDS = [...EDGE_IDS_RAW].sort((a, b) => {
+    const sa = a.split("|").reduce((s, p) => s + vertScore(p), 0);
+    const sb = b.split("|").reduce((s, p) => s + vertScore(p), 0);
+    return sa - sb;
+  });
   return page.evaluate(async ({ tokens, minSettlements, minRoads, maxSteps, VERTEX_IDS, EDGE_IDS }) => {
     const m = location.pathname.match(/room\/([^/?]+)/);
     const sid = m?.[1];
@@ -404,6 +488,7 @@ export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, min
         phase: hi?.phase,
         settle0: p0?.settlements?.length,
         roads0: p0?.roads?.length,
+        state: j?.state,
       };
     };
     const get = async () => {
@@ -412,10 +497,14 @@ export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, min
       return s.state || s;
     };
     const log = [];
+    let st = await get();
+    const triedV = new Set();
+    const triedE = new Set();
+    let lastActive = null;
     for (let step = 0; step < maxSteps; step++) {
-      const st = await get();
-      if (st.status !== "active") return { ok: false, err: "dead", log };
+      if (st.status !== "active") return { ok: false, err: "dead", log, steps: step };
       const hi = st.hexIsland;
+      if (!hi) return { ok: false, err: "no-hexIsland", log, steps: step };
       const p0 = hi.players[0];
       const settle0 = (p0.settlements || []).length;
       const roads0 = (p0.roads || []).length;
@@ -430,51 +519,68 @@ export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, min
         };
       }
       const active = st.activeSeat;
+      // T133 · seat change → clear miss caches so other seats can place during setup
+      if (lastActive !== null && lastActive !== active) { triedV.clear(); triedE.clear(); }
+      lastActive = active;
       let acted = null;
       if (hi.pendingRoadVertex) {
-        for (const edgeId of EDGE_IDS) {
+        const pending = hi.pendingRoadVertex;
+        const candidates = EDGE_IDS.filter((edgeId) => edgeId.split("|").includes(pending));
+        const pool = candidates.length ? candidates : EDGE_IDS;
+        for (const edgeId of pool) {
+          if (triedE.has(edgeId)) continue;
           const r = await intent(active, "place_road", { edgeId });
           if (r.ok) { acted = { type: "place_road", edgeId, ...r }; break; }
+          triedE.add(edgeId);
         }
       } else if (hi.phase === "setup") {
         for (const vertexId of VERTEX_IDS) {
+          if (triedV.has(vertexId)) continue;
           const r = await intent(active, "place_settlement", { vertexId });
           if (r.ok) { acted = { type: "place_settlement", vertexId, ...r }; break; }
+          triedV.add(vertexId);
         }
       } else {
-        // post-setup: try building with resources if any
         for (const vertexId of VERTEX_IDS) {
+          if (triedV.has(vertexId)) continue;
           const r = await intent(active, "place_settlement", { vertexId });
           if (r.ok) { acted = { type: "place_settlement", vertexId, ...r }; break; }
+          triedV.add(vertexId);
         }
         if (!acted) {
           for (const edgeId of EDGE_IDS) {
+            if (triedE.has(edgeId)) continue;
             const r = await intent(active, "place_road", { edgeId });
             if (r.ok) { acted = { type: "place_road", edgeId, ...r }; break; }
+            triedE.add(edgeId);
           }
         }
       }
       if (!acted) {
         log.push({ step, stuck: true, active, phase: hi.phase, pending: hi.pendingRoadVertex, settle0, roads0 });
-        return { ok: false, err: "stuck", settle0, roads0, log };
+        return { ok: false, err: "stuck", settle0, roads0, log, steps: step };
       }
       log.push({ step, active, acted: { type: acted.type, ok: acted.ok, settle0: acted.settle0, roads0: acted.roads0 } });
+      // T133 · reuse intent response state when present (skip extra GET)
+      if (acted.state) st = acted.state;
+      else st = await get();
+      // clear tried sets for next placement wave after success
+      if (acted.type === "place_settlement") { triedV.clear(); triedE.clear(); }
+      if (acted.type === "place_road") { triedE.clear(); }
     }
-    const st = await get();
-    const p0 = st.hexIsland.players[0];
+    const final = await get();
+    const p0 = final.hexIsland?.players?.[0];
     return {
-      ok: (p0.settlements || []).length >= minSettlements && (p0.roads || []).length >= minRoads,
-      settlements: p0.settlements,
-      roads: p0.roads,
+      ok: ((p0?.settlements || []).length >= minSettlements && (p0?.roads || []).length >= minRoads),
+      settlements: p0?.settlements,
+      roads: p0?.roads,
       log,
+      steps: maxSteps,
     };
   }, { tokens, minSettlements, minRoads, maxSteps, VERTEX_IDS, EDGE_IDS });
 }
 
-/**
- * Force pattern-draft until seat 0 has glazed tiles on ≥1 line and ≥1 floor tile.
- * Uses real `draft` intents (source/color/line[/factoryId]) — no pack hardcodes.
- */
+
 export async function forceDraftPattern(page, tokens, { minLineTiles = 2, minFloor = 1, maxSteps = 80 } = {}) {
   return page.evaluate(async ({ tokens, minLineTiles, minFloor, maxSteps }) => {
     const m = location.pathname.match(/room\/([^/?]+)/);

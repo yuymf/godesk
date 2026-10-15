@@ -58,7 +58,7 @@ export function atlasCell(n: number): { col: number; row: number } {
  */
 export const LABEL_FONT = `"Helvetica Neue", Helvetica, Arial, "Noto Sans", "DejaVu Sans", "Liberation Sans", sans-serif`;
 /** 默认机位俯视角会把筹码顶面纵向压缩约一半；图集里预先纵向拉伸字形，抵消透视压缩。 */
-export const GLYPH_STRETCH_Y = 1.64; // T099/T112/T118 · T125/T129/T131 ortho (floor 1.62, was 1.78)
+export const GLYPH_STRETCH_Y = 1.63; // T099/T112/T118 · T125/T129/T131/T133 ortho (floor 1.62, was 1.78)
 /** 两位数的字距（相对格宽，负值收紧），让「11」「12」成为一个整体而不是两个分离的笔画。 */
 export const GLYPH_TRACKING = -0.03;
 
@@ -147,9 +147,9 @@ export function buildLabelGeometry(labels: readonly NumberLabel[]): BufferGeomet
   const idx = new Uint16Array(labels.length * 6);
   labels.forEach((label, i) => {
     const h = label.size / 2;
-    // T129/T131 · ortho UV plane: flatter depth so seat-close top-down does not over-elongate glyphs
+    // T129/T131/T133 · ortho UV plane: flatter depth so seat-close top-down does not over-elongate glyphs
     const hx = h;
-    const hz = h * 0.88;
+    const hz = h * 0.85;
     const { x, y, z } = label.center;
     const { col, row } = atlasCell(label.number);
     const u0 = col / GRID;
@@ -181,7 +181,7 @@ export function projectLabels(labels: readonly NumberLabel[], camera: Camera, wi
   camera.getWorldPosition(camPos);
   return labels.map((label) => {
     const hx = label.size / 2;
-    const hz = (label.size / 2) * 0.88; // T129/T131 aspect
+    const hz = (label.size / 2) * 0.85; // T129/T131/T133 aspect
     const xs: number[] = [];
     const ys: number[] = [];
     let inView = true;

@@ -21,6 +21,7 @@ describe("T089 gallery lot prop density", () => {
     const pedestals = layout.pieces.filter((p) => p.id.startsWith("gallery:pedestal:"));
     const crates = layout.pieces.filter((p) => p.id.startsWith("gallery:crate:"));
     const plinths = layout.pieces.filter((p) => p.id.endsWith(":plinth"));
+    // T134 may raise counts; keep T089 floors
     expect(stands.length).toBeGreaterThanOrEqual(4);
     expect(pedestals.length).toBeGreaterThanOrEqual(4);
     expect(crates.length).toBeGreaterThanOrEqual(4);
