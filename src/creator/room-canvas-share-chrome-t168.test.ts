@@ -16,7 +16,7 @@ describe("T168 ≥9 canvasShare / chrome collapse", () => {
     expect(surf).toMatch(/is-chrome-collapse/);
     const pieces = readFileSync("src/render3d/assets/pieces.ts", "utf8");
     // T171 · seat tray scale (was 1.72 meeple pedestal)
-    expect(pieces).toMatch(/MEEPLE_HEX_SCALE = 1\.68/);
-    expect(pieces).toMatch(/#f2d2a4/);
+    expect(pieces).toMatch(/MEEPLE_HEX_SCALE = 1\.74/);
+    expect(pieces).toMatch(/#f6dcb0/);
   });
 });

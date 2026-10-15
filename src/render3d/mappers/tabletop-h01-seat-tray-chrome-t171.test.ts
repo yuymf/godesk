@@ -20,7 +20,7 @@ describe("T171 H01 tabletop-first / seat tray / legal-ring", () => {
     const pieces = readFileSync("src/render3d/assets/pieces.ts", "utf8");
     expect(pieces).toContain("T171");
     expect(pieces).toMatch(/seat tray/);
-    expect(pieces).toMatch(/MEEPLE_HEX_SCALE = 1\.68/);
+    expect(pieces).toMatch(/MEEPLE_HEX_SCALE = 1\.74/);
     expect(pieces).not.toMatch(/quadraticCurveTo\(0\.28, 0\.48/);
   });
 });

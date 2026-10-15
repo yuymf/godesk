@@ -13,7 +13,7 @@ import type { PickableLegalAction } from "./pick";
 const WORLD_SCALE = 0.01;
 const _dummy = new Object3D();
 
-let RING_GEOM_SETTLE = new TorusGeometry(0.2, 0.012, 8, 16); // T171…T189/T195 thinner
+let RING_GEOM_SETTLE = new TorusGeometry(0.2, 0.009, 8, 14); // T171…T195/T199 thinner
 RING_GEOM_SETTLE.rotateX(Math.PI / 2);
 let RING_GEOM_CITY = new TorusGeometry(0.26, 0.022, 8, 20); // T171 thinner
 RING_GEOM_CITY.rotateX(Math.PI / 2);
@@ -120,30 +120,30 @@ function packInstances(
 
 function rebuildHitMaterials(): void {
   // T171 · legal-ring density/opacity down (shared overlay; less yellow clutter)
-  // T174/T178/T189/T195 · legal-ring 再降密/降亮（共享 hit overlay）
+  // T174/T178/T189/T195/T199 · legal-ring 再降密/降亮（共享 hit overlay；H05 环晕不得主导）
   RING_MAT = new MeshStandardMaterial({
     color: 0xffe066,
     emissive: 0xffc107,
-    emissiveIntensity: 0.04,
+    emissiveIntensity: 0.025,
     transparent: true,
-    opacity: 0.07,
-    roughness: 0.78,
+    opacity: 0.045,
+    roughness: 0.82,
   });
   RING_MAT.userData.gdShared = true;
   ROAD_HIT_MAT = new MeshStandardMaterial({
     color: 0xffe066,
     emissive: 0xffc107,
-    emissiveIntensity: 0.035,
+    emissiveIntensity: 0.02,
     transparent: true,
-    opacity: 0.055,
+    opacity: 0.035,
   });
   ROAD_HIT_MAT.userData.gdShared = true;
   ROBBER_HIT_MAT = new MeshStandardMaterial({
     color: 0xff6b6b,
     emissive: 0xc0392b,
-    emissiveIntensity: 0.55,
+    emissiveIntensity: 0.32, // T199
     transparent: true,
-    opacity: 0.45,
+    opacity: 0.28,
   });
   ROBBER_HIT_MAT.userData.gdShared = true;
 }
@@ -157,7 +157,7 @@ export function disposeSharedHitResources(): void {
   RING_MAT.dispose();
   ROAD_HIT_MAT.dispose();
   ROBBER_HIT_MAT.dispose();
-  RING_GEOM_SETTLE = new TorusGeometry(0.2, 0.012, 8, 16); // T195 thinner
+  RING_GEOM_SETTLE = new TorusGeometry(0.2, 0.009, 8, 14); // T199 thinner
   RING_GEOM_SETTLE.rotateX(Math.PI / 2);
   RING_GEOM_CITY = new TorusGeometry(0.26, 0.022, 8, 20); // T171 thinner
   RING_GEOM_CITY.rotateX(Math.PI / 2);

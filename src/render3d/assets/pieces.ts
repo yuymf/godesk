@@ -502,8 +502,8 @@ export function buildRoadGeometry(seat: number): BufferGeometry {
 
 /** T123 · shared seat marker for hex layout — was meeple silhouette; T171 → seat tray on desk. */
 /** T163/T165 · dual-lip product-frame language retained on tray rim. */
-export const MEEPLE_HEX_SCALE = 1.68; // T171…T192/T196 · tray scale (shared seat marker)
-export const MEEPLE_RIM_HEX = "#f2d2a4"; // T171…T192/T196 · wood tray lip
+export const MEEPLE_HEX_SCALE = 1.74; // T171…T196/T198 · tray scale (shared seat marker)
+export const MEEPLE_RIM_HEX = "#f6dcb0"; // T171…T196/T198 · wood tray lip
 export const MEEPLE_RIM_UNDERCUT = "#3a2414"; // T163 · dark undercut
 
 export function buildMeepleGeometry(seat = 0): BufferGeometry {

@@ -8,8 +8,8 @@ describe("T195 HUD + legal-ring further collapse", () => {
     expect(tw).toMatch(/--tw-side:\s*22px/);
     expect(tw).toMatch(/--tw-dock:\s*8px/);
     const hit = readFileSync("src/render3d/hit-targets.ts", "utf8");
-    expect(hit).toContain("T195");
-    expect(hit).toMatch(/opacity:\s*0\.07/);
-    expect(hit).toMatch(/emissiveIntensity:\s*0\.04/);
+    expect(hit).toMatch(/T195|T199/);
+    expect(hit).toMatch(/opacity:\s*0\.045/);
+    expect(hit).toMatch(/emissiveIntensity:\s*0\.025/);
   });
 });

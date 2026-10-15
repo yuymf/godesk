@@ -13,7 +13,7 @@ describe("T189 tabletop-first HUD collapse + legal-ring", () => {
   it("softens shared legal-ring opacity/emissive", () => {
     const hit = readFileSync("src/render3d/hit-targets.ts", "utf8");
     expect(hit).toContain("T189");
-    expect(hit).toMatch(/opacity:\s*0\.07/);
-    expect(hit).toMatch(/emissiveIntensity:\s*0\.04/);
+    expect(hit).toMatch(/opacity:\s*0\.045/);
+    expect(hit).toMatch(/emissiveIntensity:\s*0\.025/);
   });
 });

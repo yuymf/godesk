@@ -1586,7 +1586,7 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
           const hy = height[((y + 1) % H) * W + x]!;
           const dx = (h0 - hx) * 14;
           const dy = (h0 - hy) * 14;
-          const shade = (h0 - 0.5) * 210; // T083…T190/T196 · wide-stage albedo amplitude
+          const shade = (h0 - 0.5) * 228; // T083…T196/T198 · wide-stage albedo amplitude
           const o = i * 4;
           aImg.data[o] = Math.max(0, Math.min(255, br + shade));
           aImg.data[o + 1] = Math.max(0, Math.min(255, bg + shade));
@@ -1631,7 +1631,7 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
     color: base,
     map: map ?? undefined,
     normalMap: normalMap ?? undefined,
-    normalScale: new Vector2(4.65, 4.65), // T083…T192/T196 · weave microcontrast
+    normalScale: new Vector2(4.95, 4.95), // T083…T196/T198 · weave microcontrast
     roughnessMap: roughnessMap ?? undefined,
     roughness: Math.max(0.9, token?.roughness ?? 0.97),
     metalness: 0,
@@ -1987,7 +1987,7 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = meepleFigure(node, ctx);
   } else if (mesh === "card") {
     object = cardWithFace(node, ctx);
-    (object as Group).add(softContactShadow(1.02, 1.28, { opacity: 0.52 })); // T096/T106/T150/T153/T154/T158/T161 card (lighter)
+    (object as Group).add(softContactShadow(1.08, 1.35, { opacity: 0.62 })); // T096…T161/T198 card
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
     // T081 · larger local blob so small tiles still ground at H02/H03 visibility
@@ -2001,7 +2001,7 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     built.receiveShadow = true;
     const g = new Group();
     g.add(built);
-    g.add(softContactShadow(0.52, 0.52)); // T106/T150 gem-chip
+    g.add(softContactShadow(0.58, 0.58, { opacity: 0.62 })); // T106/T150/T198 gem-chip
     object = g;
   } else if (INSTANCED_MESHES.has(mesh)) {
     object = createInstanceProxy(mesh, node, ctx);
