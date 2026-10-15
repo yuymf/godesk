@@ -1218,9 +1218,10 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       ) : null}
       {error && (harbor || workerPlacement || discFlipping || hexSettlement) && <p className="creator-error" role="alert">{error}</p>}
 
-      <aside className="action-log">
-        <span>{copy.log}</span>
-        <code>{room.id}</code>
+      {tabletopImmersive ? (
+        <details className="action-log room-action-log-drawer" id="room-action-log-drawer">
+          <summary className="room-action-log-summary">{copy.log}</summary>
+          <code>{room.id}</code>
         {room.acceptedActions.length ? (
           <ol>
             {room.acceptedActions.map((action) => (
@@ -1260,7 +1261,52 @@ export function RoomView({ sessionId }: { sessionId: string }) {
               </ul>
             </div>
           )}
-      </aside>
+        </details>
+      ) : (
+        <aside className="action-log">
+          <span>{copy.log}</span>
+          <code>{room.id}</code>
+        {room.acceptedActions.length ? (
+          <ol>
+            {room.acceptedActions.map((action) => (
+              <li key={action.sequence}>
+                #{action.sequence} · {locale === "zh" ? "座位" : "Seat"} {action.seat} · {(() => {
+                  const actionIndex = runtimeActions.findIndex((candidate) => candidate.id === action.actionId);
+                  return actionIndex >= 0 ? roomActionTitle(locale, actionIndex) : action.actionId;
+                })()}
+                {typeof action.payload?.text === "string" ? ` · ${action.payload.text}` : ""}
+                {showActionPointChrome
+                  ? action.state.pushYourLuck
+                    ? action.actionId === "roll"
+                      ? ` · 🎲 ${action.points}${action.points === action.state.pushYourLuck.bustFace ? ` · ${copy.bust}` : ` · ${copy.unbanked} ${action.state.pushYourLuck.turnScore}`}`
+                      : ` · +${action.points} ${copy.points}`
+                    : action.points
+                      ? action.state.rollAndMove
+                        ? ` · 🎲 ${action.points} · +${action.points} ${copy.move}`
+                        : action.state.drawAndScore
+                          ? ` · 🎴 ${action.points} · +${action.points} ${copy.points}`
+                          : ` · ${action.state.takeAway ? "−" : "+"}${action.points} ${scoreLabel}`
+                      : ""
+                  : ""}
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p>{copy.noLog}</p>
+        )}
+        {build.ruleSystem.runtimeSupport.status === "executable" &&
+          build.ruleSystem.runtimeSupport.unsupported.length > 0 && (
+            <div className="room-unsupported">
+              <strong>{copy.unsupported}</strong>
+              <ul>
+                {build.ruleSystem.runtimeSupport.unsupported.map((item) => (
+                  <li key={item}>{displayUnsupported(item, locale)}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </aside>
+      )}
     </main>
   );
 }

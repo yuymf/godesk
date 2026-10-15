@@ -6270,6 +6270,61 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   z-index: 2;
   margin-top: -0.15rem;
 }
+
+/* T084 · share chrome deep polish: action log + action drawer stay off-desk by default. */
+.room-view-tabletop-immersive.room-view-seated .room-action-log-drawer {
+  margin: 0.15rem 0 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--border, #d6d3d1) 70%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel, #fff) 88%, transparent);
+  max-width: 100%;
+}
+.room-view-tabletop-immersive.room-view-seated .room-action-log-summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.7rem;
+  padding: 0.15rem 0.7rem;
+  font-size: 0.78rem;
+  color: var(--muted, #78716c);
+  user-select: none;
+}
+.room-view-tabletop-immersive.room-view-seated .room-action-log-summary::-webkit-details-marker { display: none; }
+.room-view-tabletop-immersive.room-view-seated .room-action-log-drawer:not([open]) {
+  max-height: 2rem;
+  overflow: hidden;
+  opacity: 0.82;
+}
+.room-view-tabletop-immersive.room-view-seated .room-action-log-drawer:not([open]) code,
+.room-view-tabletop-immersive.room-view-seated .room-action-log-drawer:not([open]) ol,
+.room-view-tabletop-immersive.room-view-seated .room-action-log-drawer:not([open]) p,
+.room-view-tabletop-immersive.room-view-seated .room-action-log-drawer:not([open]) .room-unsupported {
+  display: none;
+}
+.room-view-tabletop-immersive.room-view-seated .desk-action-drawer:not([open]) {
+  max-height: 1.85rem;
+  margin: 0.15rem 0 0.25rem;
+  border-color: transparent;
+  background: color-mix(in srgb, #1c1917 6%, transparent);
+}
+.room-view-tabletop-immersive.room-view-seated .desk-action-drawer:not([open]) .desk-action-drawer-summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.6rem;
+  padding: 0.12rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border, #d6d3d1) 80%, transparent);
+  background: color-mix(in srgb, var(--panel, #fff) 92%, transparent);
+  font-size: 0.78rem;
+  color: var(--muted, #78716c);
+}
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud {
+  padding: 0.28rem 0.65rem;
+  font-size: 0.78rem;
+  opacity: 0.92;
+}
+
 /* Forbid large white page headers inside collapsed desk chrome. */
 .room-view-tabletop-immersive.room-view-seated .desk-action-drawer .auction-heading,
 .room-view-tabletop-immersive.room-view-seated .desk-action-drawer .auction-mark {
