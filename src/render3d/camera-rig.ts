@@ -444,6 +444,9 @@ export function framingPoints(nodes: readonly FramingNode[]): V3[] {
       }
     } else if (node.kind === "port") {
       out.push([x + 0.25, y + 0.1, z + 0.25], [x - 0.25, y + 0.1, z - 0.25]);
+    } else if (node.kind === "meeple") {
+      // T125 · keep shared seat meeples in ortho frame (near-edge band)
+      out.push([x, y + 0.35, z], [x - 0.2, y + 0.1, z], [x + 0.2, y + 0.1, z]);
     }
   }
   return out;

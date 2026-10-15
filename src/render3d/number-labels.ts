@@ -58,7 +58,7 @@ export function atlasCell(n: number): { col: number; row: number } {
  */
 export const LABEL_FONT = `"Helvetica Neue", Helvetica, Arial, "Noto Sans", "DejaVu Sans", "Liberation Sans", sans-serif`;
 /** 默认机位俯视角会把筹码顶面纵向压缩约一半；图集里预先纵向拉伸字形，抵消透视压缩。 */
-export const GLYPH_STRETCH_Y = 1.78; // T099/T112/T118
+export const GLYPH_STRETCH_Y = 1.62; // T099/T112/T118 · T125 soften seat-close ortho stretch (keep ≥1.62)
 /** 两位数的字距（相对格宽，负值收紧），让「11」「12」成为一个整体而不是两个分离的笔画。 */
 export const GLYPH_TRACKING = -0.03;
 
