@@ -454,7 +454,8 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       exposure: 1.14,
     };
     Object.assign(render.materials, {
-      map: material("#1f6b45", "cloth", 0.94, 0, undefined, 0.4),
+      // T172 · H02 interior felt denser/brighter (shared MaterialLibrary cloth map)
+      map: material("#2a8f52", "cloth", 0.96, 0, undefined, 0.55),
       table: material("#a87338", "grain", 0.84), // T110 · align exterior/rim
       ink: material("#40505a", "none", 0.58),
       piece: material("#f7f1e6", "none", 0.42, 0.08, 0.35),

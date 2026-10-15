@@ -185,8 +185,8 @@ export function mapHexSettlementToScene(genre: HexSettlementSceneInput): SceneMo
   });
 
 
-  // T123 · shared seat meeples on hex near-edge (rim disc readable in ortho / stage-wide)
-  // T125 · pull near-edge band inward so framing/camera keeps meeples + island together
+  // T123 · shared seat markers on hex near-edge (T171 · seat tray, not color-swatch meeple)
+  // T125 · pull near-edge band inward so framing/camera keeps markers + island together
   {
     const seatN = Math.max(genre.players.length, 2);
     let maxWorldZ = -Infinity;

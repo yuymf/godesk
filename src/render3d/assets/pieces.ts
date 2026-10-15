@@ -500,56 +500,40 @@ export function buildRoadGeometry(seat: number): BufferGeometry {
 }
 
 
-/** T123 · shared seat meeple for hex layout — rim disc matches T090/T116 (#a89478), larger for ortho. */
-/** T163/T165 · dual-lip product-frame language on meeple rim (align felt-wood crown gold). */
-export const MEEPLE_HEX_SCALE = 1.72; // T163/T166/T168 · dial back product-demo pedestal
-export const MEEPLE_RIM_HEX = "#d4a87a"; // T163/T168 · wood-tone crown (less demo-white)
+/** T123 · shared seat marker for hex layout — was meeple silhouette; T171 → seat tray on desk. */
+/** T163/T165 · dual-lip product-frame language retained on tray rim. */
+export const MEEPLE_HEX_SCALE = 1.35; // T171 · tray scale (not product-demo pedestal)
+export const MEEPLE_RIM_HEX = "#c4a06a"; // T171 · wood tray lip
 export const MEEPLE_RIM_UNDERCUT = "#3a2414"; // T163 · dark undercut
 
 export function buildMeepleGeometry(seat = 0): BufferGeometry {
   const seatColor = SEAT_COLORS[seat % SEAT_COLORS.length] ?? "#ffffff";
   const parts: BufferGeometry[] = [];
-  // Classic meeple extruded silhouette (Y up); base at y=0.
-  const shape = new Shape();
-  shape.moveTo(0, 0);
-  shape.lineTo(0.16, 0);
-  shape.quadraticCurveTo(0.2, 0.08, 0.14, 0.18);
-  shape.lineTo(0.08, 0.28);
-  shape.lineTo(0.22, 0.38);
-  shape.quadraticCurveTo(0.28, 0.48, 0.16, 0.52);
-  shape.lineTo(0.1, 0.55);
-  shape.quadraticCurveTo(0.12, 0.7, 0, 0.78);
-  shape.quadraticCurveTo(-0.12, 0.7, -0.1, 0.55);
-  shape.lineTo(-0.16, 0.52);
-  shape.quadraticCurveTo(-0.28, 0.48, -0.22, 0.38);
-  shape.lineTo(-0.08, 0.28);
-  shape.lineTo(-0.14, 0.18);
-  shape.quadraticCurveTo(-0.2, 0.08, -0.16, 0);
-  shape.closePath();
-  const body = new ExtrudeGeometry(shape, {
-    depth: 0.22,
-    bevelEnabled: true,
-    bevelThickness: 0.02,
-    bevelSize: 0.015,
-    bevelSegments: 2,
-    curveSegments: 8,
-  });
-  body.translate(0, 0, -0.11);
-  parts.push(paintPart(body, seatColor, { smooth: true }));
-  // T090/T116 · cream→dim rim disc under meeple (hex ortho: slightly larger radius)
-  // T163 · dual-lip: dark undercut + bright crown (shared product-frame with felt-wood-rim)
+  // T171 · seat tray on desk (shared): wood oval tray + small seat-color chip (not color-swatch meeple)
   parts.push(
-    paintPart(new CylinderGeometry(0.36, 0.40, 0.032, 20), MEEPLE_RIM_UNDERCUT, {
-      pos: [0, 0.016, 0],
+    paintPart(new CylinderGeometry(0.42, 0.46, 0.05, 24), MEEPLE_RIM_UNDERCUT, {
+      pos: [0, 0.025, 0],
     }),
   );
   parts.push(
-    paintPart(new CylinderGeometry(0.32, 0.36, 0.055, 20), MEEPLE_RIM_HEX, {
-      pos: [0, 0.042, 0],
+    paintPart(new CylinderGeometry(0.38, 0.42, 0.06, 24), MEEPLE_RIM_HEX, {
+      pos: [0, 0.055, 0],
     }),
   );
-  parts.push(contactShadow(0.30, 0.26, 0.003));
-  return scaled(bakeShading(mergeParts(parts), 0.2), MEEPLE_HEX_SCALE);
+  // shallow tray well
+  parts.push(
+    paintPart(new CylinderGeometry(0.30, 0.32, 0.02, 20), "#5a3a1c", {
+      pos: [0, 0.078, 0],
+    }),
+  );
+  // seat-color chip (small, on tray — reads as seat token, not swatch tower)
+  parts.push(
+    paintPart(new CylinderGeometry(0.14, 0.15, 0.07, 16), seatColor, {
+      pos: [0, 0.12, 0],
+    }),
+  );
+  parts.push(contactShadow(0.36, 0.32, 0.003));
+  return scaled(bakeShading(mergeParts(parts), 0.18), MEEPLE_HEX_SCALE);
 }
 
 /** Robber ≈ hooded miniature (not a lathe cylinder). */

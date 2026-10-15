@@ -963,13 +963,14 @@ function station(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const roofMat = ctx.library.get("tt-roof", ROOF);
   const ink = materialFor(node, ctx);
   // T073 · elongated platform/plinth + curb edge (desk not bald at map-close)
-  const platform = new Mesh(boxAt(0.95, 0.06, 1.15, 0, 0.03, -0.08), stone);
+  // T172 · denser station pedestal on felt (shared station mesh)
+  const platform = new Mesh(boxAt(1.08, 0.08, 1.28, 0, 0.04, -0.08), stone);
   platform.receiveShadow = true;
   platform.castShadow = true;
-  const curb = new Mesh(boxAt(0.98, 0.03, 1.18, 0, 0.065, -0.08), ink);
+  const curb = new Mesh(boxAt(1.12, 0.035, 1.32, 0, 0.085, -0.08), ink);
   curb.receiveShadow = true;
   // Round pad on top of platform (station footprint)
-  const plinth = new Mesh(translated(new CylinderGeometry(0.52, 0.56, 0.09, 20), 0.11), stone);
+  const plinth = new Mesh(translated(new CylinderGeometry(0.58, 0.62, 0.11, 20), 0.13), stone);
   plinth.receiveShadow = true;
   plinth.castShadow = true;
   const ring = new Mesh(translated(new CylinderGeometry(0.48, 0.48, 0.025, 20), 0.165), ink);

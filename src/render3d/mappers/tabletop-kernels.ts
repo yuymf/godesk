@@ -87,7 +87,8 @@ export function networkRouteLayout(
     const terminal = city.id === state.terminalFrom || city.id === state.terminalTo;
     // T051: readable station plaque tag (hub:Name / Name) — not faint debug mush.
     const label = terminal ? `hub:${city.name}` : city.name;
-    return { id: city.id, objectKind: "station", x, z, size: terminal ? 0.62 : 0.42, label };
+    // T172 · denser station footprint on felt
+    return { id: city.id, objectKind: "station", x, z, size: terminal ? 0.72 : 0.52, label };
   });
   const links: TabletopLink[] = [];
   const hints: TabletopHint[] = [];
@@ -139,6 +140,41 @@ export function networkRouteLayout(
     });
   }
 
+  // T172 · H02 board-interior density: felt pads + crates/tokens in empty map (shared desk props)
+  {
+    const bw = (spanX * scale + 2.2) / 2;
+    const bd = (spanY * scale + 2.2) / 2;
+    const pads: Array<{ x: number; z: number; kind: "token" | "crate"; size: number }> = [];
+    // grid of soft fill away from stations
+    for (let ix = -2; ix <= 2; ix += 1) {
+      for (let iz = -2; iz <= 2; iz += 1) {
+        if (ix === 0 && iz === 0) continue;
+        const x = (ix / 2.2) * bw * 0.72;
+        const z = (iz / 2.2) * bd * 0.72;
+        // skip near stations
+        let near = false;
+        for (const city of state.cities) {
+          const [cx, cz] = position.get(city.id)!;
+          if (Math.hypot(cx - x, cz - z) < 0.85) { near = true; break; }
+        }
+        if (near) continue;
+        pads.push({ x, z, kind: (ix + iz) % 2 === 0 ? "crate" : "token", size: 0.22 + ((ix + iz + 4) % 3) * 0.04 });
+      }
+    }
+    let di = 0;
+    for (const pad of pads.slice(0, 14)) {
+      pieces.push({
+        id: `decor:map:${di++}`,
+        objectKind: pad.kind === "crate" ? "building" : "resource",
+        x: pad.x,
+        z: pad.z,
+        y: 0.02,
+        size: pad.size,
+        tint: pad.kind === "crate" ? "#8b6914" : "#c4b5a0",
+      });
+    }
+  }
+
   // T042: shared seat meeples (per-seat color) along the near edge.
   const counts = state.routeCounts ?? [];
   const seatN = Math.max(counts.length, 2);
@@ -157,7 +193,8 @@ export function networkRouteLayout(
 
   return {
     kernelType: "network-route-v1",
-    board: { objectKind: "map", materialKey: "map", width: spanX * scale + 1.6, depth: spanY * scale + 1.6 },
+    // T172 · slightly larger felt map so interior reads (shared layout, not sample hack)
+    board: { objectKind: "map", materialKey: "map", width: spanX * scale + 2.2, depth: spanY * scale + 2.2 },
     cells: [],
     pieces,
     links,
