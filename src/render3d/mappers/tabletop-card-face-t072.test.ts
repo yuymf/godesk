@@ -26,8 +26,9 @@ function mockCtx() {
 describe("T072 card face stage-readable", () => {
   it("source declares T072 stage-readable motif slab", () => {
     const src = readFileSync("src/render3d/mappers/tabletop-card-face-t048.ts", "utf8");
-    expect(src).toContain("T072");
-    expect(src).toMatch(/stage-readable|solid theme slab/);
+    // T077 superseded motif comment but T072 marker may remain in history; accept T077 stage-wide
+    expect(src).toMatch(/T072|T077/);
+    expect(src).toMatch(/stage-readable|stage-wide readable|solid theme slab/);
   });
 
   it("keeps illustration share; paints large fillRect slabs + motif paths", () => {
@@ -38,10 +39,9 @@ describe("T072 card face stage-readable", () => {
     expect(calls.filter((c) => c.op === "fillRect").length).toBeGreaterThanOrEqual(3);
     expect(calls.filter((c) => c.op === "lineTo").length).toBeGreaterThanOrEqual(4);
   });
-});
 
   it("gem market cards scale ≥1.15 for stage-far readability", () => {
     const src = readFileSync("src/render3d/mappers/tabletop-kernels.ts", "utf8");
-    expect(src).toMatch(/T072[\s\S]{0,80}size: 1\.2/);
+    expect(src).toMatch(/T07[27][\s\S]{0,80}size: 1\.(2|3|4)/);
   });
-
+});

@@ -394,7 +394,7 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
   state.market.forEach((tierCards, tier) => {
     const z = -1.6 + tier * 1.15;
     tierCards.forEach((card, index) => {
-      const x = -2.4 + index * 1.6;
+      const x = -2.7 + index * 1.85;
       const discount = String(card.discount ?? "");
       const prestige = Number(card.prestige ?? 0);
       const buyPayload = { tier: tier + 1, index };
@@ -406,8 +406,8 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
         objectKind: "card",
         x,
         z,
-        // T072 · larger market cards so stage-wide reads motif color masses
-        size: 1.2,
+        // T077 · stage-wide readable (pay T072 H03 stage-wide debt)
+        size: 1.42,
         tint: GEM_TINT[discount] ?? "#d6d3d1",
         label: encodeCardFace({
           tier: tier + 1,

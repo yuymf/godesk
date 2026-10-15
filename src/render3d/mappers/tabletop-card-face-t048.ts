@@ -17,8 +17,8 @@ export type CardFaceZone = {
 /** Canonical layout zones — forbid center-number-only faces. */
 /** T063 · illustration panel dominates face; cost/border strip must not swallow art. */
 export const CARD_FACE_ZONES: ReadonlyArray<CardFaceZone> = [
-  { id: "illustration", x: 0.06, y: 0.05, w: 0.88, h: 0.52 },
-  { id: "rewardBar", x: 0.06, y: 0.58, w: 0.88, h: 0.05 },
+  { id: "illustration", x: 0.04, y: 0.04, w: 0.92, h: 0.56 },
+  { id: "rewardBar", x: 0.04, y: 0.61, w: 0.92, h: 0.08 },
   { id: "prestige", x: 0.74, y: 0.64, w: 0.18, h: 0.12 },
   { id: "cost", x: 0.06, y: 0.78, w: 0.88, h: 0.14 },
   { id: "title", x: 0.06, y: 0.64, w: 0.64, h: 0.12 },
@@ -138,25 +138,28 @@ export function paintIllustrationBand(
   g.closePath();
   g.fill();
 
-  // T072 · stage-readable motifs (pay T069 far-distance debt): huge high-contrast blocks
-  const motifKind = Math.floor(rnd() * 3);
+  // T069 · motif kinds (gem diamond / building silhouette); T077 · stage-wide readable color masses (pay T072 H03 debt)
+  const motifKind = Math.floor(rnd() * 3); // gem | building silhouette | combo
   g.globalAlpha = 1;
-  // full-bleed reward mass (dominates stage-wide crop)
-  const solid = rewardHex.startsWith("#") ? rewardHex : mix(rgb, accent, 0.05);
+  // full-bleed reward mass — pure CHIP hue dominates far crop
+  const solid = rewardHex.startsWith("#") ? rewardHex : mix(rgb, accent, 0.02);
   g.fillStyle = solid;
-  g.fillRect(box.x + box.w * 0.04, box.y + box.h * 0.06, box.w * 0.92, box.h * 0.88);
-  // dark counter-block for value structure
-  g.fillStyle = mix(shadow, rgb, 0.25);
-  g.fillRect(box.x + box.w * 0.08, box.y + box.h * 0.12, box.w * 0.36, box.h * 0.72);
-  // parchment highlight slab
-  g.fillStyle = mix(parchment, accent, 0.25);
-  g.fillRect(box.x + box.w * 0.48, box.y + box.h * 0.1, box.w * 0.42, box.h * 0.28);
+  g.fillRect(box.x, box.y, box.w, box.h);
+  // near-black counter slab (value structure at stage-wide)
+  g.fillStyle = "#0b1220";
+  g.fillRect(box.x + box.w * 0.02, box.y + box.h * 0.08, box.w * 0.42, box.h * 0.84);
+  // bright accent slab opposite
+  g.fillStyle = mix(parchment, accent, 0.05);
+  g.fillRect(box.x + box.w * 0.48, box.y + box.h * 0.06, box.w * 0.48, box.h * 0.34);
+  // secondary pure accent bar
+  g.fillStyle = accent;
+  g.fillRect(box.x + box.w * 0.48, box.y + box.h * 0.42, box.w * 0.48, box.h * 0.22);
   if (motifKind === 0 || motifKind === 2) {
-    const gx = box.x + box.w * 0.68;
-    const gy = box.y + box.h * 0.55;
-    const gw = box.w * 0.48;
-    const gh = box.h * 0.7;
-    g.fillStyle = mix(parchment, rgb, 0.15);
+    const gx = box.x + box.w * 0.72;
+    const gy = box.y + box.h * 0.62;
+    const gw = box.w * 0.55;
+    const gh = box.h * 0.78;
+    g.fillStyle = mix(parchment, "#ffffff", 0.35);
     g.beginPath();
     g.moveTo(gx, gy - gh * 0.55);
     g.lineTo(gx + gw * 0.55, gy);
@@ -164,36 +167,36 @@ export function paintIllustrationBand(
     g.lineTo(gx - gw * 0.55, gy);
     g.closePath();
     g.fill();
-    g.strokeStyle = mix(shadow, parchment, 0.1);
-    g.lineWidth = Math.max(5, box.w * 0.025);
+    g.strokeStyle = "#0b1220";
+    g.lineWidth = Math.max(8, box.w * 0.04);
     g.stroke();
-    g.fillStyle = mix(accent, parchment, 0.2);
+    g.fillStyle = mix(accent, parchment, 0.1);
     g.beginPath();
-    g.moveTo(gx - gw * 0.3, gy - gh * 0.08);
-    g.lineTo(gx + gw * 0.3, gy - gh * 0.08);
-    g.lineTo(gx, gy + gh * 0.18);
+    g.moveTo(gx - gw * 0.32, gy - gh * 0.1);
+    g.lineTo(gx + gw * 0.32, gy - gh * 0.1);
+    g.lineTo(gx, gy + gh * 0.22);
     g.closePath();
     g.fill();
     if (motifKind === 2) {
-      g.fillStyle = mix(shadow, accent, 0.3);
-      g.fillRect(box.x + box.w * 0.1, box.y + box.h * 0.2, box.w * 0.3, box.h * 0.55);
+      g.fillStyle = mix(shadow, "#000000", 0.4);
+      g.fillRect(box.x + box.w * 0.06, box.y + box.h * 0.16, box.w * 0.32, box.h * 0.62);
     }
   } else {
-    const bx = box.x + box.w * 0.66;
-    const by = box.y + box.h * 0.82;
-    const bw = box.w * 0.52;
-    const bh = box.h * 0.62;
-    g.fillStyle = mix(parchment, shadow, 0.2);
+    const bx = box.x + box.w * 0.72;
+    const by = box.y + box.h * 0.88;
+    const bw = box.w * 0.58;
+    const bh = box.h * 0.7;
+    g.fillStyle = mix(parchment, "#ffffff", 0.25);
     g.fillRect(bx - bw / 2, by - bh * 0.75, bw, bh * 0.75);
-    g.fillStyle = mix(parchment, accent, 0.15);
+    g.fillStyle = mix(accent, parchment, 0.05);
     g.beginPath();
     g.moveTo(bx - bw * 0.62, by - bh * 0.75);
-    g.lineTo(bx, by - bh * 1.22);
+    g.lineTo(bx, by - bh * 1.28);
     g.lineTo(bx + bw * 0.62, by - bh * 0.75);
     g.closePath();
     g.fill();
-    g.fillStyle = mix(shadow, parchment, 0.15);
-    g.fillRect(bx - bw * 0.12, by - bh * 0.5, bw * 0.24, bh * 0.48);
+    g.fillStyle = "#0b1220";
+    g.fillRect(bx - bw * 0.14, by - bh * 0.55, bw * 0.28, bh * 0.52);
   }
 
   g.globalAlpha = 1;
