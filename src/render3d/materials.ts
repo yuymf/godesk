@@ -59,8 +59,11 @@ float gdFbm(vec2 p) {
 }
 float gdPattern(vec3 w) {
 #if GD_PATTERN == 1
-  float n = gdNoise(vec2(w.x * 1.7, w.z * 12.0));
-  return 0.5 + 0.5 * sin((w.x + n * 0.5) * 26.0);
+  // T092 · wood grain microdetail readable on desk rim (align with felt T082/T083)
+  float n = gdNoise(vec2(w.x * 2.1, w.z * 14.0));
+  float ring = sin((w.x + n * 0.55) * 28.0);
+  float pore = gdNoise(w.xz * 22.0);
+  return 0.5 + 0.42 * ring + (pore - 0.5) * 0.22;
 #elif GD_PATTERN == 2
   // T082/T083 · cloth weave readable at wide desk cameras (H02 debt)
   vec2 g = fract(w.xz * 28.0);

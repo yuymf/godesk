@@ -1126,6 +1126,105 @@ function feltWoodRim(): Geometry {
   return outer;
 }
 
+/** T092 · shared wood rim grain/normal/roughness microdetail (align with felt T082/T083). */
+function woodRimMaterial(node: SceneNode, ctx: TabletopObjectContext): Material {
+  const token = node.material ? ctx.materials[node.material] : undefined;
+  const base = token?.base ?? "#8b5a2b";
+  const W = 256;
+  const H = 256;
+  const albedo = typeof document !== "undefined" ? document.createElement("canvas") : null;
+  const normal = typeof document !== "undefined" ? document.createElement("canvas") : null;
+  const rough = typeof document !== "undefined" ? document.createElement("canvas") : null;
+  if (albedo && normal && rough) {
+    albedo.width = W; albedo.height = H;
+    normal.width = W; normal.height = H;
+    rough.width = W; rough.height = H;
+    const ga = albedo.getContext("2d");
+    const gn = normal.getContext("2d");
+    const gr = rough.getContext("2d");
+    if (ga && gn && gr) {
+      ga.fillStyle = base;
+      ga.fillRect(0, 0, W, H);
+      const height = new Float32Array(W * H);
+      // Longitudinal grain (rings along Z, variation along X) + fine pore noise
+      for (let y = 0; y < H; y += 1) {
+        for (let x = 0; x < W; x += 1) {
+          const u = x / W;
+          const v = y / H;
+          const ring = Math.sin((u * 18 + Math.sin(v * 6.2) * 0.35) * Math.PI * 2);
+          const ray = Math.sin((v * 3.5 + u * 0.8) * Math.PI * 2) * 0.25;
+          const pore = (Math.sin(u * 90) * Math.sin(v * 70)) * 0.12;
+          const n = (Math.random() - 0.5) * 0.08;
+          height[y * W + x] = 0.5 + ring * 0.32 + ray + pore + n;
+        }
+      }
+      const aImg = ga.createImageData(W, H);
+      const nImg = gn.createImageData(W, H);
+      const rImg = gr.createImageData(W, H);
+      const parse = (hex: string) => {
+        const h = hex.replace("#", "");
+        return [
+          Number.parseInt(h.slice(0, 2), 16),
+          Number.parseInt(h.slice(2, 4), 16),
+          Number.parseInt(h.slice(4, 6), 16),
+        ] as const;
+      };
+      const [br, bg, bb] = parse(String(base).startsWith("#") && String(base).length >= 7 ? String(base) : "#8b5a2b");
+      for (let y = 0; y < H; y += 1) {
+        for (let x = 0; x < W; x += 1) {
+          const i = y * W + x;
+          const h0 = height[i]!;
+          const hx = height[y * W + ((x + 1) % W)]!;
+          const hy = height[((y + 1) % H) * W + x]!;
+          const dx = (h0 - hx) * 10;
+          const dy = (h0 - hy) * 10;
+          const shade = (h0 - 0.5) * 78;
+          const o = i * 4;
+          aImg.data[o] = Math.max(0, Math.min(255, br + shade));
+          aImg.data[o + 1] = Math.max(0, Math.min(255, bg + shade * 0.9));
+          aImg.data[o + 2] = Math.max(0, Math.min(255, bb + shade * 0.7));
+          aImg.data[o + 3] = 255;
+          nImg.data[o] = Math.max(0, Math.min(255, 128 + dx * 120));
+          nImg.data[o + 1] = Math.max(0, Math.min(255, 128 + dy * 120));
+          nImg.data[o + 2] = 255;
+          nImg.data[o + 3] = 255;
+          // pores darker = higher roughness; varnish ridges smoother
+          const rv = Math.max(0, Math.min(255, 160 + (0.5 - h0) * 90));
+          rImg.data[o] = rv;
+          rImg.data[o + 1] = rv;
+          rImg.data[o + 2] = rv;
+          rImg.data[o + 3] = 255;
+        }
+      }
+      ga.putImageData(aImg, 0, 0);
+      gn.putImageData(nImg, 0, 0);
+      gr.putImageData(rImg, 0, 0);
+    }
+  }
+  const map = albedo ? new CanvasTexture(albedo) : null;
+  const normalMap = normal ? new CanvasTexture(normal) : null;
+  const roughnessMap = rough ? new CanvasTexture(rough) : null;
+  for (const tex of [map, normalMap, roughnessMap]) {
+    if (!tex) continue;
+    tex.wrapS = tex.wrapT = RepeatWrapping;
+    tex.repeat.set(2.4, 2.4);
+  }
+  if (map) map.colorSpace = SRGBColorSpace;
+  const mat = new MeshStandardMaterial({
+    color: base,
+    map: map ?? undefined,
+    normalMap: normalMap ?? undefined,
+    normalScale: new Vector2(1.15, 1.15),
+    roughnessMap: roughnessMap ?? undefined,
+    roughness: Math.min(0.88, Math.max(0.55, token?.roughness ?? 0.78)),
+    metalness: Math.min(0.12, token?.metalness ?? 0.06),
+  });
+  installPattern(mat, "grain", 0);
+  const strength = mat.userData.gdPatternStrength as { value: number } | undefined;
+  if (strength) strength.value = 0.85;
+  return mat;
+}
+
 
 /** T044/T082 · product green felt: weave albedo + normal/roughness microdetail (shared desk cloth). */
 function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material {
@@ -1458,8 +1557,9 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = softContactShadow(sx, sz);
   } else if (mesh === "felt-wood-rim") {
     // T044: hollow wood frame — solid box was burying the green felt inset.
+    // T092 · grain/normal/roughness microdetail on shared wood rim
     const group = new Group();
-    const mat = materialFor(node, ctx);
+    const mat = woodRimMaterial(node, ctx);
     const t = 0.085; // frame thickness in unit UV
     const mk = (sx: number, sy: number, sz: number, x: number, y: number, z: number) => {
       const m = new Mesh(new BoxGeometry(sx, sy, sz), mat);
@@ -1474,11 +1574,7 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     mk(t, 1, 1 - 2 * t, -0.5 + t / 2, 0, 0);
     object = group;
   } else if (mesh === "felt-wood-lip") {
-    const built = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial({
-      color: "#8b5a2b",
-      roughness: 0.72,
-      metalness: 0.08,
-    }));
+    const built = new Mesh(new BoxGeometry(1, 1, 1), woodRimMaterial(node, ctx));
     built.castShadow = false;
     built.receiveShadow = true;
     object = built;
