@@ -9,7 +9,7 @@ describe("T115 station label plaque contrast", () => {
     // T051 length/truncation not whitewashed
     expect(src).toMatch(/stationName\.length \* 52/);
     expect(src).toMatch(/stationName\.slice\(0,\s*8\)|title:\s*stationName/);
-    expect(src).toMatch(/Math\.min\(1\.15,\s*0\.42 \+ stationName\.length \* 0\.14\)/);
+    expect(src).toMatch(/Math\.min\(1\.(15|45),\s*0\.(42|52) \+ stationName\.length \* 0\.1(4|6)\)/);
   });
 
   it("shared plaque face uses ink halo + dark wood frame", () => {

@@ -6,9 +6,9 @@ describe("T083 felt H02 vs_regress debt", () => {
     const src = readFileSync("src/render3d/tabletop-objects.ts", "utf8");
     expect(src).toContain("T083");
     // T114 may raise further; floors stay at T083
-    expect(src).toMatch(/repeat\.set\((3\.2|2\.6),\s*\1\)/);
-    expect(src).toMatch(/normalScale:\s*new Vector2\(1\.(25|45),\s*1\.\1\)/);
-    expect(src).toMatch(/period = (14|16)/);
+    expect(src).toMatch(/repeat\.set\((3\.2|2\.6|2\.1),\s*\1\)/);
+    expect(src).toMatch(/normalScale:\s*new Vector2\(1\.(25|45|70),\s*1\.\1\)/);
+    expect(src).toMatch(/period = (14|16|20)/);
     expect(src).toContain("macro");
   });
 

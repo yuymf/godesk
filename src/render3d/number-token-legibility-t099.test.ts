@@ -13,6 +13,6 @@ describe("T099 hex number token legibility", () => {
     const src = readFileSync("src/render3d/number-labels.ts", "utf8");
     expect(src).toContain("T099");
     expect(src).toContain("strokeText");
-    expect(src).toMatch(/cell \* 0\.0(48|55)/);
+    expect(src).toMatch(/cell \* 0\.0(48|55|68)/);
   });
 });

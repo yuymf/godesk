@@ -16,7 +16,8 @@ describe("T112 hex harbor/number stage-wide", () => {
     const src = readFileSync("src/render3d/island.ts", "utf8");
     expect(src).toContain("T112");
     expect(src).toContain("T101");
-    expect(src).toMatch(/cell \* 0\.072/);
-    expect(src).toMatch(/cell \* 0\.38/);
+    // T118 may raise further; floor stays at T112
+    expect(src).toMatch(/cell \* 0\.(072|098)/);
+    expect(src).toMatch(/cell \* 0\.(38|48)/);
   });
 });

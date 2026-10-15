@@ -26,12 +26,12 @@ export const NUMBER_TOKEN_HALF_HEIGHT = 0.03;
 /** 贴花离筹码顶面的高度（避免 z-fighting；配合 polygonOffset）。 */
 export const LABEL_LIFT = 0.004;
 /** 贴花边长 = 筹码半径 × 1.85 × 节点缩放：略小于筹码直径（G3D-ART-3 由 1.6 放大，字形更大）。 */
-export const LABEL_SIZE_PER_RADIUS = 2.36; // T099/T112 · stage-wide glyph
+export const LABEL_SIZE_PER_RADIUS = 2.72; // T099/T112/T118 · stage-wide glyph
 export { NUMBER_TOKEN_SCALE } from "./tokens";
 
-export const LABEL_INK = "#120e0c"; // T101/T112 · wider contrast
+export const LABEL_INK = "#120e0c"; // T101/T112/T118 · wider contrast
 /** 6 / 8 高亮：赤陶色（比风格色 #B8643C 深一档，保证在奶油色筹码面上对比度 ≥ 4.5）。 */
-export const LABEL_HOT = "#7a2410"; // T101/T112
+export const LABEL_HOT = "#7a2410"; // T101/T112/T118
 
 const GRID = 4;
 const NUMBERS = [2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 7] as const;
@@ -58,7 +58,7 @@ export function atlasCell(n: number): { col: number; row: number } {
  */
 export const LABEL_FONT = `"Helvetica Neue", Helvetica, Arial, "Noto Sans", "DejaVu Sans", "Liberation Sans", sans-serif`;
 /** 默认机位俯视角会把筹码顶面纵向压缩约一半；图集里预先纵向拉伸字形，抵消透视压缩。 */
-export const GLYPH_STRETCH_Y = 1.62; // T099/T112
+export const GLYPH_STRETCH_Y = 1.78; // T099/T112/T118
 /** 两位数的字距（相对格宽，负值收紧），让「11」「12」成为一个整体而不是两个分离的笔画。 */
 export const GLYPH_TRACKING = -0.03;
 
@@ -80,8 +80,8 @@ export function drawNumberAtlas(size = 1024): Texture {
     const color = isHotNumber(n) ? LABEL_HOT : LABEL_INK;
     ctx.fillStyle = color;
     const text = String(n);
-    // T099/T112 · larger glyphs + cream stroke for stage-wide contrast (shared; no sample specials)
-    const fontPx = Math.round(cell * (text.length > 1 ? 0.74 : 0.80));
+    // T099/T112/T118 · larger glyphs + cream stroke for stage-wide contrast (shared; no sample specials)
+    const fontPx = Math.round(cell * (text.length > 1 ? 0.86 : 0.94));
     ctx.font = `900 ${fontPx}px ${LABEL_FONT}`;
     // 逐字排版：实测字宽 + 收紧字距；两位数若超宽则整体横向压缩。
     const widths = [...text].map((ch) => ctx.measureText(ch).width);
@@ -98,7 +98,7 @@ export function drawNumberAtlas(size = 1024): Texture {
     ctx.lineJoin = "round";
     ctx.miterLimit = 2;
     ctx.strokeStyle = "#fff8e6"; // T101
-    ctx.lineWidth = Math.max(4, fontPx * 0.15); // T101/T112
+    ctx.lineWidth = Math.max(6, fontPx * 0.22); // T101/T112/T118
     [...text].forEach((ch, i) => {
       ctx.strokeText(ch, x, 0);
       ctx.fillText(ch, x, 0);
@@ -106,7 +106,7 @@ export function drawNumberAtlas(size = 1024): Texture {
     });
     ctx.restore();
     const pips = pipCount(n);
-    const r = cell * 0.055; // T099/T112 · larger probability pips
+    const r = cell * 0.068; // T099/T112/T118 · larger probability pips
     const gap = r * 2.6;
     for (let i = 0; i < pips; i += 1) {
       ctx.beginPath();
