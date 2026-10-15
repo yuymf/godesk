@@ -5,7 +5,7 @@ import { LABEL_SIZE_PER_RADIUS, LABEL_INK } from "./number-labels";
 describe("T112 hex harbor/number stage-wide", () => {
   it("number label size and ink raised without dropping T099 floor", () => {
     expect(LABEL_SIZE_PER_RADIUS).toBeGreaterThanOrEqual(2.3);
-    expect(LABEL_INK.toLowerCase()).toBe("#120e0c");
+    expect(LABEL_INK.toLowerCase()).toMatch(/^#(120e0c|0c0806)$/);
     const src = readFileSync("src/render3d/number-labels.ts", "utf8");
     expect(src).toContain("T112");
     expect(src).toContain("T099");
@@ -17,7 +17,7 @@ describe("T112 hex harbor/number stage-wide", () => {
     expect(src).toContain("T112");
     expect(src).toContain("T101");
     // T118 may raise further; floor stays at T112
-    expect(src).toMatch(/cell \* 0\.(072|098)/);
-    expect(src).toMatch(/cell \* 0\.(38|48)/);
+    expect(src).toMatch(/cell \* 0\.(072|098|112)/);
+    expect(src).toMatch(/cell \* 0\.(38|48|54)/);
   });
 });

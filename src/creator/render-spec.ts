@@ -315,10 +315,10 @@ function baseDefault(kernelType: string | null | undefined): RenderSpec {
       enabled: kernelType === "hex-settlement-v1" || kernelType === "harbor-voyage-v1",
       // R20：与 water/mesh DEFAULT_SPEC 同步 — 明亮青绿 + 浅滩环。
       // T183 · shared water chroma (hex/harbor kernel family)
-      shallow: "#1ecfc4",
-      deep: "#085a66",
-      waveHeight: 0.078,
-      waveSpeed: 0.62,
+      shallow: "#24e8d6", // T183/T222 · water microcontrast (brighter shallow)
+      deep: "#0a6270", // keep tip-or-brighter deep (no corner dunk)
+      waveHeight: 0.084,
+      waveSpeed: 0.66,
       foam: 1.0, // T183 (unit clamp)
     },
     materials: {
@@ -469,7 +469,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     render.lighting = {
       ...render.lighting,
       sun: { ...render.lighting.sun, azimuthDeg: 126, elevationDeg: 60, intensity: 5.98, color: "#ffce9a" },
-      hemisphere: { sky: "#fffcf8", ground: "#6a5844", intensity: 1.88 },
+      hemisphere: { sky: "#ffffff", ground: "#7a6854", intensity: 1.95 },
       fill: { azimuthDeg: 310, elevationDeg: 50, intensity: 1.82, color: "#d8ecfc" },
       rim: { azimuthDeg: 40, elevationDeg: 34, intensity: 1.55, color: "#ffecbe" },
       shadow: { enabled: true, softness: 0.55 },
@@ -479,7 +479,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     Object.assign(render.materials, {
       // T172/T177/T192/T201/T206 · denser/brighter network map cloth (shared MaterialLibrary)
       map: material("#20ffb0", "cloth", 0.99, 0, undefined, 0.99), // T177…T214/T218
-      table: material("#f4c08a", "grain", 0.32, 0.28), // T110…T214/T218 · warmer exterior/rim
+      table: material("#f8d0a0", "grain", 0.30, 0.26), // T110…T218/T221 · warmer exterior/rim (corner-calm)
       ink: material("#081420", "none", 0.22, 0.28, 0.58), // T214/T213/T218 route ink
       piece: material("#fff8ea", "none", 0.10, 0.34, 0.94), // T201/T206/T210/T213/T217 · plastic-wood piece
     });
@@ -500,9 +500,9 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       ...render.lighting,
       // T061 · desk contrast; T086 · explicit fill + rim (no extra shadow maps)
       // T175/T187/T198 · brighter upper sky/fill/exposure (H01 hex path separate; no vignette bait)
-      sun: { ...render.lighting.sun, azimuthDeg: 128, elevationDeg: 60, intensity: 5.55, color: "#ffd8b4" },
-      hemisphere: { sky: "#ffffff", ground: "#7a6854", intensity: 1.85 },
-      fill: { azimuthDeg: 312, elevationDeg: 54, intensity: 1.82, color: "#ecf4fc" },
+      sun: { ...render.lighting.sun, azimuthDeg: 128, elevationDeg: 60, intensity: 5.85, color: "#ffe0c0" },
+      hemisphere: { sky: "#ffffff", ground: "#9a8870", intensity: 2.05 },
+      fill: { azimuthDeg: 312, elevationDeg: 54, intensity: 1.95, color: "#f0f6fc" },
       rim: { azimuthDeg: 38, elevationDeg: 32, intensity: 1.22, color: "#ffeed0" },
       shadow: { enabled: true, softness: 0.58 },
       exposure: 1.99, // T187…T214/T218 · desk product light (H03/H05 card table readable)
@@ -511,7 +511,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
       board: material("#00e868", "cloth", 0.99, 0, undefined, 0.99),  // T044…T214/T218 product green felt
-      table: material("#e8b86c", "grain", 0.38, 0.24), // T092…T214/T218 · warmer wood rim
+      table: material("#f6d8a8", "grain", 0.34, 0.20), // T092…T221 · brighter wood rim (corner-calm)
       piece: material("#fff6e6", "none", 0.18, 0.24, 0.78), // T198/T206/T210 · plastic-wood piece
       card: material("#fff8ee", "none", 0.22, 0.14, 0.68), // T198/T206/T213 · card stock
       resource: material("#ffd898", "none", 0.08, 0.48, 0.98), // T198/T206/T213 · gem crystal

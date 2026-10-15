@@ -1218,7 +1218,7 @@ function softContactShadow(
     mesh.renderOrder = -1;
     return mesh;
   };
-  // T218 · product contact shadow: tight core + smooth falloff (no concentric bands / no center blot)
+  // T218/T222 · product contact shadow: tight core + smooth falloff (no concentric bands / no center blot)
   group.add(mk(1.42, Math.min(0.72, opacity * 1.08), 0.00085, "contact-shadow")); // core
   group.add(mk(1.78, Math.min(0.32, opacity * 0.48), 0.00068)); // near core blend
   group.add(mk(2.20, Math.min(0.12, opacity * 0.18), 0.00052)); // soft mid · center-calm
@@ -1475,7 +1475,7 @@ function woodRimMaterial(node: SceneNode, ctx: TabletopObjectContext): Material 
           // T110 · stronger shared grain shade (rim+exterior continuous, not cut)
           const dx = (h0 - hx) * 12;
           const dy = (h0 - hy) * 12;
-          const shade = (h0 - 0.5) * 220; // T110/T201/T206/T214/T217
+          const shade = (h0 - 0.5) * 220; // T110…T217/T222 · grain (restore tip highlight)
           const o = i * 4;
           aImg.data[o] = Math.max(0, Math.min(255, br + shade));
           aImg.data[o + 1] = Math.max(0, Math.min(255, bg + shade * 0.9));

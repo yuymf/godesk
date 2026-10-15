@@ -6546,4 +6546,164 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   opacity: 0.2 !important;
   margin: 0.02rem 0 !important;
 }
+/* T221 · 分享帧 chrome 再让路：字透明/条更矮，但条本身必须不透明浅色（cornerCalm） */
+.room-view-hex-island.room-view-seated .room-invitation-rich.is-collapsed.room-share-chrome.is-chrome-collapse,
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse {
+  max-height: 1.15rem !important;
+  padding: 0.08rem 0.35rem !important;
+  opacity: 1 !important;
+  overflow: visible !important;
+  background: #ffffff !important;
+  border-color: rgb(23 23 23 / 4%) !important;
+}
+/* 保留「座位」浅色垫，字几乎看不见 —— 让路但不挖角 */
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-chrome-collapse .seat-chip.is-yours,
+.room-view-hex-island.room-view-seated .room-invitation-rich.is-chrome-collapse .seat-chip.is-yours {
+  display: inline-flex !important;
+  opacity: 1 !important;
+  background: #f7f3ea !important;
+  color: transparent !important;
+  border-color: rgb(23 23 23 / 6%) !important;
+  box-shadow: none !important;
+  min-height: 0.85rem !important;
+  padding: 0.05rem 0.45rem !important;
+  font-size: 0.55rem !important;
+}
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-chrome-collapse .seat-chip.is-yours b,
+.room-view-hex-island.room-view-seated .room-invitation-rich.is-chrome-collapse .seat-chip.is-yours b,
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-chrome-collapse .seat-chip.is-yours small,
+.room-view-hex-island.room-view-seated .room-invitation-rich.is-chrome-collapse .seat-chip.is-yours small {
+  color: transparent !important;
+  opacity: 0.15 !important;
+  font-size: 0.5rem !important;
+}
+.room-view-tabletop-immersive.room-view-seated .desk-action-drawer:not([open]) {
+  max-height: 0.55rem !important;
+  opacity: 1 !important;
+  margin: 0.02rem 0 !important;
+  background: #f7f3ea !important;
+}
+.room-view-tabletop-immersive.room-view-seated .desk-action-drawer:not([open]) .desk-action-drawer-summary {
+  min-height: 0.45rem !important;
+  padding: 0 0.3rem !important;
+  font-size: 0.34rem !important;
+  opacity: 1 !important;
+  color: transparent !important;
+  background: #f3e7c9 !important;
+}
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud {
+  max-height: 0.55rem !important;
+  padding: 0.02rem 0.32rem !important;
+  font-size: 0.4rem !important;
+  opacity: 1 !important;
+  margin: 0.02rem 0 !important;
+  background: #f7f3ea !important;
+}
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud-kicker,
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud-supply,
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud-turn {
+  opacity: 0.2 !important;
+  font-size: 0.36rem !important;
+  color: transparent !important;
+}
+.room-view-tabletop-immersive.room-view-seated .room-action-log-drawer:not([open]) {
+  max-height: 0.45rem !important;
+  opacity: 1 !important;
+  margin: 0.02rem 0 !important;
+  background: #ffffff !important;
+}
+.room-view-tabletop-immersive.room-view-seated .room-action-log-drawer:not([open]) summary,
+.room-view-hex-island.room-view-seated .room-action-log-drawer:not([open]) summary {
+  color: transparent !important;
+  font-size: 0.4rem !important;
+}
+/* T221 · shell header: 全不透明白底 + 透明字（相对 tip 字更让路，角亮度不降） */
+.room-view-tabletop-immersive.room-view-seated .room-shell-header.is-immersive-strip,
+.room-view-hex-island.room-view-seated .room-shell-header.is-immersive-strip,
+.room-view-tabletop-immersive.room-view-seated .room-shell-header.is-share-chrome,
+.room-view-hex-island.room-view-seated .room-shell-header.is-share-chrome {
+  min-height: 0.7rem !important;
+  max-height: 0.85rem !important;
+  padding: 0.02rem 0.28rem !important;
+  opacity: 1 !important;
+  background: #ffffff !important;
+}
+.room-view-tabletop-immersive.room-view-seated .room-shell-header.is-immersive-strip .room-header-actions a,
+.room-view-hex-island.room-view-seated .room-shell-header.is-immersive-strip .room-header-actions a,
+.room-view-tabletop-immersive.room-view-seated .room-shell-header.is-share-chrome .room-header-actions a,
+.room-view-hex-island.room-view-seated .room-shell-header.is-share-chrome .room-header-actions a {
+  font-size: 0.4rem !important;
+  padding: 0 0.1rem !important;
+  opacity: 0.22 !important;
+  color: transparent !important;
+}
+/* T221 · 重连/错误条不得在分享帧底角泼墨 */
+.room-view-tabletop-immersive.room-view-seated .creator-error,
+.room-view-hex-island.room-view-seated .creator-error,
+.room-view-tidewell-immersive.room-view-seated .creator-error {
+  background: #f7f3ea !important;
+  color: transparent !important;
+  border: none !important;
+  margin: 0 !important;
+  padding: 0.1rem 0.4rem !important;
+  font-size: 0.45rem !important;
+  min-height: 0.4rem !important;
+  max-height: 0.55rem !important;
+  opacity: 0.35 !important;
+  overflow: hidden !important;
+}
 
+/* T221b · brand-mark 不得因 shell opacity:1 变实黑（tip 时代 0.32 洗淡） */
+.room-view-tabletop-immersive.room-view-seated .room-shell-header .room-brand-mark,
+.room-view-hex-island.room-view-seated .room-shell-header .room-brand-mark {
+  opacity: 0.12 !important;
+  filter: brightness(1.8) contrast(0.55);
+}
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-chrome-collapse .seat-chip.is-yours,
+.room-view-hex-island.room-view-seated .room-invitation-rich.is-chrome-collapse .seat-chip.is-yours {
+  background: #ffffff !important;
+  border-color: rgb(23 23 23 / 5%) !important;
+  color: #d8d2c6 !important; /* tip-like pale gray, not transparent void */
+  opacity: 1 !important;
+}
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-chrome-collapse .seat-chip.is-yours b,
+.room-view-hex-island.room-view-seated .room-invitation-rich.is-chrome-collapse .seat-chip.is-yours b {
+  color: #d8d2c6 !important;
+  opacity: 0.55 !important;
+  font-size: 0.62rem !important;
+}
+
+/* T221c · 舞台顶/底浅色 letterbox 叠在 canvas 之上（inset box-shadow 会被 canvas 盖住） */
+.room-view-tabletop-immersive.room-view-seated .tabletop-stage,
+.room-view-tabletop-immersive.room-view-seated .g3d-stage,
+.room-view-hex-island.room-view-seated .g3d-stage,
+.room-view-tidewell-immersive.room-view-seated .g3d-stage {
+  position: relative !important;
+  background-color: #ffffff !important;
+}
+.room-view-tabletop-immersive.room-view-seated .tabletop-stage::before,
+.room-view-tabletop-immersive.room-view-seated .g3d-stage::before,
+.room-view-hex-island.room-view-seated .g3d-stage::before,
+.room-view-tidewell-immersive.room-view-seated .g3d-stage::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 0; right: 0; top: 0;
+  height: 16px;
+  background: #ffffff;
+  z-index: 6;
+  pointer-events: none;
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+.room-view-tabletop-immersive.room-view-seated .tabletop-stage::after,
+.room-view-tabletop-immersive.room-view-seated .g3d-stage::after {
+  content: "" !important;
+  position: absolute !important;
+  left: 0; right: 0; bottom: 0;
+  height: 10px;
+  background: #ffffff;
+  z-index: 6;
+  pointer-events: none;
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+}

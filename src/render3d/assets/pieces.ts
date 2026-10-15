@@ -368,8 +368,8 @@ function houseParts({ width, depth, wallHeight, ridgeHeight, base, wall, roof, s
  * (no cottage/manor glTF suitable for InstancedMesh+vertexColors) — keep
  * procedural miniatures; survey noted in assets/LICENSES.md.
  */
-export const SETTLEMENT_SCALE = 2.18; // T060/T217 · taller pitched cottage (settlement readable)
-export const CITY_SCALE = 2.58; // T060/T217 · taller keep silhouette
+export const SETTLEMENT_SCALE = 2.32; // T060/T217/T222 · taller pitched cottage (settlement readable)
+export const CITY_SCALE = 2.72; // T060/T217/T222 · taller keep silhouette
 
 function scaled(geom: BufferGeometry, s: number): BufferGeometry {
   geom.scale(s, s, s);
@@ -469,7 +469,7 @@ export function buildCityGeometry(seat: number): BufferGeometry {
   return scaled(bakeShading(mergeParts(parts), 0.3), CITY_SCALE);
 }
 
-export const ROAD_LENGTH = 0.92; // T060/T217 · edge-aligned prism span
+export const ROAD_LENGTH = 0.98; // T060/T217/T222 · edge-aligned prism span
 
 export function buildRoadGeometry(seat: number): BufferGeometry {
   const main = seatColor(seat);

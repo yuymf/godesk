@@ -21,17 +21,17 @@ import {
 import type { SceneNode } from "./scene-model";
 
 /** 筹码圆柱：半径 0.22、高 0.06，节点 position 为圆柱中心。 */
-export const NUMBER_TOKEN_RADIUS = 0.22;
-export const NUMBER_TOKEN_HALF_HEIGHT = 0.03;
+export const NUMBER_TOKEN_RADIUS = 0.245; // T222 · thicker disc footprint
+export const NUMBER_TOKEN_HALF_HEIGHT = 0.042; // T222 · disc thickness / 落地感
 /** 贴花离筹码顶面的高度（避免 z-fighting；配合 polygonOffset）。 */
-export const LABEL_LIFT = 0.0015; // T131 · less float above token
+export const LABEL_LIFT = 0.0008; // T131/T222 · less float above token
 /** 贴花边长 = 筹码半径 × 1.85 × 节点缩放：略小于筹码直径（G3D-ART-3 由 1.6 放大，字形更大）。 */
-export const LABEL_SIZE_PER_RADIUS = 2.72; // T099/T112/T118 · stage-wide glyph
+export const LABEL_SIZE_PER_RADIUS = 2.88; // T099/T112/T118/T222 · stage-wide glyph
 export { NUMBER_TOKEN_SCALE } from "./tokens";
 
-export const LABEL_INK = "#120e0c"; // T101/T112/T118 · wider contrast
+export const LABEL_INK = "#0c0806"; // T101/T112/T118/T222 · wider contrast
 /** 6 / 8 高亮：赤陶色（比风格色 #B8643C 深一档，保证在奶油色筹码面上对比度 ≥ 4.5）。 */
-export const LABEL_HOT = "#7a2410"; // T101/T112/T118
+export const LABEL_HOT = "#8a1c08"; // T101/T112/T118/T222
 
 const GRID = 4;
 const NUMBERS = [2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 7] as const;

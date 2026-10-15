@@ -341,16 +341,16 @@ function drawSigns(x: CanvasRenderingContext2D, cell: number, plate: HTMLImageEl
     x.textAlign = "center";
     x.textBaseline = "middle";
     x.lineJoin = "round";
-    // T101/T112/T118 · stage-wide harbor contrast: thicker cream stroke + larger ratio/word
-    x.strokeStyle = "rgba(255, 248, 230, 0.98)";
-    x.lineWidth = cell * 0.098;
-    x.fillStyle = "#120e0c";
-    x.font = `900 ${Math.round(cell * 0.48)}px "Helvetica Neue", Helvetica, Arial, "Noto Sans", sans-serif`;
+    // T101/T112/T118/T222 · stage-wide harbor contrast: thicker cream stroke + larger ratio/word
+    x.strokeStyle = "rgba(255, 250, 235, 0.99)";
+    x.lineWidth = cell * 0.112;
+    x.fillStyle = "#0e0a08";
+    x.font = `900 ${Math.round(cell * 0.54)}px "Helvetica Neue", Helvetica, Arial, "Noto Sans", sans-serif`;
     x.strokeText(label.ratio, cx, cy - cell * 0.12);
     x.fillText(label.ratio, cx, cy - cell * 0.12);
     // 第二行（资源）放大到与比例同级，远看可读。
     x.fillStyle = label.color;
-    x.font = `900 ${Math.round(cell * (label.word.length > 1 ? 0.42 : 0.52))}px "PingFang SC", "Noto Sans CJK SC", "Noto Sans CJK JP", sans-serif`;
+    x.font = `900 ${Math.round(cell * (label.word.length > 1 ? 0.48 : 0.58))}px "PingFang SC", "Noto Sans CJK SC", "Noto Sans CJK JP", sans-serif`;
     x.strokeText(label.word, cx, cy + cell * 0.16);
     x.fillText(label.word, cx, cy + cell * 0.16);
   });
@@ -676,7 +676,7 @@ function applyBoatWetLine(g: BufferGeometry, strength: number): void {
 
 /** 帆船停泊点：岛外一圈，避开右前方骰盘（≈(4.2, 3.2)）。 */
 /** 港口牌半径 / 帆船缩放（round-2d2：放大，远景可读）。 */
-export const SIGN_RADIUS = 0.28; // T118 · stage-wide harbor disc
+export const SIGN_RADIUS = 0.32; // T118/T222 · stage-wide harbor disc
 export const BOAT_SCALE = 1.7;
 
 export const BOAT_SPOTS: ReadonlyArray<{ x: number; z: number; yaw: number; phase: number }> = [

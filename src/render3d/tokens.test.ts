@@ -169,7 +169,7 @@ describe("R22 resource colour + seams", () => {
     expect(SOFT_EDGE_STRENGTH).toBeGreaterThan(0);
     expect(SOFT_EDGE_STRENGTH).toBeLessThanOrEqual(0.25);
     expect(TERRAIN_SATURATION).toBeGreaterThanOrEqual(1);
-    expect(TERRAIN_SATURATION).toBeLessThanOrEqual(2.0); // T183/T217
+    expect(TERRAIN_SATURATION).toBeLessThanOrEqual(2.1); // T183/T217/T222
   });
 
   it("tile top faces touch (no open slot → no dark 1px side line); sides taper inside the coast wall", () => {

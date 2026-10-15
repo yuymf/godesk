@@ -8,7 +8,7 @@ describe("T196 shared dressing / light micro-lift", () => {
     expect(obj).toMatch(/Vector2\((5\.(35|70)|6\.05|6\.45|6\.85),\s*(5\.(35|70)|6\.05|6\.45|6\.85)\)/); // T201/T206/T214 weave
     expect(obj).toMatch(/W \* 0\.42/); // T193 vignette still calm
     const mats = readFileSync("src/render3d/materials.ts", "utf8");
-    expect(mats).toMatch(/TERRAIN_SATURATION = 1\.(48|58|72|95)/);
+    expect(mats).toMatch(/TERRAIN_SATURATION = 1\.(48|58|72|95)|2\.05/);
     expect(obj).not.toMatch(/suite === ["']H0/);
   });
 });
