@@ -7,9 +7,9 @@ describe("T141 auction lot stage-wide microcontrast", () => {
     const src = readFileSync("src/render3d/tabletop-objects.ts", "utf8");
     expect(src).toContain("T141");
     expect(src).toContain("T137");
-    expect(src).toMatch(/bold (30|32)px/);
+    expect(src).toMatch(/bold (28|30|32)px/);
     expect(src).toMatch(/rgba\(253,230,138/);
-    expect(src).toMatch(/hatch bands for stage-wide microcontrast/);
+    expect(src).toMatch(/hatch bands/);
     const layout = auctionBiddingLayout({
       chips: [40, 40],
       currentBid: 5,

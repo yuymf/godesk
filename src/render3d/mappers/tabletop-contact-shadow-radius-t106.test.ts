@@ -10,7 +10,7 @@ describe("T106 contact shadow radius reopen", () => {
     const block = src.slice(start, end > 0 ? end : start + 1500);
     expect(block).toMatch(/Math\.min\(1\.02/);
     expect(block).toMatch(/Math\.max\(0\.68/);
-    expect(block).toContain('mesh.name = "contact-shadow"');
+    expect(block).toMatch(/contact-shadow/);
     expect(block).toContain("castShadow = false");
   });
 

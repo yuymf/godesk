@@ -2271,12 +2271,14 @@ export class CreatorProjects extends DurableObject<Env> {
         seatToken?: unknown;
         actionId?: unknown;
         payload?: unknown;
+        chainSetup?: unknown;
       }>().catch(() => ({
         intentId: undefined,
         seat: undefined,
         seatToken: undefined,
         actionId: undefined,
         payload: undefined,
+        chainSetup: undefined,
       }));
       if (
         typeof input.intentId !== "string" ||
@@ -2354,9 +2356,51 @@ export class CreatorProjects extends DurableObject<Env> {
             value: { error: "intent_rejected", state: room.state },
           };
         }
-        const persisted = await this.persistAcceptedAction(transaction, room, accepted, build);
+        let persisted = await this.persistAcceptedAction(transaction, room, accepted, build);
         if ("error" in persisted) return persisted.error;
-        const updatedRoom = persisted.room;
+        let updatedRoom = persisted.room;
+        let chained = 0;
+        // T146 · optional setup chain: one extra place_settlement/road in same RTT (listLegalActions)
+        const wantChain = input.chainSetup === true || input.chainSetup === 1 || input.chainSetup === "1";
+        if (wantChain) {
+          const seatN = Number(input.seat);
+          for (let hop = 0; hop < 1; hop++) {
+            const active = updatedRoom.state.activeSeat;
+            const legal = listSessionLegalActions(
+              updatedRoom.state,
+              runtime,
+              updatedRoom.seed,
+              active,
+            );
+            const next = legal.find(
+              (a) => a.type === "place_settlement" || a.type === "place_road",
+            );
+            if (!next) break;
+            const chainedAccepted = acceptIntent(
+              updatedRoom.state,
+              runtime,
+              {
+                intentId: `${String(input.intentId)}:chain${hop + 1}`,
+                seat: active,
+                actionId: next.type,
+                payload: next.payload as Record<string, unknown> | undefined,
+              },
+              updatedRoom.acceptedActions.length + 1,
+              updatedRoom.seed,
+            );
+            if (!chainedAccepted) break;
+            const nextPersisted = await this.persistAcceptedAction(
+              transaction,
+              updatedRoom,
+              chainedAccepted,
+              build,
+            );
+            if ("error" in nextPersisted) break;
+            updatedRoom = nextPersisted.room;
+            persisted = nextPersisted;
+            chained += 1;
+          }
+        }
         // Response/broadcast keep full in-memory actions; DO stores slim logs.
         // T143 · pipe next-seat legal actions (listLegalActions) to cut force RTT.
         const nextLegalSeat = updatedRoom.state.activeSeat;
@@ -2372,6 +2416,7 @@ export class CreatorProjects extends DurableObject<Env> {
             ...visibleSession(updatedRoom, Number(input.seat)),
             nextLegalActions,
             nextLegalSeat,
+            chained,
             via: "listLegalActions",
           },
           broadcast: updatedRoom,

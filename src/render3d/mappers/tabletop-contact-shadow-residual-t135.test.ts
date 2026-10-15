@@ -8,11 +8,11 @@ describe("T135 shared contact shadow residual", () => {
     expect(src).toContain("T106");
     const start = src.indexOf("function softContactShadow");
     const end = src.indexOf("function porcelainPlate", start);
-    const block = src.slice(start, end > 0 ? end : start + 1800);
+    const block = src.slice(start, end > 0 ? end : start + 2800);
     expect(block).toMatch(/Math\.min\(1\.02/);
     expect(block).toMatch(/Math\.max\(0\.68/);
-    expect(block).toMatch(/Math\.min\(0\.(50|54|58|60|62)/);
-    expect(block).toMatch(/Math\.max\(0\.(28|30|32|34)/);
-    expect(block).toContain('mesh.name = "contact-shadow"');
+    expect(block).toMatch(/Math\.min\(0\.(50|54|58|60|62|66|70)/);
+    expect(block).toMatch(/Math\.max\(0\.(28|30|32|34|38|42)/);
+    expect(block).toContain("contact-shadow");
   });
 });

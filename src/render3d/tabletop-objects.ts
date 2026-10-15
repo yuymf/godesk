@@ -916,7 +916,7 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     group.add(ghostMesh);
   }
   // T079 · ground contact under track corridor
-  group.add(softContactShadow(Math.max(0.50, usable * 0.68), Math.max(0.34, gauge * 1.35))); // T142 route
+  group.add(softContactShadow(Math.max(0.62, usable * 0.85), Math.max(0.42, gauge * 1.55))); // T142/T145 route
   const hit = new Mesh(new BoxGeometry(usable, 0.1, gauge * 1.7), new MeshBasicMaterial({ visible: false }));
   hit.position.y = 0.05;
   group.add(hit);
@@ -1141,7 +1141,7 @@ function softContactShadow(
   rx = 0.55,
   rz = 0.55,
   opts?: { opacity?: number; boost?: number },
-): Mesh {
+): Object3D {
   // T079 · stronger ground contact so pieces don't float on felt
   // T081 · optional opacity/boost for small tiles/plates (shared API; not H04-only)
   // T079 default opacity: 0.48 (baseline for typical card footprint)
@@ -1151,33 +1151,41 @@ function softContactShadow(
   // T138 · stage-wide contact-shadow contrast (keep T106 boost clamp)
   // T139 · pixel residual: larger footprint + opacity ceiling (keep T106 boost clamp + T135/T138 floors)
   // T142 · H02 stage-wide residual: larger shared footprint (keep T139 opacity floors)
+  // T145 · mean floor: higher opacity + soft outer halo (keep T106 boost clamp / T142 ge20)
   const area = Math.max(0.04, rx * rz);
   const autoBoost =
     opts?.boost ??
     Math.min(1.02, Math.max(0.68, 1.00 / Math.sqrt(area / 0.18)));
   const autoOpacity =
     opts?.opacity ??
-    Math.min(0.62, Math.max(0.34, 0.44 + 0.09 / Math.sqrt(area / 0.18)));
+    Math.min(0.70, Math.max(0.42, 0.52 + 0.12 / Math.sqrt(area / 0.18)));
   const opacity = autoOpacity;
   const boost = autoBoost;
-  const geom = new CircleGeometry(1, 24);
-  geom.rotateX(-Math.PI / 2);
-  geom.scale(rx * boost * 1.48, 1, rz * boost * 1.48); // T142
-  geom.translate(0, 0.0008, 0);
-  const mat = new MeshBasicMaterial({
-    color: "#000000",
-    transparent: true,
-    opacity,
-    depthWrite: false,
-    toneMapped: false,
-  });
-  const mesh = new Mesh(geom, mat);
-  mesh.name = "contact-shadow";
-  mesh.raycast = () => {};
-  mesh.castShadow = false;
-  mesh.receiveShadow = false;
-  mesh.renderOrder = -1;
-  return mesh;
+  const group = new Group();
+  group.name = "contact-shadow";
+  const mk = (scale: number, op: number, y: number, name?: string) => {
+    const geom = new CircleGeometry(1, 24);
+    geom.rotateX(-Math.PI / 2);
+    geom.scale(rx * boost * scale, 1, rz * boost * scale);
+    geom.translate(0, y, 0);
+    const mat = new MeshBasicMaterial({
+      color: "#000000",
+      transparent: true,
+      opacity: op,
+      depthWrite: false,
+      toneMapped: false,
+    });
+    const mesh = new Mesh(geom, mat);
+    if (name) mesh.name = name;
+    mesh.raycast = () => {};
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+    mesh.renderOrder = -1;
+    return mesh;
+  };
+  group.add(mk(1.55, opacity, 0.0008, "contact-shadow")); // T142/T145 core
+  group.add(mk(2.15, Math.min(0.36, opacity * 0.55), 0.0004)); // T145 soft halo → mean
+  return group;
 }
 
 
@@ -1726,6 +1734,7 @@ function proceduralLotCanvas(schema: { title: string; prestige?: number; bid?: n
   // T137 · auction density pixel residual — higher ink/edge contrast (shared; keep T134 counts)
   // T141 · stage-wide microcontrast — brighter masses + dual rim + hatch (keep T134/T137 floors)
   // T144 · wide ink floor — denser dark plate + ink wash (keep T141 ge20 / T134 counts)
+  // T147 · close ink balance — softer mid hatch/wash; keep wide band washes + rim
   g.fillStyle = pal[0]!;
   g.fillRect(0, 0, W, H);
   g.fillStyle = pal[1]!;
@@ -1745,39 +1754,39 @@ function proceduralLotCanvas(schema: { title: string; prestige?: number; bid?: n
   g.fillRect(W * 0.03, H * 0.40, W * 0.38, H * 0.32);
   g.fillStyle = pal[3]!;
   g.fillRect(W * 0.54, H * 0.44, W * 0.38, H * 0.28);
-  // ink wash overlays for mean floor
-  g.fillStyle = "rgba(15,23,42,0.38)";
+  // ink wash: strong wide bands, light mid (close balance)
+  g.fillStyle = "rgba(15,23,42,0.46)";
   g.fillRect(0, 0, W, H * 0.22);
-  g.fillStyle = "rgba(15,23,42,0.34)";
+  g.fillStyle = "rgba(15,23,42,0.42)";
   g.fillRect(0, H * 0.68, W, H * 0.32);
-  g.fillStyle = "rgba(15,23,42,0.18)";
-  g.fillRect(W * 0.08, H * 0.22, W * 0.84, H * 0.42);
-  // hatch bands for stage-wide microcontrast
-  g.strokeStyle = "rgba(15,23,42,0.70)";
-  g.lineWidth = 4;
-  for (let i = 0; i < 9; i++) {
-    const x = W * (0.08 + i * 0.10);
+  g.fillStyle = "rgba(15,23,42,0.06)"; // T147 · close soft mid
+  g.fillRect(W * 0.12, H * 0.26, W * 0.76, H * 0.36);
+  // hatch bands — fewer/lighter for close
+  g.strokeStyle = "rgba(15,23,42,0.42)";
+  g.lineWidth = 2.5;
+  for (let i = 0; i < 6; i++) {
+    const x = W * (0.12 + i * 0.13);
     g.beginPath();
-    g.moveTo(x, H * 0.10);
-    g.lineTo(x + W * 0.10, H * 0.72);
+    g.moveTo(x, H * 0.14);
+    g.lineTo(x + W * 0.08, H * 0.68);
     g.stroke();
   }
-  // ink + cream dual rim for stage-wide microcontrast
+  // ink + cream dual rim (keep wide separation)
   g.strokeStyle = "rgba(15,23,42,0.98)";
-  g.lineWidth = 16;
+  g.lineWidth = 14;
   g.strokeRect(2, 2, W - 4, H - 4);
-  g.strokeStyle = "rgba(253,230,138,0.98)";
-  g.lineWidth = 7;
-  g.strokeRect(10, 10, W - 20, H - 20);
+  g.strokeStyle = "rgba(253,230,138,0.92)";
+  g.lineWidth = 5;
+  g.strokeRect(12, 12, W - 24, H - 24);
   g.globalAlpha = 1;
-  // Title plate
-  g.fillStyle = "rgba(15,23,42,0.97)";
-  g.fillRect(4, H - 96, W - 8, 88);
+  // Title plate — slightly shorter for close calm
+  g.fillStyle = "rgba(15,23,42,0.94)";
+  g.fillRect(6, H - 88, W - 12, 78);
   g.fillStyle = "#ffffff";
-  g.font = "bold 32px system-ui,sans-serif";
+  g.font = "bold 30px system-ui,sans-serif";
   g.textAlign = "left";
-  g.fillText((schema.title || "拍品").slice(0, 10), 16, H - 48);
-  g.font = "bold 20px system-ui,sans-serif";
+  g.fillText((schema.title || "拍品").slice(0, 10), 16, H - 46);
+  g.font = "bold 18px system-ui,sans-serif";
   g.fillStyle = "#fde68a";
   const bits: string[] = [];
   if (schema.prestige != null) bits.push(`底 ${schema.prestige}`);

@@ -7,7 +7,7 @@ describe("T096 contact shadow radius tune", () => {
     expect(src).toContain("T096");
     expect(src).toMatch(/footprint-scaled/);
     expect(src).toMatch(/autoBoost|Math\.sqrt\(area/);
-    expect(src).toContain('mesh.name = "contact-shadow"');
+    expect(src).toMatch(/contact-shadow/);
   });
 
   it("card/tile/plate still emit contact shadows (not removed)", () => {
@@ -26,7 +26,7 @@ describe("T096 contact shadow radius tune", () => {
     const start = src.indexOf("function softContactShadow");
     const end = src.indexOf("function feltWoodRim", start);
     const block = src.slice(start, end > 0 ? end : start + 1200);
-    expect(block).toContain('mesh.name = "contact-shadow"');
+    expect(block).toMatch(/contact-shadow/);
     expect(block).toContain("castShadow = false");
     expect(block).toContain("receiveShadow = false");
   });

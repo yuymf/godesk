@@ -8,7 +8,7 @@ describe("T140 hex force budget trim", () => {
     expect(src).toContain("listLegalActions");
     expect(src).toMatch(/Promise\.all\(\[\.\.\.Array\(seatN\)/);
     expect(src).toMatch(/reuse intent response state|r\.state/);
-    expect(src).toMatch(/budgetMs \?\? (55000|40000)/);
+    expect(src).toMatch(/budgetMs \?\? (20000|20000)/);
     expect(src).toMatch(/minSettlements: opts\.minSettlements \?\? 2/);
   });
 });

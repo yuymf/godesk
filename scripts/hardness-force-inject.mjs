@@ -21,13 +21,20 @@ export async function claimAllSeats(page, seatCount) {
     const sid = m?.[1];
     const share = new URLSearchParams(location.search).get("share");
     const q = share ? `?share=${encodeURIComponent(share)}` : "";
-    // T143 · parallel seat claim (shared tooling)
-    const tokens = {};
+    // T143 · parallel seat claim; T146 · restore tokens across reload
+    const bagKey = `godesk-seats:${sid}`;
+    let tokens = {};
+    try { tokens = JSON.parse(sessionStorage.getItem(bagKey) || "{}") || {}; } catch { tokens = {}; }
     await Promise.all([...Array(n).keys()].map(async (seat) => {
+      const prior = tokens[String(seat)];
       const r = await fetch(`/chatgpt-plugin/api/sessions/${sid}/seats${q}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ seat, displayName: `p${seat}` }),
+        body: JSON.stringify({
+          seat,
+          displayName: `p${seat}`,
+          ...(prior ? { seatToken: prior } : {}),
+        }),
       });
       const j = await r.json();
       if (j.seatToken) {
@@ -40,6 +47,7 @@ export async function claimAllSeats(page, seatCount) {
         }
       }
     }));
+    sessionStorage.setItem(bagKey, JSON.stringify(tokens));
     return tokens;
   }, { n: seatCount });
 }
@@ -389,8 +397,9 @@ export async function waitRoomCanvasReady(page, { timeoutMs = 20000 } = {}) {
  * Prefer this over bare forceBuildHexSetup + outer withTimeout.
  */
 export async function runHexForceWithBudget(page, tokens, opts = {}) {
-  // T143 · sub-40s: canvas ready outside force clock; default budget 40s
-  const budgetMs = opts.budgetMs ?? 40000;
+  // T143 · sub-40s: canvas ready outside force clock
+  // T146 · sub-20s: default budget 20s + chainSetup intents
+  const budgetMs = opts.budgetMs ?? 20000;
   await waitRoomCanvasReady(page, { timeoutMs: Math.min(12000, budgetMs) });
   const started = Date.now();
   const remaining = () => Math.max(1000, budgetMs - (Date.now() - started));
@@ -449,7 +458,8 @@ export async function awaitSeatCloseGlyphReady(page, { timeoutMs = 10000 } = {})
 export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, minRoads = 2, maxSteps = 48 } = {}) {
   // T136 · drive placements from GET …/legal-actions (listLegalActions authority).
   // T140 · budget trim: prefetch seats, reuse intent state, first legal only.
-  // T143 · sub-40s: consume nextLegalActions piped from intent (still listLegalActions).
+  // T143 · consume nextLegalActions piped from intent.
+  // T146 · chainSetup:true so server applies settle+road hop in one RTT.
   return page.evaluate(async ({ tokens, minSettlements, minRoads, maxSteps }) => {
     const m = location.pathname.match(/room\/([^/?]+)/);
     const sid = m?.[1];
@@ -490,6 +500,7 @@ export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, min
           seat,
           seatToken,
           actionId,
+          chainSetup: true, // T146 · batch one setup hop per RTT
           ...(payload ? { payload } : {}),
         }),
       });
@@ -503,6 +514,7 @@ export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, min
         state: j?.state || j?.session?.state,
         nextLegalActions: j?.nextLegalActions,
         nextLegalSeat: j?.nextLegalSeat,
+        chained: j?.chained ?? 0,
         raw: j,
       };
     };
