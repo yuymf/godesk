@@ -10,7 +10,7 @@ describe("T158 contact shadow H04 mean floor", () => {
     const block = src.slice(start, end > 0 ? end : start + 4000);
     expect(block).toMatch(/Math\.min\(1\.02/);
     expect(block).toMatch(/Math\.max\(0\.68/);
-    expect(block).toMatch(/2\.55|2\.50/);
-    expect(src).toMatch(/T158 tile mean floor|tile mean floor/);
+    expect(block).toMatch(/2\.(45|55|50)/);
+    expect(src).toMatch(/T158 tile mean floor|tile mean|T161 tile mean/);
   });
 });

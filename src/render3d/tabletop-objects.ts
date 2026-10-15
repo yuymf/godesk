@@ -916,7 +916,7 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     group.add(ghostMesh);
   }
   // T079 · ground contact under track corridor
-  group.add(softContactShadow(Math.max(0.82, usable * 1.05), Math.max(0.58, gauge * 1.95), { opacity: 0.62 })); // T142/T145/T155 route
+  group.add(softContactShadow(Math.max(1.05, usable * 1.28), Math.max(0.75, gauge * 2.40), { opacity: 0.64 })); // T142/T145/T155/T160 route
   const hit = new Mesh(new BoxGeometry(usable, 0.1, gauge * 1.7), new MeshBasicMaterial({ visible: false }));
   hit.position.y = 0.05;
   group.add(hit);
@@ -1158,13 +1158,15 @@ function softContactShadow(
   // T155 · H02 halo residual: route footprint + soft veil (keep H03/H04 clamps / T151)
   // T157 · lot close absolute-ink stability floor (framed-art shadow stays light)
   // T158 · H04 mean floor ≥5 (tile/mid; keep H02/H03 / T151 ink)
+  // T160 · H01/H02 product-frame + H02 route residual (keep H03/H04 / T157 ink)
+  // T161 · H04 wide halo dark-clamp: lighter mid ink blot, soft mean via footprint (keep T157)
   const area = Math.max(0.04, rx * rz);
   const autoBoost =
     opts?.boost ??
     Math.min(1.02, Math.max(0.68, 1.00 / Math.sqrt(area / 0.18)));
   const autoOpacity =
     opts?.opacity ??
-    Math.min(0.76, Math.max(0.48, 0.58 + 0.14 / Math.sqrt(area / 0.18)));
+    Math.min(0.68, Math.max(0.48, 0.56 + 0.12 / Math.sqrt(area / 0.18))); // T161 dark-clamp ceiling
   const opacity = autoOpacity;
   const boost = autoBoost;
   const group = new Group();
@@ -1190,10 +1192,10 @@ function softContactShadow(
     return mesh;
   };
   group.add(mk(1.60, opacity, 0.0008, "contact-shadow")); // T142/T145 core
-  // T153/T154/T155/T158 · softer falloff + H04 mean floor (keep core / T106 / T151)
-  group.add(mk(2.55, Math.min(0.42, opacity * 0.56), 0.0005)); // soft mid · T158 mean
-  group.add(mk(3.55, Math.min(0.32, opacity * 0.42), 0.0003)); // soft outer
-  group.add(mk(4.70, Math.min(0.18, opacity * 0.26), 0.0002)); // wide soft veil
+  // T153–T158/T161 · softer falloff; T161 dark-clamp mid blot (keep core / T106 / T157)
+  group.add(mk(2.45, Math.min(0.26, opacity * 0.36), 0.0005)); // soft mid · T161 lighter
+  group.add(mk(3.40, Math.min(0.20, opacity * 0.28), 0.0003)); // soft outer · clamped
+  group.add(mk(4.90, Math.min(0.14, opacity * 0.20), 0.0002)); // wide soft veil · mean without blot
   return group;
 }
 
@@ -1818,7 +1820,7 @@ function framedArtWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3
   // T159 · shared product-frame bevel lip (seat-close readable across suites)
   const lip = new Mesh(
     translated(new BoxGeometry(0.97, 0.012, 1.22), 0.086),
-    new MeshStandardMaterial({ color: "#d4b896", roughness: 0.55, metalness: 0.08 }),
+    new MeshStandardMaterial({ color: "#f5e0b8", roughness: 0.42, metalness: 0.12 }), // T159/T160
   );
   lip.castShadow = false;
   lip.receiveShadow = true;
@@ -1892,9 +1894,9 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     const group = new Group();
     const mat = woodRimMaterial(node, ctx);
     const lipMat = new MeshStandardMaterial({
-      color: "#c4a06a",
-      roughness: 0.58,
-      metalness: 0.08,
+      color: "#f0d8a8", // T160 · brighter product-frame lip for H01/H02 seat-close
+      roughness: 0.48,
+      metalness: 0.10,
     });
     const t = 0.085; // frame thickness in unit UV
     const mk = (sx: number, sy: number, sz: number, x: number, y: number, z: number, mtl = mat) => {
@@ -1909,10 +1911,10 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     mk(t, 1, 1 - 2 * t, 0.5 - t / 2, 0, 0);
     mk(t, 1, 1 - 2 * t, -0.5 + t / 2, 0, 0);
     // thin top bevel lip (reads in seat-close across kernels)
-    mk(1.02, 0.12, t * 1.15, 0, 0.56, 0.5 - t / 2, lipMat);
-    mk(1.02, 0.12, t * 1.15, 0, 0.56, -0.5 + t / 2, lipMat);
-    mk(t * 1.15, 0.12, 1 - 2 * t, 0.5 - t / 2, 0.56, 0, lipMat);
-    mk(t * 1.15, 0.12, 1 - 2 * t, -0.5 + t / 2, 0.56, 0, lipMat);
+    mk(1.06, 0.22, t * 1.35, 0, 0.62, 0.5 - t / 2, lipMat); // T160 taller lip
+    mk(1.06, 0.22, t * 1.35, 0, 0.62, -0.5 + t / 2, lipMat);
+    mk(t * 1.35, 0.22, 1 - 2 * t, 0.5 - t / 2, 0.62, 0, lipMat);
+    mk(t * 1.35, 0.22, 1 - 2 * t, -0.5 + t / 2, 0.62, 0, lipMat);
     object = group;
   } else if (mesh === "felt-wood-lip") {
     const built = new Mesh(new BoxGeometry(1, 1, 1), woodRimMaterial(node, ctx));
@@ -1941,11 +1943,11 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = meepleFigure(node, ctx);
   } else if (mesh === "card") {
     object = cardWithFace(node, ctx);
-    (object as Group).add(softContactShadow(0.96, 1.24, { opacity: 0.60 })); // T096/T106/T150/T153/T154/T158 card mean
+    (object as Group).add(softContactShadow(1.02, 1.28, { opacity: 0.52 })); // T096/T106/T150/T153/T154/T158/T161 card (lighter)
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
     // T081 · larger local blob so small tiles still ground at H02/H03 visibility
-    (object as Group).add(softContactShadow(0.96, 0.96, { opacity: 0.62, boost: 0.90 })); // T081/T106/T150/T153/T154/T158 tile mean floor
+    (object as Group).add(softContactShadow(1.02, 1.02, { opacity: 0.54, boost: 0.90 })); // T081/T106/T150/T153/T154/T158/T161 tile mean (lighter)
   } else if (mesh === "plaque") {
     object = plaqueWithFace(node, ctx);
     (object as Group).add(softContactShadow(0.78, 0.62, { opacity: 0.58 })); // T106/T150 plaque
