@@ -38,7 +38,7 @@ import {
   type Material,
 } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import type { MaterialLibrary } from "./materials";
+import { installPattern, type MaterialLibrary } from "./materials";
 import type { SceneNode } from "./scene-model";
 import type { MaterialToken } from "./tokens";
 import type { TierCaps } from "./tiers";
@@ -1116,39 +1116,114 @@ function feltWoodRim(): Geometry {
 }
 
 
-/** T044 · product green felt pile: dark cloth + micro-noise map (shared desk cloth look). */
+/** T044/T082 · product green felt: weave albedo + normal/roughness microdetail (shared desk cloth). */
 function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material {
   const token = node.material ? ctx.materials[node.material] : undefined;
   const base = token?.base ?? "#1a8a45";
-  const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
-  if (canvas) {
-    const W = 128, H = 128;
-    canvas.width = W; canvas.height = H;
-    const g = canvas.getContext("2d");
-    if (g) {
-      g.fillStyle = base;
-      g.fillRect(0, 0, W, H);
-      for (let i = 0; i < 2200; i += 1) {
-        const x = Math.random() * W;
-        const y = Math.random() * H;
-        const a = 0.04 + Math.random() * 0.08;
-        g.fillStyle = Math.random() < 0.5 ? `rgba(0,0,0,${a})` : `rgba(255,255,255,${a * 0.7})`;
-        g.fillRect(x, y, 1 + Math.random() * 1.5, 1 + Math.random() * 2.5);
+  const W = 256;
+  const H = 256;
+  const albedo = typeof document !== "undefined" ? document.createElement("canvas") : null;
+  const normal = typeof document !== "undefined" ? document.createElement("canvas") : null;
+  const rough = typeof document !== "undefined" ? document.createElement("canvas") : null;
+  if (albedo && normal && rough) {
+    albedo.width = W; albedo.height = H;
+    normal.width = W; normal.height = H;
+    rough.width = W; rough.height = H;
+    const ga = albedo.getContext("2d");
+    const gn = normal.getContext("2d");
+    const gr = rough.getContext("2d");
+    if (ga && gn && gr) {
+      ga.fillStyle = base;
+      ga.fillRect(0, 0, W, H);
+      // height field for weave (warp/weft)
+      const height = new Float32Array(W * H);
+      const period = 8;
+      for (let y = 0; y < H; y += 1) {
+        for (let x = 0; x < W; x += 1) {
+          const wx = ((x % period) / period) * Math.PI * 2;
+          const wy = ((y % period) / period) * Math.PI * 2;
+          const warp = Math.sin(wx) * 0.55;
+          const weft = Math.sin(wy) * 0.55;
+          const cross = Math.abs(warp) > Math.abs(weft) ? warp : weft;
+          const n = (Math.random() - 0.5) * 0.18;
+          height[y * W + x] = 0.5 + cross * 0.35 + n;
+        }
       }
+      const aImg = ga.createImageData(W, H);
+      const nImg = gn.createImageData(W, H);
+      const rImg = gr.createImageData(W, H);
+      const parse = (hex: string) => {
+        const h = hex.replace("#", "");
+        return [
+          Number.parseInt(h.slice(0, 2), 16),
+          Number.parseInt(h.slice(2, 4), 16),
+          Number.parseInt(h.slice(4, 6), 16),
+        ] as const;
+      };
+      const [br, bg, bb] = parse(String(base).startsWith("#") && String(base).length >= 7 ? String(base) : "#1a8a45");
+      for (let y = 0; y < H; y += 1) {
+        for (let x = 0; x < W; x += 1) {
+          const i = y * W + x;
+          const h0 = height[i]!;
+          const hx = height[y * W + ((x + 1) % W)]!;
+          const hy = height[((y + 1) % H) * W + x]!;
+          const dx = (h0 - hx) * 6;
+          const dy = (h0 - hy) * 6;
+          const shade = (h0 - 0.5) * 42;
+          const o = i * 4;
+          aImg.data[o] = Math.max(0, Math.min(255, br + shade));
+          aImg.data[o + 1] = Math.max(0, Math.min(255, bg + shade));
+          aImg.data[o + 2] = Math.max(0, Math.min(255, bb + shade * 0.85));
+          aImg.data[o + 3] = 255;
+          nImg.data[o] = Math.max(0, Math.min(255, 128 + dx * 110));
+          nImg.data[o + 1] = Math.max(0, Math.min(255, 128 + dy * 110));
+          nImg.data[o + 2] = 255;
+          nImg.data[o + 3] = 255;
+          const rv = Math.max(0, Math.min(255, 210 + (h0 - 0.5) * 70));
+          rImg.data[o] = rv;
+          rImg.data[o + 1] = rv;
+          rImg.data[o + 2] = rv;
+          rImg.data[o + 3] = 255;
+        }
+      }
+      // fine pile speckles on top of weave
+      for (let i = 0; i < 4800; i += 1) {
+        const x = Math.floor(Math.random() * W);
+        const y = Math.floor(Math.random() * H);
+        const o = (y * W + x) * 4;
+        const a = Math.random() < 0.5 ? -10 : 8;
+        aImg.data[o] = Math.max(0, Math.min(255, aImg.data[o]! + a));
+        aImg.data[o + 1] = Math.max(0, Math.min(255, aImg.data[o + 1]! + a));
+        aImg.data[o + 2] = Math.max(0, Math.min(255, aImg.data[o + 2]! + a));
+      }
+      ga.putImageData(aImg, 0, 0);
+      gn.putImageData(nImg, 0, 0);
+      gr.putImageData(rImg, 0, 0);
     }
   }
-  const map = canvas ? new CanvasTexture(canvas) : null;
-  if (map) {
-    map.wrapS = map.wrapT = RepeatWrapping;
-    map.repeat.set(6, 6);
-    map.colorSpace = SRGBColorSpace;
+  const map = albedo ? new CanvasTexture(albedo) : null;
+  const normalMap = normal ? new CanvasTexture(normal) : null;
+  const roughnessMap = rough ? new CanvasTexture(rough) : null;
+  for (const tex of [map, normalMap, roughnessMap]) {
+    if (!tex) continue;
+    tex.wrapS = tex.wrapT = RepeatWrapping;
+    tex.repeat.set(10, 10);
   }
-  return new MeshStandardMaterial({
+  if (map) map.colorSpace = SRGBColorSpace;
+  const mat = new MeshStandardMaterial({
     color: base,
     map: map ?? undefined,
-    roughness: Math.max(0.95, token?.roughness ?? 0.99),
+    normalMap: normalMap ?? undefined,
+    normalScale: new Vector2(0.55, 0.55),
+    roughnessMap: roughnessMap ?? undefined,
+    roughness: Math.max(0.92, token?.roughness ?? 0.98),
     metalness: 0,
   });
+  // T082 · procedural cloth weave on top of maps (MaterialLibrary cloth pattern)
+  installPattern(mat, token?.pattern === "cloth" || !token?.pattern ? "cloth" : token.pattern, 0);
+  const strength = mat.userData.gdPatternStrength as { value: number } | undefined;
+  if (strength) strength.value = 1;
+  return mat;
 }
 
 function feltInsetGeom(): Geometry {
