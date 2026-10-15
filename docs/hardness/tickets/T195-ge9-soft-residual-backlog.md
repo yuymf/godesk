@@ -1,4 +1,1 @@
-# T195 · Open · ≥9 软债 backlog
-
-**Why open:** T194 全景复抽检为复拍噪声 soft；产品仍未达可自宣 ≥9。  
-**Scope:** 共享呈现 · 禁止样例特判 · 不收口。
+# T195 · Superseded by T195-hud-legal-ring-collapse.md · ≥9 soft → **T198**

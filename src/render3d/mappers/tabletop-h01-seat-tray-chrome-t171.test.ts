@@ -5,8 +5,8 @@ describe("T171 H01 tabletop-first / seat tray / legal-ring", () => {
   it("collapses chrome toward share ≥0.88 and softens legal rings", () => {
     const tw = readFileSync("src/creator/tidewell-game-screen.css", "utf8");
     expect(tw).toContain("T171");
-    expect(tw).toMatch(/--tw-side:\s*28px/);
-    expect(tw).toMatch(/--tw-dock:\s*10px/);
+    expect(tw).toMatch(/--tw-side:\s*22px/);
+    expect(tw).toMatch(/--tw-dock:\s*8px/);
     expect(tw).toMatch(/minmax\(88vh/);
     expect(tw).toContain("tidewell-dock");
     const hit = readFileSync("src/render3d/hit-targets.ts", "utf8");
@@ -20,7 +20,7 @@ describe("T171 H01 tabletop-first / seat tray / legal-ring", () => {
     const pieces = readFileSync("src/render3d/assets/pieces.ts", "utf8");
     expect(pieces).toContain("T171");
     expect(pieces).toMatch(/seat tray/);
-    expect(pieces).toMatch(/MEEPLE_HEX_SCALE = 1\.62/);
+    expect(pieces).toMatch(/MEEPLE_HEX_SCALE = 1\.68/);
     expect(pieces).not.toMatch(/quadraticCurveTo\(0\.28, 0\.48/);
   });
 });
