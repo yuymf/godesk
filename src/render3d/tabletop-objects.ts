@@ -1895,6 +1895,7 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     // T159/T160 · product-frame seat-close top bevel lip
     // T163 · dual-lip product-frame (dark undercut + bright crown) for seat-close pixel gate
     // T165 · shared rim language across suites
+    // T166 · taller crown + outer rail for H03 seat-close/wide residual
     const group = new Group();
     const mat = woodRimMaterial(node, ctx);
     const underMat = new MeshStandardMaterial({
@@ -1925,20 +1926,25 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     mk(t, 1, 1 - 2 * t, 0.5 - t / 2, 0, 0);
     mk(t, 1, 1 - 2 * t, -0.5 + t / 2, 0, 0);
     // dark undercut
-    mk(1.08, 0.14, t * 1.45, 0, 0.48, 0.5 - t / 2, underMat);
-    mk(1.08, 0.14, t * 1.45, 0, 0.48, -0.5 + t / 2, underMat);
-    mk(t * 1.45, 0.14, 1 - 2 * t, 0.5 - t / 2, 0.48, 0, underMat);
-    mk(t * 1.45, 0.14, 1 - 2 * t, -0.5 + t / 2, 0.48, 0, underMat);
-    // bright crown lip
-    mk(1.10, 0.28, t * 1.55, 0, 0.70, 0.5 - t / 2, lipMat);
-    mk(1.10, 0.28, t * 1.55, 0, 0.70, -0.5 + t / 2, lipMat);
-    mk(t * 1.55, 0.28, 1 - 2 * t, 0.5 - t / 2, 0.70, 0, lipMat);
-    mk(t * 1.55, 0.28, 1 - 2 * t, -0.5 + t / 2, 0.70, 0, lipMat);
+    mk(1.12, 0.18, t * 1.55, 0, 0.46, 0.5 - t / 2, underMat);
+    mk(1.12, 0.18, t * 1.55, 0, 0.46, -0.5 + t / 2, underMat);
+    mk(t * 1.55, 0.18, 1 - 2 * t, 0.5 - t / 2, 0.46, 0, underMat);
+    mk(t * 1.55, 0.18, 1 - 2 * t, -0.5 + t / 2, 0.46, 0, underMat);
+    // bright crown lip (T166 taller for H03 seat-close/wide)
+    mk(1.14, 0.36, t * 1.70, 0, 0.74, 0.5 - t / 2, lipMat);
+    mk(1.14, 0.36, t * 1.70, 0, 0.74, -0.5 + t / 2, lipMat);
+    mk(t * 1.70, 0.36, 1 - 2 * t, 0.5 - t / 2, 0.74, 0, lipMat);
+    mk(t * 1.70, 0.36, 1 - 2 * t, -0.5 + t / 2, 0.74, 0, lipMat);
+    // outer crown rail (T166 · stage-wide / seat-close residual)
+    mk(1.18, 0.12, t * 1.25, 0, 0.92, 0.5 - t / 2, lipMat);
+    mk(1.18, 0.12, t * 1.25, 0, 0.92, -0.5 + t / 2, lipMat);
+    mk(t * 1.25, 0.12, 1 - 2 * t, 0.5 - t / 2, 0.92, 0, lipMat);
+    mk(t * 1.25, 0.12, 1 - 2 * t, -0.5 + t / 2, 0.92, 0, lipMat);
     // inner gold fillet (reads on seat-close board edge)
-    mk(0.92, 0.08, t * 0.55, 0, 0.52, 0.5 - t - 0.02, filletMat);
-    mk(0.92, 0.08, t * 0.55, 0, 0.52, -0.5 + t + 0.02, filletMat);
-    mk(t * 0.55, 0.08, 0.92 - 2 * t, 0.5 - t - 0.02, 0.52, 0, filletMat);
-    mk(t * 0.55, 0.08, 0.92 - 2 * t, -0.5 + t + 0.02, 0.52, 0, filletMat);
+    mk(0.92, 0.10, t * 0.65, 0, 0.54, 0.5 - t - 0.02, filletMat);
+    mk(0.92, 0.10, t * 0.65, 0, 0.54, -0.5 + t + 0.02, filletMat);
+    mk(t * 0.65, 0.10, 0.92 - 2 * t, 0.5 - t - 0.02, 0.54, 0, filletMat);
+    mk(t * 0.65, 0.10, 0.92 - 2 * t, -0.5 + t + 0.02, 0.54, 0, filletMat);
     object = group;
   } else if (mesh === "felt-wood-lip") {
     // T092 · grain maps via woodRimMaterial; T163/T165 · high-key gold tint for seat-close

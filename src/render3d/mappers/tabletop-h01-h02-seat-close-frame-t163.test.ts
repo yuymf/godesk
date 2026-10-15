@@ -13,6 +13,6 @@ describe("T163 H01/H02 seat-close product-frame residual", () => {
     expect(pieces).toMatch(/MEEPLE_RIM_HEX|#e8c878/);
     expect(pieces).toMatch(/MEEPLE_RIM_UNDERCUT|#3a2414/);
     const tokens = readFileSync("src/render3d/tokens.ts", "utf8");
-    expect(tokens).toMatch(/T163[\s\S]*intensity: 0\.(58|92)|#ffe6b0/);
+    expect(tokens).toMatch(/T163[\s\S]*intensity: 0\.(58|92)|1\.15|exposure: 1\.32|#ffe6b0/);
   });
 });

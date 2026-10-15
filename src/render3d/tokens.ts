@@ -73,12 +73,13 @@ export const SCENE_TOKENS = {
   lighting: {
     // round-5d：再暖一点主光 + 更软投影，压塑料感。
     sun: { azimuthDeg: 128, elevationDeg: 46, intensity: 3.05, color: "#ffc890" },
-    hemisphere: { sky: "#f2e6d2", ground: "#c9a878", intensity: 1.05 },
+    hemisphere: { sky: "#f2e6d2", ground: "#d4b896", intensity: 1.18 }, // T166 · warmer ground
     shadow: { enabled: true, softness: 0.92 },
-    exposure: 1.12,
+    exposure: 1.16, // T166 · slight exposure for stage-wide residual
     // T086 · soft cool fill + warm rim (shared desk layer rig)
-    fill: { azimuthDeg: 308, elevationDeg: 32, intensity: 0.48, color: "#c5d6ef" },
-    rim: { azimuthDeg: 42, elevationDeg: 16, intensity: 0.36, color: "#ffe2b8" },
+    // T166 · stronger shared rim for H03 seat-close/wide consistency (keep T161 upper-ink lighter)
+    fill: { azimuthDeg: 308, elevationDeg: 32, intensity: 0.52, color: "#c5d6ef" },
+    rim: { azimuthDeg: 42, elevationDeg: 16, intensity: 0.78, color: "#ffe6b0" },
   } satisfies LightingSpec,
   shadow: {
     /** high / medium 的 PCF 半径；low 档用 TierCaps.shadowRadius（= 1）。 */
@@ -100,14 +101,14 @@ export const SCENE_TOKENS = {
 export const HEX_ISLAND_LIGHTING = {
   // R22: less orange key light (#ffd4a4 → #ffecd2) + more neutral sky fill — the warm cast pushed wheat / desert
   // toward orange-brown and ore / pasture toward beige-olive; resource hues now stay true (water gets brighter, not darker).
-  sun: { azimuthDeg: 128, elevationDeg: 48, intensity: 3.45, color: "#ffecd2" },
-  hemisphere: { sky: "#f3f1e8", ground: "#d4b896", intensity: 1.55 }, // T163 · warmer ground for seat-close frame
+  sun: { azimuthDeg: 128, elevationDeg: 48, intensity: 3.72, color: "#ffecd2" }, // T166 · H01 wide residual
+  hemisphere: { sky: "#f3f1e8", ground: "#e0c090", intensity: 1.68 }, // T163/T166 · warmer ground
   shadow: { enabled: true, softness: 0.92 },
-  exposure: 1.2,
+  exposure: 1.32, // T166 · stage-wide residual
   // T086 · hex desk also gets fill/rim layers (generic, not sample pack)
-  // T163 · warmer/stronger rim for seat-close product-frame residual (shared desk rig)
-  fill: { azimuthDeg: 310, elevationDeg: 34, intensity: 0.52, color: "#d0dced" },
-  rim: { azimuthDeg: 38, elevationDeg: 18, intensity: 0.92, color: "#ffe6b0" },
+  // T163/T166 · warmer/stronger rim for seat-close + wide product-frame residual
+  fill: { azimuthDeg: 310, elevationDeg: 34, intensity: 0.58, color: "#d0dced" },
+  rim: { azimuthDeg: 38, elevationDeg: 18, intensity: 1.15, color: "#ffe6b0" },
 } as const satisfies LightingSpec;
 
 /** R19：AI 贴图（虹夏 8 张；R20 起经 scripts/bake-ai-r20.py 色块化 + Kuwahara 绘本化后烘焙）为 t01–t06 baseColor；base 提亮去饱和、pbrTint 让贴图色相主导；
