@@ -29,9 +29,9 @@ export const LABEL_LIFT = 0.004;
 export const LABEL_SIZE_PER_RADIUS = 2.18; // T099 · stage-wide glyph
 export { NUMBER_TOKEN_SCALE } from "./tokens";
 
-export const LABEL_INK = "#2f2a24";
+export const LABEL_INK = "#1a1612"; // T101 · wider contrast
 /** 6 / 8 高亮：赤陶色（比风格色 #B8643C 深一档，保证在奶油色筹码面上对比度 ≥ 4.5）。 */
-export const LABEL_HOT = "#a3442a";
+export const LABEL_HOT = "#8f2e18"; // T101
 
 const GRID = 4;
 const NUMBERS = [2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 7] as const;
@@ -97,8 +97,8 @@ export function drawNumberAtlas(size = 1024): Texture {
     let x = 0;
     ctx.lineJoin = "round";
     ctx.miterLimit = 2;
-    ctx.strokeStyle = "#f5ecd8";
-    ctx.lineWidth = Math.max(2.5, fontPx * 0.1);
+    ctx.strokeStyle = "#fff8e6"; // T101
+    ctx.lineWidth = Math.max(3, fontPx * 0.12); // T101
     [...text].forEach((ch, i) => {
       ctx.strokeText(ch, x, 0);
       ctx.fillText(ch, x, 0);

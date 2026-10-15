@@ -260,6 +260,24 @@ export class MaterialLibrary {
     return material;
   }
 
+  /**
+   * T102 · cache a factory-built material (e.g. deskWood canvas maps) in the shared library.
+   * Reuses the same MeshStandardMaterial on subsequent ensure(key) calls.
+   */
+  ensure(key: string, factory: () => MeshStandardMaterial, token?: MaterialToken): MeshStandardMaterial {
+    const existing = this.entries.get(key);
+    if (existing) return existing.material;
+    const material = factory();
+    material.name = `gd:${key}`;
+    material.userData.gdShared = true;
+    for (const tex of [material.map, material.normalMap, material.roughnessMap, material.metalnessMap, material.aoMap]) {
+      if (tex) this.textures.add(tex);
+    }
+    this.entries.set(key, { material, token: token ?? { base: "#888888", roughness: 0.8, metalness: 0, pattern: "none" } });
+    applyEnvironment(material, token ?? { base: "#888888", roughness: 0.8, metalness: 0, pattern: "none" }, this.environment);
+    return material;
+  }
+
   /** 当前材质引用到的 PBR 套件（去重，按名称排序）。 */
   pbrSetsInUse(): PbrSetId[] {
     const sets = new Set<PbrSetId>();

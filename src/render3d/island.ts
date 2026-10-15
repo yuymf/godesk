@@ -341,15 +341,16 @@ function drawSigns(x: CanvasRenderingContext2D, cell: number, plate: HTMLImageEl
     x.textAlign = "center";
     x.textBaseline = "middle";
     x.lineJoin = "round";
-    x.strokeStyle = "rgba(251, 243, 222, 0.9)";
-    x.lineWidth = cell * 0.035;
-    x.fillStyle = "#2f2a24";
-    x.font = `900 ${Math.round(cell * 0.27)}px "Helvetica Neue", Helvetica, Arial, "Noto Sans", sans-serif`;
+    // T101 · stage-wide harbor contrast: thicker cream stroke + larger ratio/word
+    x.strokeStyle = "rgba(255, 248, 230, 0.96)";
+    x.lineWidth = cell * 0.055;
+    x.fillStyle = "#1a1612";
+    x.font = `900 ${Math.round(cell * 0.32)}px "Helvetica Neue", Helvetica, Arial, "Noto Sans", sans-serif`;
     x.strokeText(label.ratio, cx, cy - cell * 0.12);
     x.fillText(label.ratio, cx, cy - cell * 0.12);
     // 第二行（资源）放大到与比例同级，远看可读。
     x.fillStyle = label.color;
-    x.font = `900 ${Math.round(cell * (label.word.length > 1 ? 0.25 : 0.3))}px "PingFang SC", "Noto Sans CJK SC", "Noto Sans CJK JP", sans-serif`;
+    x.font = `900 ${Math.round(cell * (label.word.length > 1 ? 0.28 : 0.36))}px "PingFang SC", "Noto Sans CJK SC", "Noto Sans CJK JP", sans-serif`;
     x.strokeText(label.word, cx, cy + cell * 0.16);
     x.fillText(label.word, cx, cy + cell * 0.16);
   });

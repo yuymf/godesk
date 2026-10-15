@@ -88,6 +88,30 @@ body:has(.room-view-tidewell-immersive) {
 .room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .seat-rail-label {
   display: none !important;
 }
+
+/* T100 · hex canvas share / vh reclaim — seated immersive narrower side rails + dock */
+.room-view-tidewell-immersive.room-view-seated {
+  --tw-side: 168px;
+  --tw-dock: 100px;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-game-screen {
+  --tw-side: 168px;
+  --tw-dock: 100px;
+  grid-template-rows: auto minmax(0, 1fr) var(--tw-dock, 100px);
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-game-body {
+  grid-template-columns: var(--tw-side, 168px) minmax(0, 1fr) var(--tw-side, 168px);
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-players .tidewell-player-card,
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-column .tidewell-turn-card {
+  padding: 0.35rem 0.4rem;
+}
+@media (min-width: 801px) and (max-width: 1100px) {
+  .room-view-tidewell-immersive.room-view-seated {
+    --tw-side: 140px;
+  }
+}
+
 .room-view-tidewell-immersive.room-view-seated > .action-log.room-action-log-drawer {
   /* keep drawer in DOM for collapsed default; float so it is reachable without stealing stage */
   display: block !important;

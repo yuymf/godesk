@@ -1434,21 +1434,28 @@ function woodRimMaterial(node: SceneNode, ctx: TabletopObjectContext): Material 
   return mat;
 }
 
-/** T098 · desk exterior wood grain — same maps as T092 rim, larger world repeat. */
+/** T098 · desk exterior wood grain — same maps as T092 rim, larger world repeat.
+ *  T102 · cached via MaterialLibrary.ensure (one shared material per base). */
 function deskWoodMaterial(node: SceneNode, ctx: TabletopObjectContext, token?: MaterialToken): Material {
-  const base = token?.base ?? (node.material && ctx.materials[node.material]?.base) ?? "#7a4e28";
-  // reuse rim builder then stretch UV repeat for large desk
-  const mat = woodRimMaterial({ ...node, material: node.material }, ctx) as MeshStandardMaterial;
-  mat.color.set(String(base));
-  for (const tex of [mat.map, mat.normalMap, mat.roughnessMap]) {
-    if (!tex) continue;
-    tex.repeat.set(4.5, 4.5);
-  }
-  const strength = mat.userData.gdPatternStrength as { value: number } | undefined;
-  if (strength) strength.value = 0.9;
-  // slight roughness nudge from token
-  if (token?.roughness !== undefined) mat.roughness = Math.min(0.9, Math.max(0.55, token.roughness));
-  return mat;
+  const base = String(token?.base ?? (node.material && ctx.materials[node.material]?.base) ?? "#7a4e28");
+  const roughKey = token?.roughness !== undefined ? String(token.roughness) : "d";
+  const cacheKey = `desk-wood:${base}:${roughKey}`;
+  return ctx.library.ensure(
+    cacheKey,
+    () => {
+      const mat = woodRimMaterial({ ...node, material: node.material }, ctx) as MeshStandardMaterial;
+      mat.color.set(base);
+      for (const tex of [mat.map, mat.normalMap, mat.roughnessMap]) {
+        if (!tex) continue;
+        tex.repeat.set(4.5, 4.5);
+      }
+      const strength = mat.userData.gdPatternStrength as { value: number } | undefined;
+      if (strength) strength.value = 0.9;
+      if (token?.roughness !== undefined) mat.roughness = Math.min(0.9, Math.max(0.55, token.roughness));
+      return mat;
+    },
+    token ?? { base, roughness: 0.82, metalness: 0.08, pattern: "grain" },
+  );
 }
 
 
