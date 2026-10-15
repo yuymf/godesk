@@ -26,7 +26,7 @@ export const NUMBER_TOKEN_HALF_HEIGHT = 0.03;
 /** 贴花离筹码顶面的高度（避免 z-fighting；配合 polygonOffset）。 */
 export const LABEL_LIFT = 0.004;
 /** 贴花边长 = 筹码半径 × 1.85 × 节点缩放：略小于筹码直径（G3D-ART-3 由 1.6 放大，字形更大）。 */
-export const LABEL_SIZE_PER_RADIUS = 1.85;
+export const LABEL_SIZE_PER_RADIUS = 2.18; // T099 · stage-wide glyph
 export { NUMBER_TOKEN_SCALE } from "./tokens";
 
 export const LABEL_INK = "#2f2a24";
@@ -58,7 +58,7 @@ export function atlasCell(n: number): { col: number; row: number } {
  */
 export const LABEL_FONT = `"Helvetica Neue", Helvetica, Arial, "Noto Sans", "DejaVu Sans", "Liberation Sans", sans-serif`;
 /** 默认机位俯视角会把筹码顶面纵向压缩约一半；图集里预先纵向拉伸字形，抵消透视压缩。 */
-export const GLYPH_STRETCH_Y = 1.5;
+export const GLYPH_STRETCH_Y = 1.55; // T099
 /** 两位数的字距（相对格宽，负值收紧），让「11」「12」成为一个整体而不是两个分离的笔画。 */
 export const GLYPH_TRACKING = -0.03;
 
@@ -80,13 +80,14 @@ export function drawNumberAtlas(size = 1024): Texture {
     const color = isHotNumber(n) ? LABEL_HOT : LABEL_INK;
     ctx.fillStyle = color;
     const text = String(n);
-    const fontPx = Math.round(cell * (text.length > 1 ? 0.56 : 0.6));
+    // T099 · larger glyphs + cream stroke for stage-wide contrast (shared; no sample specials)
+    const fontPx = Math.round(cell * (text.length > 1 ? 0.66 : 0.72));
     ctx.font = `900 ${fontPx}px ${LABEL_FONT}`;
     // 逐字排版：实测字宽 + 收紧字距；两位数若超宽则整体横向压缩。
     const widths = [...text].map((ch) => ctx.measureText(ch).width);
     const track = GLYPH_TRACKING * cell;
     const natural = widths.reduce((a, w) => a + w, 0) + track * (widths.length - 1);
-    const maxWidth = cell * 0.92;
+    const maxWidth = cell * 0.94;
     const squeeze = Math.min(1, maxWidth / natural);
     const capHeight = fontPx * 0.72 * GLYPH_STRETCH_Y;
     const baseline = cy - cell * 0.08 + capHeight / 2;
@@ -94,14 +95,19 @@ export function drawNumberAtlas(size = 1024): Texture {
     ctx.translate(cx - (natural * squeeze) / 2, baseline);
     ctx.scale(squeeze, GLYPH_STRETCH_Y);
     let x = 0;
+    ctx.lineJoin = "round";
+    ctx.miterLimit = 2;
+    ctx.strokeStyle = "#f5ecd8";
+    ctx.lineWidth = Math.max(2.5, fontPx * 0.1);
     [...text].forEach((ch, i) => {
+      ctx.strokeText(ch, x, 0);
       ctx.fillText(ch, x, 0);
       x += widths[i]! + track;
     });
     ctx.restore();
     const pips = pipCount(n);
-    const r = cell * 0.03;
-    const gap = r * 2.7;
+    const r = cell * 0.048; // T099 · larger probability pips
+    const gap = r * 2.6;
     for (let i = 0; i < pips; i += 1) {
       ctx.beginPath();
       ctx.ellipse(cx + (i - (pips - 1) / 2) * gap, cy + cell * 0.4, r, r * GLYPH_STRETCH_Y, 0, 0, Math.PI * 2);

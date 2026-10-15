@@ -402,16 +402,67 @@ function plaqueWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   return group;
 }
 
+/** T095 · shared pattern-tile glaze albedo/roughness microdetail (not porcelain T076). */
+function tileGlazeMaps(baseHex: string): { map: CanvasTexture | null; roughnessMap: CanvasTexture | null } {
+  const W = 128, H = 128;
+  const albedo = typeof document !== "undefined" ? document.createElement("canvas") : null;
+  const rough = typeof document !== "undefined" ? document.createElement("canvas") : null;
+  if (!albedo || !rough) return { map: null, roughnessMap: null };
+  albedo.width = W; albedo.height = H;
+  rough.width = W; rough.height = H;
+  const ga = albedo.getContext("2d");
+  const gr = rough.getContext("2d");
+  if (!ga || !gr) return { map: null, roughnessMap: null };
+  const parse = (hex: string) => {
+    const h = hex.replace("#", "");
+    return [
+      Number.parseInt(h.slice(0, 2), 16) || 230,
+      Number.parseInt(h.slice(2, 4), 16) || 229,
+      Number.parseInt(h.slice(4, 6), 16) || 228,
+    ] as const;
+  };
+  const [br, bg, bb] = parse(baseHex.startsWith("#") && baseHex.length >= 7 ? baseHex : "#e7e5e4");
+  const aImg = ga.createImageData(W, H);
+  const rImg = gr.createImageData(W, H);
+  for (let y = 0; y < H; y += 1) {
+    for (let x = 0; x < W; x += 1) {
+      const u = x / W, v = y / H;
+      // fine glaze speck + soft edge darkening + micro crackle
+      const speck = (Math.sin(u * 90) * Math.sin(v * 110) + Math.sin(u * 40 + v * 30)) * 0.5;
+      const edge = Math.min(u, v, 1 - u, 1 - v);
+      const rim = edge < 0.08 ? (0.08 - edge) * 10 : 0;
+      const crack = Math.abs(Math.sin((u + v) * 55)) > 0.97 ? 0.35 : 0;
+      const shade = speck * 18 - rim * 28 - crack * 40;
+      const o = (y * W + x) * 4;
+      aImg.data[o] = Math.max(0, Math.min(255, br + shade));
+      aImg.data[o + 1] = Math.max(0, Math.min(255, bg + shade * 0.95));
+      aImg.data[o + 2] = Math.max(0, Math.min(255, bb + shade * 0.9));
+      aImg.data[o + 3] = 255;
+      const rv = Math.max(0, Math.min(255, 70 + rim * 90 + crack * 80 + (0.5 - speck) * 25));
+      rImg.data[o] = rv; rImg.data[o + 1] = rv; rImg.data[o + 2] = rv; rImg.data[o + 3] = 255;
+    }
+  }
+  ga.putImageData(aImg, 0, 0);
+  gr.putImageData(rImg, 0, 0);
+  const map = new CanvasTexture(albedo);
+  const roughnessMap = new CanvasTexture(rough);
+  map.colorSpace = SRGBColorSpace;
+  map.wrapS = map.wrapT = RepeatWrapping;
+  roughnessMap.wrapS = roughnessMap.wrapT = RepeatWrapping;
+  return { map, roughnessMap };
+}
+
 function glazedTileWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const group = new Group();
   const body = new Mesh(glazedTileGeom(), materialFor(node, ctx));
   body.castShadow = true;
   body.receiveShadow = true;
   group.add(body);
-  // glossy top glaze plate
+  // glossy top glaze plate — T095 microdetail (keep clearcoat; do not whitewash T076 porcelain)
   const base = node.material && ctx.materials[node.material]?.base
     ? ctx.materials[node.material]!.base
     : "#e7e5e4";
+  const maps = tileGlazeMaps(String(base));
   const glaze = new Mesh(
     (() => {
       const plane = new PlaneGeometry(0.72, 0.72);
@@ -421,10 +472,12 @@ function glazedTileWithFace(node: SceneNode, ctx: TabletopObjectContext): Object
     })(),
     new MeshPhysicalMaterial({
       color: base,
-      roughness: 0.22,
-      metalness: 0.08,
-      clearcoat: 0.85,
-      clearcoatRoughness: 0.25,
+      map: maps.map ?? undefined,
+      roughnessMap: maps.roughnessMap ?? undefined,
+      roughness: 0.28,
+      metalness: 0.06,
+      clearcoat: 0.8,
+      clearcoatRoughness: 0.32,
     }),
   );
   group.add(glaze);
@@ -675,7 +728,12 @@ export function instanceBatchesOf(parent: Object3D): ReadonlyArray<{ key: string
 
 function materialFor(node: SceneNode, ctx: TabletopObjectContext): Material {
   const key = node.material ?? "tt-fallback";
-  return ctx.library.get(key, ctx.materials[key] ?? FALLBACK_TOKEN);
+  const token = ctx.materials[key] ?? FALLBACK_TOKEN;
+  // T098 · desk exterior wood grain aligned with T092 rim (shared maps)
+  if (node.kind === "table" || key === "table") {
+    return deskWoodMaterial(node, ctx, token);
+  }
+  return ctx.library.get(key, token);
 }
 
 function pose(object: Object3D, node: SceneNode): void {
@@ -1373,6 +1431,23 @@ function woodRimMaterial(node: SceneNode, ctx: TabletopObjectContext): Material 
   installPattern(mat, "grain", 0);
   const strength = mat.userData.gdPatternStrength as { value: number } | undefined;
   if (strength) strength.value = 0.85;
+  return mat;
+}
+
+/** T098 · desk exterior wood grain — same maps as T092 rim, larger world repeat. */
+function deskWoodMaterial(node: SceneNode, ctx: TabletopObjectContext, token?: MaterialToken): Material {
+  const base = token?.base ?? (node.material && ctx.materials[node.material]?.base) ?? "#7a4e28";
+  // reuse rim builder then stretch UV repeat for large desk
+  const mat = woodRimMaterial({ ...node, material: node.material }, ctx) as MeshStandardMaterial;
+  mat.color.set(String(base));
+  for (const tex of [mat.map, mat.normalMap, mat.roughnessMap]) {
+    if (!tex) continue;
+    tex.repeat.set(4.5, 4.5);
+  }
+  const strength = mat.userData.gdPatternStrength as { value: number } | undefined;
+  if (strength) strength.value = 0.9;
+  // slight roughness nudge from token
+  if (token?.roughness !== undefined) mat.roughness = Math.min(0.9, Math.max(0.55, token.roughness));
   return mat;
 }
 
