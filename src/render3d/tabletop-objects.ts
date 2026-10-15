@@ -1039,16 +1039,23 @@ function shoreNatural(node: SceneNode, ctx: TabletopObjectContext): Object3D {
 
 
 /** T038 · soft contact / ground shadow under desk pieces (cheap, no lightmap). */
-function softContactShadow(rx = 0.55, rz = 0.55): Mesh {
+function softContactShadow(
+  rx = 0.55,
+  rz = 0.55,
+  opts?: { opacity?: number; boost?: number },
+): Mesh {
   // T079 · stronger ground contact so pieces don't float on felt
+  // T081 · optional opacity/boost for small tiles/plates (shared API; not H04-only)
+  const opacity = opts?.opacity ?? 0.48; // T079 default opacity: 0.48
+  const boost = opts?.boost ?? 1.15;
   const geom = new CircleGeometry(1, 24);
   geom.rotateX(-Math.PI / 2);
-  geom.scale(rx * 1.15, 1, rz * 1.15);
+  geom.scale(rx * boost, 1, rz * boost);
   geom.translate(0, 0.0015, 0);
   const mat = new MeshBasicMaterial({
     color: "#050403",
     transparent: true,
-    opacity: 0.48,
+    opacity,
     depthWrite: false,
     toneMapped: false,
   });
@@ -1098,7 +1105,7 @@ function porcelainPlate(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const glaze = new Mesh(translated(new CylinderGeometry(0.36, 0.36, 0.02, 28), 0.065), glazeMat);
   glaze.receiveShadow = true;
   group.add(bed, rim, glaze);
-  group.add(softContactShadow(0.55, 0.55));
+  group.add(softContactShadow(0.82, 0.82, { opacity: 0.58, boost: 1.28 })); // T081
   return group;
 }
 
@@ -1410,7 +1417,8 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     (object as Group).add(softContactShadow(0.55, 0.78));
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
-    (object as Group).add(softContactShadow(0.58, 0.58));
+    // T081 · larger local blob so small tiles still ground at H02/H03 visibility
+    (object as Group).add(softContactShadow(1.2, 1.2, { opacity: 0.6, boost: 1.32 }));
   } else if (mesh === "plaque") {
     object = plaqueWithFace(node, ctx);
     (object as Group).add(softContactShadow(0.5, 0.38));

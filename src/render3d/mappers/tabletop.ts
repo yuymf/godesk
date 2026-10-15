@@ -625,10 +625,21 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
     });
     if (piece.action) actions[id] = piece.action;
     // T038: soft contact shadow under instanced discs/tokens (groups already embed theirs).
-    if (piece.objectKind === "disc" || piece.objectKind === "token") {
-      const s = Math.max(0.18, size * 0.85);
+    // T081: also absolute ground blobs for tile/plate — parent-scaled embeds read too faint on small pieces.
+    if (
+      piece.objectKind === "disc"
+      || piece.objectKind === "token"
+      || piece.objectKind === "tile"
+      || piece.objectKind === "plate"
+    ) {
+      const s = piece.objectKind === "plate"
+        ? Math.max(0.55, size * 0.95)
+        : piece.objectKind === "tile"
+          ? Math.max(0.28, size * 1.65)
+          : Math.max(0.18, size * 0.85);
       nodes.push({
-        id: `contact:${piece.id}`,
+        // Slash-encode so T047 factory/:tile: filters do not treat ground blobs as tiles.
+        id: `contact/${piece.id.replace(/:/g, "/")}`,
         kind: "piece",
         mesh: "contact-shadow",
         position: [round(piece.x), round(baseY + 0.003), round(piece.z)],

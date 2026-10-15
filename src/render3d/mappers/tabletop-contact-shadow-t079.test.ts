@@ -9,7 +9,7 @@ describe("T079 tabletop contact shadows", () => {
   it("softContactShadow opacity strengthened (T079)", () => {
     const src = readFileSync("src/render3d/tabletop-objects.ts", "utf8");
     expect(src).toContain("T079");
-    expect(src).toMatch(/opacity:\s*0\.48/);
+    expect(src).toMatch(/opacity \?\? 0\.48|opacity:\s*0\.48/);
     expect(src).toContain("contact-shadow");
   });
 
