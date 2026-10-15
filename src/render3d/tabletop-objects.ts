@@ -1456,7 +1456,7 @@ function woodRimMaterial(node: SceneNode, ctx: TabletopObjectContext): Material 
           // T110 · stronger shared grain shade (rim+exterior continuous, not cut)
           const dx = (h0 - hx) * 12;
           const dy = (h0 - hy) * 12;
-          const shade = (h0 - 0.5) * 148; // T110/T201
+          const shade = (h0 - 0.5) * 162; // T110/T201/T206
           const o = i * 4;
           aImg.data[o] = Math.max(0, Math.min(255, br + shade));
           aImg.data[o + 1] = Math.max(0, Math.min(255, bg + shade * 0.9));
@@ -1492,7 +1492,7 @@ function woodRimMaterial(node: SceneNode, ctx: TabletopObjectContext): Material 
     color: base,
     map: map ?? undefined,
     normalMap: normalMap ?? undefined,
-    normalScale: new Vector2(2.55, 2.55), // T092/T110/T169/T175/T181/T201 · grain microcontrast
+    normalScale: new Vector2(2.80, 2.80), // T092/T110/T169/T175/T181/T201/T206 · grain microcontrast
     roughnessMap: roughnessMap ?? undefined,
     roughness: Math.min(0.88, Math.max(0.55, token?.roughness ?? 0.78)),
     metalness: Math.min(0.12, token?.metalness ?? 0.06),
@@ -1586,7 +1586,7 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
           const hy = height[((y + 1) % H) * W + x]!;
           const dx = (h0 - hx) * 14;
           const dy = (h0 - hy) * 14;
-          const shade = (h0 - 0.5) * 252; // T083…T196/T198/T201 · wide-stage albedo amplitude
+          const shade = (h0 - 0.5) * 275; // T083…T196/T198/T201/T206 · wide-stage albedo amplitude
           const o = i * 4;
           aImg.data[o] = Math.max(0, Math.min(255, br + shade));
           aImg.data[o + 1] = Math.max(0, Math.min(255, bg + shade));
@@ -1631,7 +1631,7 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
     color: base,
     map: map ?? undefined,
     normalMap: normalMap ?? undefined,
-    normalScale: new Vector2(5.35, 5.35), // T083…T196/T198/T201 · weave microcontrast
+    normalScale: new Vector2(5.70, 5.70), // T083…T196/T198/T201/T206 · weave microcontrast
     roughnessMap: roughnessMap ?? undefined,
     roughness: Math.max(0.9, token?.roughness ?? 0.97),
     metalness: 0,

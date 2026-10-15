@@ -10,7 +10,7 @@ describe("T192 H01+H02 shared hard residual", () => {
     expect(tokens).toMatch(/intensity: 4\.55/);
     const spec = readFileSync("src/creator/render-spec.ts", "utf8");
     expect(spec).toContain("T192");
-    expect(spec).toMatch(/#04d068/);
+    expect(spec).toMatch(/#(04d068|03d870)/); // T192→T206 network map
     expect(spec).not.toMatch(/suite === ["']H0/);
   });
 });

@@ -5,7 +5,7 @@ describe("T196 shared dressing / light micro-lift", () => {
   it("lifts felt weave + tray + terrain sat without vignette bait", () => {
     const obj = readFileSync("src/render3d/tabletop-objects.ts", "utf8");
     expect(obj).toContain("T196");
-    expect(obj).toMatch(/Vector2\(5\.35,\s*5\.35\)/); // T201 weave raise keeps T196 intent
+    expect(obj).toMatch(/Vector2\(5\.(35|70),\s*5\.(35|70)\)/); // T201/T206 weave raise keeps T196 intent
     expect(obj).toMatch(/W \* 0\.42/); // T193 vignette still calm
     const mats = readFileSync("src/render3d/materials.ts", "utf8");
     expect(mats).toMatch(/TERRAIN_SATURATION = 1\.48/);
