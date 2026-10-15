@@ -6446,11 +6446,13 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
 }
 
 /* T171 · hex share ≥0.88 — collapse invite strip further (shared chrome) */
+/* T174 · shareReady 折叠再矮（共享 chrome；不吃 stage vh） */
 .room-view-hex-island.room-view-seated .room-invitation-rich.is-collapsed.room-share-chrome.is-chrome-collapse,
 .room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse {
-  max-height: 1.05rem;
-  padding: 0.04rem 0.3rem;
-  gap: 0.12rem;
+  max-height: 0.85rem;
+  padding: 0.02rem 0.28rem;
+  gap: 0.08rem;
   overflow: hidden;
+  opacity: 0.78;
 }
 

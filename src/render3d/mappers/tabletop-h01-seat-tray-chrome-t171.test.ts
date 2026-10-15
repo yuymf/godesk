@@ -5,15 +5,16 @@ describe("T171 H01 tabletop-first / seat tray / legal-ring", () => {
   it("collapses chrome toward share ≥0.88 and softens legal rings", () => {
     const tw = readFileSync("src/creator/tidewell-game-screen.css", "utf8");
     expect(tw).toContain("T171");
-    expect(tw).toMatch(/--tw-side:\s*80px/);
-    expect(tw).toMatch(/--tw-dock:\s*36px/);
+    expect(tw).toMatch(/--tw-side:\s*68px/);
+    expect(tw).toMatch(/--tw-dock:\s*28px/);
     expect(tw).toMatch(/minmax\(88vh/);
     expect(tw).toContain("tidewell-dock");
     const hit = readFileSync("src/render3d/hit-targets.ts", "utf8");
     expect(hit).toContain("T171");
-    expect(hit).toMatch(/opacity:\s*0\.42/);
-    expect(hit).toMatch(/emissiveIntensity:\s*0\.32/);
-    expect(hit).toMatch(/TorusGeometry\(0\.2,\s*0\.022/);
+    // T174 further softened ring values
+    expect(hit).toMatch(/opacity:\s*0\.26/);
+    expect(hit).toMatch(/emissiveIntensity:\s*0\.18/);
+    expect(hit).toMatch(/TorusGeometry\(0\.2,\s*0\.016/);
   });
 
   it("rewrites hex seat marker as wood tray + chip (not color-swatch meeple)", () => {
@@ -21,7 +22,6 @@ describe("T171 H01 tabletop-first / seat tray / legal-ring", () => {
     expect(pieces).toContain("T171");
     expect(pieces).toMatch(/seat tray/);
     expect(pieces).toMatch(/MEEPLE_HEX_SCALE = 1\.35/);
-    // classic meeple silhouette path removed
     expect(pieces).not.toMatch(/quadraticCurveTo\(0\.28, 0\.48/);
   });
 });

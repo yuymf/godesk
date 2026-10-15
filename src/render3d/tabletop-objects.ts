@@ -1199,11 +1199,12 @@ function softContactShadow(
     mesh.renderOrder = -1;
     return mesh;
   };
-  group.add(mk(1.60, opacity, 0.0008, "contact-shadow")); // T142/T145 core
+  group.add(mk(1.68, opacity, 0.0008, "contact-shadow")); // T142/T145/T175 core
   // T153–T158/T161/T169 · softer falloff; T161 dark-clamp; T169 micro-soften (no radial blot)
-  group.add(mk(2.55, Math.min(0.22, opacity * 0.32), 0.0005)); // soft mid · T161/T169 lighter
-  group.add(mk(3.55, Math.min(0.16, opacity * 0.24), 0.0003)); // soft outer · T169
-  group.add(mk(5.10, Math.min(0.11, opacity * 0.16), 0.0002)); // wide soft veil · mean without blot
+  // T175 · shared contact microcontrast for H03–H05 hard pixel (keep T161 mid clamp)
+  group.add(mk(2.55, Math.min(0.20, opacity * 0.30), 0.0005)); // soft mid · T161/T175 lighter
+  group.add(mk(3.85, Math.min(0.19, opacity * 0.28), 0.0003)); // soft outer · T169/T175
+  group.add(mk(5.60, Math.min(0.145, opacity * 0.20), 0.0002)); // wide soft veil · T175 mean
   return group;
 }
 
@@ -1490,7 +1491,7 @@ function woodRimMaterial(node: SceneNode, ctx: TabletopObjectContext): Material 
     color: base,
     map: map ?? undefined,
     normalMap: normalMap ?? undefined,
-    normalScale: new Vector2(1.55, 1.55), // T092/T110/T169 · grain microcontrast
+    normalScale: new Vector2(1.95, 1.95), // T092/T110/T169/T175 · grain microcontrast
     roughnessMap: roughnessMap ?? undefined,
     roughness: Math.min(0.88, Math.max(0.55, token?.roughness ?? 0.78)),
     metalness: Math.min(0.12, token?.metalness ?? 0.06),
@@ -1629,7 +1630,7 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
     color: base,
     map: map ?? undefined,
     normalMap: normalMap ?? undefined,
-    normalScale: new Vector2(2.05, 2.05), // T083/T114/T120/T132/T169 · weave microcontrast
+    normalScale: new Vector2(2.85, 2.85), // T083/T114/T120/T132/T169/T175 · weave microcontrast
     roughnessMap: roughnessMap ?? undefined,
     roughness: Math.max(0.9, token?.roughness ?? 0.97),
     metalness: 0,

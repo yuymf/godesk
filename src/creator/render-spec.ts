@@ -471,25 +471,28 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
   }
   if (kernelType === "gem-engine-v1" || kernelType === "pattern-draft-v1" || kernelType === "auction-bidding-v1") {
     // T030 · desk-kernel visual baseline; T038 · softer contact lighting + felt that eats light.
+    // T175 · shared desk material/light microcontrast — hard pixel for H03/H04/H05 (no suite fork)
     render.camera = { ...render.camera, fovDeg: 30, distance: 12.5, minPolarDeg: 32, maxPolarDeg: 62, polarDeg: 48 };
     render.lighting = {
       ...render.lighting,
       // T061 · desk contrast; T086 · explicit fill + rim (no extra shadow maps)
-      sun: { ...render.lighting.sun, azimuthDeg: 132, elevationDeg: 54, intensity: 3.15, color: "#ffd2a0" },
-      hemisphere: { sky: "#f8f0e6", ground: "#6e5c48", intensity: 0.78 },
-      fill: { azimuthDeg: 310, elevationDeg: 34, intensity: 0.55, color: "#c8d8f2" },
-      rim: { azimuthDeg: 40, elevationDeg: 17, intensity: 0.4, color: "#ffe6c0" },
-      shadow: { enabled: true, softness: 0.7 },
-      exposure: 1.14,
+      // T175 · warmer sun + higher exposure (shared; keep T161 upper-ink lighter direction)
+      sun: { ...render.lighting.sun, azimuthDeg: 128, elevationDeg: 52, intensity: 3.65, color: "#ffbe78" },
+      hemisphere: { sky: "#fff6ec", ground: "#5a4a38", intensity: 0.88 },
+      fill: { azimuthDeg: 312, elevationDeg: 36, intensity: 0.68, color: "#b8cef0" },
+      rim: { azimuthDeg: 38, elevationDeg: 18, intensity: 0.52, color: "#ffd9a8" },
+      shadow: { enabled: true, softness: 0.62 },
+      exposure: 1.32,
     };
     Object.assign(render.materials, {
-      board: material("#1a8a45", "cloth", 0.99, 0, undefined, 0.62),  // T044 product green felt
-      table: material("#a87338", "grain", 0.74, 0.06), // T092/T110 · wood rim+exterior continuous
-      piece: material("#f7f1e6", "none", 0.32, 0.1, 0.48),
-      card: material("#f8edd8", "none", 0.42, 0.04, 0.32),
-      resource: material("#f0e2c0", "none", 0.2, 0.28, 0.82),
-      token: material("#c4b5fd", "none", 0.3, 0.18, 0.55),
-      ink: material("#334155", "none", 0.48, 0.08, 0.15),
+      // T175 · richer felt chroma + weave (shared MaterialLibrary board cloth)
+      board: material("#0f9540", "cloth", 0.99, 0, undefined, 0.82),  // T044/T175 product green felt
+      table: material("#c08642", "grain", 0.66, 0.1), // T092/T110/T175 · warmer wood rim
+      piece: material("#fff6e8", "none", 0.28, 0.12, 0.52),
+      card: material("#fff1dc", "none", 0.36, 0.05, 0.38),
+      resource: material("#f5e6c4", "none", 0.16, 0.32, 0.88),
+      token: material("#cbb6ff", "none", 0.26, 0.22, 0.58),
+      ink: material("#2a3a48", "none", 0.44, 0.1, 0.18),
     });
     render.bindings = [
       binding("region", "tile-square", "board"),
@@ -509,14 +512,14 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     ];
     if (kernelType === "auction-bidding-v1") {
       Object.assign(render.materials, {
-        board: material("#1c7d42", "cloth", 0.99, 0, undefined, 0.55),  // T044 auction felt
-        card: material("#fff7ed", "none", 0.42, 0.04, 0.28), // T061
+        board: material("#10953c", "cloth", 0.99, 0, undefined, 0.78),  // T044/T175 auction felt
+        card: material("#fffaf2", "none", 0.36, 0.05, 0.34), // T061/T175
       });
     }
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
-        board: material("#1a8644", "cloth", 0.99, 0, undefined, 0.58),  // T044 pattern felt
-        piece: material("#f8fafc", "none", 0.34, 0.08, 0.45), // T061
+        board: material("#0f9542", "cloth", 0.99, 0, undefined, 0.80),  // T044/T175 pattern felt
+        piece: material("#fafcff", "none", 0.28, 0.1, 0.5), // T061/T175
         slot: material("#3f3f46", "none", 0.82, 0.05, 0.12),  // legacy recessed slots
         // T054 · pale print plate under wall hue tints (square grid, not black pits)
         "wall-print": material("#e7e5e4", "none", 0.88, 0.02, 0.08),
