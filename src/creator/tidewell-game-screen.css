@@ -2721,6 +2721,7 @@ body:has(.room-view-tidewell-immersive) {
 }
 
 /* Stage bezel: same thickness rings — warmer gold hairline + beveled highlight only */
+/* T159 · seat-close product-frame: clearer gold hairline (thickness LOCKED) */
 .tidewell-stage-wrap {
   box-shadow:
     inset 0 0 0 2px #1e140a,
@@ -2728,8 +2729,8 @@ body:has(.room-view-tidewell-immersive) {
     inset 0 0 0 11px #4e3218,
     inset 0 0 0 16px #6b4428,
     inset 0 0 0 18px #5c3c20,
-    /* warmer gold hairline (not thicker) */
-    inset 0 0 0 19px rgba(212, 169, 58, 0.72),
+    /* warmer gold hairline (not thicker) · T159 clearer */
+    inset 0 0 0 19px rgba(232, 196, 96, 0.82),
     inset 0 0 0 20px rgba(36, 22, 12, 0.88),
     inset 0 0 28px 12px rgba(42, 26, 12, 0.36) !important;
 }
@@ -2741,7 +2742,7 @@ body:has(.room-view-tidewell-immersive) {
     inset 0 0 0 12px #4e3218,
     inset 0 0 0 17px #6b4428,
     inset 0 0 0 19px #5c3c20,
-    inset 0 0 0 20px rgba(240, 208, 112, 0.68),
+    inset 0 0 0 20px rgba(245, 220, 130, 0.78), /* T159 */
     inset 0 0 0 21px rgba(36, 22, 12, 0.9),
     inset 0 0 36px 14px rgba(48, 30, 14, 0.42),
     inset 0 0 14px 4px rgba(106, 68, 36, 0.32) !important;

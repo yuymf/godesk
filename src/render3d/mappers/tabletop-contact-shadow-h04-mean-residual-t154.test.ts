@@ -11,8 +11,8 @@ describe("T154 contact shadow H04 mean residual", () => {
     const block = src.slice(start, end > 0 ? end : start + 4000);
     expect(block).toMatch(/Math\.min\(1\.02/);
     expect(block).toMatch(/Math\.max\(0\.68/);
-    expect(block).toMatch(/2\.(40|50)/);
-    expect(block).toMatch(/4\.(35|60)/);
-    expect(src).toMatch(/T154 tile residual|tile residual/);
+    expect(block).toMatch(/2\.(40|50|55)/);
+    expect(block).toMatch(/4\.(35|60|70)/);
+    expect(src).toMatch(/T154 tile residual|tile residual|T158 tile mean floor/);
   });
 });
