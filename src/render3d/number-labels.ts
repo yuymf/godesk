@@ -58,7 +58,7 @@ export function atlasCell(n: number): { col: number; row: number } {
  */
 export const LABEL_FONT = `"Helvetica Neue", Helvetica, Arial, "Noto Sans", "DejaVu Sans", "Liberation Sans", sans-serif`;
 /** 默认机位俯视角会把筹码顶面纵向压缩约一半；图集里预先纵向拉伸字形，抵消透视压缩。 */
-export const GLYPH_STRETCH_Y = 1.62; // T099/T112/T118 · T125 soften seat-close ortho stretch (keep ≥1.62)
+export const GLYPH_STRETCH_Y = 1.68; // T099/T112/T118 · T125/T129 ortho balance (floor 1.62, was 1.78)
 /** 两位数的字距（相对格宽，负值收紧），让「11」「12」成为一个整体而不是两个分离的笔画。 */
 export const GLYPH_TRACKING = -0.03;
 
@@ -147,6 +147,9 @@ export function buildLabelGeometry(labels: readonly NumberLabel[]): BufferGeomet
   const idx = new Uint16Array(labels.length * 6);
   labels.forEach((label, i) => {
     const h = label.size / 2;
+    // T129 · ortho UV plane: slightly wider than deep so seat-close top-down does not over-elongate glyphs
+    const hx = h;
+    const hz = h * 0.92;
     const { x, y, z } = label.center;
     const { col, row } = atlasCell(label.number);
     const u0 = col / GRID;
@@ -154,7 +157,7 @@ export function buildLabelGeometry(labels: readonly NumberLabel[]): BufferGeomet
     const v1 = 1 - row / GRID; // flipY：行 0 在纹理顶部
     const v0 = 1 - (row + 1) / GRID;
     // 顶点顺序：左上(-x,-z) 右上(+x,-z) 右下(+x,+z) 左下(-x,+z)
-    pos.set([x - h, y, z - h, x + h, y, z - h, x + h, y, z + h, x - h, y, z + h], i * 12);
+    pos.set([x - hx, y, z - hz, x + hx, y, z - hz, x + hx, y, z + hz, x - hx, y, z + hz], i * 12);
     uv.set([u0, v1, u1, v1, u1, v0, u0, v0], i * 8);
     nrm.set([0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0], i * 12);
     const b = i * 4;
@@ -177,11 +180,12 @@ export function projectLabels(labels: readonly NumberLabel[], camera: Camera, wi
   const camPos = new Vector3();
   camera.getWorldPosition(camPos);
   return labels.map((label) => {
-    const h = label.size / 2;
+    const hx = label.size / 2;
+    const hz = (label.size / 2) * 0.92; // T129 aspect
     const xs: number[] = [];
     const ys: number[] = [];
     let inView = true;
-    for (const [dx, dz] of [[-h, -h], [h, -h], [h, h], [-h, h], [0, 0]] as const) {
+    for (const [dx, dz] of [[-hx, -hz], [hx, -hz], [hx, hz], [-hx, hz], [0, 0]] as const) {
       const p = new Vector3(label.center.x + dx, label.center.y, label.center.z + dz).project(camera);
       if (p.x < -1 || p.x > 1 || p.y < -1 || p.y > 1 || p.z < -1 || p.z > 1) inView = false;
       xs.push(((p.x + 1) / 2) * width);
