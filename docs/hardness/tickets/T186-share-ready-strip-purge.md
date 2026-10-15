@@ -1,5 +1,19 @@
-# T186 · Open · shareReady 好友/链接条仍可检出
+# T186 · shareReady 好友/链接条 purge
 
-**Why open:** T184 已降权顶栏/邀请条，但 share 帧 metrics 仍 `shareReadyVisible=true`；预览壳层未清零。  
-**Scope:** 共享 CSS / Room chrome · 禁止样例特判 · 保持 H01–H05 share≥0.88。  
-**Not:** Collecta / T021 / merge main。
+**Baseline tip:** `1e9d791`  
+**Status:** Done · 证据未入库
+
+## 门
+
+| 项 | 结果 |
+|---|---|
+| shareReadyVisible | **false**（H01–H05） |
+| inviteLinkRowPresent | **false** |
+| H01 canvasShare | **0.9218** ≥0.88 |
+| H02–H05 share | **0.88** |
+| rejectedShell | false |
+
+## 改动（共享）
+
+- `RoomView.tsx` · seated share chrome 不挂载 invitation-heading / invitation-link-row
+- `surface.css` / `tidewell-game-screen.css` · chrome-collapse 下 invite/link `display:none`

@@ -6446,6 +6446,28 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
 }
 
 /* T171 · hex share ≥0.88 — collapse invite strip further (shared chrome) */
+/* T186 · shareReady invite/link purge — 分享帧不可检出好友/链接条（共享 chrome） */
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-chrome-collapse .invitation-heading,
+.room-view-hex-island.room-view-seated .room-invitation-rich.is-chrome-collapse .invitation-heading,
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .invitation-heading,
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-chrome-collapse .invitation-link-row,
+.room-view-hex-island.room-view-seated .room-invitation-rich.is-chrome-collapse .invitation-link-row,
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .invitation-link-row {
+  display: none !important;
+  max-height: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
+/* T186 · shell header stays light/collapsed (T184 bounds) — invite/link purged; avoid darkening upper-ink */
+.room-view-tabletop-immersive.room-view-seated .room-shell-header.is-immersive-strip,
+.room-view-hex-island.room-view-seated .room-shell-header.is-immersive-strip,
+.room-view-tabletop-immersive.room-view-seated .room-shell-header.is-share-chrome,
+.room-view-hex-island.room-view-seated .room-shell-header.is-share-chrome {
+  background: color-mix(in srgb, #fff8ee 72%, transparent) !important;
+  border-color: rgb(23 23 23 / 4%) !important;
+}
+
 /* T174/T178/T180/T184 · shareReady 折叠再矮（共享 chrome；不吃 stage vh） */
 .room-view-hex-island.room-view-seated .room-invitation-rich.is-collapsed.room-share-chrome.is-chrome-collapse,
 .room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse {

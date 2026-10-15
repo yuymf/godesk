@@ -1,5 +1,18 @@
-# T187 · Open · H04 upper-ink vs immediate tip 微升
+# T187 · H04 upper-ink vs immediate tip lighter_ok
 
-**Why open:** T183 H04 vs tip(`c6cbe75`/t182) upper_ink +1.37（not_darkened_vs_immediate 未过 +0.35）。  
-**Note:** 契约守卫 T161（vs T161 tip）在 T184 **lighter_ok**；本票只记 immediate-tip 诚实 soft。  
-**Scope:** 共享 lighting/ink · 不回退 T183 H01 hard。
+**Baseline tip:** `1e9d791`  
+**Status:** Done · 证据未入库
+
+## 门
+
+| 项 | 结果 |
+|---|---|
+| H04 upper Δ vs tip(t185) | **-0.96** · lighter_ok |
+| T161 guard | Δ **-3.38** · lighter_ok · vs T158 lighter |
+| T157 H05 | close Δ **-1.16** · calm strict |
+| T183 H01 hard vs t182 | mean **12.07** / ge20 **18.93%** · hard |
+| T036/T047 | 绿 |
+
+## 改动（共享 desk lighting）
+
+- `render-spec.ts` · pattern/gem/auction 共享 sky/fill/exposure 上提（无 suite fork；hex 路径不动）

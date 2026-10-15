@@ -533,6 +533,9 @@ export function RoomView({ sessionId }: { sessionId: string }) {
               aria-label={copy.invitation}
               className={`room-invitation room-invitation-rich${shareChromeCompact ? " is-collapsed room-share-chrome is-chrome-collapse" : ""}`}
             >
+        {/* T186 · seated shareReady: purge invite/link strip from share frame (seat rail stays) */}
+        {!shareChromeCompact ? (
+          <>
         <div className="invitation-heading">
           <span className="room-kicker">{copy.invitation}</span>
           <strong>{copy.invitationHint}</strong>
@@ -542,9 +545,9 @@ export function RoomView({ sessionId }: { sessionId: string }) {
             <span>{copy.inviteLink}</span>
             <input
               aria-label={copy.inviteLink}
-              className={shareChromeCompact ? "invite-url is-share-ready" : "invite-url"}
+              className="invite-url"
               readOnly
-              value={shareChromeCompact ? copy.shareLinkReady : room.sessionUrl}
+              value={room.sessionUrl}
             />
           </label>
           <button
@@ -555,6 +558,8 @@ export function RoomView({ sessionId }: { sessionId: string }) {
             {copied ? copy.copiedInvite : copy.copyInvite}
           </button>
         </div>
+          </>
+        ) : null}
         <div className="seat-rail" role="group" aria-label={locale === "zh" ? "席位栏" : "Seat rail"}>
           <span className="seat-rail-label">{copy.yourSeat}</span>
           <div className="seat-chip-row">

@@ -499,13 +499,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     render.lighting = {
       ...render.lighting,
       // T061 · desk contrast; T086 · explicit fill + rim (no extra shadow maps)
-      // T175 · warmer sun + higher exposure (shared; keep T161 upper-ink lighter direction)
-      sun: { ...render.lighting.sun, azimuthDeg: 128, elevationDeg: 52, intensity: 3.65, color: "#ffbe78" },
-      hemisphere: { sky: "#fff6ec", ground: "#5a4a38", intensity: 0.88 },
-      fill: { azimuthDeg: 312, elevationDeg: 36, intensity: 0.68, color: "#b8cef0" },
-      rim: { azimuthDeg: 38, elevationDeg: 18, intensity: 0.52, color: "#ffd9a8" },
-      shadow: { enabled: true, softness: 0.62 },
-      exposure: 1.36, // T181
+      // T175/T187 · brighter upper sky/fill/exposure for immediate-tip upper-ink lighter_ok (H01 hex untouched)
+      sun: { ...render.lighting.sun, azimuthDeg: 128, elevationDeg: 54, intensity: 3.72, color: "#ffc690" },
+      hemisphere: { sky: "#fffdf8", ground: "#6a5a48", intensity: 1.08 },
+      fill: { azimuthDeg: 312, elevationDeg: 42, intensity: 0.92, color: "#d0e0f8" },
+      rim: { azimuthDeg: 38, elevationDeg: 20, intensity: 0.42, color: "#ffe2b8" },
+      shadow: { enabled: true, softness: 0.68 },
+      exposure: 1.42, // T187 · lift upper half vs tip
 
     };
     Object.assign(render.materials, {

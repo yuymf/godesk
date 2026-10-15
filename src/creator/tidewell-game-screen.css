@@ -64,7 +64,7 @@ body:has(.room-view-tidewell-immersive) {
 
 /* T091 · seated shareReady / seat chrome pierces immersive hide (hex + tabletop parity) */
 /* T097 · tighter fixed strip so canvas reclaim vertical space */
-/* T180/T184 · shareReady strip 再降权：好友/链接条近隐，不抢 stage */
+/* T180/T184/T186 · shareReady strip 再降权→purge：好友/链接条不可检出 */
 .room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome {
   display: grid !important;
   position: fixed !important;
@@ -85,9 +85,17 @@ body:has(.room-view-tidewell-immersive) {
   opacity: 0.48;
 }
 .room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse {
-  max-height: 0.55rem !important;
-  opacity: 0.38 !important;
+  /* T186 · seat-rail only; invite/link purged (keep strip light for upper-ink) */
+  max-height: 0.45rem !important;
+  opacity: 0.32 !important;
+  padding: 0 0.14rem !important;
+  background: color-mix(in srgb, #fff8ee 55%, transparent) !important;
   pointer-events: none;
+  overflow: hidden !important;
+}
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .invitation-heading,
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .invitation-link-row {
+  display: none !important;
 }
 .room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .seat-chip:not(.is-yours) {
   display: none !important;
