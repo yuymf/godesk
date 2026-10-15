@@ -9,6 +9,7 @@ describe("T119 station plaque stage-wide residual", () => {
     expect(src).toContain("paintSharedOpaquePlaqueFace");
     expect(src).toMatch(/stationName\.length \* 52/);
     expect(src).toMatch(/Math\.min\(1\.45,\s*0\.52 \+ stationName\.length \* 0\.16\)/);
-    expect(src).toMatch(/PlaneGeometry\(pw,\s*0\.46\)/);
+    // T132 may raise plane height further; keep >= T119 0.46
+    expect(src).toMatch(/PlaneGeometry\(pw,\s*0\.(46|50|5)\)/);
   });
 });

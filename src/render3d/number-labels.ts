@@ -24,7 +24,7 @@ import type { SceneNode } from "./scene-model";
 export const NUMBER_TOKEN_RADIUS = 0.22;
 export const NUMBER_TOKEN_HALF_HEIGHT = 0.03;
 /** 贴花离筹码顶面的高度（避免 z-fighting；配合 polygonOffset）。 */
-export const LABEL_LIFT = 0.004;
+export const LABEL_LIFT = 0.0015; // T131 · less float above token
 /** 贴花边长 = 筹码半径 × 1.85 × 节点缩放：略小于筹码直径（G3D-ART-3 由 1.6 放大，字形更大）。 */
 export const LABEL_SIZE_PER_RADIUS = 2.72; // T099/T112/T118 · stage-wide glyph
 export { NUMBER_TOKEN_SCALE } from "./tokens";
@@ -58,7 +58,7 @@ export function atlasCell(n: number): { col: number; row: number } {
  */
 export const LABEL_FONT = `"Helvetica Neue", Helvetica, Arial, "Noto Sans", "DejaVu Sans", "Liberation Sans", sans-serif`;
 /** 默认机位俯视角会把筹码顶面纵向压缩约一半；图集里预先纵向拉伸字形，抵消透视压缩。 */
-export const GLYPH_STRETCH_Y = 1.68; // T099/T112/T118 · T125/T129 ortho balance (floor 1.62, was 1.78)
+export const GLYPH_STRETCH_Y = 1.64; // T099/T112/T118 · T125/T129/T131 ortho (floor 1.62, was 1.78)
 /** 两位数的字距（相对格宽，负值收紧），让「11」「12」成为一个整体而不是两个分离的笔画。 */
 export const GLYPH_TRACKING = -0.03;
 
@@ -147,9 +147,9 @@ export function buildLabelGeometry(labels: readonly NumberLabel[]): BufferGeomet
   const idx = new Uint16Array(labels.length * 6);
   labels.forEach((label, i) => {
     const h = label.size / 2;
-    // T129 · ortho UV plane: slightly wider than deep so seat-close top-down does not over-elongate glyphs
+    // T129/T131 · ortho UV plane: flatter depth so seat-close top-down does not over-elongate glyphs
     const hx = h;
-    const hz = h * 0.92;
+    const hz = h * 0.88;
     const { x, y, z } = label.center;
     const { col, row } = atlasCell(label.number);
     const u0 = col / GRID;
@@ -181,7 +181,7 @@ export function projectLabels(labels: readonly NumberLabel[], camera: Camera, wi
   camera.getWorldPosition(camPos);
   return labels.map((label) => {
     const hx = label.size / 2;
-    const hz = (label.size / 2) * 0.92; // T129 aspect
+    const hz = (label.size / 2) * 0.88; // T129/T131 aspect
     const xs: number[] = [];
     const ys: number[] = [];
     let inView = true;

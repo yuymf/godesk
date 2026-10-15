@@ -6233,6 +6233,9 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   /* T128 · chrome microdensity — drop side pad so stage width hits suite ≈0.78 */
   padding-left: 0;
   padding-right: 0;
+  /* T130 · stage edge bleed — 1px side borders ate 2px content width (1438 vs 1440) */
+  border-left: 0;
+  border-right: 0;
 }
 .room-view-tabletop-immersive.room-view-seated .auction-board.room-view-tabletop-immersive .tabletop-stage,
 .room-view-tabletop-immersive.room-view-seated .auction-board.room-view-tabletop-immersive .g3d-stage {

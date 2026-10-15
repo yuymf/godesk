@@ -10,7 +10,8 @@ describe("T129 hex number glyph ortho balance", () => {
     expect(LABEL_SIZE_PER_RADIUS).toBeGreaterThanOrEqual(2.5);
     const src = readFileSync("src/render3d/number-labels.ts", "utf8");
     expect(src).toContain("T129");
-    expect(src).toMatch(/hz = h \* 0\.92|hz = \(label\.size \/ 2\) \* 0\.92/);
+    // T131 may further flatten hz; keep aspect <= 0.92 floor from T129
+    expect(src).toMatch(/hz = h \* 0\.8[0-9]|hz = \(label\.size \/ 2\) \* 0\.8[0-9]/);
   });
 
   it("does not cut T125 framing markers", () => {

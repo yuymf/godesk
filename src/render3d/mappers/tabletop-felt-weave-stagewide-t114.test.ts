@@ -7,9 +7,9 @@ describe("T114 felt weave stage-wide microdetail", () => {
     expect(src).toContain("T114");
     expect(src).toContain("T082");
     expect(src).toContain("T083");
-    // T120 may raise further; floors stay at T114
+    // T120/T132 may raise further; floors stay at T114
     expect(src).toMatch(/period = (16|20)/);
-    expect(src).toMatch(/repeat\.set\((2\.6|2\.1),\s*\1\)/);
-    expect(src).toMatch(/normalScale: new Vector2\((1\.45|1\.70),\s*\1\)/);
+    expect(src).toMatch(/repeat\.set\((2\.6|2\.1|2\.0),\s*\1\)/);
+    expect(src).toMatch(/normalScale: new Vector2\((1\.45|1\.70|1\.78),\s*\1\)/);
   });
 });

@@ -336,11 +336,11 @@ function paintSharedOpaquePlaqueFace(
   const title = opts.title.slice(0, 8);
   const cx = W / 2;
   const cy = H / 2 + 2;
-  g.font = `700 ${Math.round(H * 0.58)}px "Noto Serif CJK SC","Songti SC",serif`; // T119
+  g.font = `700 ${Math.round(H * 0.60)}px "Noto Serif CJK SC","Songti SC",serif`; // T119/T132
   g.textAlign = "center";
   g.textBaseline = "middle";
   // Halo then ink — stage-wide readability without enlarging layout length rules.
-  g.lineWidth = Math.max(6, Math.round(H * 0.08)); // T119
+  g.lineWidth = Math.max(7, Math.round(H * 0.09)); // T119/T132
   g.strokeStyle = opts.hub ? "rgba(120,53,15,0.85)" : "rgba(250,246,239,0.95)";
   g.strokeText(title, cx, cy);
   g.fillStyle = "#0f172a";
@@ -1015,10 +1015,11 @@ function station(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   // T051 · large opaque station/hub name plaque (shared; not faint floating mush).
   // T115 · contrast via shared opaque plaque face (length/truncation rules unchanged).
   // T119 · stage-wide residual: larger world plaque + anisotropy (length/truncation kept).
+  // T132 · felt/plaque residual: slightly taller world plaque for stage-wide ink.
   if (stationName && typeof document !== "undefined") {
     const canvas = document.createElement("canvas");
     const W = Math.max(220, stationName.length * 52 + 64);
-    const H = 88;
+    const H = 96;
     canvas.width = W;
     canvas.height = H;
     const g = canvas.getContext("2d");
@@ -1028,7 +1029,7 @@ function station(node: SceneNode, ctx: TabletopObjectContext): Object3D {
       tex.colorSpace = SRGBColorSpace;
       tex.anisotropy = 8;
       const pw = Math.min(1.45, 0.52 + stationName.length * 0.16);
-      const plane = new PlaneGeometry(pw, 0.46);
+      const plane = new PlaneGeometry(pw, 0.50);
       plane.rotateX(-Math.PI / 2);
       const plate = new Mesh(plane, new MeshBasicMaterial({ map: tex, toneMapped: false }));
       plate.position.set(0, 0.14, 0.55);
@@ -1552,7 +1553,7 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
           const hy = height[((y + 1) % H) * W + x]!;
           const dx = (h0 - hx) * 14;
           const dy = (h0 - hy) * 14;
-          const shade = (h0 - 0.5) * 148; // T083/T114/T120 · wide-stage albedo amplitude
+          const shade = (h0 - 0.5) * 160; // T083/T114/T120/T132 · wide-stage albedo amplitude
           const o = i * 4;
           aImg.data[o] = Math.max(0, Math.min(255, br + shade));
           aImg.data[o + 1] = Math.max(0, Math.min(255, bg + shade));
@@ -1590,14 +1591,14 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
   for (const tex of [map, normalMap, roughnessMap]) {
     if (!tex) continue;
     tex.wrapS = tex.wrapT = RepeatWrapping;
-    tex.repeat.set(2.1, 2.1); // T083/T114/T120 · larger weave cells at stage-wide
+    tex.repeat.set(2.0, 2.0); // T083/T114/T120/T132 · weave cells at stage-wide
   }
   if (map) map.colorSpace = SRGBColorSpace;
   const mat = new MeshStandardMaterial({
     color: base,
     map: map ?? undefined,
     normalMap: normalMap ?? undefined,
-    normalScale: new Vector2(1.70, 1.70), // T083/T114/T120
+    normalScale: new Vector2(1.78, 1.78), // T083/T114/T120/T132
     roughnessMap: roughnessMap ?? undefined,
     roughness: Math.max(0.9, token?.roughness ?? 0.97),
     metalness: 0,
