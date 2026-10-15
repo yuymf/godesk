@@ -2,9 +2,8 @@
 
 | 字段 | 值 |
 | --- | --- |
-| 来源 | T156 / T154 · H04 仅靠 ge20≈5.64% 过门（mean≈4.27 仍 <5） |
 | 层 | **共享呈现** |
-| 状态 | **开** |
+| 状态 | **关（PASS）** · H02 guard soft → T160 |
 
-## 差距
-H04 mean 仍未稳过 5；下一刀抬 mean 同时保 H02/H03 与 T151 absolute ink。
+## 实现
+tile/card footprint + soft mid 抬 H04 mean≥5；保 H03 ge20；T157 保 absolute ink。

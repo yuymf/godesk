@@ -1,0 +1,96 @@
+[
+  {
+    "suite": "H01",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 0,
+      "hasSceneHost": 1,
+      "canvas": 1
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS\uff08\u53ef\u73a9\u5b50\u96c6\uff09",
+    "rejectedShell": false
+  },
+  {
+    "suite": "H02",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS\uff08\u53ef\u73a9\u5b50\u96c6\uff09",
+    "rejectedShell": false
+  },
+  {
+    "suite": "H03",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS\uff08\u53ef\u73a9\u5b50\u96c6\uff09",
+    "rejectedShell": false
+  },
+  {
+    "suite": "H04",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS\uff08\u53ef\u73a9\u5b50\u96c6\uff09",
+    "rejectedShell": false,
+    "t036TileGuard": {
+      "ok": true,
+      "via": "vitest tabletop-stacking-t036 + tabletop-factory-glaze-t047",
+      "tip": "1f5f686",
+      "log_tail": [
+        "RUN  v4.1.11 /workspace/godesk-tide-arena",
+        "",
+        "",
+        " Test Files  2 passed (2)",
+        "      Tests  5 passed (5)",
+        "   Start at  00:12:03",
+        "   Duration  390ms (transform 288ms, setup 0ms, import 386ms, tests 14ms, environment 0ms)"
+      ]
+    }
+  },
+  {
+    "suite": "H05",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS\uff08\u53ef\u73a9\u5b50\u96c6\uff09",
+    "rejectedShell": false
+  }
+]
