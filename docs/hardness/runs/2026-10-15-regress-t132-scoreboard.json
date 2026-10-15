@@ -1,0 +1,181 @@
+[
+  {
+    "suite": "H01",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 0,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 0
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS（可玩子集）",
+    "rejectedShell": false,
+    "kernelType": "hex-settlement-v1",
+    "sidecar": {
+      "suite": "H01",
+      "suiteRaw": "H01-regress-t132",
+      "kernelType": "hex-settlement-v1",
+      "roomId": "room_aea23a6e-4ca3-4ff9-ab19-5fab79ccd902",
+      "buildId": "build_58a85e22866e8fe7c1dedad8",
+      "projectId": "project_e2eb2906-a40d-4f99-a129-fcd76c832d0a",
+      "sessionUrl": "http://127.0.0.1:8799/chatgpt-plugin/room/room_aea23a6e-4ca3-4ff9-ab19-5fab79ccd902?share=eyJ2IjoxLCJjIjoibG9jYWwtY3JlYXRvciIsInJvb20iOiJyb29tX2FlYTIzYTZlLTRjYTMtNGZmOS1hYjE5LTVmYWI3OWNjZDkwMiIsImJ1aWxkIjoiYnVpbGRfNThhODVlMjI4NjZlOGZlN2MxZGVkYWQ4IiwicmVwbGF5IjoicmVwbGF5XzhmNjlkOGE4LTM3NmQtNDdlNy1hYWYwLTg1YTg0MGQxNjFlYiIsInByb2plY3QiOiJwcm9qZWN0X2UyZWIyOTA2LWE0MGQtNGY5OS1hMTI5LWZjZDc2YzgzMmQwYSJ9.wztjPRO0xCQsys3At5odSqVzuxRG9hYvt1mAKPgjQS0",
+      "canvas": 1,
+      "hasStage": 0,
+      "hasSceneHost": 1,
+      "kernelAttr": 0,
+      "rejectedShell": false,
+      "shellNote": "ok"
+    }
+  },
+  {
+    "suite": "H02",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 2
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS（可玩子集）",
+    "rejectedShell": false,
+    "kernelType": "network-route-v1",
+    "sidecar": {
+      "suite": "H02",
+      "suiteRaw": "H02-regress-t132",
+      "kernelType": "network-route-v1",
+      "roomId": "room_9a98daf7-109e-4271-8096-20406d391d3c",
+      "buildId": "build_e1783fcb92deac668b699bb9",
+      "projectId": "project_82a226fc-6c33-478f-b0e3-65e1d6ce9a91",
+      "sessionUrl": "http://127.0.0.1:8799/chatgpt-plugin/room/room_9a98daf7-109e-4271-8096-20406d391d3c?share=eyJ2IjoxLCJjIjoibG9jYWwtY3JlYXRvciIsInJvb20iOiJyb29tXzlhOThkYWY3LTEwOWUtNDI3MS04MDk2LTIwNDA2ZDM5MWQzYyIsImJ1aWxkIjoiYnVpbGRfZTE3ODNmY2I5MmRlYWM2NjhiNjk5YmI5IiwicmVwbGF5IjoicmVwbGF5XzcyYzI3ZjcxLWExMWItNGNkYS1hNmNmLTdhYTUwYzU0ZWZmOCIsInByb2plY3QiOiJwcm9qZWN0XzgyYTIyNmZjLTZjMzMtNDc4Zi1iMGUzLTY1ZTFkNmNlOWE5MSJ9.4kDRBie998GYNH49hljkMTeyflwppX6dNt7LkSNb1kw",
+      "canvas": 1,
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "kernelAttr": 2,
+      "rejectedShell": false,
+      "shellNote": "ok"
+    }
+  },
+  {
+    "suite": "H03",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS（可玩子集）",
+    "rejectedShell": false,
+    "kernelType": "gem-engine-v1",
+    "sidecar": {
+      "suite": "H03",
+      "suiteRaw": "H03-regress-t132",
+      "kernelType": "gem-engine-v1",
+      "roomId": "room_84cf38b4-374e-4fde-b47c-7d9f8e5833a8",
+      "buildId": "build_0fc96560ac079b9474dec273",
+      "projectId": "project_49309938-c3d8-438d-80ae-66f8e27fdf4d",
+      "sessionUrl": "http://127.0.0.1:8799/chatgpt-plugin/room/room_84cf38b4-374e-4fde-b47c-7d9f8e5833a8?share=eyJ2IjoxLCJjIjoibG9jYWwtY3JlYXRvciIsInJvb20iOiJyb29tXzg0Y2YzOGI0LTM3NGUtNGZkZS1iNDdjLTdkOWY4ZTU4MzNhOCIsImJ1aWxkIjoiYnVpbGRfMGZjOTY1NjBhYzA3OWI5NDc0ZGVjMjczIiwicmVwbGF5IjoicmVwbGF5XzI4MjFhNjg5LTMzODgtNDBlMy04NmQwLWZiNWQ3ZThjZmZlOCIsInByb2plY3QiOiJwcm9qZWN0XzQ5MzA5OTM4LWMzZDgtNDM4ZC04MGFlLTY2ZjhlMjdmZGY0ZCJ9.NqnP8VTgyoJunXg7NAtGJChXHqDsSydsZO6MlOYzhbA",
+      "canvas": 1,
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "kernelAttr": 1,
+      "rejectedShell": false,
+      "shellNote": "ok"
+    }
+  },
+  {
+    "suite": "H04",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS（可玩子集）",
+    "rejectedShell": false,
+    "kernelType": "pattern-draft-v1",
+    "sidecar": {
+      "suite": "H04",
+      "suiteRaw": "H04-regress-t132",
+      "kernelType": "pattern-draft-v1",
+      "roomId": "room_e16eba0d-9b0c-4d7e-ae94-7b1e0e3e5221",
+      "buildId": "build_3d8cafe8194885ae4145e88a",
+      "projectId": "project_5370ddf2-0636-4d41-b9ed-8efea712b6af",
+      "sessionUrl": "http://127.0.0.1:8799/chatgpt-plugin/room/room_e16eba0d-9b0c-4d7e-ae94-7b1e0e3e5221?share=eyJ2IjoxLCJjIjoibG9jYWwtY3JlYXRvciIsInJvb20iOiJyb29tX2UxNmViYTBkLTliMGMtNGQ3ZS1hZTk0LTdiMWUwZTNlNTIyMSIsImJ1aWxkIjoiYnVpbGRfM2Q4Y2FmZTgxOTQ4ODVhZTQxNDVlODhhIiwicmVwbGF5IjoicmVwbGF5X2M1NmYyYzM3LTg0NGItNDRiNi1iMzZmLTM1MWEwMGExYjg3ZSIsInByb2plY3QiOiJwcm9qZWN0XzUzNzBkZGYyLTA2MzYtNGQ0MS1iOWVkLThlZmVhNzEyYjZhZiJ9.UwjcikdJg-omCMc70J2n2DNvl8Ty1diw6IcdYtUe6Xs",
+      "canvas": 1,
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "kernelAttr": 1,
+      "rejectedShell": false,
+      "shellNote": "ok"
+    },
+    "t036TileGuard": {
+      "ok": true,
+      "via": "vitest tabletop-stacking-t036 + tabletop-factory-glaze-t047",
+      "tip": "70db786",
+      "log_tail": [
+        "RUN  v4.1.11 /workspace/godesk-tide-arena",
+        "",
+        "",
+        " Test Files  2 passed (2)",
+        "      Tests  5 passed (5)",
+        "   Start at  21:43:09",
+        "   Duration  409ms (transform 287ms, setup 0ms, import 390ms, tests 14ms, environment 0ms)"
+      ]
+    }
+  },
+  {
+    "suite": "H05",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS（可玩子集）",
+    "rejectedShell": false,
+    "kernelType": "auction-bidding-v1",
+    "sidecar": {
+      "suite": "H05",
+      "suiteRaw": "H05-regress-t132",
+      "kernelType": "auction-bidding-v1",
+      "roomId": "room_169a1e14-075d-43fa-aec7-86b03278b676",
+      "buildId": "build_0e7dd90914c4622c3de7f47c",
+      "projectId": "project_e8839217-253c-4d60-8423-f4b1999ca6be",
+      "sessionUrl": "http://127.0.0.1:8799/chatgpt-plugin/room/room_169a1e14-075d-43fa-aec7-86b03278b676?share=eyJ2IjoxLCJjIjoibG9jYWwtY3JlYXRvciIsInJvb20iOiJyb29tXzE2OWExZTE0LTA3NWQtNDNmYS1hZWM3LTg2YjAzMjc4YjY3NiIsImJ1aWxkIjoiYnVpbGRfMGU3ZGQ5MDkxNGM0NjIyYzNkZTdmNDdjIiwicmVwbGF5IjoicmVwbGF5XzIxNDZiMGUwLTU2NTAtNGQzMi04MWFjLTZlNDg5MDQyMGQ3ZiIsInByb2plY3QiOiJwcm9qZWN0X2U4ODM5MjE3LTI1M2MtNGQ2MC04NDIzLWY0YjE5OTljYTZiZSJ9.kbY9OW3TLji1IJE3w4A5JppJ9Y6VTDECYwCdnzZpVlk",
+      "canvas": 1,
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "kernelAttr": 1,
+      "rejectedShell": false,
+      "shellNote": "ok"
+    }
+  }
+]
