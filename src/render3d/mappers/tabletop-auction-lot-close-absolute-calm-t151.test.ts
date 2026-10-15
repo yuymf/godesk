@@ -8,9 +8,9 @@ describe("T151 auction lot close absolute calm", () => {
     expect(src).toContain("T151");
     expect(src).toContain("T148");
     expect(src).toMatch(/absolute close calm|mid-face luminance lift|strong mid lift/);
-    expect(src).toMatch(/rgba\(255,252,245,0\.(52|62|72)\)/);
-    expect(src).toMatch(/rgba\(15,23,42,0\.(28|36)\)/);
-    expect(src).toMatch(/#6b4a28|#8a6238|close absolute calm/);
+    expect(src).toMatch(/rgba\(255,252,245,0\.(52|62|72|82)\)/);
+    expect(src).toMatch(/rgba\(15,23,42,0\.(22|28|36)\)/);
+    expect(src).toMatch(/#6b4a28|#8a6238|#a07848|close absolute calm/);
     expect(src).toMatch(/bold 22px/);
     const layout = auctionBiddingLayout({
       chips: [40, 40],

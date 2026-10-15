@@ -916,7 +916,7 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     group.add(ghostMesh);
   }
   // T079 · ground contact under track corridor
-  group.add(softContactShadow(Math.max(0.62, usable * 0.85), Math.max(0.42, gauge * 1.55))); // T142/T145 route
+  group.add(softContactShadow(Math.max(0.82, usable * 1.05), Math.max(0.58, gauge * 1.95), { opacity: 0.62 })); // T142/T145/T155 route
   const hit = new Mesh(new BoxGeometry(usable, 0.1, gauge * 1.7), new MeshBasicMaterial({ visible: false }));
   hit.position.y = 0.05;
   group.add(hit);
@@ -1154,6 +1154,8 @@ function softContactShadow(
   // T145 · mean floor: higher opacity + soft outer halo (keep T106 boost clamp / T142 ge20)
   // T150 · H03/H04 mean: larger soft halo + card/tile footprints (keep H02/T145 floors)
   // T153 · halo softness: gentler opacity falloff on outer rings (keep core / T106 clamp)
+  // T154 · H04 mean residual: slightly denser mid/outer + tile footprint (keep H02/H03 / T151)
+  // T155 · H02 halo residual: route footprint + soft veil (keep H03/H04 clamps / T151)
   const area = Math.max(0.04, rx * rz);
   const autoBoost =
     opts?.boost ??
@@ -1186,10 +1188,10 @@ function softContactShadow(
     return mesh;
   };
   group.add(mk(1.60, opacity, 0.0008, "contact-shadow")); // T142/T145 core
-  // T153 · softer stepped falloff vs T150 hard 0.70/0.32 mid (keep core / T106 clamp)
-  group.add(mk(2.35, Math.min(0.28, opacity * 0.40), 0.0005)); // soft mid (lighter than T150)
-  group.add(mk(3.20, Math.min(0.24, opacity * 0.32), 0.0003)); // soft outer spread
-  group.add(mk(4.20, Math.min(0.13, opacity * 0.19), 0.0002)); // wide soft veil → mean
+  // T153/T154/T155 · softer stepped falloff; residual mean lift (keep core / T106 clamp)
+  group.add(mk(2.50, Math.min(0.38, opacity * 0.52), 0.0005)); // soft mid residual
+  group.add(mk(3.50, Math.min(0.30, opacity * 0.40), 0.0003)); // soft outer residual
+  group.add(mk(4.60, Math.min(0.18, opacity * 0.26), 0.0002)); // wide soft veil residual
   return group;
 }
 
@@ -1746,7 +1748,7 @@ function proceduralLotCanvas(schema: { title: string; prestige?: number; bid?: n
   g.fillStyle = pal[0]!;
   g.fillRect(0, 0, W, H);
   // lighten base plate before masses (shared absolute calm)
-  g.fillStyle = "rgba(255,250,240,0.34)";
+  g.fillStyle = "rgba(255,250,240,0.42)";
   g.fillRect(0, 0, W, H);
   g.fillStyle = pal[1]!;
   g.fillRect(0, 0, W * 0.62, H * 0.78);
@@ -1766,8 +1768,8 @@ function proceduralLotCanvas(schema: { title: string; prestige?: number; bid?: n
   g.fillStyle = "rgba(255,248,235,0.48)";
   g.fillRect(W * 0.58, H * 0.48, W * 0.30, H * 0.20);
   // T151 · strong mid-face luminance lift (close crop center)
-  g.fillStyle = "rgba(255,252,245,0.72)";
-  g.fillRect(W * 0.08, H * 0.14, W * 0.84, H * 0.58);
+  g.fillStyle = "rgba(255,252,245,0.82)";
+  g.fillRect(W * 0.06, H * 0.12, W * 0.88, H * 0.60);
   // wide-only ink bands (edges; protect wide mean/ge20)
   g.fillStyle = "rgba(15,23,42,0.62)";
   g.fillRect(0, 0, W, H * 0.22);
@@ -1785,8 +1787,8 @@ function proceduralLotCanvas(schema: { title: string; prestige?: number; bid?: n
   g.strokeRect(14, 14, W - 28, H - 28);
   g.globalAlpha = 1;
   // Title plate — light absolute ink (was 0.88 on tip)
-  g.fillStyle = "rgba(15,23,42,0.28)";
-  g.fillRect(12, H - 56, W - 24, 44);
+  g.fillStyle = "rgba(15,23,42,0.22)";
+  g.fillRect(12, H - 54, W - 24, 42);
   g.fillStyle = "#ffffff";
   g.font = "bold 22px system-ui,sans-serif";
   g.textAlign = "left";
@@ -1805,7 +1807,7 @@ function framedArtWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3
   // Wood frame (outer)
   const frame = new Mesh(
     translated(new BoxGeometry(0.95, 0.08, 1.2), 0.04),
-    new MeshStandardMaterial({ color: "#8a6238", roughness: 0.78, metalness: 0.05 }), // T137/T151 close absolute calm
+    new MeshStandardMaterial({ color: "#a07848", roughness: 0.78, metalness: 0.05 }), // T137/T151 close absolute calm
   );
   frame.castShadow = true;
   frame.receiveShadow = true;
@@ -1838,7 +1840,7 @@ function framedArtWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3
   art.position.set(0, 0.09, 0);
   art.renderOrder = 2;
   group.add(art);
-  group.add(softContactShadow(0.82, 1.02, { opacity: 0.28, boost: 0.72 })); // T139/T142/T151 close absolute calm
+  group.add(softContactShadow(0.70, 0.88, { opacity: 0.18, boost: 0.68 })); // T139/T142/T151 close absolute calm
   return group;
 }
 
@@ -1917,11 +1919,11 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = meepleFigure(node, ctx);
   } else if (mesh === "card") {
     object = cardWithFace(node, ctx);
-    (object as Group).add(softContactShadow(0.78, 1.02, { opacity: 0.48 })); // T096/T106/T150/T153 card soft footprint
+    (object as Group).add(softContactShadow(0.92, 1.20, { opacity: 0.58 })); // T096/T106/T150/T153/T154 card residual
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
     // T081 · larger local blob so small tiles still ground at H02/H03 visibility
-    (object as Group).add(softContactShadow(0.70, 0.70, { opacity: 0.44, boost: 0.90 })); // T081/T106/T150/T153 tile soft
+    (object as Group).add(softContactShadow(0.88, 0.88, { opacity: 0.56, boost: 0.90 })); // T081/T106/T150/T153/T154 tile residual
   } else if (mesh === "plaque") {
     object = plaqueWithFace(node, ctx);
     (object as Group).add(softContactShadow(0.78, 0.62, { opacity: 0.58 })); // T106/T150 plaque

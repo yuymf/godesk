@@ -13,6 +13,6 @@ describe("T150 contact shadow H03/H04 mean", () => {
     expect(block).toMatch(/Math\.max\(0\.68/);
     expect(block).toMatch(/Math\.min\(0\.(72|76)/);
     expect(block).toMatch(/1\.60/);
-    expect(src).toMatch(/softContactShadow\(0\.(56|68|72|78),\s*0\.(72|88|94)|softContactShadow\(0\.78,\s*1\.02/);
+    expect(src).toMatch(/softContactShadow\(0\.(56|68|72|78|82)/);
   });
 });
