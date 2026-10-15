@@ -1630,7 +1630,7 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
     color: base,
     map: map ?? undefined,
     normalMap: normalMap ?? undefined,
-    normalScale: new Vector2(3.35, 3.35), // T083/T114/T120/T132/T169/T175/T177/T181 · weave microcontrast
+    normalScale: new Vector2(3.55, 3.55), // T083/T114/T120/T132/T169/T175/T177/T181/T183 · weave microcontrast
     roughnessMap: roughnessMap ?? undefined,
     roughness: Math.max(0.9, token?.roughness ?? 0.97),
     metalness: 0,

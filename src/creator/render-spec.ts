@@ -314,11 +314,12 @@ function baseDefault(kernelType: string | null | undefined): RenderSpec {
     water: {
       enabled: kernelType === "hex-settlement-v1" || kernelType === "harbor-voyage-v1",
       // R20：与 water/mesh DEFAULT_SPEC 同步 — 明亮青绿 + 浅滩环。
-      shallow: "#2ab8af",
-      deep: "#0a6c74",
-      waveHeight: 0.065,
-      waveSpeed: 0.55,
-      foam: 1.0,
+      // T183 · shared water chroma (hex/harbor kernel family)
+      shallow: "#1ecfc4",
+      deep: "#085a66",
+      waveHeight: 0.078,
+      waveSpeed: 0.62,
+      foam: 1.0, // T183 (unit clamp)
     },
     materials: {
       // T090 · sync with SEAT_COLORS (felt-legible chroma)
@@ -369,19 +370,37 @@ const GENERIC_ENTITY_MESH: Record<typeof GAME_ENTITY_KINDS[number], RenderSpec["
 
 function applyKernelDefaults(render: RenderSpec, kernelType: string | null | undefined) {
   if (kernelType === "hex-settlement-v1") {
-    // T181 · shared hex terrain chroma/microcontrast (kernel family, not suite fork)
+    // T181/T183 · shared hex terrain chroma/microcontrast (kernel family, not suite fork)
     Object.assign(render.materials, {
-      "terrain-wood": material("#268a48", "grass", 0.62),
-      "terrain-brick": material("#c46e32", "stone", 0.72),
-      "terrain-sheep": material("#7ed868", "grass", 0.58),
-      "terrain-wheat": material("#e6bc3a", "grass", 0.64),
-      "terrain-ore": material("#5e6874", "stone", 0.84),
-      "terrain-desert": material("#e4c686", "sand", 0.8),
-      cliff: material("#6e6860", "stone", 0.86),
-      "number-token": material("#f5e8d0", "none", 0.5),
-      piece: material("#fff6e8", "none", 0.34, 0.1, 0.42), // T061/T181
-      "fog-lantern": material("#ffd060", "none", 0.26, 0.06, 0.4),
+      "terrain-wood": material("#1a9a42", "grass", 0.52),
+      "terrain-brick": material("#d46a28", "stone", 0.64),
+      "terrain-sheep": material("#6ee85a", "grass", 0.48),
+      "terrain-wheat": material("#f0c428", "grass", 0.55),
+      "terrain-ore": material("#4e5a68", "stone", 0.78),
+      "terrain-desert": material("#f0d090", "sand", 0.72),
+      cliff: material("#5e5850", "stone", 0.8),
+      "number-token": material("#fff0d8", "none", 0.42),
+      piece: material("#fffaf0", "none", 0.28, 0.12, 0.48), // T061/T181/T183
+      "fog-lantern": material("#ffe070", "none", 0.2, 0.08, 0.48),
     });
+    // T183 · shared hex lighting lift (kernel family)
+    render.lighting = {
+      ...render.lighting,
+      sun: { ...render.lighting.sun, intensity: 4.1, color: "#ffae5c", elevationDeg: 46 },
+      exposure: 1.38,
+      fill: {
+        azimuthDeg: render.lighting.fill?.azimuthDeg ?? 312,
+        elevationDeg: render.lighting.fill?.elevationDeg ?? 36,
+        intensity: 0.8,
+        color: render.lighting.fill?.color ?? "#aec8f2",
+      },
+      rim: {
+        azimuthDeg: render.lighting.rim?.azimuthDeg ?? 38,
+        elevationDeg: render.lighting.rim?.elevationDeg ?? 20,
+        intensity: 0.65,
+        color: render.lighting.rim?.color ?? "#ffcc90",
+      },
+    };
     render.bindings = [
       binding("tile-wood", "hex-prism", "terrain-wood"),
       binding("tile-brick", "hex-prism", "terrain-brick"),

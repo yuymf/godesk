@@ -6446,28 +6446,31 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
 }
 
 /* T171 · hex share ≥0.88 — collapse invite strip further (shared chrome) */
-/* T174/T178/T180 · shareReady 折叠再矮（共享 chrome；不吃 stage vh） */
+/* T174/T178/T180/T184 · shareReady 折叠再矮（共享 chrome；不吃 stage vh） */
 .room-view-hex-island.room-view-seated .room-invitation-rich.is-collapsed.room-share-chrome.is-chrome-collapse,
 .room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse {
-  max-height: 0.55rem;
-  padding: 0 0.2rem;
-  gap: 0.04rem;
+  max-height: 0.4rem;
+  padding: 0 0.16rem;
+  gap: 0.02rem;
   overflow: hidden;
-  opacity: 0.52;
+  opacity: 0.38;
 }
-/* T180 · 产品顶栏 immersive strip 再塌（共享 tabletop + hex seated） */
+/* T180/T184 · 产品顶栏 immersive strip 再塌（共享 tabletop + hex seated） */
 .room-view-tabletop-immersive.room-view-seated .room-shell-header.is-immersive-strip,
 .room-view-hex-island.room-view-seated .room-shell-header.is-immersive-strip,
-.room-view-tabletop-immersive.room-view-seated .room-shell-header.is-share-chrome {
-  min-height: 1.35rem;
-  max-height: 1.55rem;
-  padding: 0.1rem 0.45rem;
-  opacity: 0.7;
+.room-view-tabletop-immersive.room-view-seated .room-shell-header.is-share-chrome,
+.room-view-hex-island.room-view-seated .room-shell-header.is-share-chrome {
+  min-height: 0.95rem;
+  max-height: 1.15rem;
+  padding: 0.04rem 0.35rem;
+  opacity: 0.48;
 }
 .room-view-tabletop-immersive.room-view-seated .room-shell-header.is-immersive-strip .room-header-actions a,
-.room-view-hex-island.room-view-seated .room-shell-header.is-immersive-strip .room-header-actions a {
-  font-size: 0.65rem;
-  padding: 0.08rem 0.28rem;
-  opacity: 0.75;
+.room-view-hex-island.room-view-seated .room-shell-header.is-immersive-strip .room-header-actions a,
+.room-view-tabletop-immersive.room-view-seated .room-shell-header.is-share-chrome .room-header-actions a,
+.room-view-hex-island.room-view-seated .room-shell-header.is-share-chrome .room-header-actions a {
+  font-size: 0.58rem;
+  padding: 0.04rem 0.2rem;
+  opacity: 0.55;
 }
 

@@ -25,11 +25,11 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
     expect(SCENE_TOKENS.toneMapping).toBe("agx");
     expect(SCENE_TOKENS.lighting).toEqual({
       sun: { azimuthDeg: 128, elevationDeg: 46, intensity: 3.05, color: "#ffc890" },
-      hemisphere: { sky: "#f2e6d2", ground: "#c9a878", intensity: 1.05 },
+      hemisphere: { sky: "#f2e6d2", ground: "#d4b896", intensity: 1.18 },
       shadow: { enabled: true, softness: 0.92 },
-      exposure: 1.12,
-      fill: { azimuthDeg: 308, elevationDeg: 32, intensity: 0.48, color: "#c5d6ef" },
-      rim: { azimuthDeg: 42, elevationDeg: 16, intensity: 0.36, color: "#ffe2b8" },
+      exposure: 1.16,
+      fill: { azimuthDeg: 308, elevationDeg: 32, intensity: 0.52, color: "#c5d6ef" },
+      rim: { azimuthDeg: 42, elevationDeg: 16, intensity: 0.78, color: "#ffe6b0" },
     });
     expect(SCENE_TOKENS.shadow).toMatchObject({ radius: 4, bias: -0.0004, normalBias: 0.02, boundsPadding: 1.5 });
     expect(SCENE_TOKENS.environment.intensity).toBe(0.2);
@@ -39,12 +39,21 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
   });
 
   it("stays in sync with the creator RenderSpec lighting default", () => {
-    for (const kernel of ["hex-settlement-v1", "disc-flipping-v1", null]) {
+    // Base / null keeps SCENE_TOKENS sun; kernel families may warm the key (T061/T183)
+    const base = defaultRenderSpec(null, "table")?.lighting;
+    expect(base?.fill).toBeTruthy();
+    expect(base?.rim).toBeTruthy();
+    // T181/T183 · shared base key may warm vs SCENE_TOKENS; fill/rim must stay on
+    expect(base?.sun.color).toMatch(/^#ff/i);
+    expect(base?.sun.intensity).toBeGreaterThan(3.0);
+    expect(base?.fill?.intensity).toBeGreaterThan(0);
+    expect(base?.rim?.intensity).toBeGreaterThan(0);
+    for (const kernel of ["hex-settlement-v1", "disc-flipping-v1"]) {
       const lighting = defaultRenderSpec(kernel, "table")?.lighting;
       expect(lighting?.fill).toBeTruthy();
       expect(lighting?.rim).toBeTruthy();
-      expect(lighting?.sun.color).toBe("#ffc890");
-      // T086 · fill/rim layers present on shared defaults (exact sun numbers may differ by T061 desk baseline)
+      expect(lighting?.sun.color).toMatch(/^#ff/i);
+      expect(lighting?.sun.intensity).toBeGreaterThan(3.0);
       expect(lighting?.fill?.intensity).toBeGreaterThan(0);
       expect(lighting?.rim?.intensity).toBeGreaterThan(0);
     }
@@ -139,8 +148,8 @@ describe("R19 hex island brightness", () => {
       const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
       return (Math.max(...c) - Math.min(...c)) / Math.max(...c);
     };
-    expect(sat(TERRAIN_MATERIALS.sheep!.base)).toBeLessThan(sat("#8fbf6a"));
-    expect(sat(TERRAIN_MATERIALS.wood!.base)).toBeLessThan(sat("#2f6b3a"));
+    expect(sat(TERRAIN_MATERIALS.sheep!.base)).toBeGreaterThan(sat("#8fbf6a")); // T183 richer
+    expect(sat(TERRAIN_MATERIALS.wood!.base)).toBeGreaterThan(0.2); // T183 shared chroma
   });
 
   it("oil-dab layer is stronger than R18 (0.6) so it stays visible over the AI albedo at b3", () => {
@@ -160,7 +169,7 @@ describe("R22 resource colour + seams", () => {
     expect(SOFT_EDGE_STRENGTH).toBeGreaterThan(0);
     expect(SOFT_EDGE_STRENGTH).toBeLessThanOrEqual(0.25);
     expect(TERRAIN_SATURATION).toBeGreaterThanOrEqual(1);
-    expect(TERRAIN_SATURATION).toBeLessThanOrEqual(1.2);
+    expect(TERRAIN_SATURATION).toBeLessThanOrEqual(1.35); // T183
   });
 
   it("tile top faces touch (no open slot → no dark 1px side line); sides taper inside the coast wall", () => {

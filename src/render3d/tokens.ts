@@ -101,41 +101,40 @@ export const SCENE_TOKENS = {
 export const HEX_ISLAND_LIGHTING = {
   // R22: less orange key light (#ffd4a4 → #ffecd2) + more neutral sky fill — the warm cast pushed wheat / desert
   // toward orange-brown and ore / pasture toward beige-olive; resource hues now stay true (water gets brighter, not darker).
-  sun: { azimuthDeg: 128, elevationDeg: 48, intensity: 3.72, color: "#ffecd2" }, // T166 · H01 wide residual
-  hemisphere: { sky: "#f3f1e8", ground: "#e0c090", intensity: 1.68 }, // T163/T166 · warmer ground
-  shadow: { enabled: true, softness: 0.92 },
-  exposure: 1.32, // T166 · stage-wide residual
-  // T086 · hex desk also gets fill/rim layers (generic, not sample pack)
-  // T163/T166 · warmer/stronger rim for seat-close + wide product-frame residual
-  fill: { azimuthDeg: 310, elevationDeg: 34, intensity: 0.58, color: "#d0dced" },
-  rim: { azimuthDeg: 38, elevationDeg: 18, intensity: 1.15, color: "#ffe6b0" },
+  // T183 · shared hex island stage-wide hard residual (MaterialLibrary / SceneHost path; not suite fork)
+  sun: { azimuthDeg: 128, elevationDeg: 50, intensity: 4.05, color: "#fff0d8" },
+  hemisphere: { sky: "#f5f2ea", ground: "#e4b878", intensity: 1.82 },
+  shadow: { enabled: true, softness: 0.88 },
+  exposure: 1.38,
+  fill: { azimuthDeg: 310, elevationDeg: 34, intensity: 0.66, color: "#d4e0f0" },
+  rim: { azimuthDeg: 38, elevationDeg: 18, intensity: 1.28, color: "#ffe8b8" },
 } as const satisfies LightingSpec;
 
 /** R19：AI 贴图（虹夏 8 张；R20 起经 scripts/bake-ai-r20.py 色块化 + Kuwahara 绘本化后烘焙）为 t01–t06 baseColor；base 提亮去饱和、pbrTint 让贴图色相主导；
  *  brush 0.6→0.85：油彩 dab 层在 AI 贴图之上于 b3 近景可见（远景 / 掠射角仍由 fwidth AA 淡回均值）。 */
 /** 地块材质（颜色沿用现有地形色，pattern 按地形，贴图取 G3D-22 套件）。 */
 /** R17: matte hex faces + denser PBR repeat — continuous oil-paint brush, not flat plastic. */
+/** T183 · shared terrain chroma lift (MaterialLibrary; hex/harbor/any terrain consumer). */
 export const TERRAIN_MATERIALS: Record<string, MaterialToken> = {
-  wood: { base: "#46744a", roughness: 0.98, metalness: 0, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 1.65, pbrTint: 0.55, brush: 0.85 },
-  brick: { base: "#bc6646", roughness: 0.98, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 1.65, pbrTint: 0.6, brush: 0.85 },
+  wood: { base: "#2a8f45", roughness: 0.96, metalness: 0, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 1.75, pbrTint: 0.52, brush: 0.92 },
+  brick: { base: "#d45530", roughness: 0.96, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 1.75, pbrTint: 0.52, brush: 0.92 },
   // R22: fresher light-green pasture tint (was #a3c67e).
-  sheep: { base: "#a6d27e", roughness: 0.98, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 1.7, pbrTint: 0.6, brush: 0.85 },
-  // R22: wheat-field texture re-baked golden (bake-ai-r20.py golden_wheat) + a near-neutral light-gold tint (was #d8c070).
-  // R23: continuous golden field (no wheatrow props); texture gets low-freq undulating wave in bake; brush slightly up for colour noise.
-  wheat: { base: "#e8e090", roughness: 0.97, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 1.7, pbrTint: 0.5, brush: 0.92 },
-  // R21: light grey rock; R23: cooler + brighter (#a4abb3 → #b8c4cc), scree re-baked cooler_light_rock.
-  ore: { base: "#c2ced6", roughness: 0.96, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 1.55, pbrTint: 0.5, brush: 0.85 },
-  // R22: paler sand (texture re-baked pale_sand; tint #d2c29e → #e4dec8, less orange) — reads apart from golden wheat.
-  desert: { base: "#e4dec8", roughness: 0.98, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 1.45, pbrTint: 0.6, brush: 0.85 },
+  sheep: { base: "#7ee85c", roughness: 0.96, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 1.85, pbrTint: 0.52, brush: 0.92 },
+  // R22/R23/T183: richer golden wheat field
+  wheat: { base: "#f0e050", roughness: 0.94, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 1.85, pbrTint: 0.52, brush: 0.96 },
+  // R21/R23/T183: cooler brighter ore
+  ore: { base: "#9eb4c8", roughness: 0.94, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 1.65, pbrTint: 0.52, brush: 0.9 },
+  // R22/T183: warmer pale sand apart from wheat
+  desert: { base: "#f2e6c0", roughness: 0.96, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 1.55, pbrTint: 0.52, brush: 0.9 },
 };
 
 /** 其余物件材质。 */
 export const PROP_MATERIALS = {
   cliff: { base: "#7a7368", roughness: 0.9, metalness: 0, pattern: "stone", pbrSet: "t07-cliff", pbrRepeat: 5 },
   // R22: warmer cream (was #f5f0e1) — keeps the parchment token cream under the less-orange R22 key light.
-  "number-token": { base: "#eedcb8", roughness: 0.7, metalness: 0, pattern: "none", pbrSet: "t11-parchment", pbrRepeat: 1 },
+  "number-token": { base: "#f8e6c0", roughness: 0.62, metalness: 0, pattern: "none", pbrSet: "t11-parchment", pbrRepeat: 1 },
   // G3D-ART-2：6/8 不再整块涂红（与座位 0 红色混淆、且盖住数字）；同用 N1 筹码面，数字用赤陶色高亮（number-labels.ts）。
-  "number-token-hot": { base: "#f0d8bc", roughness: 0.7, metalness: 0, pattern: "none", pbrSet: "t11-parchment", pbrRepeat: 1 },
+  "number-token-hot": { base: "#ffd8a8", roughness: 0.62, metalness: 0, pattern: "none", pbrSet: "t11-parchment", pbrRepeat: 1 },
   robber: { base: "#2c3e50", roughness: 0.7, metalness: 0, pattern: "none" },
   wood: { base: "#8b6914", roughness: 0.7, metalness: 0, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 1 },
   die: { base: "#f8f8f8", roughness: 0.5, metalness: 0, pattern: "none" },

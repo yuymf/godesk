@@ -5,12 +5,12 @@ describe("T180 shareReady / tabletop-first chrome", () => {
   it("collapses rails/dock and demotes shareReady strip", () => {
     const tw = readFileSync("src/creator/tidewell-game-screen.css", "utf8");
     expect(tw).toContain("T180");
-    expect(tw).toMatch(/--tw-side:\s*48px/);
-    expect(tw).toMatch(/--tw-dock:\s*18px/);
+    expect(tw).toMatch(/--tw-side:\s*40px/);
+    expect(tw).toMatch(/--tw-dock:\s*14px/);
     expect(tw).toMatch(/shareReady strip/);
     expect(tw).toMatch(/minmax\(88vh/);
     const surf = readFileSync("src/creator/surface.css", "utf8");
     expect(surf).toContain("T180");
-    expect(surf).toMatch(/max-height:\s*0\.55rem/);
+    expect(surf).toMatch(/max-height:\s*0\.4rem/);
   });
 });

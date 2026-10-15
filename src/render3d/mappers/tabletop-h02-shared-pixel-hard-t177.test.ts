@@ -15,6 +15,6 @@ describe("T177 H02 soft residual → shared hard pixel", () => {
     expect(objs).toContain("T177");
     expect(objs).toMatch(/usable \* 1\.55/);
     expect(objs).toMatch(/CylinderGeometry\(0\.64, 0\.68/);
-    expect(objs).toMatch(/Vector2\(3\.35,\s*3\.35\)/);
+    expect(objs).toMatch(/Vector2\(3\.55,\s*3\.55\)/);
   });
 });
