@@ -4,8 +4,8 @@
 | --- | --- |
 | 回归靶 | H01+H03 stage before/after；试玩反馈不抢桌面；hasDevTone=false |
 | 层 | **共享呈现 / Room chrome** |
-| 状态 | **开** |
-| tip | _(pending)_ |
+| 状态 | **关** |
+| tip | `02d1070` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t080/` |
 
 ## 问题
