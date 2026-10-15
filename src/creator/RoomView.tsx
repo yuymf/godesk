@@ -494,6 +494,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
     ? true
     : !(autoBattler || auction || immersive) || room.state.status === "complete";
   // T091 · hex immersive seated gets the same compact shareReady strip as tabletop
+  // T097 · further collapse share/seat chrome after seating (canvas vh ↑)
   const shareChromeCompact = Boolean((tabletopImmersive || hexSettlement) && seat !== null);
   return (
     <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute || auction || autoBattler || gemEngine || patternDraft ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-hex-island room-view-tidewell-immersive" : ""} ${tabletopImmersive ? "room-view-tidewell-immersive room-view-tabletop-immersive" : ""} ${seat !== null ? "room-view-seated" : "room-view-unseated"} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
@@ -530,7 +531,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
 {!immersive || shareChromeCompact ? (
             <section
               aria-label={copy.invitation}
-              className={`room-invitation room-invitation-rich${shareChromeCompact ? " is-collapsed room-share-chrome" : ""}`}
+              className={`room-invitation room-invitation-rich${shareChromeCompact ? " is-collapsed room-share-chrome is-chrome-collapse" : ""}`}
             >
         <div className="invitation-heading">
           <span className="room-kicker">{copy.invitation}</span>
