@@ -4,7 +4,8 @@
 | --- | --- |
 | 回归靶 | H01 stage-wide harbor/number；T112 close 已过、wide 仍 soft |
 | 层 | **共享呈现** |
-| 状态 | **开** |
+| 状态 | **关** |
+| tip | `1689f15` |
 | 来源 | T117 audit · T112 H01 stage-wide soft 复判 |
 
 ## 问题
