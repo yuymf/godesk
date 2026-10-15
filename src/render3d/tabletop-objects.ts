@@ -1466,7 +1466,7 @@ function deskWoodMaterial(node: SceneNode, ctx: TabletopObjectContext, token?: M
 }
 
 
-/** T044/T082 · product green felt: weave albedo + normal/roughness microdetail (shared desk cloth). */
+/** T044/T082/T114 · product green felt: weave albedo + normal/roughness microdetail (shared desk cloth). */
 function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material {
   const token = node.material ? ctx.materials[node.material] : undefined;
   const base = token?.base ?? "#1a8a45";
@@ -1487,7 +1487,7 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
       ga.fillRect(0, 0, W, H);
       // height field for weave (warp/weft)
       const height = new Float32Array(W * H);
-      const period = 14; // T083 · coarser weave readable at H02 wide
+      const period = 16; // T083/T114 · coarser weave readable at stage-wide
       for (let y = 0; y < H; y += 1) {
         for (let x = 0; x < W; x += 1) {
           const wx = ((x % period) / period) * Math.PI * 2;
@@ -1496,9 +1496,9 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
           const weft = Math.sin(wy) * 0.85;
           const cross = Math.abs(warp) > Math.abs(weft) ? warp : weft;
           const n = (Math.random() - 0.5) * 0.2;
-          // T083 · low-frequency pile waves read at H02 wide stage
-          const macro = Math.sin((x / W) * Math.PI * 5) * Math.sin((y / H) * Math.PI * 4) * 0.22;
-          height[y * W + x] = 0.5 + cross * 0.55 + macro + n;
+          // T083/T114 · low-frequency pile waves read at stage-wide
+          const macro = Math.sin((x / W) * Math.PI * 4.2) * Math.sin((y / H) * Math.PI * 3.5) * 0.30;
+          height[y * W + x] = 0.5 + cross * 0.62 + macro + n;
         }
       }
       const aImg = ga.createImageData(W, H);
@@ -1519,9 +1519,9 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
           const h0 = height[i]!;
           const hx = height[y * W + ((x + 1) % W)]!;
           const hy = height[((y + 1) % H) * W + x]!;
-          const dx = (h0 - hx) * 12;
-          const dy = (h0 - hy) * 12;
-          const shade = (h0 - 0.5) * 96; // T083 · wide-stage albedo amplitude
+          const dx = (h0 - hx) * 14;
+          const dy = (h0 - hy) * 14;
+          const shade = (h0 - 0.5) * 118; // T083/T114 · wide-stage albedo amplitude
           const o = i * 4;
           aImg.data[o] = Math.max(0, Math.min(255, br + shade));
           aImg.data[o + 1] = Math.max(0, Math.min(255, bg + shade));
@@ -1559,14 +1559,14 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
   for (const tex of [map, normalMap, roughnessMap]) {
     if (!tex) continue;
     tex.wrapS = tex.wrapT = RepeatWrapping;
-    tex.repeat.set(3.2, 3.2); // T083 · macro weave for H02 wide debt
+    tex.repeat.set(2.6, 2.6); // T083/T114 · larger weave cells at stage-wide
   }
   if (map) map.colorSpace = SRGBColorSpace;
   const mat = new MeshStandardMaterial({
     color: base,
     map: map ?? undefined,
     normalMap: normalMap ?? undefined,
-    normalScale: new Vector2(1.25, 1.25), // T083
+    normalScale: new Vector2(1.45, 1.45), // T083/T114
     roughnessMap: roughnessMap ?? undefined,
     roughness: Math.max(0.9, token?.roughness ?? 0.97),
     metalness: 0,

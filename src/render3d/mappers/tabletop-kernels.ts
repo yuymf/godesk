@@ -418,9 +418,10 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
   });
 
   state.market.forEach((tierCards, tier) => {
-    const z = -1.6 + tier * 1.15;
+    // T113 · shared card-column spacing (wider tray footprint; not gem-special)
+    const z = -1.75 + tier * 1.32;
     tierCards.forEach((card, index) => {
-      const x = -2.7 + index * 1.85;
+      const x = -3.05 + index * 2.08;
       const discount = String(card.discount ?? "");
       const prestige = Number(card.prestige ?? 0);
       const buyPayload = { tier: tier + 1, index };
@@ -432,8 +433,8 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
         objectKind: "card",
         x,
         z,
-        // T077 · stage-wide readable (pay T072 H03 stage-wide debt)
-        size: 1.42,
+        // T077/T113 · stage-wide readable; slightly smaller so columns breathe
+        size: 1.28,
         tint: GEM_TINT[discount] ?? "#d6d3d1",
         label: encodeCardFace({
           tier: tier + 1,
@@ -465,7 +466,7 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
   });
 
   state.nobles.forEach((noble, i) => {
-    const x = -2.5 + i * 1.5;
+    const x = -2.8 + i * 1.65; // T113 · plaque row breathes with card columns
     const title = String(noble.name ?? "").trim() || "贵族";
     pieces.push({
       id: `noble:${noble.id ?? i}`,
