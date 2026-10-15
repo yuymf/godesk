@@ -62,11 +62,12 @@ float gdPattern(vec3 w) {
   float n = gdNoise(vec2(w.x * 1.7, w.z * 12.0));
   return 0.5 + 0.5 * sin((w.x + n * 0.5) * 26.0);
 #elif GD_PATTERN == 2
-  // T082 · denser cloth weave + pile noise so felt reads less plastic-flat
-  vec2 g = fract(w.xz * 48.0);
+  // T082/T083 · cloth weave readable at wide desk cameras (H02 debt)
+  vec2 g = fract(w.xz * 28.0);
   float weave = abs(step(0.5, g.x) - step(0.5, g.y));
-  float pile = gdNoise(w.xz * 22.0);
-  return mix(0.28, 0.72, weave) + (pile - 0.5) * 0.38;
+  float pile = gdNoise(w.xz * 14.0);
+  float rib = gdNoise(w.xz * 6.5);
+  return mix(0.22, 0.78, weave) + (pile - 0.5) * 0.42 + (rib - 0.5) * 0.16;
 #elif GD_PATTERN == 3
   float rock = gdFbm(w.xz * 2.8 + w.y * 1.2);
   float seam = gdNoise(w.xz * 7.0 + w.y);

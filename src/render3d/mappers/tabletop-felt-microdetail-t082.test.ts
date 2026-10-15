@@ -14,7 +14,7 @@ describe("T082 tabletop felt microdetail", () => {
   it("shared cloth pattern GLSL keeps denser weave (materials.ts)", () => {
     const src = readFileSync("src/render3d/materials.ts", "utf8");
     expect(src).toContain("T082");
-    expect(src).toMatch(/w\.xz \* 48\.0/);
+    expect(src).toMatch(/w\.xz \* (48|28)\.0/); // T082 denser; T083 mid-freq for wide
     expect(src).toContain("pile");
   });
 
