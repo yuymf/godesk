@@ -4,8 +4,8 @@
 | --- | --- |
 | 回归靶 | H03 stage-wide + stage-close；vs T072/T069 stage-wide ≥一闸；motif-canvas 不回退 |
 | 层 | **共享呈现** |
-| 状态 | **开** |
-| tip | pending |
+| 状态 | **关** |
+| tip | `6345194` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t077/` |
 
 ## 问题
