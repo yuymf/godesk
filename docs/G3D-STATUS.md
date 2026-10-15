@@ -13,7 +13,7 @@
 | 任务范围 | G3D-01 至 G3D-27；里程碑 M0–M5；人日上限 91 |
 | 代码基线 | `yuymf/godesk` `main` @ `f3ea418`（#148 G3D-JUDGE `f3ea418`；#153 资产搜索 `1d1f45b`；#145 G3D-ART-3 `5b585ec`；#143 `0526d16`；#144 G3D-17 预备 `1884e19`；#141 G3D-04c `0bda43e`；#138 G3D-13 `19f212d`；#147 CI 瘦身 `45cd590`；#150 公开前清理 `f79fcc7`；#142 G3D-ART-2 `45a5a1c`） |
 | 状态文件维护人 | 劳埃德(工程) / Track B（素材） |
-| 最近更新 | 2026-10-13（Asia/Shanghai）· Tide Arena / 潮阵 `auto-battler-v1` draft PR #179（`feat/tide-arena-v0`）：**Step 5 玩法深度**（★2 合成、12 单位/4 羁绊、heal 绿字、权威备战计时、AI 上阵、拖拽 level 帽、手机 XP 一行）；未进 SHAREABLE_KERNELS；**不合 main** |
+| 最近更新 | 2026-10-15（Asia/Hong_Kong）· hardness `feat/tide-arena-v0` regress-t150 + T151–T153（绝对墨量/force&lt;5s/halo soft）；Open T154；**不合 main**；#179 draft |
 
 ## 硬约束（三条）
 
