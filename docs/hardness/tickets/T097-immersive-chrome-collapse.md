@@ -5,7 +5,7 @@
 | 回归靶 | 入座后顶栏 share/seat 条进一步折叠；canvas 占屏↑；延续 T084/T091 |
 | 层 | **Room chrome** |
 | 状态 | **关** |
-| tip |  |
+| tip | `da4f97a` |
 | 来源 | T093 respotcheck |
 
 ## 问题

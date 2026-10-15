@@ -5,7 +5,7 @@
 | 回归靶 | H03/H04 stage-close：牌堆/厂牌下 soft contact 半径与不透明度可调；不砍 T079/T081 |
 | 层 | **共享呈现**（contact shadow disc） |
 | 状态 | **关** |
-| tip |  |
+| tip | `4f4b8e2` |
 | 来源 | T093 respotcheck |
 
 ## 问题
