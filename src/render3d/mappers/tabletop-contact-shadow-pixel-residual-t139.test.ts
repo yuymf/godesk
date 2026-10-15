@@ -12,9 +12,9 @@ describe("T139 contact shadow pixel residual", () => {
     const block = src.slice(start, end > 0 ? end : start + 2200);
     expect(block).toMatch(/Math\.min\(1\.02/);
     expect(block).toMatch(/Math\.max\(0\.68/);
-    expect(block).toMatch(/Math\.min\(0\.5[48]/);
-    expect(block).toMatch(/Math\.max\(0\.3[02]/);
-    expect(block).toMatch(/boost \* 1\.22/);
+    expect(block).toMatch(/Math\.min\(0\.(54|58|60|62)/);
+    expect(block).toMatch(/Math\.max\(0\.(30|32|34)/);
+    expect(block).toMatch(/boost \* 1\.(22|36|48)/);
     expect(block).toMatch(/#(010000|000000)/);
   });
 });

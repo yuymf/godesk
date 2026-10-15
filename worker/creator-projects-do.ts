@@ -2358,9 +2358,22 @@ export class CreatorProjects extends DurableObject<Env> {
         if ("error" in persisted) return persisted.error;
         const updatedRoom = persisted.room;
         // Response/broadcast keep full in-memory actions; DO stores slim logs.
+        // T143 · pipe next-seat legal actions (listLegalActions) to cut force RTT.
+        const nextLegalSeat = updatedRoom.state.activeSeat;
+        const nextLegalActions = listSessionLegalActions(
+          updatedRoom.state,
+          runtime,
+          updatedRoom.seed,
+          nextLegalSeat,
+        );
         return {
           status: 200,
-          value: visibleSession(updatedRoom, Number(input.seat)),
+          value: {
+            ...visibleSession(updatedRoom, Number(input.seat)),
+            nextLegalActions,
+            nextLegalSeat,
+            via: "listLegalActions",
+          },
           broadcast: updatedRoom,
           aiPending: persisted.aiPending,
         };

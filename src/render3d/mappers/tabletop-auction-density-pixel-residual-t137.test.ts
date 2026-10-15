@@ -7,8 +7,8 @@ describe("T137 auction density pixel residual", () => {
     const src = readFileSync("src/render3d/tabletop-objects.ts", "utf8");
     expect(src).toContain("T137");
     expect(src).toContain("T075");
-    expect(src).toMatch(/strokeRect\((6|4|3),\s*\1/);
-    expect(src).toMatch(/bold (26|28|30)px/);
+    expect(src).toMatch(/strokeRect\((6|4|3|2),\s*\1/);
+    expect(src).toMatch(/bold (26|28|30|32)px/);
     const layout = auctionBiddingLayout({
       chips: [40, 40],
       currentBid: 5,

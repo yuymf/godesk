@@ -916,7 +916,7 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     group.add(ghostMesh);
   }
   // T079 · ground contact under track corridor
-  group.add(softContactShadow(Math.max(0.35, usable * 0.45), Math.max(0.22, gauge * 0.9)));
+  group.add(softContactShadow(Math.max(0.50, usable * 0.68), Math.max(0.34, gauge * 1.35))); // T142 route
   const hit = new Mesh(new BoxGeometry(usable, 0.1, gauge * 1.7), new MeshBasicMaterial({ visible: false }));
   hit.position.y = 0.05;
   group.add(hit);
@@ -947,7 +947,7 @@ function signalPost(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   lamp.position.x = 0.18;
   lamp.castShadow = true;
   group.add(pole, arm, lamp);
-  group.add(softContactShadow(0.18, 0.18));
+  group.add(softContactShadow(0.32, 0.32)); // T142 signal
   return group;
 }
 
@@ -1150,19 +1150,20 @@ function softContactShadow(
   // T135 · residual polish: slightly stronger auto opacity floor/ceiling (keep T106 boost clamp)
   // T138 · stage-wide contact-shadow contrast (keep T106 boost clamp)
   // T139 · pixel residual: larger footprint + opacity ceiling (keep T106 boost clamp + T135/T138 floors)
+  // T142 · H02 stage-wide residual: larger shared footprint (keep T139 opacity floors)
   const area = Math.max(0.04, rx * rz);
   const autoBoost =
     opts?.boost ??
-    Math.min(1.02, Math.max(0.68, 0.98 / Math.sqrt(area / 0.18)));
+    Math.min(1.02, Math.max(0.68, 1.00 / Math.sqrt(area / 0.18)));
   const autoOpacity =
     opts?.opacity ??
-    Math.min(0.58, Math.max(0.32, 0.40 + 0.07 / Math.sqrt(area / 0.18)));
+    Math.min(0.62, Math.max(0.34, 0.44 + 0.09 / Math.sqrt(area / 0.18)));
   const opacity = autoOpacity;
   const boost = autoBoost;
   const geom = new CircleGeometry(1, 24);
   geom.rotateX(-Math.PI / 2);
-  geom.scale(rx * boost * 1.22, 1, rz * boost * 1.22); // T139
-  geom.translate(0, 0.0010, 0);
+  geom.scale(rx * boost * 1.48, 1, rz * boost * 1.48); // T142
+  geom.translate(0, 0.0008, 0);
   const mat = new MeshBasicMaterial({
     color: "#000000",
     transparent: true,
@@ -1724,56 +1725,64 @@ function proceduralLotCanvas(schema: { title: string; prestige?: number; bid?: n
   // T075 · stage-readable full-bleed color masses (pay T072 H05 debt)
   // T137 · auction density pixel residual — higher ink/edge contrast (shared; keep T134 counts)
   // T141 · stage-wide microcontrast — brighter masses + dual rim + hatch (keep T134/T137 floors)
+  // T144 · wide ink floor — denser dark plate + ink wash (keep T141 ge20 / T134 counts)
   g.fillStyle = pal[0]!;
   g.fillRect(0, 0, W, H);
   g.fillStyle = pal[1]!;
-  g.fillRect(0, 0, W * 0.62, H * 0.78);
+  g.fillRect(0, 0, W * 0.64, H * 0.80);
   g.fillStyle = pal[2]!;
-  g.fillRect(W * 0.36, H * 0.02, W * 0.60, H * 0.58);
+  g.fillRect(W * 0.34, H * 0.01, W * 0.62, H * 0.60);
   g.fillStyle = pal[3]!;
   g.beginPath();
-  g.moveTo(W * 0.54, H * 0.06);
-  g.lineTo(W * 0.98, H * 0.38);
-  g.lineTo(W * 0.54, H * 0.70);
-  g.lineTo(W * 0.22, H * 0.38);
+  g.moveTo(W * 0.52, H * 0.04);
+  g.lineTo(W * 0.99, H * 0.38);
+  g.lineTo(W * 0.52, H * 0.72);
+  g.lineTo(W * 0.20, H * 0.38);
   g.closePath();
   g.fill();
   // secondary blocks for value structure at stage distance
   g.fillStyle = pal[1]!;
-  g.fillRect(W * 0.04, H * 0.42, W * 0.36, H * 0.30);
+  g.fillRect(W * 0.03, H * 0.40, W * 0.38, H * 0.32);
   g.fillStyle = pal[3]!;
-  g.fillRect(W * 0.56, H * 0.46, W * 0.36, H * 0.26);
+  g.fillRect(W * 0.54, H * 0.44, W * 0.38, H * 0.28);
+  // ink wash overlays for mean floor
+  g.fillStyle = "rgba(15,23,42,0.38)";
+  g.fillRect(0, 0, W, H * 0.22);
+  g.fillStyle = "rgba(15,23,42,0.34)";
+  g.fillRect(0, H * 0.68, W, H * 0.32);
+  g.fillStyle = "rgba(15,23,42,0.18)";
+  g.fillRect(W * 0.08, H * 0.22, W * 0.84, H * 0.42);
   // hatch bands for stage-wide microcontrast
-  g.strokeStyle = "rgba(15,23,42,0.55)";
-  g.lineWidth = 3;
-  for (let i = 0; i < 7; i++) {
-    const x = W * (0.12 + i * 0.12);
+  g.strokeStyle = "rgba(15,23,42,0.70)";
+  g.lineWidth = 4;
+  for (let i = 0; i < 9; i++) {
+    const x = W * (0.08 + i * 0.10);
     g.beginPath();
-    g.moveTo(x, H * 0.12);
-    g.lineTo(x + W * 0.08, H * 0.70);
+    g.moveTo(x, H * 0.10);
+    g.lineTo(x + W * 0.10, H * 0.72);
     g.stroke();
   }
   // ink + cream dual rim for stage-wide microcontrast
   g.strokeStyle = "rgba(15,23,42,0.98)";
-  g.lineWidth = 14;
-  g.strokeRect(3, 3, W - 6, H - 6);
-  g.strokeStyle = "rgba(253,230,138,0.95)";
-  g.lineWidth = 6;
-  g.strokeRect(12, 12, W - 24, H - 24);
+  g.lineWidth = 16;
+  g.strokeRect(2, 2, W - 4, H - 4);
+  g.strokeStyle = "rgba(253,230,138,0.98)";
+  g.lineWidth = 7;
+  g.strokeRect(10, 10, W - 20, H - 20);
   g.globalAlpha = 1;
   // Title plate
-  g.fillStyle = "rgba(15,23,42,0.95)";
-  g.fillRect(6, H - 86, W - 12, 76);
+  g.fillStyle = "rgba(15,23,42,0.97)";
+  g.fillRect(4, H - 96, W - 8, 88);
   g.fillStyle = "#ffffff";
-  g.font = "bold 30px system-ui,sans-serif";
+  g.font = "bold 32px system-ui,sans-serif";
   g.textAlign = "left";
-  g.fillText((schema.title || "拍品").slice(0, 10), 18, H - 46);
-  g.font = "bold 18px system-ui,sans-serif";
+  g.fillText((schema.title || "拍品").slice(0, 10), 16, H - 48);
+  g.font = "bold 20px system-ui,sans-serif";
   g.fillStyle = "#fde68a";
   const bits: string[] = [];
   if (schema.prestige != null) bits.push(`底 ${schema.prestige}`);
   if (schema.bid != null && schema.bid > 0) bits.push(`价 ${schema.bid}`);
-  g.fillText(bits.join(" · ") || "画廊拍品", 18, H - 16);
+  g.fillText(bits.join(" · ") || "画廊拍品", 16, H - 16);
   return canvas;
 }
 
@@ -1815,7 +1824,7 @@ function framedArtWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3
   art.position.set(0, 0.09, 0);
   art.renderOrder = 2;
   group.add(art);
-  group.add(softContactShadow(0.72, 0.90)); // T139
+  group.add(softContactShadow(0.82, 1.02)); // T139/T142
   return group;
 }
 
@@ -1894,14 +1903,14 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = meepleFigure(node, ctx);
   } else if (mesh === "card") {
     object = cardWithFace(node, ctx);
-    (object as Group).add(softContactShadow(0.42, 0.56, { opacity: 0.46 })); // T096/T106/T135/T139 card footprint
+    (object as Group).add(softContactShadow(0.48, 0.62, { opacity: 0.48 })); // T096/T106/T135/T139/T142 card footprint
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
     // T081 · larger local blob so small tiles still ground at H02/H03 visibility
     (object as Group).add(softContactShadow(0.38, 0.38, { opacity: 0.40, boost: 0.82 })); // T081/T096/T106/T139
   } else if (mesh === "plaque") {
     object = plaqueWithFace(node, ctx);
-    (object as Group).add(softContactShadow(0.50, 0.40, { opacity: 0.48 })); // T106/T139 plaque
+    (object as Group).add(softContactShadow(0.56, 0.46, { opacity: 0.50 })); // T106/T139/T142 plaque
   } else if (mesh === "gem-chip") {
     const built = new Mesh(geometryFor(mesh), materialFor(node, ctx));
     built.castShadow = true;

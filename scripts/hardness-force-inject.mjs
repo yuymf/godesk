@@ -21,8 +21,9 @@ export async function claimAllSeats(page, seatCount) {
     const sid = m?.[1];
     const share = new URLSearchParams(location.search).get("share");
     const q = share ? `?share=${encodeURIComponent(share)}` : "";
+    // T143 · parallel seat claim (shared tooling)
     const tokens = {};
-    for (let seat = 0; seat < n; seat++) {
+    await Promise.all([...Array(n).keys()].map(async (seat) => {
       const r = await fetch(`/chatgpt-plugin/api/sessions/${sid}/seats${q}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -38,7 +39,7 @@ export async function claimAllSeats(page, seatCount) {
           );
         }
       }
-    }
+    }));
     return tokens;
   }, { n: seatCount });
 }
@@ -388,9 +389,10 @@ export async function waitRoomCanvasReady(page, { timeoutMs = 20000 } = {}) {
  * Prefer this over bare forceBuildHexSetup + outer withTimeout.
  */
 export async function runHexForceWithBudget(page, tokens, opts = {}) {
-  const budgetMs = opts.budgetMs ?? 55000; // T140 · trimmed legal-actions force (~30–45s typical)
+  // T143 · sub-40s: canvas ready outside force clock; default budget 40s
+  const budgetMs = opts.budgetMs ?? 40000;
+  await waitRoomCanvasReady(page, { timeoutMs: Math.min(12000, budgetMs) });
   const started = Date.now();
-  await waitRoomCanvasReady(page, { timeoutMs: Math.min(15000, budgetMs) });
   const remaining = () => Math.max(1000, budgetMs - (Date.now() - started));
   let result;
   try {
@@ -446,7 +448,8 @@ export async function awaitSeatCloseGlyphReady(page, { timeoutMs = 10000 } = {})
 
 export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, minRoads = 2, maxSteps = 48 } = {}) {
   // T136 · drive placements from GET …/legal-actions (listLegalActions authority).
-  // T140 · budget trim: prefetch all seats, reuse intent state, take first legal only.
+  // T140 · budget trim: prefetch seats, reuse intent state, first legal only.
+  // T143 · sub-40s: consume nextLegalActions piped from intent (still listLegalActions).
   return page.evaluate(async ({ tokens, minSettlements, minRoads, maxSteps }) => {
     const m = location.pathname.match(/room\/([^/?]+)/);
     const sid = m?.[1];
@@ -493,14 +496,22 @@ export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, min
       const text = await r.text();
       let j = null;
       try { j = JSON.parse(text); } catch {}
-      return { status: r.status, ok: r.ok, err: j?.error, state: j?.state || j?.session?.state, raw: j };
+      return {
+        status: r.status,
+        ok: r.ok,
+        err: j?.error,
+        state: j?.state || j?.session?.state,
+        nextLegalActions: j?.nextLegalActions,
+        nextLegalSeat: j?.nextLegalSeat,
+        raw: j,
+      };
     };
     let st = await get();
-    // T140 · claim all seats up front (4p setup otherwise stalls on seat_not_claimed)
     const seatN = Math.max(st.scores?.length || 2, st.hexIsland?.playerCount || 2);
     await Promise.all([...Array(seatN).keys()].map((s) => ensureSeat(s)));
     const log = [];
     let viaLegal = 0;
+    let pipedLegal = null; // { seat, actions } from prior intent
     for (let step = 0; step < maxSteps; step++) {
       if (st.status !== "active") return { ok: false, err: "dead", log, steps: step, viaLegal };
       const hi = st.hexIsland;
@@ -521,28 +532,40 @@ export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, min
         };
       }
       const active = st.activeSeat;
-      const la = await legal(active);
-      if (!la.ok || !Array.isArray(la.actions) || la.actions.length === 0) {
-        log.push({ step, stuck: true, active, phase: hi.phase, legalStatus: la.status, settle0, roads0 });
-        return { ok: false, err: "no-legal", settle0, roads0, log, steps: step, viaLegal };
+      let actions = null;
+      if (pipedLegal && pipedLegal.seat === active && Array.isArray(pipedLegal.actions) && pipedLegal.actions.length) {
+        actions = pipedLegal.actions;
+        viaLegal += 1;
+      } else {
+        const la = await legal(active);
+        if (!la.ok || !Array.isArray(la.actions) || la.actions.length === 0) {
+          log.push({ step, stuck: true, active, phase: hi.phase, legalStatus: la.status, settle0, roads0 });
+          return { ok: false, err: "no-legal", settle0, roads0, log, steps: step, viaLegal };
+        }
+        actions = la.actions;
+        viaLegal += 1;
       }
-      viaLegal += 1;
-      // T140 · legal-actions already authoritative — take first settlement/road (or first action)
-      const prefer = la.actions.find((a) => a.type === "place_settlement" || a.type === "place_road")
-        || la.actions[0];
+      const prefer = actions.find((a) => a.type === "place_settlement" || a.type === "place_road")
+        || actions[0];
       const r = await intent(active, prefer.type, prefer.payload || undefined);
       log.push({
         step,
         active,
         acted: { type: prefer.type, ok: r.ok, payload: prefer.payload || null, err: r.err || null },
-        legalCount: la.actions.length,
+        legalCount: actions.length,
+        piped: Boolean(pipedLegal && pipedLegal.seat === active),
       });
       if (!r.ok) {
         return { ok: false, err: "intent_rejected", settle0, roads0, log, steps: step, viaLegal };
       }
-      // T140 · reuse intent response state (skip extra GET round-trip)
       if (r.state) st = r.state;
       else st = await get();
+      // T143 · pipe next legal from intent (listLegalActions on server)
+      if (Array.isArray(r.nextLegalActions) && r.nextLegalSeat != null) {
+        pipedLegal = { seat: r.nextLegalSeat, actions: r.nextLegalActions };
+      } else {
+        pipedLegal = null;
+      }
     }
     const final = st?.hexIsland ? st : await get();
     const p0 = final.hexIsland?.players?.[0];

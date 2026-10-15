@@ -12,9 +12,8 @@ describe("T138 contact shadow stage-wide contrast", () => {
     const block = src.slice(start, end > 0 ? end : start + 2000);
     expect(block).toMatch(/Math\.min\(1\.02/);
     expect(block).toMatch(/Math\.max\(0\.68/);
-    // T139 may raise further; keep ≥ T138 floors
-    expect(block).toMatch(/Math\.min\(0\.(54|58)/);
-    expect(block).toMatch(/Math\.max\(0\.(30|32)/);
+    expect(block).toMatch(/Math\.min\(0\.(54|58|60|62)/);
+    expect(block).toMatch(/Math\.max\(0\.(30|32|34)/);
     expect(block).toMatch(/#(020101|010000|000000)/);
   });
 });
