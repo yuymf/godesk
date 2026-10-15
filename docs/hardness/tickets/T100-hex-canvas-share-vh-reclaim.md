@@ -5,6 +5,7 @@
 | 回归靶 | H01 seated canvasShare 明确 >0.50；不 regress T097 collapse / shareReady / purge |
 | 层 | **Room chrome / Tidewell layout** |
 | 状态 | **关** |
+| tip |  |
 | 来源 | 大主管 soft · H01 canvasShare≈0.496 flat |
 
 ## 问题

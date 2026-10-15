@@ -5,6 +5,7 @@
 | 回归靶 | deskWood maps 进 MaterialLibrary 共享缓存；H02–H04 不 regress T098；T092 rim ok |
 | 层 | **共享呈现**（MaterialLibrary + deskWoodMaterial） |
 | 状态 | **关** |
+| tip |  |
 
 ## 问题
 deskWoodMaterial 每次新建 canvas maps，未走共享库。
