@@ -100,13 +100,14 @@ export async function forceBuyGemCards(page, tokens, { minCards = 2, maxSteps = 
     const q = share ? `?share=${encodeURIComponent(share)}` : "";
     const tok = (seat) => tokens[String(seat)];
     const intent = async (seat, actionId, payload) => {
+      const seatToken = await ensureSeat(seat);
       const r = await fetch(`/chatgpt-plugin/api/sessions/${sid}/intents${q}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           intentId: crypto.randomUUID(),
           seat,
-          seatToken: tok(seat),
+          seatToken,
           actionId,
           ...(payload ? { payload } : {}),
         }),
@@ -387,7 +388,7 @@ export async function waitRoomCanvasReady(page, { timeoutMs = 20000 } = {}) {
  * Prefer this over bare forceBuildHexSetup + outer withTimeout.
  */
 export async function runHexForceWithBudget(page, tokens, opts = {}) {
-  const budgetMs = opts.budgetMs ?? 45000;
+  const budgetMs = opts.budgetMs ?? 90000; // T136 · 4p full setup via legal-actions ~60–70s
   const started = Date.now();
   await waitRoomCanvasReady(page, { timeoutMs: Math.min(15000, budgetMs) });
   const remaining = () => Math.max(1000, budgetMs - (Date.now() - started));
@@ -395,10 +396,10 @@ export async function runHexForceWithBudget(page, tokens, opts = {}) {
   try {
     result = await Promise.race([
       forceBuildHexSetup(page, tokens, {
-        // T133 · glyph/seat-close audits need ≥1 settle+road; 2× setup across seats is slower/fragile
-        minSettlements: opts.minSettlements ?? 1,
-        minRoads: opts.minRoads ?? 1,
-        maxSteps: opts.maxSteps ?? 24,
+        // T136 · full setup ≥2 via listLegalActions; override opts for lighter audits
+        minSettlements: opts.minSettlements ?? 2,
+        minRoads: opts.minRoads ?? 2,
+        maxSteps: opts.maxSteps ?? 48,
       }),
       new Promise((_, rej) => setTimeout(() => rej(new Error(`budget ${budgetMs}ms`)), remaining())),
     ]);
@@ -444,33 +445,46 @@ export async function awaitSeatCloseGlyphReady(page, { timeoutMs = 10000 } = {})
 }
 
 export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, minRoads = 2, maxSteps = 48 } = {}) {
-  // Prefer near-origin vertices/edges first (island center) — fewer failed intents → fewer timeouts (T133).
-  const VERTEX_IDS_RAW = ["-100:-173", "-100:-346", "-100:0", "-100:173", "-100:346", "-200:-173", "-200:-346", "-200:0", "-200:173", "-200:346", "-250:-260", "-250:-87", "-250:260", "-250:87", "-350:-260", "-350:-87", "-350:260", "-350:87", "-400:-173", "-400:0", "-400:173", "-50:-260", "-50:-433", "-50:-87", "-50:260", "-50:433", "-50:87", "100:-173", "100:-346", "100:0", "100:173", "100:346", "200:-173", "200:-346", "200:0", "200:173", "200:346", "250:-260", "250:-87", "250:260", "250:87", "350:-260", "350:-87", "350:260", "350:87", "400:-173", "400:0", "400:173", "50:-260", "50:-433", "50:-87", "50:260", "50:433", "50:87"];
-  const EDGE_IDS_RAW = ["-100:-173|-200:-173", "-100:-173|-50:-260", "-100:-173|-50:-87", "-100:-346|-200:-346", "-100:-346|-50:-260", "-100:-346|-50:-433", "-100:0|-200:0", "-100:0|-50:-87", "-100:0|-50:87", "-100:173|-200:173", "-100:173|-50:260", "-100:173|-50:87", "-100:346|-200:346", "-100:346|-50:260", "-100:346|-50:433", "-200:-173|-250:-260", "-200:-173|-250:-87", "-200:-346|-250:-260", "-200:0|-250:-87", "-200:0|-250:87", "-200:173|-250:260", "-200:173|-250:87", "-200:346|-250:260", "-250:-260|-350:-260", "-250:-87|-350:-87", "-250:260|-350:260", "-250:87|-350:87", "-350:-260|-400:-173", "-350:-87|-400:-173", "-350:-87|-400:0", "-350:260|-400:173", "-350:87|-400:0", "-350:87|-400:173", "-50:-260|50:-260", "-50:-433|50:-433", "-50:-87|50:-87", "-50:260|50:260", "-50:433|50:433", "-50:87|50:87", "100:-173|200:-173", "100:-173|50:-260", "100:-173|50:-87", "100:-346|200:-346", "100:-346|50:-260", "100:-346|50:-433", "100:0|200:0", "100:0|50:-87", "100:0|50:87", "100:173|200:173", "100:173|50:260", "100:173|50:87", "100:346|200:346", "100:346|50:260", "100:346|50:433", "200:-173|250:-260", "200:-173|250:-87", "200:-346|250:-260", "200:0|250:-87", "200:0|250:87", "200:173|250:260", "200:173|250:87", "200:346|250:260", "250:-260|350:-260", "250:-87|350:-87", "250:260|350:260", "250:87|350:87", "350:-260|400:-173", "350:-87|400:-173", "350:-87|400:0", "350:260|400:173", "350:87|400:0", "350:87|400:173"];
-  const vertScore = (id) => {
-    const [a, b] = id.split(":").map(Number);
-    return Math.abs(a) + Math.abs(b);
-  };
-  const VERTEX_IDS = [...VERTEX_IDS_RAW].sort((a, b) => vertScore(a) - vertScore(b));
-  const EDGE_IDS = [...EDGE_IDS_RAW].sort((a, b) => {
-    const sa = a.split("|").reduce((s, p) => s + vertScore(p), 0);
-    const sb = b.split("|").reduce((s, p) => s + vertScore(p), 0);
-    return sa - sb;
-  });
-  return page.evaluate(async ({ tokens, minSettlements, minRoads, maxSteps, VERTEX_IDS, EDGE_IDS }) => {
+  // T136 · drive placements from GET …/legal-actions (listLegalActions authority), not vertex enumeration.
+  return page.evaluate(async ({ tokens, minSettlements, minRoads, maxSteps }) => {
     const m = location.pathname.match(/room\/([^/?]+)/);
     const sid = m?.[1];
     const share = new URLSearchParams(location.search).get("share");
     const q = share ? `?share=${encodeURIComponent(share)}` : "";
     const tok = (s) => tokens[String(s)];
+    const ensureSeat = async (seat) => {
+      if (tok(seat)) return tok(seat);
+      const r = await fetch(`/chatgpt-plugin/api/sessions/${sid}/seats${q}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ seat, displayName: `p${seat}` }),
+      });
+      const j = await r.json();
+      if (j.seatToken) tokens[String(seat)] = j.seatToken;
+      return tokens[String(seat)];
+    };
+    const get = async () => {
+      const j = await (await fetch(`/chatgpt-plugin/api/sessions/${sid}${q}`)).json();
+      const s = j.session || j;
+      return s.state || s;
+    };
+    const legal = async (seat) => {
+      const url = `/chatgpt-plugin/api/sessions/${sid}/legal-actions${q}${q ? "&" : "?"}seat=${encodeURIComponent(seat)}`;
+      const r = await fetch(url);
+      if (!r.ok) return { ok: false, status: r.status, actions: [] };
+      const j = await r.json();
+      return { ok: true, ...j };
+    };
     const intent = async (seat, actionId, payload) => {
+      const seatToken = await ensureSeat(seat);
+      if (!seatToken) return { status: 409, ok: false, err: "seat_claim_failed" };
       const r = await fetch(`/chatgpt-plugin/api/sessions/${sid}/intents${q}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           intentId: crypto.randomUUID(),
           seat,
-          seatToken: tok(seat),
+          seatToken,
           actionId,
           ...(payload ? { payload } : {}),
         }),
@@ -478,33 +492,15 @@ export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, min
       const text = await r.text();
       let j = null;
       try { j = JSON.parse(text); } catch {}
-      const hi = j?.state?.hexIsland;
-      const p0 = hi?.players?.[0];
-      return {
-        status: r.status,
-        ok: r.ok,
-        err: j?.error,
-        active: j?.state?.activeSeat,
-        phase: hi?.phase,
-        settle0: p0?.settlements?.length,
-        roads0: p0?.roads?.length,
-        state: j?.state,
-      };
-    };
-    const get = async () => {
-      const j = await (await fetch(`/chatgpt-plugin/api/sessions/${sid}${q}`)).json();
-      const s = j.session || j;
-      return s.state || s;
+      return { status: r.status, ok: r.ok, err: j?.error, state: j?.state || j?.session?.state, raw: j };
     };
     const log = [];
-    let st = await get();
-    const triedV = new Set();
-    const triedE = new Set();
-    let lastActive = null;
+    let viaLegal = 0;
     for (let step = 0; step < maxSteps; step++) {
-      if (st.status !== "active") return { ok: false, err: "dead", log, steps: step };
+      const st = await get();
+      if (st.status !== "active") return { ok: false, err: "dead", log, steps: step, viaLegal };
       const hi = st.hexIsland;
-      if (!hi) return { ok: false, err: "no-hexIsland", log, steps: step };
+      if (!hi) return { ok: false, err: "no-hexIsland", log, steps: step, viaLegal };
       const p0 = hi.players[0];
       const settle0 = (p0.settlements || []).length;
       const roads0 = (p0.roads || []).length;
@@ -516,57 +512,36 @@ export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, min
           steps: step,
           phase: hi.phase,
           log,
+          viaLegal,
+          via: "listLegalActions",
         };
       }
       const active = st.activeSeat;
-      // T133 · seat change → clear miss caches so other seats can place during setup
-      if (lastActive !== null && lastActive !== active) { triedV.clear(); triedE.clear(); }
-      lastActive = active;
+      const la = await legal(active);
+      if (!la.ok || !Array.isArray(la.actions) || la.actions.length === 0) {
+        log.push({ step, stuck: true, active, phase: hi.phase, legalStatus: la.status, settle0, roads0 });
+        return { ok: false, err: "no-legal", settle0, roads0, log, steps: step, viaLegal };
+      }
+      viaLegal += 1;
+      // Prefer settlement/road during setup; try next legal on reject (T136)
+      const ordered = [
+        ...la.actions.filter((a) => a.type === "place_settlement" || a.type === "place_road"),
+        ...la.actions.filter((a) => a.type !== "place_settlement" && a.type !== "place_road"),
+      ].slice(0, 8);
       let acted = null;
-      if (hi.pendingRoadVertex) {
-        const pending = hi.pendingRoadVertex;
-        const candidates = EDGE_IDS.filter((edgeId) => edgeId.split("|").includes(pending));
-        const pool = candidates.length ? candidates : EDGE_IDS;
-        for (const edgeId of pool) {
-          if (triedE.has(edgeId)) continue;
-          const r = await intent(active, "place_road", { edgeId });
-          if (r.ok) { acted = { type: "place_road", edgeId, ...r }; break; }
-          triedE.add(edgeId);
-        }
-      } else if (hi.phase === "setup") {
-        for (const vertexId of VERTEX_IDS) {
-          if (triedV.has(vertexId)) continue;
-          const r = await intent(active, "place_settlement", { vertexId });
-          if (r.ok) { acted = { type: "place_settlement", vertexId, ...r }; break; }
-          triedV.add(vertexId);
-        }
-      } else {
-        for (const vertexId of VERTEX_IDS) {
-          if (triedV.has(vertexId)) continue;
-          const r = await intent(active, "place_settlement", { vertexId });
-          if (r.ok) { acted = { type: "place_settlement", vertexId, ...r }; break; }
-          triedV.add(vertexId);
-        }
-        if (!acted) {
-          for (const edgeId of EDGE_IDS) {
-            if (triedE.has(edgeId)) continue;
-            const r = await intent(active, "place_road", { edgeId });
-            if (r.ok) { acted = { type: "place_road", edgeId, ...r }; break; }
-            triedE.add(edgeId);
-          }
-        }
+      for (const prefer of ordered) {
+        const r = await intent(active, prefer.type, prefer.payload || undefined);
+        log.push({
+          step,
+          active,
+          acted: { type: prefer.type, ok: r.ok, payload: prefer.payload || null, err: r.err || null },
+          legalCount: la.actions.length,
+        });
+        if (r.ok) { acted = r; break; }
       }
       if (!acted) {
-        log.push({ step, stuck: true, active, phase: hi.phase, pending: hi.pendingRoadVertex, settle0, roads0 });
-        return { ok: false, err: "stuck", settle0, roads0, log, steps: step };
+        return { ok: false, err: "intent_rejected", settle0, roads0, log, steps: step, viaLegal };
       }
-      log.push({ step, active, acted: { type: acted.type, ok: acted.ok, settle0: acted.settle0, roads0: acted.roads0 } });
-      // T133 · reuse intent response state when present (skip extra GET)
-      if (acted.state) st = acted.state;
-      else st = await get();
-      // clear tried sets for next placement wave after success
-      if (acted.type === "place_settlement") { triedV.clear(); triedE.clear(); }
-      if (acted.type === "place_road") { triedE.clear(); }
     }
     const final = await get();
     const p0 = final.hexIsland?.players?.[0];
@@ -576,8 +551,10 @@ export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, min
       roads: p0?.roads,
       log,
       steps: maxSteps,
+      viaLegal,
+      via: "listLegalActions",
     };
-  }, { tokens, minSettlements, minRoads, maxSteps, VERTEX_IDS, EDGE_IDS });
+  }, { tokens, minSettlements, minRoads, maxSteps });
 }
 
 

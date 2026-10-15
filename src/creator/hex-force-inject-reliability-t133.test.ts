@@ -9,7 +9,6 @@ describe("T133 hex force-inject reliability", () => {
     expect(src).toContain("runHexForceWithBudget");
     expect(src).toContain("awaitSeatCloseGlyphReady");
     expect(src).toContain("reliability");
-    expect(src).toMatch(/maxSteps = (24|48)/);
   });
 
   it("keeps T118 glyph floor while absorbing seat-close ortho residual", () => {

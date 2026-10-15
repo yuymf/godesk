@@ -1148,13 +1148,14 @@ function softContactShadow(
   // T096 · footprint-scaled radius/strength — large discs stay visible but not board-wide blobs
   // T106 · reopen: tighter boost/opacity for large footprints; shadows remain (T079/T081)
   // T135 · residual polish: slightly stronger auto opacity floor/ceiling (keep T106 boost clamp)
+  // T138 · stage-wide contact-shadow contrast (keep T106 boost clamp)
   const area = Math.max(0.04, rx * rz);
   const autoBoost =
     opts?.boost ??
-    Math.min(1.02, Math.max(0.68, 0.85 / Math.sqrt(area / 0.18)));
+    Math.min(1.02, Math.max(0.68, 0.88 / Math.sqrt(area / 0.18)));
   const autoOpacity =
     opts?.opacity ??
-    Math.min(0.50, Math.max(0.28, 0.35 + 0.05 / Math.sqrt(area / 0.18)));
+    Math.min(0.54, Math.max(0.30, 0.37 + 0.06 / Math.sqrt(area / 0.18)));
   const opacity = autoOpacity;
   const boost = autoBoost;
   const geom = new CircleGeometry(1, 24);
@@ -1162,7 +1163,7 @@ function softContactShadow(
   geom.scale(rx * boost, 1, rz * boost);
   geom.translate(0, 0.0015, 0);
   const mat = new MeshBasicMaterial({
-    color: "#050403",
+    color: "#020101",
     transparent: true,
     opacity,
     depthWrite: false,
@@ -1720,39 +1721,44 @@ function proceduralLotCanvas(schema: { title: string; prestige?: number; bid?: n
   ];
   const pal = palettes[seed % palettes.length]!;
   // T075 · stage-readable full-bleed color masses (pay T072 H05 debt)
+  // T137 · auction density pixel residual — higher ink/edge contrast (shared; keep T134 counts)
   g.fillStyle = pal[0]!;
   g.fillRect(0, 0, W, H);
   g.fillStyle = pal[1]!;
-  g.fillRect(0, 0, W * 0.55, H * 0.72);
+  g.fillRect(0, 0, W * 0.58, H * 0.74);
   g.fillStyle = pal[2]!;
-  g.fillRect(W * 0.42, H * 0.08, W * 0.52, H * 0.5);
+  g.fillRect(W * 0.40, H * 0.06, W * 0.56, H * 0.54);
   g.fillStyle = pal[3]!;
   g.beginPath();
-  g.moveTo(W * 0.55, H * 0.12);
-  g.lineTo(W * 0.92, H * 0.38);
-  g.lineTo(W * 0.55, H * 0.64);
-  g.lineTo(W * 0.28, H * 0.38);
+  g.moveTo(W * 0.55, H * 0.10);
+  g.lineTo(W * 0.94, H * 0.38);
+  g.lineTo(W * 0.55, H * 0.66);
+  g.lineTo(W * 0.26, H * 0.38);
   g.closePath();
   g.fill();
   // secondary blocks for value structure at stage distance
   g.fillStyle = pal[1]!;
-  g.fillRect(W * 0.08, H * 0.48, W * 0.28, H * 0.22);
+  g.fillRect(W * 0.06, H * 0.46, W * 0.32, H * 0.26);
   g.fillStyle = pal[3]!;
-  g.fillRect(W * 0.62, H * 0.52, W * 0.28, H * 0.18);
+  g.fillRect(W * 0.60, H * 0.50, W * 0.32, H * 0.22);
+  // ink rim for stage-wide separation
+  g.strokeStyle = "rgba(15,23,42,0.88)";
+  g.lineWidth = 10;
+  g.strokeRect(6, 6, W - 12, H - 12);
   g.globalAlpha = 1;
   // Title plate
-  g.fillStyle = "rgba(15,23,42,0.72)";
-  g.fillRect(12, H - 72, W - 24, 56);
-  g.fillStyle = "#f8fafc";
-  g.font = "bold 22px system-ui,sans-serif";
+  g.fillStyle = "rgba(15,23,42,0.88)";
+  g.fillRect(10, H - 78, W - 20, 64);
+  g.fillStyle = "#ffffff";
+  g.font = "bold 26px system-ui,sans-serif";
   g.textAlign = "left";
-  g.fillText((schema.title || "拍品").slice(0, 10), 24, H - 40);
-  g.font = "16px system-ui,sans-serif";
+  g.fillText((schema.title || "拍品").slice(0, 10), 22, H - 42);
+  g.font = "bold 18px system-ui,sans-serif";
   g.fillStyle = "#fde68a";
   const bits: string[] = [];
   if (schema.prestige != null) bits.push(`底 ${schema.prestige}`);
   if (schema.bid != null && schema.bid > 0) bits.push(`价 ${schema.bid}`);
-  g.fillText(bits.join(" · ") || "画廊拍品", 24, H - 18);
+  g.fillText(bits.join(" · ") || "画廊拍品", 22, H - 16);
   return canvas;
 }
 
@@ -1761,7 +1767,7 @@ function framedArtWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3
   // Wood frame (outer)
   const frame = new Mesh(
     translated(new BoxGeometry(0.95, 0.08, 1.2), 0.04),
-    new MeshStandardMaterial({ color: "#6b4423", roughness: 0.78, metalness: 0.05 }),
+    new MeshStandardMaterial({ color: "#4a2c14", roughness: 0.78, metalness: 0.05 }), // T137
   );
   frame.castShadow = true;
   frame.receiveShadow = true;

@@ -37,7 +37,7 @@ import {
   applyConversationRelayIntent,
   createConversationRelayState,
 } from "../src/runtime/conversation-relay";
-import { applyAction, createInitialState } from "../src/runtime/play-kernel";
+import { applyAction, createInitialState, listLegalActions } from "../src/runtime/play-kernel";
 import {
   createTurnTakingKernelConfig,
   playActionFromIntent,
@@ -1430,6 +1430,40 @@ export function runtimeSupportsBotSeat(runtime: ExecutableRuntime): boolean {
  * phases make the acting seat active, so this also covers those). Shared by
  * runBotSimulation and the Room AI seat driver — no parallel engine.
  */
+
+/** T136 · shared legal-actions listing for session force / probes (kernel authority). */
+export function listSessionLegalActions(
+  state: SessionState,
+  runtime: ExecutableRuntime,
+  seed: number,
+  seat: number,
+): Array<{ type: string; payload?: Record<string, unknown> }> {
+  if (state.status !== "active") return [];
+  if (runtime.kernel.type === "hex-settlement-v1") {
+    if (!state.hexIsland) return [];
+    const kernelConfig = bindHexIslandFromRuntimeKernel({
+      playerCount: runtime.kernel.playerCount,
+      victoryPointsToWin: runtime.kernel.victoryPointsToWin,
+    });
+    const playState = {
+      seed,
+      sequence: state.turn,
+      phase: state.hexIsland.phase,
+      activePlayerId: state.activeSeat,
+      playerCount: runtime.kernel.playerCount,
+      status: state.status,
+      winnerId: state.winnerSeat,
+      events: [] as const,
+      genre: sessionHexIslandToGenre(state.hexIsland),
+    };
+    return listLegalActions(hexIslandAdapter, playState, seat, kernelConfig).map((a) => ({
+      type: a.type,
+      ...(a.payload ? { payload: a.payload as Record<string, unknown> } : {}),
+    }));
+  }
+  return [];
+}
+
 export function pickBotIntent(
   state: SessionState,
   runtime: ExecutableRuntime,

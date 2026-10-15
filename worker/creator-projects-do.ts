@@ -2,6 +2,7 @@ import { refreshGameSpec, ruleSystemSpecIssues } from "../src/creator/game-spec"
 import { DurableObject } from "cloudflare:workers";
 import {
   acceptIntent,
+  listSessionLegalActions,
   executableRuntime,
   initialSessionState,
   runAtSessionTime,
@@ -2485,6 +2486,37 @@ export class CreatorProjects extends DurableObject<Env> {
         `playtest:${playtestMatch[1]}`,
       );
       return playtest ? json(playtest) : error("没有找到这个试玩。", 404);
+    }
+
+    // T136 · legal-actions for hardness force / shared probes (listLegalActions authority)
+    const roomLegalMatch = url.pathname.match(/^\/sessions\/([^/]+)\/legal-actions$/);
+    if (request.method === "GET" && roomLegalMatch) {
+      const room = await this.ctx.storage.get<StoredSharedSession>(
+        `session:${roomLegalMatch[1]}`,
+      );
+      if (!room) return error("没有找到这个 Shared Session。", 404);
+      const storedBuild = await this.ctx.storage.get<StoredPlayableBuild>(
+        `build:${room.buildId}`,
+      );
+      const build = storedBuild ? normalizedBuild(storedBuild) : undefined;
+      if (!build) return error("Shared Session 引用的 Build 不存在。", 500);
+      const runtime = executableRuntime(build.ruleSystem);
+      if (!runtime) return error("runtime_not_executable", 422);
+      const loaded = await this.loadRoom(room, build);
+      const seatParam = url.searchParams.get("seat");
+      const seat = seatParam != null && Number.isInteger(Number(seatParam))
+        ? Number(seatParam)
+        : loaded.state.activeSeat;
+      const actions = listSessionLegalActions(loaded.state, runtime, loaded.seed, seat);
+      return json({
+        seat,
+        activeSeat: loaded.state.activeSeat,
+        status: loaded.state.status,
+        phase: loaded.state.hexIsland?.phase ?? null,
+        setupStep: loaded.state.hexIsland?.setupStep ?? null,
+        actions,
+        via: "listLegalActions",
+      });
     }
 
     const roomMatch = url.pathname.match(/^\/sessions\/([^/]+)$/);
