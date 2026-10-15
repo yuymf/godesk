@@ -1,6 +1,6 @@
-# T180 — ≥9 呈现 backlog
+# T180 — shareReady / tabletop-first chrome 再收
 
-| 状态 | **开（禁止自宣 ≥9）** |
-| 来源 | T177–T179 |
+| 状态 | **验票 PASS** |
+| 基线 | `4ea167c` |
 
-差距：H01 HUD 余感 / 全景 ≥9 观感 / 其它 suite soft residual。
+H01 share 0.9218 · side 48 / dock 18 · H02–H05 ≥0.88 · shareReady 降权 · rejectedShell 清。

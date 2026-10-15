@@ -1203,8 +1203,8 @@ function softContactShadow(
   // T153–T158/T161/T169 · softer falloff; T161 dark-clamp; T169 micro-soften (no radial blot)
   // T175 · shared contact microcontrast for H03–H05 hard pixel (keep T161 mid clamp)
   group.add(mk(2.55, Math.min(0.20, opacity * 0.30), 0.0005)); // soft mid · T161/T175 lighter
-  group.add(mk(3.85, Math.min(0.19, opacity * 0.28), 0.0003)); // soft outer · T169/T175
-  group.add(mk(5.60, Math.min(0.145, opacity * 0.20), 0.0002)); // wide soft veil · T175 mean
+  group.add(mk(3.95, Math.min(0.20, opacity * 0.29), 0.0003)); // soft outer · T169/T175/T181
+  group.add(mk(5.80, Math.min(0.155, opacity * 0.22), 0.0002)); // wide soft veil · T175/T181 mean
   return group;
 }
 
@@ -1491,7 +1491,7 @@ function woodRimMaterial(node: SceneNode, ctx: TabletopObjectContext): Material 
     color: base,
     map: map ?? undefined,
     normalMap: normalMap ?? undefined,
-    normalScale: new Vector2(1.95, 1.95), // T092/T110/T169/T175 · grain microcontrast
+    normalScale: new Vector2(2.25, 2.25), // T092/T110/T169/T175/T181 · grain microcontrast
     roughnessMap: roughnessMap ?? undefined,
     roughness: Math.min(0.88, Math.max(0.55, token?.roughness ?? 0.78)),
     metalness: Math.min(0.12, token?.metalness ?? 0.06),
@@ -1630,7 +1630,7 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
     color: base,
     map: map ?? undefined,
     normalMap: normalMap ?? undefined,
-    normalScale: new Vector2(3.05, 3.05), // T083/T114/T120/T132/T169/T175/T177 · weave microcontrast
+    normalScale: new Vector2(3.35, 3.35), // T083/T114/T120/T132/T169/T175/T177/T181 · weave microcontrast
     roughnessMap: roughnessMap ?? undefined,
     roughness: Math.max(0.9, token?.roughness ?? 0.97),
     metalness: 0,

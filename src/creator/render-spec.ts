@@ -297,18 +297,19 @@ function baseDefault(kernelType: string | null | undefined): RenderSpec {
     },
     lighting: {
       // T061 · stronger sun / darker ground fill → readable specular + contact shadows
+      // T181 · shared base light microcontrast (hex + fallbacks; keep T161 upper-ink lighter)
       sun: {
-        azimuthDeg: 128,
-        elevationDeg: 52,
-        intensity: 3.45,
-        color: "#ffc890",
+        azimuthDeg: 124,
+        elevationDeg: 50,
+        intensity: 3.7,
+        color: "#ffbe78",
       },
-      hemisphere: { sky: "#f7efe4", ground: "#6b5a45", intensity: 0.88 },
-      shadow: { enabled: true, softness: 0.72 },
-      exposure: 1.16,
+      hemisphere: { sky: "#fff6ec", ground: "#5a4836", intensity: 0.96 },
+      shadow: { enabled: true, softness: 0.62 },
+      exposure: 1.26,
       // T086 · shared fill + rim layers
-      fill: { azimuthDeg: 308, elevationDeg: 32, intensity: 0.48, color: "#c5d6ef" },
-      rim: { azimuthDeg: 42, elevationDeg: 16, intensity: 0.36, color: "#ffe2b8" },
+      fill: { azimuthDeg: 310, elevationDeg: 34, intensity: 0.62, color: "#b8cef0" },
+      rim: { azimuthDeg: 40, elevationDeg: 18, intensity: 0.48, color: "#ffd4a0" },
     },
     water: {
       enabled: kernelType === "hex-settlement-v1" || kernelType === "harbor-voyage-v1",
@@ -368,17 +369,18 @@ const GENERIC_ENTITY_MESH: Record<typeof GAME_ENTITY_KINDS[number], RenderSpec["
 
 function applyKernelDefaults(render: RenderSpec, kernelType: string | null | undefined) {
   if (kernelType === "hex-settlement-v1") {
+    // T181 · shared hex terrain chroma/microcontrast (kernel family, not suite fork)
     Object.assign(render.materials, {
-      "terrain-wood": material("#2f7d4f", "grass", 0.7),
-      "terrain-brick": material("#b86b38", "stone", 0.78),
-      "terrain-sheep": material("#8fcf74", "grass", 0.68),
-      "terrain-wheat": material("#d8b348", "grass", 0.72),
-      "terrain-ore": material("#6f7680", "stone", 0.9),
-      "terrain-desert": material("#d9bd7a", "sand", 0.86),
-      cliff: material("#77716a", "stone", 0.9),
-      "number-token": material("#efe3c8", "none", 0.58),
-      piece: material("#f7f1e6", "none", 0.42, 0.08, 0.35), // T061
-      "fog-lantern": material("#f6c85f", "none", 0.32, 0.05, 0.35),
+      "terrain-wood": material("#268a48", "grass", 0.62),
+      "terrain-brick": material("#c46e32", "stone", 0.72),
+      "terrain-sheep": material("#7ed868", "grass", 0.58),
+      "terrain-wheat": material("#e6bc3a", "grass", 0.64),
+      "terrain-ore": material("#5e6874", "stone", 0.84),
+      "terrain-desert": material("#e4c686", "sand", 0.8),
+      cliff: material("#6e6860", "stone", 0.86),
+      "number-token": material("#f5e8d0", "none", 0.5),
+      piece: material("#fff6e8", "none", 0.34, 0.1, 0.42), // T061/T181
+      "fog-lantern": material("#ffd060", "none", 0.26, 0.06, 0.4),
     });
     render.bindings = [
       binding("tile-wood", "hex-prism", "terrain-wood"),
@@ -452,11 +454,12 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       fill: { azimuthDeg: 310, elevationDeg: 34, intensity: 0.68, color: "#b4ccef" },
       rim: { azimuthDeg: 40, elevationDeg: 18, intensity: 0.52, color: "#ffd4a0" },
       shadow: { enabled: true, softness: 0.58 },
-      exposure: 1.28,
+      exposure: 1.34, // T181
+
     };
     Object.assign(render.materials, {
       // T172/T177 · denser/brighter network map cloth (shared MaterialLibrary)
-      map: material("#0f9a48", "cloth", 0.98, 0, undefined, 0.78),
+      map: material("#0ca84c", "cloth", 0.98, 0, undefined, 0.86), // T177/T181
       table: material("#c08642", "grain", 0.72, 0.1), // T110/T177 · warmer exterior/rim
       ink: material("#2e3e4a", "none", 0.52, 0.1, 0.18),
       piece: material("#fff6e8", "none", 0.34, 0.1, 0.42),
@@ -483,11 +486,12 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       fill: { azimuthDeg: 312, elevationDeg: 36, intensity: 0.68, color: "#b8cef0" },
       rim: { azimuthDeg: 38, elevationDeg: 18, intensity: 0.52, color: "#ffd9a8" },
       shadow: { enabled: true, softness: 0.62 },
-      exposure: 1.32,
+      exposure: 1.36, // T181
+
     };
     Object.assign(render.materials, {
       // T175 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#0f9540", "cloth", 0.99, 0, undefined, 0.82),  // T044/T175 product green felt
+      board: material("#0c9e42", "cloth", 0.99, 0, undefined, 0.88),  // T044/T175/T181 product green felt
       table: material("#c08642", "grain", 0.66, 0.1), // T092/T110/T175 · warmer wood rim
       piece: material("#fff6e8", "none", 0.28, 0.12, 0.52),
       card: material("#fff1dc", "none", 0.36, 0.05, 0.38),
@@ -513,13 +517,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     ];
     if (kernelType === "auction-bidding-v1") {
       Object.assign(render.materials, {
-        board: material("#10953c", "cloth", 0.99, 0, undefined, 0.78),  // T044/T175 auction felt
+        board: material("#0c9a40", "cloth", 0.99, 0, undefined, 0.86),  // T044/T175/T181 auction felt
         card: material("#fffaf2", "none", 0.36, 0.05, 0.34), // T061/T175
       });
     }
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
-        board: material("#0f9542", "cloth", 0.99, 0, undefined, 0.80),  // T044/T175 pattern felt
+        board: material("#0c9e44", "cloth", 0.99, 0, undefined, 0.88),  // T044/T175/T181 pattern felt
         piece: material("#fafcff", "none", 0.28, 0.1, 0.5), // T061/T175
         slot: material("#3f3f46", "none", 0.82, 0.05, 0.12),  // legacy recessed slots
         // T054 · pale print plate under wall hue tints (square grid, not black pits)

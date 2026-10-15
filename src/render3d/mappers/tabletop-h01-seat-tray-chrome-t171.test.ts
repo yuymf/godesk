@@ -5,8 +5,8 @@ describe("T171 H01 tabletop-first / seat tray / legal-ring", () => {
   it("collapses chrome toward share ≥0.88 and softens legal rings", () => {
     const tw = readFileSync("src/creator/tidewell-game-screen.css", "utf8");
     expect(tw).toContain("T171");
-    expect(tw).toMatch(/--tw-side:\s*56px/);
-    expect(tw).toMatch(/--tw-dock:\s*22px/);
+    expect(tw).toMatch(/--tw-side:\s*48px/);
+    expect(tw).toMatch(/--tw-dock:\s*18px/);
     expect(tw).toMatch(/minmax\(88vh/);
     expect(tw).toContain("tidewell-dock");
     const hit = readFileSync("src/render3d/hit-targets.ts", "utf8");
