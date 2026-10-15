@@ -55,9 +55,11 @@ describe("G3D-07 materials", () => {
     const medium = createMaterial(GLOSSY_SEAT, { clearcoat: false });
     expect(medium).not.toBeInstanceOf(MeshPhysicalMaterial);
     expect(medium.roughness).toBeCloseTo(0.5);
-    // Round-6tex seats: matte wood, no clearcoat even on high tier.
-    const matte = createMaterial(seatMaterial(0), { clearcoat: true });
-    expect(matte).not.toBeInstanceOf(MeshPhysicalMaterial);
+    // T104 · T090 seatMaterial keeps light clearcoat for chroma on felt (not r6tex matte)
+    const seat = createMaterial(seatMaterial(0), { clearcoat: true });
+    expect(seat).toBeInstanceOf(MeshPhysicalMaterial);
+    expect((seat as MeshPhysicalMaterial).clearcoat).toBeCloseTo(0.35);
+    // terrain wood stays MeshStandard (no clearcoat token)
     expect(createMaterial(TERRAIN_MATERIALS.wood!, { clearcoat: true })).not.toBeInstanceOf(MeshPhysicalMaterial);
   });
 

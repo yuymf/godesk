@@ -140,7 +140,7 @@ export const PROP_MATERIALS = {
   ground: { base: "#d7e6c8", roughness: 0.9, metalness: 0, pattern: "cloth" },
 } satisfies Record<string, MaterialToken>;
 
-/** 座位棋子：roughness 0.82、clearcoat 0（r6tex 去塑料）（仅 high 档），pattern none，贴图彩漆木。 */
+/** 座位棋子：T090 轻 clearcoat（chroma on felt）；high 档 MeshPhysical；pattern none，贴图彩漆木。 */
 export function seatMaterial(seat: number): MaterialToken {
   return {
     base: SEAT_COLORS[seat] ?? "#ffffff",

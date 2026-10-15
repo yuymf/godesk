@@ -112,6 +112,72 @@ body:has(.room-view-tidewell-immersive) {
   }
 }
 
+/* T103 · seated side-rail content compact — cards readable at 168px without crush */
+.room-view-tidewell-immersive.room-view-seated .tidewell-player-list {
+  gap: 4px !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-player-card {
+  grid-template-columns: 40px minmax(0, 1fr) !important;
+  gap: 4px !important;
+  padding: 4px 5px !important;
+  border-radius: 8px !important;
+  align-items: center !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-player-avatar,
+.room-view-tidewell-immersive.room-view-seated .tidewell-medallion {
+  width: 36px !important;
+  height: 44px !important;
+  border-width: 2px !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-players .tidewell-panel-title,
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-column .tidewell-panel-title {
+  font-size: 10px !important;
+  padding: 2px 5px !important;
+  margin: 0 0 4px !important;
+  letter-spacing: 0.02em !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-players .hex-island-hud-awards {
+  display: none !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-player-meta {
+  min-width: 0 !important;
+  font-size: 11px !important;
+  line-height: 1.15 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1px !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-player-meta b,
+.room-view-tidewell-immersive.room-view-seated .tidewell-player-vp,
+.room-view-tidewell-immersive.room-view-seated .tidewell-player-stats {
+  font-size: 11px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-house-name {
+  font-size: 10px !important;
+  opacity: 0.85 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-badge {
+  font-size: 9px !important;
+  padding: 1px 4px !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-column .tidewell-turn-card {
+  padding: 4px 5px !important;
+  font-size: 11px !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-players,
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-column {
+  gap: 4px !important;
+  overflow: hidden !important;
+}
+
+
 .room-view-tidewell-immersive.room-view-seated > .action-log.room-action-log-drawer {
   /* keep drawer in DOM for collapsed default; float so it is reachable without stealing stage */
   display: block !important;
