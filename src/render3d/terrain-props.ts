@@ -71,19 +71,20 @@ export const PROP_COUNTS: Record<RenderTierId, Record<string, Counts>> = {
     wood: { pineTall: 22, pineRound: 10, pineSmall: 24, blobshadow: 44 },
     // R20: 8 sheep in 2 clumps (3–5 each) — see SHEEP_CLUMPS.
     sheep: { trough: 1, sheep: 8, blobshadow: 1 },
-    ore: { boulder: 4, pebble: 8, blobshadow: 4 },
-    brick: { clay: 8, bricks: 4 },
+    ore: { boulder: 5, pebble: 14, blobshadow: 5 },
+    brick: { clay: 12, bricks: 7 },
     // R23: continuous golden ground field — no readable wheatrow props (texture + undulating colour noise carries the wave).
     wheat: {},
-    desert: { dune: 5, pebble: 9 },
+    // T088 · denser desert empty-face dressing (shared PROP_COUNTS; no 汐屿 pack)
+    desert: { dune: 9, pebble: 18 },
   },
   medium: {
     wood: { pineTall: 14, pineRound: 7, pineSmall: 16, blobshadow: 30 },
     sheep: { trough: 1, sheep: 6, blobshadow: 1 },
-    ore: { boulder: 3, pebble: 5, blobshadow: 3 },
-    brick: { clay: 5, bricks: 3 },
+    ore: { boulder: 4, pebble: 9, blobshadow: 4 },
+    brick: { clay: 8, bricks: 5 },
     wheat: {},
-    desert: { dune: 3, pebble: 5 },
+    desert: { dune: 6, pebble: 12 },
   },
   // R20: phone power-save keeps a few short trees on forest hexes (2 instanced meshes, no shadows)
   // so wood never reads as bare brown ground; every other terrain stays prop-free.
@@ -873,6 +874,61 @@ function placeSheepClumps(
   }
 }
 
+/**
+ * T088 · shared shore-ring dressing: procedural pebble/boulder/pineSmall in empty
+ * areas outside hex tiles (same prop vocabulary as on-tile props — NOT 汐屿 pack).
+ */
+export function placeShoreDressing(
+  tiles: readonly PropTile[],
+  tier: RenderTierId,
+): PropPlacement[] {
+  if (tier === "low" || tiles.length === 0) return [];
+  const want = tier === "high" ? 32 : 20;
+  const centers = tiles.map((t) => ({ x: t.center[0], z: t.center[2] }));
+  const reach = centers.reduce((m, t) => Math.max(m, Math.hypot(t.x, t.z)), 0) + 1.0;
+  const hexR = 1.0;
+  const out: PropPlacement[] = [];
+  const kinds: PropKind[] = ["pebble", "boulder", "pineSmall", "pebble", "dune"];
+  const free = (x: number, z: number, s: number) =>
+    centers.every((c) => Math.hypot(c.x - x, c.z - z) >= hexR + s * 0.35) &&
+    out.every((o) => Math.hypot(o.x - x, o.z - z) >= 0.28);
+  const candidates: Array<{ x: number; z: number }> = [];
+  for (const extra of [0.15, 0.45, 0.85, 1.25]) {
+    for (let deg = 0; deg < 360; deg += 8) {
+      const a = (deg * Math.PI) / 180;
+      candidates.push({
+        x: Math.cos(a) * (reach + extra - hexR * 0.35),
+        z: Math.sin(a) * (reach + extra - hexR * 0.35),
+      });
+    }
+  }
+  // Deterministic shuffle by angle hash
+  candidates.sort((a, b) => {
+    const ha = Math.sin(a.x * 12.9898 + a.z * 78.233) * 43758.5453;
+    const hb = Math.sin(b.x * 12.9898 + b.z * 78.233) * 43758.5453;
+    return (ha - Math.floor(ha)) - (hb - Math.floor(hb));
+  });
+  for (const c of candidates) {
+    if (out.length >= want) break;
+    const kind = kinds[out.length % kinds.length]!;
+    const scale = kind === "pineSmall" ? 0.55 + (out.length % 5) * 0.04 : 0.7 + (out.length % 4) * 0.06;
+    if (!free(c.x, c.z, scale)) continue;
+    out.push({
+      kind,
+      terrain: "shore",
+      x: c.x,
+      y: kind === "pineSmall" ? -0.02 : -0.01,
+      z: c.z,
+      yaw: (out.length * 1.7) % (Math.PI * 2),
+      scale,
+      stretch: 1,
+      tone: 0.5,
+      hue: 0,
+    });
+  }
+  return out;
+}
+
 export function layoutProps(tiles: readonly PropTile[], tier: RenderTierId): Map<PropKind, PropPlacement[]> {
   const byKind = new Map<PropKind, PropPlacement[]>();
   for (const tile of tiles) {
@@ -883,6 +939,12 @@ export function layoutProps(tiles: readonly PropTile[], tier: RenderTierId): Map
       arr.push(p);
       byKind.set(p.kind, arr);
     }
+  }
+  // T088 · empty-area density via shared shore dressing
+  for (const p of placeShoreDressing(tiles, tier)) {
+    const arr = byKind.get(p.kind) ?? [];
+    arr.push(p);
+    byKind.set(p.kind, arr);
   }
   return byKind;
 }
