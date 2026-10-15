@@ -14,10 +14,10 @@ describe("T183 H01 soft residual → shared hard pixel", () => {
 
   it("bumps shared seat tray, water, and felt weave", () => {
     const pieces = readFileSync("src/render3d/assets/pieces.ts", "utf8");
-    expect(pieces).toMatch(/MEEPLE_HEX_SCALE = 1\.48/);
+    expect(pieces).toMatch(/MEEPLE_HEX_SCALE = 1\.55/);
     const water = readFileSync("src/render3d/water/mesh.ts", "utf8");
     expect(water).toMatch(/#18d4c8/);
     const objs = readFileSync("src/render3d/tabletop-objects.ts", "utf8");
-    expect(objs).toMatch(/Vector2\(3\.55,\s*3\.55\)/);
+    expect(objs).toMatch(/Vector2\(4\.05,\s*4\.05\)/);
   });
 });

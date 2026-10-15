@@ -107,7 +107,7 @@ export const HEX_ISLAND_LIGHTING = {
   shadow: { enabled: true, softness: 0.88 },
   exposure: 1.38,
   fill: { azimuthDeg: 310, elevationDeg: 34, intensity: 0.66, color: "#d4e0f0" },
-  rim: { azimuthDeg: 38, elevationDeg: 18, intensity: 1.28, color: "#ffe8b8" },
+  rim: { azimuthDeg: 38, elevationDeg: 18, intensity: 1.36, color: "#ffecc0" }, // T190
 } as const satisfies LightingSpec;
 
 /** R19：AI 贴图（虹夏 8 张；R20 起经 scripts/bake-ai-r20.py 色块化 + Kuwahara 绘本化后烘焙）为 t01–t06 baseColor；base 提亮去饱和、pbrTint 让贴图色相主导；

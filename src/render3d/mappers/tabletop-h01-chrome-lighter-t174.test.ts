@@ -5,8 +5,8 @@ describe("T174 H01 chrome lighter / legal-ring", () => {
   it("narrows translucent rails/dock without dropping 88vh stage", () => {
     const tw = readFileSync("src/creator/tidewell-game-screen.css", "utf8");
     expect(tw).toContain("T174");
-    expect(tw).toMatch(/--tw-side:\s*40px/);
-    expect(tw).toMatch(/--tw-dock:\s*14px/);
+    expect(tw).toMatch(/--tw-side:\s*28px/);
+    expect(tw).toMatch(/--tw-dock:\s*10px/);
     expect(tw).toMatch(/minmax\(88vh/);
     const hit = readFileSync("src/render3d/hit-targets.ts", "utf8");
     expect(hit).toContain("T174");

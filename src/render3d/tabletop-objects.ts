@@ -1199,12 +1199,12 @@ function softContactShadow(
     mesh.renderOrder = -1;
     return mesh;
   };
-  group.add(mk(1.68, opacity, 0.0008, "contact-shadow")); // T142/T145/T175 core
+  group.add(mk(1.78, opacity, 0.0008, "contact-shadow")); // T142/T145/T175/T190 core
   // T153–T158/T161/T169 · softer falloff; T161 dark-clamp; T169 micro-soften (no radial blot)
-  // T175 · shared contact microcontrast for H03–H05 hard pixel (keep T161 mid clamp)
-  group.add(mk(2.55, Math.min(0.20, opacity * 0.30), 0.0005)); // soft mid · T161/T175 lighter
-  group.add(mk(3.95, Math.min(0.20, opacity * 0.29), 0.0003)); // soft outer · T169/T175/T181
-  group.add(mk(5.80, Math.min(0.155, opacity * 0.22), 0.0002)); // wide soft veil · T175/T181 mean
+  // T175/T190 · shared contact microcontrast (keep T161 mid clamp)
+  group.add(mk(2.70, Math.min(0.22, opacity * 0.34), 0.0005)); // soft mid · T161/T175/T190
+  group.add(mk(4.15, Math.min(0.22, opacity * 0.32), 0.0003)); // soft outer · T169/T175/T190
+  group.add(mk(6.10, Math.min(0.17, opacity * 0.25), 0.0002)); // wide soft veil · T175/T190 mean
   return group;
 }
 
@@ -1585,7 +1585,7 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
           const hy = height[((y + 1) % H) * W + x]!;
           const dx = (h0 - hx) * 14;
           const dy = (h0 - hy) * 14;
-          const shade = (h0 - 0.5) * 160; // T083/T114/T120/T132 · wide-stage albedo amplitude
+          const shade = (h0 - 0.5) * 188; // T083…T132/T190 · wide-stage albedo amplitude
           const o = i * 4;
           aImg.data[o] = Math.max(0, Math.min(255, br + shade));
           aImg.data[o + 1] = Math.max(0, Math.min(255, bg + shade));
@@ -1623,14 +1623,14 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
   for (const tex of [map, normalMap, roughnessMap]) {
     if (!tex) continue;
     tex.wrapS = tex.wrapT = RepeatWrapping;
-    tex.repeat.set(2.0, 2.0); // T083/T114/T120/T132 · weave cells at stage-wide
+    tex.repeat.set(2.25, 2.25); // T083…T132/T190 · weave cells at stage-wide
   }
   if (map) map.colorSpace = SRGBColorSpace;
   const mat = new MeshStandardMaterial({
     color: base,
     map: map ?? undefined,
     normalMap: normalMap ?? undefined,
-    normalScale: new Vector2(3.55, 3.55), // T083/T114/T120/T132/T169/T175/T177/T181/T183 · weave microcontrast
+    normalScale: new Vector2(4.05, 4.05), // T083…T183/T190 · weave microcontrast
     roughnessMap: roughnessMap ?? undefined,
     roughness: Math.max(0.9, token?.roughness ?? 0.97),
     metalness: 0,
@@ -1911,12 +1911,12 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
       metalness: 0.04,
     });
     const lipMat = new MeshStandardMaterial({
-      color: "#f0d4a0", // T163/T169 · crown lip microcontrast vs felt
+      color: "#f6dfa8", // T163/T169/T190 · crown lip microcontrast vs felt
       roughness: 0.44,
       metalness: 0.12,
     });
     const filletMat = new MeshStandardMaterial({
-      color: "#d4a84a", // T163 · inner gold fillet toward felt
+      color: "#e0b450", // T163/T190 · inner gold fillet toward felt
       roughness: 0.45,
       metalness: 0.18,
     });

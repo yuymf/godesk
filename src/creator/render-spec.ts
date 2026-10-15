@@ -380,7 +380,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       "terrain-desert": material("#f0d090", "sand", 0.72),
       cliff: material("#5e5850", "stone", 0.8),
       "number-token": material("#fff0d8", "none", 0.42),
-      piece: material("#fffaf0", "none", 0.28, 0.12, 0.48), // T061/T181/T183
+      piece: material("#fffaf0", "none", 0.26, 0.14, 0.55), // T061/T181/T183/T190
       "fog-lantern": material("#ffe070", "none", 0.2, 0.08, 0.48),
     });
     // T183 · shared hex lighting lift (kernel family)
@@ -510,8 +510,8 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T175 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#0c9e42", "cloth", 0.99, 0, undefined, 0.88),  // T044/T175/T181 product green felt
-      table: material("#c08642", "grain", 0.66, 0.1), // T092/T110/T175 · warmer wood rim
+      board: material("#0aa844", "cloth", 0.99, 0, undefined, 0.92),  // T044/T175/T181/T190 product green felt
+      table: material("#cc9048", "grain", 0.62, 0.12), // T092/T110/T175/T190 · warmer wood rim
       piece: material("#fff6e8", "none", 0.28, 0.12, 0.52),
       card: material("#fff1dc", "none", 0.36, 0.05, 0.38),
       resource: material("#f5e6c4", "none", 0.16, 0.32, 0.88),
@@ -536,13 +536,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     ];
     if (kernelType === "auction-bidding-v1") {
       Object.assign(render.materials, {
-        board: material("#0c9a40", "cloth", 0.99, 0, undefined, 0.86),  // T044/T175/T181 auction felt
+        board: material("#0aa640", "cloth", 0.99, 0, undefined, 0.90),  // T044/T175/T181/T190 auction felt
         card: material("#fffaf2", "none", 0.36, 0.05, 0.34), // T061/T175
       });
     }
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
-        board: material("#0c9e44", "cloth", 0.99, 0, undefined, 0.88),  // T044/T175/T181 pattern felt
+        board: material("#0aaa46", "cloth", 0.99, 0, undefined, 0.92),  // T044/T175/T181/T190 pattern felt
         piece: material("#fafcff", "none", 0.28, 0.1, 0.5), // T061/T175
         slot: material("#3f3f46", "none", 0.82, 0.05, 0.12),  // legacy recessed slots
         // T054 · pale print plate under wall hue tints (square grid, not black pits)

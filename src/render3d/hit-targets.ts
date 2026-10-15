@@ -13,7 +13,7 @@ import type { PickableLegalAction } from "./pick";
 const WORLD_SCALE = 0.01;
 const _dummy = new Object3D();
 
-let RING_GEOM_SETTLE = new TorusGeometry(0.2, 0.012, 8, 20); // T171/T174/T178 thinner
+let RING_GEOM_SETTLE = new TorusGeometry(0.2, 0.016, 8, 18); // T171/T174/T178/T189 thinner
 RING_GEOM_SETTLE.rotateX(Math.PI / 2);
 let RING_GEOM_CITY = new TorusGeometry(0.26, 0.022, 8, 20); // T171 thinner
 RING_GEOM_CITY.rotateX(Math.PI / 2);
@@ -120,22 +120,22 @@ function packInstances(
 
 function rebuildHitMaterials(): void {
   // T171 · legal-ring density/opacity down (shared overlay; less yellow clutter)
-  // T174/T178 · legal-ring 再降密/降亮（共享 hit overlay）
+  // T174/T178/T189 · legal-ring 再降密/降亮（共享 hit overlay）
   RING_MAT = new MeshStandardMaterial({
     color: 0xffe066,
     emissive: 0xffc107,
-    emissiveIntensity: 0.12,
+    emissiveIntensity: 0.07,
     transparent: true,
-    opacity: 0.18,
-    roughness: 0.68,
+    opacity: 0.11,
+    roughness: 0.72,
   });
   RING_MAT.userData.gdShared = true;
   ROAD_HIT_MAT = new MeshStandardMaterial({
     color: 0xffe066,
     emissive: 0xffc107,
-    emissiveIntensity: 0.10,
+    emissiveIntensity: 0.06,
     transparent: true,
-    opacity: 0.15,
+    opacity: 0.09,
   });
   ROAD_HIT_MAT.userData.gdShared = true;
   ROBBER_HIT_MAT = new MeshStandardMaterial({
@@ -157,7 +157,7 @@ export function disposeSharedHitResources(): void {
   RING_MAT.dispose();
   ROAD_HIT_MAT.dispose();
   ROBBER_HIT_MAT.dispose();
-  RING_GEOM_SETTLE = new TorusGeometry(0.2, 0.022, 8, 20); // T171 thinner
+  RING_GEOM_SETTLE = new TorusGeometry(0.2, 0.016, 8, 18); // T189 thinner
   RING_GEOM_SETTLE.rotateX(Math.PI / 2);
   RING_GEOM_CITY = new TorusGeometry(0.26, 0.022, 8, 20); // T171 thinner
   RING_GEOM_CITY.rotateX(Math.PI / 2);
