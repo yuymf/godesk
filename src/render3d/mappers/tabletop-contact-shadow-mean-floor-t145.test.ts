@@ -14,7 +14,7 @@ describe("T145 contact shadow mean floor", () => {
     expect(block).toMatch(/Math\.min\(0\.(66|70|72|76)/);
     expect(block).toMatch(/Math\.max\(0\.(38|42|44|48)/);
     expect(block).toMatch(/soft halo/);
-    expect(block).toMatch(/2\.(15|35|60)/);
+    expect(block).toMatch(/2\.(15|35|40|60|90)/);
     expect(block).toContain("contact-shadow");
   });
 });

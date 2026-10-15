@@ -1153,6 +1153,7 @@ function softContactShadow(
   // T142 · H02 stage-wide residual: larger shared footprint (keep T139 opacity floors)
   // T145 · mean floor: higher opacity + soft outer halo (keep T106 boost clamp / T142 ge20)
   // T150 · H03/H04 mean: larger soft halo + card/tile footprints (keep H02/T145 floors)
+  // T153 · halo softness: gentler opacity falloff on outer rings (keep core / T106 clamp)
   const area = Math.max(0.04, rx * rz);
   const autoBoost =
     opts?.boost ??
@@ -1185,8 +1186,10 @@ function softContactShadow(
     return mesh;
   };
   group.add(mk(1.60, opacity, 0.0008, "contact-shadow")); // T142/T145 core
-  group.add(mk(2.60, Math.min(0.48, opacity * 0.70), 0.0003)); // T150 soft halo → mean
-  group.add(mk(3.10, Math.min(0.22, opacity * 0.32), 0.0002)); // T150 outer veil
+  // T153 · softer stepped falloff vs T150 hard 0.70/0.32 mid (keep core / T106 clamp)
+  group.add(mk(2.35, Math.min(0.28, opacity * 0.40), 0.0005)); // soft mid (lighter than T150)
+  group.add(mk(3.20, Math.min(0.24, opacity * 0.32), 0.0003)); // soft outer spread
+  group.add(mk(4.20, Math.min(0.13, opacity * 0.19), 0.0002)); // wide soft veil → mean
   return group;
 }
 
@@ -1738,7 +1741,12 @@ function proceduralLotCanvas(schema: { title: string; prestige?: number; bid?: n
   // T144 · wide ink floor — denser dark plate + ink wash (keep T141 ge20 / T134 counts)
   // T147 · close ink balance — softer mid hatch/wash; keep wide band washes + rim
   // T148 · close calm — no mid hatch; quieter secondary; keep wide bands + rim
+  // T151 · absolute close calm — strong mid lift (drop close absolute ink); keep wide edge ink
+  // NOTE: do not thin mid masses with low alpha over dark base — that raises absolute ink.
   g.fillStyle = pal[0]!;
+  g.fillRect(0, 0, W, H);
+  // lighten base plate before masses (shared absolute calm)
+  g.fillStyle = "rgba(255,250,240,0.34)";
   g.fillRect(0, 0, W, H);
   g.fillStyle = pal[1]!;
   g.fillRect(0, 0, W * 0.62, H * 0.78);
@@ -1752,41 +1760,43 @@ function proceduralLotCanvas(schema: { title: string; prestige?: number; bid?: n
   g.lineTo(W * 0.22, H * 0.38);
   g.closePath();
   g.fill();
-  // secondary blocks — quieter for close
-  g.fillStyle = pal[1]!;
+  // secondary — cream lift (vs dark pal blocks on tip)
+  g.fillStyle = "rgba(255,248,235,0.55)";
   g.fillRect(W * 0.05, H * 0.44, W * 0.30, H * 0.24);
-  g.fillStyle = pal[3]!;
+  g.fillStyle = "rgba(255,248,235,0.48)";
   g.fillRect(W * 0.58, H * 0.48, W * 0.30, H * 0.20);
-  // ink wash: strong wide bands only (no mid fill — T148 close calm)
+  // T151 · strong mid-face luminance lift (close crop center)
+  g.fillStyle = "rgba(255,252,245,0.72)";
+  g.fillRect(W * 0.08, H * 0.14, W * 0.84, H * 0.58);
+  // wide-only ink bands (edges; protect wide mean/ge20)
+  g.fillStyle = "rgba(15,23,42,0.62)";
+  g.fillRect(0, 0, W, H * 0.22);
   g.fillStyle = "rgba(15,23,42,0.58)";
-  g.fillRect(0, 0, W, H * 0.24);
-  g.fillStyle = "rgba(15,23,42,0.54)";
-  g.fillRect(0, H * 0.70, W, H * 0.30);
-  // thin side bars for wide mean without mid clutter
-  g.fillStyle = "rgba(15,23,42,0.30)";
-  g.fillRect(0, H * 0.24, W * 0.08, H * 0.46);
-  g.fillRect(W * 0.92, H * 0.24, W * 0.08, H * 0.46);
-  // dual rim (wide separation)
-  g.strokeStyle = "rgba(15,23,42,0.98)";
-  g.lineWidth = 16;
-  g.strokeRect(2, 2, W - 4, H - 4);
-  g.strokeStyle = "rgba(253,230,138,0.80)";
+  g.fillRect(0, H * 0.74, W, H * 0.26);
+  g.fillStyle = "rgba(15,23,42,0.32)";
+  g.fillRect(0, H * 0.22, W * 0.08, H * 0.52);
+  g.fillRect(W * 0.92, H * 0.22, W * 0.08, H * 0.52);
+  // dual rim
+  g.strokeStyle = "rgba(15,23,42,0.72)";
+  g.lineWidth = 10;
+  g.strokeRect(3, 3, W - 6, H - 6); // T151 lighter rim
+  g.strokeStyle = "rgba(253,230,138,0.76)";
   g.lineWidth = 4;
   g.strokeRect(14, 14, W - 28, H - 28);
   g.globalAlpha = 1;
-  // Title plate — calmer close
-  g.fillStyle = "rgba(15,23,42,0.88)";
-  g.fillRect(10, H - 72, W - 20, 60);
+  // Title plate — light absolute ink (was 0.88 on tip)
+  g.fillStyle = "rgba(15,23,42,0.28)";
+  g.fillRect(12, H - 56, W - 24, 44);
   g.fillStyle = "#ffffff";
-  g.font = "bold 26px system-ui,sans-serif";
+  g.font = "bold 22px system-ui,sans-serif";
   g.textAlign = "left";
-  g.fillText((schema.title || "拍品").slice(0, 10), 20, H - 38);
-  g.font = "bold 16px system-ui,sans-serif";
+  g.fillText((schema.title || "拍品").slice(0, 10), 22, H - 30);
+  g.font = "bold 14px system-ui,sans-serif";
   g.fillStyle = "#fde68a";
   const bits: string[] = [];
   if (schema.prestige != null) bits.push(`底 ${schema.prestige}`);
   if (schema.bid != null && schema.bid > 0) bits.push(`价 ${schema.bid}`);
-  g.fillText(bits.join(" · ") || "画廊拍品", 20, H - 14);
+  g.fillText(bits.join(" · ") || "画廊拍品", 22, H - 12);
   return canvas;
 }
 
@@ -1795,7 +1805,7 @@ function framedArtWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3
   // Wood frame (outer)
   const frame = new Mesh(
     translated(new BoxGeometry(0.95, 0.08, 1.2), 0.04),
-    new MeshStandardMaterial({ color: "#4a2c14", roughness: 0.78, metalness: 0.05 }), // T137
+    new MeshStandardMaterial({ color: "#8a6238", roughness: 0.78, metalness: 0.05 }), // T137/T151 close absolute calm
   );
   frame.castShadow = true;
   frame.receiveShadow = true;
@@ -1828,7 +1838,7 @@ function framedArtWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3
   art.position.set(0, 0.09, 0);
   art.renderOrder = 2;
   group.add(art);
-  group.add(softContactShadow(0.82, 1.02)); // T139/T142
+  group.add(softContactShadow(0.82, 1.02, { opacity: 0.28, boost: 0.72 })); // T139/T142/T151 close absolute calm
   return group;
 }
 
@@ -1907,11 +1917,11 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = meepleFigure(node, ctx);
   } else if (mesh === "card") {
     object = cardWithFace(node, ctx);
-    (object as Group).add(softContactShadow(0.68, 0.88, { opacity: 0.58 })); // T096/T106/T150 card footprint
+    (object as Group).add(softContactShadow(0.78, 1.02, { opacity: 0.48 })); // T096/T106/T150/T153 card soft footprint
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
     // T081 · larger local blob so small tiles still ground at H02/H03 visibility
-    (object as Group).add(softContactShadow(0.58, 0.58, { opacity: 0.52, boost: 0.90 })); // T081/T106/T150 tile
+    (object as Group).add(softContactShadow(0.70, 0.70, { opacity: 0.44, boost: 0.90 })); // T081/T106/T150/T153 tile soft
   } else if (mesh === "plaque") {
     object = plaqueWithFace(node, ctx);
     (object as Group).add(softContactShadow(0.78, 0.62, { opacity: 0.58 })); // T106/T150 plaque

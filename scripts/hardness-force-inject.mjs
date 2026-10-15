@@ -398,8 +398,8 @@ export async function waitRoomCanvasReady(page, { timeoutMs = 20000 } = {}) {
  */
 export async function runHexForceWithBudget(page, tokens, opts = {}) {
   // T143 · sub-40s: canvas ready outside force clock
-  // T146/T149 · chainSetup intents; default budget 10s
-  const budgetMs = opts.budgetMs ?? 10000;
+  // T146/T149/T152 · chainSetup intents; default budget 5s
+  const budgetMs = opts.budgetMs ?? 5000;
   await waitRoomCanvasReady(page, { timeoutMs: Math.min(12000, budgetMs) });
   const started = Date.now();
   const remaining = () => Math.max(1000, budgetMs - (Date.now() - started));
@@ -572,6 +572,26 @@ export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, min
       }
       if (r.state) st = r.state;
       else st = await get();
+      // T152 · chainSetup may already finish seat-0 setup in one RTT
+      {
+        const hi2 = st?.hexIsland;
+        const p0b = hi2?.players?.[0];
+        const s0 = (p0b?.settlements || []).length;
+        const r0 = (p0b?.roads || []).length;
+        if (s0 >= minSettlements && r0 >= minRoads) {
+          return {
+            ok: true,
+            settlements: [...p0b.settlements],
+            roads: [...p0b.roads],
+            steps: step + 1,
+            phase: hi2.phase,
+            log,
+            viaLegal,
+            via: "listLegalActions",
+            chained: r.chained ?? 0,
+          };
+        }
+      }
       // T143 · pipe next legal from intent (listLegalActions on server)
       if (Array.isArray(r.nextLegalActions) && r.nextLegalSeat != null) {
         pipedLegal = { seat: r.nextLegalSeat, actions: r.nextLegalActions };

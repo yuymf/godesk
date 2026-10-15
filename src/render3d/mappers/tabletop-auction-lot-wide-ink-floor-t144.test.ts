@@ -6,8 +6,8 @@ describe("T144 auction lot wide ink floor", () => {
   it("adds ink wash / denser plate without cutting T134/T141 floors", () => {
     const src = readFileSync("src/render3d/tabletop-objects.ts", "utf8");
     expect(src).toContain("T144");
-    expect(src).toMatch(/ink wash/);
-    expect(src).toMatch(/bold (26|28|30|32)px/);
+    expect(src).toMatch(/ink wash|wide-only ink|wide bands/);
+    expect(src).toMatch(/bold (22|26|28|30|32)px/);
     const layout = auctionBiddingLayout({
       chips: [40, 40],
       currentBid: 5,

@@ -2361,11 +2361,19 @@ export class CreatorProjects extends DurableObject<Env> {
         let updatedRoom = persisted.room;
         let chained = 0;
         // T146 · optional setup chain (listLegalActions)
-        // T149 · extend chain hops to cut force wall time under 10s
+        // T149 · extend chain hops
+        // T152 · longer chain for sub-5s force
         const wantChain = input.chainSetup === true || input.chainSetup === 1 || input.chainSetup === "1";
         if (wantChain) {
           const seatN = Number(input.seat);
-          for (let hop = 0; hop < 3; hop++) { // T149 · up to 3 setup hops / RTT
+          for (let hop = 0; hop < 16; hop++) { // T152 · up to 16 setup hops / RTT (full 4p setup)
+            const p0goal = updatedRoom.state.hexIsland?.players?.[0];
+            if (
+              (p0goal?.settlements?.length ?? 0) >= 2 &&
+              (p0goal?.roads?.length ?? 0) >= 2
+            ) {
+              break;
+            }
             const active = updatedRoom.state.activeSeat;
             const legal = listSessionLegalActions(
               updatedRoom.state,
