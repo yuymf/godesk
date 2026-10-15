@@ -162,9 +162,10 @@ function meepleFigure(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   collar.position.set(0, 0.54, -0.12);
   group.add(collar);
   // T090 · cream rim disc under meeple — stage-wide silhouette on green felt
+  // T116 · dim rim albedo (was #f8f1e3) so base disc does not blow out; keep T090/T106.
   const rimMat = new MeshStandardMaterial({
-    color: "#f8f1e3",
-    roughness: 0.85,
+    color: "#a89478",
+    roughness: 0.95,
     metalness: 0,
   });
   const rim = new Mesh(new CylinderGeometry(0.22, 0.24, 0.035, 16), rimMat);
@@ -313,6 +314,38 @@ function glazedTileGeom(): Geometry {
   return geom;
 }
 
+
+/** T115 · shared opaque name-plaque face (station + framed plaque title band). */
+function paintSharedOpaquePlaqueFace(
+  g: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  opts: { title: string; hub?: boolean },
+): void {
+  // Parchment/amber fill aligned with plaqueWithFace albedo family.
+  g.fillStyle = opts.hub ? "#f59e0b" : "#f3e7d3";
+  g.fillRect(0, 0, W, H);
+  // Outer dark wood frame + inner gold line (plaqueWithFace contrast recipe).
+  g.strokeStyle = "#3f2a14";
+  g.lineWidth = Math.max(10, Math.round(H * 0.12));
+  g.strokeRect(4, 4, W - 8, H - 8);
+  g.strokeStyle = "#a16207";
+  g.lineWidth = Math.max(3, Math.round(H * 0.04));
+  g.strokeRect(14, 14, W - 28, H - 28);
+  const title = opts.title.slice(0, 8);
+  const cx = W / 2;
+  const cy = H / 2 + 2;
+  g.font = `700 ${Math.round(H * 0.55)}px "Noto Serif CJK SC","Songti SC",serif`;
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  // Halo then ink — stage-wide readability without enlarging layout length rules.
+  g.lineWidth = Math.max(4, Math.round(H * 0.06));
+  g.strokeStyle = opts.hub ? "rgba(120,53,15,0.85)" : "rgba(250,246,239,0.95)";
+  g.strokeText(title, cx, cy);
+  g.fillStyle = "#0f172a";
+  g.fillText(title, cx, cy);
+}
+
 /** T034/T037 · framed plaque: title + requirement dots (no raw ids). */
 function plaqueWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const group = new Group();
@@ -360,10 +393,14 @@ function plaqueWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
         g.textBaseline = "middle";
         g.fillText(String(prestige), W - 52, 52);
       }
-      g.fillStyle = "#1f2937";
+      // T115 · shared plaque title ink+halo (same family as station plaques)
       g.font = '700 34px "Noto Serif CJK SC","Songti SC",serif';
       g.textAlign = "center";
       g.textBaseline = "middle";
+      g.lineWidth = 5;
+      g.strokeStyle = "rgba(250,246,239,0.95)";
+      g.strokeText(title.slice(0, 8), W / 2, 108);
+      g.fillStyle = "#0f172a";
       g.fillText(title.slice(0, 8), W / 2, 108);
       // requirement dots
       const entries = Object.entries(reqs).filter(([, n]) => n > 0);
@@ -975,6 +1012,7 @@ function station(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     group.add(chimney, tower, cap);
   }
   // T051 · large opaque station/hub name plaque (shared; not faint floating mush).
+  // T115 · contrast via shared opaque plaque face (length/truncation rules unchanged).
   if (stationName && typeof document !== "undefined") {
     const canvas = document.createElement("canvas");
     const W = Math.max(220, stationName.length * 52 + 64);
@@ -983,21 +1021,12 @@ function station(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     canvas.height = H;
     const g = canvas.getContext("2d");
     if (g) {
-      g.fillStyle = isHub ? "#fbbf24" : "#fff7ed";
-      g.fillRect(0, 0, W, H);
-      g.strokeStyle = "#5b3a1a";
-      g.lineWidth = 8;
-      g.strokeRect(4, 4, W - 8, H - 8);
-      g.fillStyle = "#111827";
-      g.font = '700 48px "Noto Serif CJK SC","Songti SC",serif';
-      g.textAlign = "center";
-      g.textBaseline = "middle";
-      g.fillText(stationName.slice(0, 8), W / 2, H / 2 + 2);
+      paintSharedOpaquePlaqueFace(g, W, H, { title: stationName, hub: isHub });
       const tex = new CanvasTexture(canvas);
       tex.colorSpace = SRGBColorSpace;
       tex.anisotropy = 4;
       const pw = Math.min(1.15, 0.42 + stationName.length * 0.14);
-      const plane = new PlaneGeometry(pw, 0.32);
+      const plane = new PlaneGeometry(pw, 0.36);
       plane.rotateX(-Math.PI / 2);
       const plate = new Mesh(plane, new MeshBasicMaterial({ map: tex, toneMapped: false }));
       plate.position.set(0, 0.14, 0.55);
