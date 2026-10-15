@@ -5,7 +5,7 @@
 | 回归靶 | H05 stage-wide/close；press T087 H05 soft；purge；不回退 T075 |
 | 层 | **共享呈现 / auction layout** |
 | 状态 | **证据齐，待主管裁** |
-| tip | `53e7de6` |
+| tip | `9290448` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t089/` |
 
 ## 问题

@@ -6111,6 +6111,39 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   display: none;
 }
 
+
+/* T091 · hex immersive seated share/seat chrome parity with tabletop shareReady */
+.room-view-hex-island.room-view-seated .room-invitation-rich.is-collapsed {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  padding: 0.35rem 0.75rem;
+  align-items: center;
+}
+.room-view-hex-island.room-view-seated .room-invitation-rich.is-collapsed .invitation-heading,
+.room-view-hex-island.room-view-seated .room-invitation-rich.is-collapsed .seat-rail-label,
+.room-view-hex-island.room-view-seated .room-invitation-rich.is-collapsed .seat-picker-fallback {
+  display: none;
+}
+.room-view-hex-island.room-view-seated .room-invitation-rich.is-collapsed .invitation-link-row label span {
+  display: none;
+}
+.room-view-hex-island.room-view-seated .room-invitation-rich.is-collapsed .seat-chip small {
+  display: none;
+}
+.room-view-hex-island.room-view-seated .room-invitation-rich.room-share-chrome .invite-url.is-share-ready {
+  color: color-mix(in srgb, var(--ink, #1c1917) 72%, transparent);
+  font-size: 0.85rem;
+  letter-spacing: 0.01em;
+}
+.room-view-hex-island.room-view-seated .room-shell-header.is-share-chrome .room-header-actions a[href*="settings"] {
+  display: none;
+}
+@media (max-width: 767px) {
+  .room-view-hex-island.room-view-seated .room-invitation-rich.is-collapsed.room-share-chrome {
+    display: grid;
+  }
+}
+
 /* T080 · shareable Room production chrome: no address-bar localhost dump; feedback off-table. */
 .room-view-tabletop-immersive.room-view-seated .room-invitation-rich.room-share-chrome .invite-url.is-share-ready {
   color: color-mix(in srgb, var(--ink, #1c1917) 72%, transparent);

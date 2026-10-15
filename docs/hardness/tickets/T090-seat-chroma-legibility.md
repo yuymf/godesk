@@ -5,7 +5,7 @@
 | 回归靶 | H02+H03+H04 seat/chroma；purge clean |
 | 层 | **共享呈现 / SEAT_COLORS** |
 | 状态 | **证据齐，待主管裁** |
-| tip | `2f2755f` |
+| tip | `ce0dad2` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t090/` |
 
 ## 问题

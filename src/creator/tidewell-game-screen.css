@@ -62,6 +62,39 @@ body:has(.room-view-tidewell-immersive) {
   display: none !important;
 }
 
+/* T091 · seated shareReady / seat chrome pierces immersive hide (hex + tabletop parity) */
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome {
+  display: grid !important;
+  position: fixed !important;
+  left: 10px;
+  right: 10px;
+  top: 8px;
+  z-index: 120;
+  width: auto !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0.35rem 0.75rem !important;
+  background: color-mix(in srgb, var(--surface-paper, #f7f3ea) 92%, transparent) !important;
+  border: 1px solid rgb(23 23 23 / 12%) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 16%) !important;
+}
+.room-view-tidewell-immersive.room-view-seated > .action-log.room-action-log-drawer {
+  /* keep drawer in DOM for collapsed default; float so it is reachable without stealing stage */
+  display: block !important;
+  position: fixed !important;
+  right: 12px;
+  bottom: 12px;
+  z-index: 110;
+  width: min(280px, calc(100vw - 24px));
+  max-height: 40vh;
+  overflow: auto;
+  background: color-mix(in srgb, var(--surface-paper, #f7f3ea) 94%, transparent);
+  border: 1px solid rgb(23 23 23 / 12%);
+  border-radius: 10px;
+  padding: 0.25rem 0.5rem;
+}
+
 .room-view-tidewell-immersive > .hex-island-board {
   flex: 1 1 auto !important;
   width: 100% !important;

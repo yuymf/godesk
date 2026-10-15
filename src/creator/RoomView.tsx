@@ -493,7 +493,8 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   const feedbackVisible = feedbackAsDrawer
     ? true
     : !(autoBattler || auction || immersive) || room.state.status === "complete";
-  const shareChromeCompact = Boolean(tabletopImmersive && seat !== null);
+  // T091 · hex immersive seated gets the same compact shareReady strip as tabletop
+  const shareChromeCompact = Boolean((tabletopImmersive || hexSettlement) && seat !== null);
   return (
     <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute || auction || autoBattler || gemEngine || patternDraft ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-hex-island room-view-tidewell-immersive" : ""} ${tabletopImmersive ? "room-view-tidewell-immersive room-view-tabletop-immersive" : ""} ${seat !== null ? "room-view-seated" : "room-view-unseated"} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
       <header className={`room-shell-header${shareChromeCompact ? " is-immersive-strip is-share-chrome" : ""}`}>
@@ -525,7 +526,8 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         </div>
       </header>
 
-{!immersive ? (
+{/* T091 · show compact share/seat chrome for seated hex immersive (parity with tabletop shareReady) */}
+{!immersive || shareChromeCompact ? (
             <section
               aria-label={copy.invitation}
               className={`room-invitation room-invitation-rich${shareChromeCompact ? " is-collapsed room-share-chrome" : ""}`}
@@ -1218,7 +1220,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       ) : null}
       {error && (harbor || workerPlacement || discFlipping || hexSettlement) && <p className="creator-error" role="alert">{error}</p>}
 
-      {tabletopImmersive ? (
+      {tabletopImmersive || hexSettlement ? (
         <details className="action-log room-action-log-drawer" id="room-action-log-drawer">
           <summary className="room-action-log-summary">{copy.log}</summary>
           <code>{room.id}</code>
