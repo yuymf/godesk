@@ -715,8 +715,9 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const start = -((count - 1) * step) / 2;
   const railZ = gauge * 0.32;
   // T078 · cold board: wood sleepers even when unclaimed (not bald faint slots)
-  const tieMat = ctx.library.get("tt-sleeper", SLEEPER);
-  const steel = ctx.library.get("tt-steel", STEEL);
+  // T094 · sleeper/steel microdetail (shared route path)
+  const tieMat = railSleeperMaterial(ctx);
+  const steel = railSteelMaterial(ctx);
   const ties: Geometry[] = [];
   for (let i = 0; i < count; i += 1) {
     const x = start + i * step;
@@ -796,12 +797,8 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     group.add(chassisMesh, bodyMesh, glassMesh);
   } else {
     // T078 · cold unclaimed: ballast bed + wood sleepers + length ticks (NOT claimed cars).
-    const ballastMat = ctx.library.get("tt-ballast", {
-      base: "#6b7280",
-      roughness: 0.95,
-      metalness: 0.02,
-      pattern: "none" as const,
-    });
+    // T094 · ballast gravel microdetail
+    const ballastMat = railBallastMaterial();
     const bed = new Mesh(boxAt(usable + 0.16, 0.028, gauge * 1.45, 0, 0.014, 0), ballastMat);
     bed.receiveShadow = true;
     bed.castShadow = false;
@@ -1057,8 +1054,17 @@ function softContactShadow(
 ): Mesh {
   // T079 · stronger ground contact so pieces don't float on felt
   // T081 · optional opacity/boost for small tiles/plates (shared API; not H04-only)
-  const opacity = opts?.opacity ?? 0.48; // T079 default opacity: 0.48
-  const boost = opts?.boost ?? 1.15;
+  // T079 default opacity: 0.48 (baseline for typical card footprint)
+  // T096 · footprint-scaled radius/strength — large discs stay visible but not board-wide blobs
+  const area = Math.max(0.04, rx * rz);
+  const autoBoost =
+    opts?.boost ??
+    Math.min(1.22, Math.max(0.82, 1.08 / Math.sqrt(area / 0.28)));
+  const autoOpacity =
+    opts?.opacity ??
+    Math.min(0.52, Math.max(0.30, 0.40 + 0.07 / Math.sqrt(area / 0.28)));
+  const opacity = autoOpacity;
+  const boost = autoBoost;
   const geom = new CircleGeometry(1, 24);
   geom.rotateX(-Math.PI / 2);
   geom.scale(rx * boost, 1, rz * boost);
@@ -1116,7 +1122,7 @@ function porcelainPlate(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const glaze = new Mesh(translated(new CylinderGeometry(0.36, 0.36, 0.02, 28), 0.065), glazeMat);
   glaze.receiveShadow = true;
   group.add(bed, rim, glaze);
-  group.add(softContactShadow(0.82, 0.82, { opacity: 0.58, boost: 1.28 })); // T081
+  group.add(softContactShadow(0.55, 0.55, { opacity: 0.5, boost: 1.05 })); // T081/T096 footprint
   return group;
 }
 
@@ -1124,6 +1130,151 @@ function feltWoodRim(): Geometry {
   const outer = new BoxGeometry(1, 1, 1);
   // Bevel cue: thinner top lip via a second box slightly inset on Y.
   return outer;
+}
+
+/** T094 · shared route-path microdetail maps (ballast / sleeper / steel). */
+function makeRailMaps(kind: "ballast" | "sleeper" | "steel", baseHex: string): {
+  map: CanvasTexture | null;
+  normalMap: CanvasTexture | null;
+  roughnessMap: CanvasTexture | null;
+} {
+  const W = 128;
+  const H = 128;
+  const albedo = typeof document !== "undefined" ? document.createElement("canvas") : null;
+  const normal = typeof document !== "undefined" ? document.createElement("canvas") : null;
+  const rough = typeof document !== "undefined" ? document.createElement("canvas") : null;
+  if (!albedo || !normal || !rough) return { map: null, normalMap: null, roughnessMap: null };
+  albedo.width = W; albedo.height = H;
+  normal.width = W; normal.height = H;
+  rough.width = W; rough.height = H;
+  const ga = albedo.getContext("2d");
+  const gn = normal.getContext("2d");
+  const gr = rough.getContext("2d");
+  if (!ga || !gn || !gr) return { map: null, normalMap: null, roughnessMap: null };
+  const parse = (hex: string) => {
+    const h = hex.replace("#", "");
+    return [
+      Number.parseInt(h.slice(0, 2), 16) || 90,
+      Number.parseInt(h.slice(2, 4), 16) || 90,
+      Number.parseInt(h.slice(4, 6), 16) || 90,
+    ] as const;
+  };
+  const [br, bg, bb] = parse(baseHex.startsWith("#") && baseHex.length >= 7 ? baseHex : "#6b7280");
+  const height = new Float32Array(W * H);
+  for (let y = 0; y < H; y += 1) {
+    for (let x = 0; x < W; x += 1) {
+      const u = x / W;
+      const v = y / H;
+      let h0 = 0.5;
+      if (kind === "ballast") {
+        // gravel / crushed stone: high-freq noise clumps
+        const n1 = Math.sin(u * 70) * Math.sin(v * 55);
+        const n2 = Math.sin(u * 140 + 1.7) * Math.cos(v * 110);
+        const n3 = (Math.random() - 0.5) * 0.55;
+        h0 = 0.5 + n1 * 0.22 + n2 * 0.18 + n3;
+      } else if (kind === "sleeper") {
+        // cross-grain lumber (ties run across gauge = local Z)
+        const ring = Math.sin((v * 14 + Math.sin(u * 4) * 0.4) * Math.PI * 2);
+        const pore = Math.sin(u * 55) * Math.sin(v * 40) * 0.15;
+        h0 = 0.5 + ring * 0.28 + pore + (Math.random() - 0.5) * 0.06;
+      } else {
+        // steel: longitudinal scrapes + pit noise
+        const scrape = Math.sin((u * 48 + v * 0.3) * Math.PI * 2) * 0.2;
+        const pit = (Math.sin(u * 90) * Math.sin(v * 80)) * 0.12;
+        h0 = 0.5 + scrape + pit + (Math.random() - 0.5) * 0.05;
+      }
+      height[y * W + x] = h0;
+    }
+  }
+  const aImg = ga.createImageData(W, H);
+  const nImg = gn.createImageData(W, H);
+  const rImg = gr.createImageData(W, H);
+  for (let y = 0; y < H; y += 1) {
+    for (let x = 0; x < W; x += 1) {
+      const i = y * W + x;
+      const h0 = height[i]!;
+      const hx = height[y * W + ((x + 1) % W)]!;
+      const hy = height[((y + 1) % H) * W + x]!;
+      const dx = (h0 - hx) * (kind === "steel" ? 6 : 10);
+      const dy = (h0 - hy) * (kind === "steel" ? 6 : 10);
+      const shade = (h0 - 0.5) * (kind === "ballast" ? 90 : 70);
+      const o = i * 4;
+      aImg.data[o] = Math.max(0, Math.min(255, br + shade));
+      aImg.data[o + 1] = Math.max(0, Math.min(255, bg + shade * 0.92));
+      aImg.data[o + 2] = Math.max(0, Math.min(255, bb + shade * 0.85));
+      aImg.data[o + 3] = 255;
+      nImg.data[o] = Math.max(0, Math.min(255, 128 + dx * 110));
+      nImg.data[o + 1] = Math.max(0, Math.min(255, 128 + dy * 110));
+      nImg.data[o + 2] = 255;
+      nImg.data[o + 3] = 255;
+      let rv = 160;
+      if (kind === "ballast") rv = Math.max(0, Math.min(255, 200 + (0.5 - h0) * 70));
+      else if (kind === "sleeper") rv = Math.max(0, Math.min(255, 170 + (0.5 - h0) * 80));
+      else rv = Math.max(0, Math.min(255, 90 + (0.5 - h0) * 100));
+      rImg.data[o] = rv;
+      rImg.data[o + 1] = rv;
+      rImg.data[o + 2] = rv;
+      rImg.data[o + 3] = 255;
+    }
+  }
+  ga.putImageData(aImg, 0, 0);
+  gn.putImageData(nImg, 0, 0);
+  gr.putImageData(rImg, 0, 0);
+  const map = new CanvasTexture(albedo);
+  const normalMap = new CanvasTexture(normal);
+  const roughnessMap = new CanvasTexture(rough);
+  for (const tex of [map, normalMap, roughnessMap]) {
+    tex.wrapS = tex.wrapT = RepeatWrapping;
+    tex.repeat.set(kind === "ballast" ? 3.2 : kind === "sleeper" ? 1.6 : 4.0, kind === "ballast" ? 3.2 : kind === "sleeper" ? 1.2 : 1.5);
+  }
+  map.colorSpace = SRGBColorSpace;
+  return { map, normalMap, roughnessMap };
+}
+
+function railSleeperMaterial(ctx: TabletopObjectContext): Material {
+  const maps = makeRailMaps("sleeper", SLEEPER.base);
+  const mat = new MeshStandardMaterial({
+    color: SLEEPER.base,
+    map: maps.map ?? undefined,
+    normalMap: maps.normalMap ?? undefined,
+    normalScale: new Vector2(1.1, 1.1),
+    roughnessMap: maps.roughnessMap ?? undefined,
+    roughness: SLEEPER.roughness,
+    metalness: SLEEPER.metalness,
+  });
+  installPattern(mat, "grain", 0);
+  const strength = mat.userData.gdPatternStrength as { value: number } | undefined;
+  if (strength) strength.value = 0.75;
+  void ctx;
+  return mat;
+}
+
+function railBallastMaterial(): Material {
+  const maps = makeRailMaps("ballast", "#6b7280");
+  return new MeshStandardMaterial({
+    color: "#6b7280",
+    map: maps.map ?? undefined,
+    normalMap: maps.normalMap ?? undefined,
+    normalScale: new Vector2(1.35, 1.35),
+    roughnessMap: maps.roughnessMap ?? undefined,
+    roughness: 0.95,
+    metalness: 0.02,
+  });
+}
+
+function railSteelMaterial(ctx: TabletopObjectContext): Material {
+  const maps = makeRailMaps("steel", STEEL.base);
+  const mat = new MeshStandardMaterial({
+    color: STEEL.base,
+    map: maps.map ?? undefined,
+    normalMap: maps.normalMap ?? undefined,
+    normalScale: new Vector2(0.85, 0.85),
+    roughnessMap: maps.roughnessMap ?? undefined,
+    roughness: STEEL.roughness,
+    metalness: STEEL.metalness,
+  });
+  void ctx;
+  return mat;
 }
 
 /** T092 · shared wood rim grain/normal/roughness microdetail (align with felt T082/T083). */
@@ -1600,11 +1751,11 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = meepleFigure(node, ctx);
   } else if (mesh === "card") {
     object = cardWithFace(node, ctx);
-    (object as Group).add(softContactShadow(0.55, 0.78));
+    (object as Group).add(softContactShadow(0.42, 0.58)); // T096 card footprint
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
     // T081 · larger local blob so small tiles still ground at H02/H03 visibility
-    (object as Group).add(softContactShadow(1.2, 1.2, { opacity: 0.6, boost: 1.32 }));
+    (object as Group).add(softContactShadow(0.62, 0.62, { opacity: 0.6, boost: 1.12 })); // T081/T096
   } else if (mesh === "plaque") {
     object = plaqueWithFace(node, ctx);
     (object as Group).add(softContactShadow(0.5, 0.38));
