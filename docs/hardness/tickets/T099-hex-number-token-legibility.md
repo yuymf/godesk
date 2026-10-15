@@ -5,6 +5,7 @@
 | 回归靶 | H01 stage-wide(+close) 数字/点数可读；canvasShare/vh 不低于 T097 H01 基线(~0.496)；shareReady ok；purge clean |
 | 层 | **共享呈现**（number-labels / number-token；全 hex-settlement） |
 | 状态 | **关** |
+| tip |  |
 | 来源 | 大主管 soft · stage-wide type；T097 后 |
 
 ## 问题
