@@ -260,9 +260,10 @@ function translated(geom: Geometry, y: number): Geometry {
 /** T030 · card stock: rounded-rect extrude, bottom on y=0. */
 function cardStock(): Geometry {
   const shape = new Shape();
-  const w = 0.31;
-  const h = 0.44;
-  const r = 0.04;
+  // T213 · thicker board-game card stock + fuller corner radius (readable stage-wide)
+  const w = 0.34;
+  const h = 0.48;
+  const r = 0.05;
   shape.moveTo(-w + r, -h);
   shape.lineTo(w - r, -h);
   shape.quadraticCurveTo(w, -h, w, -h + r);
@@ -274,14 +275,15 @@ function cardStock(): Geometry {
   shape.quadraticCurveTo(-w, -h, -w + r, -h);
   shape.closePath();
   const geom = new ExtrudeGeometry(shape, {
-    depth: 0.045,
+    depth: 0.062,
     bevelEnabled: true,
-    bevelThickness: 0.008,
-    bevelSize: 0.008,
-    bevelSegments: 2,
+    bevelThickness: 0.014,
+    bevelSize: 0.012,
+    bevelSegments: 3,
   });
   geom.rotateX(-Math.PI / 2);
   geom.translate(0, 0, 0);
+  geom.computeVertexNormals();
   // Extrude depth along +Z before rotate → after rotateX(-90) thickness is +Y.
   return geom;
 }
@@ -289,8 +291,10 @@ function cardStock(): Geometry {
 
 /** T033 · cut gem chip: short faceted cylinder. */
 function gemChip(): Geometry {
-  const geom = new CylinderGeometry(0.42, 0.46, 0.18, 8);
-  geom.translate(0, 0.09, 0);
+  // T213 · cut gem: taller faceted cylinder (tabletop crystal chip, not a flat slug)
+  const geom = new CylinderGeometry(0.40, 0.48, 0.26, 10);
+  geom.translate(0, 0.13, 0);
+  geom.computeVertexNormals();
   return geom;
 }
 
@@ -538,10 +542,10 @@ function glazedTileWithFace(node: SceneNode, ctx: TabletopObjectContext): Object
 /** T037/T048 · card face: illustration band + reward bar + cost + prestige (shared atlas). */
 function cardWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const group = new Group();
-  // T169 · card stock micro-glaze (shared; keep face BasicMaterial plate)
+  // T169/T213 · card stock micro-glaze (shared; keep face BasicMaterial plate)
   const stockMat = materialFor(node, ctx).clone();
-  if ("roughness" in stockMat) (stockMat as MeshStandardMaterial).roughness = Math.min(0.72, (stockMat as MeshStandardMaterial).roughness ?? 0.72);
-  if ("metalness" in stockMat) (stockMat as MeshStandardMaterial).metalness = Math.max(0.04, (stockMat as MeshStandardMaterial).metalness ?? 0);
+  if ("roughness" in stockMat) (stockMat as MeshStandardMaterial).roughness = Math.min(0.58, (stockMat as MeshStandardMaterial).roughness ?? 0.58);
+  if ("metalness" in stockMat) (stockMat as MeshStandardMaterial).metalness = Math.max(0.08, (stockMat as MeshStandardMaterial).metalness ?? 0);
   const stock = new Mesh(cardStock(), stockMat);
   stock.castShadow = true;
   stock.receiveShadow = true;
@@ -581,10 +585,10 @@ function cardWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     tex.anisotropy = 4;
     const face = new Mesh(
       (() => {
-        const plane = new PlaneGeometry(0.58, 0.82);
+        const plane = new PlaneGeometry(0.64, 0.90);
         plane.rotateX(-Math.PI / 2);
-        // Sit clearly above extruded card stock (~0.045 + bevel).
-        plane.translate(0, 0.09, 0);
+        // T213 · sit clearly above thicker card stock
+        plane.translate(0, 0.11, 0);
         return plane;
       })(),
       new MeshBasicMaterial({ map: tex, toneMapped: false }),
@@ -934,7 +938,7 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     group.add(ghostMesh);
   }
   // T079 · ground contact under track corridor
-  group.add(softContactShadow(Math.max(1.55, usable * 1.85), Math.max(1.20, gauge * 3.6), { opacity: 1.0 })); // T142…T177/T192/T201/T210 route
+  group.add(softContactShadow(Math.max(1.70, usable * 2.0), Math.max(1.35, gauge * 3.9), { opacity: 1.0 })); // T142…T210/T213 route
   const hit = new Mesh(new BoxGeometry(usable, 0.1, gauge * 1.7), new MeshBasicMaterial({ visible: false }));
   hit.position.y = 0.05;
   group.add(hit);
@@ -1470,7 +1474,7 @@ function woodRimMaterial(node: SceneNode, ctx: TabletopObjectContext): Material 
           // T110 · stronger shared grain shade (rim+exterior continuous, not cut)
           const dx = (h0 - hx) * 12;
           const dy = (h0 - hy) * 12;
-          const shade = (h0 - 0.5) * 162; // T110/T201/T206
+          const shade = (h0 - 0.5) * 178; // T110/T201/T206/T214
           const o = i * 4;
           aImg.data[o] = Math.max(0, Math.min(255, br + shade));
           aImg.data[o + 1] = Math.max(0, Math.min(255, bg + shade * 0.9));
@@ -1506,7 +1510,7 @@ function woodRimMaterial(node: SceneNode, ctx: TabletopObjectContext): Material 
     color: base,
     map: map ?? undefined,
     normalMap: normalMap ?? undefined,
-    normalScale: new Vector2(2.80, 2.80), // T092/T110/T169/T175/T181/T201/T206 · grain microcontrast
+    normalScale: new Vector2(3.05, 3.05), // T092/T110/T169/T175/T181/T201/T206/T214 · grain microcontrast
     roughnessMap: roughnessMap ?? undefined,
     roughness: Math.min(0.88, Math.max(0.55, token?.roughness ?? 0.78)),
     metalness: Math.min(0.12, token?.metalness ?? 0.06),
@@ -1600,7 +1604,7 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
           const hy = height[((y + 1) % H) * W + x]!;
           const dx = (h0 - hx) * 14;
           const dy = (h0 - hy) * 14;
-          const shade = (h0 - 0.5) * 275; // T083…T196/T198/T201/T206 · wide-stage albedo amplitude
+          const shade = (h0 - 0.5) * 298; // T083…T196/T198/T201/T206/T214 · wide-stage albedo amplitude
           const o = i * 4;
           aImg.data[o] = Math.max(0, Math.min(255, br + shade));
           aImg.data[o + 1] = Math.max(0, Math.min(255, bg + shade));
@@ -1645,7 +1649,7 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
     color: base,
     map: map ?? undefined,
     normalMap: normalMap ?? undefined,
-    normalScale: new Vector2(5.70, 5.70), // T083…T196/T198/T201/T206 · weave microcontrast
+    normalScale: new Vector2(6.05, 6.05), // T083…T196/T198/T201/T206/T214 · weave microcontrast
     roughnessMap: roughnessMap ?? undefined,
     roughness: Math.max(0.9, token?.roughness ?? 0.97),
     metalness: 0,
@@ -1834,26 +1838,26 @@ function proceduralLotCanvas(schema: { title: string; prestige?: number; bid?: n
 
 function framedArtWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const group = new Group();
-  // Wood frame (outer)
+  // T213 · Wood frame (outer) — thicker product gallery frame
   const frame = new Mesh(
-    translated(new BoxGeometry(0.95, 0.08, 1.2), 0.04),
-    new MeshStandardMaterial({ color: "#b08858", roughness: 0.78, metalness: 0.05 }), // T137/T151/T157 close absolute calm
+    translated(new BoxGeometry(1.02, 0.11, 1.28), 0.055),
+    new MeshStandardMaterial({ color: "#c49858", roughness: 0.68, metalness: 0.08 }), // T137…T157/T213
   );
   frame.castShadow = true;
   frame.receiveShadow = true;
   group.add(frame);
-  // T159 · shared product-frame bevel lip (seat-close readable across suites)
+  // T159/T213 · shared product-frame bevel lip (seat-close readable across suites)
   const lip = new Mesh(
-    translated(new BoxGeometry(0.97, 0.012, 1.22), 0.086),
-    new MeshStandardMaterial({ color: "#ffe6b0", roughness: 0.38, metalness: 0.14 }), // T159/T160/T163
+    translated(new BoxGeometry(1.05, 0.018, 1.32), 0.115),
+    new MeshStandardMaterial({ color: "#ffe8b8", roughness: 0.32, metalness: 0.18 }), // T159/T160/T163/T213
   );
   lip.castShadow = false;
   lip.receiveShadow = true;
   group.add(lip);
   // Inner mat
   const mat = new Mesh(
-    translated(new BoxGeometry(0.78, 0.02, 1.0), 0.075),
-    new MeshStandardMaterial({ color: "#faf6ee", roughness: 0.88, metalness: 0 }), // T157 mat lift
+    translated(new BoxGeometry(0.84, 0.025, 1.06), 0.09),
+    new MeshStandardMaterial({ color: "#fffaf2", roughness: 0.82, metalness: 0 }), // T157/T213 mat lift
   );
   mat.receiveShadow = true;
   group.add(mat);
@@ -1869,16 +1873,16 @@ function framedArtWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3
   });
   const tex = canvas ? new CanvasTexture(canvas) : null;
   if (tex) tex.colorSpace = SRGBColorSpace;
-  const artGeom = new PlaneGeometry(0.72, 0.92);
+  const artGeom = new PlaneGeometry(0.78, 0.98);
   artGeom.rotateX(-Math.PI / 2);
   const art = new Mesh(
     artGeom,
     new MeshBasicMaterial({ map: tex, toneMapped: false }),
   );
-  art.position.set(0, 0.09, 0);
+  art.position.set(0, 0.12, 0);
   art.renderOrder = 2;
   group.add(art);
-  group.add(softContactShadow(0.62, 0.78, { opacity: 0.12, boost: 0.62 })); // T139/T142/T151/T157 ink-stable lot shadow
+  group.add(softContactShadow(0.70, 0.88, { opacity: 0.16, boost: 0.68 })); // T139…T157/T213 lot shadow (corner-calm)
   return group;
 }
 
@@ -2001,7 +2005,7 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = meepleFigure(node, ctx);
   } else if (mesh === "card") {
     object = cardWithFace(node, ctx);
-    (object as Group).add(softContactShadow(1.08, 1.35, { opacity: 0.62 })); // T096…T161/T198 card
+    (object as Group).add(softContactShadow(1.10, 1.35, { opacity: 0.45 })); // T096…T161/T198/T213 card (corner-calm)
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
     // T081 · larger local blob so small tiles still ground at H02/H03 visibility
@@ -2010,12 +2014,24 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = plaqueWithFace(node, ctx);
     (object as Group).add(softContactShadow(0.78, 0.62, { opacity: 0.58 })); // T106/T150 plaque
   } else if (mesh === "gem-chip") {
-    const built = new Mesh(geometryFor(mesh), materialFor(node, ctx));
+    // T213 · shared gem chip with clearcoat crystal feel (MaterialLibrary base + physical coat)
+    const baseTok = node.material ? ctx.materials[node.material] : undefined;
+    const base = baseTok?.base ?? "#ffe9b8";
+    const built = new Mesh(
+      geometryFor(mesh),
+      new MeshPhysicalMaterial({
+        color: base,
+        roughness: Math.min(0.28, baseTok?.roughness ?? 0.28),
+        metalness: Math.max(0.12, baseTok?.metalness ?? 0.12),
+        clearcoat: 0.95,
+        clearcoatRoughness: 0.18,
+      }),
+    );
     built.castShadow = true;
     built.receiveShadow = true;
     const g = new Group();
     g.add(built);
-    g.add(softContactShadow(0.58, 0.58, { opacity: 0.62 })); // T106/T150/T198 gem-chip
+    g.add(softContactShadow(0.68, 0.68, { opacity: 0.70 })); // T106/T150/T198/T213 gem-chip (corner-calm)
     object = g;
   } else if (INSTANCED_MESHES.has(mesh)) {
     object = createInstanceProxy(mesh, node, ctx);

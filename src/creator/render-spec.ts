@@ -468,20 +468,20 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     // T086 · desk lighting layers on network
     render.lighting = {
       ...render.lighting,
-      sun: { ...render.lighting.sun, azimuthDeg: 126, elevationDeg: 56, intensity: 5.15, color: "#ffc890" },
-      hemisphere: { sky: "#fffaf4", ground: "#6a5844", intensity: 1.38 },
-      fill: { azimuthDeg: 310, elevationDeg: 42, intensity: 1.18, color: "#c8daf8" },
-      rim: { azimuthDeg: 40, elevationDeg: 26, intensity: 1.05, color: "#ffe6b8" },
+      sun: { ...render.lighting.sun, azimuthDeg: 126, elevationDeg: 58, intensity: 5.85, color: "#ffca94" },
+      hemisphere: { sky: "#fffaf8", ground: "#6a5844", intensity: 1.62 },
+      fill: { azimuthDeg: 310, elevationDeg: 46, intensity: 1.48, color: "#d0e4fc" },
+      rim: { azimuthDeg: 40, elevationDeg: 30, intensity: 1.28, color: "#ffe8bc" },
       shadow: { enabled: true, softness: 0.55 },
-      exposure: 1.74, // T192/T201/T206 · H02 network readable stage-wide (product map cloth)
+      exposure: 1.96, // T192/T201/T206/T214 · H02 network readable stage-wide (product map cloth)
 
     };
     Object.assign(render.materials, {
       // T172/T177/T192/T201/T206 · denser/brighter network map cloth (shared MaterialLibrary)
-      map: material("#03d870", "cloth", 0.99, 0, undefined, 0.99), // T177/T181/T192/T196/T201/T206
-      table: material("#e4b070", "grain", 0.48, 0.20), // T110/T177/T192/T196/T201/T206 · warmer exterior/rim
-      ink: material("#1a2c3c", "none", 0.34, 0.18, 0.38),
-      piece: material("#fff6e6", "none", 0.16, 0.26, 0.82), // T201/T206/T210 · plastic-wood piece
+      map: material("#00e888", "cloth", 0.99, 0, undefined, 0.99), // T177…T206/T214
+      table: material("#ecb880", "grain", 0.40, 0.24), // T110…T206/T214 · warmer exterior/rim
+      ink: material("#162838", "none", 0.30, 0.20, 0.44), // T214/T213 route ink
+      piece: material("#fff4e0", "none", 0.14, 0.30, 0.88), // T201/T206/T210/T213 · plastic-wood piece
     });
     render.bindings = [
       binding("station", "station", "ink", 1.2),
@@ -500,35 +500,35 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       ...render.lighting,
       // T061 · desk contrast; T086 · explicit fill + rim (no extra shadow maps)
       // T175/T187/T198 · brighter upper sky/fill/exposure (H01 hex path separate; no vignette bait)
-      sun: { ...render.lighting.sun, azimuthDeg: 128, elevationDeg: 58, intensity: 4.70, color: "#ffd0a8" },
-      hemisphere: { sky: "#ffffff", ground: "#7a6854", intensity: 1.42 },
-      fill: { azimuthDeg: 312, elevationDeg: 46, intensity: 1.30, color: "#dceafc" },
-      rim: { azimuthDeg: 38, elevationDeg: 24, intensity: 0.82, color: "#ffecc8" },
+      sun: { ...render.lighting.sun, azimuthDeg: 128, elevationDeg: 58, intensity: 5.20, color: "#ffd4b0" },
+      hemisphere: { sky: "#ffffff", ground: "#7a6854", intensity: 1.68 },
+      fill: { azimuthDeg: 312, elevationDeg: 52, intensity: 1.62, color: "#e8f0fc" },
+      rim: { azimuthDeg: 38, elevationDeg: 30, intensity: 1.08, color: "#ffecc8" },
       shadow: { enabled: true, softness: 0.58 },
-      exposure: 1.70, // T187/T196/T198/T201/T206 · desk hard residual (H04 pattern + shared)
+      exposure: 1.90, // T187…T206/T214 · desk product light (H03/H05 card table readable)
 
     };
     Object.assign(render.materials, {
-      // T175/T206 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#02c852", "cloth", 0.99, 0, undefined, 0.99),  // T044…T198/T201/T206 product green felt
-      table: material("#dca858", "grain", 0.50, 0.18), // T092…T190/T196/T201/T206 · warmer wood rim
+      // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
+      board: material("#00d45a", "cloth", 0.99, 0, undefined, 0.99),  // T044…T206/T214 product green felt
+      table: material("#e4b468", "grain", 0.42, 0.22), // T092…T206/T214 · warmer wood rim
       piece: material("#fff6e6", "none", 0.18, 0.24, 0.78), // T198/T206/T210 · plastic-wood piece
-      card: material("#fff6e8", "none", 0.26, 0.10, 0.52), // T198/T206
-      resource: material("#ffe9b8", "none", 0.10, 0.40, 0.94), // T198/T206
-      token: material("#d4c0ff", "none", 0.18, 0.30, 0.72), // T198/T206
-      ink: material("#243640", "none", 0.40, 0.12, 0.22),
+      card: material("#fff8ee", "none", 0.22, 0.14, 0.68), // T198/T206/T213 · card stock
+      resource: material("#ffd898", "none", 0.08, 0.48, 0.98), // T198/T206/T213 · gem crystal
+      token: material("#d8c4ff", "none", 0.14, 0.36, 0.82), // T198/T206/T213 · chip
+      ink: material("#203440", "none", 0.36, 0.14, 0.26),
     });
     render.bindings = [
       binding("region", "tile-square", "board"),
       binding("cell", "tile-square", "board"),
       binding("map", "tile-square", "board"),
-      binding("card", "card", "card", 1),
-      binding("disc", "disc", "piece", 0.9),
+      binding("card", "card", "card", 1.12),
+      binding("disc", "disc", "piece", 1.0),
       binding("tile", "glazed-tile", "piece", 1.12),
-      binding("resource", "gem-chip", "resource", 0.9),
-      binding("token", "disc", "token", 0.75),
+      binding("resource", "gem-chip", "resource", 1.08),
+      binding("token", "disc", "token", 0.88),
       binding("plaque", "plaque", "piece", 1),
-      binding("lot", "framed-art", "card", 1.15),
+      binding("lot", "framed-art", "card", 1.28),
       binding("building", "house", "piece", 1.05),
       binding("worker", "meeple", "piece", 1.08),
       binding("station", "disc", "ink", 0.8),
@@ -536,13 +536,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     ];
     if (kernelType === "auction-bidding-v1") {
       Object.assign(render.materials, {
-        board: material("#07b646", "cloth", 0.99, 0, undefined, 0.96),  // T044…T190/T196/T206 auction felt
-        card: material("#fffaf2", "none", 0.36, 0.05, 0.34), // T061/T175
+        board: material("#05c450", "cloth", 0.99, 0, undefined, 0.99),  // T044…T206/T214 auction felt
+        card: material("#fffaf4", "none", 0.28, 0.10, 0.48), // T061/T175/T213
       });
     }
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
-        board: material("#04cc58", "cloth", 0.99, 0, undefined, 0.99),  // T044…T196/T198/T201/T206 pattern felt
+        board: material("#02d864", "cloth", 0.99, 0, undefined, 0.99),  // T044…T206/T214 pattern felt
         piece: material("#f7fbff", "none", 0.18, 0.20, 0.74), // T061/T175/T201/T206/T210
         slot: material("#3f3f46", "none", 0.82, 0.05, 0.12),  // legacy recessed slots
         // T054 · pale print plate under wall hue tints (square grid, not black pits)
