@@ -591,7 +591,9 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
   }
   for (const piece of [...layout.pieces, ...decorPieces]) {
     const resolved = bindingFor(render, piece.objectKind);
-    const size = round(piece.size * resolved.scale);
+    // T087 · shared stage-wide card scale boost (all kernels; no gem/auction fork)
+    const cardBoost = resolved.mesh === "card" ? 1.14 : 1;
+    const size = round(piece.size * resolved.scale * cardBoost);
     const id = `piece:${resolved.mesh}:${piece.id}`;
     const onCell = layout.cells.some((cell) =>
       Math.abs(cell.x - piece.x) <= cell.width / 2 && Math.abs(cell.z - piece.z) <= cell.depth / 2);
