@@ -6508,3 +6508,42 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   opacity: 0.55;
 }
 
+/* T209 · 底栏「当前行动…」play HUD 再降权：几乎只留 3D 桌面（共享 chrome） */
+.room-view-tabletop-immersive.room-view-seated .desk-action-drawer:not([open]) {
+  max-height: 0.55rem !important;
+  opacity: 0.22 !important;
+  margin: 0.02rem 0 0.04rem !important;
+  pointer-events: none;
+}
+.room-view-tabletop-immersive.room-view-seated .desk-action-drawer:not([open]) .desk-action-drawer-summary {
+  min-height: 0.45rem !important;
+  padding: 0 0.35rem !important;
+  font-size: 0.42rem !important;
+  opacity: 0.28 !important;
+  border: none !important;
+  background: transparent !important;
+  color: transparent !important;
+}
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud {
+  max-height: 0.7rem !important;
+  padding: 0.06rem 0.4rem !important;
+  font-size: 0.52rem !important;
+  opacity: 0.28 !important;
+  margin: 0.02rem 0 0.08rem !important;
+  background: color-mix(in srgb, #1c1917 28%, transparent) !important;
+}
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud-kicker,
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud-supply {
+  opacity: 0.35 !important;
+  font-size: 0.45rem !important;
+}
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud-turn {
+  font-size: 0.52rem !important;
+  opacity: 0.4 !important;
+}
+.room-view-tabletop-immersive.room-view-seated .room-action-log-drawer:not([open]) {
+  max-height: 0.55rem !important;
+  opacity: 0.2 !important;
+  margin: 0.02rem 0 !important;
+}
+

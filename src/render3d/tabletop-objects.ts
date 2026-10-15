@@ -76,15 +76,25 @@ function hexPrism(): Geometry {
 /** T060 · pitched-roof cottage silhouette (generic house mesh; hex uses pieces.ts). */
 function house(): Geometry {
   const shape = new Shape();
-  // Base → eaves → ridge (readable pitched roof, not a toy block)
-  shape.moveTo(-0.36, 0);
-  shape.lineTo(0.36, 0);
-  shape.lineTo(0.36, 0.38);
-  shape.lineTo(0, 0.78);
-  shape.lineTo(-0.36, 0.38);
+  // T210 · board-game house: wider eaves, steeper ridge, bevelled edges (not a toy block)
+  shape.moveTo(-0.40, 0);
+  shape.lineTo(0.40, 0);
+  shape.lineTo(0.40, 0.36);
+  shape.lineTo(0.44, 0.36); // eave overhang
+  shape.lineTo(0, 0.82);
+  shape.lineTo(-0.44, 0.36);
+  shape.lineTo(-0.40, 0.36);
   shape.closePath();
-  const geom = new ExtrudeGeometry(shape, { depth: 0.5, bevelEnabled: false });
-  geom.translate(0, 0, -0.25);
+  const geom = new ExtrudeGeometry(shape, {
+    depth: 0.52,
+    bevelEnabled: true,
+    bevelThickness: 0.018,
+    bevelSize: 0.014,
+    bevelSegments: 2,
+    curveSegments: 4,
+  });
+  geom.translate(0, 0, -0.26);
+  geom.computeVertexNormals();
   return geom;
 }
 
@@ -99,32 +109,32 @@ function pawn(): Geometry {
 /** T042 · board-game meeple: extruded silhouette + front face (eyes); back plain. */
 function meepleBody(): Geometry {
   const shape = new Shape();
-  // Classic meeple outline (Y up, X right); base at y=0.
+  // T210 · classic meeple silhouette with fuller limbs + rounder head (tabletop plastic feel)
   shape.moveTo(0, 0);
-  shape.lineTo(0.16, 0);
-  shape.quadraticCurveTo(0.2, 0.08, 0.14, 0.18); // right foot
-  shape.lineTo(0.08, 0.28);
-  shape.lineTo(0.22, 0.38); // right arm tip
-  shape.quadraticCurveTo(0.28, 0.48, 0.16, 0.52);
-  shape.lineTo(0.1, 0.55);
-  shape.quadraticCurveTo(0.12, 0.7, 0, 0.78); // head right→top
-  shape.quadraticCurveTo(-0.12, 0.7, -0.1, 0.55);
-  shape.lineTo(-0.16, 0.52);
-  shape.quadraticCurveTo(-0.28, 0.48, -0.22, 0.38);
-  shape.lineTo(-0.08, 0.28);
-  shape.lineTo(-0.14, 0.18);
-  shape.quadraticCurveTo(-0.2, 0.08, -0.16, 0);
+  shape.lineTo(0.17, 0);
+  shape.quadraticCurveTo(0.22, 0.09, 0.15, 0.2); // right foot
+  shape.lineTo(0.09, 0.3);
+  shape.lineTo(0.24, 0.4); // right arm tip
+  shape.quadraticCurveTo(0.3, 0.5, 0.17, 0.54);
+  shape.lineTo(0.11, 0.57);
+  shape.quadraticCurveTo(0.13, 0.74, 0, 0.84); // head right→top
+  shape.quadraticCurveTo(-0.13, 0.74, -0.11, 0.57);
+  shape.lineTo(-0.17, 0.54);
+  shape.quadraticCurveTo(-0.3, 0.5, -0.24, 0.4);
+  shape.lineTo(-0.09, 0.3);
+  shape.lineTo(-0.15, 0.2);
+  shape.quadraticCurveTo(-0.22, 0.09, -0.17, 0);
   shape.closePath();
   const geom = new ExtrudeGeometry(shape, {
-    depth: 0.22,
+    depth: 0.26,
     bevelEnabled: true,
-    bevelThickness: 0.02,
-    bevelSize: 0.015,
-    bevelSegments: 2,
-    curveSegments: 8,
+    bevelThickness: 0.028,
+    bevelSize: 0.02,
+    bevelSegments: 3,
+    curveSegments: 10,
   });
   // Extrude along +Z; shift so base y=0 and centered in Z.
-  geom.translate(0, 0, -0.11);
+  geom.translate(0, 0, -0.13);
   geom.computeVertexNormals();
   return geom;
 }
@@ -164,17 +174,18 @@ function meepleFigure(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   // T090 · cream rim disc under meeple — stage-wide silhouette on green felt
   // T116 · dim rim albedo (was #f8f1e3) so base disc does not blow out; keep T090/T106.
   // T123 · slightly larger rim for hex/ortho + stage-wide readability (shared figure).
+  // T210 · warmer wood plinth under meeple (reads as tabletop stand, not flat disc)
   const rimMat = new MeshStandardMaterial({
-    color: "#a89478",
-    roughness: 0.95,
-    metalness: 0,
+    color: "#b08960",
+    roughness: 0.82,
+    metalness: 0.04,
   });
-  const rim = new Mesh(new CylinderGeometry(0.28, 0.30, 0.045, 16), rimMat);
-  rim.position.set(0, 0.02, 0);
-  rim.castShadow = false;
+  const rim = new Mesh(new CylinderGeometry(0.30, 0.33, 0.055, 20), rimMat);
+  rim.position.set(0, 0.025, 0);
+  rim.castShadow = true;
   rim.receiveShadow = true;
   group.add(rim);
-  group.add(softContactShadow(0.34, 0.30)); // T106/T139 meeple footprint
+  group.add(softContactShadow(0.38, 0.34, { opacity: 0.62 })); // T106/T139/T210 meeple footprint
   return group;
 }
 
@@ -292,8 +303,9 @@ function lineTroughGeom(): Geometry {
 
 function glazedTileGeom(): Geometry {
   const shape = new Shape();
-  const s = 0.42;
-  const r = 0.06;
+  // T210 · thicker porcelain tile + fuller corner radius (reads as ceramic, not flat chip)
+  const s = 0.46;
+  const r = 0.08;
   shape.moveTo(-s + r, -s);
   shape.lineTo(s - r, -s);
   shape.quadraticCurveTo(s, -s, s, -s + r);
@@ -305,13 +317,14 @@ function glazedTileGeom(): Geometry {
   shape.quadraticCurveTo(-s, -s, -s + r, -s);
   shape.closePath();
   const geom = new ExtrudeGeometry(shape, {
-    depth: 0.08,
+    depth: 0.12,
     bevelEnabled: true,
-    bevelThickness: 0.018,
-    bevelSize: 0.018,
-    bevelSegments: 2,
+    bevelThickness: 0.028,
+    bevelSize: 0.026,
+    bevelSegments: 3,
   });
   geom.rotateX(-Math.PI / 2);
+  geom.computeVertexNormals();
   return geom;
 }
 
@@ -503,19 +516,19 @@ function glazedTileWithFace(node: SceneNode, ctx: TabletopObjectContext): Object
   const maps = tileGlazeMaps(String(base));
   const glaze = new Mesh(
     (() => {
-      const plane = new PlaneGeometry(0.72, 0.72);
+      const plane = new PlaneGeometry(0.78, 0.78);
       plane.rotateX(-Math.PI / 2);
-      plane.translate(0, 0.09, 0);
+      plane.translate(0, 0.125, 0); // T210 · sit on thicker body
       return plane;
     })(),
     new MeshPhysicalMaterial({
       color: base,
       map: maps.map ?? undefined,
       roughnessMap: maps.roughnessMap ?? undefined,
-      roughness: 0.28,
-      metalness: 0.06,
-      clearcoat: 0.8,
-      clearcoatRoughness: 0.32,
+      roughness: 0.22,
+      metalness: 0.08,
+      clearcoat: 0.92, // T210 · porcelain glaze
+      clearcoatRoughness: 0.22,
     }),
   );
   group.add(glaze);
@@ -821,17 +834,17 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const ties: Geometry[] = [];
   for (let i = 0; i < count; i += 1) {
     const x = start + i * step;
-    // Slightly thicker / taller ties so they read as lumber, not printed dashes.
-    ties.push(boxAt(claimed ? 0.08 : 0.075, claimed ? 0.04 : 0.036, gauge * 1.12, x, claimed ? 0.055 : 0.038, 0));
+    // T210 · thicker / taller ties — lumber blocks, not printed dashes
+    ties.push(boxAt(claimed ? 0.10 : 0.09, claimed ? 0.055 : 0.048, gauge * 1.22, x, claimed ? 0.07 : 0.05, 0));
   }
   const sleepers = new Mesh(mergeGeometries(ties) ?? ties[0]!, tieMat);
   sleepers.castShadow = true;
   sleepers.receiveShadow = true;
-  // I-ish rail: web + head (two boxes per side) for a raised bar look in ortho close-up.
-  const railY = claimed ? 0.095 : 0.07;
-  const railH = claimed ? 0.04 : 0.034;
-  const head = claimed ? 0.034 : 0.028;
-  const web = claimed ? 0.016 : 0.014;
+  // T210 · I-ish rail: taller web + head for raised steel bar in stage-wide
+  const railY = claimed ? 0.125 : 0.09;
+  const railH = claimed ? 0.055 : 0.045;
+  const head = claimed ? 0.046 : 0.036;
+  const web = claimed ? 0.022 : 0.018;
   const railGeoms = [
     boxAt(usable, railH, web, 0, railY, railZ),
     boxAt(usable, head * 0.55, head, 0, railY + railH * 0.55, railZ),
@@ -876,9 +889,10 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
           chassis.push(disk);
         }
       }
-      // seat-colored body
-      bodies.push(boxAt(cw, 0.16, cd, cx, 0.18, 0));
-      bodies.push(boxAt(cw * 0.96, 0.05, cd * 0.92, cx, 0.28, 0)); // roof lip
+      // T210 · seat-colored body + pitched roof lip (rolling stock, not sugar cubes)
+      bodies.push(boxAt(cw, 0.18, cd, cx, 0.2, 0));
+      bodies.push(boxAt(cw * 0.96, 0.06, cd * 0.88, cx, 0.31, 0)); // roof lip
+      bodies.push(boxAt(cw * 0.7, 0.03, cd * 0.7, cx, 0.35, 0)); // roof crown
       // coupler knuckle between cars
       bodies.push(boxAt(0.05, 0.06, cd * 0.35, cx - cw * 0.52, 0.14, 0));
       // window panes (dark recesses — readable vs solid box)
@@ -920,7 +934,7 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     group.add(ghostMesh);
   }
   // T079 · ground contact under track corridor
-  group.add(softContactShadow(Math.max(1.40, usable * 1.70), Math.max(1.08, gauge * 3.3), { opacity: 0.96 })); // T142…T177/T192/T201 route
+  group.add(softContactShadow(Math.max(1.55, usable * 1.85), Math.max(1.20, gauge * 3.6), { opacity: 1.0 })); // T142…T177/T192/T201/T210 route
   const hit = new Mesh(new BoxGeometry(usable, 0.1, gauge * 1.7), new MeshBasicMaterial({ visible: false }));
   hit.position.y = 0.05;
   group.add(hit);
@@ -965,7 +979,7 @@ function station(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   // T073 · elongated platform/plinth + curb edge (desk not bald at map-close)
   // T172/T177 · denser station pedestal on felt (shared station mesh)
   // T192 · denser station pedestal (shared station mesh)
-  const platform = new Mesh(boxAt(1.30, 0.11, 1.50, 0, 0.055, -0.08), stone); // T201 · clearer station foot
+  const platform = new Mesh(boxAt(1.42, 0.13, 1.62, 0, 0.065, -0.08), stone); // T201/T210 · clearer station foot
   platform.receiveShadow = true;
   platform.castShadow = true;
   const curb = new Mesh(boxAt(1.28, 0.045, 1.48, 0, 0.105, -0.08), ink);
@@ -1362,14 +1376,14 @@ function railSleeperMaterial(ctx: TabletopObjectContext): Material {
     color: SLEEPER.base,
     map: maps.map ?? undefined,
     normalMap: maps.normalMap ?? undefined,
-    normalScale: new Vector2(1.25, 1.25), // T109
+    normalScale: new Vector2(1.45, 1.45), // T109/T210 · lumber microcontrast
     roughnessMap: maps.roughnessMap ?? undefined,
     roughness: SLEEPER.roughness,
     metalness: SLEEPER.metalness,
   });
   installPattern(mat, "grain", 0);
   const strength = mat.userData.gdPatternStrength as { value: number } | undefined;
-  if (strength) strength.value = 0.82; // T109
+  if (strength) strength.value = 0.88; // T109/T210
   void ctx;
   return mat;
 }
@@ -1394,10 +1408,10 @@ function railSteelMaterial(ctx: TabletopObjectContext): Material {
     color: STEEL.base,
     map: maps.map ?? undefined,
     normalMap: maps.normalMap ?? undefined,
-    normalScale: new Vector2(0.85, 0.85),
+    normalScale: new Vector2(1.05, 1.05), // T210 · steel microcontrast
     roughnessMap: maps.roughnessMap ?? undefined,
-    roughness: STEEL.roughness,
-    metalness: STEEL.metalness,
+    roughness: Math.max(0.28, (STEEL.roughness ?? 0.35) - 0.04),
+    metalness: Math.min(0.92, (STEEL.metalness ?? 0.75) + 0.08), // T210
   });
   void ctx;
   return mat;
@@ -1991,7 +2005,7 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
     // T081 · larger local blob so small tiles still ground at H02/H03 visibility
-    (object as Group).add(softContactShadow(1.02, 1.02, { opacity: 0.58, boost: 0.94 })); // T081…T161/T201 tile mean
+    (object as Group).add(softContactShadow(1.18, 1.18, { opacity: 0.78, boost: 1.08 })); // T081…T161/T201/T210 tile mean
   } else if (mesh === "plaque") {
     object = plaqueWithFace(node, ctx);
     (object as Group).add(softContactShadow(0.78, 0.62, { opacity: 0.58 })); // T106/T150 plaque

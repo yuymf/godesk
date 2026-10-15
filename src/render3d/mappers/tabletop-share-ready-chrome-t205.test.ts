@@ -5,9 +5,9 @@ describe("T205 shareReady product chrome further collapse", () => {
   it("further demotes top bar / dock / rails without suite fork", () => {
     const tw = readFileSync("src/creator/tidewell-game-screen.css", "utf8");
     expect(tw).toContain("T205");
-    expect(tw).toMatch(/--tw-side:\s*18px/);
-    expect(tw).toMatch(/--tw-dock:\s*5px/);
-    expect(tw).toMatch(/minmax\(92vh/);
+    expect(tw).toMatch(/--tw-side:\s*(18|16)px/);
+    expect(tw).toMatch(/--tw-dock:\s*(5|3)px/);
+    expect(tw).toMatch(/minmax\(9[23]vh/);
     const surf = readFileSync("src/creator/surface.css", "utf8");
     expect(surf).toContain("T205");
     expect(surf).toMatch(/max-height:\s*0\.85rem/);

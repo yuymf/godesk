@@ -481,13 +481,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       map: material("#03d870", "cloth", 0.99, 0, undefined, 0.99), // T177/T181/T192/T196/T201/T206
       table: material("#e4b070", "grain", 0.48, 0.20), // T110/T177/T192/T196/T201/T206 · warmer exterior/rim
       ink: material("#1a2c3c", "none", 0.34, 0.18, 0.38),
-      piece: material("#fffaf0", "none", 0.20, 0.18, 0.66), // T201/T206
+      piece: material("#fff6e6", "none", 0.16, 0.26, 0.82), // T201/T206/T210 · plastic-wood piece
     });
     render.bindings = [
       binding("station", "station", "ink", 1.2),
       binding("route", "rail-track", "ink", 1.7),
       binding("claim", "rail-track", "ink", 1.2),
-      binding("worker", "meeple", "piece", 0.95),
+      binding("worker", "meeple", "piece", 1.08),
       binding("map", "tile-square", "map", 1),
     ];
     return;
@@ -512,7 +512,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       // T175/T206 · richer felt chroma + weave (shared MaterialLibrary board cloth)
       board: material("#02c852", "cloth", 0.99, 0, undefined, 0.99),  // T044…T198/T201/T206 product green felt
       table: material("#dca858", "grain", 0.50, 0.18), // T092…T190/T196/T201/T206 · warmer wood rim
-      piece: material("#fffaf0", "none", 0.22, 0.16, 0.62), // T198/T206
+      piece: material("#fff6e6", "none", 0.18, 0.24, 0.78), // T198/T206/T210 · plastic-wood piece
       card: material("#fff6e8", "none", 0.26, 0.10, 0.52), // T198/T206
       resource: material("#ffe9b8", "none", 0.10, 0.40, 0.94), // T198/T206
       token: material("#d4c0ff", "none", 0.18, 0.30, 0.72), // T198/T206
@@ -524,13 +524,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       binding("map", "tile-square", "board"),
       binding("card", "card", "card", 1),
       binding("disc", "disc", "piece", 0.9),
-      binding("tile", "glazed-tile", "piece", 1),
+      binding("tile", "glazed-tile", "piece", 1.12),
       binding("resource", "gem-chip", "resource", 0.9),
       binding("token", "disc", "token", 0.75),
       binding("plaque", "plaque", "piece", 1),
       binding("lot", "framed-art", "card", 1.15),
-      binding("building", "house", "piece", 0.9),
-      binding("worker", "meeple", "piece", 0.95),
+      binding("building", "house", "piece", 1.05),
+      binding("worker", "meeple", "piece", 1.08),
       binding("station", "disc", "ink", 0.8),
       binding("die", "die", "piece", 0.8),
     ];
@@ -543,7 +543,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
         board: material("#04cc58", "cloth", 0.99, 0, undefined, 0.99),  // T044…T196/T198/T201/T206 pattern felt
-        piece: material("#fafcff", "none", 0.22, 0.14, 0.60), // T061/T175/T201/T206
+        piece: material("#f7fbff", "none", 0.18, 0.20, 0.74), // T061/T175/T201/T206/T210
         slot: material("#3f3f46", "none", 0.82, 0.05, 0.12),  // legacy recessed slots
         // T054 · pale print plate under wall hue tints (square grid, not black pits)
         "wall-print": material("#e7e5e4", "none", 0.88, 0.02, 0.08),

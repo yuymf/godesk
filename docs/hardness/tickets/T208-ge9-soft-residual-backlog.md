@@ -1,4 +1,4 @@
-# T208 · Open · ≥9 软债 backlog
+# T208 · Open · ≥9 软债 backlog（已由 T209–T211 承接）
 
-**Why open:** T207 全景复抽检未达可自宣 ≥9（多数 soft；不构成产品收口）。  
-**Scope:** 共享呈现 · 禁止样例特判 · 不收口 · 北对齐真实用户路径（规则书→插件冷启动→可分享多人 3D）。
+**Why open:** T207 全景复抽检未达可自宣 ≥9。  
+**Superseded by:** T209 action HUD · T210 piece mesh · T211 panorama recheck。
