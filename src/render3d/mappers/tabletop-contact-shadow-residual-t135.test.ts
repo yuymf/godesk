@@ -11,9 +11,9 @@ describe("T135 shared contact shadow residual", () => {
     const block = src.slice(start, end > 0 ? end : start + 1800);
     expect(block).toMatch(/Math\.min\(1\.02/);
     expect(block).toMatch(/Math\.max\(0\.68/);
-    // T138 may raise further; keep ≥ T135 floors
-    expect(block).toMatch(/Math\.min\(0\.(50|54)/);
-    expect(block).toMatch(/Math\.max\(0\.(28|30)/);
+    // T138/T139 may raise further; keep ≥ T135 floors
+    expect(block).toMatch(/Math\.min\(0\.(50|54|58)/);
+    expect(block).toMatch(/Math\.max\(0\.(28|30|32)/);
     expect(block).toContain('mesh.name = "contact-shadow"');
   });
 });

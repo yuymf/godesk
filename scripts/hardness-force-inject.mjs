@@ -388,7 +388,7 @@ export async function waitRoomCanvasReady(page, { timeoutMs = 20000 } = {}) {
  * Prefer this over bare forceBuildHexSetup + outer withTimeout.
  */
 export async function runHexForceWithBudget(page, tokens, opts = {}) {
-  const budgetMs = opts.budgetMs ?? 90000; // T136 · 4p full setup via legal-actions ~60–70s
+  const budgetMs = opts.budgetMs ?? 55000; // T140 · trimmed legal-actions force (~30–45s typical)
   const started = Date.now();
   await waitRoomCanvasReady(page, { timeoutMs: Math.min(15000, budgetMs) });
   const remaining = () => Math.max(1000, budgetMs - (Date.now() - started));
@@ -445,7 +445,8 @@ export async function awaitSeatCloseGlyphReady(page, { timeoutMs = 10000 } = {})
 }
 
 export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, minRoads = 2, maxSteps = 48 } = {}) {
-  // T136 · drive placements from GET …/legal-actions (listLegalActions authority), not vertex enumeration.
+  // T136 · drive placements from GET …/legal-actions (listLegalActions authority).
+  // T140 · budget trim: prefetch all seats, reuse intent state, take first legal only.
   return page.evaluate(async ({ tokens, minSettlements, minRoads, maxSteps }) => {
     const m = location.pathname.match(/room\/([^/?]+)/);
     const sid = m?.[1];
@@ -494,10 +495,13 @@ export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, min
       try { j = JSON.parse(text); } catch {}
       return { status: r.status, ok: r.ok, err: j?.error, state: j?.state || j?.session?.state, raw: j };
     };
+    let st = await get();
+    // T140 · claim all seats up front (4p setup otherwise stalls on seat_not_claimed)
+    const seatN = Math.max(st.scores?.length || 2, st.hexIsland?.playerCount || 2);
+    await Promise.all([...Array(seatN).keys()].map((s) => ensureSeat(s)));
     const log = [];
     let viaLegal = 0;
     for (let step = 0; step < maxSteps; step++) {
-      const st = await get();
       if (st.status !== "active") return { ok: false, err: "dead", log, steps: step, viaLegal };
       const hi = st.hexIsland;
       if (!hi) return { ok: false, err: "no-hexIsland", log, steps: step, viaLegal };
@@ -523,27 +527,24 @@ export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, min
         return { ok: false, err: "no-legal", settle0, roads0, log, steps: step, viaLegal };
       }
       viaLegal += 1;
-      // Prefer settlement/road during setup; try next legal on reject (T136)
-      const ordered = [
-        ...la.actions.filter((a) => a.type === "place_settlement" || a.type === "place_road"),
-        ...la.actions.filter((a) => a.type !== "place_settlement" && a.type !== "place_road"),
-      ].slice(0, 8);
-      let acted = null;
-      for (const prefer of ordered) {
-        const r = await intent(active, prefer.type, prefer.payload || undefined);
-        log.push({
-          step,
-          active,
-          acted: { type: prefer.type, ok: r.ok, payload: prefer.payload || null, err: r.err || null },
-          legalCount: la.actions.length,
-        });
-        if (r.ok) { acted = r; break; }
-      }
-      if (!acted) {
+      // T140 · legal-actions already authoritative — take first settlement/road (or first action)
+      const prefer = la.actions.find((a) => a.type === "place_settlement" || a.type === "place_road")
+        || la.actions[0];
+      const r = await intent(active, prefer.type, prefer.payload || undefined);
+      log.push({
+        step,
+        active,
+        acted: { type: prefer.type, ok: r.ok, payload: prefer.payload || null, err: r.err || null },
+        legalCount: la.actions.length,
+      });
+      if (!r.ok) {
         return { ok: false, err: "intent_rejected", settle0, roads0, log, steps: step, viaLegal };
       }
+      // T140 · reuse intent response state (skip extra GET round-trip)
+      if (r.state) st = r.state;
+      else st = await get();
     }
-    const final = await get();
+    const final = st?.hexIsland ? st : await get();
     const p0 = final.hexIsland?.players?.[0];
     return {
       ok: ((p0?.settlements || []).length >= minSettlements && (p0?.roads || []).length >= minRoads),
@@ -556,6 +557,7 @@ export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, min
     };
   }, { tokens, minSettlements, minRoads, maxSteps });
 }
+
 
 
 export async function forceDraftPattern(page, tokens, { minLineTiles = 2, minFloor = 1, maxSteps = 80 } = {}) {

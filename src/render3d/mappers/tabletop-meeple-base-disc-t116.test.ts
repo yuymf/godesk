@@ -9,6 +9,6 @@ describe("T116 meeple base disc tune", () => {
     expect(src).toMatch(/cream rim/);
     expect(src).toContain("#a89478");
     // T106 meeple footprint kept
-    expect(src).toMatch(/softContactShadow\(0\.26,\s*0\.22\)/);
+    expect(src).toMatch(/softContactShadow\(0\.(26|30|34),\s*0\.(22|26|30)\)/);
   });
 });

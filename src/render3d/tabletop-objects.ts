@@ -174,7 +174,7 @@ function meepleFigure(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   rim.castShadow = false;
   rim.receiveShadow = true;
   group.add(rim);
-  group.add(softContactShadow(0.26, 0.22)); // T106 meeple footprint
+  group.add(softContactShadow(0.34, 0.30)); // T106/T139 meeple footprint
   return group;
 }
 
@@ -1149,21 +1149,22 @@ function softContactShadow(
   // T106 · reopen: tighter boost/opacity for large footprints; shadows remain (T079/T081)
   // T135 · residual polish: slightly stronger auto opacity floor/ceiling (keep T106 boost clamp)
   // T138 · stage-wide contact-shadow contrast (keep T106 boost clamp)
+  // T139 · pixel residual: larger footprint + opacity ceiling (keep T106 boost clamp + T135/T138 floors)
   const area = Math.max(0.04, rx * rz);
   const autoBoost =
     opts?.boost ??
-    Math.min(1.02, Math.max(0.68, 0.88 / Math.sqrt(area / 0.18)));
+    Math.min(1.02, Math.max(0.68, 0.98 / Math.sqrt(area / 0.18)));
   const autoOpacity =
     opts?.opacity ??
-    Math.min(0.54, Math.max(0.30, 0.37 + 0.06 / Math.sqrt(area / 0.18)));
+    Math.min(0.58, Math.max(0.32, 0.40 + 0.07 / Math.sqrt(area / 0.18)));
   const opacity = autoOpacity;
   const boost = autoBoost;
   const geom = new CircleGeometry(1, 24);
   geom.rotateX(-Math.PI / 2);
-  geom.scale(rx * boost, 1, rz * boost);
-  geom.translate(0, 0.0015, 0);
+  geom.scale(rx * boost * 1.22, 1, rz * boost * 1.22); // T139
+  geom.translate(0, 0.0010, 0);
   const mat = new MeshBasicMaterial({
-    color: "#020101",
+    color: "#000000",
     transparent: true,
     opacity,
     depthWrite: false,
@@ -1722,43 +1723,57 @@ function proceduralLotCanvas(schema: { title: string; prestige?: number; bid?: n
   const pal = palettes[seed % palettes.length]!;
   // T075 · stage-readable full-bleed color masses (pay T072 H05 debt)
   // T137 · auction density pixel residual — higher ink/edge contrast (shared; keep T134 counts)
+  // T141 · stage-wide microcontrast — brighter masses + dual rim + hatch (keep T134/T137 floors)
   g.fillStyle = pal[0]!;
   g.fillRect(0, 0, W, H);
   g.fillStyle = pal[1]!;
-  g.fillRect(0, 0, W * 0.58, H * 0.74);
+  g.fillRect(0, 0, W * 0.62, H * 0.78);
   g.fillStyle = pal[2]!;
-  g.fillRect(W * 0.40, H * 0.06, W * 0.56, H * 0.54);
+  g.fillRect(W * 0.36, H * 0.02, W * 0.60, H * 0.58);
   g.fillStyle = pal[3]!;
   g.beginPath();
-  g.moveTo(W * 0.55, H * 0.10);
-  g.lineTo(W * 0.94, H * 0.38);
-  g.lineTo(W * 0.55, H * 0.66);
-  g.lineTo(W * 0.26, H * 0.38);
+  g.moveTo(W * 0.54, H * 0.06);
+  g.lineTo(W * 0.98, H * 0.38);
+  g.lineTo(W * 0.54, H * 0.70);
+  g.lineTo(W * 0.22, H * 0.38);
   g.closePath();
   g.fill();
   // secondary blocks for value structure at stage distance
   g.fillStyle = pal[1]!;
-  g.fillRect(W * 0.06, H * 0.46, W * 0.32, H * 0.26);
+  g.fillRect(W * 0.04, H * 0.42, W * 0.36, H * 0.30);
   g.fillStyle = pal[3]!;
-  g.fillRect(W * 0.60, H * 0.50, W * 0.32, H * 0.22);
-  // ink rim for stage-wide separation
-  g.strokeStyle = "rgba(15,23,42,0.88)";
-  g.lineWidth = 10;
-  g.strokeRect(6, 6, W - 12, H - 12);
+  g.fillRect(W * 0.56, H * 0.46, W * 0.36, H * 0.26);
+  // hatch bands for stage-wide microcontrast
+  g.strokeStyle = "rgba(15,23,42,0.55)";
+  g.lineWidth = 3;
+  for (let i = 0; i < 7; i++) {
+    const x = W * (0.12 + i * 0.12);
+    g.beginPath();
+    g.moveTo(x, H * 0.12);
+    g.lineTo(x + W * 0.08, H * 0.70);
+    g.stroke();
+  }
+  // ink + cream dual rim for stage-wide microcontrast
+  g.strokeStyle = "rgba(15,23,42,0.98)";
+  g.lineWidth = 14;
+  g.strokeRect(3, 3, W - 6, H - 6);
+  g.strokeStyle = "rgba(253,230,138,0.95)";
+  g.lineWidth = 6;
+  g.strokeRect(12, 12, W - 24, H - 24);
   g.globalAlpha = 1;
   // Title plate
-  g.fillStyle = "rgba(15,23,42,0.88)";
-  g.fillRect(10, H - 78, W - 20, 64);
+  g.fillStyle = "rgba(15,23,42,0.95)";
+  g.fillRect(6, H - 86, W - 12, 76);
   g.fillStyle = "#ffffff";
-  g.font = "bold 26px system-ui,sans-serif";
+  g.font = "bold 30px system-ui,sans-serif";
   g.textAlign = "left";
-  g.fillText((schema.title || "拍品").slice(0, 10), 22, H - 42);
+  g.fillText((schema.title || "拍品").slice(0, 10), 18, H - 46);
   g.font = "bold 18px system-ui,sans-serif";
   g.fillStyle = "#fde68a";
   const bits: string[] = [];
   if (schema.prestige != null) bits.push(`底 ${schema.prestige}`);
   if (schema.bid != null && schema.bid > 0) bits.push(`价 ${schema.bid}`);
-  g.fillText(bits.join(" · ") || "画廊拍品", 22, H - 16);
+  g.fillText(bits.join(" · ") || "画廊拍品", 18, H - 16);
   return canvas;
 }
 
@@ -1800,7 +1815,7 @@ function framedArtWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3
   art.position.set(0, 0.09, 0);
   art.renderOrder = 2;
   group.add(art);
-  group.add(softContactShadow(0.55, 0.7));
+  group.add(softContactShadow(0.72, 0.90)); // T139
   return group;
 }
 
@@ -1879,21 +1894,21 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = meepleFigure(node, ctx);
   } else if (mesh === "card") {
     object = cardWithFace(node, ctx);
-    (object as Group).add(softContactShadow(0.32, 0.44, { opacity: 0.42 })); // T096/T106/T135 card footprint
+    (object as Group).add(softContactShadow(0.42, 0.56, { opacity: 0.46 })); // T096/T106/T135/T139 card footprint
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
     // T081 · larger local blob so small tiles still ground at H02/H03 visibility
-    (object as Group).add(softContactShadow(0.28, 0.28, { opacity: 0.36, boost: 0.80 })); // T081/T096/T106
+    (object as Group).add(softContactShadow(0.38, 0.38, { opacity: 0.40, boost: 0.82 })); // T081/T096/T106/T139
   } else if (mesh === "plaque") {
     object = plaqueWithFace(node, ctx);
-    (object as Group).add(softContactShadow(0.38, 0.30)); // T106 plaque
+    (object as Group).add(softContactShadow(0.50, 0.40, { opacity: 0.48 })); // T106/T139 plaque
   } else if (mesh === "gem-chip") {
     const built = new Mesh(geometryFor(mesh), materialFor(node, ctx));
     built.castShadow = true;
     built.receiveShadow = true;
     const g = new Group();
     g.add(built);
-    g.add(softContactShadow(0.34, 0.34)); // T106 gem-chip
+    g.add(softContactShadow(0.44, 0.44)); // T106/T139 gem-chip
     object = g;
   } else if (INSTANCED_MESHES.has(mesh)) {
     object = createInstanceProxy(mesh, node, ctx);
