@@ -139,20 +139,21 @@ export function paintIllustrationBand(
   g.fill();
 
   // T069 · motif kinds (gem diamond / building silhouette); T077 · stage-wide readable color masses; T087 · shared edge/contrast boost (no kernel special-case)
+  // T108 · microcontrast: deeper counter + brighter parchment/accent slabs (shared; no gem/auction fork)
   const motifKind = Math.floor(rnd() * 3); // gem | building silhouette | combo
   g.globalAlpha = 1;
   // full-bleed reward mass — pure CHIP hue dominates far crop
   const solid = rewardHex.startsWith("#") ? rewardHex : mix(rgb, accent, 0.02);
   g.fillStyle = solid;
   g.fillRect(box.x, box.y, box.w, box.h);
-  // near-black counter slab (value structure at stage-wide) — T087 slightly larger
-  g.fillStyle = "#05070c";
+  // near-black counter slab (value structure at stage-wide) — T087/T108 slightly deeper
+  g.fillStyle = "#02040a";
   g.fillRect(box.x + box.w * 0.01, box.y + box.h * 0.05, box.w * 0.46, box.h * 0.9);
-  // bright accent slab opposite
-  g.fillStyle = mix(parchment, "#ffffff", 0.15);
+  // bright accent slab opposite — T108 lift parchment
+  g.fillStyle = mix(parchment, "#ffffff", 0.28);
   g.fillRect(box.x + box.w * 0.5, box.y + box.h * 0.04, box.w * 0.48, box.h * 0.36);
   // secondary pure accent bar (higher chroma for stage-wide)
-  g.fillStyle = mix(accent, rgb, 0.15);
+  g.fillStyle = mix(accent, rgb, 0.08);
   g.fillRect(box.x + box.w * 0.5, box.y + box.h * 0.42, box.w * 0.48, box.h * 0.26);
   if (motifKind === 0 || motifKind === 2) {
     const gx = box.x + box.w * 0.72;
@@ -167,11 +168,11 @@ export function paintIllustrationBand(
     g.lineTo(gx - gw * 0.55, gy);
     g.closePath();
     g.fill();
-    g.strokeStyle = "#0b1220";
-    g.lineWidth = Math.max(10, box.w * 0.05); // T087 · thicker motif edge for stage-wide
+    g.strokeStyle = "#05070c";
+    g.lineWidth = Math.max(11, box.w * 0.055); // T087/T108 · thicker motif edge for stage-wide
     g.stroke();
-    g.strokeStyle = "rgba(255,248,235,0.55)";
-    g.lineWidth = Math.max(3, box.w * 0.018);
+    g.strokeStyle = "rgba(255,248,235,0.72)";
+    g.lineWidth = Math.max(3.5, box.w * 0.02);
     g.stroke();
     g.fillStyle = mix(accent, parchment, 0.1);
     g.beginPath();
@@ -202,15 +203,15 @@ export function paintIllustrationBand(
     g.fillRect(bx - bw * 0.14, by - bh * 0.55, bw * 0.28, bh * 0.52);
   }
 
-  // T087 · dual-edge ring: dark outer + light inner — stage-wide silhouette without gem/auction forks
+  // T087/T108 · dual-edge ring: darker outer + brighter inner — stage-wide silhouette without gem/auction forks
   g.globalAlpha = 1;
   const inset = Math.max(2, Math.min(box.w, box.h) * 0.015);
-  const edgeW = Math.max(8, Math.min(box.w, box.h) * 0.055);
-  g.strokeStyle = "rgba(5,6,12,0.98)";
+  const edgeW = Math.max(8, Math.min(box.w, box.h) * 0.058);
+  g.strokeStyle = "rgba(2,4,10,0.99)";
   g.lineWidth = edgeW;
   g.strokeRect(box.x + inset, box.y + inset, box.w - inset * 2, box.h - inset * 2);
-  g.strokeStyle = "rgba(255,250,240,0.92)";
-  g.lineWidth = Math.max(3, edgeW * 0.5);
+  g.strokeStyle = "rgba(255,252,245,0.96)";
+  g.lineWidth = Math.max(3.5, edgeW * 0.52);
   g.strokeRect(box.x + inset + edgeW * 0.5, box.y + inset + edgeW * 0.5, box.w - inset * 2 - edgeW, box.h - inset * 2 - edgeW);
   // T087 · high-contrast corner ticks (stage-wide landmark, shared)
   const tick = Math.max(10, Math.min(box.w, box.h) * 0.12);
@@ -260,12 +261,12 @@ export function paintCardFace(
   // stock
   g.fillStyle = "#fbf6ec";
   g.fillRect(0, 0, W, H);
-  // T087 · thicker dark outer + brighter inner frame for stage-wide edge readout
-  g.strokeStyle = "#2a1810";
-  g.lineWidth = 14;
+  // T087/T108 · thicker dark outer + brighter inner frame for stage-wide edge readout
+  g.strokeStyle = "#1a0e08";
+  g.lineWidth = 15;
   g.strokeRect(12, 12, W - 24, H - 24);
-  g.strokeStyle = "#e8d2b0";
-  g.lineWidth = 5;
+  g.strokeStyle = "#f0dcb8";
+  g.lineWidth = 5.5;
   g.strokeRect(22, 22, W - 44, H - 44);
 
   const ill = zones.illustration!;

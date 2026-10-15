@@ -172,7 +172,7 @@ function meepleFigure(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   rim.castShadow = false;
   rim.receiveShadow = true;
   group.add(rim);
-  group.add(softContactShadow(0.42, 0.34));
+  group.add(softContactShadow(0.26, 0.22)); // T106 meeple footprint
   return group;
 }
 
@@ -1114,13 +1114,14 @@ function softContactShadow(
   // T081 · optional opacity/boost for small tiles/plates (shared API; not H04-only)
   // T079 default opacity: 0.48 (baseline for typical card footprint)
   // T096 · footprint-scaled radius/strength — large discs stay visible but not board-wide blobs
+  // T106 · reopen: tighter boost/opacity for large footprints; shadows remain (T079/T081)
   const area = Math.max(0.04, rx * rz);
   const autoBoost =
     opts?.boost ??
-    Math.min(1.22, Math.max(0.82, 1.08 / Math.sqrt(area / 0.28)));
+    Math.min(1.02, Math.max(0.68, 0.85 / Math.sqrt(area / 0.18)));
   const autoOpacity =
     opts?.opacity ??
-    Math.min(0.52, Math.max(0.30, 0.40 + 0.07 / Math.sqrt(area / 0.28)));
+    Math.min(0.46, Math.max(0.26, 0.33 + 0.05 / Math.sqrt(area / 0.18)));
   const opacity = autoOpacity;
   const boost = autoBoost;
   const geom = new CircleGeometry(1, 24);
@@ -1180,7 +1181,7 @@ function porcelainPlate(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const glaze = new Mesh(translated(new CylinderGeometry(0.36, 0.36, 0.02, 28), 0.065), glazeMat);
   glaze.receiveShadow = true;
   group.add(bed, rim, glaze);
-  group.add(softContactShadow(0.55, 0.55, { opacity: 0.5, boost: 1.05 })); // T081/T096 footprint
+  group.add(softContactShadow(0.32, 0.32, { opacity: 0.38, boost: 0.82 })); // T081/T096/T106 footprint
   return group;
 }
 
@@ -1833,21 +1834,21 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = meepleFigure(node, ctx);
   } else if (mesh === "card") {
     object = cardWithFace(node, ctx);
-    (object as Group).add(softContactShadow(0.42, 0.58)); // T096 card footprint
+    (object as Group).add(softContactShadow(0.32, 0.44)); // T096/T106 card footprint
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
     // T081 · larger local blob so small tiles still ground at H02/H03 visibility
-    (object as Group).add(softContactShadow(0.62, 0.62, { opacity: 0.6, boost: 1.12 })); // T081/T096
+    (object as Group).add(softContactShadow(0.28, 0.28, { opacity: 0.36, boost: 0.80 })); // T081/T096/T106
   } else if (mesh === "plaque") {
     object = plaqueWithFace(node, ctx);
-    (object as Group).add(softContactShadow(0.5, 0.38));
+    (object as Group).add(softContactShadow(0.38, 0.30)); // T106 plaque
   } else if (mesh === "gem-chip") {
     const built = new Mesh(geometryFor(mesh), materialFor(node, ctx));
     built.castShadow = true;
     built.receiveShadow = true;
     const g = new Group();
     g.add(built);
-    g.add(softContactShadow(0.48, 0.48));
+    g.add(softContactShadow(0.34, 0.34)); // T106 gem-chip
     object = g;
   } else if (INSTANCED_MESHES.has(mesh)) {
     object = createInstanceProxy(mesh, node, ctx);
