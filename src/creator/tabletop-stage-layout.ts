@@ -39,7 +39,7 @@ export function fallbackTabletopRender(kernel: TabletopStageProps["kernel"]): Ta
     water: { enabled: kernel === "harbor-voyage-v1", shallow: "#4aa8a8", deep: "#0e3a55" },
     materials: {
       ...Object.fromEntries(colors.map((base, index) => [`seat${index}`, seat(base)])),
-      table: { base: "#7a4e28", roughness: 0.92, metalness: 0, pattern: "grain" },
+      table: { base: "#a87338", roughness: 0.74, metalness: 0.06, pattern: "grain" }, // T110
       piece: { base: "#f7f1e6", roughness: desk ? 0.42 : 0.58, metalness: desk ? 0.08 : 0, clearcoat: desk ? 0.35 : 0.12, pattern: "none" },
       card: { base: "#f3e7d3", roughness: 0.72, metalness: 0, clearcoat: 0.08, pattern: "none" },
       resource: { base: "#e8d9b8", roughness: 0.48, metalness: 0.12, clearcoat: 0.28, pattern: "none" },

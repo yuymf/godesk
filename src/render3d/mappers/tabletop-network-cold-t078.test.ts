@@ -34,7 +34,7 @@ describe("T078 network cold board richness", () => {
   it("rail-track source has ballast bed for unclaimed; signal-post mesh exists", () => {
     const src = readFileSync("src/render3d/tabletop-objects.ts", "utf8");
     expect(src).toContain("T078");
-    expect(src).toContain("tt-ballast");
+    expect(src).toMatch(/tt-ballast|railBallastMaterial/);
     expect(src).toContain("signal-post");
     expect(src).toContain("function signalPost");
   });

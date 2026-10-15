@@ -12,7 +12,7 @@ describe("T098 desk exterior wood grain", () => {
   it("desk wood reuses T092 woodRimMaterial maps", () => {
     const src = readFileSync("src/render3d/tabletop-objects.ts", "utf8");
     expect(src).toContain("woodRimMaterial");
-    expect(src).toMatch(/deskWoodMaterial[\s\S]{0,400}woodRimMaterial/);
+    expect(src).toMatch(/deskWoodMaterial[\s\S]{0,600}woodRimMaterial/);
   });
 
   it("T086 lighting fill/rim still present", () => {

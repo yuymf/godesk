@@ -743,9 +743,9 @@ function pose(object: Object3D, node: SceneNode): void {
   else object.scale.set(1, 1, 1);
 }
 
-const STEEL: MaterialToken = { base: "#9aa1a6", roughness: 0.32, metalness: 0.85, pattern: "none" };
-const SLEEPER: MaterialToken = { base: "#5a3b22", roughness: 0.86, metalness: 0, pattern: "grain" };
-const TRACK_SLOT: MaterialToken = { base: "#94a3b8", roughness: 0.85, metalness: 0.05, pattern: "none" };
+const STEEL: MaterialToken = { base: "#c2c8ce", roughness: 0.28, metalness: 0.88, pattern: "none" }; // T109 · brighter steel vs felt
+const SLEEPER: MaterialToken = { base: "#4a2e18", roughness: 0.88, metalness: 0, pattern: "grain" }; // T109 · warmer/darker ties
+const TRACK_SLOT: MaterialToken = { base: "#a8b4c4", roughness: 0.82, metalness: 0.06, pattern: "none" };
 const STONE: MaterialToken = { base: "#b8ab92", roughness: 0.9, metalness: 0, pattern: "stone" };
 const WALL: MaterialToken = { base: "#efe2c4", roughness: 0.8, metalness: 0, pattern: "none" };
 const ROOF: MaterialToken = { base: "#8e3b2c", roughness: 0.7, metalness: 0, pattern: "none" };
@@ -1191,7 +1191,7 @@ function feltWoodRim(): Geometry {
   return outer;
 }
 
-/** T094 · shared route-path microdetail maps (ballast / sleeper / steel). */
+/** T094/T109 · shared route-path microdetail maps (ballast / sleeper / steel). */
 function makeRailMaps(kind: "ballast" | "sleeper" | "steel", baseHex: string): {
   map: CanvasTexture | null;
   normalMap: CanvasTexture | null;
@@ -1254,9 +1254,10 @@ function makeRailMaps(kind: "ballast" | "sleeper" | "steel", baseHex: string): {
       const h0 = height[i]!;
       const hx = height[y * W + ((x + 1) % W)]!;
       const hy = height[((y + 1) % H) * W + x]!;
-      const dx = (h0 - hx) * (kind === "steel" ? 6 : 10);
-      const dy = (h0 - hy) * (kind === "steel" ? 6 : 10);
-      const shade = (h0 - 0.5) * (kind === "ballast" ? 90 : 70);
+      // T109 · stronger albedo micro-shade for stage-wide path contrast (T094 maps kept)
+      const dx = (h0 - hx) * (kind === "steel" ? 7 : 12);
+      const dy = (h0 - hy) * (kind === "steel" ? 7 : 12);
+      const shade = (h0 - 0.5) * (kind === "ballast" ? 120 : kind === "sleeper" ? 95 : 85);
       const o = i * 4;
       aImg.data[o] = Math.max(0, Math.min(255, br + shade));
       aImg.data[o + 1] = Math.max(0, Math.min(255, bg + shade * 0.92));
@@ -1296,28 +1297,29 @@ function railSleeperMaterial(ctx: TabletopObjectContext): Material {
     color: SLEEPER.base,
     map: maps.map ?? undefined,
     normalMap: maps.normalMap ?? undefined,
-    normalScale: new Vector2(1.1, 1.1),
+    normalScale: new Vector2(1.25, 1.25), // T109
     roughnessMap: maps.roughnessMap ?? undefined,
     roughness: SLEEPER.roughness,
     metalness: SLEEPER.metalness,
   });
   installPattern(mat, "grain", 0);
   const strength = mat.userData.gdPatternStrength as { value: number } | undefined;
-  if (strength) strength.value = 0.75;
+  if (strength) strength.value = 0.82; // T109
   void ctx;
   return mat;
 }
 
 function railBallastMaterial(): Material {
-  const maps = makeRailMaps("ballast", "#6b7280");
+  // T078 tt-ballast · T094 maps · T109 contrast lift
+  const maps = makeRailMaps("ballast", "#9aa3b0");
   return new MeshStandardMaterial({
-    color: "#6b7280",
+    color: "#9aa3b0",
     map: maps.map ?? undefined,
     normalMap: maps.normalMap ?? undefined,
-    normalScale: new Vector2(1.35, 1.35),
+    normalScale: new Vector2(1.55, 1.55),
     roughnessMap: maps.roughnessMap ?? undefined,
-    roughness: 0.95,
-    metalness: 0.02,
+    roughness: 0.93,
+    metalness: 0.03,
   });
 }
 
@@ -1336,10 +1338,10 @@ function railSteelMaterial(ctx: TabletopObjectContext): Material {
   return mat;
 }
 
-/** T092 · shared wood rim grain/normal/roughness microdetail (align with felt T082/T083). */
+/** T092 · shared wood rim grain/normal/roughness microdetail (align with felt T082/T083; T110 exterior shares). */
 function woodRimMaterial(node: SceneNode, ctx: TabletopObjectContext): Material {
   const token = node.material ? ctx.materials[node.material] : undefined;
-  const base = token?.base ?? "#8b5a2b";
+  const base = token?.base ?? "#a87338"; // T110
   const W = 256;
   const H = 256;
   const albedo = typeof document !== "undefined" ? document.createElement("canvas") : null;
@@ -1379,16 +1381,17 @@ function woodRimMaterial(node: SceneNode, ctx: TabletopObjectContext): Material 
           Number.parseInt(h.slice(4, 6), 16),
         ] as const;
       };
-      const [br, bg, bb] = parse(String(base).startsWith("#") && String(base).length >= 7 ? String(base) : "#8b5a2b");
+      const [br, bg, bb] = parse(String(base).startsWith("#") && String(base).length >= 7 ? String(base) : "#a87338");
       for (let y = 0; y < H; y += 1) {
         for (let x = 0; x < W; x += 1) {
           const i = y * W + x;
           const h0 = height[i]!;
           const hx = height[y * W + ((x + 1) % W)]!;
           const hy = height[((y + 1) % H) * W + x]!;
-          const dx = (h0 - hx) * 10;
-          const dy = (h0 - hy) * 10;
-          const shade = (h0 - 0.5) * 78;
+          // T110 · stronger shared grain shade (rim+exterior continuous, not cut)
+          const dx = (h0 - hx) * 12;
+          const dy = (h0 - hy) * 12;
+          const shade = (h0 - 0.5) * 128; // T110
           const o = i * 4;
           aImg.data[o] = Math.max(0, Math.min(255, br + shade));
           aImg.data[o + 1] = Math.max(0, Math.min(255, bg + shade * 0.9));
@@ -1424,21 +1427,20 @@ function woodRimMaterial(node: SceneNode, ctx: TabletopObjectContext): Material 
     color: base,
     map: map ?? undefined,
     normalMap: normalMap ?? undefined,
-    normalScale: new Vector2(1.15, 1.15),
+    normalScale: new Vector2(1.35, 1.35), // T110 shared with exterior
     roughnessMap: roughnessMap ?? undefined,
     roughness: Math.min(0.88, Math.max(0.55, token?.roughness ?? 0.78)),
     metalness: Math.min(0.12, token?.metalness ?? 0.06),
   });
   installPattern(mat, "grain", 0);
   const strength = mat.userData.gdPatternStrength as { value: number } | undefined;
-  if (strength) strength.value = 0.85;
+  if (strength) strength.value = 0.92; // T110
   return mat;
 }
 
-/** T098 · desk exterior wood grain — same maps as T092 rim, larger world repeat.
- *  T102 · cached via MaterialLibrary.ensure (one shared material per base). */
+/** T098/T110/T102 · desk exterior = T092 woodRimMaterial maps; continuous with rim. */
 function deskWoodMaterial(node: SceneNode, ctx: TabletopObjectContext, token?: MaterialToken): Material {
-  const base = String(token?.base ?? (node.material && ctx.materials[node.material]?.base) ?? "#7a4e28");
+  const base = String(token?.base ?? (node.material && ctx.materials[node.material]?.base) ?? "#a87338"); // T110=rim
   const roughKey = token?.roughness !== undefined ? String(token.roughness) : "d";
   const cacheKey = `desk-wood:${base}:${roughKey}`;
   return ctx.library.ensure(
@@ -1448,14 +1450,18 @@ function deskWoodMaterial(node: SceneNode, ctx: TabletopObjectContext, token?: M
       mat.color.set(base);
       for (const tex of [mat.map, mat.normalMap, mat.roughnessMap]) {
         if (!tex) continue;
-        tex.repeat.set(4.5, 4.5);
+        // T110 · closer world repeat to rim (was 4.5 vs rim 2.4) — continuity without cutting grain
+        tex.repeat.set(3.2, 3.2);
       }
       const strength = mat.userData.gdPatternStrength as { value: number } | undefined;
-      if (strength) strength.value = 0.9;
-      if (token?.roughness !== undefined) mat.roughness = Math.min(0.9, Math.max(0.55, token.roughness));
+      if (strength) strength.value = 0.92; // match rim T110
+      // Match rim roughness/metalness floors when token silent
+      mat.roughness = Math.min(0.88, Math.max(0.55, token?.roughness ?? 0.78));
+      mat.metalness = Math.min(0.12, token?.metalness ?? 0.06);
+      mat.normalScale = new Vector2(1.35, 1.35); // same as rim T110
       return mat;
     },
-    token ?? { base, roughness: 0.82, metalness: 0.08, pattern: "grain" },
+    token ?? { base, roughness: 0.78, metalness: 0.06, pattern: "grain" },
   );
 }
 

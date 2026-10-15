@@ -455,7 +455,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       map: material("#1f6b45", "cloth", 0.94, 0, undefined, 0.4),
-      table: material("#7a4e28", "grain", 0.92),
+      table: material("#a87338", "grain", 0.84), // T110 · align exterior/rim
       ink: material("#40505a", "none", 0.58),
       piece: material("#f7f1e6", "none", 0.42, 0.08, 0.35),
     });
@@ -483,7 +483,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       board: material("#1a8a45", "cloth", 0.99, 0, undefined, 0.62),  // T044 product green felt
-      table: material("#7a4e28", "grain", 0.82, 0.08), // T092 · wood rim microdetail base
+      table: material("#a87338", "grain", 0.74, 0.06), // T092/T110 · wood rim+exterior continuous
       piece: material("#f7f1e6", "none", 0.32, 0.1, 0.48),
       card: material("#f8edd8", "none", 0.42, 0.04, 0.32),
       resource: material("#f0e2c0", "none", 0.2, 0.28, 0.82),
