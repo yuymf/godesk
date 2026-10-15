@@ -4,8 +4,8 @@
 | --- | --- |
 | 回归靶 | H04 stage-close vs regress-t079 过 gate（mean≥5 OR ge20≥5%）；T047/T076/T074 仍净 |
 | 层 | **共享呈现** |
-| 状态 | **开** |
-| tip | _(pending)_ |
+| 状态 | **关** |
+| tip | `981752c` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t081/` |
 
 ## 问题
