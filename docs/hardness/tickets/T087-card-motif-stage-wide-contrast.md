@@ -5,7 +5,7 @@
 | 回归靶 | H03 (+H05 if cards) stage-wide vs prior tip；motif-canvas 不回退；purge clean |
 | 层 | **共享呈现 / card-face** |
 | 状态 | **证据齐，待主管裁** |
-| tip | `045fdb0` |
+| tip | `347185e` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t087/` |
 
 ## 问题

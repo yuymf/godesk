@@ -5,7 +5,7 @@
 | 回归靶 | H01 stage-wide/close；不破 T062/T067/T070；purge clean |
 | 层 | **共享呈现 / terrain-props** |
 | 状态 | **证据齐，待主管裁** |
-| tip | `9a4f154` |
+| tip | `3dfdbd2` |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t088/` |
 
 ## 问题
