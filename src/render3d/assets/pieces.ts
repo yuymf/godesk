@@ -501,8 +501,10 @@ export function buildRoadGeometry(seat: number): BufferGeometry {
 
 
 /** T123 · shared seat meeple for hex layout — rim disc matches T090/T116 (#a89478), larger for ortho. */
-export const MEEPLE_HEX_SCALE = 1.35;
-export const MEEPLE_RIM_HEX = "#a89478";
+/** T163/T165 · dual-lip product-frame language on meeple rim (align felt-wood crown gold). */
+export const MEEPLE_HEX_SCALE = 1.85; // T163 · seat-close readable product-frame rim
+export const MEEPLE_RIM_HEX = "#ffe6b0"; // T163 · high-key crown (align felt-wood lip)
+export const MEEPLE_RIM_UNDERCUT = "#3a2414"; // T163 · dark undercut
 
 export function buildMeepleGeometry(seat = 0): BufferGeometry {
   const seatColor = SEAT_COLORS[seat % SEAT_COLORS.length] ?? "#ffffff";
@@ -535,12 +537,18 @@ export function buildMeepleGeometry(seat = 0): BufferGeometry {
   body.translate(0, 0, -0.11);
   parts.push(paintPart(body, seatColor, { smooth: true }));
   // T090/T116 · cream→dim rim disc under meeple (hex ortho: slightly larger radius)
+  // T163 · dual-lip: dark undercut + bright crown (shared product-frame with felt-wood-rim)
   parts.push(
-    paintPart(new CylinderGeometry(0.28, 0.30, 0.045, 16), MEEPLE_RIM_HEX, {
-      pos: [0, 0.022, 0],
+    paintPart(new CylinderGeometry(0.40, 0.44, 0.035, 20), MEEPLE_RIM_UNDERCUT, {
+      pos: [0, 0.016, 0],
     }),
   );
-  parts.push(contactShadow(0.26, 0.22, 0.003));
+  parts.push(
+    paintPart(new CylinderGeometry(0.36, 0.40, 0.065, 20), MEEPLE_RIM_HEX, {
+      pos: [0, 0.045, 0],
+    }),
+  );
+  parts.push(contactShadow(0.34, 0.30, 0.003));
   return scaled(bakeShading(mergeParts(parts), 0.2), MEEPLE_HEX_SCALE);
 }
 

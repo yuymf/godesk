@@ -101,12 +101,13 @@ export const HEX_ISLAND_LIGHTING = {
   // R22: less orange key light (#ffd4a4 → #ffecd2) + more neutral sky fill — the warm cast pushed wheat / desert
   // toward orange-brown and ore / pasture toward beige-olive; resource hues now stay true (water gets brighter, not darker).
   sun: { azimuthDeg: 128, elevationDeg: 48, intensity: 3.45, color: "#ffecd2" },
-  hemisphere: { sky: "#f3f1e8", ground: "#cfc3a2", intensity: 1.42 },
+  hemisphere: { sky: "#f3f1e8", ground: "#d4b896", intensity: 1.55 }, // T163 · warmer ground for seat-close frame
   shadow: { enabled: true, softness: 0.92 },
   exposure: 1.2,
   // T086 · hex desk also gets fill/rim layers (generic, not sample pack)
+  // T163 · warmer/stronger rim for seat-close product-frame residual (shared desk rig)
   fill: { azimuthDeg: 310, elevationDeg: 34, intensity: 0.52, color: "#d0dced" },
-  rim: { azimuthDeg: 38, elevationDeg: 18, intensity: 0.4, color: "#ffe8c4" },
+  rim: { azimuthDeg: 38, elevationDeg: 18, intensity: 0.92, color: "#ffe6b0" },
 } as const satisfies LightingSpec;
 
 /** R19：AI 贴图（虹夏 8 张；R20 起经 scripts/bake-ai-r20.py 色块化 + Kuwahara 绘本化后烘焙）为 t01–t06 baseColor；base 提亮去饱和、pbrTint 让贴图色相主导；

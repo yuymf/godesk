@@ -916,7 +916,7 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     group.add(ghostMesh);
   }
   // T079 · ground contact under track corridor
-  group.add(softContactShadow(Math.max(1.05, usable * 1.28), Math.max(0.75, gauge * 2.40), { opacity: 0.64 })); // T142/T145/T155/T160 route
+  group.add(softContactShadow(Math.max(1.20, usable * 1.45), Math.max(0.88, gauge * 2.75), { opacity: 0.70 })); // T142/T145/T155/T160/T164 route
   const hit = new Mesh(new BoxGeometry(usable, 0.1, gauge * 1.7), new MeshBasicMaterial({ visible: false }));
   hit.position.y = 0.05;
   group.add(hit);
@@ -1160,6 +1160,8 @@ function softContactShadow(
   // T158 · H04 mean floor ≥5 (tile/mid; keep H02/H03 / T151 ink)
   // T160 · H01/H02 product-frame + H02 route residual (keep H03/H04 / T157 ink)
   // T161 · H04 wide halo dark-clamp: lighter mid ink blot, soft mean via footprint (keep T157)
+  // T163 · H01/H02 seat-close dual-lip product-frame (must clear pixel gate)
+  // T164 · H02 route residual under dark-clamp (keep T161 upper-ink lighter)
   const area = Math.max(0.04, rx * rz);
   const autoBoost =
     opts?.boost ??
@@ -1820,7 +1822,7 @@ function framedArtWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3
   // T159 · shared product-frame bevel lip (seat-close readable across suites)
   const lip = new Mesh(
     translated(new BoxGeometry(0.97, 0.012, 1.22), 0.086),
-    new MeshStandardMaterial({ color: "#f5e0b8", roughness: 0.42, metalness: 0.12 }), // T159/T160
+    new MeshStandardMaterial({ color: "#ffe6b0", roughness: 0.38, metalness: 0.14 }), // T159/T160/T163
   );
   lip.castShadow = false;
   lip.receiveShadow = true;
@@ -1890,13 +1892,25 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
   } else if (mesh === "felt-wood-rim") {
     // T044: hollow wood frame — solid box was burying the green felt inset.
     // T092 · grain/normal/roughness microdetail on shared wood rim
-    // T159 · product-frame seat-close: top bevel lip on shared wood rim
+    // T159/T160 · product-frame seat-close top bevel lip
+    // T163 · dual-lip product-frame (dark undercut + bright crown) for seat-close pixel gate
+    // T165 · shared rim language across suites
     const group = new Group();
     const mat = woodRimMaterial(node, ctx);
+    const underMat = new MeshStandardMaterial({
+      color: "#3a2414", // T163 · dark undercut for contrast
+      roughness: 0.72,
+      metalness: 0.04,
+    });
     const lipMat = new MeshStandardMaterial({
-      color: "#f0d8a8", // T160 · brighter product-frame lip for H01/H02 seat-close
-      roughness: 0.48,
-      metalness: 0.10,
+      color: "#ffe6b0", // T163 · high-key crown lip
+      roughness: 0.38,
+      metalness: 0.14,
+    });
+    const filletMat = new MeshStandardMaterial({
+      color: "#d4a84a", // T163 · inner gold fillet toward felt
+      roughness: 0.45,
+      metalness: 0.18,
     });
     const t = 0.085; // frame thickness in unit UV
     const mk = (sx: number, sy: number, sz: number, x: number, y: number, z: number, mtl = mat) => {
@@ -1910,14 +1924,29 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     mk(1, 1, t, 0, 0, -0.5 + t / 2);
     mk(t, 1, 1 - 2 * t, 0.5 - t / 2, 0, 0);
     mk(t, 1, 1 - 2 * t, -0.5 + t / 2, 0, 0);
-    // thin top bevel lip (reads in seat-close across kernels)
-    mk(1.06, 0.22, t * 1.35, 0, 0.62, 0.5 - t / 2, lipMat); // T160 taller lip
-    mk(1.06, 0.22, t * 1.35, 0, 0.62, -0.5 + t / 2, lipMat);
-    mk(t * 1.35, 0.22, 1 - 2 * t, 0.5 - t / 2, 0.62, 0, lipMat);
-    mk(t * 1.35, 0.22, 1 - 2 * t, -0.5 + t / 2, 0.62, 0, lipMat);
+    // dark undercut
+    mk(1.08, 0.14, t * 1.45, 0, 0.48, 0.5 - t / 2, underMat);
+    mk(1.08, 0.14, t * 1.45, 0, 0.48, -0.5 + t / 2, underMat);
+    mk(t * 1.45, 0.14, 1 - 2 * t, 0.5 - t / 2, 0.48, 0, underMat);
+    mk(t * 1.45, 0.14, 1 - 2 * t, -0.5 + t / 2, 0.48, 0, underMat);
+    // bright crown lip
+    mk(1.10, 0.28, t * 1.55, 0, 0.70, 0.5 - t / 2, lipMat);
+    mk(1.10, 0.28, t * 1.55, 0, 0.70, -0.5 + t / 2, lipMat);
+    mk(t * 1.55, 0.28, 1 - 2 * t, 0.5 - t / 2, 0.70, 0, lipMat);
+    mk(t * 1.55, 0.28, 1 - 2 * t, -0.5 + t / 2, 0.70, 0, lipMat);
+    // inner gold fillet (reads on seat-close board edge)
+    mk(0.92, 0.08, t * 0.55, 0, 0.52, 0.5 - t - 0.02, filletMat);
+    mk(0.92, 0.08, t * 0.55, 0, 0.52, -0.5 + t + 0.02, filletMat);
+    mk(t * 0.55, 0.08, 0.92 - 2 * t, 0.5 - t - 0.02, 0.52, 0, filletMat);
+    mk(t * 0.55, 0.08, 0.92 - 2 * t, -0.5 + t + 0.02, 0.52, 0, filletMat);
     object = group;
   } else if (mesh === "felt-wood-lip") {
-    const built = new Mesh(new BoxGeometry(1, 1, 1), woodRimMaterial(node, ctx));
+    // T092 · grain maps via woodRimMaterial; T163/T165 · high-key gold tint for seat-close
+    const mat = woodRimMaterial(node, ctx).clone();
+    mat.color.set("#f3d59a");
+    mat.roughness = 0.42;
+    mat.metalness = 0.12;
+    const built = new Mesh(new BoxGeometry(1, 1, 1), mat);
     built.castShadow = false;
     built.receiveShadow = true;
     object = built;
