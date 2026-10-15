@@ -3447,3 +3447,29 @@ body:has(.room-view-tidewell-immersive) {
   background: rgba(239, 224, 187, 0.97);
   border-radius: 0 0 5px 5px;
 }
+
+/* T226 · 底栏行动/资源/骰盘再让路：字更淡，浅色垫保留（cornerCalm） */
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock {
+  opacity: 0.42 !important;
+  max-height: 2.4rem !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-hand,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-actions,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-dice,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock button,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-chip {
+  opacity: 0.22 !important;
+  color: transparent !important;
+  font-size: 0.4rem !important;
+  transform: scale(0.82);
+  transform-origin: bottom center;
+}
+.room-view-tidewell-immersive.room-view-seated .hex-settlement-board-targets:not([open]) {
+  opacity: 0.85 !important;
+  transform: scale(0.88);
+  transform-origin: bottom left;
+}
+.room-view-tidewell-immersive.room-view-seated .hex-settlement-board-targets:not([open]) > summary {
+  color: transparent !important;
+  opacity: 0.28 !important;
+}

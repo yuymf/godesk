@@ -132,9 +132,9 @@ export const TERRAIN_MATERIALS: Record<string, MaterialToken> = {
 export const PROP_MATERIALS = {
   cliff: { base: "#7a7368", roughness: 0.9, metalness: 0, pattern: "stone", pbrSet: "t07-cliff", pbrRepeat: 5 },
   // R22: warmer cream (was #f5f0e1) — keeps the parchment token cream under the less-orange R22 key light.
-  "number-token": { base: "#f8e6c0", roughness: 0.62, metalness: 0, pattern: "none", pbrSet: "t11-parchment", pbrRepeat: 1 },
+  "number-token": { base: "#edd4a0", roughness: 0.72, metalness: 0, pattern: "none", pbrSet: "t11-parchment", pbrRepeat: 1.15 }, // T225 wood-chip
   // G3D-ART-2：6/8 不再整块涂红（与座位 0 红色混淆、且盖住数字）；同用 N1 筹码面，数字用赤陶色高亮（number-labels.ts）。
-  "number-token-hot": { base: "#ffd8a8", roughness: 0.62, metalness: 0, pattern: "none", pbrSet: "t11-parchment", pbrRepeat: 1 },
+  "number-token-hot": { base: "#f0c090", roughness: 0.70, metalness: 0, pattern: "none", pbrSet: "t11-parchment", pbrRepeat: 1.15 }, // T225
   robber: { base: "#2c3e50", roughness: 0.7, metalness: 0, pattern: "none" },
   wood: { base: "#8b6914", roughness: 0.7, metalness: 0, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 1 },
   die: { base: "#f8f8f8", roughness: 0.5, metalness: 0, pattern: "none" },
@@ -227,7 +227,7 @@ export const TILE_BASE_SCALE = 0.92;
 export const TILE_FACE_APOTHEM = TILE_FACE_RADIUS * (Math.sqrt(3) / 2);
 
 /** G3D-ART-2：点数筹码水平放大倍数（0.22 半径只占六角宽 23%，远看读不出数字；放大到 ≈42%，G3D-ART-3 由 1.6 调到 1.8 保证 iPhone 低档远处筹码可读）。 */
-export const NUMBER_TOKEN_SCALE = 1.92; // T099/T118/T222 · stage-wide disc (落地感)
+export const NUMBER_TOKEN_SCALE = 1.98; // T099/T225 · wood-chip stage disc
 
 /**
  * 由场景节点求岛屿包围球（XZ 平面）：中心 = 地块中心均值，半径 = 最远地块中心距离 + 地块外接半径。

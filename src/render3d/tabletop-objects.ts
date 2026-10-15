@@ -1218,13 +1218,13 @@ function softContactShadow(
     mesh.renderOrder = -1;
     return mesh;
   };
-  // T218/T222 · product contact shadow: tight core + smooth falloff (no concentric bands / no center blot)
-  group.add(mk(1.42, Math.min(0.72, opacity * 1.08), 0.00085, "contact-shadow")); // core
-  group.add(mk(1.78, Math.min(0.32, opacity * 0.48), 0.00068)); // near core blend
-  group.add(mk(2.20, Math.min(0.12, opacity * 0.18), 0.00052)); // soft mid · center-calm
-  group.add(mk(2.80, Math.min(0.055, opacity * 0.08), 0.00038)); // mid-outer blend · corner-calm
-  group.add(mk(3.50, Math.min(0.028, opacity * 0.04), 0.00026)); // soft outer
-  group.add(mk(4.60, Math.min(0.012, opacity * 0.018), 0.00016)); // wide soft veil · corner-calm
+  // T218/T226 · product contact shadow: denser core hug + smoother veil (no bands / no center blot)
+  group.add(mk(1.28, Math.min(0.78, opacity * 1.18), 0.00078, "contact-shadow")); // tight core hug
+  group.add(mk(1.62, Math.min(0.36, opacity * 0.52), 0.00062)); // near core blend
+  group.add(mk(2.05, Math.min(0.14, opacity * 0.20), 0.00048)); // soft mid · center-calm
+  group.add(mk(2.65, Math.min(0.06, opacity * 0.09), 0.00034)); // mid-outer · corner-calm
+  group.add(mk(3.40, Math.min(0.03, opacity * 0.045), 0.00022)); // soft outer
+  group.add(mk(4.40, Math.min(0.014, opacity * 0.02), 0.00014)); // wide soft veil · corner-calm
   return group;
 }
 

@@ -6707,3 +6707,22 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   border-bottom-left-radius: inherit;
   border-bottom-right-radius: inherit;
 }
+
+/* T226 · desk 底栏/行动抽屉再让路（浅色垫 + 透明字） */
+.room-view-tabletop-immersive.room-view-seated .desk-action-drawer:not([open]) {
+  max-height: 0.4rem !important;
+  opacity: 1 !important;
+  background: #f7f3ea !important;
+}
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud {
+  max-height: 0.42rem !important;
+  opacity: 1 !important;
+  background: #f7f3ea !important;
+}
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud-kicker,
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud-supply,
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud-turn {
+  color: transparent !important;
+  opacity: 0.15 !important;
+  font-size: 0.32rem !important;
+}

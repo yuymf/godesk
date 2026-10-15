@@ -315,11 +315,11 @@ function baseDefault(kernelType: string | null | undefined): RenderSpec {
       enabled: kernelType === "hex-settlement-v1" || kernelType === "harbor-voyage-v1",
       // R20：与 water/mesh DEFAULT_SPEC 同步 — 明亮青绿 + 浅滩环。
       // T183 · shared water chroma (hex/harbor kernel family)
-      shallow: "#24e8d6", // T183/T222 · water microcontrast (brighter shallow)
-      deep: "#0a6270", // keep tip-or-brighter deep (no corner dunk)
-      waveHeight: 0.084,
-      waveSpeed: 0.66,
-      foam: 1.0, // T183 (unit clamp)
+      shallow: "#2af0dc", // T183/T225 · shallow reef microcontrast
+      deep: "#0c6878", // tip-or-brighter deep (corner-safe)
+      waveHeight: 0.092,
+      waveSpeed: 0.70,
+      foam: 1.0, // T183/T225 shore foam (unit clamp)
     },
     materials: {
       // T090 · sync with SEAT_COLORS (felt-legible chroma)
@@ -379,7 +379,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       "terrain-ore": material("#3e5468", "stone", 0.68),
       "terrain-desert": material("#f8dca0", "sand", 0.62),
       cliff: material("#5a544c", "stone", 0.70),
-      "number-token": material("#fff8e8", "none", 0.30, 0.08, 0.28),
+      "number-token": material("#edd4a0", "none", 0.22, 0.10, 0.18), // T225 wood-chip
       piece: material("#fff8ec", "none", 0.14, 0.28, 0.88), // T061…T198/T217
       "fog-lantern": material("#ffec70", "none", 0.12, 0.12, 0.68),
     });
@@ -510,7 +510,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#00e868", "cloth", 0.99, 0, undefined, 0.99),  // T044…T214/T218 product green felt
+      board: material("#00f070", "cloth", 0.99, 0, undefined, 0.99),  // T044…T226 product green felt
       table: material("#f6d8a8", "grain", 0.34, 0.20), // T092…T221 · brighter wood rim (corner-calm)
       piece: material("#fff6e6", "none", 0.18, 0.24, 0.78), // T198/T206/T210 · plastic-wood piece
       card: material("#fff8ee", "none", 0.22, 0.14, 0.68), // T198/T206/T213 · card stock

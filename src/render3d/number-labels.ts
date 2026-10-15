@@ -21,15 +21,15 @@ import {
 import type { SceneNode } from "./scene-model";
 
 /** 筹码圆柱：半径 0.22、高 0.06，节点 position 为圆柱中心。 */
-export const NUMBER_TOKEN_RADIUS = 0.245; // T222 · thicker disc footprint
-export const NUMBER_TOKEN_HALF_HEIGHT = 0.042; // T222 · disc thickness / 落地感
+export const NUMBER_TOKEN_RADIUS = 0.252; // T222/T225 · chip footprint
+export const NUMBER_TOKEN_HALF_HEIGHT = 0.055; // T222/T225 · wood-chip thickness
 /** 贴花离筹码顶面的高度（避免 z-fighting；配合 polygonOffset）。 */
-export const LABEL_LIFT = 0.0008; // T131/T222 · less float above token
+export const LABEL_LIFT = 0.0005; // T131/T225 · decal seated on chip face
 /** 贴花边长 = 筹码半径 × 1.85 × 节点缩放：略小于筹码直径（G3D-ART-3 由 1.6 放大，字形更大）。 */
-export const LABEL_SIZE_PER_RADIUS = 2.88; // T099/T112/T118/T222 · stage-wide glyph
+export const LABEL_SIZE_PER_RADIUS = 2.72; // T225 · glyph inset on chip (not floating sticker)
 export { NUMBER_TOKEN_SCALE } from "./tokens";
 
-export const LABEL_INK = "#0c0806"; // T101/T112/T118/T222 · wider contrast
+export const LABEL_INK = "#0a0604"; // T225 · stamped ink on chip
 /** 6 / 8 高亮：赤陶色（比风格色 #B8643C 深一档，保证在奶油色筹码面上对比度 ≥ 4.5）。 */
 export const LABEL_HOT = "#8a1c08"; // T101/T112/T118/T222
 

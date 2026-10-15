@@ -20,7 +20,7 @@ import { TILE_FACE_APOTHEM } from "./tokens";
 /** R21 soft hex-edge band: max share the top-face albedo eases toward the shared light earth tone (× brush). R22: 0.45 → 0.25. */
 export const SOFT_EDGE_STRENGTH = 0.25;
 /** R22: terrain albedo saturation (1 = texture as-is; R19–R21 used 0.86, a 14% pull toward grey). */
-export const TERRAIN_SATURATION = 2.05; // T183/T192/T196/T198/T217/T222 shared terrain chroma
+export const TERRAIN_SATURATION = 2.12; // T183…T225 shared terrain chroma / shore contrast
 /** R22 hairline seam; R23: 0.006 → 0.002 (whole-board a no longer chessboard). */
 export const SEAM_HALF_WIDTH = 0.0015;
 

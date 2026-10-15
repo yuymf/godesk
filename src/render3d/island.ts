@@ -325,16 +325,26 @@ function drawSigns(x: CanvasRenderingContext2D, cell: number, plate: HTMLImageEl
       x.arc(cx, cy, r * 0.74, 0, Math.PI * 2);
       x.fill();
     } else {
-      x.fillStyle = "#6b4a2f";
+      // T225 · carved wood plaque rim (not flat UI badge)
+      x.fillStyle = "#4a3020";
       x.beginPath();
       x.arc(cx, cy, r, 0, Math.PI * 2);
       x.fill();
-      const g = x.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r * 0.86);
+      const rim = x.createRadialGradient(cx - r * 0.25, cy - r * 0.28, r * 0.08, cx, cy, r);
+      rim.addColorStop(0, "#8a6238");
+      rim.addColorStop(0.55, "#6a4828");
+      rim.addColorStop(1, "#3a2416");
+      x.fillStyle = rim;
+      x.beginPath();
+      x.arc(cx, cy, r * 0.97, 0, Math.PI * 2);
+      x.fill();
+      const g = x.createRadialGradient(cx - r * 0.28, cy - r * 0.3, r * 0.08, cx, cy, r * 0.78);
       g.addColorStop(0, "#fbf1d8");
-      g.addColorStop(1, "#e7d3a8");
+      g.addColorStop(0.7, "#e8d4a8");
+      g.addColorStop(1, "#d4b888");
       x.fillStyle = g;
       x.beginPath();
-      x.arc(cx, cy, r * 0.86, 0, Math.PI * 2);
+      x.arc(cx, cy, r * 0.78, 0, Math.PI * 2);
       x.fill();
     }
     const label = SIGN_LABEL[kind]!;
@@ -541,13 +551,13 @@ export function dockGeometry(length = 0.62, wetFoot = 0): BufferGeometry {
   const planks = 6;
   for (let i = 0; i < planks; i += 1) {
     const z = 0.04 + (i + 0.5) * (length / planks);
-    parts.push(paint(place(new BoxGeometry(0.26, 0.025, length / planks - 0.012), 0, 0, z), i % 2 ? "#8a6340" : "#9a7048", 0.15));
+    parts.push(paint(place(new BoxGeometry(0.28, 0.038, length / planks - 0.010), 0, 0, z), i % 2 ? "#8a6340" : "#9a7048", 0.18)); // T225 plank thickness
   }
   parts.push(paint(place(new BoxGeometry(0.03, 0.03, length), -0.12, -0.022, length / 2 + 0.04), "#5e4128"));
   parts.push(paint(place(new BoxGeometry(0.03, 0.03, length), 0.12, -0.022, length / 2 + 0.04), "#5e4128"));
   const postXZ = [[-0.13, 0.22], [0.13, 0.22], [-0.13, length], [0.13, length]] as const;
   for (const [px, pz] of postXZ) {
-    parts.push(paint(place(new CylinderGeometry(0.022, 0.026, 0.34, 6), px, -0.15, pz), "#4f3824"));
+    parts.push(paint(place(new CylinderGeometry(0.028, 0.032, 0.38, 6), px, -0.16, pz), "#4f3824")); // T225 pier posts
   }
   // 牌柱（牌面本身是单独的广告牌 InstancedMesh）。
   parts.push(paint(place(new CylinderGeometry(0.016, 0.018, 0.36, 6), 0.1, 0.17, length - 0.02), "#4f3824"));
@@ -676,7 +686,7 @@ function applyBoatWetLine(g: BufferGeometry, strength: number): void {
 
 /** 帆船停泊点：岛外一圈，避开右前方骰盘（≈(4.2, 3.2)）。 */
 /** 港口牌半径 / 帆船缩放（round-2d2：放大，远景可读）。 */
-export const SIGN_RADIUS = 0.32; // T118/T222 · stage-wide harbor disc
+export const SIGN_RADIUS = 0.335; // T118/T225 · wooden harbor plaque
 export const BOAT_SCALE = 1.7;
 
 export const BOAT_SPOTS: ReadonlyArray<{ x: number; z: number; yaw: number; phase: number }> = [
@@ -769,8 +779,9 @@ export function createIslandLayer(): IslandLayer {
       // 连续岩壁 + 顶盖（1 个 draw call，几何随地块集合重建）。
       wallGeom?.dispose();
       wallGeom = coastWallGeometry(tiles, {
-        wetFootDark: tier === "high",
-        midBandDark: tier === "high" ? 1 : tier === "medium" ? 0.34 : 0,
+        // T225 · shore wet foot readable on medium+ (shallow reef microcontrast)
+        wetFootDark: tier === "high" || tier === "medium",
+        midBandDark: tier === "high" ? 1 : tier === "medium" ? 0.42 : 0.12,
       });
       rockMat.map = tier === "high" ? rockMapHigh : tier === "medium" ? rockMapMed : rockMapLow;
       rockMat.needsUpdate = true;
