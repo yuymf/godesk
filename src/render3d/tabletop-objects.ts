@@ -161,6 +161,17 @@ function meepleFigure(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const collar = new Mesh(new BoxGeometry(0.14, 0.03, 0.03), backMat);
   collar.position.set(0, 0.54, -0.12);
   group.add(collar);
+  // T090 · cream rim disc under meeple — stage-wide silhouette on green felt
+  const rimMat = new MeshStandardMaterial({
+    color: "#f8f1e3",
+    roughness: 0.85,
+    metalness: 0,
+  });
+  const rim = new Mesh(new CylinderGeometry(0.22, 0.24, 0.035, 16), rimMat);
+  rim.position.set(0, 0.02, 0);
+  rim.castShadow = false;
+  rim.receiveShadow = true;
+  group.add(rim);
   group.add(softContactShadow(0.42, 0.34));
   return group;
 }

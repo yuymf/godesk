@@ -35,7 +35,7 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
     expect(SCENE_TOKENS.environment.intensity).toBe(0.2);
     expect(SCENE_TOKENS.tile).toEqual({ roughness: 0.98, metalness: 0 });
     expect(SCENE_TOKENS.piece).toEqual({ roughness: 0.82, metalness: 0, clearcoat: 0 });
-    expect(SEAT_COLORS).toEqual(["#c0392b", "#2980b9", "#27ae60", "#f39c12"]);
+    expect(SEAT_COLORS).toEqual(["#e74c3c", "#2980b9", "#8e44ad", "#f1c40f"]);
   });
 
   it("stays in sync with the creator RenderSpec lighting default", () => {
@@ -66,9 +66,9 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
     expect((PROP_MATERIALS.cliff as MaterialToken).brush).toBeUndefined();
   });
 
-  it("seat pieces keep their seat colour: clearcoat 0.12, normal + ORM only", () => {
+    it("seat pieces keep their seat colour: T090 glossier chroma paint", () => {
     const token = seatMaterial(1);
-    expect(token).toMatchObject({ base: "#2980b9", roughness: 0.82, clearcoat: 0, pbrSet: "t09-paintwood", pbrBaseColor: true });
+    expect(token).toMatchObject({ base: "#2980b9", roughness: 0.62, clearcoat: 0.35, pbrSet: "t09-paintwood", pbrBaseColor: true });
     expect(seatMaterial(9).base).toBe("#ffffff");
   });
 

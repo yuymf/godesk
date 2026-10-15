@@ -63,7 +63,8 @@ export type PbrSetId =
   | "t10-canvas"
   | "t11-parchment";
 
-export const SEAT_COLORS = ["#c0392b", "#2980b9", "#27ae60", "#f39c12"] as const;
+/** T090 · high-chroma seats that stay readable on product-green felt (seat2 leaves green hue). */
+export const SEAT_COLORS = ["#e74c3c", "#2980b9", "#8e44ad", "#f1c40f"] as const;
 
 export const SCENE_TOKENS = {
   preset: "tabletop-day",
@@ -143,9 +144,10 @@ export const PROP_MATERIALS = {
 export function seatMaterial(seat: number): MaterialToken {
   return {
     base: SEAT_COLORS[seat] ?? "#ffffff",
-    roughness: SCENE_TOKENS.piece.roughness,
-    metalness: SCENE_TOKENS.piece.metalness,
-    clearcoat: SCENE_TOKENS.piece.clearcoat,
+    // T090 · slightly glossier seat paint so chroma pops on matte felt
+    roughness: 0.62,
+    metalness: 0.08,
+    clearcoat: 0.35,
     pattern: "none",
     pbrSet: "t09-paintwood",
     pbrRepeat: 2.2,

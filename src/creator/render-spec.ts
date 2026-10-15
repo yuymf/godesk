@@ -320,10 +320,11 @@ function baseDefault(kernelType: string | null | undefined): RenderSpec {
       foam: 1.0,
     },
     materials: {
-      seat0: material("#c0392b", "none", 0.58, 0, 0.12),
-      seat1: material("#2980b9", "none", 0.58, 0, 0.12),
-      seat2: material("#27ae60", "none", 0.58, 0, 0.12),
-      seat3: material("#f39c12", "none", 0.58, 0, 0.12),
+      // T090 · sync with SEAT_COLORS (felt-legible chroma)
+      seat0: material("#e74c3c", "none", 0.55, 0.08, 0.28),
+      seat1: material("#2980b9", "none", 0.55, 0.08, 0.28),
+      seat2: material("#8e44ad", "none", 0.55, 0.08, 0.28),
+      seat3: material("#f1c40f", "none", 0.55, 0.08, 0.28),
       table: material("#8b5a2b", "grain", 0.9),
     },
     bindings: [],
