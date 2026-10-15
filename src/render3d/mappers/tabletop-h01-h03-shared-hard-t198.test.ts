@@ -10,9 +10,9 @@ describe("T198 H01+H03 shared hard residual", () => {
     expect(tokens).toMatch(/intensity: 4\.55/);
     const spec = readFileSync("src/creator/render-spec.ts", "utf8");
     expect(spec).toContain("T198");
-    expect(spec).toMatch(/#04c050/);
+    expect(spec).toMatch(/#03c24e/);
     const obj = readFileSync("src/render3d/tabletop-objects.ts", "utf8");
-    expect(obj).toMatch(/W \* 0\.34/); // T193 vignette calm kept
+    expect(obj).toMatch(/W \* 0\.42/); // T193 vignette calm kept
     expect(spec).not.toMatch(/suite === ["']H0/);
   });
 });

@@ -920,7 +920,7 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     group.add(ghostMesh);
   }
   // T079 · ground contact under track corridor
-  group.add(softContactShadow(Math.max(1.35, usable * 1.62), Math.max(1.02, gauge * 3.1), { opacity: 0.84 })); // T142…T177/T192 route
+  group.add(softContactShadow(Math.max(1.40, usable * 1.70), Math.max(1.08, gauge * 3.3), { opacity: 0.96 })); // T142…T177/T192/T201 route
   const hit = new Mesh(new BoxGeometry(usable, 0.1, gauge * 1.7), new MeshBasicMaterial({ visible: false }));
   hit.position.y = 0.05;
   group.add(hit);
@@ -965,7 +965,7 @@ function station(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   // T073 · elongated platform/plinth + curb edge (desk not bald at map-close)
   // T172/T177 · denser station pedestal on felt (shared station mesh)
   // T192 · denser station pedestal (shared station mesh)
-  const platform = new Mesh(boxAt(1.24, 0.10, 1.44, 0, 0.05, -0.08), stone);
+  const platform = new Mesh(boxAt(1.30, 0.11, 1.50, 0, 0.055, -0.08), stone); // T201 · clearer station foot
   platform.receiveShadow = true;
   platform.castShadow = true;
   const curb = new Mesh(boxAt(1.28, 0.045, 1.48, 0, 0.105, -0.08), ink);
@@ -1203,9 +1203,9 @@ function softContactShadow(
   group.add(mk(1.80, Math.min(0.72, opacity * 1.06), 0.0008, "contact-shadow")); // T142…T192/T196 core (mid/outer stay T193 calm)
   // T153–T161/T169 · softer falloff; T193 · mid/outer veil calmer (no center radial blot as hard bait)
   // T175/T190/T192 · shared contact microcontrast (keep T161 mid clamp)
-  group.add(mk(2.45, Math.min(0.16, opacity * 0.24), 0.0005)); // soft mid · T161/T193 lighter
-  group.add(mk(3.70, Math.min(0.14, opacity * 0.20), 0.0003)); // soft outer · T193 calmer
-  group.add(mk(5.20, Math.min(0.10, opacity * 0.14), 0.0002)); // wide soft veil · T193 calm
+  group.add(mk(2.45, Math.min(0.12, opacity * 0.18), 0.0005)); // soft mid · T161/T193/T202 lighter
+  group.add(mk(3.70, Math.min(0.10, opacity * 0.14), 0.0003)); // soft outer · T193/T202 calmer
+  group.add(mk(5.20, Math.min(0.06, opacity * 0.10), 0.0002)); // wide soft veil · T193/T202 calm
   return group;
 }
 
@@ -1456,7 +1456,7 @@ function woodRimMaterial(node: SceneNode, ctx: TabletopObjectContext): Material 
           // T110 · stronger shared grain shade (rim+exterior continuous, not cut)
           const dx = (h0 - hx) * 12;
           const dy = (h0 - hy) * 12;
-          const shade = (h0 - 0.5) * 128; // T110
+          const shade = (h0 - 0.5) * 148; // T110/T201
           const o = i * 4;
           aImg.data[o] = Math.max(0, Math.min(255, br + shade));
           aImg.data[o + 1] = Math.max(0, Math.min(255, bg + shade * 0.9));
@@ -1492,7 +1492,7 @@ function woodRimMaterial(node: SceneNode, ctx: TabletopObjectContext): Material 
     color: base,
     map: map ?? undefined,
     normalMap: normalMap ?? undefined,
-    normalScale: new Vector2(2.25, 2.25), // T092/T110/T169/T175/T181 · grain microcontrast
+    normalScale: new Vector2(2.55, 2.55), // T092/T110/T169/T175/T181/T201 · grain microcontrast
     roughnessMap: roughnessMap ?? undefined,
     roughness: Math.min(0.88, Math.max(0.55, token?.roughness ?? 0.78)),
     metalness: Math.min(0.12, token?.metalness ?? 0.06),
@@ -1586,7 +1586,7 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
           const hy = height[((y + 1) % H) * W + x]!;
           const dx = (h0 - hx) * 14;
           const dy = (h0 - hy) * 14;
-          const shade = (h0 - 0.5) * 228; // T083…T196/T198 · wide-stage albedo amplitude
+          const shade = (h0 - 0.5) * 252; // T083…T196/T198/T201 · wide-stage albedo amplitude
           const o = i * 4;
           aImg.data[o] = Math.max(0, Math.min(255, br + shade));
           aImg.data[o + 1] = Math.max(0, Math.min(255, bg + shade));
@@ -1631,7 +1631,7 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
     color: base,
     map: map ?? undefined,
     normalMap: normalMap ?? undefined,
-    normalScale: new Vector2(4.95, 4.95), // T083…T196/T198 · weave microcontrast
+    normalScale: new Vector2(5.35, 5.35), // T083…T196/T198/T201 · weave microcontrast
     roughnessMap: roughnessMap ?? undefined,
     roughness: Math.max(0.9, token?.roughness ?? 0.97),
     metalness: 0,
@@ -1655,7 +1655,7 @@ function feltStitchMesh(): Object3D {
   const mat = new MeshBasicMaterial({
     color: "#2a2118",
     transparent: true,
-    opacity: 0.55,
+    opacity: 0.38, // T202 · calmer felt lip stitch
     depthWrite: false,
     toneMapped: false,
   });
@@ -1685,11 +1685,11 @@ function tableVignetteMesh(): Object3D {
     canvas.height = H;
     const g = canvas.getContext("2d");
     if (g) {
-      // T193 · softer shared table vignette — larger clear center, milder rim (H04 center calm)
-      const grd = g.createRadialGradient(W / 2, H / 2, W * 0.34, W / 2, H / 2, W * 0.72);
+      // T193/T202 · softer shared table vignette — larger clear center, milder rim (no hard bait)
+      const grd = g.createRadialGradient(W / 2, H / 2, W * 0.42, W / 2, H / 2, W * 0.78);
       grd.addColorStop(0, "rgba(0,0,0,0)");
-      grd.addColorStop(0.62, "rgba(0,0,0,0.02)");
-      grd.addColorStop(1, "rgba(12,8,4,0.22)");
+      grd.addColorStop(0.58, "rgba(0,0,0,0.01)");
+      grd.addColorStop(1, "rgba(12,8,4,0.12)");
       g.fillStyle = grd;
       g.fillRect(0, 0, W, H);
     }
@@ -1991,7 +1991,7 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
     // T081 · larger local blob so small tiles still ground at H02/H03 visibility
-    (object as Group).add(softContactShadow(1.02, 1.02, { opacity: 0.54, boost: 0.90 })); // T081/T106/T150/T153/T154/T158/T161 tile mean (lighter)
+    (object as Group).add(softContactShadow(1.02, 1.02, { opacity: 0.58, boost: 0.94 })); // T081…T161/T201 tile mean
   } else if (mesh === "plaque") {
     object = plaqueWithFace(node, ctx);
     (object as Group).add(softContactShadow(0.78, 0.62, { opacity: 0.58 })); // T106/T150 plaque
