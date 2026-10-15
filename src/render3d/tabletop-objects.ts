@@ -161,7 +161,7 @@ function meepleFigure(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const collar = new Mesh(new BoxGeometry(0.14, 0.03, 0.03), backMat);
   collar.position.set(0, 0.54, -0.12);
   group.add(collar);
-  group.add(softContactShadow(0.35, 0.28));
+  group.add(softContactShadow(0.42, 0.34));
   return group;
 }
 
@@ -811,6 +811,8 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     ghostMesh.receiveShadow = true;
     group.add(ghostMesh);
   }
+  // T079 · ground contact under track corridor
+  group.add(softContactShadow(Math.max(0.35, usable * 0.45), Math.max(0.22, gauge * 0.9)));
   const hit = new Mesh(new BoxGeometry(usable, 0.1, gauge * 1.7), new MeshBasicMaterial({ visible: false }));
   hit.position.y = 0.05;
   group.add(hit);
@@ -1038,14 +1040,15 @@ function shoreNatural(node: SceneNode, ctx: TabletopObjectContext): Object3D {
 
 /** T038 · soft contact / ground shadow under desk pieces (cheap, no lightmap). */
 function softContactShadow(rx = 0.55, rz = 0.55): Mesh {
+  // T079 · stronger ground contact so pieces don't float on felt
   const geom = new CircleGeometry(1, 24);
   geom.rotateX(-Math.PI / 2);
-  geom.scale(rx, 1, rz);
-  geom.translate(0, 0.002, 0);
+  geom.scale(rx * 1.15, 1, rz * 1.15);
+  geom.translate(0, 0.0015, 0);
   const mat = new MeshBasicMaterial({
-    color: "#0c0a08",
+    color: "#050403",
     transparent: true,
-    opacity: 0.32,
+    opacity: 0.48,
     depthWrite: false,
     toneMapped: false,
   });
@@ -1404,10 +1407,10 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = meepleFigure(node, ctx);
   } else if (mesh === "card") {
     object = cardWithFace(node, ctx);
-    (object as Group).add(softContactShadow(0.48, 0.68));
+    (object as Group).add(softContactShadow(0.55, 0.78));
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
-    (object as Group).add(softContactShadow(0.52, 0.52));
+    (object as Group).add(softContactShadow(0.58, 0.58));
   } else if (mesh === "plaque") {
     object = plaqueWithFace(node, ctx);
     (object as Group).add(softContactShadow(0.5, 0.38));
@@ -1417,7 +1420,7 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     built.receiveShadow = true;
     const g = new Group();
     g.add(built);
-    g.add(softContactShadow(0.4, 0.4));
+    g.add(softContactShadow(0.48, 0.48));
     object = g;
   } else if (INSTANCED_MESHES.has(mesh)) {
     object = createInstanceProxy(mesh, node, ctx);
