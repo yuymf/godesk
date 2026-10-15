@@ -22,6 +22,7 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import type { TierCaps } from "./tiers";
 import {
   SCENE_TOKENS,
+  sunDirection,
   type LightingSpec,
   shadowFrustumForBounds,
   shadowRadiusFor,
@@ -39,6 +40,10 @@ export function configureRenderer(renderer: WebGLRenderer, lighting: LightingSpe
 export type LightingRig = {
   sun: DirectionalLight;
   hemisphere: HemisphereLight;
+  /** T086 · soft fill (no shadow). */
+  fill: DirectionalLight;
+  /** T086 · rim / kicker (no shadow). */
+  rim: DirectionalLight;
   /** 按岛屿包围球收紧阴影相机；只在布局变化时调用。 */
   fitToBounds(center: readonly [number, number, number], radius: number): void;
   /** 档位变化（运行时降档）时更新阴影贴图尺寸 / 半径。 */
@@ -61,12 +66,50 @@ export function createLightingRig(scene: Scene, lighting: LightingSpec, caps: Ti
   const hemisphere = new HemisphereLight();
   hemisphere.name = "gd:hemisphere";
 
-  scene.add(sun, target, hemisphere);
+  // T086 · fill + rim: no castShadow so contact-shadow blobs (T079/T081) stay authoritative
+  const fill = new DirectionalLight();
+  fill.name = "gd:fill";
+  fill.castShadow = false;
+  const fillTarget = new Object3D();
+  fillTarget.name = "gd:fill-target";
+  fill.target = fillTarget;
+
+  const rim = new DirectionalLight();
+  rim.name = "gd:rim";
+  rim.castShadow = false;
+  const rimTarget = new Object3D();
+  rimTarget.name = "gd:rim-target";
+  rim.target = rimTarget;
+
+  scene.add(sun, target, hemisphere, fill, fillTarget, rim, rimTarget);
 
   let current = lighting;
   let currentCaps = caps;
   let center: readonly [number, number, number] = [0, 0, 0];
   let radius = 4;
+
+  const placeLayer = (
+    light: DirectionalLight,
+    layerTarget: Object3D,
+    layer: { azimuthDeg: number; elevationDeg: number } | undefined,
+    distance: number,
+  ) => {
+    layerTarget.position.set(center[0], center[1], center[2]);
+    if (!layer || light.intensity <= 0) {
+      light.position.set(center[0], center[1] + distance, center[2]);
+      layerTarget.updateMatrixWorld();
+      light.updateMatrixWorld();
+      return;
+    }
+    const dir = sunDirection(layer.azimuthDeg, layer.elevationDeg);
+    light.position.set(
+      center[0] + dir[0] * distance,
+      center[1] + dir[1] * distance,
+      center[2] + dir[2] * distance,
+    );
+    layerTarget.updateMatrixWorld();
+    light.updateMatrixWorld();
+  };
 
   const place = () => {
     const frustum = shadowFrustumForBounds(radius, current.sun);
@@ -86,6 +129,9 @@ export function createLightingRig(scene: Scene, lighting: LightingSpec, caps: Ti
     camera.updateProjectionMatrix();
     target.updateMatrixWorld();
     sun.updateMatrixWorld();
+    const dist = Math.max(6, radius * 2.4);
+    placeLayer(fill, fillTarget, current.fill, dist);
+    placeLayer(rim, rimTarget, current.rim, dist * 1.1);
   };
 
   const applyCaps = (next: TierCaps) => {
@@ -107,6 +153,22 @@ export function createLightingRig(scene: Scene, lighting: LightingSpec, caps: Ti
     hemisphere.color.set(next.hemisphere.sky);
     hemisphere.groundColor.set(next.hemisphere.ground);
     hemisphere.intensity = next.hemisphere.intensity;
+    if (next.fill) {
+      fill.color.set(next.fill.color);
+      fill.intensity = next.fill.intensity;
+      fill.visible = next.fill.intensity > 0;
+    } else {
+      fill.intensity = 0;
+      fill.visible = false;
+    }
+    if (next.rim) {
+      rim.color.set(next.rim.color);
+      rim.intensity = next.rim.intensity;
+      rim.visible = next.rim.intensity > 0;
+    } else {
+      rim.intensity = 0;
+      rim.visible = false;
+    }
     applyCaps(currentCaps);
     place();
   };
@@ -116,6 +178,8 @@ export function createLightingRig(scene: Scene, lighting: LightingSpec, caps: Ti
   return {
     sun,
     hemisphere,
+    fill,
+    rim,
     fitToBounds(nextCenter, nextRadius) {
       center = nextCenter;
       radius = nextRadius;
@@ -125,9 +189,11 @@ export function createLightingRig(scene: Scene, lighting: LightingSpec, caps: Ti
     applyLighting,
     dispose() {
       sun.shadow.dispose();
-      scene.remove(sun, target, hemisphere);
+      scene.remove(sun, target, hemisphere, fill, fillTarget, rim, rimTarget);
       sun.dispose();
       hemisphere.dispose();
+      fill.dispose();
+      rim.dispose();
     },
   };
 }

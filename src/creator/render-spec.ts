@@ -110,6 +110,18 @@ export const renderSpecSchema = z.strictObject({
     }),
     shadow: z.strictObject({ enabled: z.boolean(), softness: unit }),
     exposure: z.number().min(0.5).max(2),
+    fill: z.strictObject({
+      azimuthDeg: z.number().min(0).max(360),
+      elevationDeg: z.number().min(5).max(80),
+      intensity: z.number().min(0).max(4),
+      color: hex,
+    }).optional(),
+    rim: z.strictObject({
+      azimuthDeg: z.number().min(0).max(360),
+      elevationDeg: z.number().min(5).max(80),
+      intensity: z.number().min(0).max(4),
+      color: hex,
+    }).optional(),
   }),
   water: z.strictObject({
     enabled: z.boolean(),
@@ -294,6 +306,9 @@ function baseDefault(kernelType: string | null | undefined): RenderSpec {
       hemisphere: { sky: "#f7efe4", ground: "#6b5a45", intensity: 0.88 },
       shadow: { enabled: true, softness: 0.72 },
       exposure: 1.16,
+      // T086 · shared fill + rim layers
+      fill: { azimuthDeg: 308, elevationDeg: 32, intensity: 0.48, color: "#c5d6ef" },
+      rim: { azimuthDeg: 42, elevationDeg: 16, intensity: 0.36, color: "#ffe2b8" },
     },
     water: {
       enabled: kernelType === "hex-settlement-v1" || kernelType === "harbor-voyage-v1",
@@ -427,6 +442,16 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     // T046 · shared train-route presentation (not parchment sticky-pad graph).
     render.preset = "tabletop-day";
     render.camera = { ...render.camera, fovDeg: 32, distance: 14, minPolarDeg: 28, maxPolarDeg: 58, polarDeg: 46 };
+    // T086 · desk lighting layers on network
+    render.lighting = {
+      ...render.lighting,
+      sun: { ...render.lighting.sun, azimuthDeg: 130, elevationDeg: 50, intensity: 3.2, color: "#ffd2a0" },
+      hemisphere: { sky: "#f8f0e6", ground: "#6e5c48", intensity: 0.85 },
+      fill: { azimuthDeg: 308, elevationDeg: 32, intensity: 0.5, color: "#c5d6ef" },
+      rim: { azimuthDeg: 42, elevationDeg: 16, intensity: 0.38, color: "#ffe2b8" },
+      shadow: { enabled: true, softness: 0.72 },
+      exposure: 1.14,
+    };
     Object.assign(render.materials, {
       map: material("#1f6b45", "cloth", 0.94, 0, undefined, 0.4),
       table: material("#7a4e28", "grain", 0.92),
@@ -447,9 +472,11 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     render.camera = { ...render.camera, fovDeg: 30, distance: 12.5, minPolarDeg: 32, maxPolarDeg: 62, polarDeg: 48 };
     render.lighting = {
       ...render.lighting,
-      // T061 · desk contrast: hotter key, cooler fill, sharper shadows
-      sun: { ...render.lighting.sun, azimuthDeg: 132, elevationDeg: 54, intensity: 3.25, color: "#ffd2a0" },
-      hemisphere: { sky: "#f8f0e6", ground: "#6e5c48", intensity: 0.82 },
+      // T061 · desk contrast; T086 · explicit fill + rim (no extra shadow maps)
+      sun: { ...render.lighting.sun, azimuthDeg: 132, elevationDeg: 54, intensity: 3.15, color: "#ffd2a0" },
+      hemisphere: { sky: "#f8f0e6", ground: "#6e5c48", intensity: 0.78 },
+      fill: { azimuthDeg: 310, elevationDeg: 34, intensity: 0.55, color: "#c8d8f2" },
+      rim: { azimuthDeg: 40, elevationDeg: 17, intensity: 0.4, color: "#ffe6c0" },
       shadow: { enabled: true, softness: 0.7 },
       exposure: 1.14,
     };
@@ -581,6 +608,18 @@ export const renderPatchSchema = z.strictObject({
     hemisphere: lightingShape.hemisphere.partial().optional(),
     shadow: lightingShape.shadow.partial().optional(),
     exposure: lightingShape.exposure.optional(),
+    fill: z.strictObject({
+      azimuthDeg: z.number().min(0).max(360),
+      elevationDeg: z.number().min(5).max(80),
+      intensity: z.number().min(0).max(4),
+      color: hex,
+    }).partial().optional(),
+    rim: z.strictObject({
+      azimuthDeg: z.number().min(0).max(360),
+      elevationDeg: z.number().min(5).max(80),
+      intensity: z.number().min(0).max(4),
+      color: hex,
+    }).partial().optional(),
   }).optional(),
   water: renderShape.water.partial().optional(),
   materials: z.record(materialKey, materialSchema.partial()).optional(),
@@ -619,6 +658,20 @@ export function applyRenderPatch(render: RenderSpec, patch: RenderPatch): Render
     if (patch.lighting.hemisphere) Object.assign(next.lighting.hemisphere, definedEntries(patch.lighting.hemisphere));
     if (patch.lighting.shadow) Object.assign(next.lighting.shadow, definedEntries(patch.lighting.shadow));
     if (patch.lighting.exposure !== undefined) next.lighting.exposure = patch.lighting.exposure;
+    if (patch.lighting.fill) {
+      next.lighting.fill = {
+        azimuthDeg: 308, elevationDeg: 32, intensity: 0, color: "#c5d6ef",
+        ...(next.lighting.fill ?? {}),
+        ...definedEntries(patch.lighting.fill),
+      };
+    }
+    if (patch.lighting.rim) {
+      next.lighting.rim = {
+        azimuthDeg: 42, elevationDeg: 16, intensity: 0, color: "#ffe2b8",
+        ...(next.lighting.rim ?? {}),
+        ...definedEntries(patch.lighting.rim),
+      };
+    }
   }
   if (patch.water) Object.assign(next.water, definedEntries(patch.water));
   if (patch.materials) {

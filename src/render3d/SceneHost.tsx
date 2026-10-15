@@ -590,7 +590,14 @@ export function SceneHost({
   const [activeTier, setActiveTier] = useState<RenderTierId>("high");
   const runtimeFloorRef = useRef<RenderTierId | null>(null);
   // R19: hex island scenes default to the brighter picture-book rig.
-  const lightingSpec: LightingSpec = lighting ?? (hexSettlement ? HEX_ISLAND_LIGHTING : SCENE_TOKENS.lighting);
+  // T086 · merge shared fill/rim when a stored RenderSpec predates the layers
+  const lightingDefaults = hexSettlement ? HEX_ISLAND_LIGHTING : SCENE_TOKENS.lighting;
+  const lightingBase: LightingSpec = lighting ?? lightingDefaults;
+  const lightingSpec: LightingSpec = {
+    ...lightingBase,
+    fill: lightingBase.fill ?? lightingDefaults.fill,
+    rim: lightingBase.rim ?? lightingDefaults.rim,
+  };
   const lightingRef = useRef<LightingSpec>(lightingSpec);
   lightingRef.current = lightingSpec;
   const rigRef = useRef<ReturnType<typeof createLightingRig> | null>(null);

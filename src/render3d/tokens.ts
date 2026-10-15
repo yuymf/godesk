@@ -10,11 +10,22 @@
 export type MaterialPattern = "none" | "grain" | "cloth" | "stone" | "grass" | "sand";
 
 /** 与 RenderSpec.lighting 同形。 */
+export type LightLayer = {
+  azimuthDeg: number;
+  elevationDeg: number;
+  intensity: number;
+  color: string;
+};
+
 export type LightingSpec = {
-  sun: { azimuthDeg: number; elevationDeg: number; intensity: number; color: string };
+  sun: LightLayer;
   hemisphere: { sky: string; ground: string; intensity: number };
   shadow: { enabled: boolean; softness: number };
   exposure: number;
+  /** T086 · soft fill (cool, opposite key); optional for backward-compat specs. */
+  fill?: LightLayer;
+  /** T086 · rim / kicker (warm, low elevation); optional. */
+  rim?: LightLayer;
 };
 
 /** 与 RenderSpec.materials[*] 同形，外加可选的 PBR 贴图套件。 */
@@ -64,6 +75,9 @@ export const SCENE_TOKENS = {
     hemisphere: { sky: "#f2e6d2", ground: "#c9a878", intensity: 1.05 },
     shadow: { enabled: true, softness: 0.92 },
     exposure: 1.12,
+    // T086 · soft cool fill + warm rim (shared desk layer rig)
+    fill: { azimuthDeg: 308, elevationDeg: 32, intensity: 0.48, color: "#c5d6ef" },
+    rim: { azimuthDeg: 42, elevationDeg: 16, intensity: 0.36, color: "#ffe2b8" },
   } satisfies LightingSpec,
   shadow: {
     /** high / medium 的 PCF 半径；low 档用 TierCaps.shadowRadius（= 1）。 */
@@ -89,6 +103,9 @@ export const HEX_ISLAND_LIGHTING = {
   hemisphere: { sky: "#f3f1e8", ground: "#cfc3a2", intensity: 1.42 },
   shadow: { enabled: true, softness: 0.92 },
   exposure: 1.2,
+  // T086 · hex desk also gets fill/rim layers (generic, not sample pack)
+  fill: { azimuthDeg: 310, elevationDeg: 34, intensity: 0.52, color: "#d0dced" },
+  rim: { azimuthDeg: 38, elevationDeg: 18, intensity: 0.4, color: "#ffe8c4" },
 } as const satisfies LightingSpec;
 
 /** R19：AI 贴图（虹夏 8 张；R20 起经 scripts/bake-ai-r20.py 色块化 + Kuwahara 绘本化后烘焙）为 t01–t06 baseColor；base 提亮去饱和、pbrTint 让贴图色相主导；

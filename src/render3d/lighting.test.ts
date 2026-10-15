@@ -62,6 +62,21 @@ describe("G3D-07 lighting rig", () => {
     rig.dispose();
   });
 
+
+  it("T086 builds soft fill + rim layers without casting shadows", () => {
+    const scene = new Scene();
+    const rig = createLightingRig(scene, SCENE_TOKENS.lighting, TIER_CAPS.high);
+    expect(rig.fill).toBeInstanceOf(DirectionalLight);
+    expect(rig.rim).toBeInstanceOf(DirectionalLight);
+    expect(rig.fill.castShadow).toBe(false);
+    expect(rig.rim.castShadow).toBe(false);
+    expect(rig.fill.intensity).toBeGreaterThan(0);
+    expect(rig.rim.intensity).toBeGreaterThan(0);
+    expect(rig.fill.name).toBe("gd:fill");
+    expect(rig.rim.name).toBe("gd:rim");
+    rig.dispose();
+  });
+
   it("draws a procedural gradient sky dome in one draw, behind everything", () => {
     const sky = createSkyDome();
     expect(sky.material).toBeInstanceOf(ShaderMaterial);

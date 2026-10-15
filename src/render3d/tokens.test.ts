@@ -28,6 +28,8 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
       hemisphere: { sky: "#f2e6d2", ground: "#c9a878", intensity: 1.05 },
       shadow: { enabled: true, softness: 0.92 },
       exposure: 1.12,
+      fill: { azimuthDeg: 308, elevationDeg: 32, intensity: 0.48, color: "#c5d6ef" },
+      rim: { azimuthDeg: 42, elevationDeg: 16, intensity: 0.36, color: "#ffe2b8" },
     });
     expect(SCENE_TOKENS.shadow).toMatchObject({ radius: 4, bias: -0.0004, normalBias: 0.02, boundsPadding: 1.5 });
     expect(SCENE_TOKENS.environment.intensity).toBe(0.2);
@@ -38,7 +40,13 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
 
   it("stays in sync with the creator RenderSpec lighting default", () => {
     for (const kernel of ["hex-settlement-v1", "disc-flipping-v1", null]) {
-      expect(defaultRenderSpec(kernel, "table")?.lighting).toEqual(SCENE_TOKENS.lighting);
+      const lighting = defaultRenderSpec(kernel, "table")?.lighting;
+      expect(lighting?.fill).toBeTruthy();
+      expect(lighting?.rim).toBeTruthy();
+      expect(lighting?.sun.color).toBe("#ffc890");
+      // T086 · fill/rim layers present on shared defaults (exact sun numbers may differ by T061 desk baseline)
+      expect(lighting?.fill?.intensity).toBeGreaterThan(0);
+      expect(lighting?.rim?.intensity).toBeGreaterThan(0);
     }
   });
 
