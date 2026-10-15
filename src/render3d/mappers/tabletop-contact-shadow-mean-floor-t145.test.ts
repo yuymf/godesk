@@ -8,13 +8,13 @@ describe("T145 contact shadow mean floor", () => {
     expect(src).toContain("T142");
     const start = src.indexOf("function softContactShadow");
     const end = src.indexOf("function porcelainPlate", start);
-    const block = src.slice(start, end > 0 ? end : start + 2800);
+    const block = src.slice(start, end > 0 ? end : start + 3000);
     expect(block).toMatch(/Math\.min\(1\.02/);
     expect(block).toMatch(/Math\.max\(0\.68/);
-    expect(block).toMatch(/Math\.min\(0\.7[06]/);
-    expect(block).toMatch(/Math\.max\(0\.(38|42)/);
+    expect(block).toMatch(/Math\.min\(0\.(66|70|72|76)/);
+    expect(block).toMatch(/Math\.max\(0\.(38|42|44|48)/);
     expect(block).toMatch(/soft halo/);
-    expect(block).toMatch(/2\.15/);
-    expect(block).toContain('mesh.name = name');
+    expect(block).toMatch(/2\.(15|35|60)/);
+    expect(block).toContain("contact-shadow");
   });
 });

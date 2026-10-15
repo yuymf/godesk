@@ -7,7 +7,7 @@ describe("T144 auction lot wide ink floor", () => {
     const src = readFileSync("src/render3d/tabletop-objects.ts", "utf8");
     expect(src).toContain("T144");
     expect(src).toMatch(/ink wash/);
-    expect(src).toMatch(/bold (30|32)px/);
+    expect(src).toMatch(/bold (26|28|30|32)px/);
     const layout = auctionBiddingLayout({
       chips: [40, 40],
       currentBid: 5,

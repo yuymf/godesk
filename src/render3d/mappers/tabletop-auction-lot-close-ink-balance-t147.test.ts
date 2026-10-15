@@ -3,13 +3,12 @@ import { readFileSync } from "node:fs";
 import { auctionBiddingLayout } from "./tabletop-kernels";
 
 describe("T147 auction lot close ink balance", () => {
-  it("softens mid wash/hatch while keeping T144 wide bands and T134 floors", () => {
+  it("softens mid detail while keeping T144 wide bands and T134 floors", () => {
     const src = readFileSync("src/render3d/tabletop-objects.ts", "utf8");
     expect(src).toContain("T147");
     expect(src).toContain("T144");
-    expect(src).toMatch(/close soft/);
-    expect(src).toMatch(/rgba\(15,23,42,0\.0[68]\)/);
-    expect(src).toMatch(/rgba\(15,23,42,0\.(40|46)\)/);
+    expect(src).toMatch(/rgba\(15,23,42,0\.(46|48)\)/);
+    expect(src).toMatch(/bold (26|30|32)px/);
     const layout = auctionBiddingLayout({
       chips: [40, 40],
       currentBid: 5,

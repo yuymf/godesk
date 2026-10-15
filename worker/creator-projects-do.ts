@@ -2360,11 +2360,12 @@ export class CreatorProjects extends DurableObject<Env> {
         if ("error" in persisted) return persisted.error;
         let updatedRoom = persisted.room;
         let chained = 0;
-        // T146 · optional setup chain: one extra place_settlement/road in same RTT (listLegalActions)
+        // T146 · optional setup chain (listLegalActions)
+        // T149 · extend chain hops to cut force wall time under 10s
         const wantChain = input.chainSetup === true || input.chainSetup === 1 || input.chainSetup === "1";
         if (wantChain) {
           const seatN = Number(input.seat);
-          for (let hop = 0; hop < 1; hop++) {
+          for (let hop = 0; hop < 3; hop++) { // T149 · up to 3 setup hops / RTT
             const active = updatedRoom.state.activeSeat;
             const legal = listSessionLegalActions(
               updatedRoom.state,

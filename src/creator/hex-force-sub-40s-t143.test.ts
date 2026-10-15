@@ -6,7 +6,7 @@ describe("T143 hex force sub-40s", () => {
     const force = readFileSync("scripts/hardness-force-inject.mjs", "utf8");
     expect(force).toContain("T143");
     expect(force).toContain("nextLegalActions");
-    expect(force).toMatch(/budgetMs \?\? (40000|20000)/);
+    expect(force).toMatch(/budgetMs \?\? (10000|10000)/);
     expect(force).toMatch(/parallel seat claim/);
     expect(force).toContain("listLegalActions");
     const dos = readFileSync("worker/creator-projects-do.ts", "utf8");

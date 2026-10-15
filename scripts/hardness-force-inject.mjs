@@ -398,8 +398,8 @@ export async function waitRoomCanvasReady(page, { timeoutMs = 20000 } = {}) {
  */
 export async function runHexForceWithBudget(page, tokens, opts = {}) {
   // T143 · sub-40s: canvas ready outside force clock
-  // T146 · sub-20s: default budget 20s + chainSetup intents
-  const budgetMs = opts.budgetMs ?? 20000;
+  // T146/T149 · chainSetup intents; default budget 10s
+  const budgetMs = opts.budgetMs ?? 10000;
   await waitRoomCanvasReady(page, { timeoutMs: Math.min(12000, budgetMs) });
   const started = Date.now();
   const remaining = () => Math.max(1000, budgetMs - (Date.now() - started));
@@ -500,7 +500,7 @@ export async function forceBuildHexSetup(page, tokens, { minSettlements = 2, min
           seat,
           seatToken,
           actionId,
-          chainSetup: true, // T146 · batch one setup hop per RTT
+          chainSetup: true, // T146/T149 · batch setup hops per RTT
           ...(payload ? { payload } : {}),
         }),
       });

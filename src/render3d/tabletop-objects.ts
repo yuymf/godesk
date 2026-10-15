@@ -1152,13 +1152,14 @@ function softContactShadow(
   // T139 · pixel residual: larger footprint + opacity ceiling (keep T106 boost clamp + T135/T138 floors)
   // T142 · H02 stage-wide residual: larger shared footprint (keep T139 opacity floors)
   // T145 · mean floor: higher opacity + soft outer halo (keep T106 boost clamp / T142 ge20)
+  // T150 · H03/H04 mean: larger soft halo + card/tile footprints (keep H02/T145 floors)
   const area = Math.max(0.04, rx * rz);
   const autoBoost =
     opts?.boost ??
     Math.min(1.02, Math.max(0.68, 1.00 / Math.sqrt(area / 0.18)));
   const autoOpacity =
     opts?.opacity ??
-    Math.min(0.70, Math.max(0.42, 0.52 + 0.12 / Math.sqrt(area / 0.18)));
+    Math.min(0.76, Math.max(0.48, 0.58 + 0.14 / Math.sqrt(area / 0.18)));
   const opacity = autoOpacity;
   const boost = autoBoost;
   const group = new Group();
@@ -1183,8 +1184,9 @@ function softContactShadow(
     mesh.renderOrder = -1;
     return mesh;
   };
-  group.add(mk(1.55, opacity, 0.0008, "contact-shadow")); // T142/T145 core
-  group.add(mk(2.15, Math.min(0.36, opacity * 0.55), 0.0004)); // T145 soft halo → mean
+  group.add(mk(1.60, opacity, 0.0008, "contact-shadow")); // T142/T145 core
+  group.add(mk(2.60, Math.min(0.48, opacity * 0.70), 0.0003)); // T150 soft halo → mean
+  group.add(mk(3.10, Math.min(0.22, opacity * 0.32), 0.0002)); // T150 outer veil
   return group;
 }
 
@@ -1735,63 +1737,56 @@ function proceduralLotCanvas(schema: { title: string; prestige?: number; bid?: n
   // T141 · stage-wide microcontrast — brighter masses + dual rim + hatch (keep T134/T137 floors)
   // T144 · wide ink floor — denser dark plate + ink wash (keep T141 ge20 / T134 counts)
   // T147 · close ink balance — softer mid hatch/wash; keep wide band washes + rim
+  // T148 · close calm — no mid hatch; quieter secondary; keep wide bands + rim
   g.fillStyle = pal[0]!;
   g.fillRect(0, 0, W, H);
   g.fillStyle = pal[1]!;
-  g.fillRect(0, 0, W * 0.64, H * 0.80);
+  g.fillRect(0, 0, W * 0.62, H * 0.78);
   g.fillStyle = pal[2]!;
-  g.fillRect(W * 0.34, H * 0.01, W * 0.62, H * 0.60);
+  g.fillRect(W * 0.36, H * 0.02, W * 0.58, H * 0.56);
   g.fillStyle = pal[3]!;
   g.beginPath();
-  g.moveTo(W * 0.52, H * 0.04);
-  g.lineTo(W * 0.99, H * 0.38);
-  g.lineTo(W * 0.52, H * 0.72);
-  g.lineTo(W * 0.20, H * 0.38);
+  g.moveTo(W * 0.52, H * 0.06);
+  g.lineTo(W * 0.96, H * 0.38);
+  g.lineTo(W * 0.52, H * 0.68);
+  g.lineTo(W * 0.22, H * 0.38);
   g.closePath();
   g.fill();
-  // secondary blocks for value structure at stage distance
+  // secondary blocks — quieter for close
   g.fillStyle = pal[1]!;
-  g.fillRect(W * 0.03, H * 0.40, W * 0.38, H * 0.32);
+  g.fillRect(W * 0.05, H * 0.44, W * 0.30, H * 0.24);
   g.fillStyle = pal[3]!;
-  g.fillRect(W * 0.54, H * 0.44, W * 0.38, H * 0.28);
-  // ink wash: strong wide bands, light mid (close balance)
-  g.fillStyle = "rgba(15,23,42,0.46)";
-  g.fillRect(0, 0, W, H * 0.22);
-  g.fillStyle = "rgba(15,23,42,0.42)";
-  g.fillRect(0, H * 0.68, W, H * 0.32);
-  g.fillStyle = "rgba(15,23,42,0.06)"; // T147 · close soft mid
-  g.fillRect(W * 0.12, H * 0.26, W * 0.76, H * 0.36);
-  // hatch bands — fewer/lighter for close
-  g.strokeStyle = "rgba(15,23,42,0.42)";
-  g.lineWidth = 2.5;
-  for (let i = 0; i < 6; i++) {
-    const x = W * (0.12 + i * 0.13);
-    g.beginPath();
-    g.moveTo(x, H * 0.14);
-    g.lineTo(x + W * 0.08, H * 0.68);
-    g.stroke();
-  }
-  // ink + cream dual rim (keep wide separation)
+  g.fillRect(W * 0.58, H * 0.48, W * 0.30, H * 0.20);
+  // ink wash: strong wide bands only (no mid fill — T148 close calm)
+  g.fillStyle = "rgba(15,23,42,0.58)";
+  g.fillRect(0, 0, W, H * 0.24);
+  g.fillStyle = "rgba(15,23,42,0.54)";
+  g.fillRect(0, H * 0.70, W, H * 0.30);
+  // thin side bars for wide mean without mid clutter
+  g.fillStyle = "rgba(15,23,42,0.30)";
+  g.fillRect(0, H * 0.24, W * 0.08, H * 0.46);
+  g.fillRect(W * 0.92, H * 0.24, W * 0.08, H * 0.46);
+  // dual rim (wide separation)
   g.strokeStyle = "rgba(15,23,42,0.98)";
-  g.lineWidth = 14;
+  g.lineWidth = 16;
   g.strokeRect(2, 2, W - 4, H - 4);
-  g.strokeStyle = "rgba(253,230,138,0.92)";
-  g.lineWidth = 5;
-  g.strokeRect(12, 12, W - 24, H - 24);
+  g.strokeStyle = "rgba(253,230,138,0.80)";
+  g.lineWidth = 4;
+  g.strokeRect(14, 14, W - 28, H - 28);
   g.globalAlpha = 1;
-  // Title plate — slightly shorter for close calm
-  g.fillStyle = "rgba(15,23,42,0.94)";
-  g.fillRect(6, H - 88, W - 12, 78);
+  // Title plate — calmer close
+  g.fillStyle = "rgba(15,23,42,0.88)";
+  g.fillRect(10, H - 72, W - 20, 60);
   g.fillStyle = "#ffffff";
-  g.font = "bold 30px system-ui,sans-serif";
+  g.font = "bold 26px system-ui,sans-serif";
   g.textAlign = "left";
-  g.fillText((schema.title || "拍品").slice(0, 10), 16, H - 46);
-  g.font = "bold 18px system-ui,sans-serif";
+  g.fillText((schema.title || "拍品").slice(0, 10), 20, H - 38);
+  g.font = "bold 16px system-ui,sans-serif";
   g.fillStyle = "#fde68a";
   const bits: string[] = [];
   if (schema.prestige != null) bits.push(`底 ${schema.prestige}`);
   if (schema.bid != null && schema.bid > 0) bits.push(`价 ${schema.bid}`);
-  g.fillText(bits.join(" · ") || "画廊拍品", 16, H - 16);
+  g.fillText(bits.join(" · ") || "画廊拍品", 20, H - 14);
   return canvas;
 }
 
@@ -1912,21 +1907,21 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = meepleFigure(node, ctx);
   } else if (mesh === "card") {
     object = cardWithFace(node, ctx);
-    (object as Group).add(softContactShadow(0.48, 0.62, { opacity: 0.48 })); // T096/T106/T135/T139/T142 card footprint
+    (object as Group).add(softContactShadow(0.68, 0.88, { opacity: 0.58 })); // T096/T106/T150 card footprint
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
     // T081 · larger local blob so small tiles still ground at H02/H03 visibility
-    (object as Group).add(softContactShadow(0.38, 0.38, { opacity: 0.40, boost: 0.82 })); // T081/T096/T106/T139
+    (object as Group).add(softContactShadow(0.58, 0.58, { opacity: 0.52, boost: 0.90 })); // T081/T106/T150 tile
   } else if (mesh === "plaque") {
     object = plaqueWithFace(node, ctx);
-    (object as Group).add(softContactShadow(0.56, 0.46, { opacity: 0.50 })); // T106/T139/T142 plaque
+    (object as Group).add(softContactShadow(0.78, 0.62, { opacity: 0.58 })); // T106/T150 plaque
   } else if (mesh === "gem-chip") {
     const built = new Mesh(geometryFor(mesh), materialFor(node, ctx));
     built.castShadow = true;
     built.receiveShadow = true;
     const g = new Group();
     g.add(built);
-    g.add(softContactShadow(0.44, 0.44)); // T106/T139 gem-chip
+    g.add(softContactShadow(0.52, 0.52)); // T106/T150 gem-chip
     object = g;
   } else if (INSTANCED_MESHES.has(mesh)) {
     object = createInstanceProxy(mesh, node, ctx);
