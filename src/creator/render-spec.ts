@@ -380,7 +380,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       "terrain-desert": material("#f0d090", "sand", 0.72),
       cliff: material("#5e5850", "stone", 0.8),
       "number-token": material("#fff0d8", "none", 0.42),
-      piece: material("#fffaf0", "none", 0.26, 0.14, 0.55), // T061/T181/T183/T190
+      piece: material("#fffaf0", "none", 0.24, 0.16, 0.62), // T061/T181/T183/T190/T192
       "fog-lantern": material("#ffe070", "none", 0.2, 0.08, 0.48),
     });
     // T183 · shared hex lighting lift (kernel family)
@@ -462,26 +462,26 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
   }
   if (kernelType === "network-route-v1") {
     // T046 · shared train-route presentation (not parchment sticky-pad graph).
-    // T177 · shared network material/light microcontrast — hard pixel residual (kernel family, not suite fork)
+    // T177/T192 · shared network material/light microcontrast — hard pixel residual (kernel family, not suite fork)
     render.preset = "tabletop-day";
     render.camera = { ...render.camera, fovDeg: 32, distance: 14, minPolarDeg: 28, maxPolarDeg: 58, polarDeg: 46 };
     // T086 · desk lighting layers on network
     render.lighting = {
       ...render.lighting,
-      sun: { ...render.lighting.sun, azimuthDeg: 126, elevationDeg: 48, intensity: 3.55, color: "#ffc078" },
-      hemisphere: { sky: "#fff4e8", ground: "#5a4838", intensity: 0.95 },
-      fill: { azimuthDeg: 310, elevationDeg: 34, intensity: 0.68, color: "#b4ccef" },
-      rim: { azimuthDeg: 40, elevationDeg: 18, intensity: 0.52, color: "#ffd4a0" },
-      shadow: { enabled: true, softness: 0.58 },
-      exposure: 1.34, // T181
+      sun: { ...render.lighting.sun, azimuthDeg: 126, elevationDeg: 50, intensity: 3.95, color: "#ffc890" },
+      hemisphere: { sky: "#fff8ee", ground: "#6a5844", intensity: 1.08 },
+      fill: { azimuthDeg: 310, elevationDeg: 36, intensity: 0.82, color: "#c0d4f4" },
+      rim: { azimuthDeg: 40, elevationDeg: 20, intensity: 0.68, color: "#ffe0b0" },
+      shadow: { enabled: true, softness: 0.55 },
+      exposure: 1.44, // T192
 
     };
     Object.assign(render.materials, {
-      // T172/T177 · denser/brighter network map cloth (shared MaterialLibrary)
-      map: material("#0ca84c", "cloth", 0.98, 0, undefined, 0.86), // T177/T181
-      table: material("#c08642", "grain", 0.72, 0.1), // T110/T177 · warmer exterior/rim
-      ink: material("#2e3e4a", "none", 0.52, 0.1, 0.18),
-      piece: material("#fff6e8", "none", 0.34, 0.1, 0.42),
+      // T172/T177/T192 · denser/brighter network map cloth (shared MaterialLibrary)
+      map: material("#08b852", "cloth", 0.98, 0, undefined, 0.94), // T177/T181/T192
+      table: material("#d09450", "grain", 0.66, 0.12), // T110/T177/T192 · warmer exterior/rim
+      ink: material("#243848", "none", 0.46, 0.12, 0.22),
+      piece: material("#fffaf0", "none", 0.28, 0.12, 0.52),
     });
     render.bindings = [
       binding("station", "station", "ink", 1.2),

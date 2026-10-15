@@ -920,7 +920,7 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     group.add(ghostMesh);
   }
   // T079 · ground contact under track corridor
-  group.add(softContactShadow(Math.max(1.28, usable * 1.55), Math.max(0.95, gauge * 2.95), { opacity: 0.78 })); // T142/T145/T155/T160/T164/T177 route
+  group.add(softContactShadow(Math.max(1.35, usable * 1.62), Math.max(1.02, gauge * 3.1), { opacity: 0.84 })); // T142…T177/T192 route
   const hit = new Mesh(new BoxGeometry(usable, 0.1, gauge * 1.7), new MeshBasicMaterial({ visible: false }));
   hit.position.y = 0.05;
   group.add(hit);
@@ -964,10 +964,11 @@ function station(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const ink = materialFor(node, ctx);
   // T073 · elongated platform/plinth + curb edge (desk not bald at map-close)
   // T172/T177 · denser station pedestal on felt (shared station mesh)
-  const platform = new Mesh(boxAt(1.18, 0.09, 1.38, 0, 0.045, -0.08), stone);
+  // T192 · denser station pedestal (shared station mesh)
+  const platform = new Mesh(boxAt(1.24, 0.10, 1.44, 0, 0.05, -0.08), stone);
   platform.receiveShadow = true;
   platform.castShadow = true;
-  const curb = new Mesh(boxAt(1.22, 0.04, 1.42, 0, 0.095, -0.08), ink);
+  const curb = new Mesh(boxAt(1.28, 0.045, 1.48, 0, 0.105, -0.08), ink);
   curb.receiveShadow = true;
   // Round pad on top of platform (station footprint)
   const plinth = new Mesh(translated(new CylinderGeometry(0.64, 0.68, 0.13, 20), 0.15), stone);
@@ -1199,12 +1200,12 @@ function softContactShadow(
     mesh.renderOrder = -1;
     return mesh;
   };
-  group.add(mk(1.78, opacity, 0.0008, "contact-shadow")); // T142/T145/T175/T190 core
-  // T153–T158/T161/T169 · softer falloff; T161 dark-clamp; T169 micro-soften (no radial blot)
-  // T175/T190 · shared contact microcontrast (keep T161 mid clamp)
-  group.add(mk(2.70, Math.min(0.22, opacity * 0.34), 0.0005)); // soft mid · T161/T175/T190
-  group.add(mk(4.15, Math.min(0.22, opacity * 0.32), 0.0003)); // soft outer · T169/T175/T190
-  group.add(mk(6.10, Math.min(0.17, opacity * 0.25), 0.0002)); // wide soft veil · T175/T190 mean
+  group.add(mk(1.72, opacity, 0.0008, "contact-shadow")); // T142/T145/T175/T190/T192 core
+  // T153–T161/T169 · softer falloff; T193 · mid/outer veil calmer (no center radial blot as hard bait)
+  // T175/T190/T192 · shared contact microcontrast (keep T161 mid clamp)
+  group.add(mk(2.45, Math.min(0.16, opacity * 0.24), 0.0005)); // soft mid · T161/T193 lighter
+  group.add(mk(3.70, Math.min(0.14, opacity * 0.20), 0.0003)); // soft outer · T193 calmer
+  group.add(mk(5.20, Math.min(0.10, opacity * 0.14), 0.0002)); // wide soft veil · T193 calm
   return group;
 }
 
@@ -1630,7 +1631,7 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
     color: base,
     map: map ?? undefined,
     normalMap: normalMap ?? undefined,
-    normalScale: new Vector2(4.05, 4.05), // T083…T183/T190 · weave microcontrast
+    normalScale: new Vector2(4.35, 4.35), // T083…T190/T192 · weave microcontrast
     roughnessMap: roughnessMap ?? undefined,
     roughness: Math.max(0.9, token?.roughness ?? 0.97),
     metalness: 0,
@@ -1684,10 +1685,11 @@ function tableVignetteMesh(): Object3D {
     canvas.height = H;
     const g = canvas.getContext("2d");
     if (g) {
-      const grd = g.createRadialGradient(W / 2, H / 2, W * 0.22, W / 2, H / 2, W * 0.62);
+      // T193 · softer shared table vignette — larger clear center, milder rim (H04 center calm)
+      const grd = g.createRadialGradient(W / 2, H / 2, W * 0.34, W / 2, H / 2, W * 0.72);
       grd.addColorStop(0, "rgba(0,0,0,0)");
-      grd.addColorStop(0.55, "rgba(0,0,0,0.05)");
-      grd.addColorStop(1, "rgba(12,8,4,0.42)");
+      grd.addColorStop(0.62, "rgba(0,0,0,0.02)");
+      grd.addColorStop(1, "rgba(12,8,4,0.22)");
       g.fillStyle = grd;
       g.fillRect(0, 0, W, H);
     }

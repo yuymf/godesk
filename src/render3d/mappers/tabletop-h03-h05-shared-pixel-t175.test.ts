@@ -14,7 +14,7 @@ describe("T175 H03–H05 shared pixel hard gate", () => {
   it("raises shared felt/wood microcontrast and contact veil", () => {
     const objs = readFileSync("src/render3d/tabletop-objects.ts", "utf8");
     expect(objs).toContain("T175");
-    expect(objs).toMatch(/Vector2\(4\.05,\s*4\.05\)/);
-    expect(objs).toMatch(/Math\.min\(0\.22,\s*opacity \* 0\.34\)/);
+    expect(objs).toMatch(/Vector2\(4\.35,\s*4\.35\)/);
+    expect(objs).toMatch(/Math\.min\(0\.16,\s*opacity \* 0\.24\)/);
   });
 });

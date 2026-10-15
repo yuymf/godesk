@@ -14,7 +14,7 @@ describe("T181 shared desktop microcontrast / props", () => {
   it("raises shared felt/wood weave and contact veil", () => {
     const objs = readFileSync("src/render3d/tabletop-objects.ts", "utf8");
     expect(objs).toContain("T181");
-    expect(objs).toMatch(/Vector2\(4\.05,\s*4\.05\)/);
+    expect(objs).toMatch(/Vector2\(4\.35,\s*4\.35\)/);
     expect(objs).toMatch(/Vector2\(2\.25,\s*2\.25\)/);
   });
 });
