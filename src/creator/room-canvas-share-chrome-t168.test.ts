@@ -6,9 +6,9 @@ describe("T168 ≥9 canvasShare / chrome collapse", () => {
     const tw = readFileSync("src/creator/tidewell-game-screen.css", "utf8");
     expect(tw).toContain("T168");
     // T171 · further collapse (was 128/72); share floor still ≥0.88 for H02–H05
-    expect(tw).toMatch(/--tw-side:\s*68px/);
-    expect(tw).toMatch(/--tw-dock:\s*28px/);
-    expect(tw).toMatch(/rgba\(243, 231, 201, 0\.(28|42|48|72)\)/);
+    expect(tw).toMatch(/--tw-side:\s*56px/);
+    expect(tw).toMatch(/--tw-dock:\s*22px/);
+    expect(tw).toMatch(/rgba\(243, 231, 201, 0\.(18|28|42|48|72)\)/);
     const surf = readFileSync("src/creator/surface.css", "utf8");
     expect(surf).toContain("T168");
     expect(surf).toMatch(/88vh|clamp\(560px,\s*88vh/);

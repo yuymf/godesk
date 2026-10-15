@@ -441,24 +441,25 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
   }
   if (kernelType === "network-route-v1") {
     // T046 · shared train-route presentation (not parchment sticky-pad graph).
+    // T177 · shared network material/light microcontrast — hard pixel residual (kernel family, not suite fork)
     render.preset = "tabletop-day";
     render.camera = { ...render.camera, fovDeg: 32, distance: 14, minPolarDeg: 28, maxPolarDeg: 58, polarDeg: 46 };
     // T086 · desk lighting layers on network
     render.lighting = {
       ...render.lighting,
-      sun: { ...render.lighting.sun, azimuthDeg: 130, elevationDeg: 50, intensity: 3.2, color: "#ffd2a0" },
-      hemisphere: { sky: "#f8f0e6", ground: "#6e5c48", intensity: 0.85 },
-      fill: { azimuthDeg: 308, elevationDeg: 32, intensity: 0.5, color: "#c5d6ef" },
-      rim: { azimuthDeg: 42, elevationDeg: 16, intensity: 0.38, color: "#ffe2b8" },
-      shadow: { enabled: true, softness: 0.72 },
-      exposure: 1.14,
+      sun: { ...render.lighting.sun, azimuthDeg: 126, elevationDeg: 48, intensity: 3.55, color: "#ffc078" },
+      hemisphere: { sky: "#fff4e8", ground: "#5a4838", intensity: 0.95 },
+      fill: { azimuthDeg: 310, elevationDeg: 34, intensity: 0.68, color: "#b4ccef" },
+      rim: { azimuthDeg: 40, elevationDeg: 18, intensity: 0.52, color: "#ffd4a0" },
+      shadow: { enabled: true, softness: 0.58 },
+      exposure: 1.28,
     };
     Object.assign(render.materials, {
-      // T172 · H02 interior felt denser/brighter (shared MaterialLibrary cloth map)
-      map: material("#2a8f52", "cloth", 0.96, 0, undefined, 0.55),
-      table: material("#a87338", "grain", 0.84), // T110 · align exterior/rim
-      ink: material("#40505a", "none", 0.58),
-      piece: material("#f7f1e6", "none", 0.42, 0.08, 0.35),
+      // T172/T177 · denser/brighter network map cloth (shared MaterialLibrary)
+      map: material("#0f9a48", "cloth", 0.98, 0, undefined, 0.78),
+      table: material("#c08642", "grain", 0.72, 0.1), // T110/T177 · warmer exterior/rim
+      ink: material("#2e3e4a", "none", 0.52, 0.1, 0.18),
+      piece: material("#fff6e8", "none", 0.34, 0.1, 0.42),
     });
     render.bindings = [
       binding("station", "station", "ink", 1.2),

@@ -1,12 +1,8 @@
-# T177 — ≥9 呈现 backlog（观感仍 <9）
+# T177 — H02 soft residual 硬过门
 
-| 字段 | 值 |
-| --- | --- |
-| 来源 | T174–T176 |
-| 层 | **共享呈现** |
-| 状态 | **开（backlog · 禁止自宣 ≥9）** |
+| 状态 | **验票 PASS（H02 stage-wide hard）** |
+| 基线 | `9c6567b` |
 
-## 差距候选
-- H01 侧栏/底栏观感仍偏 HUD（虽 share≥0.88）
-- H02 soft residual vs tip
-- 全景 ≥9 观感差距（不自宣）
+## 结果
+H02 mean **10.0352** · ge20 **11.87%** · hard ✅  
+share 地板保 · T161/T157 OK · 共享 network-route/MaterialLibrary（非 H02 特例）

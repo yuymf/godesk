@@ -88,7 +88,7 @@ export function networkRouteLayout(
     // T051: readable station plaque tag (hub:Name / Name) — not faint debug mush.
     const label = terminal ? `hub:${city.name}` : city.name;
     // T172 · denser station footprint on felt
-    return { id: city.id, objectKind: "station", x, z, size: terminal ? 0.72 : 0.52, label };
+    return { id: city.id, objectKind: "station", x, z, size: terminal ? 0.82 : 0.60, label };
   });
   const links: TabletopLink[] = [];
   const hints: TabletopHint[] = [];
@@ -140,10 +140,10 @@ export function networkRouteLayout(
     });
   }
 
-  // T172 · H02 board-interior density: felt pads + crates/tokens in empty map (shared desk props)
+  // T172/T177 · board-interior density: felt pads + crates/tokens in empty map (shared desk props)
   {
-    const bw = (spanX * scale + 2.2) / 2;
-    const bd = (spanY * scale + 2.2) / 2;
+    const bw = (spanX * scale + 2.6) / 2;
+    const bd = (spanY * scale + 2.6) / 2;
     const pads: Array<{ x: number; z: number; kind: "token" | "crate"; size: number }> = [];
     // grid of soft fill away from stations
     for (let ix = -2; ix <= 2; ix += 1) {
@@ -162,7 +162,7 @@ export function networkRouteLayout(
       }
     }
     let di = 0;
-    for (const pad of pads.slice(0, 14)) {
+    for (const pad of pads.slice(0, 18)) {
       pieces.push({
         id: `decor:map:${di++}`,
         objectKind: pad.kind === "crate" ? "building" : "resource",
@@ -194,7 +194,7 @@ export function networkRouteLayout(
   return {
     kernelType: "network-route-v1",
     // T172 · slightly larger felt map so interior reads (shared layout, not sample hack)
-    board: { objectKind: "map", materialKey: "map", width: spanX * scale + 2.2, depth: spanY * scale + 2.2 },
+    board: { objectKind: "map", materialKey: "map", width: spanX * scale + 2.6, depth: spanY * scale + 2.6 },
     cells: [],
     pieces,
     links,

@@ -224,13 +224,14 @@ body:has(.room-view-tidewell-immersive) {
    translucent rails so tabletop-3d reads through; H01 desk proportion ↑ (shared). */
 /* T171 · tabletop-first: collapse rails; overlay dock so stage hits ≥0.88 share (shared chrome). */
 /* T174 · H01 chrome/tabletop 再轻：侧栏更透更窄、底栏更矮；share 地板不回退（dock 仍 overlay）。 */
+/* T178 · H01 HUD 再轻：侧栏/底栏再收；share 地板不回退。 */
 .room-view-tidewell-immersive.room-view-seated {
-  --tw-side: 68px;
-  --tw-dock: 28px;
+  --tw-side: 56px;
+  --tw-dock: 22px;
 }
 .room-view-tidewell-immersive.room-view-seated .tidewell-game-screen {
-  --tw-side: 68px;
-  --tw-dock: 28px;
+  --tw-side: 56px;
+  --tw-dock: 22px;
   /* T171 · stage row eats vh; dock overlays bottom (parity with T168 auction 88vh share) */
   grid-template-rows: auto minmax(88vh, 1fr) !important;
   position: relative !important;
@@ -240,31 +241,31 @@ body:has(.room-view-tidewell-immersive) {
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
-  height: var(--tw-dock, 28px) !important;
-  max-height: var(--tw-dock, 28px) !important;
+  height: var(--tw-dock, 22px) !important;
+  max-height: var(--tw-dock, 22px) !important;
   z-index: 8 !important;
-  background: linear-gradient(180deg, rgba(243, 231, 201, 0.28), rgba(42, 24, 16, 0.38)) !important;
+  background: linear-gradient(180deg, rgba(243, 231, 201, 0.18), rgba(42, 24, 16, 0.28)) !important;
   pointer-events: auto;
-  opacity: 0.82 !important;
+  opacity: 0.72 !important;
 }
 .room-view-tidewell-immersive.room-view-seated .tidewell-stage-wrap {
   min-height: 88vh !important;
 }
 .room-view-tidewell-immersive.room-view-seated .tidewell-players,
 .room-view-tidewell-immersive.room-view-seated .tidewell-turn-column {
-  width: var(--tw-side, 68px) !important;
+  width: var(--tw-side, 56px) !important;
   background:
-    linear-gradient(180deg, rgba(243, 231, 201, 0.28), rgba(232, 211, 162, 0.18)),
-    linear-gradient(180deg, rgba(90, 56, 28, 0.22), rgba(42, 24, 16, 0.28)) !important;
+    linear-gradient(180deg, rgba(243, 231, 201, 0.18), rgba(232, 211, 162, 0.10)),
+    linear-gradient(180deg, rgba(90, 56, 28, 0.14), rgba(42, 24, 16, 0.18)) !important;
   box-shadow:
-    inset 0 0 0 1px rgba(201, 162, 39, 0.12),
-    inset 0 0 0 2px rgba(42, 24, 12, 0.14),
-    0 0 4px rgba(0, 0, 0, 0.06) !important;
-  opacity: 0.88 !important;
+    inset 0 0 0 1px rgba(201, 162, 39, 0.08),
+    inset 0 0 0 2px rgba(42, 24, 12, 0.10),
+    0 0 3px rgba(0, 0, 0, 0.04) !important;
+  opacity: 0.78 !important;
 }
 @media (min-width: 801px) and (max-width: 1100px) {
   .room-view-tidewell-immersive.room-view-seated {
-    --tw-side: 60px;
+    --tw-side: 48px;
   }
 }
 

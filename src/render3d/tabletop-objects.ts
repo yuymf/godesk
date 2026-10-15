@@ -920,7 +920,7 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     group.add(ghostMesh);
   }
   // T079 · ground contact under track corridor
-  group.add(softContactShadow(Math.max(1.20, usable * 1.45), Math.max(0.88, gauge * 2.75), { opacity: 0.70 })); // T142/T145/T155/T160/T164 route
+  group.add(softContactShadow(Math.max(1.28, usable * 1.55), Math.max(0.95, gauge * 2.95), { opacity: 0.78 })); // T142/T145/T155/T160/T164/T177 route
   const hit = new Mesh(new BoxGeometry(usable, 0.1, gauge * 1.7), new MeshBasicMaterial({ visible: false }));
   hit.position.y = 0.05;
   group.add(hit);
@@ -963,14 +963,14 @@ function station(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const roofMat = ctx.library.get("tt-roof", ROOF);
   const ink = materialFor(node, ctx);
   // T073 · elongated platform/plinth + curb edge (desk not bald at map-close)
-  // T172 · denser station pedestal on felt (shared station mesh)
-  const platform = new Mesh(boxAt(1.08, 0.08, 1.28, 0, 0.04, -0.08), stone);
+  // T172/T177 · denser station pedestal on felt (shared station mesh)
+  const platform = new Mesh(boxAt(1.18, 0.09, 1.38, 0, 0.045, -0.08), stone);
   platform.receiveShadow = true;
   platform.castShadow = true;
-  const curb = new Mesh(boxAt(1.12, 0.035, 1.32, 0, 0.085, -0.08), ink);
+  const curb = new Mesh(boxAt(1.22, 0.04, 1.42, 0, 0.095, -0.08), ink);
   curb.receiveShadow = true;
   // Round pad on top of platform (station footprint)
-  const plinth = new Mesh(translated(new CylinderGeometry(0.58, 0.62, 0.11, 20), 0.13), stone);
+  const plinth = new Mesh(translated(new CylinderGeometry(0.64, 0.68, 0.13, 20), 0.15), stone);
   plinth.receiveShadow = true;
   plinth.castShadow = true;
   const ring = new Mesh(translated(new CylinderGeometry(0.48, 0.48, 0.025, 20), 0.165), ink);
@@ -1630,7 +1630,7 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
     color: base,
     map: map ?? undefined,
     normalMap: normalMap ?? undefined,
-    normalScale: new Vector2(2.85, 2.85), // T083/T114/T120/T132/T169/T175 · weave microcontrast
+    normalScale: new Vector2(3.05, 3.05), // T083/T114/T120/T132/T169/T175/T177 · weave microcontrast
     roughnessMap: roughnessMap ?? undefined,
     roughness: Math.max(0.9, token?.roughness ?? 0.97),
     metalness: 0,
