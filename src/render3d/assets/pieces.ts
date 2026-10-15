@@ -43,7 +43,7 @@ import {
 } from "three";
 import { SEAT_COLORS } from "../tokens";
 
-export type PieceKind = "settlement" | "city" | "road" | "robber";
+export type PieceKind = "settlement" | "city" | "road" | "robber" | "meeple";
 
 type Vec3 = readonly [number, number, number];
 
@@ -499,6 +499,51 @@ export function buildRoadGeometry(seat: number): BufferGeometry {
   return bakeShading(mergeParts(parts), 0.55);
 }
 
+
+/** T123 · shared seat meeple for hex layout — rim disc matches T090/T116 (#a89478), larger for ortho. */
+export const MEEPLE_HEX_SCALE = 1.35;
+export const MEEPLE_RIM_HEX = "#a89478";
+
+export function buildMeepleGeometry(seat = 0): BufferGeometry {
+  const seatColor = SEAT_COLORS[seat % SEAT_COLORS.length] ?? "#ffffff";
+  const parts: BufferGeometry[] = [];
+  // Classic meeple extruded silhouette (Y up); base at y=0.
+  const shape = new Shape();
+  shape.moveTo(0, 0);
+  shape.lineTo(0.16, 0);
+  shape.quadraticCurveTo(0.2, 0.08, 0.14, 0.18);
+  shape.lineTo(0.08, 0.28);
+  shape.lineTo(0.22, 0.38);
+  shape.quadraticCurveTo(0.28, 0.48, 0.16, 0.52);
+  shape.lineTo(0.1, 0.55);
+  shape.quadraticCurveTo(0.12, 0.7, 0, 0.78);
+  shape.quadraticCurveTo(-0.12, 0.7, -0.1, 0.55);
+  shape.lineTo(-0.16, 0.52);
+  shape.quadraticCurveTo(-0.28, 0.48, -0.22, 0.38);
+  shape.lineTo(-0.08, 0.28);
+  shape.lineTo(-0.14, 0.18);
+  shape.quadraticCurveTo(-0.2, 0.08, -0.16, 0);
+  shape.closePath();
+  const body = new ExtrudeGeometry(shape, {
+    depth: 0.22,
+    bevelEnabled: true,
+    bevelThickness: 0.02,
+    bevelSize: 0.015,
+    bevelSegments: 2,
+    curveSegments: 8,
+  });
+  body.translate(0, 0, -0.11);
+  parts.push(paintPart(body, seatColor, { smooth: true }));
+  // T090/T116 · cream→dim rim disc under meeple (hex ortho: slightly larger radius)
+  parts.push(
+    paintPart(new CylinderGeometry(0.28, 0.30, 0.045, 16), MEEPLE_RIM_HEX, {
+      pos: [0, 0.022, 0],
+    }),
+  );
+  parts.push(contactShadow(0.26, 0.22, 0.003));
+  return scaled(bakeShading(mergeParts(parts), 0.2), MEEPLE_HEX_SCALE);
+}
+
 /** Robber ≈ hooded miniature (not a lathe cylinder). */
 export const ROBBER_SCALE = 1.55;
 
@@ -584,7 +629,9 @@ export function pieceGeometry(kind: PieceKind, seat = 0): BufferGeometry {
           ? buildCityGeometry(seat)
           : kind === "road"
             ? buildRoadGeometry(seat)
-            : buildRobberGeometry();
+            : kind === "meeple"
+              ? buildMeepleGeometry(seat)
+              : buildRobberGeometry();
     geom.userData.gdShared = true;
     CACHE.set(key, geom);
   }

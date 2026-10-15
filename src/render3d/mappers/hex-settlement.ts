@@ -184,6 +184,32 @@ export function mapHexSettlementToScene(genre: HexSettlementSceneInput): SceneMo
     }
   });
 
+
+  // T123 · shared seat meeples on hex near-edge (rim disc readable in ortho / stage-wide)
+  {
+    const seatN = Math.max(genre.players.length, 2);
+    let maxWorldZ = -Infinity;
+    for (const tile of genre.tiles) {
+      const c = hexCenter(tile.q, tile.r);
+      const wz = c.y * WORLD_SCALE;
+      if (wz > maxWorldZ) maxWorldZ = wz;
+    }
+    if (!Number.isFinite(maxWorldZ)) maxWorldZ = 2.2;
+    const z = maxWorldZ + 0.95;
+    for (let seat = 0; seat < seatN; seat += 1) {
+      const x = (seat - (seatN - 1) / 2) * 1.15;
+      nodes.push({
+        id: `seat:${seat}:meeple`,
+        kind: "meeple",
+        position: [x, 0.02, z],
+        seat,
+        tag: `seat${seat}`,
+        scale: [1, 1, 1],
+        rotationY: Math.PI,
+      });
+    }
+  }
+
   // Dice tray + dice: local to the screen-corner dice overlay (dice-overlay.ts), not world space.
   const layout = diceLayout();
   nodes.push({

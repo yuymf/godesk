@@ -178,6 +178,41 @@ body:has(.room-view-tidewell-immersive) {
 }
 
 
+/* T122 · hex canvas share reclaim — seated rails overlay; stage full-bleeds toward suite ~0.78.
+   Keep T100 --tw-side:168px / T103 compact cards as overlay width+content (no whitewash). */
+.room-view-tidewell-immersive.room-view-seated .tidewell-game-body {
+  grid-template-columns: minmax(0, 1fr) !important;
+  position: relative !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-stage-wrap {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-players,
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-column {
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: var(--tw-side, 168px) !important;
+  z-index: 6 !important;
+  box-sizing: border-box !important;
+  background: color-mix(in srgb, var(--tw-parchment, #f3e7c9) 88%, transparent);
+  pointer-events: auto;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-players {
+  left: 0 !important;
+  right: auto !important;
+  border-right: 1px solid rgb(74 47 28 / 18%);
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-column {
+  right: 0 !important;
+  left: auto !important;
+  border-left: 1px solid rgb(74 47 28 / 18%);
+}
+
+
 .room-view-tidewell-immersive.room-view-seated > .action-log.room-action-log-drawer {
   /* keep drawer in DOM for collapsed default; float so it is reachable without stealing stage */
   display: block !important;

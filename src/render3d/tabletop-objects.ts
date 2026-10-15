@@ -163,12 +163,13 @@ function meepleFigure(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   group.add(collar);
   // T090 · cream rim disc under meeple — stage-wide silhouette on green felt
   // T116 · dim rim albedo (was #f8f1e3) so base disc does not blow out; keep T090/T106.
+  // T123 · slightly larger rim for hex/ortho + stage-wide readability (shared figure).
   const rimMat = new MeshStandardMaterial({
     color: "#a89478",
     roughness: 0.95,
     metalness: 0,
   });
-  const rim = new Mesh(new CylinderGeometry(0.22, 0.24, 0.035, 16), rimMat);
+  const rim = new Mesh(new CylinderGeometry(0.28, 0.30, 0.045, 16), rimMat);
   rim.position.set(0, 0.02, 0);
   rim.castShadow = false;
   rim.receiveShadow = true;

@@ -197,6 +197,14 @@ function proceduralFor(
       };
     case "robber":
       return { geometry: pieceGeometry("robber"), material: vcMaterial(library, "figure-vc", FIGURE_VC_TOKEN), poolKey: "robber:vc" };
+    case "meeple": {
+      const meepleSeat = node.seat ?? 0;
+      return {
+        geometry: pieceGeometry("meeple", meepleSeat),
+        material: vcMaterial(library, "piece-vc", PIECE_VC_TOKEN),
+        poolKey: `meeple:s${meepleSeat}`,
+      };
+    }
     case "die":
       return { geometry: dieGeometry(), material: vcMaterial(library, "dice-vc", DICE_VC_TOKEN), poolKey: "die:vc" };
     case "dice-tray":
@@ -321,7 +329,8 @@ export function materialFor(node: SceneNode): { key: string; token: MaterialToke
       return { key: "robber", token: PROP_MATERIALS.robber };
     case "settlement":
     case "city":
-    case "road": {
+    case "road":
+    case "meeple": {
       const seat = node.seat ?? 0;
       return { key: `seat-${seat}`, token: seatMaterial(seat) };
     }
@@ -344,6 +353,7 @@ function batchableKind(kind: SceneNode["kind"]): boolean {
     kind === "settlement" ||
     kind === "city" ||
     kind === "robber" ||
+    kind === "meeple" ||
     kind === "number-token" ||
     kind === "port" ||
     kind === "ship" ||
@@ -477,7 +487,7 @@ function updateNodeObject(object: Object3D, node: SceneNode, library: MaterialLi
   object.position.set(node.position[0], node.position[1], node.position[2]);
   if (node.rotationY !== undefined) object.rotation.y = node.rotationY;
   if (node.scale) object.scale.set(node.scale[0], node.scale[1], node.scale[2]);
-  else if (node.kind === "settlement" || node.kind === "city" || node.kind === "robber") object.scale.set(1, 1, 1);
+  else if (node.kind === "settlement" || node.kind === "city" || node.kind === "robber" || node.kind === "meeple") object.scale.set(1, 1, 1);
   if (node.kind === "die") applyDieOrientation(object, node.number, node.rotationY ?? 0);
   object.userData.baseY = node.position[1];
   const inst = object.userData.gdInstance as { poolKey: string; index: number } | undefined;
@@ -640,7 +650,7 @@ export function SceneHost({
             motion.place(object, node.id);
             return;
           }
-          if (node.kind !== "settlement" && node.kind !== "city" && node.kind !== "road") return;
+          if (node.kind !== "settlement" && node.kind !== "city" && node.kind !== "road" && node.kind !== "meeple") return;
           motion.place(object, node.id);
         },
         removed: (object: Object3D, id: string, detach: () => void) => {

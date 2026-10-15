@@ -4,6 +4,7 @@ export type SceneNodeKind =
   | "tile"
   | "number-token"
   | "robber"
+  | "meeple"
   | "settlement"
   | "city"
   | "road"
