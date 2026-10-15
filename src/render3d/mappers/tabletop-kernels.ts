@@ -105,7 +105,7 @@ export function networkRouteLayout(
       objectKind: claimed ? "claim" : "route",
       from,
       to,
-      width: claimed ? 0.38 : 0.12, // T062 · thicker claimed car corridor
+      width: claimed ? 0.38 : 0.18, // T078 · cold ballast corridor readable; claim still thicker
       seat: claimed ? owner : null,
       ...(action ? { action } : {}),
     });
@@ -113,6 +113,32 @@ export function networkRouteLayout(
       hints.push({ id: edge.id, x: (from[0] + to[0]) / 2, z: (from[1] + to[1]) / 2, radius: 0.24, action });
     }
   }
+  // T078 · wayside signal / switch posts on cold board (decorative; claim semantics unchanged)
+  let signalIdx = 0;
+  for (const edge of state.edges) {
+    const from = position.get(edge.from);
+    const to = position.get(edge.to);
+    if (!from || !to) continue;
+    const claimed = state.claims[edge.id] !== null && state.claims[edge.id] !== undefined;
+    const dx = to[0] - from[0];
+    const dz = to[1] - from[1];
+    const len = Math.hypot(dx, dz);
+    if (len < 0.9) continue;
+    const mx = (from[0] + to[0]) / 2;
+    const mz = (from[1] + to[1]) / 2;
+    const ox = len > 0 ? (-dz / len) * 0.22 : 0;
+    const oz = len > 0 ? (dx / len) * 0.22 : 0;
+    pieces.push({
+      id: `signal:${signalIdx++}:${edge.id}`,
+      objectKind: "signal",
+      x: mx + ox,
+      z: mz + oz,
+      y: 0.02,
+      size: claimed ? 0.28 : 0.34,
+      tint: claimed ? "#64748b" : "#f59e0b",
+    });
+  }
+
   // T042: shared seat meeples (per-seat color) along the near edge.
   const counts = state.routeCounts ?? [];
   const seatN = Math.max(counts.length, 2);

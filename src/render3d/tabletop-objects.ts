@@ -703,22 +703,23 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const count = Math.max(2, Math.floor(usable / step));
   const start = -((count - 1) * step) / 2;
   const railZ = gauge * 0.32;
-  const tieMat = claimed ? ctx.library.get("tt-sleeper", SLEEPER) : materialFor(node, ctx);
+  // T078 · cold board: wood sleepers even when unclaimed (not bald faint slots)
+  const tieMat = ctx.library.get("tt-sleeper", SLEEPER);
   const steel = ctx.library.get("tt-steel", STEEL);
   const ties: Geometry[] = [];
   for (let i = 0; i < count; i += 1) {
     const x = start + i * step;
     // Slightly thicker / taller ties so they read as lumber, not printed dashes.
-    ties.push(boxAt(claimed ? 0.08 : 0.07, claimed ? 0.04 : 0.028, gauge * 1.05, x, claimed ? 0.055 : 0.03, 0));
+    ties.push(boxAt(claimed ? 0.08 : 0.075, claimed ? 0.04 : 0.036, gauge * 1.12, x, claimed ? 0.055 : 0.038, 0));
   }
   const sleepers = new Mesh(mergeGeometries(ties) ?? ties[0]!, tieMat);
   sleepers.castShadow = true;
   sleepers.receiveShadow = true;
   // I-ish rail: web + head (two boxes per side) for a raised bar look in ortho close-up.
-  const railY = claimed ? 0.095 : 0.055;
-  const railH = claimed ? 0.04 : 0.028;
-  const head = claimed ? 0.034 : 0.024;
-  const web = claimed ? 0.016 : 0.012;
+  const railY = claimed ? 0.095 : 0.07;
+  const railH = claimed ? 0.04 : 0.034;
+  const head = claimed ? 0.034 : 0.028;
+  const web = claimed ? 0.016 : 0.014;
   const railGeoms = [
     boxAt(usable, railH, web, 0, railY, railZ),
     boxAt(usable, head * 0.55, head, 0, railY + railH * 0.55, railZ),
@@ -783,17 +784,26 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     glassMesh.castShadow = false;
     group.add(chassisMesh, bodyMesh, glassMesh);
   } else {
-    // Unclaimed: faint empty track + T051 countable length tick/slots (ghost wagon bays).
-    group.add(sleepers, rails);
+    // T078 · cold unclaimed: ballast bed + wood sleepers + length ticks (NOT claimed cars).
+    const ballastMat = ctx.library.get("tt-ballast", {
+      base: "#6b7280",
+      roughness: 0.95,
+      metalness: 0.02,
+      pattern: "none" as const,
+    });
+    const bed = new Mesh(boxAt(usable + 0.16, 0.028, gauge * 1.45, 0, 0.014, 0), ballastMat);
+    bed.receiveShadow = true;
+    bed.castShadow = false;
+    group.add(bed, sleepers, rails);
     const slotCount = Math.max(1, Math.min(6, Math.round(usable / 0.42)));
     const slotStep = usable / slotCount;
     const ghosts: Geometry[] = [];
     for (let i = 0; i < slotCount; i += 1) {
       const cx = -usable / 2 + slotStep * (i + 0.5);
       // hollow bay: thin rim boxes (readable length marks, not claimed cars)
-      ghosts.push(boxAt(slotStep * 0.7, 0.02, gauge * 0.75, cx, 0.07, 0));
-      ghosts.push(boxAt(0.02, 0.05, gauge * 0.75, cx - slotStep * 0.32, 0.09, 0));
-      ghosts.push(boxAt(0.02, 0.05, gauge * 0.75, cx + slotStep * 0.32, 0.09, 0));
+      ghosts.push(boxAt(slotStep * 0.7, 0.02, gauge * 0.75, cx, 0.08, 0));
+      ghosts.push(boxAt(0.02, 0.05, gauge * 0.75, cx - slotStep * 0.32, 0.1, 0));
+      ghosts.push(boxAt(0.02, 0.05, gauge * 0.75, cx + slotStep * 0.32, 0.1, 0));
     }
     const ghostMat = ctx.library.get("tt-track-slot", TRACK_SLOT);
     const ghostMesh = new Mesh(mergeGeometries(ghosts) ?? ghosts[0]!, ghostMat);
@@ -804,6 +814,34 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const hit = new Mesh(new BoxGeometry(usable, 0.1, gauge * 1.7), new MeshBasicMaterial({ visible: false }));
   hit.position.y = 0.05;
   group.add(hit);
+  return group;
+}
+
+
+/** T078 · decorative wayside signal / switch post (cold-board richness; not a claimed car). */
+function signalPost(node: SceneNode, ctx: TabletopObjectContext): Object3D {
+  const group = new Group();
+  const postMat = ctx.library.get("tt-signal-post", {
+    base: "#374151",
+    roughness: 0.55,
+    metalness: 0.35,
+    pattern: "none" as const,
+  });
+  const lampMat = ctx.library.get("tt-signal-lamp", {
+    base: (node.material && ctx.materials[node.material]?.base) || "#f59e0b",
+    roughness: 0.35,
+    metalness: 0.2,
+    pattern: "none" as const,
+  });
+  const pole = new Mesh(translated(new CylinderGeometry(0.035, 0.045, 0.55, 8), 0.275), postMat);
+  pole.castShadow = true;
+  const arm = new Mesh(boxAt(0.22, 0.03, 0.04, 0.1, 0.48, 0), postMat);
+  arm.castShadow = true;
+  const lamp = new Mesh(translated(new SphereGeometry(0.055, 10, 8), 0.5), lampMat);
+  lamp.position.x = 0.18;
+  lamp.castShadow = true;
+  group.add(pole, arm, lamp);
+  group.add(softContactShadow(0.18, 0.18));
   return group;
 }
 
@@ -1306,6 +1344,8 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = hint;
   } else if (mesh === "rail-track") {
     object = railTrack(node, ctx);
+  } else if (mesh === "signal-post") {
+    object = signalPost(node, ctx);
   } else if (mesh === "station") {
     object = station(node, ctx);
   } else if (mesh === "shore-natural") {
