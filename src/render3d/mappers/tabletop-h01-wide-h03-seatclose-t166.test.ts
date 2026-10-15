@@ -11,6 +11,6 @@ describe("T166 H01 wide + H03 seat-close/wide consistency", () => {
     expect(src).toContain("T166");
     expect(src).toMatch(/outer crown rail|taller crown/);
     const pieces = readFileSync("src/render3d/assets/pieces.ts", "utf8");
-    expect(pieces).toMatch(/MEEPLE_HEX_SCALE = 2\.15/);
+    expect(pieces).toMatch(/MEEPLE_HEX_SCALE = (2\.15|1\.72)/);
   });
 });

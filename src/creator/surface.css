@@ -6239,10 +6239,9 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
 }
 .room-view-tabletop-immersive.room-view-seated .auction-board.room-view-tabletop-immersive .tabletop-stage,
 .room-view-tabletop-immersive.room-view-seated .auction-board.room-view-tabletop-immersive .g3d-stage {
-  /* T124 · raise toward suite ≈0.78 (was 72vh→≈0.71); keep T107 full-bleed width */
-  /* T128 · keep 78vh; width reclaim via zero side pad */
-  height: clamp(520px, 78vh, 920px);
-  min-height: 500px;
+  /* T124/T128 · full-bleed width; T168 · lift auction stage share with shared 88vh */
+  height: clamp(560px, 88vh, 980px);
+  min-height: 540px;
   width: 100%;
 }
 
@@ -6427,3 +6426,22 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   height: clamp(520px, 78vh, 920px);
   min-height: 500px;
 }
+
+/* T168 · ≥9 tabletop canvasShare — taller stage + tighter collapsed chrome (shared) */
+.room-view-tabletop-immersive.room-view-seated .tabletop-stage,
+.room-view-tabletop-immersive.room-view-seated .g3d-stage,
+.room-view-tabletop-immersive:has(.desk-action-drawer:not([open])) .tabletop-stage,
+.room-view-tabletop-immersive:has(.desk-action-drawer:not([open])) .g3d-stage {
+  height: clamp(560px, 88vh, 980px);
+  min-height: 540px;
+}
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-collapsed.room-share-chrome.is-chrome-collapse,
+.room-view-hex-island.room-view-seated .room-invitation-rich.is-collapsed.room-share-chrome.is-chrome-collapse {
+  max-height: 1.75rem;
+  padding: 0.12rem 0.45rem;
+  gap: 0.28rem;
+}
+.room-view-tabletop-immersive.room-view-seated .desk-action-drawer:not([open]) {
+  max-height: 1.85rem;
+}
+

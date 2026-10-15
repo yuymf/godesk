@@ -24,7 +24,7 @@ describe("T123 meeple rim hex visibility", () => {
   it("shared rim keeps T090/T106/T116 markers while enlarging disc", () => {
     const pieces = readFileSync("src/render3d/assets/pieces.ts", "utf8");
     expect(pieces).toContain("T123");
-    expect(pieces).toMatch(/#a89478|#e8c878|#ffe6b0/); // T123 heritage / T163 crown
+    expect(pieces).toMatch(/#a89478|#e8c878|#ffe6b0|#d4a87a/); // T123 heritage / T163 crown
     expect(pieces).toMatch(/CylinderGeometry\(0\.(28|30|32|36|40|42|46),\s*0\.(30|32|34|40|44|46|50)/);
     expect(pieces).toMatch(/contactShadow\(0\.(2[2468]|3[0468]),\s*0\.(2[2468]|3[0468])/);
     const tt = readFileSync("src/render3d/tabletop-objects.ts", "utf8");

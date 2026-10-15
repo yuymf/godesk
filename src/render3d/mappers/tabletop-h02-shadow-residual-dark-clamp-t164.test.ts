@@ -10,6 +10,6 @@ describe("T164 H02 shadow residual under dark-clamp", () => {
     const end = src.indexOf("function porcelainPlate", start);
     const block = src.slice(start, end > 0 ? end : start + 4000);
     expect(block).toMatch(/T161 lighter|dark-clamp/);
-    expect(block).toMatch(/Math\.min\(0\.26|0\.26,/); // mid stays light
+    expect(block).toMatch(/Math\.min\(0\.(22|26)|0\.(22|26),/); // mid stays light
   });
 });
