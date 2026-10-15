@@ -1073,6 +1073,113 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
     });
   });
 
+  // T089 · shared gallery desk density (stands / pedestals / catalog plaques) — generic path, no sample specials
+  // Empty felt ring around the auction floor gets readable props without covering lots or seat tableaux.
+  const dressSeed = (gallery?.artists?.length ?? 0) * 17 + (gallery?.round ?? 0) * 3 + seatCount * 5;
+  const dressRand = (i: number) => {
+    const x = Math.sin((dressSeed + i) * 12.9898) * 43758.5453;
+    return x - Math.floor(x);
+  };
+  // Corner catalog stands (plaque) — stage-wide landmarks
+  const corners: Array<[number, number]> = [
+    [-3.55, -2.35], [3.55, -2.35], [-3.7, 1.55], [3.7, 1.55],
+    [-2.2, -3.0], [2.2, -3.0],
+  ];
+  corners.forEach(([cx, cz], i) => {
+    pieces.push({
+      id: `gallery:stand:${i}`,
+      objectKind: "plaque",
+      x: cx,
+      z: cz,
+      size: 0.78 + dressRand(i) * 0.18,
+      tint: ARTIST_TINT[i % ARTIST_TINT.length],
+      label: encodePlaqueFace({ title: "目录", prestige: i + 1 }),
+      emphasis: true,
+    });
+    pieces.push({
+      id: `gallery:pedestal:${i}`,
+      objectKind: "building",
+      x: cx,
+      z: cz + 0.02,
+      y: 0.02,
+      size: 0.58,
+      tint: "#8b6914",
+    });
+  });
+  // Mid-ring crates + token stacks — denser empty-felt fill (press T087 H05 stage-wide soft)
+  for (let i = 0; i < 14; i += 1) {
+    const a = (i / 14) * Math.PI * 2 + 0.15;
+    const r = 2.15 + dressRand(i + 20) * 0.7;
+    const x = Math.cos(a) * r;
+    const z = Math.sin(a) * r * 0.68;
+    if (Math.abs(z) > 2.15) continue;
+    pieces.push({
+      id: `gallery:crate:${i}`,
+      objectKind: "building",
+      x,
+      z,
+      y: 0.04,
+      size: 0.52 + dressRand(i + 40) * 0.22,
+      tint: dressRand(i) > 0.5 ? "#a67c52" : "#6b7280",
+      emphasis: i % 3 === 0,
+    });
+    if (i % 2 === 0) {
+      pieces.push({
+        id: `gallery:chipstack:${i}`,
+        objectKind: "resource",
+        x: x + 0.35,
+        z: z - 0.1,
+        y: 0.06,
+        size: 0.34,
+        tint: "#eab308",
+      });
+    }
+  }
+  // Inner display arc (stage-wide readable framed minis) — fills center empty felt
+  for (let i = 0; i < 5; i += 1) {
+    const x = -1.8 + i * 0.9;
+    const z = 0.85 + dressRand(i + 60) * 0.15;
+    pieces.push({
+      id: `gallery:display:${i}`,
+      objectKind: "lot",
+      x,
+      z,
+      y: 0.08,
+      size: 1.18,
+      emphasis: true,
+      label: encodeLotArt({ title: `展位${i + 1}`, artistId: gallery?.artists?.[i % Math.max(1, gallery?.artists?.length ?? 1)]?.id }),
+    });
+    pieces.push({
+      id: `gallery:display:${i}:plinth`,
+      objectKind: "building",
+      x,
+      z,
+      y: 0.01,
+      size: 0.45,
+      tint: "#7c5a2e",
+    });
+  }
+    // Lot pedestals under current / floor lots (shared; keeps T075 framed-art readable above)
+  for (const piece of [...pieces]) {
+    if (!piece.id.startsWith("lot:") || piece.objectKind !== "lot") continue;
+    if (piece.id.includes(":hand:") || piece.id.includes(":coll:")) continue;
+    pieces.push({
+      id: `${piece.id}:plinth`,
+      objectKind: "building",
+      x: piece.x,
+      z: piece.z,
+      y: 0.01,
+      size: Math.max(0.55, (piece.size ?? 1) * 0.42),
+      tint: "#7c5a2e",
+    });
+  }
+  // Offer-phase hand lots: slightly larger for stage-wide (press T087 H05 soft)
+  for (const piece of pieces) {
+    if (piece.id.startsWith("lot:hand:") && (piece.size ?? 0) < 1.35) {
+      piece.size = 1.4;
+    }
+  }
+
   return {
     kernelType: "auction-bidding-v1",
     board: { objectKind: "region", materialKey: "table", width: BOARD_SPAN + 1.4, depth: BOARD_SPAN + 0.6 },
