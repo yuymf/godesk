@@ -6110,6 +6110,42 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
 .room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-collapsed .seat-chip small {
   display: none;
 }
+
+/* T080 · shareable Room production chrome: no address-bar localhost dump; feedback off-table. */
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.room-share-chrome .invite-url.is-share-ready {
+  color: color-mix(in srgb, var(--ink, #1c1917) 72%, transparent);
+  font-size: 0.85rem;
+  letter-spacing: 0.01em;
+}
+.room-view-tabletop-immersive.room-view-seated .room-shell-header.is-share-chrome .room-header-actions a[href*="settings"] {
+  display: none;
+}
+.room-view-tabletop-immersive > .room-feedback-drawer:not([open]),
+.room-view-tidewell-immersive > .room-feedback-drawer:not([open]) {
+  position: fixed;
+  right: 12px;
+  top: 52px;
+  z-index: 90;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.room-view-tabletop-immersive > .room-feedback-drawer[open],
+.room-view-tidewell-immersive > .room-feedback-drawer[open] {
+  position: fixed;
+  right: 12px;
+  top: 52px;
+  z-index: 95;
+  width: auto;
+  height: auto;
+  max-width: min(360px, calc(100vw - 24px));
+  opacity: 1;
+  overflow: visible;
+  pointer-events: auto;
+}
+
 .room-view-tabletop-immersive.room-view-seated .tabletop-stage,
 .room-view-tabletop-immersive.room-view-seated .g3d-stage {
   height: clamp(420px, 64vh, 780px);

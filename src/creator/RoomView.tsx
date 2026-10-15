@@ -486,12 +486,17 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       ? copy.progress
       : copy.points;
 
-  // Board-surface games (dedicated play surfaces) keep the play page clean: the feedback
-  // form appears only once the match is over.
-  const feedbackVisible = !(autoBattler || auction || immersive) || room.state.status === "complete";
+  // T080 · shareable Room: tabletop / immersive kernels keep playtest feedback in a
+  // collapsed off-table drawer so it does not steal desk focus. Non-desk kernels still
+  // defer the open panel until the match ends (or keep legacy open panel).
+  const feedbackAsDrawer = Boolean(tabletopImmersive || immersive);
+  const feedbackVisible = feedbackAsDrawer
+    ? true
+    : !(autoBattler || auction || immersive) || room.state.status === "complete";
+  const shareChromeCompact = Boolean(tabletopImmersive && seat !== null);
   return (
     <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute || auction || autoBattler || gemEngine || patternDraft ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-hex-island room-view-tidewell-immersive" : ""} ${tabletopImmersive ? "room-view-tidewell-immersive room-view-tabletop-immersive" : ""} ${seat !== null ? "room-view-seated" : "room-view-unseated"} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
-      <header className={`room-shell-header${tabletopImmersive && seat !== null ? " is-immersive-strip" : ""}`}>
+      <header className={`room-shell-header${shareChromeCompact ? " is-immersive-strip is-share-chrome" : ""}`}>
         <div className="room-title-block">
           <span className="room-brand-mark" aria-hidden="true"><GameMark /></span>
           <div>
@@ -501,7 +506,9 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         </div>
         <div className="room-header-actions">
           <a href={href("/games")}>{locale === "zh" ? "我的游戏" : "My games"}</a>
-          <a href={href("/settings")}>{locale === "zh" ? "设置" : "Settings"}</a>
+          {!shareChromeCompact ? (
+            <a href={href("/settings")}>{locale === "zh" ? "设置" : "Settings"}</a>
+          ) : null}
           <a
             href={validationStudioHref(room.projectId, {
               buildId: room.buildId,
@@ -521,7 +528,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
 {!immersive ? (
             <section
               aria-label={copy.invitation}
-              className={`room-invitation room-invitation-rich${tabletopImmersive && seat !== null ? " is-collapsed" : ""}`}
+              className={`room-invitation room-invitation-rich${shareChromeCompact ? " is-collapsed room-share-chrome" : ""}`}
             >
         <div className="invitation-heading">
           <span className="room-kicker">{copy.invitation}</span>
@@ -530,7 +537,12 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         <div className="invitation-link-row">
           <label>
             <span>{copy.inviteLink}</span>
-            <input aria-label={copy.inviteLink} readOnly value={room.sessionUrl} />
+            <input
+              aria-label={copy.inviteLink}
+              className={shareChromeCompact ? "invite-url is-share-ready" : "invite-url"}
+              readOnly
+              value={shareChromeCompact ? copy.shareLinkReady : room.sessionUrl}
+            />
           </label>
           <button
             className={`invite-copy-btn${copied ? " is-copied" : ""}`}
@@ -1064,7 +1076,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         </section>
       )}
 
-{!feedbackVisible ? null : immersive ? (
+{!feedbackVisible ? null : feedbackAsDrawer ? (
         <details className="room-feedback-drawer" id="room-feedback-drawer">
           <summary>{copy.feedbackTitle}</summary>
                 <section aria-label={copy.feedbackTitle} className="room-feedback-panel">
