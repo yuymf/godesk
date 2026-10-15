@@ -4,8 +4,8 @@
 | --- | --- |
 | 回归靶 | H02+H03+H04 stage-close pixel mean_abs≥5 OR ge20≥5%；purge clean；不 regress T074/T086 lighting 或 T079/T081 contact shadows |
 | 层 | **共享呈现**（woodRimMaterial / materials grain；felt-wood-rim / felt-wood-lip） |
-| 状态 | **关**（本批落地后） |
-| tip | （feat 提交后填） |
+| 状态 | **关** |
+| tip | 6e93078 |
 | 证据 | `/workspace/g3d-evidence/godesk-2026-10-14/hardness-real/H0x-t092/` |
 
 ## 问题
