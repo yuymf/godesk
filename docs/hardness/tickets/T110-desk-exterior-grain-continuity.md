@@ -2,13 +2,14 @@
 
 | 字段 | 值 |
 | --- | --- |
-| 回归靶 | H01–H05 框外桌面与 rim grain 连续；不砍 T092/T098 |
+| 回归靶 | H02+H03+H04 stage-close；框外桌面与 rim grain 连续；不砍 T092/T098 |
 | 层 | **共享呈现** |
-| 状态 | **开** |
+| 状态 | **关** |
+| tip | `8251050` |
 | 来源 | T105 · 框外桌面仍软断层 |
 
 ## 问题
-框外桌面与木缘仍有材质/光泽断层。
+框外桌面与木缘色/光泽断层（table `#7a4e28` vs rim）。
 
-## 拟实现（通用）
-exterior desk grain 对齐 rim；共享 desk material。
+## 实现（通用）
+desk/table token 对齐 rim；共享 grain shade/normal；deskWood repeat 贴近 rim。
