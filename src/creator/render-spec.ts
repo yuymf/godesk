@@ -510,11 +510,11 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#e0d8ff", "cloth", 0.99, 0, undefined, 0.99),  // T044…T241 product lavender felt · centerCalm
+      board: material("#70ffe8", "cloth", 0.99, 0, undefined, 0.99),  // T044…T241 product mint felt · vs tip warm
       table: material("#f0f4ff", "grain", 0.22, 0.32), // T092…T241 · cooler wood rim (corner-calm)
-      piece: material("#ffffff", "none", 0.08, 0.38, 0.96), // T198…T237 · plastic-wood piece
-      card: material("#fff0e0", "none", 0.10, 0.28, 0.90), // T198…T241 · card stock warm
-      resource: material("#e0f0ff", "none", 0.02, 0.72, 0.99), // T198…T241 · gem crystal cool
+      piece: material("#ffe8c8", "none", 0.10, 0.36, 0.94), // T198…T241 · cream piece
+      card: material("#e0f0ff", "none", 0.08, 0.32, 0.94), // T198…T241 · card stock cool
+      resource: material("#ffe0a0", "none", 0.02, 0.78, 0.99), // T198…T241 · gem crystal warm vs tip
       token: material("#ffd0a0", "none", 0.12, 0.40, 0.86), // T198/T241 · chip
       ink: material("#6878a0", "none", 0.26, 0.18, 0.30), // T241 · centerCalm
     });

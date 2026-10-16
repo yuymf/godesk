@@ -2032,7 +2032,7 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     built.receiveShadow = true;
     const g = new Group();
     g.add(built);
-    g.add(softContactShadow(0.62, 0.62, { opacity: 0.48 })); // T106/T150/T198/T213/T218 gem-chip (center-calm)
+    g.add(softContactShadow(0.72, 0.72, { opacity: 0.58 })); // T106…T241 gem-chip (center-calm)
     object = g;
   } else if (INSTANCED_MESHES.has(mesh)) {
     object = createInstanceProxy(mesh, node, ctx);
