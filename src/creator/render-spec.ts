@@ -469,8 +469,8 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     render.lighting = {
       ...render.lighting,
       sun: { ...render.lighting.sun, azimuthDeg: 126, elevationDeg: 60, intensity: 5.98, color: "#ffd0a8" }, // T230 schema ≤6
-      hemisphere: { sky: "#ffffff", ground: "#9a8e78", intensity: 2.72 }, // T234 network product light
-      fill: { azimuthDeg: 310, elevationDeg: 50, intensity: 2.05, color: "#e0f2ff" }, // T234
+      hemisphere: { sky: "#ffffff", ground: "#a89880", intensity: 2.95 }, // T237 network product light
+      fill: { azimuthDeg: 310, elevationDeg: 50, intensity: 2.55, color: "#e8f6ff" }, // T237
       rim: { azimuthDeg: 40, elevationDeg: 34, intensity: 1.72, color: "#fff0c8" }, // T234
       shadow: { enabled: true, softness: 0.55 },
       exposure: 1.99, // T192…T230 · H02 network readable (schema ≤2); chroma via map/hemi
@@ -478,10 +478,10 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T172/T177/T192/T201/T206 · denser/brighter network map cloth (shared MaterialLibrary)
-      map: material("#98fff0", "cloth", 0.99, 0, undefined, 0.99), // T177…T234 H02 HARD chroma
-      table: material("#ffe0b0", "grain", 0.26, 0.30), // T110…T234 · warmer exterior/rim (corner-calm)
+      map: material("#c8ff88", "cloth", 0.99, 0, undefined, 0.99), // T177…T237 H02 HARD chroma
+      table: material("#fff0c8", "grain", 0.22, 0.34), // T110…T237 · warmer exterior/rim (corner-calm)
       ink: material("#050e16", "none", 0.16, 0.36, 0.66), // T214…T234 route ink product
-      piece: material("#fffcf4", "none", 0.05, 0.46, 0.99), // T201…T234 · plastic-wood piece
+      piece: material("#ffffff", "none", 0.04, 0.50, 0.99), // T201…T237 · plastic-wood piece
     });
     render.bindings = [
       binding("station", "station", "ink", 1.2),
@@ -500,9 +500,9 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       ...render.lighting,
       // T061 · desk contrast; T086 · explicit fill + rim (no extra shadow maps)
       // T175/T187/T198 · brighter upper sky/fill/exposure (H01 hex path separate; no vignette bait)
-      sun: { ...render.lighting.sun, azimuthDeg: 128, elevationDeg: 60, intensity: 5.95, color: "#ffe8c8" },
-      hemisphere: { sky: "#ffffff", ground: "#c0b098", intensity: 2.92 }, // T234 desk product light
-      fill: { azimuthDeg: 312, elevationDeg: 54, intensity: 2.38, color: "#f8fbff" }, // T234
+      sun: { ...render.lighting.sun, azimuthDeg: 128, elevationDeg: 60, intensity: 5.98, color: "#fff0d0" },
+      hemisphere: { sky: "#ffffff", ground: "#c8b8a0", intensity: 2.98 }, // T237 desk product light
+      fill: { azimuthDeg: 312, elevationDeg: 54, intensity: 2.70, color: "#fafcff" }, // T237
       rim: { azimuthDeg: 38, elevationDeg: 32, intensity: 1.22, color: "#ffeed0" },
       shadow: { enabled: true, softness: 0.58 },
       exposure: 1.99, // T187…T230 · desk product light (schema ≤2); chroma via felt/piece
@@ -510,11 +510,11 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#6affd0", "cloth", 0.99, 0, undefined, 0.99),  // T044…T234 product green felt
-      table: material("#fff0d0", "grain", 0.26, 0.28), // T092…T234 · brighter wood rim (corner-calm)
-      piece: material("#fffaf0", "none", 0.10, 0.34, 0.92), // T198…T234 · plastic-wood piece
-      card: material("#fffffa", "none", 0.10, 0.26, 0.88), // T198…T234 · card stock
-      resource: material("#ffefc0", "none", 0.03, 0.62, 0.99), // T198…T234 · gem crystal
+      board: material("#88ffe0", "cloth", 0.99, 0, undefined, 0.99),  // T044…T237 product green felt
+      table: material("#fff8e0", "grain", 0.22, 0.32), // T092…T237 · brighter wood rim (corner-calm)
+      piece: material("#ffffff", "none", 0.08, 0.38, 0.96), // T198…T237 · plastic-wood piece
+      card: material("#ffffff", "none", 0.08, 0.30, 0.92), // T198…T237 · card stock
+      resource: material("#fff6d0", "none", 0.02, 0.68, 0.99), // T198…T237 · gem crystal
       token: material("#d8c4ff", "none", 0.14, 0.36, 0.82), // T198/T206/T213 · chip
       ink: material("#203440", "none", 0.36, 0.14, 0.26),
     });
@@ -536,19 +536,19 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     ];
     if (kernelType === "auction-bidding-v1") {
       Object.assign(render.materials, {
-        board: material("#3aff88", "cloth", 0.99, 0, undefined, 0.99),  // T044…T234 auction felt
+        board: material("#55ffa0", "cloth", 0.99, 0, undefined, 0.99),  // T044…T237 auction felt
         card: material("#fffaf4", "none", 0.28, 0.10, 0.48), // T061/T175/T213
       });
     }
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
-        board: material("#98fff0", "cloth", 0.99, 0, undefined, 0.99),  // T044…T234 pattern felt · hue vs tip #10fc80
-        piece: material("#fffef8", "none", 0.06, 0.40, 0.98), // T061…T234
-        slot: material("#1c1c22", "none", 0.88, 0.04, 0.08),  // T234 recessed slots
+        board: material("#ffe0a0", "cloth", 0.99, 0, undefined, 0.99),  // T044…T237 pattern felt · warm vs tip #98fff0
+        piece: material("#ffffff", "none", 0.05, 0.44, 0.99), // T061…T237
+        slot: material("#121218", "none", 0.90, 0.03, 0.06),  // T237 recessed slots
         // T054 · pale print plate under wall hue tints (square grid, not black pits)
-        "wall-print": material("#faf9f6", "none", 0.78, 0.05, 0.14), // T234
+        "wall-print": material("#fffef8", "none", 0.74, 0.06, 0.16), // T237
         // T058 · elongated pattern-line / floor troughs
-        "line-trough": material("#141210", "none", 0.90, 0.05, 0.06), // T234
+        "line-trough": material("#0c0a08", "none", 0.92, 0.04, 0.05), // T237
       });
       // T050/T054/T058: wall empties → square print; lines → trough strips (not round pits)
       render.bindings = [
