@@ -479,7 +479,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     Object.assign(render.materials, {
       // T172/T177/T192/T201/T206 · denser/brighter network map cloth (shared MaterialLibrary)
       map: material("#e0d868", "cloth", 0.99, 0, undefined, 0.99), // T249 bright chartreuse felt
-      table: material("#e8f0ff", "grain", 0.22, 0.34), // tip cool rim (cornerCalm)
+      table: material("#d0b078", "grain", 0.40, 0.20), // T249 warm oak rim
       ink: material("#d48828", "none", 0.12, 0.48, 0.90), // T249 amber product rail (bright vs tip teal)
       piece: material("#ffe0a0", "none", 0.08, 0.38, 0.92), // T245 warm piece
     });
@@ -511,11 +511,11 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
       board: material("#c8e878", "cloth", 0.99, 0, undefined, 0.99),  // T249 lime meadow felt (centerCalm)
-      table: material("#f0f4ff", "grain", 0.22, 0.32), // T092…T241 · cooler wood rim (corner-calm)
-      piece: material("#ffe8c8", "none", 0.10, 0.36, 0.94), // T198…T241 · cream piece
-      card: material("#e0f0ff", "none", 0.08, 0.32, 0.94), // T198…T241 · card stock cool
-      resource: material("#ffe0a0", "none", 0.02, 0.78, 0.99), // T198…T241 · gem crystal warm vs tip
-      token: material("#ffd0a0", "none", 0.12, 0.40, 0.86), // T198/T241 · chip
+      table: material("#c8a060", "grain", 0.45, 0.18), // T249 warm oak desk (readable vs tip cool)
+      piece: material("#fff0a8", "none", 0.08, 0.42, 0.92), // T249 bright cream piece
+      card: material("#fff8e0", "none", 0.10, 0.28, 0.90), // T249 warm card stock
+      resource: material("#88e0ff", "none", 0.02, 0.82, 0.99), // T249 crystal cyan gem
+      token: material("#ffe898", "none", 0.10, 0.45, 0.88), // T249 bright chip
       ink: material("#8a98b0", "none", 0.30, 0.14, 0.26), // T245 · centerCalm lighter
     });
     render.bindings = [
