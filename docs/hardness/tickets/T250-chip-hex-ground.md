@@ -7,3 +7,6 @@
 - hex Extrude depth 0.28→0.34；TILE_BASE_SCALE 0.76（侧壁可读）
 - blobshadow 软接触影（opacity 0.30，GLB footprint）
 - kraft SOFT_EDGE / lip 略抬（纸板侧唇）
+
+## 探针
+- PASS · 证据 `…/H0x-t250/`

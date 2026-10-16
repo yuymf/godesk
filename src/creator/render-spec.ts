@@ -495,23 +495,23 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
   if (kernelType === "gem-engine-v1" || kernelType === "pattern-draft-v1" || kernelType === "auction-bidding-v1") {
     // T030 · desk-kernel visual baseline; T038 · softer contact lighting + felt that eats light.
     // T175 · shared desk material/light microcontrast — hard pixel for H03/H04/H05 (no suite fork)
-    render.camera = { ...render.camera, fovDeg: 34, distance: 10.0, minPolarDeg: 32, maxPolarDeg: 62, polarDeg: 40 }; // T249 product desk framing
+    render.camera = { ...render.camera, fovDeg: 31, distance: 11.8, minPolarDeg: 32, maxPolarDeg: 62, polarDeg: 45 }; // T249 desk framing HARD+cornerCalm
     render.lighting = {
       ...render.lighting,
       // T061 · desk contrast; T086 · explicit fill + rim (no extra shadow maps)
       // T175/T187/T198 · brighter upper sky/fill/exposure (H01 hex path separate; no vignette bait)
-      sun: { ...render.lighting.sun, azimuthDeg: 95, elevationDeg: 52, intensity: 5.98, color: "#ffe8a8" }, // T249 warm key + azimuth HARD
-      hemisphere: { sky: "#fff5e0", ground: "#c8a060", intensity: 3.25 }, // T249 warm bounce
-      fill: { azimuthDeg: 312, elevationDeg: 54, intensity: 2.20, color: "#fff0d8" }, // T249 softer cool fill → warm read
-      rim: { azimuthDeg: 38, elevationDeg: 32, intensity: 2.40, color: "#ffe8c0" }, // T249 warm rim
+      sun: { ...render.lighting.sun, azimuthDeg: 100, elevationDeg: 54, intensity: 5.98, color: "#ffe0a0" }, // T249 warm key + azimuth HARD
+      hemisphere: { sky: "#fff5e0", ground: "#c8a060", intensity: 2.98 }, // T249 warm bounce (schema max 3)
+      fill: { azimuthDeg: 312, elevationDeg: 54, intensity: 3.35, color: "#fffaf4" }, // T249 warm fill centerCalm
+      rim: { azimuthDeg: 38, elevationDeg: 32, intensity: 2.10, color: "#fff0d8" }, // T249 warm rim
       shadow: { enabled: true, softness: 0.58 },
-      exposure: 1.99, // T187…T230 · desk product light (schema ≤2); chroma via felt/piece
+      exposure: 2.0, // T249 desk product light (schema ≤2); centerCalm lift
 
     };
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#c8e878", "cloth", 0.99, 0, undefined, 0.99),  // T249 lime meadow felt (centerCalm)
-      table: material("#c8a060", "grain", 0.45, 0.18), // T249 warm oak desk (readable vs tip cool)
+      board: material("#eef6b0", "cloth", 0.99, 0, undefined, 0.99),  // T249 bright lime meadow (centerCalm)
+      table: material("#f2f4f0", "grain", 0.22, 0.30), // T249 near-tip corner-calm desk
       piece: material("#fff0a8", "none", 0.08, 0.42, 0.92), // T249 bright cream piece
       card: material("#fff8e0", "none", 0.10, 0.28, 0.90), // T249 warm card stock
       resource: material("#88e0ff", "none", 0.02, 0.82, 0.99), // T249 crystal cyan gem
@@ -536,13 +536,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     ];
     if (kernelType === "auction-bidding-v1") {
       Object.assign(render.materials, {
-        board: material("#d0c870", "cloth", 0.99, 0, undefined, 0.99),  // T249 auction lime meadow
+        board: material("#eef6b0", "cloth", 0.99, 0, undefined, 0.99),  // T249 auction bright meadow
         card: material("#fffaf4", "none", 0.28, 0.10, 0.48), // T061/T175/T213
       });
     }
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
-        board: material("#d8e890", "cloth", 0.99, 0, undefined, 0.99),  // T249 pattern lime meadow
+        board: material("#f0f8b8", "cloth", 0.99, 0, undefined, 0.99),  // T249 pattern bright meadow
         piece: material("#fff0d0", "none", 0.08, 0.38, 0.94), // T061…T241 warm piece vs tip white
         slot: material("#5a6870", "none", 0.82, 0.04, 0.10),  // T249 deeper slots
         // T054 · pale print plate under wall hue tints (square grid, not black pits)

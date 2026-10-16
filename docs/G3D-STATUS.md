@@ -169,6 +169,7 @@ GoDesk ② 导入 GLB（#160），本 PR 未修：
 
 | 日期 | 变更 | 作者 |
 | --- | --- | --- |
+| 2026-10-16 | hardness regress-t247 PASS + T249 修暗 PASS + T250 立缘/接地/纸板侧厚 PASS + T251 全景 HARD绿 → Open T252；左T247/右T249 JPEG；不合 main；不自宣 ≥9 | 劳埃德(工程) |
 | 2026-10-16 | hardness regress-t179 + T180 shareReady chrome + T181 shared microcontrast + T182 panorama Open T183；不合 main；不自宣 ≥9 | 劳埃德(工程) |
 | 2026-10-16 | hardness regress-t176 + T177 H02 shared hard pixel + T178 H01 chrome HUD + T179 panorama Open T180；不合 main；不自宣 ≥9 | 劳埃德(工程) |
 | 2026-10-16 | hardness regress-t173 + T174 H01 chrome lighter + T175 H03–H05 shared hard pixel + T176 panorama Open T177；不合 main；不自宣 ≥9 | 劳埃德(工程) |

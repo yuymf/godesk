@@ -9,3 +9,6 @@
 - 羊 dissolve pattern 0.8→0.18
 
 交判必须附 **左 T247 / 右 T249** 同机位宽帧 JPEG。
+
+## 探针
+- PASS · 证据 `…/H0x-t249/` · JPEG 左T247/右T249
