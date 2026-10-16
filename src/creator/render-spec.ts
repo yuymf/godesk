@@ -500,10 +500,10 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       ...render.lighting,
       // T061 · desk contrast; T086 · explicit fill + rim (no extra shadow maps)
       // T175/T187/T198 · brighter upper sky/fill/exposure (H01 hex path separate; no vignette bait)
-      sun: { ...render.lighting.sun, azimuthDeg: 128, elevationDeg: 60, intensity: 5.98, color: "#fff0d0" },
-      hemisphere: { sky: "#fffaf0", ground: "#b8a878", intensity: 3.10 }, // T249 bright desk bounce
-      fill: { azimuthDeg: 312, elevationDeg: 54, intensity: 3.40, color: "#ffffff" }, // T241
-      rim: { azimuthDeg: 38, elevationDeg: 32, intensity: 1.85, color: "#f0f4ff" }, // T241
+      sun: { ...render.lighting.sun, azimuthDeg: 95, elevationDeg: 52, intensity: 5.98, color: "#ffe8a8" }, // T249 warm key + azimuth HARD
+      hemisphere: { sky: "#fff5e0", ground: "#c8a060", intensity: 3.25 }, // T249 warm bounce
+      fill: { azimuthDeg: 312, elevationDeg: 54, intensity: 2.20, color: "#fff0d8" }, // T249 softer cool fill → warm read
+      rim: { azimuthDeg: 38, elevationDeg: 32, intensity: 2.40, color: "#ffe8c0" }, // T249 warm rim
       shadow: { enabled: true, softness: 0.58 },
       exposure: 1.99, // T187…T230 · desk product light (schema ≤2); chroma via felt/piece
 
@@ -544,7 +544,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       Object.assign(render.materials, {
         board: material("#d8e890", "cloth", 0.99, 0, undefined, 0.99),  // T249 pattern lime meadow
         piece: material("#fff0d0", "none", 0.08, 0.38, 0.94), // T061…T241 warm piece vs tip white
-        slot: material("#7a7a82", "none", 0.76, 0.06, 0.14),  // T241 recessed slots · centerCalm
+        slot: material("#5a6870", "none", 0.82, 0.04, 0.10),  // T249 deeper slots
         // T054 · pale print plate under wall hue tints (square grid, not black pits)
         "wall-print": material("#e8f8ff", "none", 0.72, 0.08, 0.18), // T241 cool wall
         // T058 · elongated pattern-line / floor troughs
