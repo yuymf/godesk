@@ -502,21 +502,21 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       // T175/T187/T198 · brighter upper sky/fill/exposure (H01 hex path separate; no vignette bait)
       sun: { ...render.lighting.sun, azimuthDeg: 128, elevationDeg: 60, intensity: 5.98, color: "#fff0d0" },
       hemisphere: { sky: "#ffffff", ground: "#c8b8a0", intensity: 2.98 }, // T237 desk product light
-      fill: { azimuthDeg: 312, elevationDeg: 54, intensity: 2.70, color: "#fafcff" }, // T237
-      rim: { azimuthDeg: 38, elevationDeg: 32, intensity: 1.22, color: "#ffeed0" },
+      fill: { azimuthDeg: 312, elevationDeg: 54, intensity: 3.10, color: "#ffffff" }, // T237
+      rim: { azimuthDeg: 38, elevationDeg: 32, intensity: 1.55, color: "#fff6e0" }, // T237
       shadow: { enabled: true, softness: 0.58 },
       exposure: 1.99, // T187…T230 · desk product light (schema ≤2); chroma via felt/piece
 
     };
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#ffd890", "cloth", 0.99, 0, undefined, 0.99),  // T044…T237 product warm felt
+      board: material("#ffe8b8", "cloth", 0.99, 0, undefined, 0.99),  // T044…T237 product warm felt · centerCalm
       table: material("#fff8e0", "grain", 0.22, 0.32), // T092…T237 · brighter wood rim (corner-calm)
       piece: material("#ffffff", "none", 0.08, 0.38, 0.96), // T198…T237 · plastic-wood piece
       card: material("#ffffff", "none", 0.08, 0.30, 0.92), // T198…T237 · card stock
       resource: material("#fff6d0", "none", 0.02, 0.68, 0.99), // T198…T237 · gem crystal
       token: material("#d8c4ff", "none", 0.14, 0.36, 0.82), // T198/T206/T213 · chip
-      ink: material("#2a4858", "none", 0.32, 0.18, 0.30), // T237
+      ink: material("#4a6878", "none", 0.28, 0.16, 0.28), // T237 · centerCalm
     });
     render.bindings = [
       binding("region", "tile-square", "board"),
@@ -542,13 +542,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     }
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
-        board: material("#ffe0a0", "cloth", 0.99, 0, undefined, 0.99),  // T044…T237 pattern felt · warm vs tip #98fff0
+        board: material("#fff0c0", "cloth", 0.99, 0, undefined, 0.99),  // T044…T237 pattern felt · centerCalm
         piece: material("#ffffff", "none", 0.05, 0.44, 0.99), // T061…T237
-        slot: material("#3a3a42", "none", 0.84, 0.04, 0.10),  // T237 recessed slots · centerCalm
+        slot: material("#5a5a62", "none", 0.80, 0.05, 0.12),  // T237 recessed slots · centerCalm
         // T054 · pale print plate under wall hue tints (square grid, not black pits)
         "wall-print": material("#fffef8", "none", 0.74, 0.06, 0.16), // T237
         // T058 · elongated pattern-line / floor troughs
-        "line-trough": material("#3a3834", "none", 0.88, 0.05, 0.08), // T237 · centerCalm
+        "line-trough": material("#5a5854", "none", 0.84, 0.05, 0.10), // T237 · centerCalm
       });
       // T050/T054/T058: wall empties → square print; lines → trough strips (not round pits)
       render.bindings = [
