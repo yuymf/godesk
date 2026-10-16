@@ -464,7 +464,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     // T046 · shared train-route presentation (not parchment sticky-pad graph).
     // T177/T192 · shared network material/light microcontrast — hard pixel residual (kernel family, not suite fork)
     render.preset = "tabletop-day";
-    render.camera = { ...render.camera, fovDeg: 34, distance: 11.8, minPolarDeg: 28, maxPolarDeg: 58, polarDeg: 42 }; // T245 product framing
+    render.camera = { ...render.camera, fovDeg: 34, distance: 11.2, minPolarDeg: 28, maxPolarDeg: 58, polarDeg: 38 }; // T249 readable framing
     // T086 · desk lighting layers on network
     render.lighting = {
       ...render.lighting,
@@ -480,7 +480,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       // T172/T177/T192/T201/T206 · denser/brighter network map cloth (shared MaterialLibrary)
       map: material("#f0c878", "cloth", 0.99, 0, undefined, 0.99), // T249 bright parchment felt
       table: material("#e8f0ff", "grain", 0.22, 0.34), // tip cool rim (cornerCalm)
-      ink: material("#00c878", "none", 0.10, 0.55, 0.95), // T245 vivid teal rail vs tip terracotta
+      ink: material("#d48828", "none", 0.12, 0.48, 0.90), // T249 amber product rail (bright vs tip teal)
       piece: material("#ffe0a0", "none", 0.08, 0.38, 0.92), // T245 warm piece
     });
     render.bindings = [
@@ -495,13 +495,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
   if (kernelType === "gem-engine-v1" || kernelType === "pattern-draft-v1" || kernelType === "auction-bidding-v1") {
     // T030 · desk-kernel visual baseline; T038 · softer contact lighting + felt that eats light.
     // T175 · shared desk material/light microcontrast — hard pixel for H03/H04/H05 (no suite fork)
-    render.camera = { ...render.camera, fovDeg: 30, distance: 12.5, minPolarDeg: 32, maxPolarDeg: 62, polarDeg: 48 };
+    render.camera = { ...render.camera, fovDeg: 32, distance: 11.2, minPolarDeg: 32, maxPolarDeg: 62, polarDeg: 44 }; // T249 readable desk framing
     render.lighting = {
       ...render.lighting,
       // T061 · desk contrast; T086 · explicit fill + rim (no extra shadow maps)
       // T175/T187/T198 · brighter upper sky/fill/exposure (H01 hex path separate; no vignette bait)
       sun: { ...render.lighting.sun, azimuthDeg: 128, elevationDeg: 60, intensity: 5.98, color: "#fff0d0" },
-      hemisphere: { sky: "#ffffff", ground: "#a0b0c8", intensity: 2.98 }, // T241 desk product light
+      hemisphere: { sky: "#fffaf0", ground: "#b8a878", intensity: 3.10 }, // T249 bright desk bounce
       fill: { azimuthDeg: 312, elevationDeg: 54, intensity: 3.40, color: "#ffffff" }, // T241
       rim: { azimuthDeg: 38, elevationDeg: 32, intensity: 1.85, color: "#f0f4ff" }, // T241
       shadow: { enabled: true, softness: 0.58 },
@@ -510,7 +510,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#faf0d0", "cloth", 0.99, 0, undefined, 0.99),  // T249 brighter parchment (centerCalm)
+      board: material("#e8f4c0", "cloth", 0.99, 0, undefined, 0.99),  // T249 bright meadow felt (centerCalm)
       table: material("#f0f4ff", "grain", 0.22, 0.32), // T092…T241 · cooler wood rim (corner-calm)
       piece: material("#ffe8c8", "none", 0.10, 0.36, 0.94), // T198…T241 · cream piece
       card: material("#e0f0ff", "none", 0.08, 0.32, 0.94), // T198…T241 · card stock cool
@@ -536,13 +536,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     ];
     if (kernelType === "auction-bidding-v1") {
       Object.assign(render.materials, {
-        board: material("#f0d090", "cloth", 0.99, 0, undefined, 0.99),  // T249 auction parchment
+        board: material("#e8d898", "cloth", 0.99, 0, undefined, 0.99),  // T249 auction meadow parchment
         card: material("#fffaf4", "none", 0.28, 0.10, 0.48), // T061/T175/T213
       });
     }
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
-        board: material("#f6e0b0", "cloth", 0.99, 0, undefined, 0.99),  // T249 pattern parchment
+        board: material("#f0ecc0", "cloth", 0.99, 0, undefined, 0.99),  // T249 pattern meadow parchment
         piece: material("#fff0d0", "none", 0.08, 0.38, 0.94), // T061…T241 warm piece vs tip white
         slot: material("#7a7a82", "none", 0.76, 0.06, 0.14),  // T241 recessed slots · centerCalm
         // T054 · pale print plate under wall hue tints (square grid, not black pits)
