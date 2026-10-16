@@ -130,7 +130,7 @@ describe("Room incremental kernel state (G3D-04c)", () => {
     const build = await storedBuild(created.id);
     const simulation = runBotSimulation(ruleSystem, 42);
     const total = simulation.acceptedActions.length;
-    expect(total).toBeGreaterThan(800);
+    expect(total).toBeGreaterThan(400); // auction-floor era: seed-42 completes shorter
     const finalState = simulation.acceptedActions[total - 1].state;
     expect(finalState.status).toBe("complete");
     const log = slimAcceptedActionsForStorage(simulation.acceptedActions);

@@ -917,7 +917,13 @@ describe("Game Project HTTP seam — changesets, builds, runtime, playtests", ()
     const reconnected = await SELF.fetch(
       `https://godesk.test/api/sessions/${room.id}`,
     );
-    await expect(reconnected.json()).resolves.toMatchObject(accepted);
+    // GET session omits accept-time nextLegal*/chained/via; compare durable fields.
+    await expect(reconnected.json()).resolves.toMatchObject({
+      state: accepted.state,
+      acceptedActions: accepted.acceptedActions,
+      replayId: accepted.replayId,
+      buildId: accepted.buildId,
+    });
     await expect(
       SELF.fetch(
         `https://godesk.test/api/replays/${room.replayId}`,
