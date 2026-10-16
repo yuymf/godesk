@@ -464,12 +464,12 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     // T046 · shared train-route presentation (not parchment sticky-pad graph).
     // T177/T192 · shared network material/light microcontrast — hard pixel residual (kernel family, not suite fork)
     render.preset = "tabletop-day";
-    render.camera = { ...render.camera, fovDeg: 32, distance: 14, minPolarDeg: 28, maxPolarDeg: 58, polarDeg: 46 };
+    render.camera = { ...render.camera, fovDeg: 34, distance: 11.8, minPolarDeg: 28, maxPolarDeg: 58, polarDeg: 42 }; // T245 product framing
     // T086 · desk lighting layers on network
     render.lighting = {
       ...render.lighting,
       sun: { ...render.lighting.sun, azimuthDeg: 126, elevationDeg: 60, intensity: 5.98, color: "#ffd0a8" }, // T230 schema ≤6
-      hemisphere: { sky: "#ffffff", ground: "#8098a8", intensity: 2.98 }, // T241 network product light
+      hemisphere: { sky: "#fff8f0", ground: "#a88860", intensity: 2.98 }, // T245 warm bounce vs tip cool
       fill: { azimuthDeg: 310, elevationDeg: 50, intensity: 2.85, color: "#f0faff" }, // T241
       rim: { azimuthDeg: 40, elevationDeg: 34, intensity: 2.35, color: "#e8f0ff" }, // T241
       shadow: { enabled: true, softness: 0.55 },
@@ -478,16 +478,16 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T172/T177/T192/T201/T206 · denser/brighter network map cloth (shared MaterialLibrary)
-      map: material("#f0c878", "cloth", 0.99, 0, undefined, 0.99), // T245 H02 parchment felt
-      table: material("#e8f0ff", "grain", 0.22, 0.34), // T110…T241 · cooler exterior/rim (corner-calm)
-      ink: material("#1a2838", "none", 0.22, 0.36, 0.70), // T245 route ink
-      piece: material("#fff8e8", "none", 0.06, 0.42, 0.95), // T201…T241 · cream piece vs tip white
+      map: material("#e8b860", "cloth", 0.99, 0, undefined, 0.99), // T245 H02 parchment felt
+      table: material("#e8f0ff", "grain", 0.22, 0.34), // tip cool rim (cornerCalm)
+      ink: material("#00c878", "none", 0.10, 0.55, 0.95), // T245 vivid teal rail vs tip terracotta
+      piece: material("#ffe0a0", "none", 0.08, 0.38, 0.92), // T245 warm piece
     });
     render.bindings = [
-      binding("station", "station", "ink", 1.2),
-      binding("route", "rail-track", "ink", 1.7),
-      binding("claim", "rail-track", "ink", 1.2),
-      binding("worker", "meeple", "piece", 1.08),
+      binding("station", "station", "ink", 1.55),
+      binding("route", "rail-track", "ink", 2.35),
+      binding("claim", "rail-track", "ink", 1.55),
+      binding("worker", "meeple", "piece", 1.18),
       binding("map", "tile-square", "map", 1),
     ];
     return;
