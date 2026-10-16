@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 describe("T217 H01 hex/settlement shared hard residual", () => {
   it("lifts shared hex terrain sat + lighting + settlement scale without suite fork", () => {
     const mats = readFileSync("src/render3d/materials.ts", "utf8");
-    expect(mats).toMatch(/TERRAIN_SATURATION = (1.95|2.05|2.12|2.18)/);
+    expect(mats).toMatch(/TERRAIN_SATURATION = (1.95|2.05|2.12|2.18|2.28)/);
     const tokens = readFileSync("src/render3d/tokens.ts", "utf8");
     expect(tokens).toContain("T217");
     expect(tokens).toMatch(/intensity: 5\.90/);

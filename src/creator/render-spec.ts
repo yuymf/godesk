@@ -478,7 +478,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T172/T177/T192/T201/T206 · denser/brighter network map cloth (shared MaterialLibrary)
-      map: material("#30ffc0", "cloth", 0.99, 0, undefined, 0.99), // T177…T230
+      map: material("#42ffe0", "cloth", 0.99, 0, undefined, 0.99), // T177…T230
       table: material("#f8d0a0", "grain", 0.30, 0.26), // T110…T218/T221 · warmer exterior/rim (corner-calm)
       ink: material("#081420", "none", 0.22, 0.28, 0.58), // T214/T213/T218 route ink
       piece: material("#fff8ea", "none", 0.10, 0.34, 0.94), // T201/T206/T210/T213/T217 · plastic-wood piece
@@ -501,7 +501,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       // T061 · desk contrast; T086 · explicit fill + rim (no extra shadow maps)
       // T175/T187/T198 · brighter upper sky/fill/exposure (H01 hex path separate; no vignette bait)
       sun: { ...render.lighting.sun, azimuthDeg: 128, elevationDeg: 60, intensity: 5.85, color: "#ffe0c0" },
-      hemisphere: { sky: "#ffffff", ground: "#a09078", intensity: 2.12 }, // T230 desk product light
+      hemisphere: { sky: "#ffffff", ground: "#a89880", intensity: 2.28 }, // T230 desk product light
       fill: { azimuthDeg: 312, elevationDeg: 54, intensity: 1.95, color: "#f0f6fc" },
       rim: { azimuthDeg: 38, elevationDeg: 32, intensity: 1.22, color: "#ffeed0" },
       shadow: { enabled: true, softness: 0.58 },
@@ -510,7 +510,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#18ff80", "cloth", 0.99, 0, undefined, 0.99),  // T044…T230 product green felt
+      board: material("#28ff90", "cloth", 0.99, 0, undefined, 0.99),  // T044…T230 product green felt
       table: material("#f6d8a8", "grain", 0.34, 0.20), // T092…T221 · brighter wood rim (corner-calm)
       piece: material("#fff6e6", "none", 0.18, 0.24, 0.78), // T198/T206/T210 · plastic-wood piece
       card: material("#fffaf2", "none", 0.18, 0.16, 0.72), // T198…T225 · card stock

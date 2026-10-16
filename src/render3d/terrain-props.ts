@@ -366,7 +366,7 @@ function pineTallGeometry(): BufferGeometry {
   const crown: BufferGeometry[] = [];
   tiers.forEach(([y, r], ti) => {
     const a0 = ti * 1.9;
-    const n = ti < 3 ? 4 : 3; // T229 denser crown clumps
+    const n = ti < 3 ? 5 : 4; // T229 denser crown clumps
     for (let k = 0; k < n; k += 1) {
       const a = a0 + k * ((Math.PI * 2) / n);
       const dy = ((ti * 7 + k * 5) % 5 - 2) * 0.006;
@@ -389,7 +389,7 @@ function pineTallGeometry(): BufferGeometry {
 function pineRoundGeometry(): BufferGeometry {
   // R18: cauliflower crown of painted clumps (warm yellow-green tops, cool undersides).
   const ring: BufferGeometry[] = [];
-  for (let k = 0; k < 6; k += 1) { // T229 denser cauliflower
+  for (let k = 0; k < 8; k += 1) { // T229 denser cauliflower
     const a = k * ((Math.PI * 2) / 6) + 0.3;
     const rr = 0.088 + (k % 2) * 0.012;
     ring.push(clump(Math.cos(a) * 0.09, 0.17 + (k % 3) * 0.035, Math.sin(a) * 0.09, rr, 0.8, "#24502c", k % 2 ? "#5e9a54" : "#6aa65a", 5 + k * 7));
@@ -760,13 +760,13 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
             : TILE_TOP,
         z: tile.center[2] + dz,
         yaw: kind === "wheatrow" ? -rowYaw + (rand() - 0.5) * 0.06 : rand() * Math.PI * 2,
-        // R20/T229: product tabletop props — slightly fuller silhouette, still ground-hugging.
+        // R20/T229: product tabletop props — fuller silhouette, still ground-hugging.
         scale: isPine(kind)
-          ? (kind === "pineTall" ? 0.58 + rand() * 0.20 : kind === "pineRound" ? 0.60 + rand() * 0.18 : 0.64 + rand() * 0.22)
-          : kind === "canopy" ? 0.68 + rand() * 0.18
-          : kind === "boulder" ? 0.88 + rand() * 0.28
-          : kind === "clay" || kind === "bricks" ? 1.05 + rand() * 0.28
-          : 0.98 + rand() * 0.3,
+          ? (kind === "pineTall" ? 0.68 + rand() * 0.22 : kind === "pineRound" ? 0.70 + rand() * 0.20 : 0.74 + rand() * 0.24)
+          : kind === "canopy" ? 0.78 + rand() * 0.20
+          : kind === "boulder" ? 1.02 + rand() * 0.30
+          : kind === "clay" || kind === "bricks" ? 1.15 + rand() * 0.30
+          : 1.08 + rand() * 0.32,
         stretch: isPine(kind)
           ? (kind === "pineTall" ? 0.82 + rand() * 0.14 : kind === "pineRound" ? 0.78 + rand() * 0.14 : 0.8 + rand() * 0.14)
           : kind === "canopy" ? 0.6 + rand() * 0.2
