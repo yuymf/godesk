@@ -471,16 +471,16 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       sun: { ...render.lighting.sun, azimuthDeg: 126, elevationDeg: 60, intensity: 5.98, color: "#ffd0a8" }, // T230 schema ≤6
       hemisphere: { sky: "#ffffff", ground: "#a89880", intensity: 2.95 }, // T237 network product light
       fill: { azimuthDeg: 310, elevationDeg: 50, intensity: 2.55, color: "#e8f6ff" }, // T237
-      rim: { azimuthDeg: 40, elevationDeg: 34, intensity: 1.72, color: "#fff0c8" }, // T234
+      rim: { azimuthDeg: 40, elevationDeg: 34, intensity: 2.10, color: "#fff6d8" }, // T237
       shadow: { enabled: true, softness: 0.55 },
       exposure: 1.99, // T192…T230 · H02 network readable (schema ≤2); chroma via map/hemi
 
     };
     Object.assign(render.materials, {
       // T172/T177/T192/T201/T206 · denser/brighter network map cloth (shared MaterialLibrary)
-      map: material("#c8ff88", "cloth", 0.99, 0, undefined, 0.99), // T177…T237 H02 HARD chroma
+      map: material("#ffe08a", "cloth", 0.99, 0, undefined, 0.99), // T177…T237 H02 HARD chroma
       table: material("#fff0c8", "grain", 0.22, 0.34), // T110…T237 · warmer exterior/rim (corner-calm)
-      ink: material("#050e16", "none", 0.16, 0.36, 0.66), // T214…T234 route ink product
+      ink: material("#1a4868", "none", 0.22, 0.42, 0.72), // T214…T237 route ink product
       piece: material("#ffffff", "none", 0.04, 0.50, 0.99), // T201…T237 · plastic-wood piece
     });
     render.bindings = [
@@ -510,13 +510,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#88ffe0", "cloth", 0.99, 0, undefined, 0.99),  // T044…T237 product green felt
+      board: material("#ffd890", "cloth", 0.99, 0, undefined, 0.99),  // T044…T237 product warm felt
       table: material("#fff8e0", "grain", 0.22, 0.32), // T092…T237 · brighter wood rim (corner-calm)
       piece: material("#ffffff", "none", 0.08, 0.38, 0.96), // T198…T237 · plastic-wood piece
       card: material("#ffffff", "none", 0.08, 0.30, 0.92), // T198…T237 · card stock
       resource: material("#fff6d0", "none", 0.02, 0.68, 0.99), // T198…T237 · gem crystal
       token: material("#d8c4ff", "none", 0.14, 0.36, 0.82), // T198/T206/T213 · chip
-      ink: material("#203440", "none", 0.36, 0.14, 0.26),
+      ink: material("#2a4858", "none", 0.32, 0.18, 0.30), // T237
     });
     render.bindings = [
       binding("region", "tile-square", "board"),
@@ -536,7 +536,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     ];
     if (kernelType === "auction-bidding-v1") {
       Object.assign(render.materials, {
-        board: material("#55ffa0", "cloth", 0.99, 0, undefined, 0.99),  // T044…T237 auction felt
+        board: material("#ffb060", "cloth", 0.99, 0, undefined, 0.99),  // T044…T237 auction felt
         card: material("#fffaf4", "none", 0.28, 0.10, 0.48), // T061/T175/T213
       });
     }
@@ -544,11 +544,11 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       Object.assign(render.materials, {
         board: material("#ffe0a0", "cloth", 0.99, 0, undefined, 0.99),  // T044…T237 pattern felt · warm vs tip #98fff0
         piece: material("#ffffff", "none", 0.05, 0.44, 0.99), // T061…T237
-        slot: material("#121218", "none", 0.90, 0.03, 0.06),  // T237 recessed slots
+        slot: material("#3a3a42", "none", 0.84, 0.04, 0.10),  // T237 recessed slots · centerCalm
         // T054 · pale print plate under wall hue tints (square grid, not black pits)
         "wall-print": material("#fffef8", "none", 0.74, 0.06, 0.16), // T237
         // T058 · elongated pattern-line / floor troughs
-        "line-trough": material("#0c0a08", "none", 0.92, 0.04, 0.05), // T237
+        "line-trough": material("#3a3834", "none", 0.88, 0.05, 0.08), // T237 · centerCalm
       });
       // T050/T054/T058: wall empties → square print; lines → trough strips (not round pits)
       render.bindings = [

@@ -938,7 +938,7 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     group.add(ghostMesh);
   }
   // T079 · ground contact under track corridor
-  group.add(softContactShadow(Math.max(1.70, usable * 2.0), Math.max(1.35, gauge * 3.9), { opacity: 1.0 })); // T142…T210/T213 route
+  group.add(softContactShadow(Math.max(1.85, usable * 2.15), Math.max(1.48, gauge * 4.2), { opacity: 1.0 })); // T142…T237 route
   const hit = new Mesh(new BoxGeometry(usable, 0.1, gauge * 1.7), new MeshBasicMaterial({ visible: false }));
   hit.position.y = 0.05;
   group.add(hit);
