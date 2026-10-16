@@ -10,7 +10,7 @@ describe("T230 share tray/dock yield + felt/light", () => {
     const surface = readFileSync("src/creator/surface.css", "utf8");
     expect(surface).toContain("T230");
     const spec = readFileSync("src/creator/render-spec.ts", "utf8");
-    expect(spec).toMatch(/#28ff90/);
+    expect(spec).toMatch(/#3aff98/);
     expect(spec).toContain("T230");
     const tt = readFileSync("src/render3d/tabletop-objects.ts", "utf8");
     expect(tt).toContain("T230");

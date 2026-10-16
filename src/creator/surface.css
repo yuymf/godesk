@@ -6688,7 +6688,7 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   content: "" !important;
   position: absolute !important;
   left: 0; right: 0; top: 0;
-  height: 16px;
+  height: 24px; /* T230 · thicker top letterbox cornerCalm */
   background: #ffffff;
   z-index: 6;
   pointer-events: none;
@@ -6703,7 +6703,7 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   content: "" !important;
   position: absolute !important;
   left: 0; right: 0; bottom: 0;
-  height: 18px;
+  height: 28px; /* T230 · thicker bottom letterbox cornerCalm */
   background: #ffffff;
   z-index: 6;
   pointer-events: none;
