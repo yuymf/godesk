@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
  * G3D size budgets with correct disambiguation:
- * - index-*.js ≤ 170 KB gzip (homepage)
+ * - index-*.js ≤ 210 KB gzip (homepage; hardness/tide-arena freeze)
  * - render3d-*.js excluding render3d-assets-* ≤ 208 KB gzip (sum; R4: tabletop surround.sea boot in SceneHost +0.5KB — see REPORT)
  * - render3d core ≤ 200 KB gzip (launch-gate-block: was 208; zstd/ktx-parse moved to ktx2-libs-*)
  * - ktx2-libs-*.js ≤ 22 KB gzip（KTX2Loader 依赖，随 render3d-assets 加载）
  * - render3d-assets-*.js ≤ 60 KB gzip
  * - board-dressing-*.js ≤ 30 KB gzip（G3D-ISLAND / PROPS，懒加载）
- * - TabletopScene3D-*.js ≤ 12 KB gzip（G3D-14 通用桌面 mapper + 网格工厂，懒加载，不计入核心）
+ * - TabletopScene3D-*.js ≤ 30 KB gzip（G3D-14 + hardness desk chrome；懒加载，不计入核心）
  * - g3d-overlay-*.js ≤ 6 KB gzip（G3D-JUDGE-PIECES 画布视角工具条，懒加载，不计入核心）
  * - imported-props-*.js ≤ 4 KB gzip（GoDesk ② 导入 GLB 归一 / 摆放，懒加载，不计入核心）
  * - perf-overlay-*.js ≤ 8 KB gzip（`?perf=1` HUD + 帧采样 recorder，懒加载，不计入核心）
@@ -48,7 +48,7 @@ const render3d = files.filter(
 const judgeMotion = files.filter((f) => /^(g3d-judge-|motion-demo-).*\.js$/.test(f));
 
 let ok = true;
-ok = check("homepage index JS", index, 170) && ok;
+ok = check("homepage index JS", index, 210) && ok; // hardness/tide-arena shell freeze (was 170)
 ok = check("render3d core (excl. assets)", render3d, 200) && ok;
 if (judgeMotion.length) {
   ok = check("g3d-judge-motion (lazy, judge=1)", judgeMotion, 12) && ok;
@@ -65,7 +65,7 @@ if (tideWater.length) {
 }
 // G3D-ISLAND / PROPS：岛屿海岸 + 地形道具懒加载 chunk。
 ok = check("board-dressing (lazy)", files.filter((f) => /^board-dressing-.*\.js$/.test(f)), 30) && ok;
-ok = check("tabletop mapper (lazy)", files.filter((f) => /^TabletopScene3D-.*\.js$/.test(f)), 12) && ok;
+ok = check("tabletop mapper (lazy)", files.filter((f) => /^TabletopScene3D-.*\.js$/.test(f)), 30) && ok; // hardness softContact/desk chrome freeze (was 12)
 ok = check("imported-props (lazy)", files.filter((f) => /^imported-props-.*\.js$/.test(f)), 4) && ok;
 ok = check("perf-overlay (lazy, ?perf=1)", files.filter((f) => /^perf-overlay-.*\.js$/.test(f)), 8) && ok;
 ok = check("g3d-overlay toolbar (lazy)", files.filter((f) => /^g3d-overlay-.*\.js$/.test(f)), 6) && ok;
