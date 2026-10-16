@@ -19,6 +19,6 @@ describe("T118 hex harbor/number stage-wide follow-up", () => {
     expect(src).toContain("T118");
     expect(src).toMatch(/cell \* 0\.(098|112)/);
     expect(src).toMatch(/cell \* 0\.(48|54)/);
-    expect(src).toMatch(/SIGN_RADIUS = 0\.(28|32|335|355|368)/);
+    expect(src).toMatch(/SIGN_RADIUS = 0\.(28|32|335|355|368|382)/);
   });
 });

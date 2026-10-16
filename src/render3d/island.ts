@@ -312,7 +312,7 @@ function drawSigns(x: CanvasRenderingContext2D, cell: number, plate: HTMLImageEl
     const cx = (i % SIGN_COLS) * cell + cell / 2;
     const cy = Math.floor(i / SIGN_COLS) * cell + cell / 2;
     const r = cell * 0.46;
-    // T237 · always carve a thicker wood rim so plaque reads as 3D dock sign (not UI badge)
+    // T241 · always carve a thicker wood rim so plaque reads as 3D dock sign (not UI badge)
     {
       x.fillStyle = "#3a2416";
       x.beginPath();
@@ -324,7 +324,7 @@ function drawSigns(x: CanvasRenderingContext2D, cell: number, plate: HTMLImageEl
       outer.addColorStop(1, "#2a1810");
       x.fillStyle = outer;
       x.beginPath();
-      x.arc(cx, cy, r * 0.94, 0, Math.PI * 2);
+      x.arc(cx, cy, r * 0.92, 0, Math.PI * 2);
       x.fill();
     }
     if (plate) {
@@ -340,7 +340,7 @@ function drawSigns(x: CanvasRenderingContext2D, cell: number, plate: HTMLImageEl
       x.arc(cx, cy, r * 0.70, 0, Math.PI * 2);
       x.fill();
     } else {
-      // T225/T237 · carved wood plaque face
+      // T225/T241 · carved wood plaque face
       x.fillStyle = "#4a3020";
       x.beginPath();
       x.arc(cx, cy, r, 0, Math.PI * 2);
@@ -566,21 +566,21 @@ export function dockGeometry(length = 0.62, wetFoot = 0): BufferGeometry {
   const planks = 7;
   for (let i = 0; i < planks; i += 1) {
     const z = 0.04 + (i + 0.5) * (length / planks);
-    // T225/T237 · thicker product planks + stagger (dock thickness read)
-    const hy = 0.064 + (i % 2) * 0.008;
-    parts.push(paint(place(new BoxGeometry(0.32, hy, length / planks - 0.006), 0, hy * 0.18, z), i % 2 ? "#8a6340" : "#9a7048", 0.22));
+    // T225/T241 · thicker product planks + stagger (dock thickness read)
+    const hy = 0.078 + (i % 2) * 0.010;
+    parts.push(paint(place(new BoxGeometry(0.34, hy, length / planks - 0.005), 0, hy * 0.20, z), i % 2 ? "#8a6340" : "#9a7048", 0.24));
   }
-  parts.push(paint(place(new BoxGeometry(0.048, 0.048, length), -0.14, -0.022, length / 2 + 0.04), "#5e4128"));
-  parts.push(paint(place(new BoxGeometry(0.048, 0.048, length), 0.14, -0.022, length / 2 + 0.04), "#5e4128"));
+  parts.push(paint(place(new BoxGeometry(0.056, 0.056, length), -0.145, -0.026, length / 2 + 0.04), "#5e4128"));
+  parts.push(paint(place(new BoxGeometry(0.056, 0.056, length), 0.145, -0.026, length / 2 + 0.04), "#5e4128"));
   const postXZ = [[-0.14, 0.20], [0.14, 0.20], [-0.14, length], [0.14, length]] as const;
   for (const [px, pz] of postXZ) {
-    parts.push(paint(place(new CylinderGeometry(0.042, 0.048, 0.50, 10), px, -0.16, pz), "#4f3824")); // T237 pier posts
+    parts.push(paint(place(new CylinderGeometry(0.048, 0.054, 0.56, 12), px, -0.18, pz), "#4f3824")); // T241 pier posts
   }
-  // T237 · plaque post + thicker wood backboard (3D plaque mount, not floating UI)
-  parts.push(paint(place(new CylinderGeometry(0.026, 0.030, 0.46, 10), 0.1, 0.22, length - 0.02), "#4f3824"));
-  parts.push(paint(place(new BoxGeometry(0.30, 0.30, 0.072), 0.1, 0.36, length - 0.04), "#6a4828", 0.16));
-  parts.push(paint(place(new BoxGeometry(0.34, 0.34, 0.04), 0.1, 0.36, length - 0.09), "#3a2416", 0.12));
-  parts.push(paint(place(new BoxGeometry(0.22, 0.22, 0.02), 0.1, 0.36, length - 0.01), "#8a6238", 0.08)); // carved face lip
+  // T241 · plaque post + thicker wood backboard (3D plaque mount, not floating UI)
+  parts.push(paint(place(new CylinderGeometry(0.030, 0.034, 0.52, 12), 0.1, 0.24, length - 0.02), "#4f3824"));
+  parts.push(paint(place(new BoxGeometry(0.34, 0.34, 0.090), 0.1, 0.38, length - 0.03), "#6a4828", 0.18));
+  parts.push(paint(place(new BoxGeometry(0.38, 0.38, 0.05), 0.1, 0.38, length - 0.10), "#3a2416", 0.14));
+  parts.push(paint(place(new BoxGeometry(0.24, 0.24, 0.028), 0.1, 0.38, length + 0.01), "#8a6238", 0.10)); // carved face lip
   // Wet skirt at water contact (visible ABOVE opaque water). One cheap band/post — no whole-pier reshape.
   // Budget: InstancedMesh × ports multiplies tris; keep ≤1 open 4-seg cylinder per post (~8 tris).
   // docksFor base y=0.1 → local waterline = WATER_Y - 0.1.
@@ -706,7 +706,7 @@ function applyBoatWetLine(g: BufferGeometry, strength: number): void {
 
 /** 帆船停泊点：岛外一圈，避开右前方骰盘（≈(4.2, 3.2)）。 */
 /** 港口牌半径 / 帆船缩放（round-2d2：放大，远景可读）。 */
-export const SIGN_RADIUS = 0.368; // T118/T237 · wooden harbor plaque product
+export const SIGN_RADIUS = 0.382; // T118/T241 · wooden harbor plaque product
 export const BOAT_SCALE = 1.7;
 
 export const BOAT_SPOTS: ReadonlyArray<{ x: number; z: number; yaw: number; phase: number }> = [

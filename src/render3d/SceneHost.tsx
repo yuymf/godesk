@@ -362,22 +362,22 @@ function batchableKind(kind: SceneNode["kind"]): boolean {
 }
 
 let SHARED_NUMBER_GEOM: BufferGeometry | null = null;
-/** T237 · wood-chip number token: deeper rim bevel + side turning bands (lathe read, not UI disc). */
+/** T241 · wood-chip number token: deeper rim bevel + stronger side turning bands (lathe read). */
 function sharedNumberGeom(): BufferGeometry {
   if (!SHARED_NUMBER_GEOM) {
     const shape = new Shape();
     const r = 0.22;
     shape.absarc(0, 0, r, 0, Math.PI * 2, false);
     const geom = new ExtrudeGeometry(shape, {
-      depth: 0.092,
+      depth: 0.108,
       bevelEnabled: true,
-      bevelThickness: 0.020,
-      bevelSize: 0.016,
-      bevelSegments: 4,
-      curveSegments: 36,
+      bevelThickness: 0.026,
+      bevelSize: 0.020,
+      bevelSegments: 5,
+      curveSegments: 40,
     });
     geom.rotateX(-Math.PI / 2);
-    // T237 · side turning grooves: ring notches on cylinder wall (vertex y-band darken via normals stay; scale micro-ridges)
+    // T241 · side turning grooves: deeper ring notches on cylinder wall
     geom.computeBoundingBox();
     const bb0 = geom.boundingBox!;
     const pos = geom.getAttribute("position");
@@ -387,10 +387,9 @@ function sharedNumberGeom(): BufferGeometry {
       const x = pos.getX(i);
       const z = pos.getZ(i);
       const rad = Math.hypot(x, z);
-      // only outer wall band
-      if (rad > 0.195 && Math.abs(y - midY0) < 0.038) {
-        const band = Math.sin((y - midY0) * 95.0);
-        const k = 1 - 0.018 * Math.max(0, band);
+      if (rad > 0.190 && Math.abs(y - midY0) < 0.048) {
+        const band = Math.sin((y - midY0) * 110.0);
+        const k = 1 - 0.028 * Math.max(0, band);
         pos.setXYZ(i, x * k, y, z * k);
       }
     }

@@ -132,9 +132,9 @@ export const TERRAIN_MATERIALS: Record<string, MaterialToken> = {
 export const PROP_MATERIALS = {
   cliff: { base: "#7a7368", roughness: 0.9, metalness: 0, pattern: "stone", pbrSet: "t07-cliff", pbrRepeat: 5 },
   // R22: warmer cream (was #f5f0e1) — keeps the parchment token cream under the less-orange R22 key light.
-  "number-token": { base: "#e4c080", roughness: 0.64, metalness: 0.05, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 1.55, pbrTint: 0.48 }, // T237 wood-chip bevel+lathe
+  "number-token": { base: "#e0b870", roughness: 0.60, metalness: 0.06, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 1.72, pbrTint: 0.52 }, // T241 wood-chip bevel+lathe
   // G3D-ART-2：6/8 不再整块涂红（与座位 0 红色混淆、且盖住数字）；同用 N1 筹码面，数字用赤陶色高亮（number-labels.ts）。
-  "number-token-hot": { base: "#f0b870", roughness: 0.62, metalness: 0.05, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 1.55, pbrTint: 0.44 }, // T237
+  "number-token-hot": { base: "#f2b060", roughness: 0.58, metalness: 0.06, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 1.72, pbrTint: 0.48 }, // T241
   robber: { base: "#2c3e50", roughness: 0.7, metalness: 0, pattern: "none" },
   wood: { base: "#8b6914", roughness: 0.7, metalness: 0, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 1 },
   die: { base: "#f8f8f8", roughness: 0.5, metalness: 0, pattern: "none" },

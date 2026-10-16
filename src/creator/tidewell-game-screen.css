@@ -3500,10 +3500,10 @@ body:has(.room-view-tidewell-immersive) {
   color: transparent !important;
 }
 
-/* T234/T238 · 座位托盘/行动字/骰盘再让路（cornerCalm） */
+/* T234/T242 · 座位托盘/行动字/骰盘再让路（cornerCalm） */
 .room-view-tidewell-immersive.room-view-seated .tidewell-dock {
-  opacity: 0.16 !important;
-  max-height: 1.35rem !important;
+  opacity: 0.12 !important;
+  max-height: 1.15rem !important;
 }
 .room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-hand,
 .room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-actions,
@@ -3513,9 +3513,9 @@ body:has(.room-view-tidewell-immersive) {
 .room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-chip,
 .room-view-tidewell-immersive.room-view-seated .tidewell-dock [class*="seat"],
 .room-view-tidewell-immersive.room-view-seated .tidewell-dock [class*="dice"] {
-  opacity: 0.05 !important;
+  opacity: 0.03 !important;
   color: transparent !important;
-  font-size: 0.22rem !important;
-  transform: scale(0.52);
+  font-size: 0.18rem !important;
+  transform: scale(0.44);
   transform-origin: bottom center;
 }
