@@ -938,7 +938,7 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     group.add(ghostMesh);
   }
   // T079 · ground contact under track corridor
-  group.add(softContactShadow(Math.max(1.85, usable * 2.15), Math.max(1.48, gauge * 4.2), { opacity: 1.0 })); // T142…T237 route
+  group.add(softContactShadow(Math.max(2.05, usable * 2.35), Math.max(1.60, gauge * 4.5), { opacity: 1.0 })); // T142…T241 route
   const hit = new Mesh(new BoxGeometry(usable, 0.1, gauge * 1.7), new MeshBasicMaterial({ visible: false }));
   hit.position.y = 0.05;
   group.add(hit);
@@ -1221,8 +1221,8 @@ function softContactShadow(
   // T218/T226/T230 · product contact shadow: denser core hug + smoother veil (no bands / no center blot)
   group.add(mk(1.02, Math.min(0.95, opacity * 1.50), 0.00066, "contact-shadow")); // T233/T234 tight core hug
   group.add(mk(1.28, Math.min(0.64, opacity * 0.86), 0.00050)); // near core blend
-  group.add(mk(1.72, Math.min(0.26, opacity * 0.38), 0.00038)); // soft mid · center-calm T237
-  group.add(mk(2.55, Math.min(0.055, opacity * 0.08), 0.00032)); // mid-outer · corner-calm T237
+  group.add(mk(1.72, Math.min(0.20, opacity * 0.30), 0.00038)); // soft mid · center-calm T241
+  group.add(mk(2.55, Math.min(0.04, opacity * 0.06), 0.00032)); // mid-outer · corner-calm T241
   group.add(mk(3.10, Math.min(0.022, opacity * 0.035), 0.00018)); // soft outer · T230 corner-calm
   group.add(mk(3.90, Math.min(0.008, opacity * 0.012), 0.00010)); // wide soft veil · T230 corner-calm
   return group;
