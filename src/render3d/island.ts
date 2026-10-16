@@ -581,7 +581,9 @@ export function dockGeometry(length = 0.62, wetFoot = 0): BufferGeometry {
   parts.push(paint(place(new CylinderGeometry(0.030, 0.034, 0.52, 12), 0.1, 0.24, length - 0.02), "#4f3824"));
   parts.push(paint(place(new BoxGeometry(0.34, 0.34, 0.090), 0.1, 0.38, length - 0.03), "#6a4828", 0.18));
   parts.push(paint(place(new BoxGeometry(0.38, 0.38, 0.05), 0.1, 0.38, length - 0.10), "#3a2416", 0.14));
-  parts.push(paint(place(new BoxGeometry(0.24, 0.24, 0.028), 0.1, 0.38, length + 0.01), "#8a6238", 0.10)); // carved face lip
+  parts.push(paint(place(new BoxGeometry(0.34, 0.34, 0.055), 0.1, 0.38, length + 0.02), "#8a6238", 0.12)); // T269c carved face lip
+  parts.push(paint(place(new CylinderGeometry(0.070, 0.080, 0.14, 10), 0.1, 0.28, length - 0.02), "#5a3c22")); // T269c plaque collar
+  parts.push(paint(place(new BoxGeometry(0.16, 0.10, 0.12), 0.1, 0.22, length - 0.08), "#6a4828")); // T269c brace
   // Wet skirt at water contact (visible ABOVE opaque water). One cheap band/post — no whole-pier reshape.
   // Budget: InstancedMesh × ports multiplies tris; keep ≤1 open 4-seg cylinder per post (~8 tris).
   // docksFor base y=0.1 → local waterline = WATER_Y - 0.1.
@@ -708,7 +710,7 @@ function applyBoatWetLine(g: BufferGeometry, strength: number): void {
 
 /** 帆船停泊点：岛外一圈，避开右前方骰盘（≈(4.2, 3.2)）。 */
 /** 港口牌半径 / 帆船缩放（round-2d2：放大，远景可读）。 */
-export const SIGN_RADIUS = 0.46 /* T262 larger harbor plaque mesh */; // T118/T241 · wooden harbor plaque product
+export const SIGN_RADIUS = 0.62 /* T269c HARD dock plaque */; // T118/T241/T269 · wooden harbor plaque product
 export const BOAT_SCALE = 1.7;
 
 export const BOAT_SPOTS: ReadonlyArray<{ x: number; z: number; yaw: number; phase: number }> = [
@@ -721,7 +723,7 @@ export const BOAT_SPOTS: ReadonlyArray<{ x: number; z: number; yaw: number; phas
 export type IslandLayer = {
   group: Group;
   sync(tiles: readonly IslandTile[], ports: readonly IslandPort[], tier: RenderTierId, castShadow: boolean): void;
-  /** 每帧：帆船起伏 + 港口牌朝向相机。frozen = 减少动态效果 / 评审截图。 */
+  /** 每帧：帆船起伏 + 港口牌 dock-lock（T269）。frozen = 减少动态效果 / 评审截图。 */
   update(nowMs: number, camera: Camera, frozen: boolean): void;
   docks(): Dock[];
   stats(): { meshes: number; instances: Record<string, number> };
@@ -969,14 +971,19 @@ export function createIslandLayer(): IslandLayer {
       }
       if (signs && dockList.length > 0) {
         dockList.forEach((d, i) => {
-          // 牌面：立在牌柱顶上，绕 Y 朝向相机（柱面广告牌），略后仰。
-          // 码头局部 +X（偏航 atan2(dx,dz) 后）= 世界 (dz, −dx)：牌柱在局部 (0.1, ·, len − 0.02)。
-          const px = d.tip[0] + d.dir[1] * 0.1 - d.dir[0] * 0.02;
-          const pz = d.tip[2] - d.dir[0] * 0.1 - d.dir[1] * 0.02;
-          const yaw = camera ? Math.atan2(camera.position.x - px, camera.position.z - pz) : Math.atan2(d.dir[0], d.dir[1]);
-          dummy.position.set(px, 0.56, pz);
-          dummy.scale.setScalar(1);
-          dummy.rotation.set(-0.35, yaw, 0, "YXZ");
+          // T269 · dock-axis plaque (not free billboard): sit on carved face; yaw stays on
+          // pier axis, flip 180° if needed so face reads toward camera (diegetic mount).
+          const px = d.tip[0] + d.dir[1] * 0.1 + d.dir[0] * 0.02;
+          const pz = d.tip[2] - d.dir[0] * 0.1 + d.dir[1] * 0.02;
+          let yaw = Math.atan2(d.dir[0], d.dir[1]);
+          if (camera) {
+            const toCam = Math.atan2(camera.position.x - px, camera.position.z - pz);
+            const ang = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+            if (Math.abs(ang(toCam - (yaw + Math.PI))) < Math.abs(ang(toCam - yaw))) yaw += Math.PI;
+          }
+          dummy.position.set(px, 0.46, pz);
+          dummy.scale.setScalar(1.08); // T269c readable dock plaque
+          dummy.rotation.set(-0.08, yaw, 0, "YXZ");
           dummy.updateMatrix();
           signs!.setMatrixAt(i, dummy.matrix);
         });

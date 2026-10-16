@@ -11,8 +11,8 @@ describe("T150 contact shadow H03/H04 mean", () => {
     const block = src.slice(start, end > 0 ? end : start + 3500);
     expect(block).toMatch(/Math\.min\(1\.02/);
     expect(block).toMatch(/Math\.max\(0\.68/);
-    expect(block).toMatch(/Math\.min\(0\.(72|76)/);
-    expect(block).toMatch(/1\.60/);
+    expect(block).toMatch(/Math\.min\(0\.(68|72|76)/);
+    expect(src).toMatch(/1\.60|2\.25|usable \* 2\.55/); // route footprint (T269 ground HARD)
     expect(src).toMatch(/softContactShadow\(0\.(56|68|72|78|82)/);
   });
 });

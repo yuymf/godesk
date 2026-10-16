@@ -968,7 +968,7 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     group.add(ghostMesh);
   }
   // T079 · ground contact under track corridor
-  group.add(softContactShadow(Math.max(2.05, usable * 2.35), Math.max(1.60, gauge * 4.5), { opacity: 1.0 })); // T142…T241 route
+  group.add(softContactShadow(Math.max(2.25, usable * 2.55), Math.max(1.75, gauge * 4.8), { opacity: 1.0 })); // T269 · route ground HARD
   const hit = new Mesh(new BoxGeometry(usable, 0.1, gauge * 1.7), new MeshBasicMaterial({ visible: false }));
   hit.position.y = 0.05;
   group.add(hit);
@@ -1195,7 +1195,7 @@ function shoreNatural(node: SceneNode, ctx: TabletopObjectContext): Object3D {
 function softContactShadow(
   rx = 0.55,
   rz = 0.55,
-  opts?: { opacity?: number; boost?: number },
+  opts?: { opacity?: number; boost?: number; grounded?: boolean },
 ): Object3D {
   // T079 · stronger ground contact so pieces don't float on felt
   // T081 · optional opacity/boost for small tiles/plates (shared API; not H04-only)
@@ -1249,6 +1249,16 @@ function softContactShadow(
     mesh.renderOrder = -1;
     return mesh;
   };
+  // T270 · grounded short-contact ring for tall chip stacks (clear foot, no soft mush)
+  if (opts?.grounded) {
+    // T270 · clear short-contact under tall chips (wide-frame readable)
+    group.add(mk(0.72, Math.min(0.99, opacity * 2.20), 0.00076, "contact-shadow"));
+    group.add(mk(1.00, Math.min(0.85, opacity * 1.25), 0.00058));
+    group.add(mk(1.35, Math.min(0.35, opacity * 0.48), 0.00042));
+    group.add(mk(1.70, Math.min(0.16, opacity * 0.22), 0.00028));
+    group.add(mk(2.10, Math.min(0.06, opacity * 0.08), 0.00016)); // bank ge20 outer
+    return group;
+  }
   // T218/T226/T230 · product contact shadow: denser core hug + smoother veil (no bands / no center blot)
   group.add(mk(1.02, Math.min(0.95, opacity * 1.50), 0.00066, "contact-shadow")); // T233/T234 tight core hug
   group.add(mk(1.28, Math.min(0.64, opacity * 0.86), 0.00050)); // near core blend
@@ -1296,7 +1306,7 @@ function porcelainPlate(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const glaze = new Mesh(translated(new CylinderGeometry(0.36, 0.36, 0.02, 28), 0.065), glazeMat);
   glaze.receiveShadow = true;
   group.add(bed, rim, glaze);
-  group.add(softContactShadow(0.32, 0.32, { opacity: 0.38, boost: 0.82 })); // T081/T096/T106 footprint
+  group.add(softContactShadow(0.40, 0.40, { opacity: 0.52, boost: 0.95 })); // T269 · plate ground
   return group;
 }
 
@@ -1938,7 +1948,7 @@ function framedArtWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3
   art.position.set(0, 0.15, 0);
   art.renderOrder = 2;
   group.add(art);
-  group.add(softContactShadow(0.66, 0.82, { opacity: 0.12, boost: 0.62 })); // T139…T213/T218 lot shadow (corner-calm)
+  group.add(softContactShadow(0.78, 0.95, { opacity: 0.32, boost: 0.85, grounded: true })); // T269 · lot grounded HARD
   return group;
 }
 
@@ -1971,7 +1981,9 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
   } else if (mesh === "contact-shadow") {
     const sx = Math.max(0.2, Math.abs(node.scale?.[0] ?? 1));
     const sz = Math.max(0.2, Math.abs(node.scale?.[2] ?? sx));
-    object = softContactShadow(sx, sz);
+    // T270 · grounded short-contact path for chip stacks (tag from mapper)
+    const grounded = node.tag === "grounded-contact";
+    object = softContactShadow(sx, sz, grounded ? { opacity: 1.0, boost: 1.20, grounded: true } : undefined);
   } else if (mesh === "felt-wood-rim") {
     // T044: hollow wood frame — solid box was burying the green felt inset.
     // T092 · grain/normal/roughness microdetail on shared wood rim
@@ -1979,6 +1991,7 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     // T163 · dual-lip product-frame (dark undercut + bright crown) for seat-close pixel gate
     // T165 · shared rim language across suites
     // T166 · taller crown + outer rail for H03 seat-close/wide residual
+    // T269 · keep tip crown mass (cornerCalm) but demote ivory plastic → wood-grain lip hierarchy
     const group = new Group();
     const mat = woodRimMaterial(node, ctx);
     const underMat = new MeshStandardMaterial({
@@ -1986,16 +1999,18 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
       roughness: 0.72,
       metalness: 0.04,
     });
-    const lipMat = new MeshStandardMaterial({
-      color: "#fae6b0", // T163/T169/T190/T196 · crown lip microcontrast vs felt
-      roughness: 0.44,
-      metalness: 0.12,
-    });
-    const filletMat = new MeshStandardMaterial({
-      color: "#e8bc58", // T163/T190/T196 · inner gold fillet toward felt
-      roughness: 0.45,
-      metalness: 0.18,
-    });
+    // T269 · matte wood crown at tip luminance (≠ glossy plastic); tip height for cornerCalm
+    // T269 · tip-hue wood-albedo crown (flat plastic→wood); no normalMap for cornerCalm
+    const lipMat = woodRimMaterial(node, ctx).clone();
+    lipMat.color.set("#faf0d0"); // tip-lum wood albedo (cornerCalm)
+    lipMat.roughness = 0.62;
+    lipMat.metalness = 0.05;
+    lipMat.normalMap = null;
+    const filletMat = woodRimMaterial(node, ctx).clone();
+    filletMat.color.set("#e8bc58");
+    filletMat.roughness = 0.60;
+    filletMat.metalness = 0.06;
+    filletMat.normalMap = null;
     const t = 0.085; // frame thickness in unit UV
     const mk = (sx: number, sy: number, sz: number, x: number, y: number, z: number, mtl = mat) => {
       const m = new Mesh(new BoxGeometry(sx, sy, sz), mtl);
@@ -2013,17 +2028,17 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     mk(1.12, 0.18, t * 1.55, 0, 0.46, -0.5 + t / 2, underMat);
     mk(t * 1.55, 0.18, 1 - 2 * t, 0.5 - t / 2, 0.46, 0, underMat);
     mk(t * 1.55, 0.18, 1 - 2 * t, -0.5 + t / 2, 0.46, 0, underMat);
-    // bright crown lip (T166 taller for H03 seat-close/wide)
+    // wood crown lip (T166 tip height · T269 material demote)
     mk(1.14, 0.36, t * 1.70, 0, 0.74, 0.5 - t / 2, lipMat);
     mk(1.14, 0.36, t * 1.70, 0, 0.74, -0.5 + t / 2, lipMat);
     mk(t * 1.70, 0.36, 1 - 2 * t, 0.5 - t / 2, 0.74, 0, lipMat);
     mk(t * 1.70, 0.36, 1 - 2 * t, -0.5 + t / 2, 0.74, 0, lipMat);
-    // outer crown rail (T166 · stage-wide / seat-close residual)
+    // outer crown rail (T166 tip height)
     mk(1.18, 0.12, t * 1.25, 0, 0.92, 0.5 - t / 2, lipMat);
     mk(1.18, 0.12, t * 1.25, 0, 0.92, -0.5 + t / 2, lipMat);
     mk(t * 1.25, 0.12, 1 - 2 * t, 0.5 - t / 2, 0.92, 0, lipMat);
     mk(t * 1.25, 0.12, 1 - 2 * t, -0.5 + t / 2, 0.92, 0, lipMat);
-    // inner gold fillet (reads on seat-close board edge)
+    // inner wood fillet (reads on seat-close board edge)
     mk(0.92, 0.10, t * 0.65, 0, 0.54, 0.5 - t - 0.02, filletMat);
     mk(0.92, 0.10, t * 0.65, 0, 0.54, -0.5 + t + 0.02, filletMat);
     mk(t * 0.65, 0.10, 0.92 - 2 * t, 0.5 - t - 0.02, 0.54, 0, filletMat);
@@ -2032,9 +2047,10 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
   } else if (mesh === "felt-wood-lip") {
     // T092 · grain maps via woodRimMaterial; T163/T165 · high-key gold tint for seat-close
     const mat = woodRimMaterial(node, ctx).clone();
-    mat.color.set("#f3d59a");
-    mat.roughness = 0.42;
-    mat.metalness = 0.12;
+    mat.color.set("#faf0d0"); // T269 · match crown
+    mat.roughness = 0.62;
+    mat.metalness = 0.05;
+    mat.normalMap = null;
     const built = new Mesh(new BoxGeometry(1, 1, 1), mat);
     built.castShadow = false;
     built.receiveShadow = true;
@@ -2065,10 +2081,10 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
     // T081 · larger local blob so small tiles still ground at H02/H03 visibility
-    (object as Group).add(softContactShadow(1.18, 1.18, { opacity: 0.78, boost: 1.08 })); // T081…T161/T201/T210 tile mean
+    (object as Group).add(softContactShadow(1.05, 1.05, { opacity: 0.70, boost: 0.95, grounded: true })); // T269 · tile grounded HARD/centerCalm
   } else if (mesh === "plaque") {
     object = plaqueWithFace(node, ctx);
-    (object as Group).add(softContactShadow(0.78, 0.62, { opacity: 0.58 })); // T106/T150 plaque
+    (object as Group).add(softContactShadow(0.70, 0.55, { opacity: 0.62, boost: 0.92, grounded: true })); // T269 · plaque grounded
   } else if (mesh === "gem-chip") {
     // T213 · shared gem chip with clearcoat crystal feel (MaterialLibrary base + physical coat)
     const baseTok = node.material ? ctx.materials[node.material] : undefined;
@@ -2087,7 +2103,7 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     built.receiveShadow = true;
     const g = new Group();
     g.add(built);
-    g.add(softContactShadow(0.72, 0.72, { opacity: 0.58 })); // T106…T241 gem-chip (center-calm)
+    // T270 · stack foot via mapper playTop grounded-contact (no per-chip mid-air disc)
     object = g;
   } else if (INSTANCED_MESHES.has(mesh)) {
     object = createInstanceProxy(mesh, node, ctx);

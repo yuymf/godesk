@@ -1,4 +1,7 @@
-# T268 · ≥9 soft residual backlog（Open）
+# T268 · ≥9 soft residual backlog（已由 T269/T270 清）
+
+> T269 清 #1/#2；T270 清 #3。后续残差见 T272。
+
 
 T267 全景复抽：HARD/share 全绿，观感仍 <9（**禁自宣 ≥9**）。T265 polar/座次 + T266 水岸/画布清晰已 PASS。
 

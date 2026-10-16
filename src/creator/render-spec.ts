@@ -55,7 +55,7 @@ export const renderSpecSchema = z.strictObject({
     pan: z.boolean(),
     /**
      * step3 · Tidewell-quality framing for any tabletop surface: `orthographic` uses the same
-     * ortho play camera as 汐屿 (polar 62° / azimuth 12° / fill 0.945 inside HUD insets). // T265
+     * ortho play camera as 汐屿 (polar ≈56° / azimuth 12° / fill 0.945 inside HUD insets). // T265/T269 live play polar
      * Omitted = legacy perspective orbit (fovDeg / distance).
      */
     projection: z.enum(["perspective", "orthographic"]).optional(),
@@ -482,7 +482,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     Object.assign(render.materials, {
       // T172/T177/T192/T201/T206 · denser/brighter network map cloth (shared MaterialLibrary)
       map: material("#98f0ff", "cloth", 0.28, 0, 0.86, 0.99), // T266 map cloth HARD4
-      table: material("#ffe8c0", "grain", 0.18, 0.20, 0.55), // T266 lacquer HARD3
+      table: material("#ffe8c0", "grain", 0.18, 0.20, 0.55), // T269c keep tip network table for cornerCalm
       ink: material("#ffd060", "none", 0.02, 0.92, 0.99), // T266 station ink HARD4
       piece: material("#ffe070", "none", 0.04, 0.58, 0.98), // T266 network piece HARD
     });
@@ -514,7 +514,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
       board: material("#90ff00", "cloth", 0.36, 0, 0.80, 0.99),  // T266 felt HARD6 H03
-      table: material("#fffff4", "grain", 0.14, 0.28, 0.50), // T266 lacquer HARD
+      table: material("#fffff4", "grain", 0.14, 0.28, 0.50), // T269d tip-lum table; plastic demote via shorter crown geom
       piece: material("#ffffa8", "none", 0.03, 0.48, 0.99), // T266 desk piece brighter centerCalm
       card: material("#ffe060", "none", 0.04, 0.30, 0.98), // T266 card HARD6
       resource: material("#e0ffff", "none", 0.01, 0.95, 0.99), // T266 gem HARD6

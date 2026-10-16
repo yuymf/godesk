@@ -258,7 +258,7 @@ export function playFraming(
   aspect: number,
   half = SEA_HALF_EXTENT - SEA_EDGE_PAD,
 ): { polar: number; distance: number; fit: number; safe: boolean } {
-  // Prefer settlecoast-like ≈62° 3/4 tilt. If the near-sea (±9) cannot cover the
+  // Prefer settlecoast-like ≈56° 3/4 tilt (T265 live play polar). If the near-sea (±9) cannot cover the
   // frame, keep the ≥45° floor (tiles uncropped) rather than collapsing to
   // top-down — far-sea ring (±80) makes the preferred tilt sky-free once exposed.
   return seaSafeFraming(points, keepPoints, target, preferredPolar, PLAY_MIN_POLAR_DEG * DEG, azimuth, fovDeg, aspect, half);

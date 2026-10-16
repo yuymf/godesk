@@ -633,19 +633,25 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
       || piece.objectKind === "token"
       || piece.objectKind === "tile"
       || piece.objectKind === "plate"
+      || piece.objectKind === "resource"
     ) {
       const s = piece.objectKind === "plate"
         ? Math.max(0.55, size * 0.95)
         : piece.objectKind === "tile"
           ? Math.max(0.28, size * 1.65)
-          : Math.max(0.18, size * 0.85);
+          : piece.objectKind === "resource"
+            ? Math.max(0.62, size * 1.55) // T270 · short grounded ring under chip stacks
+            : Math.max(0.26, size * 1.05); // T269 · disc/token ground HARD (H02/H04)
+      // T270 · resource/chip stacks ground at playTop (not mid-stack baseY) so contact stays sharp
+      const contactY = piece.objectKind === "resource" ? playTop + 0.003 : baseY + 0.003;
       nodes.push({
         // Slash-encode so T047 factory/:tile: filters do not treat ground blobs as tiles.
         id: `contact/${piece.id.replace(/:/g, "/")}`,
         kind: "piece",
         mesh: "contact-shadow",
-        position: [round(piece.x), round(baseY + 0.003), round(piece.z)],
+        position: [round(piece.x), round(contactY), round(piece.z)],
         scale: [s, 1, s],
+        ...(piece.objectKind === "resource" ? { tag: "grounded-contact" } : {}),
       });
     }
   }
