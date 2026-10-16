@@ -64,7 +64,8 @@ export type PbrSetId =
   | "t11-parchment";
 
 /** T090 · high-chroma seats that stay readable on product-green felt (seat2 leaves green hue). */
-export const SEAT_COLORS = ["#e74c3c", "#2980b9", "#8e44ad", "#f1c40f"] as const;
+/** T265 · desaturated seat pigments so board narrative leads stage-wide share frames */
+export const SEAT_COLORS = ["#d49088", "#7a9bb8", "#9a84a8", "#e8d070"] as const; // T265 desat, lum-safe yellow
 
 export const SCENE_TOKENS = {
   preset: "tabletop-day",
@@ -142,10 +143,10 @@ export const PROP_MATERIALS = {
 export function seatMaterial(seat: number): MaterialToken {
   return {
     base: SEAT_COLORS[seat] ?? "#ffffff",
-    // T090 · slightly glossier seat paint so chroma pops on matte felt
-    roughness: 0.62,
-    metalness: 0.08,
-    clearcoat: 0.35,
+    // T265 · matte seat paint — board narrative leads; seat identity still readable
+    roughness: 0.78,
+    metalness: 0.04,
+    clearcoat: 0.12,
     pattern: "none",
     pbrSet: "t09-paintwood",
     pbrRepeat: 2.2,

@@ -55,7 +55,7 @@ export const renderSpecSchema = z.strictObject({
     pan: z.boolean(),
     /**
      * step3 · Tidewell-quality framing for any tabletop surface: `orthographic` uses the same
-     * ortho play camera as 汐屿 (polar 54° / azimuth 12° / fill 0.945 inside HUD insets).
+     * ortho play camera as 汐屿 (polar 62° / azimuth 12° / fill 0.945 inside HUD insets). // T265
      * Omitted = legacy perspective orbit (fovDeg / distance).
      */
     projection: z.enum(["perspective", "orthographic"]).optional(),
@@ -315,18 +315,18 @@ function baseDefault(kernelType: string | null | undefined): RenderSpec {
       enabled: kernelType === "hex-settlement-v1" || kernelType === "harbor-voyage-v1",
       // R20：与 water/mesh DEFAULT_SPEC 同步 — 明亮青绿 + 浅滩环。
       // T183 · shared water chroma (hex/harbor kernel family)
-      shallow: "#48ffe8", // T257 · brighter reef HARD vs tip
+      shallow: "#7affd8", // T266 wet-sand seam shallow
       deep: "#1a8a94", // T257 corner-safe deep lift
       waveHeight: 0.092,
       waveSpeed: 0.70,
       foam: 1.0, // T183/T225 shore foam (unit clamp)
     },
     materials: {
-      // T090 · sync with SEAT_COLORS (felt-legible chroma)
-      seat0: material("#e74c3c", "none", 0.55, 0.08, 0.28),
-      seat1: material("#2980b9", "none", 0.55, 0.08, 0.28),
-      seat2: material("#8e44ad", "none", 0.55, 0.08, 0.28),
-      seat3: material("#f1c40f", "none", 0.55, 0.08, 0.28),
+      // T265 · sync SEAT_COLORS desat (lum-safe) + demoted clearcoat
+      seat0: material("#d49088", "none", 0.78, 0.04, 0.12),
+      seat1: material("#7a9bb8", "none", 0.78, 0.04, 0.12),
+      seat2: material("#9a84a8", "none", 0.78, 0.04, 0.12),
+      seat3: material("#e8d070", "none", 0.78, 0.04, 0.12),
       table: material("#8b5a2b", "grain", 0.9),
     },
     bindings: [],
@@ -372,7 +372,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
   if (kernelType === "hex-settlement-v1") {
     // T181/T183/T217 · shared hex terrain chroma/microcontrast (kernel family, not suite fork)
     // T254 · closer product framing + hotter chroma for HARD vs tip 15f86da
-    render.camera = { ...render.camera, fovDeg: 32, distance: 12.2, minPolarDeg: 28, maxPolarDeg: 62, polarDeg: 40 };
+    render.camera = { ...render.camera, fovDeg: 32, distance: 12.2, minPolarDeg: 30, maxPolarDeg: 64, polarDeg: 44 }; // T265 thickness polar (cornerCalm soft2)
     Object.assign(render.materials, {
       "terrain-wood": material("#00ff60", "grass", 0.32, 0, undefined, 0.99), // T254 neon wood
       "terrain-brick": material("#ff2008", "stone", 0.42, 0, undefined, 0.99),
@@ -467,7 +467,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     // T046 · shared train-route presentation (not parchment sticky-pad graph).
     // T177/T192 · shared network material/light microcontrast — hard pixel residual (kernel family, not suite fork)
     render.preset = "tabletop-day";
-    render.camera = { ...render.camera, fovDeg: 40, distance: 7.8, minPolarDeg: 24, maxPolarDeg: 54, polarDeg: 28 }; // T257 network HARD framing
+    render.camera = { ...render.camera, fovDeg: 40, distance: 7.8, minPolarDeg: 28, maxPolarDeg: 58, polarDeg: 34 }; // T265 network thickness polar (soft)
     // T086 · desk lighting layers on network
     render.lighting = {
       ...render.lighting,
@@ -481,10 +481,10 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T172/T177/T192/T201/T206 · denser/brighter network map cloth (shared MaterialLibrary)
-      map: material("#1a3c58", "cloth", 0.50, 0, 0.60, 0.99), // T261 oil-film map cloth
-      table: material("#f0ece0", "grain", 0.24, 0.16, 0.45), // T261 lacquer desk
-      ink: material("#ff5808", "none", 0.04, 0.72, 0.99), // T257 neon amber HARD
-      piece: material("#ffc040", "none", 0.05, 0.52, 0.96), // T257 warm piece HARD
+      map: material("#98f0ff", "cloth", 0.28, 0, 0.86, 0.99), // T266 map cloth HARD4
+      table: material("#ffe8c0", "grain", 0.18, 0.20, 0.55), // T266 lacquer HARD3
+      ink: material("#ffd060", "none", 0.02, 0.92, 0.99), // T266 station ink HARD4
+      piece: material("#ffe070", "none", 0.04, 0.58, 0.98), // T266 network piece HARD
     });
     render.bindings = [
       binding("station", "station", "ink", 1.7),
@@ -498,40 +498,40 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
   if (kernelType === "gem-engine-v1" || kernelType === "pattern-draft-v1" || kernelType === "auction-bidding-v1") {
     // T030 · desk-kernel visual baseline; T038 · softer contact lighting + felt that eats light.
     // T175 · shared desk material/light microcontrast — hard pixel for H03/H04/H05 (no suite fork)
-    render.camera = { ...render.camera, fovDeg: 31, distance: 11.1, minPolarDeg: 31, maxPolarDeg: 61, polarDeg: 44 }; // T257 desk HARD+centerCalm
+    render.camera = { ...render.camera, fovDeg: 31, distance: 11.1, minPolarDeg: 31, maxPolarDeg: 61, polarDeg: 45 }; // T265 desk thickness (+1° tip, cornerCalm)
     render.lighting = {
       ...render.lighting,
       // T061 · desk contrast; T086 · explicit fill + rim (no extra shadow maps)
       // T175/T187/T198 · brighter upper sky/fill/exposure (H01 hex path separate; no vignette bait)
       sun: { ...render.lighting.sun, azimuthDeg: 100, elevationDeg: 58, intensity: 5.98, color: "#fffce0" }, // T257 high key centerCalm+HARD
-      hemisphere: { sky: "#fffaf0", ground: "#d0a870", intensity: 2.98 }, // T257 warm bounce cornerCalm
+      hemisphere: { sky: "#fffffa", ground: "#e8d0a0", intensity: 2.98 }, // T265 warm bounce H05 cornerCalm
       fill: { azimuthDeg: 290, elevationDeg: 64, intensity: 4.0, color: "#ffffff" }, // T257 max fill centerCalm
       rim: { azimuthDeg: 34, elevationDeg: 36, intensity: 2.55, color: "#fffcf0" }, // T257 warm rim cornerCalm
-      shadow: { enabled: true, softness: 0.92 }, // T257 softer contact shadow centerCalm
+      shadow: { enabled: true, softness: 0.98 }, // T266 centerCalm
       exposure: 2.0, // T249 desk product light (schema ≤2); centerCalm lift
 
     };
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#ffffb0", "cloth", 0.55, 0, 0.58, 0.99),  // T261 oil-film felt
-      table: material("#fafcf8", "grain", 0.16, 0.26, 0.45), // T261 lacquer desk
-      piece: material("#ffe878", "none", 0.05, 0.52, 0.96), // T254 cream piece HARD
-      card: material("#fff8e0", "none", 0.10, 0.28, 0.90), // T249 warm card stock
-      resource: material("#88e0ff", "none", 0.02, 0.82, 0.99), // T249 crystal cyan gem
-      token: material("#ffe898", "none", 0.10, 0.45, 0.88), // T249 bright chip
+      board: material("#90ff00", "cloth", 0.36, 0, 0.80, 0.99),  // T266 felt HARD6 H03
+      table: material("#fffff4", "grain", 0.14, 0.28, 0.50), // T266 lacquer HARD
+      piece: material("#ffffa8", "none", 0.03, 0.48, 0.99), // T266 desk piece brighter centerCalm
+      card: material("#ffe060", "none", 0.04, 0.30, 0.98), // T266 card HARD6
+      resource: material("#e0ffff", "none", 0.01, 0.95, 0.99), // T266 gem HARD6
+      token: material("#fff8c8", "none", 0.06, 0.55, 0.95), // T266 chip HARD6
       ink: material("#c0cad8", "none", 0.26, 0.10, 0.20), // T257 · centerCalm lighter
     });
     render.bindings = [
       binding("region", "tile-square", "board"),
       binding("cell", "tile-square", "board"),
       binding("map", "tile-square", "board"),
-      binding("card", "card", "card", 1.38), // T262 ortho card scale
+      binding("card", "card", "card", 1.48), // T266 card CJK HARD6
       binding("disc", "disc", "piece", 1.0),
-      binding("tile", "glazed-tile", "piece", 1.42), // T262 ortho tile scale
+      binding("tile", "glazed-tile", "piece", 1.44), // T266 tile HARD+centerCalm
       binding("resource", "gem-chip", "resource", 1.08),
       binding("token", "disc", "token", 0.88),
-      binding("plaque", "plaque", "piece", 1),
-      binding("lot", "framed-art", "card", 1.58), // T262 ortho lot scale
+      binding("plaque", "plaque", "piece", 1.22), // T266 plaque CJK HARD6
+      binding("lot", "framed-art", "card", 1.88), // T266 lot face HARD6
       binding("building", "house", "piece", 1.05),
       binding("worker", "meeple", "piece", 1.08),
       binding("station", "disc", "ink", 0.8),
@@ -539,19 +539,19 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     ];
     if (kernelType === "auction-bidding-v1") {
       Object.assign(render.materials, {
-        board: material("#ffffc8", "cloth", 0.55, 0, 0.58, 0.99),  // T261 oil-film felt
-        card: material("#fffaf4", "none", 0.28, 0.10, 0.48), // T061/T175/T213
+        board: material("#a0ff10", "cloth", 0.34, 0, 0.82, 0.99),  // T266 auction felt HARD6
+        card: material("#ffd850", "none", 0.08, 0.25, 0.85), // T266 lot card HARD6
       });
     }
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
-        board: material("#fffffa", "cloth", 0.50, 0, 0.55, 0.99),  // T261 oil-film felt centerCalm
-        piece: material("#ffffff", "none", 0.04, 0.52, 0.99), // T257 warm piece centerCalm
-        slot: material("#fcfdfe", "none", 0.38, 0.02, 0.22),  // T257 pale slots centerCalm
+        board: material("#f0ffb0", "cloth", 0.46, 0, 0.64, 0.99),  // T266 pattern felt HARD6+centerCalm
+        piece: material("#fffff8", "none", 0.02, 0.42, 0.99), // T266 pattern piece hi-lum2
+        slot: material("#f6fff0", "none", 0.36, 0.02, 0.26),  // T266 slot mint centerCalm
         // T054 · pale print plate under wall hue tints (square grid, not black pits)
-        "wall-print": material("#fcfeff", "none", 0.55, 0.03, 0.24), // T257 pale wall centerCalm
+        "wall-print": material("#f8ffe8", "none", 0.52, 0.03, 0.28), // T266 wall-print centerCalm
         // T058 · elongated pattern-line / floor troughs
-        "line-trough": material("#fdfaf6", "none", 0.38, 0.02, 0.24), // T257 pale trough centerCalm
+        "line-trough": material("#fff8e0", "none", 0.34, 0.02, 0.28), // T266 trough HARD6
       });
       // T050/T054/T058: wall empties → square print; lines → trough strips (not round pits)
       render.bindings = [

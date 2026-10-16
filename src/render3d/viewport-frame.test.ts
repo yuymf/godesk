@@ -27,13 +27,13 @@ describe("viewport-frame", () => {
   });
 
   it("framePose returns orbit above the island centre", () => {
-    const pose = framePose([0, 0, 0], 4.5, 1.6, { fill: 0.945, polarDeg: 54 });
+    const pose = framePose([0, 0, 0], 4.5, 1.6, { fill: 0.945, polarDeg: 56 });
     expect(pose.position[1]).toBeGreaterThan(2);
     expect(pose.distance).toBeGreaterThan(3);
   });
 
   it("desktop defaults align settlecoast-like 3/4 (R27 fill ~0.94–0.95)", () => {
-    expect(DEFAULT_DESKTOP_FRAME.polarDeg).toBe(54);
+    expect(DEFAULT_DESKTOP_FRAME.polarDeg).toBe(56);
     expect(DEFAULT_DESKTOP_FRAME.fovDeg).toBe(40);
     expect(DEFAULT_DESKTOP_FRAME.azimuthDeg).toBeGreaterThanOrEqual(11);
     expect(DEFAULT_DESKTOP_FRAME.azimuthDeg).toBeLessThanOrEqual(14);

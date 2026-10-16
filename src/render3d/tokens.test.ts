@@ -35,7 +35,7 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
     expect(SCENE_TOKENS.environment.intensity).toBe(0.72); // T249
     expect(SCENE_TOKENS.tile).toEqual({ roughness: 0.98, metalness: 0 });
     expect(SCENE_TOKENS.piece).toEqual({ roughness: 0.82, metalness: 0, clearcoat: 0 });
-    expect(SEAT_COLORS).toEqual(["#e74c3c", "#2980b9", "#8e44ad", "#f1c40f"]);
+    expect(SEAT_COLORS).toEqual(["#d49088", "#7a9bb8", "#9a84a8", "#e8d070"]); // T265
   });
 
   it("stays in sync with the creator RenderSpec lighting default", () => {
@@ -59,12 +59,12 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
     }
   });
 
-  it("gives every terrain a pattern and a G3D-22 PBR set, tiles use matte roughness ≥ 0.9", () => {
+  it("gives every terrain a pattern and a G3D-22 PBR set, tiles use oil-film roughness (T261)", () => {
     for (const terrain of ["wood", "brick", "sheep", "wheat", "ore", "desert"]) {
       const token = TERRAIN_MATERIALS[terrain]!;
       expect(token.pattern).not.toBe("none");
       expect(token.pbrSet).toMatch(/^t0[1-6]-/);
-      expect(token.roughness).toBeGreaterThanOrEqual(0.9);
+      expect(token.roughness).toBeGreaterThanOrEqual(0.45);
       expect(token.metalness).toBe(0);
     }
     expect(PROP_MATERIALS.cliff.pbrSet).toBe("t07-cliff");
@@ -77,7 +77,7 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
 
     it("seat pieces keep their seat colour: T090 glossier chroma paint", () => {
     const token = seatMaterial(1);
-    expect(token).toMatchObject({ base: "#2980b9", roughness: 0.62, clearcoat: 0.35, pbrSet: "t09-paintwood", pbrBaseColor: true });
+    expect(token).toMatchObject({ base: "#7a9bb8", roughness: 0.78, clearcoat: 0.12, pbrSet: "t09-paintwood", pbrBaseColor: true }); // T265
     expect(seatMaterial(9).base).toBe("#ffffff");
   });
 
@@ -196,15 +196,10 @@ describe("R22 resource colour + seams", () => {
     expect(lum(TERRAIN_MATERIALS.desert!.base)).toBeGreaterThan(lum("#d2c29e"));
   });
 
-  it("R23 ore tint is cooler + brighter light-grey rock than R21/R22 warm grey", () => {
+  it("ore tint is cool blue-leaning reef rock (T261 oil-film palette)", () => {
     const [r, g, b] = rgb(TERRAIN_MATERIALS.ore!.base);
-    // cooler: blue channel ≥ red (cold grey, not warm brown)
-    expect(b).toBeGreaterThanOrEqual(r);
-    expect(g).toBeGreaterThanOrEqual(r);
-    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    // brighter than R22 #a4abb3
-    const r22 = rgb("#a4abb3");
-    const lum22 = 0.2126 * r22[0] + 0.7152 * r22[1] + 0.0722 * r22[2];
-    expect(lum).toBeGreaterThan(lum22);
+    // cooler: blue channel dominates red
+    expect(b).toBeGreaterThan(r);
+    expect(b).toBeGreaterThan(g * 0.7);
   });
 });

@@ -3519,3 +3519,13 @@ body:has(.room-view-tidewell-immersive) {
   transform: scale(0.44);
   transform-origin: bottom center;
 }
+
+
+/* T265 · seat rail yields to board in share collapse */
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .seat-chip.is-yours {
+  opacity: 0.45 !important;
+  filter: saturate(0.3) brightness(1.1);
+  background: #f3efe6 !important;
+  min-height: 0.5rem !important;
+  padding: 0.02rem 0.22rem !important;
+}

@@ -24,7 +24,7 @@ export function isOrthographicCamera(camera: PlayCamera): camera is Orthographic
 export type V3 = readonly [number, number, number];
 export type CameraMode = "play" | "overview";
 
-export const CAMERA_MODE_POLAR_DEG: Readonly<Record<CameraMode, number>> = { play: 54, overview: 8 };
+export const CAMERA_MODE_POLAR_DEG: Readonly<Record<CameraMode, number>> = { play: 56, overview: 8 }; // T265 · side-read thickness (cornerCalm soft2)
 /** Zoom is relative to the fitted distance: 1 = whole island (+ tray) in view. */
 export const ZOOM_LIMITS = { min: 0.7, max: 3.2 } as const;
 export const ZOOM_STEP = 1.25;
@@ -43,7 +43,7 @@ export const SEA_HALF_EXTENT = 9;
 export const SEA_EDGE_PAD = 0.3;
 /** Play mode may flatten toward top-down to keep the sky out, but not below this. */
 // Own-turn floor: keep a readable 3/4 tilt (settlecoast source default φ≈53.9°, maxPolar≈58.4°). Prefer sky-at-corners over pure top-down until far-sea covers the frame.
-export const PLAY_MIN_POLAR_DEG = 45;
+export const PLAY_MIN_POLAR_DEG = 46; // T265 · above tip 45; cornerCalm soft2
 /** Default play azimuth (deg): settlecoast ≈11.5°; keep within 11–14°. */
 export const PLAY_AZIMUTH_DEG = 12;
 /**
@@ -64,7 +64,7 @@ export type HudInsets = { top: number; bottom: number; left: number; right: numb
 export const PLAY_HUD_INSETS = { top: 48, bottom: 72, left: 24, right: 24 } as const;
 /** settlecoast placement-like top reserve clamp. */
 export function settlecoastTopReservePx(canvasHeight: number): number {
-  return Math.min(62, Math.max(28, (canvasHeight - 300) * 0.3));
+  return Math.min(56, Math.max(28, (canvasHeight - 300) * 0.3));
 }
 /** Dice cinematic bottom reserve (settlecoast ~158). */
 export const DICE_HUD_BOTTOM_PX = 158;
@@ -258,7 +258,7 @@ export function playFraming(
   aspect: number,
   half = SEA_HALF_EXTENT - SEA_EDGE_PAD,
 ): { polar: number; distance: number; fit: number; safe: boolean } {
-  // Prefer settlecoast-like ≈54° 3/4 tilt. If the near-sea (±9) cannot cover the
+  // Prefer settlecoast-like ≈62° 3/4 tilt. If the near-sea (±9) cannot cover the
   // frame, keep the ≥45° floor (tiles uncropped) rather than collapsing to
   // top-down — far-sea ring (±80) makes the preferred tilt sky-free once exposed.
   return seaSafeFraming(points, keepPoints, target, preferredPolar, PLAY_MIN_POLAR_DEG * DEG, azimuth, fovDeg, aspect, half);
@@ -399,7 +399,7 @@ export function seaSafeOrthoFraming(
   }
 }
 
-/** Own-turn ortho framing: lock ≥ PLAY_MIN_POLAR; prefer ≈54°. */
+/** Own-turn ortho framing: lock ≥ PLAY_MIN_POLAR; prefer ≈56°. */
 export function playOrthoFraming(
   points: readonly V3[],
   keepPoints: readonly V3[],

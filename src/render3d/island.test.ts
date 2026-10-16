@@ -50,11 +50,11 @@ describe("G3D-ISLAND island + coast", () => {
     expect(reefClusterSize(0)).toBeLessThanOrEqual(4);
   });
 
-  it("high shore-stones include reef clusters + gap wall-huggers; medium count unchanged", () => {
+  it("high shore-stones include reef clusters + gap wall-huggers; medium gets T266 apron", () => {
     const layer = createIslandLayer();
     layer.sync(tiles, ports, "medium", true);
     const mid = layer.group.children.find((c) => c.name === "island:shore-stones") as InstancedMesh;
-    expect(mid.count).toBe(coastEdges(tiles).length * 4);
+    expect(mid.count).toBeGreaterThan(coastEdges(tiles).length * 4); // T266 wet-sand apron on medium
     layer.sync(tiles, ports, "high", true);
     const hi = layer.group.children.find((c) => c.name === "island:shore-stones") as InstancedMesh;
     // base 120 + reef clusters on ~55% edges + 1–2 huggers on the rest

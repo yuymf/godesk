@@ -6673,6 +6673,29 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   font-size: 0.62rem !important;
 }
 
+/* T265 · seat chrome yields to board: paler/smaller yours-chip; no neon seat rail */
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-chrome-collapse .seat-chip.is-yours,
+.room-view-hex-island.room-view-seated .room-invitation-rich.is-chrome-collapse .seat-chip.is-yours,
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .seat-chip.is-yours {
+  background: #f3efe6 !important;
+  border-color: rgb(23 23 23 / 4%) !important;
+  color: #cfc8bc !important;
+  opacity: 0.55 !important;
+  min-height: 0.55rem !important;
+  padding: 0.02rem 0.28rem !important;
+  box-shadow: none !important;
+  filter: saturate(0.35) brightness(1.08);
+}
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-chrome-collapse .seat-chip.is-yours b,
+.room-view-hex-island.room-view-seated .room-invitation-rich.is-chrome-collapse .seat-chip.is-yours b,
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .seat-chip.is-yours b {
+  color: #cfc8bc !important;
+  opacity: 0.35 !important;
+  font-size: 0.48rem !important;
+  font-weight: 500 !important;
+}
+
+
 /* T221c · 舞台顶/底浅色 letterbox 叠在 canvas 之上（inset box-shadow 会被 canvas 盖住） */
 .room-view-tabletop-immersive.room-view-seated .tabletop-stage,
 .room-view-tabletop-immersive.room-view-seated .g3d-stage,
@@ -6688,7 +6711,7 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   content: "" !important;
   position: absolute !important;
   left: 0; right: 0; top: 0;
-  height: 40px; /* T230/T242 · thicker top letterbox cornerCalm */
+  height: 48px; /* T265 · hex top letterbox covers polar peek (cornerCalm) */
   background: #ffffff;
   z-index: 6;
   pointer-events: none;

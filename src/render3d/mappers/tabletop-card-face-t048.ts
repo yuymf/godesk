@@ -289,13 +289,13 @@ export function paintCardFace(
   const titleBox = zones.title!;
   if (input.title && !/^T\d\+/i.test(input.title)) {
     g.fillStyle = "#1f2937";
-    g.font = '700 28px "Noto Serif CJK SC","Songti SC",serif';
+    g.font = '700 36px /* T266 */ "Noto Serif CJK SC","Songti SC",serif';
     g.textAlign = "left";
     g.textBaseline = "middle";
     g.fillText(input.title.slice(0, 10), titleBox.x + 4, titleBox.y + titleBox.h / 2);
   } else if (input.tier != null) {
     g.fillStyle = "rgba(55,40,25,0.55)";
-    g.font = "700 26px serif";
+    g.font = "700 34px /* T266 */ serif";
     g.textAlign = "left";
     g.textBaseline = "middle";
     g.fillText(`T${input.tier}`, titleBox.x + 4, titleBox.y + titleBox.h / 2);
@@ -337,7 +337,7 @@ export function paintCardFace(
     g.lineWidth = 2;
     g.stroke();
     g.fillStyle = color === "white" || color === "gold" ? "#1f2937" : "#fff";
-    g.font = "700 20px sans-serif";
+    g.font = "700 26px /* T266 */ sans-serif";
     g.textAlign = "center";
     g.textBaseline = "middle";
     g.fillText(String(n), cx, cy);

@@ -7,7 +7,7 @@ describe("T104 seatMaterial clearcoat test green", () => {
   it("T090 seat clearcoat 0.35 yields MeshPhysical on high tier", () => {
     const seat = createMaterial(seatMaterial(0), { clearcoat: true });
     expect(seat).toBeInstanceOf(MeshPhysicalMaterial);
-    expect((seat as MeshPhysicalMaterial).clearcoat).toBeCloseTo(0.35);
-    expect(seatMaterial(0).clearcoat).toBeCloseTo(0.35);
+    expect((seat as MeshPhysicalMaterial).clearcoat).toBeCloseTo(0.12); // T265 demote from T104 0.35
+    expect(seatMaterial(0).clearcoat).toBeCloseTo(0.12);
   });
 });

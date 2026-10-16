@@ -7,7 +7,7 @@ import { actionCardArt, seatPortrait } from "../../creator/tabletop-hud-art";
 import { networkRouteLayout } from "./tabletop-kernels";
 
 const PATCH = {
-  camera: { projection: "orthographic", polarDeg: 54, azimuthDeg: 12, fill: 0.945 },
+  camera: { projection: "orthographic", polarDeg: 62, azimuthDeg: 12, fill: 0.945 },
   chrome: "wood",
   decor: { trees: 40, rocks: 10, seed: 11 },
   bindings: [

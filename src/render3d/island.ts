@@ -836,8 +836,8 @@ export function createIslandLayer(): IslandLayer {
           m.compose(p.set(ex + (ox / ol) * out, WATER_Y + 0.015, ez + (oz / ol) * out), q, s.set(size * 1.3, size * 0.78, size));
           stones.setMatrixAt(n++, m);
         }
-        // high only：断续礁石簇 — 约半数边留空，其余 2–4 块扁平错层外推（干露 / 半湿 / 入水）。
-        if (tier === "high") {
+        // T266 · wet-sand / reef apron on all tiers (seam mesh; high denser)
+        if (tier === "high" || tier === "medium" || tier === "low") {
           const ox0 = (a[0] + b[0]) / 2 - c[0];
           const oz0 = (a[2] + b[2]) / 2 - c[2];
           const ol0 = Math.hypot(ox0, oz0) || 1;
@@ -845,14 +845,14 @@ export function createIslandLayer(): IslandLayer {
           const nz = oz0 / ol0;
           if (reefEdgeMask(edgeIdx)) {
             // 断续礁石簇 — 约半数边；扁平错层外推。
-            const cluster = reefClusterSize(edgeIdx);
+            const cluster = Math.max(1, Math.round(reefClusterSize(edgeIdx) * (tier === "high" ? 1 : tier === "medium" ? 0.7 : 0.45))); // T266
             for (let j = 0; j < cluster; j += 1) {
               const along = 0.18 + rand() * 0.64;
               const ex = a[0] + (b[0] - a[0]) * along + (-nz) * (rand() - 0.5) * 0.12;
               const ez = a[2] + (b[2] - a[2]) * along + nx * (rand() - 0.5) * 0.12;
               const step = j + rand() * 0.7;
               const out = 0.22 + step * 0.14 + rand() * 0.08;
-              const y = WATER_Y + 0.09 - step * 0.035 + (rand() - 0.5) * 0.02;
+              const y = WATER_Y + 0.06 - step * 0.04 + (rand() - 0.5) * 0.02; // T266 wetter apron
               const sx = 1.55 + rand() * 1.1;
               const sy = 0.22 + rand() * 0.28;
               const sz = 1.15 + rand() * 0.9;
@@ -862,7 +862,7 @@ export function createIslandLayer(): IslandLayer {
               m.compose(p.set(ex + nx * out, y, ez + nz * out), q, s.set(sx, sy, sz));
               stones.setMatrixAt(n++, m);
             }
-          } else {
+          } else if (tier === "high") {
             // 簇间空档：贴崖稀疏立石，盖住褐色纸板状六角侧面（非整圈）。
             const hug = 1 + Math.floor(rand() * 2); // 1–2
             for (let j = 0; j < hug; j += 1) {
@@ -886,6 +886,46 @@ export function createIslandLayer(): IslandLayer {
       }
       stones.count = n;
       add(stones, "island:shore-stones", false);
+
+      // T266 · wet-sand apron discs at waterline (shared seam mesh, all tiers)
+      {
+        const sandMat = new MeshStandardMaterial({
+          color: "#f3e6c0", // T266 bright wet sand HARD
+          roughness: 0.92,
+          metalness: 0,
+          flatShading: true,
+        });
+        sandMat.userData.gdShared = true;
+        const disc = new CylinderGeometry(0.48, 0.58, 0.06, 7); // T266 apron HARD
+        disc.translate(0, 0.01, 0);
+        const apronN = Math.max(1, edges.length * (tier === "high" ? 5 : tier === "medium" ? 3 : 2)); // T266 HARD denser
+        const apron = new InstancedMesh(disc, sandMat, apronN);
+        let ai = 0;
+        let ei = 0;
+        for (const [a, b, c] of edges) {
+          const reps = tier === "high" ? 5 : tier === "medium" ? 3 : 2;
+          for (let k = 0; k < reps && ai < apronN; k += 1) {
+            const tt = (k + 0.35 + rand() * 0.3) / reps;
+            const ex = a[0] + (b[0] - a[0]) * tt;
+            const ez = a[2] + (b[2] - a[2]) * tt;
+            const ox = ex - c[0];
+            const oz = ez - c[2];
+            const ol = Math.hypot(ox, oz) || 1;
+            const out = 0.34 + rand() * 0.22 + (tier === "low" ? 0.08 : 0);
+            q.setFromAxisAngle(up, rand() * Math.PI * 2);
+            const sc = 1.15 + rand() * 0.95;
+            m.compose(
+              p.set(ex + (ox / ol) * out, WATER_Y + 0.028, ez + (oz / ol) * out),
+              q,
+              s.set(sc * 1.35, 1, sc * 1.1),
+            );
+            apron.setMatrixAt(ai++, m);
+          }
+          ei += 1;
+        }
+        apron.count = ai;
+        add(apron, "island:wet-sand-apron", false);
+      }
 
       // 码头 + 港口牌。
       dockList = docksFor(ports);

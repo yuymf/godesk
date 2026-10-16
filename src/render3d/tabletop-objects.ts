@@ -24,6 +24,7 @@ import {
   RingGeometry,
   Shape,
   CanvasTexture,
+  LinearMipmapLinearFilter,
   ConeGeometry,
   DodecahedronGeometry,
   IcosahedronGeometry,
@@ -354,7 +355,7 @@ function paintSharedOpaquePlaqueFace(
   const title = opts.title.slice(0, 8);
   const cx = W / 2;
   const cy = H / 2 + 2;
-  g.font = `700 ${Math.round(H * 0.60)}px "Noto Serif CJK SC","Songti SC",serif`; // T119/T132
+  g.font = `700 ${Math.round(H * 0.66)}px "Noto Serif CJK SC","Songti SC",serif`; // T266
   g.textAlign = "center";
   g.textBaseline = "middle";
   // Halo then ink — stage-wide readability without enlarging layout length rules.
@@ -392,7 +393,7 @@ function plaqueWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   };
   const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
   if (canvas) {
-    const W = 320, H = 200;
+    const W = 640, H = 400; // T266 CJK crisp 2×
     canvas.width = W;
     canvas.height = H;
     const g = canvas.getContext("2d");
@@ -453,7 +454,9 @@ function plaqueWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     }
     const tex = new CanvasTexture(canvas);
     tex.colorSpace = SRGBColorSpace;
-    tex.anisotropy = 4;
+    tex.anisotropy = 16; // T266
+    tex.generateMipmaps = true;
+    tex.minFilter = LinearMipmapLinearFilter;
     // T261 · mesh-recessed parchment plate sunk under wood frame lip (topology, not canvas ox/oy)
     const face = new Mesh(
       (() => {
@@ -480,7 +483,7 @@ function plaqueWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
 
 /** T095 · shared pattern-tile glaze albedo/roughness microdetail (not porcelain T076). */
 function tileGlazeMaps(baseHex: string): { map: CanvasTexture | null; roughnessMap: CanvasTexture | null } {
-  const W = 128, H = 128;
+  const W = 256, H = 256; // T266 glaze clarity HARD
   const albedo = typeof document !== "undefined" ? document.createElement("canvas") : null;
   const rough = typeof document !== "undefined" ? document.createElement("canvas") : null;
   if (!albedo || !rough) return { map: null, roughnessMap: null };
@@ -507,8 +510,8 @@ function tileGlazeMaps(baseHex: string): { map: CanvasTexture | null; roughnessM
       const speck = (Math.sin(u * 90) * Math.sin(v * 110) + Math.sin(u * 40 + v * 30)) * 0.5;
       const edge = Math.min(u, v, 1 - u, 1 - v);
       const rim = edge < 0.08 ? (0.08 - edge) * 10 : 0;
-      const crack = Math.abs(Math.sin((u + v) * 55)) > 0.97 ? 0.35 : 0;
-      const shade = speck * 18 - rim * 28 - crack * 40;
+      const crack = Math.abs(Math.sin((u + v) * 55)) > 0.94 ? 0.40 : 0; // T266 HARD centerCalm
+      const shade = speck * 16 - rim * 22 - crack * 36; // T266 HARD+centerCalm
       const o = (y * W + x) * 4;
       aImg.data[o] = Math.max(0, Math.min(255, br + shade));
       aImg.data[o + 1] = Math.max(0, Math.min(255, bg + shade * 0.95));
@@ -521,7 +524,10 @@ function tileGlazeMaps(baseHex: string): { map: CanvasTexture | null; roughnessM
   ga.putImageData(aImg, 0, 0);
   gr.putImageData(rImg, 0, 0);
   const map = new CanvasTexture(albedo);
+  map.anisotropy = 16; // T266 canvas clarity
+  map.generateMipmaps = true;
   const roughnessMap = new CanvasTexture(rough);
+  roughnessMap.anisotropy = 16;
   map.colorSpace = SRGBColorSpace;
   map.wrapS = map.wrapT = RepeatWrapping;
   roughnessMap.wrapS = roughnessMap.wrapT = RepeatWrapping;
@@ -583,7 +589,7 @@ function cardWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const showTitle = title && !/^T\d\+/i.test(title) ? title : undefined;
   const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
   if (canvas) {
-    const W = 280, H = 400;
+    const W = 560, H = 800; // T266 CJK crisp 2×
     canvas.width = W;
     canvas.height = H;
     const g = canvas.getContext("2d");
@@ -603,7 +609,7 @@ function cardWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     }
     const tex = new CanvasTexture(canvas);
     tex.colorSpace = SRGBColorSpace;
-    tex.anisotropy = 4;
+    tex.anisotropy = 16; // T266
     const face = new Mesh(
       (() => {
         const plane = new PlaneGeometry(0.76, 1.06); // T262 larger face plate
@@ -1066,8 +1072,8 @@ function station(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   // T132 · felt/plaque residual: slightly taller world plaque for stage-wide ink.
   if (stationName && typeof document !== "undefined") {
     const canvas = document.createElement("canvas");
-    const W = Math.max(220, stationName.length * 52 + 64);
-    const H = 96;
+    const W = Math.max(440, stationName.length * 96 + 120); // T266
+    const H = 176; // T266
     canvas.width = W;
     canvas.height = H;
     const g = canvas.getContext("2d");
@@ -1075,7 +1081,7 @@ function station(node: SceneNode, ctx: TabletopObjectContext): Object3D {
       paintSharedOpaquePlaqueFace(g, W, H, { title: stationName, hub: isHub });
       const tex = new CanvasTexture(canvas);
       tex.colorSpace = SRGBColorSpace;
-      tex.anisotropy = 8;
+      tex.anisotropy = 16; // T266
       const pw = Math.min(1.45, 0.52 + stationName.length * 0.16);
       const plane = new PlaneGeometry(pw, 0.50);
       plane.rotateX(-Math.PI / 2);
@@ -1096,9 +1102,9 @@ function station(node: SceneNode, ctx: TabletopObjectContext): Object3D {
 function label(node: SceneNode): Object3D {
   const text = node.tag ?? "";
   const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
-  const pxPerChar = 56;
+  const pxPerChar = 96; // T266 CJK crisp
   const w = Math.max(2, text.length) * pxPerChar + 48;
-  const h = 84;
+  const h = 128; // T266
   if (canvas) {
     canvas.width = w;
     canvas.height = h;
@@ -1124,18 +1130,19 @@ function label(node: SceneNode): Object3D {
     }
   }
   // T039: float labels stay very faint so they do not form large white boards on the table.
-  const worldH = text.length <= 3 ? 0.22 : 0.28;
+  const worldH = text.length <= 3 ? 0.30 : 0.38; // T266 stage-wide CJK
   const geom = new PlaneGeometry((w / h) * worldH, worldH);
   geom.rotateX(-Math.PI / 2);
   const texture = canvas ? new CanvasTexture(canvas) : null;
   if (texture) {
     texture.colorSpace = SRGBColorSpace;
-    texture.anisotropy = 4;
+    texture.anisotropy = 16; // T266
+    texture.generateMipmaps = true;
   }
   const mesh = new Mesh(geom, new MeshBasicMaterial({
     map: texture,
     transparent: true,
-    opacity: 0.28,
+    opacity: 0.52, // T266 label readable
     depthWrite: false,
     depthTest: false,
     toneMapped: false,
@@ -1389,8 +1396,11 @@ function makeRailMaps(kind: "ballast" | "sleeper" | "steel", baseHex: string): {
   gn.putImageData(nImg, 0, 0);
   gr.putImageData(rImg, 0, 0);
   const map = new CanvasTexture(albedo);
+  if (map) { map.anisotropy = 16; map.generateMipmaps = true; } // T266
   const normalMap = new CanvasTexture(normal);
+  if (normalMap) { normalMap.anisotropy = 16; normalMap.generateMipmaps = true; } // T266
   const roughnessMap = new CanvasTexture(rough);
+  if (roughnessMap) { roughnessMap.anisotropy = 16; roughnessMap.generateMipmaps = true; } // T266
   for (const tex of [map, normalMap, roughnessMap]) {
     tex.wrapS = tex.wrapT = RepeatWrapping;
     tex.repeat.set(kind === "ballast" ? 3.2 : kind === "sleeper" ? 1.6 : 4.0, kind === "ballast" ? 3.2 : kind === "sleeper" ? 1.2 : 1.5);
@@ -1523,6 +1533,7 @@ function woodRimMaterial(node: SceneNode, ctx: TabletopObjectContext): Material 
     }
   }
   const map = albedo ? new CanvasTexture(albedo) : null;
+  if (map) { map.anisotropy = 16; map.generateMipmaps = true; } // T266
   const normalMap = normal ? new CanvasTexture(normal) : null;
   const roughnessMap = rough ? new CanvasTexture(rough) : null;
   for (const tex of [map, normalMap, roughnessMap]) {
@@ -1663,6 +1674,7 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
     }
   }
   const map = albedo ? new CanvasTexture(albedo) : null;
+  if (map) { map.anisotropy = 16; map.generateMipmaps = true; } // T266
   const normalMap = normal ? new CanvasTexture(normal) : null;
   const roughnessMap = rough ? new CanvasTexture(rough) : null;
   for (const tex of [map, normalMap, roughnessMap]) {
@@ -1792,7 +1804,7 @@ function hashSeed(s: string): number {
 
 function proceduralLotCanvas(schema: { title: string; prestige?: number; bid?: number; artistId?: string }): HTMLCanvasElement | null {
   if (typeof document === "undefined") return null;
-  const W = 256, H = 320;
+  const W = 512, H = 640; // T266 CJK lot 2×
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
@@ -1868,10 +1880,10 @@ function proceduralLotCanvas(schema: { title: string; prestige?: number; bid?: n
   g.fillStyle = "rgba(15,23,42,0.22)";
   g.fillRect(12, H - 54, W - 24, 42);
   g.fillStyle = "#ffffff";
-  g.font = "bold 22px system-ui,sans-serif";
+  g.font = '700 40px "Noto Serif CJK SC","Songti SC",system-ui,sans-serif'; // T266
   g.textAlign = "left";
   g.fillText((schema.title || "拍品").slice(0, 10), 22, H - 30);
-  g.font = "bold 14px system-ui,sans-serif";
+  g.font = '700 26px "Noto Serif CJK SC","Songti SC",system-ui,sans-serif'; // T266
   g.fillStyle = "#fde68a";
   const bits: string[] = [];
   if (schema.prestige != null) bits.push(`底 ${schema.prestige}`);
@@ -1916,8 +1928,8 @@ function framedArtWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3
     artistId: "artistId" in lot ? (lot as { artistId?: string }).artistId : undefined,
   });
   const tex = canvas ? new CanvasTexture(canvas) : null;
-  if (tex) tex.colorSpace = SRGBColorSpace;
-  const artGeom = new PlaneGeometry(0.96, 1.20); // T262 larger lot canvas
+  if (tex) { tex.colorSpace = SRGBColorSpace; tex.anisotropy = 16; tex.generateMipmaps = true; } // T266
+  const artGeom = new PlaneGeometry(1.12, 1.40); // T266 lot HARD6
   artGeom.rotateX(-Math.PI / 2);
   const art = new Mesh(
     artGeom,

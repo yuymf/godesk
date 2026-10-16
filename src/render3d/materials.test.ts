@@ -58,7 +58,7 @@ describe("G3D-07 materials", () => {
     // T104 · T090 seatMaterial keeps light clearcoat for chroma on felt (not r6tex matte)
     const seat = createMaterial(seatMaterial(0), { clearcoat: true });
     expect(seat).toBeInstanceOf(MeshPhysicalMaterial);
-    expect((seat as MeshPhysicalMaterial).clearcoat).toBeCloseTo(0.35);
+    expect((seat as MeshPhysicalMaterial).clearcoat).toBeCloseTo(0.12); // T265
     // T261 · brush terrain oil-film → MeshPhysical even when tier clearcoat flag is off
     const oil = createMaterial(TERRAIN_MATERIALS.wood!, { clearcoat: false });
     expect(oil).toBeInstanceOf(MeshPhysicalMaterial);

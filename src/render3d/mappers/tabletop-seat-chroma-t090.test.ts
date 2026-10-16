@@ -18,7 +18,7 @@ function contrast(a: string, b: string): number {
 
 describe("T090 seat chroma legibility", () => {
   it("SEAT_COLORS leave felt-green hue family (seat2 not green)", () => {
-    expect(SEAT_COLORS).toEqual(["#e74c3c", "#2980b9", "#8e44ad", "#f1c40f"]);
+    expect(SEAT_COLORS).toEqual(["#d49088", "#7a9bb8", "#9a84a8", "#e8d070"]); // T265
     // seat2 must not be a green-channel-dominant felt twin
     const seat2 = SEAT_COLORS[2]!;
     const r = parseInt(seat2.slice(1, 3), 16);
@@ -37,10 +37,11 @@ describe("T090 seat chroma legibility", () => {
     expect(contrast(SEAT_COLORS[3]!, felt)).toBeGreaterThan(2.0);
   });
 
-  it("seatMaterial uses glossier paint than matte felt pieces", () => {
+  it("seatMaterial stays readable paint without chrome-steal clearcoat (T265)", () => {
     const m = seatMaterial(0);
-    expect(m.clearcoat ?? 0).toBeGreaterThan(0.2);
-    expect(m.roughness).toBeLessThan(0.8);
+    expect(m.clearcoat ?? 0).toBeGreaterThan(0.05);
+    expect(m.clearcoat ?? 0).toBeLessThanOrEqual(0.15);
+    expect(m.roughness).toBeGreaterThanOrEqual(0.7);
   });
 
   it("meeple figure declares T090 cream rim", () => {
