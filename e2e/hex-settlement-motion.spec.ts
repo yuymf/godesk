@@ -22,8 +22,8 @@ async function openRoom(page: Page) {
   await card.getByRole("link", { name: "继续这一局" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
   await claimTidewellSeat(page, 0);
-  const board = page.getByRole("region", { name: "汐屿六角岛" });
-  await expect(page.getByRole("img", { name: "汐屿六角岛" })).toBeVisible();
+  const board = page.getByRole("region", { name: "六角岛桌面" });
+  await expect(page.getByRole("img", { name: "六角岛桌面" })).toBeVisible();
   await expect(page.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
   await expect(page.getByTestId("g3d-scene-host")).toHaveAttribute("data-water", "on", { timeout: 60_000 });
   return board;
@@ -34,7 +34,7 @@ async function joinSeat1(browser: Browser, url: string, reducedMotion: "reduce" 
   const page = await ctx.newPage();
   await page.goto(url);
   await claimTidewellSeat(page, 1);
-  const board = page.getByRole("region", { name: "汐屿六角岛" });
+  const board = page.getByRole("region", { name: "六角岛桌面" });
   await expect(board).toBeVisible({ timeout: 30_000 });
   return { ctx, page, board };
 }

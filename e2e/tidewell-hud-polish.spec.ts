@@ -16,7 +16,7 @@ async function openBoard(page: import("@playwright/test").Page) {
   await card.getByRole("link", { name: "继续这一局" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
   await claimTidewellSeat(page, 0);
-  const board = page.getByRole("region", { name: "汐屿六角岛" });
+  const board = page.getByRole("region", { name: "六角岛桌面" });
   await expect(board).toBeVisible();
   await expect(page.getByTestId("g3d-scene-host")).toHaveAttribute("data-water", "on", { timeout: 60_000 });
   return board;

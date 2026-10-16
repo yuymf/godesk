@@ -26,8 +26,8 @@ test("汐屿 room: iPhone 12 Pro touch taps a legal settlement", async ({ browse
     await card.getByRole("link", { name: "继续这一局" }).click();
     await page.waitForURL(/\/chatgpt-plugin\/room\//);
     await claimTidewellSeat(page, 0);
-    const board = page.getByRole("region", { name: "汐屿六角岛" });
-    await expect(page.getByRole("img", { name: "汐屿六角岛" })).toBeVisible();
+    const board = page.getByRole("region", { name: "六角岛桌面" });
+    await expect(page.getByRole("img", { name: "六角岛桌面" })).toBeVisible();
     const { openTidewellBoardTargets } = await import("./helpers/tidewell-actions");
     await openTidewellBoardTargets(board);
     await board.getByRole("button", { name: /建造渔村/ }).first().tap({ timeout: 10_000 });

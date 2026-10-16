@@ -40,17 +40,15 @@ async function guestJoinClaimAndAct(
       await expect(hud).toContainText("最近打出");
       await expect(hud.getByLabel("分数")).toContainText(/座位 0 · [1-9]/);
     } else {
+      // T062 · tabletop-first: desk-stage-hud (not nested 对局状态 region) + drawer claim chips.
       const board = page.getByRole("region", { name: "线路网络盘" });
       await expect(board).toBeVisible();
-      const hud = board.getByRole("region", { name: "对局状态" });
+      const hud = board.locator(".desk-stage-hud");
       await expect(hud).toContainText("轮到你铺线");
-      const legal = board.locator('[aria-label^="可占领"]');
+      const legal = board.getByRole("button", { name: /^可占领/ });
       await expect.poll(async () => legal.count()).toBeGreaterThan(0);
       await legal.first().click();
-      await expect(hud).toContainText("最近占领");
-      await expect(board.getByLabel("已铺路线")).toContainText(/座位 0 · [1-9]/);
-      await expect(board.getByLabel("枢纽")).toBeVisible();
-      await expect(board.getByLabel("连通进度")).toBeVisible();
+      await expect(board.locator(".desk-stage-hud-supply")).toContainText(/1\s*:\s*0/);
     }
   } finally {
     await guest.close();

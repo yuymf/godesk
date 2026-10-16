@@ -32,8 +32,8 @@ async function openAiRoom(page: Page) {
   await expect(seatSelect.locator("option[value='1']")).toHaveText(/电脑/);
   await expect(seatSelect.locator("option[value='1']")).toHaveAttribute("disabled", "");
   await seatSelect.selectOption("0");
-  const board = page.getByRole("region", { name: "汐屿六角岛" });
-  await expect(page.getByRole("img", { name: "汐屿六角岛" })).toBeVisible({ timeout: 30_000 });
+  const board = page.getByRole("region", { name: "六角岛桌面" });
+  await expect(page.getByRole("img", { name: "六角岛桌面" })).toBeVisible({ timeout: 30_000 });
   await expect(page.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
   await expect(board.locator(".tidewell-player-card").filter({ hasText: "电脑" })).toHaveCount(1);
   return board;
@@ -119,7 +119,7 @@ for (const mobile of [false, true]) {
     const page = await ctx.newPage();
     const board = await openAiRoom(page);
     const hud = board.getByRole("region", { name: "对局状态" });
-    const img = page.getByRole("img", { name: "汐屿六角岛" });
+    const img = page.getByRole("img", { name: "六角岛桌面" });
     await expect(page.locator("svg polygon")).toHaveCount(0);
     await page.screenshot({ path: `${out}/${tag}-start.png` });
     let mine = 0;

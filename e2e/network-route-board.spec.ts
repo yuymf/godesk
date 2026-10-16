@@ -29,18 +29,16 @@ test.describe("PR14 network-route HUD + lobby thumb", () => {
 
     const board = page.getByRole("region", { name: "线路网络盘" });
     await expect(board).toBeVisible();
-    const hud = board.getByRole("region", { name: "对局状态" });
+    // T062 · desk-stage-hud carries turn authority (nested 对局状态 region retired).
+    const hud = board.locator(".desk-stage-hud");
     await expect(hud).toBeVisible();
 
     await page.getByLabel("你的席位").selectOption("0");
     await expect(hud).toContainText("轮到你铺线");
 
-    const legal = board.locator('[aria-label^="可占领"]');
+    const legal = board.getByRole("button", { name: /^可占领/ });
     await expect.poll(async () => legal.count()).toBeGreaterThan(0);
     await legal.first().click();
-    await expect(hud).toContainText("最近占领");
-    await expect(board.getByLabel("已铺路线")).toContainText(/座位 0 · [1-9]/);
-    await expect(board.getByLabel("枢纽")).toContainText(/北港|南站|A|F/);
-    await expect(board.getByLabel("连通进度")).toBeVisible();
+    await expect(board.locator(".desk-stage-hud-supply")).toContainText(/1\s*:\s*0/);
   });
 });

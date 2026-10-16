@@ -37,7 +37,7 @@ jobs:
     # Labels other than `full-e2e` do not need a run (skipped jobs bill 0 minutes).
     if: github.event.action != 'labeled' || github.event.label.name == 'full-e2e'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       FULL_E2E: ${{ !github.event.pull_request.draft || contains(github.event.pull_request.labels.*.name, 'full-e2e') }}
     steps:

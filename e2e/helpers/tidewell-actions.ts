@@ -33,9 +33,10 @@ export async function claimTidewellSeat(page: Page, seat: string | number): Prom
   }
   await expect(select).toBeVisible({ timeout: 10_000 });
   await select.selectOption(String(seat));
-  // Menu panel is position:fixed over the turn column — close so primary CTA is clickable.
+  // Menu panel is position:fixed and can cover <summary> (反馈 chip intercepts).
+  // Force-click the gear so the turn column / primary CTA is clickable again.
   if ((await menu.count()) > 0 && (await menu.getAttribute("open")) !== null) {
-    await menu.locator("summary").click();
+    await menu.locator("summary").click({ force: true });
     await expect(menu).not.toHaveAttribute("open", { timeout: 5_000 });
   }
 }
