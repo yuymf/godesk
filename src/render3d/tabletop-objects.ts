@@ -1310,11 +1310,6 @@ function porcelainPlate(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   return group;
 }
 
-function feltWoodRim(): Geometry {
-  const outer = new BoxGeometry(1, 1, 1);
-  // Bevel cue: thinner top lip via a second box slightly inset on Y.
-  return outer;
-}
 
 /** T094/T109 · shared route-path microdetail maps (ballast / sleeper / steel). */
 function makeRailMaps(kind: "ballast" | "sleeper" | "steel", baseHex: string): {
@@ -1821,13 +1816,6 @@ function proceduralLotCanvas(schema: { title: string; prestige?: number; bid?: n
   const g = canvas.getContext("2d");
   if (!g) return canvas;
   const seed = hashSeed(`${schema.artistId ?? ""}:${schema.title}`);
-  let state = seed || 1;
-  const rnd = () => {
-    state ^= state << 13;
-    state ^= state >>> 17;
-    state ^= state << 5;
-    return ((state >>> 0) % 1000) / 1000;
-  };
   const palettes = [
     ["#0f172a", "#38bdf8", "#f472b6", "#fef3c7"],
     ["#1e1b4b", "#a78bfa", "#fbbf24", "#ecfccb"],
@@ -2001,12 +1989,12 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     });
     // T269 · matte wood crown at tip luminance (≠ glossy plastic); tip height for cornerCalm
     // T269 · tip-hue wood-albedo crown (flat plastic→wood); no normalMap for cornerCalm
-    const lipMat = woodRimMaterial(node, ctx).clone();
+    const lipMat = woodRimMaterial(node, ctx).clone() as MeshStandardMaterial;
     lipMat.color.set("#faf0d0"); // tip-lum wood albedo (cornerCalm)
     lipMat.roughness = 0.62;
     lipMat.metalness = 0.05;
     lipMat.normalMap = null;
-    const filletMat = woodRimMaterial(node, ctx).clone();
+    const filletMat = woodRimMaterial(node, ctx).clone() as MeshStandardMaterial;
     filletMat.color.set("#e8bc58");
     filletMat.roughness = 0.60;
     filletMat.metalness = 0.06;
@@ -2046,7 +2034,7 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = group;
   } else if (mesh === "felt-wood-lip") {
     // T092 · grain maps via woodRimMaterial; T163/T165 · high-key gold tint for seat-close
-    const mat = woodRimMaterial(node, ctx).clone();
+    const mat = woodRimMaterial(node, ctx).clone() as MeshStandardMaterial;
     mat.color.set("#faf0d0"); // T269 · match crown
     mat.roughness = 0.62;
     mat.metalness = 0.05;

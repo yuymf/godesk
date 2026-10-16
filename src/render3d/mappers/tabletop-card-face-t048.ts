@@ -62,10 +62,25 @@ function hexToRgb(hex: string): [number, number, number] {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
-function mix(a: [number, number, number], b: [number, number, number], t: number): string {
-  const r = Math.round(a[0] + (b[0] - a[0]) * t);
-  const g = Math.round(a[1] + (b[1] - a[1]) * t);
-  const bl = Math.round(a[2] + (b[2] - a[2]) * t);
+function mix(
+  a: [number, number, number] | string,
+  b: [number, number, number] | string,
+  t: number,
+): string {
+  const toRgb = (v: [number, number, number] | string): [number, number, number] => {
+    if (typeof v !== "string") return v;
+    const h = v.replace("#", "");
+    if (h.length >= 6) {
+      return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+    }
+    return [0, 0, 0];
+  };
+  const aa = toRgb(a);
+  const bb = toRgb(b);
+
+  const r = Math.round(aa[0] + (bb[0] - aa[0]) * t);
+  const g = Math.round(aa[1] + (bb[1] - aa[1]) * t);
+  const bl = Math.round(aa[2] + (bb[2] - aa[2]) * t);
   return `rgb(${r},${g},${bl})`;
 }
 

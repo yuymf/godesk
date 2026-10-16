@@ -224,9 +224,6 @@ function addBanks(a: ResourceBank, b: ResourceBank): ResourceBank {
   return out;
 }
 
-function lotTotal(lot: ResourceBank): number {
-  return totalResources(lot);
-}
 
 
 function addResources(bank: ResourceBank, gain: Partial<ResourceBank>): ResourceBank {

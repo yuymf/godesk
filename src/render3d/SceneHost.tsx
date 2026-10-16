@@ -1023,12 +1023,13 @@ export function SceneHost({
       }
       if (hoverObject !== found) {
         clearHover();
-        hoverObject = found;
-        if (typeof found.userData.gdHoverBaseY !== "number") {
-          found.userData.gdHoverBaseY = found.position.y;
+        const hover = found as Object3D;
+        hoverObject = hover;
+        if (typeof hover.userData.gdHoverBaseY !== "number") {
+          hover.userData.gdHoverBaseY = hover.position.y;
         }
-        found.position.y = found.userData.gdHoverBaseY + 0.12;
-        found.userData.gdHover = true;
+        hover.position.y = hover.userData.gdHoverBaseY + 0.12;
+        hover.userData.gdHover = true;
       }
       renderer.domElement.style.cursor = "pointer";
     };

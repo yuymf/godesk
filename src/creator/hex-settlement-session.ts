@@ -76,6 +76,10 @@ export function toHexSettlementGenre(hexIsland: HexSettlementBoardState): HexIsl
     freeRoadsRemaining: hexIsland.freeRoadsRemaining,
     lastAction: hexIsland.lastAction,
     turnPlayer: hexIsland.turnPlayer,
+    pendingTrade: null,
+    pendingAuction: null,
+    activeFloorLots: [],
+    lastFloorBroker: null,
   };
 }
 

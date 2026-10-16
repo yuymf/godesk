@@ -26,7 +26,6 @@ import {
 import {
   SEAT_CAPACITY,
   clampSeatCount,
-  makeSeatArray,
   winnerByHighestScore,
 } from "../seat-capacity";
 import {

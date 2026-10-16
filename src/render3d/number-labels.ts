@@ -94,7 +94,6 @@ export function drawNumberAtlas(size = 1024): Texture {
     ctx.save();
     ctx.translate(cx - (natural * squeeze) / 2, baseline);
     ctx.scale(squeeze, GLYPH_STRETCH_Y);
-    let x = 0;
     ctx.lineJoin = "round";
     ctx.miterLimit = 2;
     // T257 · wide-frame pressed stamp: broader recess shadow + brighter lip highlight

@@ -617,6 +617,13 @@ function galleryAwardLot(
       endReason: "round_market",
       status: "active" as const,
       winnerId: null as PlayerId | null,
+    } as {
+      genre: AuctionBiddingGenre;
+      phase: string;
+      activePlayerId: number;
+      endReason: string;
+      status: "active";
+      winnerId: PlayerId | null;
     };
   }
   g.auctioneer = ((g.auctioneer + 1) % g.playerCount) as PlayerId;
@@ -814,7 +821,7 @@ function parseAuctionBiddingConfig(
         paintings,
         startingFunds:
           typeof c.startingFunds === "number" ? c.startingFunds : 100,
-        modes: modes.length ? modes : ["open", "sealed", "fixed", "double"],
+        modes: (modes.length ? modes : ["open", "sealed", "fixed", "double"]) as GalleryAuctionMode[],
         salesToEndRound:
           typeof c.salesToEndRound === "number" ? c.salesToEndRound : 3,
         marketLadder: Array.isArray(c.marketLadder)

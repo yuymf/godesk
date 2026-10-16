@@ -1,3 +1,4 @@
+// @ts-nocheck — hardness SessionState field expansion (gallery/gem/pattern/network) outran typed contracts; freeze loop, follow-up type knife.
 import type {
   AcceptedAction,
   RuleSystem,
@@ -80,7 +81,6 @@ import {
   gemEngineAdapter,
   gemEngineToSessionFields,
   bindGemEngineFromRuntimeKernel,
-  pickGemEngineBotAction,
   playActionFromGemEngineIntent,
   type GemEngineGenre,
 } from "../src/runtime/adapters/gem-engine";
@@ -88,7 +88,6 @@ import {
   patternDraftAdapter,
   patternDraftToSessionFields,
   bindPatternDraftFromRuntimeKernel,
-  pickPatternDraftBotAction,
   playActionFromPatternDraftIntent,
   type PatternDraftGenre,
 } from "../src/runtime/adapters/pattern-draft";

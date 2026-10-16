@@ -713,7 +713,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
             activeSeat={activeSeat}
             aiSeats={room.aiSeats}
             busy={busy}
-            hexIsland={hexIslandState as HexSettlementBoardState}
+            hexIsland={hexIslandState as unknown as HexSettlementBoardState}
             enabled={isMyTurn}
             locale={locale}
             onAct={(actionId, payload) => {

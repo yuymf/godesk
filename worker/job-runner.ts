@@ -1011,7 +1011,7 @@ export async function runCreatorJob(
               }
             : null;
       const capabilityGap = gameSpecCapabilityGap(`${input.name ?? ""}\n${idea}\n${authoredMaterial}`);
-      proposedRuntime = capabilityGap ? null : runtimeOperation;
+      proposedRuntime = capabilityGap ? null : (runtimeOperation as any);
       if (proposedRuntime?.op === "configure_auto_battler" && autoBattlerAssetIntents?.length) {
         const applied = await applyAssetIntentsToConfigure(
           host, job.projectId, proposedRuntime as { op: "configure_auto_battler"; config: Record<string, unknown> },

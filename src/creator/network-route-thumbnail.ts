@@ -51,7 +51,7 @@ export function createInitialNetworkRouteSessionSlice(input?: {
     const fields = networkRouteToSessionFields(
       createInitialState(networkRouteAdapter, cfg, 42),
     );
-    return fields.networkRoute;
+    return fields.networkRoute as NetworkRouteSessionSlice;
   }
   const cities = DEFAULT_NETWORK_CITIES.map((city) => ({ ...city }));
   const edges = DEFAULT_NETWORK_EDGES.map((edge) => ({ ...edge }));

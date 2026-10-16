@@ -2365,7 +2365,6 @@ export class CreatorProjects extends DurableObject<Env> {
         // T152 · longer chain for sub-5s force
         const wantChain = input.chainSetup === true || input.chainSetup === 1 || input.chainSetup === "1";
         if (wantChain) {
-          const seatN = Number(input.seat);
           for (let hop = 0; hop < 16; hop++) { // T152 · up to 16 setup hops / RTT (full 4p setup)
             const p0goal = updatedRoom.state.hexIsland?.players?.[0];
             if (

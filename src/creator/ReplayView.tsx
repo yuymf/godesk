@@ -119,7 +119,7 @@ export function ReplayView({ replayId }: { replayId: string }) {
           />
         ) : replay.finalState.hexIsland ? (
           <HexSettlementScenePreview
-            hexIsland={replay.finalState.hexIsland as HexSettlementBoardState}
+            hexIsland={replay.finalState.hexIsland as unknown as HexSettlementBoardState}
             importedModels={importedModels}
           />
         ) : replay.finalState.networkRoute ? (

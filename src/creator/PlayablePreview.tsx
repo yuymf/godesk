@@ -236,7 +236,7 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
                 content: patternKernel.content ?? null,
               }),
               42,
-            )).patternDraft!}
+            )).patternDraft! as React.ComponentProps<typeof PatternDraftBoard>["draft"]}
             activeSeat={0} enabled={false} readOnly status="active" viewerSeat={0}
           />
         </section>

@@ -212,6 +212,8 @@ export function defaultTicketsContent(
     faceUpCount: overrides?.faceUpCount ?? 5,
     cardsPerColor: overrides?.cardsPerColor ?? 8,
     wildCount: overrides?.wildCount ?? 10,
+    faceUpWildFloodLimit: overrides?.faceUpWildFloodLimit ?? 3,
+    longestPathBonus: overrides?.longestPathBonus ?? 10,
   };
 }
 
