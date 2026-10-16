@@ -32,7 +32,11 @@ describe("UI-surface-contrast · softContact / vignette / chrome floors", () => 
     expect(body).toMatch(/mk\(0\.92/);
     expect(body).toMatch(/mk\(1\.28,\s*Math\.min\(0\.018/);
     // Tile foot tightened (generic, not H04 fork)
-    expect(obj).toMatch(/softContactShadow\(0\.72,\s*0\.72,\s*\{\s*opacity:\s*0\.34/);
+    expect(obj).toMatch(/softContactShadow\(0\.48,\s*0\.48,\s*\{\s*opacity:\s*0\.16/);
+    expect(obj).toMatch(/opacity: 0\.28, boost: 0\.82/);
+    const map = readFileSync("src/render3d/mappers/tabletop.ts", "utf8");
+    expect(map).toMatch(/size \* 0\.82/);
+    expect(map).not.toMatch(/suite === ["']H0/);
     expect(obj).not.toMatch(/suite === ["']H0/);
   });
 

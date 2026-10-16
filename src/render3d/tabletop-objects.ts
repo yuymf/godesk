@@ -1314,7 +1314,7 @@ function porcelainPlate(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const glaze = new Mesh(translated(new CylinderGeometry(0.36, 0.36, 0.02, 28), 0.065), glazeMat);
   glaze.receiveShadow = true;
   group.add(bed, rim, glaze);
-  group.add(softContactShadow(0.40, 0.40, { opacity: 0.52, boost: 0.95 })); // T269 · plate ground
+  group.add(softContactShadow(0.32, 0.32, { opacity: 0.22, boost: 0.75 })); // UI-surface-contrast · plate foot
   return group;
 }
 
@@ -1980,8 +1980,15 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     const sx = Math.max(0.2, Math.abs(node.scale?.[0] ?? 1));
     const sz = Math.max(0.2, Math.abs(node.scale?.[2] ?? sx));
     // T270 · grounded short-contact path for chip stacks (tag from mapper)
+    // UI-surface-contrast · absolute blobs stay foot-only (no opacity 1.0 / boost 1.2 blot pool)
     const grounded = node.tag === "grounded-contact";
-    object = softContactShadow(sx, sz, grounded ? { opacity: 1.0, boost: 1.20, grounded: true } : undefined);
+    object = softContactShadow(
+      sx,
+      sz,
+      grounded
+        ? { opacity: 0.42, boost: 0.78, grounded: true }
+        : { opacity: 0.28, boost: 0.82 },
+    );
   } else if (mesh === "felt-wood-rim") {
     // T044: hollow wood frame — solid box was burying the green felt inset.
     // T092 · grain/normal/roughness microdetail on shared wood rim
@@ -2079,8 +2086,8 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
     // T081 · larger local blob so small tiles still ground at H02/H03 visibility
-    // UI-surface-contrast · tighter tile foot — ring layouts must not pool mid/outer into center blot
-    (object as Group).add(softContactShadow(0.72, 0.72, { opacity: 0.34, boost: 0.70, grounded: true }));
+    // UI-surface-contrast · whisper embed only — absolute contact/ blob is primary foot
+    (object as Group).add(softContactShadow(0.48, 0.48, { opacity: 0.16, boost: 0.62, grounded: true }));
   } else if (mesh === "plaque") {
     object = plaqueWithFace(node, ctx);
     // UI-surface-contrast · plaque foot lighter so seat-close type stays readable
