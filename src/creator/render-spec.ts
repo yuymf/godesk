@@ -510,7 +510,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#5affb8", "cloth", 0.99, 0, undefined, 0.99),  // T044…T234 product green felt
+      board: material("#62ffc0", "cloth", 0.99, 0, undefined, 0.99),  // T044…T234 product green felt
       table: material("#ffe4b8", "grain", 0.30, 0.24), // T092…T234 · brighter wood rim (corner-calm)
       piece: material("#fffaf0", "none", 0.10, 0.34, 0.92), // T198…T234 · plastic-wood piece
       card: material("#fffffa", "none", 0.10, 0.26, 0.88), // T198…T234 · card stock
@@ -542,13 +542,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     }
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
-        board: material("#38ff98", "cloth", 0.99, 0, undefined, 0.99),  // T044…T234 pattern felt
-        piece: material("#fafdff", "none", 0.10, 0.30, 0.90), // T061…T234
+        board: material("#52ffb0", "cloth", 0.99, 0, undefined, 0.99),  // T044…T234 pattern felt
+        piece: material("#ffffff", "none", 0.08, 0.34, 0.94), // T061…T234
         slot: material("#3f3f46", "none", 0.82, 0.05, 0.12),  // legacy recessed slots
         // T054 · pale print plate under wall hue tints (square grid, not black pits)
-        "wall-print": material("#e7e5e4", "none", 0.88, 0.02, 0.08),
+        "wall-print": material("#f2f0ee", "none", 0.82, 0.04, 0.12), // T234
         // T058 · elongated pattern-line / floor troughs
-        "line-trough": material("#44403c", "none", 0.9, 0.04, 0.06),
+        "line-trough": material("#2a2826", "none", 0.88, 0.06, 0.08), // T234
       });
       // T050/T054/T058: wall empties → square print; lines → trough strips (not round pits)
       render.bindings = [
