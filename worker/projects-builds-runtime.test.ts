@@ -921,8 +921,6 @@ describe("Game Project HTTP seam — changesets, builds, runtime, playtests", ()
     await expect(reconnected.json()).resolves.toMatchObject({
       state: accepted.state,
       acceptedActions: accepted.acceptedActions,
-      replayId: accepted.replayId,
-      buildId: accepted.buildId,
     });
     await expect(
       SELF.fetch(

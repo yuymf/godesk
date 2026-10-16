@@ -66,4 +66,6 @@
     "src/runtime/adapters/auto-battler-packs.ts",
     "src/runtime/topology-stub.ts"
   ]
+,
+  "exclude": ["worker/**/*.test.ts"]
 }
