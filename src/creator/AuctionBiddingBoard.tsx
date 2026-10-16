@@ -91,9 +91,10 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
         </span>
       </div>
       {/* T071 */}
-      <details className="desk-chrome desk-action-drawer">
+      <details className="desk-chrome desk-action-drawer" open data-ui-action-drawer="1">
         <summary className="desk-action-drawer-summary">行动</summary>
         <div className="desk-action-drawer-body">
+        {!canPass && !canBid ? <p className="desk-action-empty" data-empty="1">暂无合法行动 · 等待回合</p> : null}
       <section aria-label="拍卖状态" aria-live="polite" className={`auction-status${status === "complete" ? " is-complete" : " is-live"}`}>
         <strong>
           {status === "complete"
@@ -210,8 +211,8 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
       {!readOnly && status === "active" && phase === "bidding" ? (
         <div className="auction-actions" aria-label="竞价操作">
           <label>出价金额<input aria-label="出价金额" type="number" min={minimum} max={auction.chips[activeSeat]} step="1" value={amount} disabled={!canPass} onChange={(event) => setAmount(Number(event.target.value))} /></label>
-          <button className="auction-bid" type="button" disabled={!canBid} onClick={() => onAct?.("bid", { amount })}>出价</button>
-          <button className="auction-pass" type="button" disabled={!canPass} onClick={() => onAct?.("pass")}>放弃</button>
+          <button className={`auction-bid ${canBid ? "is-legal" : "is-disabled"}`} type="button" disabled={!canBid} onClick={() => onAct?.("bid", { amount })}>出价</button>
+          <button className={`auction-pass ${canPass ? "is-legal" : "is-disabled"}`} type="button" disabled={!canPass} onClick={() => onAct?.("pass")}>放弃</button>
         </div>
       ) : null}
       {!readOnly && status === "active" && phase === "sealed" && canAct ? (

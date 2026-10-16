@@ -127,9 +127,10 @@ export function GemEngineBoard({
         <span className="desk-stage-hud-supply" aria-label="gem-bank">{bankLine}</span>
       </div>
       {/* T071 */}
-      <details className="desk-chrome desk-action-drawer">
+      <details className="desk-chrome desk-action-drawer" open data-ui-action-drawer="1">
         <summary className="desk-action-drawer-summary">行动</summary>
         <div className="desk-action-drawer-body">
+        {!canAct ? <p className="desk-action-empty" data-empty="1">暂无合法行动 · 等待回合</p> : null}
       <div role="region" aria-label="贵族" className="gem-nobles">
         {gem.nobles.map((n, i) => (
           <span key={i}>{String((n as { name?: string }).name ?? "贵族")}</span>
@@ -148,6 +149,7 @@ export function GemEngineBoard({
               <span key={String(c.id ?? index)} className="gem-market-card">
                 <button
                   type="button"
+                  className={!canAct || pendingDiscard ? "is-disabled" : "is-legal"}
                   disabled={!canAct || pendingDiscard}
                   onClick={() => onAct?.("buy", { tier: tier + 1, index })}
                 >
@@ -155,6 +157,7 @@ export function GemEngineBoard({
                 </button>
                 <button
                   type="button"
+                  className={!canAct || pendingDiscard ? "is-disabled" : "is-legal"}
                   disabled={!canAct || pendingDiscard}
                   onClick={() => onAct?.("reserve", { tier: tier + 1, index })}
                 >
@@ -193,6 +196,7 @@ export function GemEngineBoard({
             <button
               key={String(card.id ?? index)}
               type="button"
+              className={!canAct || pendingDiscard ? "is-disabled" : "is-legal"}
               disabled={!canAct || pendingDiscard}
               onClick={() => onAct?.("buy_reserved", { index })}
             >
@@ -219,16 +223,16 @@ export function GemEngineBoard({
             </>
           ) : (
             <>
-              <button type="button" onClick={() => onAct?.("take_diverse", { colors: ["white", "blue", "green"] })}>
+              <button type="button" className="is-legal" onClick={() => onAct?.("take_diverse", { colors: ["white", "blue", "green"] })}>
                 拿白蓝绿
               </button>
-              <button type="button" onClick={() => onAct?.("take_diverse", { colors: ["red", "black", "white"] })}>
+              <button type="button" className="is-legal" onClick={() => onAct?.("take_diverse", { colors: ["red", "black", "white"] })}>
                 拿红黑白
               </button>
-              <button type="button" onClick={() => onAct?.("take_pair", { color: "blue" })}>
+              <button type="button" className="is-legal" onClick={() => onAct?.("take_pair", { color: "blue" })}>
                 拿两蓝
               </button>
-              <button type="button" onClick={() => onAct?.("reserve", { tier: 1, fromDeck: true })}>
+              <button type="button" className="is-legal" onClick={() => onAct?.("reserve", { tier: 1, fromDeck: true })}>
                 保留 T1 牌库顶
               </button>
             </>

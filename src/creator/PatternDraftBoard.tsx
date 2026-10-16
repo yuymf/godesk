@@ -134,9 +134,10 @@ export function PatternDraftBoard({
         </span>
       </div>
       {/* T071 */}
-      <details className="desk-chrome desk-action-drawer">
+      <details className="desk-chrome desk-action-drawer" open data-ui-action-drawer="1">
         <summary className="desk-action-drawer-summary">行动</summary>
         <div className="desk-action-drawer-body">
+        {!canAct ? <p className="desk-action-empty" data-empty="1">暂无合法行动 · 等待回合</p> : null}
       <div role="region" aria-label="工厂展示">
         {draft.factories.map((factory, fi) => {
           const colors = [...new Set(factory)];
@@ -150,6 +151,7 @@ export function PatternDraftBoard({
                     <button
                       key={`${fi}-${color}-${line}`}
                       type="button"
+                      className="is-legal"
                       onClick={() => draftFromFactory(fi, color, line)}
                     >
                       {COLOR_LABEL[color]}→行{line + 1}
@@ -161,6 +163,7 @@ export function PatternDraftBoard({
                   <button
                     key={`${fi}-${color}-floor`}
                     type="button"
+                    className="is-legal"
                     onClick={() => draftFromFactory(fi, color, "floor")}
                   >
                     {COLOR_LABEL[color]}→地板
@@ -179,6 +182,7 @@ export function PatternDraftBoard({
               <button
                 key={`c-${color}-${line}`}
                 type="button"
+                className="is-legal"
                 onClick={() => draftFromCenter(color, line)}
               >
                 {COLOR_LABEL[color]}→行{line + 1}
