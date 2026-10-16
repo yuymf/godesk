@@ -884,6 +884,11 @@ export const hexIslandAdapter: PlayKernelAdapter<HexIslandGenre, HexIslandConfig
   listLegalActions(state, playerId) {
     if (state.status !== "active") return [];
     const genre = state.genre;
+    // Harden older session snapshots missing T023/T025 floor fields.
+    if (!genre.activeFloorLots) genre.activeFloorLots = [];
+    if (genre.pendingAuction === undefined) genre.pendingAuction = null;
+    if (genre.lastFloorBroker === undefined) genre.lastFloorBroker = null;
+    if (genre.pendingTrade === undefined) genre.pendingTrade = null;
     const auction = genre.pendingAuction;
     const offTurnAuction =
       Boolean(auction) &&
@@ -1219,7 +1224,7 @@ export const hexIslandAdapter: PlayKernelAdapter<HexIslandGenre, HexIslandConfig
     if (
       !genre.pendingTrade &&
       !genre.pendingAuction &&
-      genre.activeFloorLots.length === 0
+      (genre.activeFloorLots?.length ?? 0) === 0
     ) {
       for (const resource of RESOURCES) {
         if (player.resources[resource] < 1) continue;
@@ -1242,6 +1247,10 @@ export const hexIslandAdapter: PlayKernelAdapter<HexIslandGenre, HexIslandConfig
 
   reduce(state, action) {
     if (state.status !== "active") return null;
+    if (!state.genre.activeFloorLots) state.genre.activeFloorLots = [];
+    if (state.genre.pendingAuction === undefined) state.genre.pendingAuction = null;
+    if (state.genre.lastFloorBroker === undefined) state.genre.lastFloorBroker = null;
+    if (state.genre.pendingTrade === undefined) state.genre.pendingTrade = null;
     const auction0 = state.genre.pendingAuction;
     const offTurnAuction =
       Boolean(auction0) &&

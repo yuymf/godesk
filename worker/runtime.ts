@@ -2246,5 +2246,8 @@ function sessionHexIslandToGenre(hexIsland: NonNullable<import("../src/creator/p
           take: { ...(hexIsland.pendingTrade.take as HexIslandPlayer["resources"]) },
         }
       : null,
+    pendingAuction: (hexIsland as { pendingAuction?: HexIslandGenre["pendingAuction"] }).pendingAuction ?? null,
+    activeFloorLots: (hexIsland as { activeFloorLots?: HexIslandGenre["activeFloorLots"] }).activeFloorLots ?? [],
+    lastFloorBroker: (hexIsland as { lastFloorBroker?: HexIslandGenre["lastFloorBroker"] }).lastFloorBroker ?? null,
   };
 }
