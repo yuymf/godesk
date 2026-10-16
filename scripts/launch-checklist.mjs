@@ -20,8 +20,8 @@
  *        [--only id,...] [--mode warn|block] [--block id,...] [--out launch-checklist.json]
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, writeFileSync, appendFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, appendFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { TIER_BUDGETS } from "./perf/budgets.mjs";
@@ -246,6 +246,7 @@ async function main() {
     }
   }
   if (values.out) {
+    mkdirSync(dirname(values.out), { recursive: true });
     writeFileSync(values.out, `${JSON.stringify({ schema: "godesk-launch-checklist/v1", mode, blocking, items, capturedAt: new Date().toISOString() }, null, 2)}\n`);
   }
   process.exitCode = exitCode;
