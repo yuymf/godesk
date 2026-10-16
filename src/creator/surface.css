@@ -6695,12 +6695,15 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   border-top-left-radius: inherit;
   border-top-right-radius: inherit;
 }
+/* T225/T226 · bottom letterbox also on hex/tidewell (dice-tray contact shadow cornerCalm) */
 .room-view-tabletop-immersive.room-view-seated .tabletop-stage::after,
-.room-view-tabletop-immersive.room-view-seated .g3d-stage::after {
+.room-view-tabletop-immersive.room-view-seated .g3d-stage::after,
+.room-view-hex-island.room-view-seated .g3d-stage::after,
+.room-view-tidewell-immersive.room-view-seated .g3d-stage::after {
   content: "" !important;
   position: absolute !important;
   left: 0; right: 0; bottom: 0;
-  height: 10px;
+  height: 18px;
   background: #ffffff;
   z-index: 6;
   pointer-events: none;

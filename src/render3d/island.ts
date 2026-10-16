@@ -779,9 +779,9 @@ export function createIslandLayer(): IslandLayer {
       // 连续岩壁 + 顶盖（1 个 draw call，几何随地块集合重建）。
       wallGeom?.dispose();
       wallGeom = coastWallGeometry(tiles, {
-        // T225 · shore wet foot readable on medium+ (shallow reef microcontrast)
-        wetFootDark: tier === "high" || tier === "medium",
-        midBandDark: tier === "high" ? 1 : tier === "medium" ? 0.42 : 0.12,
+        // T225 · wet foot on high only (cornerCalm); shore microcontrast via water shallow/foam
+        wetFootDark: tier === "high",
+        midBandDark: tier === "high" ? 1 : tier === "medium" ? 0.38 : 0,
       });
       rockMat.map = tier === "high" ? rockMapHigh : tier === "medium" ? rockMapMed : rockMapLow;
       rockMat.needsUpdate = true;

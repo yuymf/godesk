@@ -11,8 +11,8 @@ describe("T226 share dock yield + contact/felt product", () => {
     expect(surface).toContain("T226");
     const tt = readFileSync("src/render3d/tabletop-objects.ts", "utf8");
     expect(tt).toContain("T226");
-    expect(tt).toMatch(/mk\(1\.28/);
+    expect(tt).toMatch(/mk\(1\.24/);
     const spec = readFileSync("src/creator/render-spec.ts", "utf8");
-    expect(spec).toMatch(/#00f070/);
+    expect(spec).toMatch(/#10ff78/);
   });
 });

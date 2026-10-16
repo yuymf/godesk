@@ -13,10 +13,10 @@ describe("T222/T225 hex product parts", () => {
     const island = readFileSync("src/render3d/island.ts", "utf8");
     expect(island).toMatch(/SIGN_RADIUS = 0\.335/);
     expect(island).toContain("T225");
-    expect(island).toMatch(/wetFootDark: tier === "high" \|\| tier === "medium"/);
+    expect(island).toMatch(/wetFootDark: tier === "high"/);
     const spec = readFileSync("src/creator/render-spec.ts", "utf8");
-    expect(spec).toMatch(/#2af0dc/);
-    expect(spec).toMatch(/#0c6878/);
+    expect(spec).toMatch(/#2ef4e0/);
+    expect(spec).toMatch(/#0e7284/);
     expect(spec).not.toMatch(/suite === ["']H0/);
     const hex = readFileSync("src/render3d/mappers/hex-settlement.ts", "utf8");
     expect(hex).toMatch(/1\.42/);

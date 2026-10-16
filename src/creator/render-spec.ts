@@ -315,8 +315,8 @@ function baseDefault(kernelType: string | null | undefined): RenderSpec {
       enabled: kernelType === "hex-settlement-v1" || kernelType === "harbor-voyage-v1",
       // R20：与 water/mesh DEFAULT_SPEC 同步 — 明亮青绿 + 浅滩环。
       // T183 · shared water chroma (hex/harbor kernel family)
-      shallow: "#2af0dc", // T183/T225 · shallow reef microcontrast
-      deep: "#0c6878", // tip-or-brighter deep (corner-safe)
+      shallow: "#2ef4e0", // T183/T225 · shallow reef microcontrast
+      deep: "#0e7284", // T225 corner-safe deep
       waveHeight: 0.092,
       waveSpeed: 0.70,
       foam: 1.0, // T183/T225 shore foam (unit clamp)
@@ -478,7 +478,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T172/T177/T192/T201/T206 · denser/brighter network map cloth (shared MaterialLibrary)
-      map: material("#20ffb0", "cloth", 0.99, 0, undefined, 0.99), // T177…T214/T218
+      map: material("#28ffb8", "cloth", 0.99, 0, undefined, 0.99), // T177…T225/T226
       table: material("#f8d0a0", "grain", 0.30, 0.26), // T110…T218/T221 · warmer exterior/rim (corner-calm)
       ink: material("#081420", "none", 0.22, 0.28, 0.58), // T214/T213/T218 route ink
       piece: material("#fff8ea", "none", 0.10, 0.34, 0.94), // T201/T206/T210/T213/T217 · plastic-wood piece
@@ -510,11 +510,11 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#00f070", "cloth", 0.99, 0, undefined, 0.99),  // T044…T226 product green felt
+      board: material("#10ff78", "cloth", 0.99, 0, undefined, 0.99),  // T044…T226 product green felt
       table: material("#f6d8a8", "grain", 0.34, 0.20), // T092…T221 · brighter wood rim (corner-calm)
       piece: material("#fff6e6", "none", 0.18, 0.24, 0.78), // T198/T206/T210 · plastic-wood piece
-      card: material("#fff8ee", "none", 0.22, 0.14, 0.68), // T198/T206/T213 · card stock
-      resource: material("#ffd898", "none", 0.08, 0.48, 0.98), // T198/T206/T213 · gem crystal
+      card: material("#fffaf2", "none", 0.18, 0.16, 0.72), // T198…T225 · card stock
+      resource: material("#ffe0a8", "none", 0.06, 0.52, 0.99), // T198…T225 · gem crystal
       token: material("#d8c4ff", "none", 0.14, 0.36, 0.82), // T198/T206/T213 · chip
       ink: material("#203440", "none", 0.36, 0.14, 0.26),
     });
