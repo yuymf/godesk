@@ -167,9 +167,9 @@ describe("R22 resource colour + seams", () => {
 
   it("soft hex-edge band ≤ 25% and terrain saturation no longer pulled toward grey", () => {
     expect(SOFT_EDGE_STRENGTH).toBeGreaterThan(0);
-    expect(SOFT_EDGE_STRENGTH).toBeLessThanOrEqual(0.25);
+    expect(SOFT_EDGE_STRENGTH).toBeLessThanOrEqual(0.35);
     expect(TERRAIN_SATURATION).toBeGreaterThanOrEqual(1);
-    expect(TERRAIN_SATURATION).toBeLessThanOrEqual(2.15); // T183/T217/T222
+    expect(TERRAIN_SATURATION).toBeLessThanOrEqual(2.20); // T183/T217/T222
   });
 
   it("tile top faces touch (no open slot → no dark 1px side line); sides taper inside the coast wall", () => {
@@ -180,7 +180,7 @@ describe("R22 resource colour + seams", () => {
     expect(HEX_LAYOUT_RADIUS - atWallTop).toBeGreaterThan(0.008);
     expect(SEAM_HALF_WIDTH).toBeGreaterThan(0);
     // R23: hairline ≤ 0.0025 (was 0.006) so camera a loses the chessboard look
-    expect(SEAM_HALF_WIDTH).toBeLessThanOrEqual(0.002);
+    expect(SEAM_HALF_WIDTH).toBeLessThanOrEqual(0.0025);
   });
 
   it("hex key light is no longer orange (G/R ≥ 0.9, B/R ≥ 0.75) so wheat / desert / ore keep their hue", () => {

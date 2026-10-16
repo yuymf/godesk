@@ -6729,3 +6729,20 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   opacity: 0.15 !important;
   font-size: 0.32rem !important;
 }
+
+/* T230 · desk 座位/行动/骰盘托盘再让路 */
+.room-view-tabletop-immersive.room-view-seated .desk-action-drawer:not([open]) {
+  max-height: 0.32rem !important;
+  opacity: 1 !important;
+  background: #f7f3ea !important;
+}
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud {
+  max-height: 0.36rem !important;
+  opacity: 1 !important;
+  background: #f7f3ea !important;
+}
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud * {
+  color: transparent !important;
+  opacity: 0.12 !important;
+  font-size: 0.3rem !important;
+}

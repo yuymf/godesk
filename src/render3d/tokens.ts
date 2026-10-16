@@ -222,7 +222,7 @@ export const TILE_FACE_RADIUS = 1.0;
  * R22 · 地块侧面向下内收：底面外接半径 = TILE_FACE_RADIUS × TILE_BASE_SCALE。顶面相接（无缝槽、无暗线），
  * 外圈侧面仍缩在岸崖顶（SKIRT_TOP_Y 处 ≈0.989）之内，不与岸崖面 z-fight。
  */
-export const TILE_BASE_SCALE = 0.92;
+export const TILE_BASE_SCALE = 0.88; // T229 · stronger cardboard bevel / thickness read
 /** R21 · 顶面内切半径（边心距）= TILE_FACE_RADIUS·√3/2，供 shader 软边带使用。 */
 export const TILE_FACE_APOTHEM = TILE_FACE_RADIUS * (Math.sqrt(3) / 2);
 

@@ -3473,3 +3473,29 @@ body:has(.room-view-tidewell-immersive) {
   color: transparent !important;
   opacity: 0.28 !important;
 }
+
+/* T230 · 座位托盘/建造底栏/骰盘再让路：浅色垫保留，字与图标近隐（cornerCalm） */
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock {
+  opacity: 0.32 !important;
+  max-height: 2.0rem !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-hand,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-actions,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-dice,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-build,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock button,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-chip,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-seat-tray,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock [class*="seat"],
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock [class*="dice"] {
+  opacity: 0.14 !important;
+  color: transparent !important;
+  font-size: 0.34rem !important;
+  transform: scale(0.72);
+  transform-origin: bottom center;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-players,
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-column {
+  opacity: 0.14 !important;
+  color: transparent !important;
+}

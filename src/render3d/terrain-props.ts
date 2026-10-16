@@ -366,7 +366,7 @@ function pineTallGeometry(): BufferGeometry {
   const crown: BufferGeometry[] = [];
   tiers.forEach(([y, r], ti) => {
     const a0 = ti * 1.9;
-    const n = ti < 3 ? 3 : 2;
+    const n = ti < 3 ? 4 : 3; // T229 denser crown clumps
     for (let k = 0; k < n; k += 1) {
       const a = a0 + k * ((Math.PI * 2) / n);
       const dy = ((ti * 7 + k * 5) % 5 - 2) * 0.006;
@@ -375,7 +375,7 @@ function pineTallGeometry(): BufferGeometry {
   });
   crown.push(clump(0, 0.575, 0, 0.026, 1.5, "#2a5a3a", "#4a8a56", 41, 0.12));
   return merged([
-    grad(at(new CylinderGeometry(0.014, 0.022, 0.09, 5, 1, true), 0, 0.045, 0), "#3a2a1a", "#5a4028", 0, 0.09),
+    grad(at(new CylinderGeometry(0.014, 0.022, 0.09, 8, 1, true), 0, 0.045, 0), "#3a2a1a", "#5a4028", 0, 0.09), // T229 trunk segs
     ...crown,
     // R16 soft brush cards near crown — feathered silhouette vs hard umbrella
     brushCard(0.02, 0.5, 0.01, 0.07, 0.05, 0.4, "#2a5a36", "#4a8050"),
@@ -389,13 +389,13 @@ function pineTallGeometry(): BufferGeometry {
 function pineRoundGeometry(): BufferGeometry {
   // R18: cauliflower crown of painted clumps (warm yellow-green tops, cool undersides).
   const ring: BufferGeometry[] = [];
-  for (let k = 0; k < 5; k += 1) {
-    const a = k * ((Math.PI * 2) / 5) + 0.3;
+  for (let k = 0; k < 6; k += 1) { // T229 denser cauliflower
+    const a = k * ((Math.PI * 2) / 6) + 0.3;
     const rr = 0.088 + (k % 2) * 0.012;
     ring.push(clump(Math.cos(a) * 0.09, 0.17 + (k % 3) * 0.035, Math.sin(a) * 0.09, rr, 0.8, "#24502c", k % 2 ? "#5e9a54" : "#6aa65a", 5 + k * 7));
   }
   return merged([
-    grad(at(new CylinderGeometry(0.02, 0.03, 0.08, 5, 1, true), 0, 0.04, 0), "#4a3220", "#6b4a2c", 0, 0.08),
+    grad(at(new CylinderGeometry(0.02, 0.03, 0.08, 8, 1, true), 0, 0.04, 0), "#4a3220", "#6b4a2c", 0, 0.08), // T229
     clump(0, 0.24, 0, 0.12, 0.82, "#24542c", "#5a9650", 3),
     ...ring,
     clump(0.012, 0.335, -0.01, 0.075, 0.9, "#2c5c32", "#74ae60", 29),
@@ -407,7 +407,7 @@ function pineRoundGeometry(): BufferGeometry {
 /** 矮灌：短胖两层 + 侧叶团，偏橄榄绿，高约 0.3。 */
 function pineSmallGeometry(): BufferGeometry {
   return merged([
-    grad(at(new CylinderGeometry(0.016, 0.022, 0.05, 5, 1, true), 0, 0.025, 0), "#3e2c1c", "#5c4028", 0, 0.05),
+    grad(at(new CylinderGeometry(0.016, 0.022, 0.05, 8, 1, true), 0, 0.025, 0), "#3e2c1c", "#5c4028", 0, 0.05), // T229
     // R18: olive shrub = 4 painted clumps (no lathe cone)
     clump(0, 0.115, 0, 0.088, 0.78, "#284626", "#5a7c40", 13),
     clump(0.065, 0.085, 0.03, 0.06, 0.75, "#264424", "#567838", 17),
@@ -442,12 +442,12 @@ function blobShadowGeometry(): BufferGeometry {
  *  脚下只留牧场底色的软溶片（alpha→0，无硬边圆盘、无深色接触阴影）。 */
 function sheepGeometry(): BufferGeometry {
   const leg = (x: number, z: number) =>
-    grad(at(new CylinderGeometry(0.0115, 0.0095, 0.07, 6, 1, true), x, 0.035, z), "#2a231e", "#3f352d", 0, 0.07);
+    grad(at(new CylinderGeometry(0.0115, 0.0095, 0.07, 8, 1, true), x, 0.035, z), "#2a231e", "#3f352d", 0, 0.07); // T229
   const puff = (x: number, y: number, z: number, r: number) =>
-    grad(at(new SphereGeometry(r, 8, 6), x, y, z), "#d9d3c4", "#fffdf6", y - r, y + r, 0.06);
+    grad(at(new SphereGeometry(r, 10, 8), x, y, z), "#d9d3c4", "#fffdf6", y - r, y + r, 0.06); // T229 wool segs
   const parts: BufferGeometry[] = [
     // fleece body: soft cream underside → white top (volume from colour, not a dark blotch)
-    grad(at(new SphereGeometry(0.074, 12, 8), 0, 0.128, 0, 1.45, 0.92, 1.05), "#cfc8b8", "#fbf8f0", 0.06, 0.2, 0.05),
+    grad(at(new SphereGeometry(0.074, 14, 10), 0, 0.128, 0, 1.45, 0.92, 1.05), "#cfc8b8", "#fbf8f0", 0.06, 0.2, 0.05), // T229
     puff(0.05, 0.168, 0.03, 0.04), puff(-0.01, 0.178, -0.028, 0.042), puff(-0.06, 0.162, 0.03, 0.038),
     puff(0.035, 0.16, -0.045, 0.036), puff(-0.055, 0.15, -0.045, 0.035), puff(0.075, 0.138, 0.0, 0.034),
     puff(-0.095, 0.14, 0.0, 0.033), puff(0.0, 0.15, 0.06, 0.036), puff(0.0, 0.112, -0.062, 0.034),
@@ -477,13 +477,15 @@ function troughGeometry(): BufferGeometry {
 
 /** R20 山地：低矮贴地的岩块群（≈R19 一半高、体量 ~0.7×），岩色贴 ore tile，根脚溶入灰石面。 */
 function boulderGeometry(): BufferGeometry {
+  // T229 · product rock: higher-detail dodecahedra + softer jag (less toy facet)
   return merged([
-    paint(jag(at(new DodecahedronGeometry(0.085, 1), 0, 0.035, 0, 1.4, 0.62, 1.15), 0.14, 1), "#a7adb4", 0.26),
-    paint(jag(at(new DodecahedronGeometry(0.06, 1), 0.075, 0.06, -0.035, 1.1, 0.78, 0.95, 0.5), 0.12, 3), "#6a7078", 0.24),
-    paint(jag(at(new DodecahedronGeometry(0.045, 0), -0.06, 0.075, 0.04, 1.0, 0.8, 0.9, -0.4), 0.1, 5), "#848b93", 0.22),
-    paint(jag(at(new DodecahedronGeometry(0.04, 0), -0.09, 0.02, 0.07, 1.2, 0.6, 1.0, 1.1), 0.1, 2), "#62676e", 0.24),
+    paint(jag(at(new DodecahedronGeometry(0.085, 1), 0, 0.035, 0, 1.4, 0.62, 1.15), 0.10, 1), "#a7adb4", 0.28),
+    paint(jag(at(new DodecahedronGeometry(0.06, 1), 0.075, 0.06, -0.035, 1.1, 0.78, 0.95, 0.5), 0.09, 3), "#6a7078", 0.26),
+    paint(jag(at(new DodecahedronGeometry(0.05, 1), -0.06, 0.075, 0.04, 1.0, 0.8, 0.9, -0.4), 0.08, 5), "#848b93", 0.24),
+    paint(jag(at(new DodecahedronGeometry(0.042, 1), -0.09, 0.02, 0.07, 1.2, 0.6, 1.0, 1.1), 0.08, 2), "#62676e", 0.26),
+    paint(jag(at(new DodecahedronGeometry(0.035, 0), 0.04, 0.02, 0.08, 1.1, 0.55, 1.0, 0.3), 0.07, 4), "#90969c", 0.22),
     // ground-bleed skirt
-    grad(at(new CircleGeometry(0.12, 10), 0, 0.003, 0, 1.2, 1, 1.1).rotateX(-Math.PI / 2), "#9ca2a9", "#b0b6bc", 0, 0.01, 0.1),
+    grad(at(new CircleGeometry(0.13, 12), 0, 0.003, 0, 1.2, 1, 1.1).rotateX(-Math.PI / 2), "#9ca2a9", "#b0b6bc", 0, 0.01, 0.1),
   ]);
 }
 
@@ -758,13 +760,13 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
             : TILE_TOP,
         z: tile.center[2] + dz,
         yaw: kind === "wheatrow" ? -rowYaw + (rand() - 0.5) * 0.06 : rand() * Math.PI * 2,
-        // R20: smaller / lower trees + boulders (ground-hugging, hex face reads first).
+        // R20/T229: product tabletop props — slightly fuller silhouette, still ground-hugging.
         scale: isPine(kind)
-          ? (kind === "pineTall" ? 0.52 + rand() * 0.18 : kind === "pineRound" ? 0.54 + rand() * 0.16 : 0.58 + rand() * 0.2)
-          : kind === "canopy" ? 0.62 + rand() * 0.18
-          : kind === "boulder" ? 0.8 + rand() * 0.25
-          : kind === "clay" || kind === "bricks" ? 1.0 + rand() * 0.28
-          : 0.95 + rand() * 0.3,
+          ? (kind === "pineTall" ? 0.58 + rand() * 0.20 : kind === "pineRound" ? 0.60 + rand() * 0.18 : 0.64 + rand() * 0.22)
+          : kind === "canopy" ? 0.68 + rand() * 0.18
+          : kind === "boulder" ? 0.88 + rand() * 0.28
+          : kind === "clay" || kind === "bricks" ? 1.05 + rand() * 0.28
+          : 0.98 + rand() * 0.3,
         stretch: isPine(kind)
           ? (kind === "pineTall" ? 0.82 + rand() * 0.14 : kind === "pineRound" ? 0.78 + rand() * 0.14 : 0.8 + rand() * 0.14)
           : kind === "canopy" ? 0.6 + rand() * 0.2
