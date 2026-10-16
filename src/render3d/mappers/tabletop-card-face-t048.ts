@@ -16,13 +16,23 @@ export type CardFaceZone = {
 
 /** Canonical layout zones — forbid center-number-only faces. */
 /** T063 · illustration panel dominates face; cost/border strip must not swallow art. */
+/** UI-card-schema · taller cost + title bands for seat-close readout. */
 export const CARD_FACE_ZONES: ReadonlyArray<CardFaceZone> = [
-  { id: "illustration", x: 0.04, y: 0.04, w: 0.92, h: 0.56 },
-  { id: "rewardBar", x: 0.04, y: 0.61, w: 0.92, h: 0.08 },
-  { id: "prestige", x: 0.74, y: 0.64, w: 0.18, h: 0.12 },
-  { id: "cost", x: 0.06, y: 0.78, w: 0.88, h: 0.14 },
-  { id: "title", x: 0.06, y: 0.64, w: 0.64, h: 0.12 },
+  { id: "illustration", x: 0.04, y: 0.03, w: 0.92, h: 0.52 },
+  { id: "rewardBar", x: 0.04, y: 0.56, w: 0.92, h: 0.07 },
+  { id: "prestige", x: 0.72, y: 0.58, w: 0.22, h: 0.14 },
+  { id: "cost", x: 0.05, y: 0.74, w: 0.90, h: 0.20 },
+  { id: "title", x: 0.05, y: 0.58, w: 0.64, h: 0.14 },
 ];
+
+/** UI-card-schema · minimum seat-close glyph floors (canvas px at 512-wide face). */
+export const CARD_SCHEMA_FLOORS = {
+  costDotRadius: 24,
+  costDigitPx: 32,
+  titlePx: 42,
+  prestigePx: 40,
+  underlayPad: 6,
+} as const;
 
 const CHIP: Record<string, string> = {
   white: "#f4efe6",
@@ -301,19 +311,25 @@ export function paintCardFace(
   g.fillRect(bar.x, bar.y, bar.w, Math.max(2, bar.h * 0.35));
 
   // title / tier (NOT a giant center-only number)
+  // UI-card-schema · darker underlay + larger seat-close title
   const titleBox = zones.title!;
+  const floors = CARD_SCHEMA_FLOORS;
   if (input.title && !/^T\d\+/i.test(input.title)) {
-    g.fillStyle = "#1f2937";
-    g.font = '700 36px /* T266 */ "Noto Serif CJK SC","Songti SC",serif';
+    g.fillStyle = "rgba(251,246,236,0.92)";
+    g.fillRect(titleBox.x, titleBox.y + 2, titleBox.w * 0.98, titleBox.h - 4);
+    g.fillStyle = "#0f172a";
+    g.font = `700 ${floors.titlePx}px /* UI-card-schema */ "Noto Serif CJK SC","Songti SC",serif`;
     g.textAlign = "left";
     g.textBaseline = "middle";
-    g.fillText(input.title.slice(0, 10), titleBox.x + 4, titleBox.y + titleBox.h / 2);
+    g.fillText(input.title.slice(0, 10), titleBox.x + 6, titleBox.y + titleBox.h / 2);
   } else if (input.tier != null) {
-    g.fillStyle = "rgba(55,40,25,0.55)";
-    g.font = "700 34px /* T266 */ serif";
+    g.fillStyle = "rgba(251,246,236,0.88)";
+    g.fillRect(titleBox.x, titleBox.y + 2, titleBox.w * 0.45, titleBox.h - 4);
+    g.fillStyle = "#1c1917";
+    g.font = `700 ${floors.titlePx - 4}px /* UI-card-schema */ serif`;
     g.textAlign = "left";
     g.textBaseline = "middle";
-    g.fillText(`T${input.tier}`, titleBox.x + 4, titleBox.y + titleBox.h / 2);
+    g.fillText(`T${input.tier}`, titleBox.x + 6, titleBox.y + titleBox.h / 2);
   }
 
   // prestige badge (corner zone — secondary, not center-number-only)
@@ -321,41 +337,52 @@ export function paintCardFace(
   if (input.prestige != null) {
     const cx = pr.x + pr.w / 2;
     const cy = pr.y + pr.h / 2;
-    const r = Math.min(pr.w, pr.h) * 0.42;
+    const r = Math.max(floors.costDotRadius + 2, Math.min(pr.w, pr.h) * 0.46);
     g.fillStyle = "#fbbf24";
     g.beginPath();
     g.arc(cx, cy, r, 0, Math.PI * 2);
     g.fill();
-    g.strokeStyle = "#92400e";
-    g.lineWidth = 3;
+    g.strokeStyle = "#78350f";
+    g.lineWidth = 4;
     g.stroke();
-    g.fillStyle = "#78350f";
-    g.font = "700 36px serif";
+    g.fillStyle = "#451a03";
+    g.font = `700 ${floors.prestigePx}px serif`;
     g.textAlign = "center";
     g.textBaseline = "middle";
     g.fillText(String(input.prestige), cx, cy + 1);
   }
 
-  // cost row
+  // cost row — UI-card-schema · larger dots + dark underlay for seat-close
   const costBox = zones.cost!;
+  g.fillStyle = "rgba(28,25,23,0.10)";
+  g.fillRect(costBox.x, costBox.y, costBox.w, costBox.h);
+  g.fillStyle = "rgba(255,252,245,0.92)";
+  g.fillRect(costBox.x + 4, costBox.y + 4, costBox.w - 8, costBox.h - 8);
   const costEntries = Object.entries(input.cost ?? {}).filter(([, n]) => n > 0);
+  const step = Math.max(56, floors.costDotRadius * 2 + 12);
   costEntries.forEach(([color, n], i) => {
     const col = i % 4;
     const row = Math.floor(i / 4);
-    const cx = costBox.x + 28 + col * 52;
-    const cy = costBox.y + 28 + row * 44;
+    const cx = costBox.x + 32 + col * step;
+    const cy = costBox.y + costBox.h / 2 + row * (floors.costDotRadius * 2 + 8) - (row ? 0 : 0);
+    const cyDot = costBox.y + Math.min(costBox.h - floors.costDotRadius - 6, floors.costDotRadius + 10 + row * (floors.costDotRadius * 2 + 10));
+    // under-disc for contrast on washed stock
+    g.fillStyle = "rgba(15,23,42,0.22)";
+    g.beginPath();
+    g.arc(cx + 1, cyDot + 2, floors.costDotRadius + floors.underlayPad * 0.35, 0, Math.PI * 2);
+    g.fill();
     g.fillStyle = CHIP[color] ?? input.base ?? "#64748b";
     g.beginPath();
-    g.arc(cx, cy, 18, 0, Math.PI * 2);
+    g.arc(cx, cyDot, floors.costDotRadius, 0, Math.PI * 2);
     g.fill();
-    g.strokeStyle = "rgba(0,0,0,0.35)";
-    g.lineWidth = 2;
+    g.strokeStyle = "#0f172a";
+    g.lineWidth = 3.5;
     g.stroke();
-    g.fillStyle = color === "white" || color === "gold" ? "#1f2937" : "#fff";
-    g.font = "700 26px /* T266 */ sans-serif";
+    g.fillStyle = color === "white" || color === "gold" ? "#0f172a" : "#fff";
+    g.font = `700 ${floors.costDigitPx}px /* UI-card-schema */ sans-serif`;
     g.textAlign = "center";
     g.textBaseline = "middle";
-    g.fillText(String(n), cx, cy);
+    g.fillText(String(n), cx, cyDot + 1);
   });
 
   // footer rule

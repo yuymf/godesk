@@ -420,36 +420,45 @@ function plaqueWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
         g.fillText(String(prestige), W - 52, 52);
       }
       // T115 · shared plaque title ink+halo (same family as station plaques)
-      g.font = '700 34px "Noto Serif CJK SC","Songti SC",serif';
+      // UI-card-schema · larger carved plaque title for seat-close
+      g.font = '700 44px "Noto Serif CJK SC","Songti SC",serif';
       g.textAlign = "center";
       g.textBaseline = "middle";
       // T257 · carved plaque title (wide-frame)
       g.fillStyle = "rgba(15,23,42,0.4)";
       g.fillText(title.slice(0, 8), W / 2 + 2, 110);
-      g.fillStyle = "rgba(255,250,240,0.65)";
+      g.fillStyle = "rgba(255,250,240,0.7)";
       g.fillText(title.slice(0, 8), W / 2 - 1.5, 106);
-      g.lineWidth = 3;
-      g.strokeStyle = "rgba(250,246,239,0.5)";
+      g.lineWidth = 3.5;
+      g.strokeStyle = "rgba(250,246,239,0.55)";
       g.strokeText(title.slice(0, 8), W / 2, 108);
       g.fillStyle = "#0f172a";
       g.fillText(title.slice(0, 8), W / 2, 108);
-      // requirement dots
+      // requirement dots — UI-card-schema · seat-close readable cost dots + underlay
+      g.fillStyle = "rgba(28,25,23,0.08)";
+      g.fillRect(36, 130, W - 72, 78);
+      g.fillStyle = "rgba(255,252,245,0.94)";
+      g.fillRect(40, 134, W - 80, 70);
       const entries = Object.entries(reqs).filter(([, n]) => n > 0);
       entries.forEach(([color, n], i) => {
-        const cx = 56 + i * 52;
-        const cy = 158;
+        const cx = 64 + i * 64;
+        const cy = 168;
+        g.fillStyle = "rgba(15,23,42,0.22)";
+        g.beginPath();
+        g.arc(cx + 1, cy + 2, 24, 0, Math.PI * 2);
+        g.fill();
         g.fillStyle = chipColors[color] ?? "#a78bfa";
         g.beginPath();
-        g.arc(cx, cy, 16, 0, Math.PI * 2);
+        g.arc(cx, cy, 22, 0, Math.PI * 2);
         g.fill();
-        g.strokeStyle = "rgba(0,0,0,0.35)";
-        g.lineWidth = 2;
+        g.strokeStyle = "#0f172a";
+        g.lineWidth = 3.5;
         g.stroke();
-        g.fillStyle = color === "white" || color === "yellow" ? "#1f2937" : "#fff";
-        g.font = "700 18px sans-serif";
+        g.fillStyle = color === "white" || color === "yellow" || color === "gold" ? "#0f172a" : "#fff";
+        g.font = "700 28px /* UI-card-schema */ sans-serif";
         g.textAlign = "center";
         g.textBaseline = "middle";
-        g.fillText(String(n), cx, cy);
+        g.fillText(String(n), cx, cy + 1);
       });
     }
     const tex = new CanvasTexture(canvas);
