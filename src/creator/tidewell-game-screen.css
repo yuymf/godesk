@@ -3529,3 +3529,84 @@ body:has(.room-view-tidewell-immersive) {
   min-height: 0.5rem !important;
   padding: 0.02rem 0.22rem !important;
 }
+
+
+/* ========== UI-room-shell · tidewell playable chrome restore (P0) ==========
+ * Undo T184/T209/T221 dock/topbar/turn collapse so whose-turn + primary CTA read.
+ */
+.room-view-tidewell-immersive.room-view-seated {
+  --tw-side: 168px !important;
+  --tw-dock: 148px !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-game-screen {
+  --tw-side: 168px !important;
+  --tw-dock: 148px !important;
+  grid-template-rows: auto minmax(0, 1fr) var(--tw-dock, 148px) !important;
+  position: relative !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock {
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  height: var(--tw-dock, 148px) !important;
+  max-height: var(--tw-dock, 148px) !important;
+  z-index: 8 !important;
+  opacity: 1 !important;
+  overflow: visible !important;
+  pointer-events: auto !important;
+  background: linear-gradient(180deg, #faf6ec 0%, #f0e2c4 100%) !important;
+  color: #1c1917 !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-topbar {
+  min-height: 2.6rem !important;
+  max-height: none !important;
+  padding: 0.35rem 0.75rem !important;
+  opacity: 1 !important;
+  overflow: visible !important;
+  background: linear-gradient(180deg, #faf6ec 0%, #f0e2c4 100%) !important;
+  color: #1c1917 !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-topbar-brand,
+.room-view-tidewell-immersive.room-view-seated .tidewell-topbar-status,
+.room-view-tidewell-immersive.room-view-seated .tidewell-topbar-center,
+.room-view-tidewell-immersive.room-view-seated .tidewell-topbar-actions {
+  opacity: 1 !important;
+  font-size: inherit !important;
+  transform: none !important;
+  color: inherit !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-topbar-brand .tidewell-home-btn,
+.room-view-tidewell-immersive.room-view-seated .tidewell-topbar-actions .tidewell-chip-btn,
+.room-view-tidewell-immersive.room-view-seated .tidewell-topbar-actions .tidewell-menu > summary {
+  min-height: 1.8rem !important;
+  height: auto !important;
+  padding: 0.25rem 0.55rem !important;
+  font-size: 0.82rem !important;
+  opacity: 1 !important;
+  color: #1c1917 !important;
+  background: #fff !important;
+  border: 1px solid rgb(120 90 50 / 22%) !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-players,
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-column {
+  opacity: 1 !important;
+  color: inherit !important;
+  pointer-events: auto !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-panel,
+.room-view-tidewell-immersive.room-view-seated .tidewell-primary-cta,
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-blurb,
+.room-view-tidewell-immersive.room-view-seated .hex-island-hud-dice {
+  opacity: 1 !important;
+  color: inherit !important;
+  font-size: inherit !important;
+}
+.room-view-tidewell-immersive.room-view-seated .hex-settlement-board-targets:not([open]),
+.room-view-tidewell-immersive.room-view-seated .hex-settlement-board-targets:not([open]) > summary {
+  opacity: 1 !important;
+  color: #1c1917 !important;
+  background: #f7f0e0 !important;
+  font-size: 0.85rem !important;
+  padding: 0.35rem 0.65rem !important;
+}

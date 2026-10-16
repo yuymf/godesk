@@ -666,6 +666,45 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         </section>
       )}
 
+      {/* UI-room-shell · generic playable chrome: whose turn / phase / primary action placeholder */}
+      {(tabletopImmersive || immersive || hexSettlement) ? (
+        <section
+          aria-label={locale === "zh" ? "对局状态" : "Match status"}
+          className="room-playable-shell"
+          data-ui-room-shell="1"
+        >
+          <div className="room-playable-shell-turn" aria-live="polite">
+            <span className="room-playable-shell-kicker">
+              {locale === "zh" ? "回合" : "Turn"}
+            </span>
+            <strong className="room-playable-shell-who">
+              {room.state.status === "complete"
+                ? copy.gameOver
+                : isMyTurn
+                  ? copy.yourTurn
+                  : `${copy.waitingFor} ${activeSeat}`}
+            </strong>
+            <span className="room-playable-shell-phase">
+              {room.state.status === "complete"
+                ? copy.gameOver
+                : isMyTurn
+                  ? copy.currentTurn
+                  : copy.waitForOther}
+            </span>
+          </div>
+          <div className="room-playable-shell-primary" data-empty={isMyTurn ? "0" : "1"}>
+            <span className="room-playable-shell-primary-label">
+              {locale === "zh" ? "主操作" : "Primary action"}
+            </span>
+            <span className="room-playable-shell-primary-slot">
+              {isMyTurn
+                ? (locale === "zh" ? "选择下方行动或桌面目标" : "Pick an action or board target")
+                : (locale === "zh" ? "等待行动…" : "Waiting for action…")}
+            </span>
+          </div>
+        </section>
+      ) : null}
+
       {harbor ? (
         <HarborVoyageBoard render={build.ruleSystem.presentation.render}
           busy={busy}

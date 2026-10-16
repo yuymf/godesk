@@ -438,7 +438,7 @@ export function NetworkRouteBoard({
         </span>
       </div>
       {/* T071 · production action chip */}
-      <details className="desk-chrome desk-action-drawer">
+      <details className="desk-chrome desk-action-drawer" open data-ui-action-drawer="1">
         <summary className="desk-action-drawer-summary">
           行动
         </summary>
@@ -458,7 +458,7 @@ export function NetworkRouteBoard({
                   {legalActions
                     .filter((a) => a.type === "draw_trains" || a.type === "draw_tickets")
                     .map((a) => (
-                      <button key={a.type} type="button" onClick={() => onAct?.(a.type, {})}>
+                      <button key={a.type} type="button" className="is-legal" onClick={() => onAct?.(a.type, {})}>
                         {a.type === "draw_trains" ? copy.drawTrains : copy.drawTickets}
                       </button>
                     ))}
@@ -469,6 +469,7 @@ export function NetworkRouteBoard({
                       <button
                         key={String(a.payload?.edgeId)}
                         type="button"
+                        className="is-legal"
                         onClick={() =>
                           onAct?.("claim", {
                             edgeId: a.payload?.edgeId,
@@ -491,13 +492,16 @@ export function NetworkRouteBoard({
                   <button
                     key={String(a.payload?.edgeId)}
                     type="button"
+                    className="is-legal"
                     onClick={() => onAct?.("claim", { edgeId: a.payload?.edgeId })}
                   >
                     {copy.claim} · {String(a.payload?.edgeId)}
                   </button>
                 ))}
             </div>
-          ) : null}
+          ) : (
+            <p className="desk-action-empty" data-empty="1">暂无合法行动 · 等待回合</p>
+          )}
         </div>
       </details>
     </section>

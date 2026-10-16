@@ -532,7 +532,7 @@ export function HexSettlementBoard({
     <li key={actionKey(action)}>
       <button
         aria-label={labelForBoardAction(action, copy, resourceLabel)}
-        className={`hex-island-action${compact ? " is-board-target" : ""}`}
+        className={`hex-island-action${compact ? " is-board-target" : ""}${busy ? " is-disabled" : " is-legal"}`}
         disabled={busy}
         onClick={() =>
           onAct?.(

@@ -374,9 +374,20 @@ export class MaterialLibrary {
   }
 }
 
+
+/** UI-light-floors · cap wash-white albedo so paperboard/felt cannot crush UI chrome (H01/H03/H05). */
+export const PLAYABLE_ALBEDO_MAX = 0.92;
+export function clampPlayableAlbedo(color: Color): Color {
+  const maxCh = Math.max(color.r, color.g, color.b);
+  if (maxCh > PLAYABLE_ALBEDO_MAX) {
+    color.multiplyScalar(PLAYABLE_ALBEDO_MAX / maxCh);
+  }
+  return color;
+}
+
 export function createMaterial(token: MaterialToken, features: MaterialFeatures): MeshStandardMaterial {
   const params = {
-    color: new Color(token.base),
+    color: clampPlayableAlbedo(new Color(token.base)),
     roughness: token.roughness,
     metalness: token.metalness,
   };
@@ -429,6 +440,7 @@ function applyMaps(material: MeshStandardMaterial, token: MaterialToken, maps: P
   material.metalnessMap = maps.ormMap;
   material.color.set(token.base);
   if (useBaseColor) material.color.lerp(new Color(0xffffff), token.pbrTint ?? PBR_TINT_TO_WHITE);
+  clampPlayableAlbedo(material.color);
   const strength = material.userData.gdPatternStrength as PatternUniform | undefined;
   if (strength && token.pattern !== "none") strength.value = PATTERN_STRENGTH_WITH_PBR;
   material.userData.gdPbr = token.pbrSet;

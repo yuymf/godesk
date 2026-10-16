@@ -9,7 +9,7 @@ describe("T213 shared card/gem/auction parts hard residual", () => {
     expect(obj).toMatch(/CylinderGeometry\(0\.40,\s*0\.48,\s*0\.26,\s*10\)/);
     expect(obj).toMatch(/clearcoat: 0\.95/);
     expect(obj).toMatch(/BoxGeometry\(1\.02,\s*0\.11,\s*1\.28\)/); // framed art
-    expect(obj).toMatch(/W \* 0\.42/); // vignette calm
+    expect(obj).toMatch(/W \* 0\.58/); // vignette calm
     const spec = readFileSync("src/creator/render-spec.ts", "utf8");
     expect(spec).toContain("T213");
     expect(spec).toMatch(/#fff8ee/);

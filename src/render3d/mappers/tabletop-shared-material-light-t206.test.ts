@@ -13,7 +13,7 @@ describe("T206 shared desk/network material + light", () => {
     const obj = readFileSync("src/render3d/tabletop-objects.ts", "utf8");
     expect(obj).toMatch(/Vector2\((5\.70|6\.05|6\.45|6\.85),\s*(5\.70|6\.05|6\.45|6\.85)\)/);
     expect(obj).toMatch(/Vector2\((2\.80|3\.05|3\.35|3\.65),\s*(2\.80|3\.05|3\.35|3\.65)\)/);
-    expect(obj).toMatch(/W \* 0\.42/); // keep T202 vignette calm — no bait
+    expect(obj).toMatch(/W \* 0\.58/); // keep T202 vignette calm — no bait
     expect(spec).not.toMatch(/suite === ["']H0/);
   });
 });

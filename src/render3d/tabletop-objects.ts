@@ -1252,20 +1252,19 @@ function softContactShadow(
   // T270 · grounded short-contact ring for tall chip stacks (clear foot, no soft mush)
   if (opts?.grounded) {
     // T270 · clear short-contact under tall chips (wide-frame readable)
-    group.add(mk(0.72, Math.min(0.99, opacity * 2.20), 0.00076, "contact-shadow"));
-    group.add(mk(1.00, Math.min(0.85, opacity * 1.25), 0.00058));
-    group.add(mk(1.35, Math.min(0.35, opacity * 0.48), 0.00042));
-    group.add(mk(1.70, Math.min(0.16, opacity * 0.22), 0.00028));
-    group.add(mk(2.10, Math.min(0.06, opacity * 0.08), 0.00016)); // bank ge20 outer
+    // UI-light-floors · shorter/lighter rings — no radial black blob over disc heart
+    group.add(mk(0.72, Math.min(0.72, opacity * 1.35), 0.00076, "contact-shadow"));
+    group.add(mk(1.00, Math.min(0.40, opacity * 0.65), 0.00058));
+    group.add(mk(1.28, Math.min(0.12, opacity * 0.18), 0.00042));
+    group.add(mk(1.55, Math.min(0.04, opacity * 0.06), 0.00028));
     return group;
   }
   // T218/T226/T230 · product contact shadow: denser core hug + smoother veil (no bands / no center blot)
-  group.add(mk(1.02, Math.min(0.95, opacity * 1.50), 0.00066, "contact-shadow")); // T233/T234 tight core hug
-  group.add(mk(1.28, Math.min(0.64, opacity * 0.86), 0.00050)); // near core blend
-  group.add(mk(1.72, Math.min(0.20, opacity * 0.30), 0.00038)); // soft mid · center-calm T241
-  group.add(mk(2.55, Math.min(0.04, opacity * 0.06), 0.00032)); // mid-outer · corner-calm T241
-  group.add(mk(3.10, Math.min(0.022, opacity * 0.035), 0.00018)); // soft outer · T230 corner-calm
-  group.add(mk(3.90, Math.min(0.008, opacity * 0.012), 0.00010)); // wide soft veil · T230 corner-calm
+  // UI-light-floors · mid/outer veil near-zero so H04 radial blot cannot crush center
+  group.add(mk(1.02, Math.min(0.58, opacity * 0.90), 0.00066, "contact-shadow")); // tight core hug
+  group.add(mk(1.22, Math.min(0.22, opacity * 0.32), 0.00050)); // near core blend
+  group.add(mk(1.55, Math.min(0.06, opacity * 0.10), 0.00038)); // soft mid · no blot
+  group.add(mk(2.10, Math.min(0.015, opacity * 0.022), 0.00028)); // mid-outer whisper
   return group;
 }
 
@@ -1765,10 +1764,11 @@ function tableVignetteMesh(): Object3D {
     const g = canvas.getContext("2d");
     if (g) {
       // T193/T202 · softer shared table vignette — larger clear center, milder rim (no hard bait)
-      const grd = g.createRadialGradient(W / 2, H / 2, W * 0.42, W / 2, H / 2, W * 0.78);
+      // UI-light-floors · kill center black blot / radial veil that crushed disc heart (H02/H04)
+      const grd = g.createRadialGradient(W / 2, H / 2, W * 0.58, W / 2, H / 2, W * 0.94);
       grd.addColorStop(0, "rgba(0,0,0,0)");
-      grd.addColorStop(0.58, "rgba(0,0,0,0.01)");
-      grd.addColorStop(1, "rgba(12,8,4,0.12)");
+      grd.addColorStop(0.72, "rgba(0,0,0,0)");
+      grd.addColorStop(1, "rgba(12,8,4,0.04)");
       g.fillStyle = grd;
       g.fillRect(0, 0, W, H);
     }
