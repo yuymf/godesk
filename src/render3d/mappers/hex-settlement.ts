@@ -103,7 +103,7 @@ export function mapHexSettlementToScene(genre: HexSettlementSceneInput): SceneMo
         number: tile.number,
         tag: tile.number === 6 || tile.number === 8 ? "hot" : "normal",
         // G3D-ART-2：筹码放大到约 37% 六角宽，数字贴花才读得出（见 number-labels.ts）。
-        scale: [NUMBER_TOKEN_SCALE, 1.42, NUMBER_TOKEN_SCALE], // T225 · chip thickness
+        scale: [NUMBER_TOKEN_SCALE, 1.48, NUMBER_TOKEN_SCALE], // T233 · beveled chip thickness
       });
     }
   }

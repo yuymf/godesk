@@ -362,8 +362,29 @@ function batchableKind(kind: SceneNode["kind"]): boolean {
 }
 
 let SHARED_NUMBER_GEOM: BufferGeometry | null = null;
+/** T233 · wood-chip number token: extruded disc with rim bevel (not flat UI cylinder). */
 function sharedNumberGeom(): BufferGeometry {
-  if (!SHARED_NUMBER_GEOM) SHARED_NUMBER_GEOM = new CylinderGeometry(0.22, 0.22, 0.06, 24);
+  if (!SHARED_NUMBER_GEOM) {
+    const shape = new Shape();
+    const r = 0.22;
+    shape.absarc(0, 0, r, 0, Math.PI * 2, false);
+    const geom = new ExtrudeGeometry(shape, {
+      depth: 0.078,
+      bevelEnabled: true,
+      bevelThickness: 0.014,
+      bevelSize: 0.012,
+      bevelSegments: 3,
+      curveSegments: 28,
+    });
+    geom.rotateX(-Math.PI / 2);
+    // Center at origin like CylinderGeometry (labels use HALF_HEIGHT from mid).
+    geom.computeBoundingBox();
+    const bb = geom.boundingBox!;
+    const midY = (bb.min.y + bb.max.y) / 2;
+    geom.translate(0, -midY, 0);
+    geom.computeVertexNormals();
+    SHARED_NUMBER_GEOM = geom;
+  }
   return SHARED_NUMBER_GEOM;
 }
 
@@ -471,7 +492,7 @@ function createNodeObject(
   }
 
   if (node.kind === "number-token") {
-    return applyPose(new Mesh(new CylinderGeometry(0.22, 0.22, 0.06, 24), mat));
+    return applyPose(new Mesh(sharedNumberGeom().clone(), mat));
   }
 
   const tide = getTidewellGeometriesSync();

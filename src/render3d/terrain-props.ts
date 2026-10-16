@@ -366,7 +366,7 @@ function pineTallGeometry(): BufferGeometry {
   const crown: BufferGeometry[] = [];
   tiers.forEach(([y, r], ti) => {
     const a0 = ti * 1.9;
-    const n = ti < 3 ? 5 : 4; // T229 denser crown clumps
+    const n = ti < 3 ? 6 : 5; // T229/T234 denser crown clumps
     for (let k = 0; k < n; k += 1) {
       const a = a0 + k * ((Math.PI * 2) / n);
       const dy = ((ti * 7 + k * 5) % 5 - 2) * 0.006;
@@ -389,7 +389,7 @@ function pineTallGeometry(): BufferGeometry {
 function pineRoundGeometry(): BufferGeometry {
   // R18: cauliflower crown of painted clumps (warm yellow-green tops, cool undersides).
   const ring: BufferGeometry[] = [];
-  for (let k = 0; k < 8; k += 1) { // T229 denser cauliflower
+  for (let k = 0; k < 10; k += 1) { // T229/T234 denser cauliflower
     const a = k * ((Math.PI * 2) / 6) + 0.3;
     const rr = 0.088 + (k % 2) * 0.012;
     ring.push(clump(Math.cos(a) * 0.09, 0.17 + (k % 3) * 0.035, Math.sin(a) * 0.09, rr, 0.8, "#24502c", k % 2 ? "#5e9a54" : "#6aa65a", 5 + k * 7));
@@ -444,10 +444,10 @@ function sheepGeometry(): BufferGeometry {
   const leg = (x: number, z: number) =>
     grad(at(new CylinderGeometry(0.0115, 0.0095, 0.07, 8, 1, true), x, 0.035, z), "#2a231e", "#3f352d", 0, 0.07); // T229
   const puff = (x: number, y: number, z: number, r: number) =>
-    grad(at(new SphereGeometry(r, 10, 8), x, y, z), "#d9d3c4", "#fffdf6", y - r, y + r, 0.06); // T229 wool segs
+    grad(at(new SphereGeometry(r, 12, 10), x, y, z), "#d9d3c4", "#fffdf6", y - r, y + r, 0.06); // T234 wool segs
   const parts: BufferGeometry[] = [
     // fleece body: soft cream underside → white top (volume from colour, not a dark blotch)
-    grad(at(new SphereGeometry(0.074, 14, 10), 0, 0.128, 0, 1.45, 0.92, 1.05), "#cfc8b8", "#fbf8f0", 0.06, 0.2, 0.05), // T229
+    grad(at(new SphereGeometry(0.076, 16, 12), 0, 0.128, 0, 1.45, 0.92, 1.05), "#cfc8b8", "#fbf8f0", 0.06, 0.2, 0.05), // T234
     puff(0.05, 0.168, 0.03, 0.04), puff(-0.01, 0.178, -0.028, 0.042), puff(-0.06, 0.162, 0.03, 0.038),
     puff(0.035, 0.16, -0.045, 0.036), puff(-0.055, 0.15, -0.045, 0.035), puff(0.075, 0.138, 0.0, 0.034),
     puff(-0.095, 0.14, 0.0, 0.033), puff(0.0, 0.15, 0.06, 0.036), puff(0.0, 0.112, -0.062, 0.034),
@@ -477,7 +477,7 @@ function troughGeometry(): BufferGeometry {
 
 /** R20 山地：低矮贴地的岩块群（≈R19 一半高、体量 ~0.7×），岩色贴 ore tile，根脚溶入灰石面。 */
 function boulderGeometry(): BufferGeometry {
-  // T229 · product rock: higher-detail dodecahedra + softer jag (less toy facet)
+  // T229/T234 · product rock: higher-detail dodecahedra + softer jag (less toy facet)
   return merged([
     paint(jag(at(new DodecahedronGeometry(0.085, 1), 0, 0.035, 0, 1.4, 0.62, 1.15), 0.10, 1), "#a7adb4", 0.28),
     paint(jag(at(new DodecahedronGeometry(0.06, 1), 0.075, 0.06, -0.035, 1.1, 0.78, 0.95, 0.5), 0.09, 3), "#6a7078", 0.26),
@@ -760,13 +760,13 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
             : TILE_TOP,
         z: tile.center[2] + dz,
         yaw: kind === "wheatrow" ? -rowYaw + (rand() - 0.5) * 0.06 : rand() * Math.PI * 2,
-        // R20/T229: product tabletop props — fuller silhouette, still ground-hugging.
+        // R20/T229/T234: product tabletop props — fuller silhouette, still ground-hugging.
         scale: isPine(kind)
-          ? (kind === "pineTall" ? 0.68 + rand() * 0.22 : kind === "pineRound" ? 0.70 + rand() * 0.20 : 0.74 + rand() * 0.24)
-          : kind === "canopy" ? 0.78 + rand() * 0.20
-          : kind === "boulder" ? 1.02 + rand() * 0.30
-          : kind === "clay" || kind === "bricks" ? 1.15 + rand() * 0.30
-          : 1.08 + rand() * 0.32,
+          ? (kind === "pineTall" ? 0.74 + rand() * 0.24 : kind === "pineRound" ? 0.76 + rand() * 0.22 : 0.80 + rand() * 0.26)
+          : kind === "canopy" ? 0.84 + rand() * 0.22
+          : kind === "boulder" ? 1.10 + rand() * 0.32
+          : kind === "clay" || kind === "bricks" ? 1.20 + rand() * 0.32
+          : 1.14 + rand() * 0.34,
         stretch: isPine(kind)
           ? (kind === "pineTall" ? 0.82 + rand() * 0.14 : kind === "pineRound" ? 0.78 + rand() * 0.14 : 0.8 + rand() * 0.14)
           : kind === "canopy" ? 0.6 + rand() * 0.2

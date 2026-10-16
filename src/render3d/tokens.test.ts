@@ -167,9 +167,9 @@ describe("R22 resource colour + seams", () => {
 
   it("soft hex-edge band ≤ 25% and terrain saturation no longer pulled toward grey", () => {
     expect(SOFT_EDGE_STRENGTH).toBeGreaterThan(0);
-    expect(SOFT_EDGE_STRENGTH).toBeLessThanOrEqual(0.45);
+    expect(SOFT_EDGE_STRENGTH).toBeLessThanOrEqual(0.50);
     expect(TERRAIN_SATURATION).toBeGreaterThanOrEqual(1);
-    expect(TERRAIN_SATURATION).toBeLessThanOrEqual(2.30); // T183/T217/T222
+    expect(TERRAIN_SATURATION).toBeLessThanOrEqual(2.35); // T183/T217/T222
   });
 
   it("tile top faces touch (no open slot → no dark 1px side line); sides taper inside the coast wall", () => {

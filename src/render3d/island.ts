@@ -312,20 +312,35 @@ function drawSigns(x: CanvasRenderingContext2D, cell: number, plate: HTMLImageEl
     const cx = (i % SIGN_COLS) * cell + cell / 2;
     const cy = Math.floor(i / SIGN_COLS) * cell + cell / 2;
     const r = cell * 0.46;
+    // T233 · always carve a thick wood rim so plaque reads as 3D dock sign (not UI badge)
+    {
+      x.fillStyle = "#3a2416";
+      x.beginPath();
+      x.arc(cx, cy, r, 0, Math.PI * 2);
+      x.fill();
+      const outer = x.createRadialGradient(cx - r * 0.22, cy - r * 0.26, r * 0.06, cx, cy, r);
+      outer.addColorStop(0, "#9a6e40");
+      outer.addColorStop(0.45, "#6a4828");
+      outer.addColorStop(1, "#2a1810");
+      x.fillStyle = outer;
+      x.beginPath();
+      x.arc(cx, cy, r * 0.96, 0, Math.PI * 2);
+      x.fill();
+    }
     if (plate) {
       // plate disc fills 94% of the source; scale so its rim lands on r
-      const d = (r * 2) / 0.94;
+      const d = (r * 2) / 0.94 * 0.92;
       x.drawImage(plate, cx - d / 2, cy - d / 2, d, d);
-      const g = x.createRadialGradient(cx, cy, r * 0.1, cx, cy, r * 0.74);
+      const g = x.createRadialGradient(cx, cy, r * 0.1, cx, cy, r * 0.70);
       g.addColorStop(0, "rgba(251, 241, 216, 0.72)");
       g.addColorStop(0.7, "rgba(251, 241, 216, 0.5)");
       g.addColorStop(1, "rgba(251, 241, 216, 0)");
       x.fillStyle = g;
       x.beginPath();
-      x.arc(cx, cy, r * 0.74, 0, Math.PI * 2);
+      x.arc(cx, cy, r * 0.70, 0, Math.PI * 2);
       x.fill();
     } else {
-      // T225 · carved wood plaque rim (not flat UI badge)
+      // T225/T233 · carved wood plaque face
       x.fillStyle = "#4a3020";
       x.beginPath();
       x.arc(cx, cy, r, 0, Math.PI * 2);
@@ -548,19 +563,23 @@ function shoreStoneGeometry(): BufferGeometry {
  */
 export function dockGeometry(length = 0.62, wetFoot = 0): BufferGeometry {
   const parts: BufferGeometry[] = [];
-  const planks = 6;
+  const planks = 7;
   for (let i = 0; i < planks; i += 1) {
     const z = 0.04 + (i + 0.5) * (length / planks);
-    parts.push(paint(place(new BoxGeometry(0.28, 0.038, length / planks - 0.010), 0, 0, z), i % 2 ? "#8a6340" : "#9a7048", 0.18)); // T225 plank thickness
+    // T233 · thicker product planks + slight height stagger (dock thickness read)
+    const hy = 0.052 + (i % 2) * 0.006;
+    parts.push(paint(place(new BoxGeometry(0.30, hy, length / planks - 0.008), 0, hy * 0.15, z), i % 2 ? "#8a6340" : "#9a7048", 0.2));
   }
-  parts.push(paint(place(new BoxGeometry(0.03, 0.03, length), -0.12, -0.022, length / 2 + 0.04), "#5e4128"));
-  parts.push(paint(place(new BoxGeometry(0.03, 0.03, length), 0.12, -0.022, length / 2 + 0.04), "#5e4128"));
-  const postXZ = [[-0.13, 0.22], [0.13, 0.22], [-0.13, length], [0.13, length]] as const;
+  parts.push(paint(place(new BoxGeometry(0.04, 0.04, length), -0.13, -0.018, length / 2 + 0.04), "#5e4128"));
+  parts.push(paint(place(new BoxGeometry(0.04, 0.04, length), 0.13, -0.018, length / 2 + 0.04), "#5e4128"));
+  const postXZ = [[-0.14, 0.20], [0.14, 0.20], [-0.14, length], [0.14, length]] as const;
   for (const [px, pz] of postXZ) {
-    parts.push(paint(place(new CylinderGeometry(0.028, 0.032, 0.38, 6), px, -0.16, pz), "#4f3824")); // T225 pier posts
+    parts.push(paint(place(new CylinderGeometry(0.036, 0.042, 0.44, 8), px, -0.14, pz), "#4f3824")); // T233 pier posts
   }
-  // 牌柱（牌面本身是单独的广告牌 InstancedMesh）。
-  parts.push(paint(place(new CylinderGeometry(0.016, 0.018, 0.36, 6), 0.1, 0.17, length - 0.02), "#4f3824"));
+  // T233 · plaque post + wood backboard (sign mesh sits in front; dock reads as 3D plaque mount)
+  parts.push(paint(place(new CylinderGeometry(0.022, 0.026, 0.42, 8), 0.1, 0.20, length - 0.02), "#4f3824"));
+  parts.push(paint(place(new BoxGeometry(0.26, 0.26, 0.05), 0.1, 0.34, length - 0.05), "#6a4828", 0.14));
+  parts.push(paint(place(new BoxGeometry(0.30, 0.30, 0.03), 0.1, 0.34, length - 0.08), "#3a2416", 0.1));
   // Wet skirt at water contact (visible ABOVE opaque water). One cheap band/post — no whole-pier reshape.
   // Budget: InstancedMesh × ports multiplies tris; keep ≤1 open 4-seg cylinder per post (~8 tris).
   // docksFor base y=0.1 → local waterline = WATER_Y - 0.1.
@@ -686,7 +705,7 @@ function applyBoatWetLine(g: BufferGeometry, strength: number): void {
 
 /** 帆船停泊点：岛外一圈，避开右前方骰盘（≈(4.2, 3.2)）。 */
 /** 港口牌半径 / 帆船缩放（round-2d2：放大，远景可读）。 */
-export const SIGN_RADIUS = 0.335; // T118/T225 · wooden harbor plaque
+export const SIGN_RADIUS = 0.355; // T118/T233 · wooden harbor plaque product
 export const BOAT_SCALE = 1.7;
 
 export const BOAT_SPOTS: ReadonlyArray<{ x: number; z: number; yaw: number; phase: number }> = [

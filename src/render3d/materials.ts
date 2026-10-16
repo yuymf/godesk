@@ -18,9 +18,9 @@ import type { MaterialPattern, MaterialToken, PbrSetId } from "./tokens";
 import { TILE_FACE_APOTHEM } from "./tokens";
 
 /** R21 soft hex-edge band: max share the top-face albedo eases toward the shared light earth tone (× brush). R22: 0.45 → 0.25. */
-export const SOFT_EDGE_STRENGTH = 0.42; // T229 · paperboard edge bevel read
+export const SOFT_EDGE_STRENGTH = 0.46; // T229/T234 · paperboard edge bevel read
 /** R22: terrain albedo saturation (1 = texture as-is; R19–R21 used 0.86, a 14% pull toward grey). */
-export const TERRAIN_SATURATION = 2.28; // T183…T229 shared terrain chroma
+export const TERRAIN_SATURATION = 2.32; // T183…T234 shared terrain chroma
 /** R22 hairline seam; R23: 0.006 → 0.002 (whole-board a no longer chessboard). */
 export const SEAM_HALF_WIDTH = 0.0030; // T229 · cardboard hairline seam
 
