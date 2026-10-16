@@ -9,7 +9,7 @@ describe("T218 shared contact-shadow product falloff", () => {
     expect(obj).toMatch(/mk\(1\.78/);
     expect(obj).toMatch(/mk\(2\.80/);
     expect(obj).toMatch(/mk\(4\.60/);
-    expect(obj).toMatch(/W \* 0\.42/); // vignette calm kept
+    expect(obj).toMatch(/W \* 0\.58/); // vignette calm kept
     expect(obj).not.toMatch(/suite === ["']H0/);
     const spec = readFileSync("src/creator/render-spec.ts", "utf8");
     expect(spec).toContain("T218");

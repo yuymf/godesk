@@ -28,13 +28,46 @@ import {
   shadowRadiusFor,
 } from "./tokens";
 
+/** UI-light-floors · playable exposure / key ceilings (kill wash-out that crushes UI text).
+ *  Applies at renderer+rig time so RenderSpec/HARD authoring stays schema-valid; no suite forks. */
+export const PLAYABLE_LIGHT_FLOORS = {
+  exposureMin: 0.85,
+  exposureMax: 1.32,
+  sunIntensityMax: 3.35,
+  fillIntensityMax: 1.85,
+  rimIntensityMax: 1.45,
+  hemiIntensityMax: 1.55,
+} as const;
+
+export function clampPlayableLighting(lighting: LightingSpec): LightingSpec {
+  const f = PLAYABLE_LIGHT_FLOORS;
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+  return {
+    ...lighting,
+    exposure: clamp(lighting.exposure, f.exposureMin, f.exposureMax),
+    sun: { ...lighting.sun, intensity: Math.min(lighting.sun.intensity, f.sunIntensityMax) },
+    hemisphere: {
+      ...lighting.hemisphere,
+      intensity: Math.min(lighting.hemisphere.intensity, f.hemiIntensityMax),
+    },
+    fill: lighting.fill
+      ? { ...lighting.fill, intensity: Math.min(lighting.fill.intensity, f.fillIntensityMax) }
+      : lighting.fill,
+    rim: lighting.rim
+      ? { ...lighting.rim, intensity: Math.min(lighting.rim.intensity, f.rimIntensityMax) }
+      : lighting.rim,
+  };
+}
+
 /** 色调映射 AgX、曝光、sRGB 输出、PCF 阴影（r186 已移除 PCFSoft）。 */
 export function configureRenderer(renderer: WebGLRenderer, lighting: LightingSpec): void {
+  const playable = clampPlayableLighting(lighting);
   renderer.toneMapping = AgXToneMapping;
   // T245 · product tabletop: AgX keeps wood grain / paperboard from blowing out under sun
-  renderer.toneMappingExposure = lighting.exposure;
+  // UI-light-floors · exposure clamp so high-key RenderSpec cannot wash UI chrome
+  renderer.toneMappingExposure = playable.exposure;
   renderer.outputColorSpace = SRGBColorSpace;
-  renderer.shadowMap.enabled = lighting.shadow.enabled;
+  renderer.shadowMap.enabled = playable.shadow.enabled;
   renderer.shadowMap.type = PCFShadowMap;
 }
 
@@ -147,25 +180,27 @@ export function createLightingRig(scene: Scene, lighting: LightingSpec, caps: Ti
   };
 
   const applyLighting = (next: LightingSpec) => {
-    current = next;
-    sun.color.set(next.sun.color);
-    sun.intensity = next.sun.intensity;
-    sun.castShadow = next.shadow.enabled;
-    hemisphere.color.set(next.hemisphere.sky);
-    hemisphere.groundColor.set(next.hemisphere.ground);
-    hemisphere.intensity = next.hemisphere.intensity;
-    if (next.fill) {
-      fill.color.set(next.fill.color);
-      fill.intensity = next.fill.intensity;
-      fill.visible = next.fill.intensity > 0;
+    // UI-light-floors · clamp key/fill/rim/hemi so HARD high-key cannot wash board or crush chrome
+    const playable = clampPlayableLighting(next);
+    current = playable;
+    sun.color.set(playable.sun.color);
+    sun.intensity = playable.sun.intensity;
+    sun.castShadow = playable.shadow.enabled;
+    hemisphere.color.set(playable.hemisphere.sky);
+    hemisphere.groundColor.set(playable.hemisphere.ground);
+    hemisphere.intensity = playable.hemisphere.intensity;
+    if (playable.fill) {
+      fill.color.set(playable.fill.color);
+      fill.intensity = playable.fill.intensity;
+      fill.visible = playable.fill.intensity > 0;
     } else {
       fill.intensity = 0;
       fill.visible = false;
     }
-    if (next.rim) {
-      rim.color.set(next.rim.color);
-      rim.intensity = next.rim.intensity;
-      rim.visible = next.rim.intensity > 0;
+    if (playable.rim) {
+      rim.color.set(playable.rim.color);
+      rim.intensity = playable.rim.intensity;
+      rim.visible = playable.rim.intensity > 0;
     } else {
       rim.intensity = 0;
       rim.visible = false;
