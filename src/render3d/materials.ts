@@ -69,12 +69,12 @@ float gdPattern(vec3 w) {
   float poreCluster = smoothstep(0.55, 0.95, pore) * 0.35;
   return 0.42 + 0.38 * ring + 0.18 * ring2 - pith * 0.22 - poreCluster;
 #elif GD_PATTERN == 2
-  // T245 · pressed felt / paperboard: pulp strands + dimple grid (not checker weave plastic)
+  // T245/T249 · pressed felt / paperboard: brighter pulp (readable tabletop, not burnt)
   vec2 pulp = w.xz * 22.0;
   float strand = sin(pulp.x * 1.7 + gdNoise(pulp * 0.35) * 2.4) * cos(pulp.y * 0.55);
   float dimple = gdNoise(floor(w.xz * 14.0) * 1.7);
   float nap = gdFbm(w.xz * 9.0);
-  return mix(0.28, 0.82, 0.5 + 0.5 * strand) + (dimple - 0.5) * 0.28 + (nap - 0.5) * 0.22;
+  return mix(0.42, 0.92, 0.5 + 0.5 * strand) + (dimple - 0.5) * 0.22 + (nap - 0.5) * 0.16;
 #elif GD_PATTERN == 3
   // T245 · sedimentary stone strata + fracture
   float strata = sin(w.y * 28.0 + gdFbm(w.xz * 1.4) * 4.0);

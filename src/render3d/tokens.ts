@@ -89,7 +89,7 @@ export const SCENE_TOKENS = {
     /** 阴影相机正交范围 = 岛屿包围半径 + 1.5 单位（§4.3）。 */
     boundsPadding: 1.5,
   },
-  environment: { intensity: 0.58, pmremSigma: 0.04 }, // T245 · wood/felt catch room light
+  environment: { intensity: 0.72, pmremSigma: 0.035 }, // T249 · bright readable tabletop (un-burnt props/felt)
   /** §5.5 S-01 程序化渐变天空穹顶。 */
   sky: { top: "#9ab8cc", horizon: "#efe6d4", bottom: "#d4c4a4", exponent: 0.75, radius: 60 },
   camera: { fovDeg: 35, distance: 16, minPolarDeg: 25, maxPolarDeg: 70 },

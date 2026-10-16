@@ -478,7 +478,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T172/T177/T192/T201/T206 · denser/brighter network map cloth (shared MaterialLibrary)
-      map: material("#e8b860", "cloth", 0.99, 0, undefined, 0.99), // T245 H02 parchment felt
+      map: material("#f0c878", "cloth", 0.99, 0, undefined, 0.99), // T249 bright parchment felt
       table: material("#e8f0ff", "grain", 0.22, 0.34), // tip cool rim (cornerCalm)
       ink: material("#00c878", "none", 0.10, 0.55, 0.95), // T245 vivid teal rail vs tip terracotta
       piece: material("#ffe0a0", "none", 0.08, 0.38, 0.92), // T245 warm piece
@@ -510,7 +510,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#f6e8b8", "cloth", 0.99, 0, undefined, 0.99),  // T245 product parchment felt (centerCalm)
+      board: material("#faf0d0", "cloth", 0.99, 0, undefined, 0.99),  // T249 brighter parchment (centerCalm)
       table: material("#f0f4ff", "grain", 0.22, 0.32), // T092…T241 · cooler wood rim (corner-calm)
       piece: material("#ffe8c8", "none", 0.10, 0.36, 0.94), // T198…T241 · cream piece
       card: material("#e0f0ff", "none", 0.08, 0.32, 0.94), // T198…T241 · card stock cool
@@ -536,13 +536,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     ];
     if (kernelType === "auction-bidding-v1") {
       Object.assign(render.materials, {
-        board: material("#e8c878", "cloth", 0.99, 0, undefined, 0.99),  // T245 auction parchment
+        board: material("#f0d090", "cloth", 0.99, 0, undefined, 0.99),  // T249 auction parchment
         card: material("#fffaf4", "none", 0.28, 0.10, 0.48), // T061/T175/T213
       });
     }
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
-        board: material("#f0d8a0", "cloth", 0.99, 0, undefined, 0.99),  // T245 pattern parchment
+        board: material("#f6e0b0", "cloth", 0.99, 0, undefined, 0.99),  // T249 pattern parchment
         piece: material("#fff0d0", "none", 0.08, 0.38, 0.94), // T061…T241 warm piece vs tip white
         slot: material("#7a7a82", "none", 0.76, 0.06, 0.14),  // T241 recessed slots · centerCalm
         // T054 · pale print plate under wall hue tints (square grid, not black pits)

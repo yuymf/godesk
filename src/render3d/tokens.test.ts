@@ -32,7 +32,7 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
       rim: { azimuthDeg: 42, elevationDeg: 16, intensity: 0.78, color: "#ffe6b0" },
     });
     expect(SCENE_TOKENS.shadow).toMatchObject({ radius: 4, bias: -0.0004, normalBias: 0.02, boundsPadding: 1.5 });
-    expect(SCENE_TOKENS.environment.intensity).toBe(0.58); // T245
+    expect(SCENE_TOKENS.environment.intensity).toBe(0.72); // T249
     expect(SCENE_TOKENS.tile).toEqual({ roughness: 0.98, metalness: 0 });
     expect(SCENE_TOKENS.piece).toEqual({ roughness: 0.82, metalness: 0, clearcoat: 0 });
     expect(SEAT_COLORS).toEqual(["#e74c3c", "#2980b9", "#8e44ad", "#f1c40f"]);
