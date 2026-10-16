@@ -102,12 +102,12 @@ export const HEX_ISLAND_LIGHTING = {
   // R22: less orange key light (#ffd4a4 → #ffecd2) + more neutral sky fill — the warm cast pushed wheat / desert
   // toward orange-brown and ore / pasture toward beige-olive; resource hues now stay true (water gets brighter, not darker).
   // T183/T192/T198/T217 · shared hex island stage-wide hard residual (MaterialLibrary / SceneHost; not suite fork)
-  sun: { azimuthDeg: 124, elevationDeg: 60, intensity: 5.90, color: "#fffdf4" },
-  hemisphere: { sky: "#fffef8", ground: "#e4b070", intensity: 2.65 },
-  shadow: { enabled: true, softness: 0.74 },
-  exposure: 1.95, // T198/T217
-  fill: { azimuthDeg: 310, elevationDeg: 46, intensity: 1.40, color: "#eaf2fc" },
-  rim: { azimuthDeg: 38, elevationDeg: 30, intensity: 2.20, color: "#fffcde" },
+  sun: { azimuthDeg: 124, elevationDeg: 58, intensity: 5.92, color: "#fffdf4" }, // T254 cornerCalm≈tip key
+  hemisphere: { sky: "#fffef8", ground: "#e8c090", intensity: 2.72 },
+  shadow: { enabled: true, softness: 0.78 },
+  exposure: 1.96, // T254 <2.0
+  fill: { azimuthDeg: 310, elevationDeg: 48, intensity: 1.65, color: "#f0f6fc" },
+  rim: { azimuthDeg: 38, elevationDeg: 30, intensity: 2.25, color: "#fffcde" },
 } as const satisfies LightingSpec;
 
 /** R19：AI 贴图（虹夏 8 张；R20 起经 scripts/bake-ai-r20.py 色块化 + Kuwahara 绘本化后烘焙）为 t01–t06 baseColor；base 提亮去饱和、pbrTint 让贴图色相主导；
@@ -116,29 +116,26 @@ export const HEX_ISLAND_LIGHTING = {
 /** R17: matte hex faces + denser PBR repeat — continuous oil-paint brush, not flat plastic. */
 /** T183/T192/T198 · shared terrain chroma lift (MaterialLibrary; hex/harbor/any terrain consumer). */
 export const TERRAIN_MATERIALS: Record<string, MaterialToken> = {
-  wood: { base: "#00c834", roughness: 0.96, metalness: 0, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 1.75, pbrTint: 0.50, brush: 0.98 },
-  brick: { base: "#ff2410", roughness: 0.96, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 1.75, pbrTint: 0.50, brush: 0.98 },
-  // R22: fresher light-green pasture tint (was #a3c67e).
-  sheep: { base: "#3aff30", roughness: 0.96, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 1.85, pbrTint: 0.50, brush: 0.98 },
-  // R22/R23/T183: richer golden wheat field
-  wheat: { base: "#ffff10", roughness: 0.94, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 1.85, pbrTint: 0.52, brush: 0.98 },
-  // R21/R23/T183: cooler brighter ore
-  ore: { base: "#c0e0fa", roughness: 0.94, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 1.65, pbrTint: 0.52, brush: 0.9 },
-  // R22/T183: warmer pale sand apart from wheat
-  desert: { base: "#fffce0", roughness: 0.96, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 1.55, pbrTint: 0.52, brush: 0.9 },
+  // T254 · solid base leads (pbrBaseColor false) + chroma vs tip 15f86da (shared MaterialLibrary)
+  wood: { base: "#28f070", roughness: 0.88, metalness: 0, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 2.05, pbrTint: 0.22, brush: 0.99, pbrBaseColor: false },
+  brick: { base: "#ff4818", roughness: 0.88, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 2.05, pbrTint: 0.22, brush: 0.99, pbrBaseColor: false },
+  sheep: { base: "#68f038", roughness: 0.88, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 2.15, pbrTint: 0.24, brush: 0.99, pbrBaseColor: false },
+  wheat: { base: "#fff028", roughness: 0.86, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 2.15, pbrTint: 0.22, brush: 0.99, pbrBaseColor: false },
+  ore: { base: "#58b0ff", roughness: 0.86, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 1.95, pbrTint: 0.22, brush: 0.98, pbrBaseColor: false },
+  desert: { base: "#ffe080", roughness: 0.88, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 1.85, pbrTint: 0.24, brush: 0.98, pbrBaseColor: false },
 };
 
 /** 其余物件材质。 */
 export const PROP_MATERIALS = {
   cliff: { base: "#7a7368", roughness: 0.9, metalness: 0, pattern: "stone", pbrSet: "t07-cliff", pbrRepeat: 5 },
   // R22: warmer cream (was #f5f0e1) — keeps the parchment token cream under the less-orange R22 key light.
-  "number-token": { base: "#d4a868", roughness: 0.48, metalness: 0.08, clearcoat: 0.55, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 2.1, pbrTint: 0.22 }, // T245 lacquered wood-chip
+  "number-token": { base: "#c89858", roughness: 0.55, metalness: 0.06, clearcoat: 0.42, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 2.1, pbrTint: 0.28 }, // T253 pressed wood-chip
   // G3D-ART-2：6/8 不再整块涂红（与座位 0 红色混淆、且盖住数字）；同用 N1 筹码面，数字用赤陶色高亮（number-labels.ts）。
-  "number-token-hot": { base: "#e8a050", roughness: 0.44, metalness: 0.08, clearcoat: 0.62, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 2.1, pbrTint: 0.18 }, // T245
+  "number-token-hot": { base: "#d89040", roughness: 0.50, metalness: 0.06, clearcoat: 0.48, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 2.1, pbrTint: 0.22 }, // T253
   robber: { base: "#2c3e50", roughness: 0.7, metalness: 0, pattern: "none" },
   wood: { base: "#8b6914", roughness: 0.55, metalness: 0.04, clearcoat: 0.35, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 1.4, pbrTint: 0.15 }, // T245
   die: { base: "#f8f8f8", roughness: 0.5, metalness: 0, pattern: "none" },
-  ground: { base: "#d7e6c8", roughness: 0.9, metalness: 0, pattern: "cloth" },
+  ground: { base: "#c8e8b0", roughness: 0.9, metalness: 0, pattern: "cloth" }, // T254
 } satisfies Record<string, MaterialToken>;
 
 /** 座位棋子：T090 轻 clearcoat（chroma on felt）；high 档 MeshPhysical；pattern none，贴图彩漆木。 */

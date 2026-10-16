@@ -442,24 +442,24 @@ function blobShadowGeometry(): BufferGeometry {
 /** R19 羊：白色羊毛小羊群（settlecoast 基准的读感：白绒身体 + 深色头腿，低头吃草），
  *  脚下只留牧场底色的软溶片（alpha→0，无硬边圆盘、无深色接触阴影）。 */
 function sheepGeometry(): BufferGeometry {
+  // T253 · clearer head/leg silhouette vs meadow bushes
   const leg = (x: number, z: number) =>
-    grad(at(new CylinderGeometry(0.0115, 0.0095, 0.07, 8, 1, true), x, 0.035, z), "#2a231e", "#3f352d", 0, 0.07); // T229
+    grad(at(new CylinderGeometry(0.0125, 0.010, 0.088, 8, 1, true), x, 0.044, z), "#1a1410", "#2e2620", 0, 0.09);
   const puff = (x: number, y: number, z: number, r: number) =>
-    grad(at(new SphereGeometry(r, 16, 14), x, y, z), "#d9d3c4", "#fffdf6", y - r, y + r, 0.05); // T242 wool segs
+    grad(at(new SphereGeometry(r, 16, 14), x, y, z), "#e8e2d4", "#fffdf8", y - r, y + r, 0.04);
   const parts: BufferGeometry[] = [
-    // fleece body: soft cream underside → white top (volume from colour, not a dark blotch)
-    grad(at(new SphereGeometry(0.082, 20, 16), 0, 0.132, 0, 1.50, 0.96, 1.10), "#cfc8b8", "#fbf8f0", 0.05, 0.22, 0.04), // T242
-    puff(0.05, 0.168, 0.03, 0.04), puff(-0.01, 0.178, -0.028, 0.042), puff(-0.06, 0.162, 0.03, 0.038),
-    puff(0.035, 0.16, -0.045, 0.036), puff(-0.055, 0.15, -0.045, 0.035), puff(0.075, 0.138, 0.0, 0.034),
-    puff(-0.095, 0.14, 0.0, 0.033), puff(0.0, 0.15, 0.06, 0.036), puff(0.0, 0.112, -0.062, 0.034),
-    // tail tuft
-    puff(-0.115, 0.15, 0, 0.022),
-    // head lowered to graze: dark face + ears + cream wool cap
-    grad(at(new SphereGeometry(0.03, 9, 6), 0.128, 0.082, 0, 1.45, 0.95, 0.85), "#2c241f", "#463a31", 0.05, 0.11),
-    grad(at(new SphereGeometry(0.012, 6, 4), 0.112, 0.106, 0.034, 0.7, 0.55, 1.35), "#2c241f", "#463a31", 0.09, 0.12),
-    grad(at(new SphereGeometry(0.012, 6, 4), 0.112, 0.106, -0.034, 0.7, 0.55, 1.35), "#2c241f", "#463a31", 0.09, 0.12),
-    puff(0.1, 0.122, 0, 0.026),
-    leg(0.052, 0.034), leg(0.052, -0.034), leg(-0.052, 0.034), leg(-0.052, -0.034),
+    grad(at(new SphereGeometry(0.082, 20, 16), 0, 0.145, 0, 1.50, 0.96, 1.10), "#ddd6c6", "#fffdf6", 0.06, 0.24, 0.03),
+    puff(0.05, 0.182, 0.03, 0.04), puff(-0.01, 0.192, -0.028, 0.042), puff(-0.06, 0.176, 0.03, 0.038),
+    puff(0.035, 0.174, -0.045, 0.036), puff(-0.055, 0.164, -0.045, 0.035), puff(0.075, 0.152, 0.0, 0.034),
+    puff(-0.095, 0.154, 0.0, 0.033), puff(0.0, 0.164, 0.06, 0.036), puff(0.0, 0.126, -0.062, 0.034),
+    puff(-0.115, 0.164, 0, 0.022),
+    // head + neck stub: darker, more forward for flock read
+    grad(at(new SphereGeometry(0.028, 10, 7), 0.118, 0.118, 0, 1.1, 0.85, 0.9), "#1c1612", "#2a221c", 0.08, 0.14),
+    grad(at(new SphereGeometry(0.034, 10, 7), 0.155, 0.092, 0, 1.35, 0.95, 0.88), "#1a1410", "#2c241e", 0.05, 0.12),
+    grad(at(new SphereGeometry(0.013, 6, 4), 0.138, 0.118, 0.038, 0.7, 0.55, 1.4), "#1a1410", "#2c241e", 0.1, 0.14),
+    grad(at(new SphereGeometry(0.013, 6, 4), 0.138, 0.118, -0.038, 0.7, 0.55, 1.4), "#1a1410", "#2c241e", 0.1, 0.14),
+    puff(0.12, 0.138, 0, 0.024),
+    leg(0.052, 0.036), leg(0.052, -0.036), leg(-0.052, 0.036), leg(-0.052, -0.036),
   ].map(rgba);
   // ground-colour soft dissolve under the hooves: pasture tone, alpha → 0 at rim (no hard disc)
   parts.push(radialDisc(0.13, "#6f9a44", "#7ea84e", 1.35, 1.0, 0.004, 0.42));
@@ -600,6 +600,35 @@ function liftGlbAlbedo(g: BufferGeometry): BufferGeometry {
   return g;
 }
 
+/** T253 · sheep GLB: lift wool, keep dark head/legs for flock silhouette vs bushes. */
+function liftGlbSheepSilhouette(g: BufferGeometry): BufferGeometry {
+  const col = g.getAttribute("color");
+  if (col && "array" in col) {
+    const arr = col.array as Float32Array;
+    const item = col.itemSize;
+    for (let i = 0; i < col.count; i += 1) {
+      const o = i * item;
+      const r = arr[o]!, g0 = arr[o + 1]!, b = arr[o + 2]!;
+      const lum = 0.2126 * r + 0.7152 * g0 + 0.0722 * b;
+      if (lum >= 0.42) {
+        // wool: bright readable fleece
+        arr[o] = Math.min(1, 0.62 + r * 0.48);
+        arr[o + 1] = Math.min(1, 0.62 + g0 * 0.48);
+        arr[o + 2] = Math.min(1, 0.58 + b * 0.48);
+      } else {
+        // head/legs: deepen for silhouette (not lift toward meadow green)
+        arr[o] = Math.min(1, r * 0.55 + 0.02);
+        arr[o + 1] = Math.min(1, g0 * 0.50 + 0.015);
+        arr[o + 2] = Math.min(1, b * 0.48 + 0.01);
+      }
+    }
+    col.needsUpdate = true;
+  } else {
+    liftGlbAlbedo(g);
+  }
+  return g;
+}
+
 /** T246/T249 · prefer sculpted Tidewell GLB meshes; brighten baked albedo (keep mesh fidelity). */
 function glbOr(kind: PropKind, procedural: () => BufferGeometry): BufferGeometry {
   const tide = getTidewellGeometriesSync();
@@ -607,7 +636,7 @@ function glbOr(kind: PropKind, procedural: () => BufferGeometry): BufferGeometry
   if (kind === "sheep" && tide.sheep) {
     const g = tide.sheep.clone();
     g.computeVertexNormals();
-    return liftGlbAlbedo(g);
+    return liftGlbSheepSilhouette(g); // T253
   }
   if (isPine(kind) || kind === "canopy") {
     const tree = tide.decorByTerrain.wood;
@@ -860,7 +889,7 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
         y: TILE_TOP + 0.004,
         z: b.z,
         yaw: b.yaw,
-        scale: (isPine(b.kind) ? 1.28 : b.kind === "boulder" ? 1.18 : b.kind === "sheep" ? 0.85 : 1.0) * b.scale, // T250 GLB contact footprint
+        scale: (isPine(b.kind) ? 1.28 : b.kind === "boulder" ? 1.18 : b.kind === "sheep" ? 0.92 : 1.0) * b.scale, // T253 sheep silhouette footprint
         stretch: 1,
         tone: 0.5,
         hue: 0.5,
@@ -1091,7 +1120,7 @@ export function createSheepDissolveMaterial(): MeshStandardMaterial {
   m.polygonOffsetFactor = -1;
   m.polygonOffsetUnits = -2;
   const pattern = installPattern(m, "grass");
-  pattern.value = 0.18; // T249 bright wool readable (was burnt 0.8)
+  pattern.value = 0.06; // T253 wool/head chroma over grass dissolve
   const base = m.onBeforeCompile;
   const ground = { value: new Color(SHEEP_GROUND_TINT) };
   const [y0, y1] = SHEEP_DISSOLVE_BAND;

@@ -357,8 +357,14 @@ function paintSharedOpaquePlaqueFace(
   g.textAlign = "center";
   g.textBaseline = "middle";
   // Halo then ink — stage-wide readability without enlarging layout length rules.
-  g.lineWidth = Math.max(7, Math.round(H * 0.09)); // T119/T132
-  g.strokeStyle = opts.hub ? "rgba(120,53,15,0.85)" : "rgba(250,246,239,0.95)";
+  // T253 · carved plaque lettering: recess shadow + highlight + ink
+  const e = Math.max(2, Math.round(H * 0.025));
+  g.fillStyle = "rgba(15,23,42,0.45)";
+  g.fillText(title, cx + e, cy + e);
+  g.fillStyle = opts.hub ? "rgba(255,236,200,0.55)" : "rgba(255,250,240,0.7)";
+  g.fillText(title, cx - e * 0.6, cy - e * 0.6);
+  g.lineWidth = Math.max(3, Math.round(H * 0.04));
+  g.strokeStyle = opts.hub ? "rgba(120,53,15,0.55)" : "rgba(250,246,239,0.55)";
   g.strokeText(title, cx, cy);
   g.fillStyle = "#0f172a";
   g.fillText(title, cx, cy);
@@ -415,8 +421,13 @@ function plaqueWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
       g.font = '700 34px "Noto Serif CJK SC","Songti SC",serif';
       g.textAlign = "center";
       g.textBaseline = "middle";
-      g.lineWidth = 5;
-      g.strokeStyle = "rgba(250,246,239,0.95)";
+      // T253 · carved plaque title
+      g.fillStyle = "rgba(15,23,42,0.4)";
+      g.fillText(title.slice(0, 8), W / 2 + 2, 110);
+      g.fillStyle = "rgba(255,250,240,0.65)";
+      g.fillText(title.slice(0, 8), W / 2 - 1.5, 106);
+      g.lineWidth = 3;
+      g.strokeStyle = "rgba(250,246,239,0.5)";
       g.strokeText(title.slice(0, 8), W / 2, 108);
       g.fillStyle = "#0f172a";
       g.fillText(title.slice(0, 8), W / 2, 108);

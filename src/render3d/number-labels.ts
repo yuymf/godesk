@@ -24,7 +24,7 @@ import type { SceneNode } from "./scene-model";
 export const NUMBER_TOKEN_RADIUS = 0.258; // T222/T237 · chip footprint
 export const NUMBER_TOKEN_HALF_HEIGHT = 0.092; // T250 · product wood-chip lip / side thickness
 /** 贴花离筹码顶面的高度（避免 z-fighting；配合 polygonOffset）。 */
-export const LABEL_LIFT = 0.0005; // T131/T225 · decal seated on chip face
+export const LABEL_LIFT = 0.00015; // T253 · seated in chip recess (pressed stamp)
 /** 贴花边长 = 筹码半径 × 1.85 × 节点缩放：略小于筹码直径（G3D-ART-3 由 1.6 放大，字形更大）。 */
 export const LABEL_SIZE_PER_RADIUS = 2.50; // T241 · glyph inset on thicker beveled chip
 export { NUMBER_TOKEN_SCALE } from "./tokens";
@@ -97,20 +97,46 @@ export function drawNumberAtlas(size = 1024): Texture {
     let x = 0;
     ctx.lineJoin = "round";
     ctx.miterLimit = 2;
-    ctx.strokeStyle = "#fff8e6"; // T101
-    ctx.lineWidth = Math.max(6, fontPx * 0.22); // T101/T112/T118
+    // T253 · pressed stamp: soft recess shadow + thin highlight + ink fill (not sticker stroke)
+    const shadow = "rgba(12,6,2,0.72)";
+    const hi = "rgba(255,252,240,0.7)";
+    const ox = Math.max(3, fontPx * 0.07);
+    const oy = Math.max(3, fontPx * 0.08);
+    let xs = 0;
     [...text].forEach((ch, i) => {
-      ctx.strokeText(ch, x, 0);
-      ctx.fillText(ch, x, 0);
-      x += widths[i]! + track;
+      ctx.fillStyle = shadow;
+      ctx.fillText(ch, xs + ox, oy);
+      xs += widths[i]! + track;
+    });
+    xs = 0;
+    [...text].forEach((ch, i) => {
+      ctx.fillStyle = hi;
+      ctx.fillText(ch, xs - ox * 0.7, -oy * 0.7);
+      xs += widths[i]! + track;
+    });
+    xs = 0;
+    ctx.fillStyle = color;
+    ctx.strokeStyle = "rgba(255,248,230,0.35)";
+    ctx.lineWidth = Math.max(2, fontPx * 0.06);
+    [...text].forEach((ch, i) => {
+      ctx.strokeText(ch, xs, 0);
+      ctx.fillText(ch, xs, 0);
+      xs += widths[i]! + track;
     });
     ctx.restore();
     const pips = pipCount(n);
     const r = cell * 0.068; // T099/T112/T118 · larger probability pips
     const gap = r * 2.6;
     for (let i = 0; i < pips; i += 1) {
+      const px = cx + (i - (pips - 1) / 2) * gap;
+      const py = cy + cell * 0.4;
+      ctx.fillStyle = "rgba(20,10,4,0.45)";
       ctx.beginPath();
-      ctx.ellipse(cx + (i - (pips - 1) / 2) * gap, cy + cell * 0.4, r, r * GLYPH_STRETCH_Y, 0, 0, Math.PI * 2);
+      ctx.ellipse(px + 1.2, py + 1.4, r, r * GLYPH_STRETCH_Y, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.ellipse(px, py, r, r * GLYPH_STRETCH_Y, 0, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -218,11 +244,11 @@ export function createNumberLabelLayer(options: { atlas?: () => Texture } = {}):
     transparent: true,
     alphaTest: 0.35,
     depthWrite: false,
-    roughness: 0.85,
+    roughness: 0.94, // T253 · matte pressed ink (not glossy sticker)
     metalness: 0,
     polygonOffset: true,
-    polygonOffsetFactor: -2,
-    polygonOffsetUnits: -2,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
   });
   material.userData.gdShared = true;
   const mesh = new Mesh(new BufferGeometry(), material);

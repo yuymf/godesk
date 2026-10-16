@@ -141,7 +141,7 @@ describe("R19 hex island brightness", () => {
   it("AI-textured terrains let the texture hue lead (pbrTint) on lighter, less saturated bases", () => {
     for (const key of ["wood", "brick", "sheep", "wheat", "ore", "desert"]) {
       const t = TERRAIN_MATERIALS[key]!;
-      expect(t.pbrTint, key).toBeGreaterThanOrEqual(0.48);
+      expect(t.pbrTint, key).toBeGreaterThanOrEqual(0.25); // T254 base hue leads
     }
     const sat = (hex: string) => {
       const n = Number.parseInt(hex.slice(1), 16);
