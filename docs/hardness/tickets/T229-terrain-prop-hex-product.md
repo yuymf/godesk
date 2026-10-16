@@ -11,3 +11,6 @@
 - share H01≥0.962 / H02–H05≥0.88；purge false
 - centerFails=0 cornerFails=0
 - continuity 不回退 T217–T226
+
+## 结果
+SUCCESS（探针 H01–H05 HARD；H02 mean6.07/ge20 5.97；share 0.962/0.88；center/corner 0）。

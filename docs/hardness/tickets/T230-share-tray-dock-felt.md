@@ -10,3 +10,6 @@
 - H01 canvasShare ≥0.962（力争再抬）；H02–H05 ≥0.88
 - tw 不回涨（side≤16 dock≤3）
 - center/corner/T157/T161/T193/T202 全绿
+
+## 结果
+SUCCESS（探针 shareFloorOk；H01 0.962 tw 16/3；guards 绿）。
