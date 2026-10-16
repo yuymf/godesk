@@ -1,3 +1,6 @@
+import type { AutoBattlerContentPatch } from "../runtime/adapters/auto-battler-content";
+import type { AutoBattlerThemePatch } from "../runtime/adapters/auto-battler-theme";
+import type { AutoBattlerBranding } from "../runtime/adapters/auto-battler-packs";
 import type { GameSpec, GenerationMetadata } from "./game-spec";
 import type { RenderPatch, RenderSpec } from "./render-spec";
 
@@ -272,10 +275,110 @@ export interface RuleSystem {
               playerCount: number;
               terminalFrom?: string;
               terminalTo?: string;
+              freight?: boolean;
+              tickets?: boolean;
+              content?: {
+                contracts: Array<{
+                  id: string;
+                  name: string;
+                  from: string;
+                  to: string;
+                  reward: number;
+                  reputation: number;
+                  kind?: string;
+                }>;
+                ships: Array<{
+                  id: string;
+                  name: string;
+                  cargo: number;
+                  speed: number;
+                  armor: number;
+                }>;
+                winReputation: number;
+                startingFunds: number;
+                startingReputation?: number;
+                edgeTolls?: Record<string, number>;
+              };
+              ticketsContent?: {
+                edgeMeta: Record<string, { color: string; length: number }>;
+                tickets: Array<{
+                  id: string;
+                  name: string;
+                  from: string;
+                  to: string;
+                  points: number;
+                }>;
+                lengthScores: Record<string, number>;
+                startingTrainCards: number;
+                startingTicketDraw: number;
+                startingTicketKeep: number;
+                startingTrains: number;
+                faceUpCount: number;
+                cardsPerColor: number;
+                wildCount: number;
+              };
             }
           | {
               type: "auction-bidding-v1";
               playerCount: number;
+              harbor?: boolean;
+              gallery?: boolean;
+              content?: {
+                lots: Array<{
+                  id: string;
+                  name: string;
+                  reserve: number;
+                  marketMult: number;
+                }>;
+                startingFunds: number;
+                bidVisibility: "open" | "sealed";
+              };
+              galleryContent?: {
+                artists: Array<{ id: string; name: string }>;
+                paintings: Array<{
+                  id: string;
+                  name: string;
+                  artistId: string;
+                  reserve: number;
+                }>;
+                startingFunds: number;
+                modes: Array<"open" | "sealed" | "fixed">;
+                salesToEndRound: number;
+                marketLadder: number[];
+                handSize: number;
+                roundsToEnd: number;
+              };
+            }
+          | {
+              type: "gem-engine-v1";
+              playerCount: number;
+              content?: {
+                prestigeToWin?: number;
+                bankPerBasic?: number;
+                bankGold?: number;
+              };
+            }
+          | {
+              type: "pattern-draft-v1";
+              playerCount: number;
+              content?: {
+                factoryCount?: number;
+                tilesPerFactory?: number;
+                tilesPerColor?: number;
+                floorPenalties?: number[];
+              };
+            }
+          | {
+              type: "auto-battler-v1";
+              playerCount: number;
+              /** Creator tuning (prep timers, starting HP/gold); omitted → kernel defaults. */
+              tuning?: { prepShopSeconds?: number; prepPlaceSeconds?: number; startHp?: number; startGold?: number; boardCols?: number; boardRows?: number };
+              /** Content data (units / traits / star rules); omitted fields → kernel defaults. */
+              content?: AutoBattlerContentPatch;
+              /** Visual theme (preset + overrides); omitted → default preset. */
+              theme?: AutoBattlerThemePatch;
+              /** HUD labels from the selected content+theme pack. */
+              branding?: AutoBattlerBranding;
             };
   };
 }
@@ -299,7 +402,7 @@ export interface GenerationPlan {
   sourceIds: string[];
   proposedRuntime?: RuntimeConfigureOperation;
   /** Wave4 refuse kind surfaced on pending 「这局还做不到」 (W5-01). */
-  generationRefuse?: "non-score-hand" | "multi-act-hidden-role" | "weak-genre-score-race";
+  generationRefuse?: "non-score-hand" | "multi-act-hidden-role" | "weak-genre-score-race" | "pattern-draft";
   createdAt: string;
   approvedAt?: string;
 }
@@ -616,12 +719,113 @@ export type ProjectChangeOperation =
         playerCount: number;
         terminalFrom?: string;
         terminalTo?: string;
+        freight?: boolean;
+        tickets?: boolean;
+        content?: {
+          contracts: Array<{
+            id: string;
+            name: string;
+            from: string;
+            to: string;
+            reward: number;
+            reputation: number;
+            kind?: string;
+          }>;
+          ships: Array<{
+            id: string;
+            name: string;
+            cargo: number;
+            speed: number;
+            armor: number;
+          }>;
+          winReputation: number;
+          startingFunds: number;
+          startingReputation?: number;
+          edgeTolls?: Record<string, number>;
+        };
+        ticketsContent?: {
+          edgeMeta: Record<string, { color: string; length: number }>;
+          tickets: Array<{
+            id: string;
+            name: string;
+            from: string;
+            to: string;
+            points: number;
+          }>;
+          lengthScores: Record<string, number>;
+          startingTrainCards: number;
+          startingTicketDraw: number;
+          startingTicketKeep: number;
+          startingTrains: number;
+          faceUpCount: number;
+          cardsPerColor: number;
+          wildCount: number;
+        };
         unsupported?: string[];
       };
     }
   | {
       op: "configure_auction_bidding";
-      config: { playerCount: number; unsupported?: string[] };
+      config: {
+        playerCount: number;
+        harbor?: boolean;
+        gallery?: boolean;
+        content?: {
+          lots: Array<{
+            id: string;
+            name: string;
+            reserve: number;
+            marketMult: number;
+          }>;
+          startingFunds: number;
+          bidVisibility: "open" | "sealed";
+        };
+        galleryContent?: {
+          artists: Array<{ id: string; name: string }>;
+          paintings: Array<{
+            id: string;
+            name: string;
+            artistId: string;
+            reserve: number;
+          }>;
+          startingFunds: number;
+          modes: Array<"open" | "sealed" | "fixed">;
+          salesToEndRound: number;
+          marketLadder: number[];
+          handSize: number;
+          roundsToEnd: number;
+        };
+        unsupported?: string[];
+      };
+    }
+  | {
+      op: "configure_gem_engine";
+      config: {
+        playerCount: number;
+        content?: {
+          prestigeToWin?: number;
+          bankPerBasic?: number;
+          bankGold?: number;
+        };
+        unsupported?: string[];
+      };
+    }
+  | {
+      op: "configure_pattern_draft";
+      config: {
+        playerCount: number;
+        content?: {
+          factoryCount?: number;
+          tilesPerFactory?: number;
+          tilesPerColor?: number;
+          floorPenalties?: number[];
+        };
+        unsupported?: string[];
+      };
+    }
+  | {
+      op: "configure_auto_battler";
+      config: { playerCount: number; unsupported?: string[]; tuning?: { prepShopSeconds?: number; prepPlaceSeconds?: number; startHp?: number; startGold?: number; boardCols?: number; boardRows?: number }; content?: AutoBattlerContentPatch; theme?: AutoBattlerThemePatch; branding?: AutoBattlerBranding };
     }
   | {
       /** G3D-15: partial patch over `presentation.render` (spatial surfaces only). */
@@ -918,6 +1122,12 @@ export interface SessionState {
     freeRoadsRemaining: number;
     lastAction: string | null;
     turnPlayer: number;
+    pendingTrade: {
+      from: number;
+      to: number;
+      give: Record<string, number>;
+      take: Record<string, number>;
+    } | null;
   };
   /** Present when the build kernel is network-route-v1 (line network). */
   networkRoute?: {
@@ -928,17 +1138,230 @@ export interface SessionState {
     terminalTo: string;
     lastClaim: { edgeId: string; playerId: number } | null;
     routeCounts: [number, number];
+    tickets?: any;
+    freight?: {
+      funds: [number, number];
+      reputation: [number, number];
+      shipIds: [string[], string[]];
+      hand: Array<Array<{
+        id: string;
+        name: string;
+        from: string;
+        to: string;
+        reward: number;
+        reputation: number;
+        kind?: string;
+        instanceId: string;
+      }>>;
+      market: Array<{
+        id: string;
+        name: string;
+        from: string;
+        to: string;
+        reward: number;
+        reputation: number;
+        kind?: string;
+        instanceId: string;
+      }>;
+      deck: Array<{
+        id: string;
+        name: string;
+        from: string;
+        to: string;
+        reward: number;
+        reputation: number;
+        kind?: string;
+        instanceId: string;
+      }>;
+      winReputation: number;
+      shipsCatalog: Array<{
+        id: string;
+        name: string;
+        cargo: number;
+        speed: number;
+        armor: number;
+      }>;
+      edgeTolls: Record<string, number>;
+      lastDelivery: {
+        playerId: number;
+        contractId: string;
+        name: string;
+        reward: number;
+        reputation: number;
+      } | null;
+    } | null;
   };
   auctionBidding?: {
-    lotId: "amber" | "jade";
-    chips: [number, number];
-    scores: [number, number];
+    lotId: string;
+    chips: number[];
+    scores: number[];
     lotValue: number;
     currentBid: number;
     highBidder: number | null;
     passedWithoutBid: number;
     awardedTo: number | null;
-    seatOrder: [number, number];
+    seatOrder: number[];
+    phase?: string;
+    harbor?: {
+      bidVisibility: "open" | "sealed";
+      deck: Array<{ id: string; name: string; reserve: number; marketMult: number; instanceId: string }>;
+      discard: Array<{ id: string; name: string; reserve: number; marketMult: number; instanceId: string }>;
+      currentLot: { id: string; name: string; reserve: number; marketMult: number; instanceId: string } | null;
+      hand: [
+        Array<{ id: string; name: string; reserve: number; marketMult: number; instanceId: string }>,
+        Array<{ id: string; name: string; reserve: number; marketMult: number; instanceId: string }>,
+      ];
+      sealedBids: [number | null, number | null];
+      lastSold: { seat: number; name: string; payout: number } | null;
+    } | null;
+    gallery?: {
+      artists: Array<{ id: string; name: string }>;
+      modes: Array<"open" | "sealed" | "fixed" | "double">;
+      currentMode: "open" | "sealed" | "fixed" | "double";
+      modeCursor: number;
+      salesToEndRound: number;
+      marketLadder: number[];
+      roundsToEnd: number;
+      round: number;
+      playerCount: number;
+      handSize: number;
+      auctioneer: number;
+      auctionHand: Array<Array<{ id: string; name: string; artistId: string; reserve: number; instanceId: string }>>;
+      collection: Array<Array<{ id: string; name: string; artistId: string; reserve: number; instanceId: string }>>;
+      deck: Array<{ id: string; name: string; artistId: string; reserve: number; instanceId: string }>;
+      currentLot: { id: string; name: string; artistId: string; reserve: number; instanceId: string } | null;
+      companionLot: { id: string; name: string; artistId: string; reserve: number; instanceId: string } | null;
+      sealedBids: Array<number | null>;
+      fixedPrice: number;
+      fixedAnswered: boolean[];
+      roundSales: Record<string, number>;
+      marketPrices: Record<string, number>;
+      lastSold: { seat: number; name: string; payout: number; artistId: string } | null;
+      marketPasses: number;
+    } | null;
+  };
+  /** Present when the build kernel is gem-engine-v1. */
+  gemEngine?: {
+    phase?: string;
+    bank: Record<string, number>;
+    market: [Array<Record<string, unknown>>, Array<Record<string, unknown>>, Array<Record<string, unknown>>];
+    decks: [Array<Record<string, unknown>>, Array<Record<string, unknown>>, Array<Record<string, unknown>>];
+    nobles: Array<Record<string, unknown>>;
+    seats: [
+      {
+        gems: Record<string, number>;
+        discounts: Record<string, number>;
+        prestige: number;
+        cards: Array<Record<string, unknown>>;
+        nobles: Array<Record<string, unknown>>;
+      },
+      {
+        gems: Record<string, number>;
+        discounts: Record<string, number>;
+        prestige: number;
+        cards: Array<Record<string, unknown>>;
+        nobles: Array<Record<string, unknown>>;
+      },
+    ];
+    lastEvent: string | null;
+    prestigeToWin?: number;
+  };
+  /** Present when the build kernel is pattern-draft-v1. */
+  patternDraft?: {
+    phase?: string;
+    factories: string[][];
+    center: string[];
+    markerInCenter: boolean;
+    bag: string[];
+    lid: string[];
+    bagCount: number;
+    lidCount: number;
+    round: number;
+    nextStart: number;
+    lastEvent: string | null;
+    seats: [
+      {
+        lines: Array<{ color: string | null; tiles: string[]; capacity: number }>;
+        wall: Array<Array<string | null>>;
+        floor: string[];
+        hasMarker: boolean;
+        score: number;
+      },
+      {
+        lines: Array<{ color: string | null; tiles: string[]; capacity: number }>;
+        wall: Array<Array<string | null>>;
+        floor: string[];
+        hasMarker: boolean;
+        score: number;
+      },
+    ];
+  };
+    /** Present when the build kernel is auto-battler-v1 (generic shop/bench/combat). */
+  autoBattler?: {
+    phase: "shop" | "place" | "ended";
+    round: number;
+    /** Epoch ms; client shows remaining seconds only. */
+    prepEndsAt?: number;
+    tuning?: { prepShopSeconds?: number; prepPlaceSeconds?: number; startHp?: number; startGold?: number; boardCols?: number; boardRows?: number };
+    seats: [
+      {
+        gold: number;
+        hp: number;
+        level: number;
+        xp: number;
+        shop: string[];
+        bench: Array<{
+          uid: string;
+          unitId: string;
+          owner: number;
+          stars: number;
+          atk: number;
+          hp: number;
+          maxHp: number;
+        } | null>;
+        board: Array<{
+          uid: string;
+          unitId: string;
+          owner: number;
+          stars: number;
+          atk: number;
+          hp: number;
+          maxHp: number;
+        } | null>;
+        ready: boolean;
+        synergies: Array<{ trait: string; count: number; label: string }>;
+      },
+      {
+        gold: number;
+        hp: number;
+        level: number;
+        xp: number;
+        shop: string[];
+        bench: Array<{
+          uid: string;
+          unitId: string;
+          owner: number;
+          stars: number;
+          atk: number;
+          hp: number;
+          maxHp: number;
+        } | null>;
+        board: Array<{
+          uid: string;
+          unitId: string;
+          owner: number;
+          stars: number;
+          atk: number;
+          hp: number;
+          maxHp: number;
+        } | null>;
+        ready: boolean;
+        synergies: Array<{ trait: string; count: number; label: string }>;
+      },
+    ];
+    combatLog: Array<Record<string, unknown>>;
+    lastCombat: { winnerSeat: number | null; damage: number } | null;
+    nextUid: number;
   };
 }
 
@@ -950,6 +1373,12 @@ export interface AcceptedAction {
   points: number;
   payload?: Record<string, unknown>;
   state: SessionState;
+  /**
+   * Epoch ms the authority accepted this action. Only set for kernels whose rules read a
+   * wall clock (prep timers); replay re-runs the action at this time so reconstructed
+   * state is identical to the live state.
+   */
+  at?: number;
 }
 
 export interface PlaytestRun {

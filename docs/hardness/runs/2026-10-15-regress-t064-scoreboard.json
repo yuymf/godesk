@@ -1,0 +1,108 @@
+[
+  {
+    "suite": "H01",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 0,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 0
+    },
+    "playIsRoom": true,
+    "score": "PASS（可玩子集）",
+    "kernelType": "hex-settlement-v1",
+    "sessionOk": true,
+    "rejectedShell": false
+  },
+  {
+    "suite": "H02",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 2
+    },
+    "playIsRoom": true,
+    "score": "PASS（可玩子集）",
+    "kernelType": "network-route-v1",
+    "sessionOk": true,
+    "rejectedShell": false
+  },
+  {
+    "suite": "H03",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "score": "PASS（可玩子集）",
+    "kernelType": "gem-engine-v1",
+    "sessionOk": true,
+    "rejectedShell": false
+  },
+  {
+    "suite": "H04",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "score": "PASS（可玩子集）",
+    "kernelType": "pattern-draft-v1",
+    "sessionOk": true,
+    "rejectedShell": false,
+    "t036TileGuard": {
+      "ok": true,
+      "tip": "5c7c4d6",
+      "log_tail": [
+        "RUN  v4.1.11 /workspace/godesk-tide-arena",
+        "",
+        "",
+        " Test Files  2 passed (2)",
+        "      Tests  5 passed (5)",
+        "   Start at  06:55:04",
+        "   Duration  351ms (transform 264ms, setup 0ms, import 347ms, tests 14ms, environment 0ms)"
+      ]
+    },
+    "t047FactoryGlazeGuard": {
+      "ok": true
+    }
+  },
+  {
+    "suite": "H05",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "score": "PASS（可玩子集）",
+    "kernelType": "auction-bidding-v1",
+    "sessionOk": true,
+    "rejectedShell": false
+  }
+]

@@ -4,10 +4,16 @@
 import type { TabletopLayout, TabletopRenderInput } from "../render3d/mappers/tabletop";
 import {
   discFlippingLayout,
+  gemEngineLayout,
+  patternDraftLayout,
+  auctionBiddingLayout,
   harborVoyageLayout,
   networkRouteLayout,
   workerPlacementLayout,
   type DiscFlippingTabletopInput,
+  type GemEngineTabletopInput,
+  type PatternDraftTabletopInput,
+  type AuctionBiddingTabletopInput,
   type NetworkRouteTabletopInput,
 } from "../render3d/mappers/tabletop-kernels";
 import { SCENE_TOKENS, SEAT_COLORS } from "../render3d/tokens";
@@ -23,19 +29,38 @@ const HARBOR_TARGETS = HARBOR_TARGET_GROUPS.flatMap((group) => group.targets);
  * 从懒加载 chunk 引用会把整段 Kernel 默认值留在首页包里（约 +1.1 KB gzip）。
  */
 export function fallbackTabletopRender(kernel: TabletopStageProps["kernel"]): TabletopRenderInput {
-  const seat = (base: string) => ({ base, roughness: 0.58, metalness: 0, clearcoat: 0.12, pattern: "none" as const });
+  const seat = (base: string) => ({ base, roughness: 0.48, metalness: 0.05, clearcoat: 0.28, pattern: "none" as const });
   const colors = kernel === "disc-flipping-v1" ? ["#1d1d1f", "#f4efe6", SEAT_COLORS[2], SEAT_COLORS[3]] : SEAT_COLORS;
+  const desk = kernel === "gem-engine-v1" || kernel === "pattern-draft-v1" || kernel === "auction-bidding-v1";
+  const boardBase = kernel === "disc-flipping-v1" ? "#1f6b4a" : desk ? "#1a8a45" : "#b9a77d"; // T044 desk green felt
   return {
-    camera: { ...SCENE_TOKENS.camera, pan: false },
+    camera: { ...SCENE_TOKENS.camera, ...(desk ? { fovDeg: 30, distance: 12.5 } : {}), pan: false },
     lighting: SCENE_TOKENS.lighting,
     water: { enabled: kernel === "harbor-voyage-v1", shallow: "#4aa8a8", deep: "#0e3a55" },
     materials: {
       ...Object.fromEntries(colors.map((base, index) => [`seat${index}`, seat(base)])),
-      table: { base: "#8b5a2b", roughness: 0.9, metalness: 0, pattern: "grain" },
-      piece: { base: "#f4efe6", roughness: 0.58, metalness: 0, pattern: "none" },
-      board: { base: kernel === "disc-flipping-v1" ? "#1f6b4a" : "#b9a77d", roughness: 0.8, metalness: 0, pattern: "cloth" },
+      table: { base: "#a87338", roughness: 0.74, metalness: 0.06, pattern: "grain" }, // T110
+      piece: { base: "#f7f1e6", roughness: desk ? 0.42 : 0.58, metalness: desk ? 0.08 : 0, clearcoat: desk ? 0.35 : 0.12, pattern: "none" },
+      card: { base: "#f3e7d3", roughness: 0.72, metalness: 0, clearcoat: 0.08, pattern: "none" },
+      resource: { base: "#e8d9b8", roughness: 0.48, metalness: 0.12, clearcoat: 0.28, pattern: "none" },
+      token: { base: "#c4b5fd", roughness: 0.4, metalness: 0.15, clearcoat: 0.4, pattern: "none" },
+      board: { base: boardBase, roughness: desk ? 0.99 : 0.8, metalness: 0, pattern: "cloth", ...(desk ? { brush: 0.55 } : {}) },
     },
-    bindings: [{ objectKind: "cell", mesh: "tile-square", material: "board", scale: 1 }],
+    bindings: desk
+      ? [
+          { objectKind: "region", mesh: "tile-square", material: "board", scale: 1 },
+          { objectKind: "cell", mesh: "tile-square", material: "board", scale: 1 },
+          { objectKind: "card", mesh: "card", material: "card", scale: 1 },
+          { objectKind: "disc", mesh: "disc", material: "piece", scale: 0.9 },
+          { objectKind: "tile", mesh: "glazed-tile", material: "piece", scale: 1 },
+          { objectKind: "resource", mesh: "gem-chip", material: "resource", scale: 0.9 },
+          { objectKind: "token", mesh: "disc", material: "token", scale: 0.75 },
+          { objectKind: "plaque", mesh: "plaque", material: "piece", scale: 1 },
+          { objectKind: "lot", mesh: "framed-art", material: "card", scale: 1.15 },
+          { objectKind: "building", mesh: "house", material: "piece", scale: 0.9 },
+          { objectKind: "worker", mesh: "meeple", material: "piece", scale: 0.95 },
+        ]
+      : [{ objectKind: "cell", mesh: "tile-square", material: "board", scale: 1 }],
   };
 }
 
@@ -72,5 +97,21 @@ export function layoutForStage({ kernel, state, legal, onAct }: Pick<TabletopSta
         targets: HARBOR_TARGETS,
       }, new Set(open));
     }
+    case "gem-engine-v1":
+      return gemEngineLayout(
+        state as GemEngineTabletopInput,
+        interactive
+          ? (legal ?? []) as Array<{ type: string; payload?: Record<string, unknown> | null }>
+          : undefined,
+      );
+    case "pattern-draft-v1":
+      return patternDraftLayout(
+        state as PatternDraftTabletopInput,
+        interactive
+          ? (legal ?? []) as Array<{ type: string; payload?: Record<string, unknown> | null }>
+          : undefined,
+      );
+    case "auction-bidding-v1":
+      return auctionBiddingLayout(state as AuctionBiddingTabletopInput);
   }
 }

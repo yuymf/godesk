@@ -46,8 +46,8 @@ const RESOURCE_LABEL = {
 
 const COPY = {
   zh: {
-    board: "汐屿六角岛",
-    island: "汐屿群岛",
+    board: "六角岛桌面", // T064 · generic (no product-shell brand)
+    island: "群岛",
     hud: "对局状态",
     active: "当前行动",
     seat: "座位",
@@ -80,7 +80,7 @@ const COPY = {
     placeRoad: "铺设栈道",
     moveRobber: "移动雾灯",
     actions: "可用行动",
-    boardTargets: "棋盘落点（键盘 / 辅助）",
+    boardTargets: "落点",
     primary: "本回合",
     settlers: "开拓者",
     turnPanel: "本回合",
@@ -119,8 +119,8 @@ const COPY = {
     toWin: "还需胜利点",
   },
   en: {
-    board: "Tidewell Isles",
-    island: "Tidewell Isles",
+    board: "Hex island table", // T064
+    island: "Archipelago",
     hud: "Match status",
     active: "Active seat",
     seat: "Seat",
@@ -153,7 +153,7 @@ const COPY = {
     placeRoad: "Lay causeway",
     moveRobber: "Move fog lantern",
     actions: "Available actions",
-    boardTargets: "Board targets (keyboard / assistive)",
+    boardTargets: "Targets",
     primary: "This turn",
     settlers: "The settlers",
     turnPanel: "Your turn",
@@ -204,6 +204,7 @@ function phaseLabel(phase: string, locale: RoomLocale): string {
     discard: { zh: "弃牌", en: "Discard" },
     robber: { zh: "移动雾灯", en: "Fog lantern" },
     main: { zh: "建造/贸易", en: "Build / trade" },
+    trade_response: { zh: "回应交易", en: "Trade response" },
     ended: { zh: "结束", en: "Ended" },
   };
   return map[phase]?.[locale] ?? phase;
@@ -243,12 +244,23 @@ function shortLabelForAction(
       const ratio = Number(action.payload?.ratio ?? 4);
       return `${copy.bankTrade} ${ratio}${resourceLabel[give] ?? give}→${resourceLabel[take] ?? take}`;
     }
-    case "player_trade": {
-      const give = String(action.payload?.give ?? "") as Resource;
-      const take = String(action.payload?.take ?? "") as Resource;
+    case "propose_trade": {
+      const give = action.payload?.give as Record<string, number> | undefined;
+      const take = action.payload?.take as Record<string, number> | undefined;
       const withSeat = action.payload?.withSeat;
-      return `${copy.playerTrade} 1${resourceLabel[give] ?? give}↔P${withSeat} ${resourceLabel[take] ?? take}`;
+      const fmt = (bag?: Record<string, number>) =>
+        bag
+          ? Object.entries(bag)
+              .filter(([, n]) => (n as number) > 0)
+              .map(([r, n]) => `${n}${resourceLabel[r as Resource] ?? r}`)
+              .join("+")
+          : "?";
+      return `${copy.playerTrade}→P${withSeat} ${fmt(give)}↔${fmt(take)}`;
     }
+    case "accept_trade":
+      return copy.playerTrade + " ✓";
+    case "reject_trade":
+      return copy.playerTrade + " ✗";
     default:
       return action.label;
   }
@@ -274,7 +286,9 @@ export function formatLastAction(
     play_road_building: copy.playRoadBuilding,
     discard: copy.discard,
     bank_trade: copy.bankTrade,
-    player_trade: copy.playerTrade,
+    propose_trade: copy.playerTrade,
+    accept_trade: copy.playerTrade,
+    reject_trade: copy.playerTrade,
   };
   return map[lastAction] ?? copy.noLast;
 }
@@ -326,10 +340,8 @@ export function HexSettlementBoard({
   homeHref?: string;
   replayUrl?: string;
 }) {
-  const [boardTargetsOpen, setBoardTargetsOpen] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return window.matchMedia("(min-width: 768px)").matches;
-  });
+  // T067 · placement assist folded by default so island canvas stays primary
+  const [boardTargetsOpen, setBoardTargetsOpen] = useState(false);
   const [logTab, setLogTab] = useState<"chronicle" | "chat" | "coach">("chronicle");
   const [logOpenMobile, setLogOpenMobile] = useState(false);
   const [tableOpen, setTableOpen] = useState(false);
@@ -349,13 +361,7 @@ export function HexSettlementBoard({
   const [resourceGain, setResourceGain] = useState<Partial<Record<Resource, number>>>({});
   const prevResourcesRef = useRef<Record<Resource, number> | null>(null);
 
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)");
-    const sync = () => setBoardTargetsOpen(mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
+  // T067 · do not auto-open placement drawer on desktop (island stays primary)
 
   const copy = COPY[locale];
   const resourceLabel = RESOURCE_LABEL[locale];

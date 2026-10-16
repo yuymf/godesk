@@ -199,9 +199,57 @@ export function isNetworkRoute(ruleSystem: RuleSystem): boolean {
   return Boolean(networkRouteKernel(ruleSystem));
 }
 
-export function isAuctionBidding(ruleSystem: RuleSystem): boolean {
+export function auctionBiddingKernel(
+  ruleSystem: RuleSystem,
+): Extract<
+  Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
+  { type: "auction-bidding-v1" }
+> | null {
   return ruleSystem.runtimeSupport.status === "executable" &&
-    ruleSystem.runtimeSupport.kernel.type === "auction-bidding-v1";
+    ruleSystem.runtimeSupport.kernel.type === "auction-bidding-v1"
+    ? ruleSystem.runtimeSupport.kernel
+    : null;
+}
+
+export function isAuctionBidding(ruleSystem: RuleSystem): boolean {
+  return Boolean(auctionBiddingKernel(ruleSystem));
+}
+
+export function gemEngineKernel(
+  ruleSystem: RuleSystem,
+): Extract<
+  Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
+  { type: "gem-engine-v1" }
+> | null {
+  return ruleSystem.runtimeSupport.status === "executable" &&
+    ruleSystem.runtimeSupport.kernel.type === "gem-engine-v1"
+    ? ruleSystem.runtimeSupport.kernel
+    : null;
+}
+
+export function isGemEngine(ruleSystem: RuleSystem): boolean {
+  return Boolean(gemEngineKernel(ruleSystem));
+}
+
+export function patternDraftKernel(
+  ruleSystem: RuleSystem,
+): Extract<
+  Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
+  { type: "pattern-draft-v1" }
+> | null {
+  return ruleSystem.runtimeSupport.status === "executable" &&
+    ruleSystem.runtimeSupport.kernel.type === "pattern-draft-v1"
+    ? ruleSystem.runtimeSupport.kernel
+    : null;
+}
+
+export function isPatternDraft(ruleSystem: RuleSystem): boolean {
+  return Boolean(patternDraftKernel(ruleSystem));
+}
+
+export function isAutoBattler(ruleSystem: RuleSystem): boolean {
+  return ruleSystem.runtimeSupport.status === "executable" &&
+    ruleSystem.runtimeSupport.kernel.type === "auto-battler-v1";
 }
 
 /** Score-track family only — themed scoreboard UI must not stand in for other genres (ADR 0012). */
@@ -243,6 +291,7 @@ export const ROOM_COPY = {
     inviteLink: "邀请链接",
     copyInvite: "复制链接",
     copiedInvite: "已复制",
+    shareLinkReady: "好友可打开 · 点复制链接",
     copyFailed: "复制失败，请手动选择链接。",
     yourSeat: "你的席位",
     chooseSeat: "选择空席位",
@@ -323,6 +372,7 @@ export const ROOM_COPY = {
     inviteLink: "Invite link",
     copyInvite: "Copy link",
     copiedInvite: "Copied",
+    shareLinkReady: "Ready to share · tap Copy link",
     copyFailed: "Copy failed. Select the link manually.",
     yourSeat: "Your seat",
     chooseSeat: "Choose an open seat",

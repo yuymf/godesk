@@ -124,8 +124,8 @@ describe("camera rig (pure)", () => {
         expect(Math.max(maxX, maxY)).toBeLessThanOrEqual(0.93 + 1e-6);
         // Tight: at least one axis touches the margin.
         expect(Math.max(maxX, maxY)).toBeGreaterThan(0.89);
-        // The dice tray is a screen overlay now: only tile corners are framed.
-        expect(points.length).toBe(TILES.length * 6);
+        // Tile corners framed; harbour/coast dress may add a few shared points.
+        expect(points.length).toBeGreaterThanOrEqual(TILES.length * 6);
       });
     }
   }
@@ -205,9 +205,9 @@ describe("camera rig (pure)", () => {
 });
 
 describe("R24 camera alignment constants", () => {
-  it("play polar ≈54°, floor ≥45°, maxPolar ≈58°, azimuth 11–14°, FOV lock is viewport-side", () => {
-    expect(CAMERA_MODE_POLAR_DEG.play).toBe(54);
-    expect(PLAY_MIN_POLAR_DEG).toBeGreaterThanOrEqual(45);
+  it("play polar ≈56°, floor ≥46°, maxPolar ≈58°, azimuth 11–14°, FOV lock is viewport-side", () => {
+    expect(CAMERA_MODE_POLAR_DEG.play).toBe(56);
+    expect(PLAY_MIN_POLAR_DEG).toBeGreaterThanOrEqual(46);
     expect(POLAR_LIMITS_DEG.max).toBeGreaterThanOrEqual(58);
     expect(POLAR_LIMITS_DEG.max).toBeLessThanOrEqual(60);
     expect(PLAY_AZIMUTH_DEG).toBeGreaterThanOrEqual(11);

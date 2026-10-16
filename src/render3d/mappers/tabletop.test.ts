@@ -31,7 +31,10 @@ describe("G3D-14 tabletop mapper", () => {
   it("maps disc-flipping to board + grid + seat-coloured discs + legal hints", () => {
     const scene = mapTabletopToScene(discFlippingLayout(othelloStart(), OTHELLO_LEGAL), renderFor("disc-flipping-v1"));
     const kinds = scene.model.nodes.map((node) => node.kind);
-    expect(kinds.filter((kind) => kind === "piece")).toHaveLength(4);
+    // T038/T269 · each disc emits a soft contact-shadow piece node (4 discs + 4 shadows).
+    const pieces = scene.model.nodes.filter((node) => node.kind === "piece");
+    expect(pieces.filter((node) => node.mesh !== "contact-shadow")).toHaveLength(4);
+    expect(pieces.filter((node) => node.mesh === "contact-shadow")).toHaveLength(4);
     expect(kinds.filter((kind) => kind === "hint")).toHaveLength(4);
     expect(scene.model.nodes.find((node) => node.id === "grid")?.tag).toBe("8x8");
     const black = scene.model.nodes.find((node) => node.id === "piece:disc:3,4")!;
@@ -112,11 +115,14 @@ describe("G3D-14 tabletop mapper", () => {
     const scene = mapTabletopToScene(layout, renderFor("network-route-v1"));
     const links = scene.model.nodes.filter((node) => node.kind === "link");
     expect(links).toHaveLength(3);
-    const claimed = links.find((node) => node.id === "link:ab")!;
+    // T046 · rail-track ids encode claim state: link:rail-track:{c|o}:{edgeId}
+    const claimed = links.find((node) => node.id === "link:rail-track:c:ab")!;
     expect(claimed.seat).toBe(0);
-    expect(scene.materials[claimed.material!]!.base).toBe("#c0392b");
-    expect(resolveTabletopPick(scene, { nodeId: "link:bc" })).toEqual({ type: "claim", payload: { edgeId: "bc" } });
-    expect(resolveTabletopPick(scene, { nodeId: "link:ab" })).toBeNull();
+    expect(claimed.mesh).toBe("rail-track");
+    // T265 · seat0 desaturated chrome (not legacy #c0392b)
+    expect(scene.materials[claimed.material!]!.base).toBe("#d49088");
+    expect(resolveTabletopPick(scene, { nodeId: "link:rail-track:o:bc" })).toEqual({ type: "claim", payload: { edgeId: "bc" } });
+    expect(resolveTabletopPick(scene, { nodeId: "link:rail-track:c:ab" })).toBeNull();
     // 坐标归一到约 8 单位宽的桌面。
     const xs = scene.model.nodes.filter((node) => node.kind === "piece").map((node) => node.position[0]);
     expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(8, 1);

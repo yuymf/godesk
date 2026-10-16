@@ -42,7 +42,7 @@ export const WATER_Y = -0.08;
 /** 岩壁顶面低于地块顶 4cm：地块间的缝里露出岩石，外圈形成岛的岩壁。 */
 export const SKIRT_TOP_Y = 0.24;
 /** R12：更深岸崖，穿过水面，嵌进桌面读感（非托盘窗框）。 */
-export const SKIRT_BOTTOM_Y = -0.84;
+export const SKIRT_BOTTOM_Y = -1.45; // T262 · deeper cardboard skirt into water
 
 export type IslandTile = { q: number; r: number; terrain: string; center: SceneVec3 };
 export type IslandPort = { kind: string; vertices: SceneVec3[] };
@@ -312,44 +312,70 @@ function drawSigns(x: CanvasRenderingContext2D, cell: number, plate: HTMLImageEl
     const cx = (i % SIGN_COLS) * cell + cell / 2;
     const cy = Math.floor(i / SIGN_COLS) * cell + cell / 2;
     const r = cell * 0.46;
+    // T241 · always carve a thicker wood rim so plaque reads as 3D dock sign (not UI badge)
+    {
+      x.fillStyle = "#3a2416";
+      x.beginPath();
+      x.arc(cx, cy, r, 0, Math.PI * 2);
+      x.fill();
+      const outer = x.createRadialGradient(cx - r * 0.22, cy - r * 0.26, r * 0.06, cx, cy, r);
+      outer.addColorStop(0, "#9a6e40");
+      outer.addColorStop(0.45, "#6a4828");
+      outer.addColorStop(1, "#2a1810");
+      x.fillStyle = outer;
+      x.beginPath();
+      x.arc(cx, cy, r * 0.92, 0, Math.PI * 2);
+      x.fill();
+    }
     if (plate) {
       // plate disc fills 94% of the source; scale so its rim lands on r
-      const d = (r * 2) / 0.94;
+      const d = (r * 2) / 0.94 * 0.92;
       x.drawImage(plate, cx - d / 2, cy - d / 2, d, d);
-      const g = x.createRadialGradient(cx, cy, r * 0.1, cx, cy, r * 0.74);
+      const g = x.createRadialGradient(cx, cy, r * 0.1, cx, cy, r * 0.70);
       g.addColorStop(0, "rgba(251, 241, 216, 0.72)");
       g.addColorStop(0.7, "rgba(251, 241, 216, 0.5)");
       g.addColorStop(1, "rgba(251, 241, 216, 0)");
       x.fillStyle = g;
       x.beginPath();
-      x.arc(cx, cy, r * 0.74, 0, Math.PI * 2);
+      x.arc(cx, cy, r * 0.70, 0, Math.PI * 2);
       x.fill();
     } else {
-      x.fillStyle = "#6b4a2f";
+      // T225/T241 · carved wood plaque face
+      x.fillStyle = "#4a3020";
       x.beginPath();
       x.arc(cx, cy, r, 0, Math.PI * 2);
       x.fill();
-      const g = x.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r * 0.86);
+      const rim = x.createRadialGradient(cx - r * 0.25, cy - r * 0.28, r * 0.08, cx, cy, r);
+      rim.addColorStop(0, "#8a6238");
+      rim.addColorStop(0.55, "#6a4828");
+      rim.addColorStop(1, "#3a2416");
+      x.fillStyle = rim;
+      x.beginPath();
+      x.arc(cx, cy, r * 0.97, 0, Math.PI * 2);
+      x.fill();
+      const g = x.createRadialGradient(cx - r * 0.28, cy - r * 0.3, r * 0.08, cx, cy, r * 0.78);
       g.addColorStop(0, "#fbf1d8");
-      g.addColorStop(1, "#e7d3a8");
+      g.addColorStop(0.7, "#e8d4a8");
+      g.addColorStop(1, "#d4b888");
       x.fillStyle = g;
       x.beginPath();
-      x.arc(cx, cy, r * 0.86, 0, Math.PI * 2);
+      x.arc(cx, cy, r * 0.78, 0, Math.PI * 2);
       x.fill();
     }
     const label = SIGN_LABEL[kind]!;
     x.textAlign = "center";
     x.textBaseline = "middle";
     x.lineJoin = "round";
-    x.strokeStyle = "rgba(251, 243, 222, 0.9)";
-    x.lineWidth = cell * 0.035;
-    x.fillStyle = "#2f2a24";
-    x.font = `900 ${Math.round(cell * 0.27)}px "Helvetica Neue", Helvetica, Arial, "Noto Sans", sans-serif`;
+    // T101/T112/T118/T222 · stage-wide harbor contrast: thicker cream stroke + larger ratio/word
+    x.strokeStyle = "rgba(255, 250, 235, 0.99)";
+    x.lineWidth = cell * 0.112;
+    x.fillStyle = "#0e0a08";
+    x.font = `900 ${Math.round(cell * 0.54)}px "Helvetica Neue", Helvetica, Arial, "Noto Sans", sans-serif`;
     x.strokeText(label.ratio, cx, cy - cell * 0.12);
     x.fillText(label.ratio, cx, cy - cell * 0.12);
     // 第二行（资源）放大到与比例同级，远看可读。
     x.fillStyle = label.color;
-    x.font = `900 ${Math.round(cell * (label.word.length > 1 ? 0.25 : 0.3))}px "PingFang SC", "Noto Sans CJK SC", "Noto Sans CJK JP", sans-serif`;
+    x.font = `900 ${Math.round(cell * (label.word.length > 1 ? 0.48 : 0.58))}px "PingFang SC", "Noto Sans CJK SC", "Noto Sans CJK JP", sans-serif`;
     x.strokeText(label.word, cx, cy + cell * 0.16);
     x.fillText(label.word, cx, cy + cell * 0.16);
   });
@@ -416,19 +442,20 @@ export function coastWallGeometry(tiles: readonly IslandTile[], opts: { wetFootD
     const h1 = hash01(panel * 12.9898 + 78.23);
     const h2 = hash01(panel * 78.233 + 19.1);
     const h3 = hash01(panel * 41.17 + 3.9);
-    // 体块深度大跨度跳变：有的几乎贴边，有的深外凸巨块。
-    const blockDepth = 0.02 + h1 * 0.22 + mass * 0.14;
-    const undercut = 0.01 + h2 * 0.11 + mass * 0.06;
+    // T262 · thicker cardboard stand-off at waterline (mesh flare, not gdHi apothem)
+    const blockDepth = 0.12 + h1 * 0.48 + mass * 0.36;
+    const undercut = 0.06 + h2 * 0.24 + mass * 0.16;
     // 每面独立 flare 曲线（非全岛同一台阶环）。
     const flarePow = 1.4 + h3 * 1.4;
-    const flare = Math.pow(t, flarePow) * (0.12 + h1 * 0.16) + t * t * t * (0.04 + h2 * 0.08);
+    const flare = Math.pow(t, flarePow) * (0.26 + h1 * 0.30) + t * t * t * (0.10 + h2 * 0.16); // T262 flare
     const face = t * blockDepth + (t > 0.48 ? (t - 0.48) * undercut * (1.8 + mass) : 0);
     // 切向噪声破径向同心；顶部小凹口打破平整环唇。
     const tangX = -nz, tangZ = nx;
     const notch = t < 0.08 ? (hash01(panel * 2.3 + x * 0.1) - 0.5) * 0.035 : 0;
     const sidePush = (hash01(panel * 11.1 + t * 7.0) - 0.5) * (0.02 + mass * 0.03);
     const noise = t === 0 ? notch : Math.sin(x * 3.9 + panel * 1.7) * 0.018 + Math.sin(z * 4.6 - panel) * 0.014;
-    const out = 0.015 + flare + face + noise;
+    // T262 · top-lip overhang readable above waterline in ortho wide
+    const out = 0.06 + flare + face + noise + (1.0 - t) * 0.18;
     const wx = x + nx * out + tangX * sidePush;
     const wz = z + nz * out + tangZ * sidePush;
     const u = (Math.atan2(z, x) / (Math.PI * 2) + 0.5) * 26;
@@ -537,26 +564,34 @@ function shoreStoneGeometry(): BufferGeometry {
  */
 export function dockGeometry(length = 0.62, wetFoot = 0): BufferGeometry {
   const parts: BufferGeometry[] = [];
-  const planks = 6;
+  const planks = 7;
   for (let i = 0; i < planks; i += 1) {
     const z = 0.04 + (i + 0.5) * (length / planks);
-    parts.push(paint(place(new BoxGeometry(0.26, 0.025, length / planks - 0.012), 0, 0, z), i % 2 ? "#8a6340" : "#9a7048", 0.15));
+    // T225/T241 · thicker product planks + stagger (dock thickness read)
+    const hy = 0.078 + (i % 2) * 0.010;
+    parts.push(paint(place(new BoxGeometry(0.34, hy, length / planks - 0.005), 0, hy * 0.20, z), i % 2 ? "#8a6340" : "#9a7048", 0.24));
   }
-  parts.push(paint(place(new BoxGeometry(0.03, 0.03, length), -0.12, -0.022, length / 2 + 0.04), "#5e4128"));
-  parts.push(paint(place(new BoxGeometry(0.03, 0.03, length), 0.12, -0.022, length / 2 + 0.04), "#5e4128"));
-  const postXZ = [[-0.13, 0.22], [0.13, 0.22], [-0.13, length], [0.13, length]] as const;
+  parts.push(paint(place(new BoxGeometry(0.056, 0.056, length), -0.145, -0.026, length / 2 + 0.04), "#5e4128"));
+  parts.push(paint(place(new BoxGeometry(0.056, 0.056, length), 0.145, -0.026, length / 2 + 0.04), "#5e4128"));
+  const postXZ = [[-0.14, 0.20], [0.14, 0.20], [-0.14, length], [0.14, length]] as const;
   for (const [px, pz] of postXZ) {
-    parts.push(paint(place(new CylinderGeometry(0.022, 0.026, 0.34, 6), px, -0.15, pz), "#4f3824"));
+    parts.push(paint(place(new CylinderGeometry(0.048, 0.054, 0.56, 12), px, -0.18, pz), "#4f3824")); // T241 pier posts
   }
-  // 牌柱（牌面本身是单独的广告牌 InstancedMesh）。
-  parts.push(paint(place(new CylinderGeometry(0.016, 0.018, 0.36, 6), 0.1, 0.17, length - 0.02), "#4f3824"));
+  // T241 · plaque post + thicker wood backboard (3D plaque mount, not floating UI)
+  parts.push(paint(place(new CylinderGeometry(0.030, 0.034, 0.52, 12), 0.1, 0.24, length - 0.02), "#4f3824"));
+  parts.push(paint(place(new BoxGeometry(0.34, 0.34, 0.090), 0.1, 0.38, length - 0.03), "#6a4828", 0.18));
+  parts.push(paint(place(new BoxGeometry(0.38, 0.38, 0.05), 0.1, 0.38, length - 0.10), "#3a2416", 0.14));
+  parts.push(paint(place(new BoxGeometry(0.34, 0.34, 0.055), 0.1, 0.38, length + 0.02), "#8a6238", 0.12)); // T269c carved face lip
+  parts.push(paint(place(new CylinderGeometry(0.070, 0.080, 0.14, 10), 0.1, 0.28, length - 0.02), "#5a3c22")); // T269c plaque collar
+  parts.push(paint(place(new BoxGeometry(0.16, 0.10, 0.12), 0.1, 0.22, length - 0.08), "#6a4828")); // T269c brace
   // Wet skirt at water contact (visible ABOVE opaque water). One cheap band/post — no whole-pier reshape.
   // Budget: InstancedMesh × ports multiplies tris; keep ≤1 open 4-seg cylinder per post (~8 tris).
   // docksFor base y=0.1 → local waterline = WATER_Y - 0.1.
   if (wetFoot > 0) {
     const waterLocal = WATER_Y - 0.1;
-    const skirtH = 0.06 + 0.03 * wetFoot;
-    const skirtR = 0.032 + 0.01 * wetFoot;
+    // T262 · taller/wider wet-contact skirt under pier (mesh contact, not vertex darken)
+    const skirtH = 0.09 + 0.045 * wetFoot;
+    const skirtR = 0.042 + 0.014 * wetFoot;
     const wetHex = wetFoot > 0.55 ? "#16120e" : "#2a2118";
     for (const [px, pz] of postXZ) {
       const ring = new CylinderGeometry(skirtR, skirtR * 1.06, skirtH, 4, 1, true);
@@ -675,7 +710,7 @@ function applyBoatWetLine(g: BufferGeometry, strength: number): void {
 
 /** 帆船停泊点：岛外一圈，避开右前方骰盘（≈(4.2, 3.2)）。 */
 /** 港口牌半径 / 帆船缩放（round-2d2：放大，远景可读）。 */
-export const SIGN_RADIUS = 0.21;
+export const SIGN_RADIUS = 0.62 /* T269c HARD dock plaque */; // T118/T241/T269 · wooden harbor plaque product
 export const BOAT_SCALE = 1.7;
 
 export const BOAT_SPOTS: ReadonlyArray<{ x: number; z: number; yaw: number; phase: number }> = [
@@ -688,7 +723,7 @@ export const BOAT_SPOTS: ReadonlyArray<{ x: number; z: number; yaw: number; phas
 export type IslandLayer = {
   group: Group;
   sync(tiles: readonly IslandTile[], ports: readonly IslandPort[], tier: RenderTierId, castShadow: boolean): void;
-  /** 每帧：帆船起伏 + 港口牌朝向相机。frozen = 减少动态效果 / 评审截图。 */
+  /** 每帧：帆船起伏 + 港口牌 dock-lock（T269）。frozen = 减少动态效果 / 评审截图。 */
   update(nowMs: number, camera: Camera, frozen: boolean): void;
   docks(): Dock[];
   stats(): { meshes: number; instances: Record<string, number> };
@@ -768,8 +803,9 @@ export function createIslandLayer(): IslandLayer {
       // 连续岩壁 + 顶盖（1 个 draw call，几何随地块集合重建）。
       wallGeom?.dispose();
       wallGeom = coastWallGeometry(tiles, {
-        wetFootDark: tier === "high",
-        midBandDark: tier === "high" ? 1 : tier === "medium" ? 0.34 : 0,
+        // T225 · wet foot on high only (cornerCalm); shore microcontrast via water shallow/foam
+        wetFootDark: true, // T262 · waterline wet foot on all tiers (mesh contact)
+        midBandDark: 1, // T262 · cardboard mid-band rock on all tiers (mesh/albedo, not gdHi)
       });
       rockMat.map = tier === "high" ? rockMapHigh : tier === "medium" ? rockMapMed : rockMapLow;
       rockMat.needsUpdate = true;
@@ -782,8 +818,8 @@ export function createIslandLayer(): IslandLayer {
 
       // 岸石：每条外圈海岸边常规圆石；high 另在部分边加断续扁平礁石浅滩簇（非整圈砂台）。
       const edges = coastEdges(tiles);
-      const perEdge = tier === "low" ? 2 : 4;
-      const reefBudget = tier === "high" ? edges.length * 6 : 0; // clusters + gap wall-huggers
+      const perEdge = tier === "low" ? 6 : 9; // T262 denser shore-stone mesh
+      const reefBudget = edges.length * 8; // T262 reef stones all tiers // clusters + gap wall-huggers
       const stones = new InstancedMesh(stoneGeom, vertexMat, Math.max(1, edges.length * perEdge + reefBudget));
       let n = 0;
       let edgeIdx = 0;
@@ -802,8 +838,8 @@ export function createIslandLayer(): IslandLayer {
           m.compose(p.set(ex + (ox / ol) * out, WATER_Y + 0.015, ez + (oz / ol) * out), q, s.set(size * 1.3, size * 0.78, size));
           stones.setMatrixAt(n++, m);
         }
-        // high only：断续礁石簇 — 约半数边留空，其余 2–4 块扁平错层外推（干露 / 半湿 / 入水）。
-        if (tier === "high") {
+        // T266 · wet-sand / reef apron on all tiers (seam mesh; high denser)
+        if (tier === "high" || tier === "medium" || tier === "low") {
           const ox0 = (a[0] + b[0]) / 2 - c[0];
           const oz0 = (a[2] + b[2]) / 2 - c[2];
           const ol0 = Math.hypot(ox0, oz0) || 1;
@@ -811,14 +847,14 @@ export function createIslandLayer(): IslandLayer {
           const nz = oz0 / ol0;
           if (reefEdgeMask(edgeIdx)) {
             // 断续礁石簇 — 约半数边；扁平错层外推。
-            const cluster = reefClusterSize(edgeIdx);
+            const cluster = Math.max(1, Math.round(reefClusterSize(edgeIdx) * (tier === "high" ? 1 : tier === "medium" ? 0.7 : 0.45))); // T266
             for (let j = 0; j < cluster; j += 1) {
               const along = 0.18 + rand() * 0.64;
               const ex = a[0] + (b[0] - a[0]) * along + (-nz) * (rand() - 0.5) * 0.12;
               const ez = a[2] + (b[2] - a[2]) * along + nx * (rand() - 0.5) * 0.12;
               const step = j + rand() * 0.7;
               const out = 0.22 + step * 0.14 + rand() * 0.08;
-              const y = WATER_Y + 0.09 - step * 0.035 + (rand() - 0.5) * 0.02;
+              const y = WATER_Y + 0.06 - step * 0.04 + (rand() - 0.5) * 0.02; // T266 wetter apron
               const sx = 1.55 + rand() * 1.1;
               const sy = 0.22 + rand() * 0.28;
               const sz = 1.15 + rand() * 0.9;
@@ -828,7 +864,7 @@ export function createIslandLayer(): IslandLayer {
               m.compose(p.set(ex + nx * out, y, ez + nz * out), q, s.set(sx, sy, sz));
               stones.setMatrixAt(n++, m);
             }
-          } else {
+          } else if (tier === "high") {
             // 簇间空档：贴崖稀疏立石，盖住褐色纸板状六角侧面（非整圈）。
             const hug = 1 + Math.floor(rand() * 2); // 1–2
             for (let j = 0; j < hug; j += 1) {
@@ -852,6 +888,46 @@ export function createIslandLayer(): IslandLayer {
       }
       stones.count = n;
       add(stones, "island:shore-stones", false);
+
+      // T266 · wet-sand apron discs at waterline (shared seam mesh, all tiers)
+      {
+        const sandMat = new MeshStandardMaterial({
+          color: "#f3e6c0", // T266 bright wet sand HARD
+          roughness: 0.92,
+          metalness: 0,
+          flatShading: true,
+        });
+        sandMat.userData.gdShared = true;
+        const disc = new CylinderGeometry(0.48, 0.58, 0.06, 7); // T266 apron HARD
+        disc.translate(0, 0.01, 0);
+        const apronN = Math.max(1, edges.length * (tier === "high" ? 5 : tier === "medium" ? 3 : 2)); // T266 HARD denser
+        const apron = new InstancedMesh(disc, sandMat, apronN);
+        let ai = 0;
+        let ei = 0;
+        for (const [a, b, c] of edges) {
+          const reps = tier === "high" ? 5 : tier === "medium" ? 3 : 2;
+          for (let k = 0; k < reps && ai < apronN; k += 1) {
+            const tt = (k + 0.35 + rand() * 0.3) / reps;
+            const ex = a[0] + (b[0] - a[0]) * tt;
+            const ez = a[2] + (b[2] - a[2]) * tt;
+            const ox = ex - c[0];
+            const oz = ez - c[2];
+            const ol = Math.hypot(ox, oz) || 1;
+            const out = 0.34 + rand() * 0.22 + (tier === "low" ? 0.08 : 0);
+            q.setFromAxisAngle(up, rand() * Math.PI * 2);
+            const sc = 1.15 + rand() * 0.95;
+            m.compose(
+              p.set(ex + (ox / ol) * out, WATER_Y + 0.028, ez + (oz / ol) * out),
+              q,
+              s.set(sc * 1.35, 1, sc * 1.1),
+            );
+            apron.setMatrixAt(ai++, m);
+          }
+          ei += 1;
+        }
+        apron.count = ai;
+        add(apron, "island:wet-sand-apron", false);
+      }
 
       // 码头 + 港口牌。
       dockList = docksFor(ports);
@@ -895,14 +971,19 @@ export function createIslandLayer(): IslandLayer {
       }
       if (signs && dockList.length > 0) {
         dockList.forEach((d, i) => {
-          // 牌面：立在牌柱顶上，绕 Y 朝向相机（柱面广告牌），略后仰。
-          // 码头局部 +X（偏航 atan2(dx,dz) 后）= 世界 (dz, −dx)：牌柱在局部 (0.1, ·, len − 0.02)。
-          const px = d.tip[0] + d.dir[1] * 0.1 - d.dir[0] * 0.02;
-          const pz = d.tip[2] - d.dir[0] * 0.1 - d.dir[1] * 0.02;
-          const yaw = camera ? Math.atan2(camera.position.x - px, camera.position.z - pz) : Math.atan2(d.dir[0], d.dir[1]);
-          dummy.position.set(px, 0.56, pz);
-          dummy.scale.setScalar(1);
-          dummy.rotation.set(-0.35, yaw, 0, "YXZ");
+          // T269 · dock-axis plaque (not free billboard): sit on carved face; yaw stays on
+          // pier axis, flip 180° if needed so face reads toward camera (diegetic mount).
+          const px = d.tip[0] + d.dir[1] * 0.1 + d.dir[0] * 0.02;
+          const pz = d.tip[2] - d.dir[0] * 0.1 + d.dir[1] * 0.02;
+          let yaw = Math.atan2(d.dir[0], d.dir[1]);
+          if (camera) {
+            const toCam = Math.atan2(camera.position.x - px, camera.position.z - pz);
+            const ang = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+            if (Math.abs(ang(toCam - (yaw + Math.PI))) < Math.abs(ang(toCam - yaw))) yaw += Math.PI;
+          }
+          dummy.position.set(px, 0.46, pz);
+          dummy.scale.setScalar(1.08); // T269c readable dock plaque
+          dummy.rotation.set(-0.08, yaw, 0, "YXZ");
           dummy.updateMatrix();
           signs!.setMatrixAt(i, dummy.matrix);
         });

@@ -21,17 +21,17 @@ import {
 import type { SceneNode } from "./scene-model";
 
 /** 筹码圆柱：半径 0.22、高 0.06，节点 position 为圆柱中心。 */
-export const NUMBER_TOKEN_RADIUS = 0.22;
-export const NUMBER_TOKEN_HALF_HEIGHT = 0.03;
+export const NUMBER_TOKEN_RADIUS = 0.258; // T222/T237 · chip footprint
+export const NUMBER_TOKEN_HALF_HEIGHT = 0.092; // T250 · product wood-chip lip / side thickness
 /** 贴花离筹码顶面的高度（避免 z-fighting；配合 polygonOffset）。 */
-export const LABEL_LIFT = 0.004;
+export const LABEL_LIFT = -0.026; // T261 · seat numeral into carved mesh well (not canvas ox/oy)
 /** 贴花边长 = 筹码半径 × 1.85 × 节点缩放：略小于筹码直径（G3D-ART-3 由 1.6 放大，字形更大）。 */
-export const LABEL_SIZE_PER_RADIUS = 1.85;
+export const LABEL_SIZE_PER_RADIUS = 2.72; // T257 · wider stamp footprint stage-wide
 export { NUMBER_TOKEN_SCALE } from "./tokens";
 
-export const LABEL_INK = "#2f2a24";
+export const LABEL_INK = "#0a0604"; // T225 · stamped ink on chip
 /** 6 / 8 高亮：赤陶色（比风格色 #B8643C 深一档，保证在奶油色筹码面上对比度 ≥ 4.5）。 */
-export const LABEL_HOT = "#a3442a";
+export const LABEL_HOT = "#8a1c08"; // T101/T112/T118/T222
 
 const GRID = 4;
 const NUMBERS = [2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 7] as const;
@@ -58,7 +58,7 @@ export function atlasCell(n: number): { col: number; row: number } {
  */
 export const LABEL_FONT = `"Helvetica Neue", Helvetica, Arial, "Noto Sans", "DejaVu Sans", "Liberation Sans", sans-serif`;
 /** 默认机位俯视角会把筹码顶面纵向压缩约一半；图集里预先纵向拉伸字形，抵消透视压缩。 */
-export const GLYPH_STRETCH_Y = 1.5;
+export const GLYPH_STRETCH_Y = 1.63; // T099/T112/T118 · T125/T129/T131/T133 ortho (floor 1.62, was 1.78)
 /** 两位数的字距（相对格宽，负值收紧），让「11」「12」成为一个整体而不是两个分离的笔画。 */
 export const GLYPH_TRACKING = -0.03;
 
@@ -80,31 +80,62 @@ export function drawNumberAtlas(size = 1024): Texture {
     const color = isHotNumber(n) ? LABEL_HOT : LABEL_INK;
     ctx.fillStyle = color;
     const text = String(n);
-    const fontPx = Math.round(cell * (text.length > 1 ? 0.56 : 0.6));
+    // T099/T112/T118 · larger glyphs + cream stroke for stage-wide contrast (shared; no sample specials)
+    const fontPx = Math.round(cell * (text.length > 1 ? 0.86 : 0.94));
     ctx.font = `900 ${fontPx}px ${LABEL_FONT}`;
     // 逐字排版：实测字宽 + 收紧字距；两位数若超宽则整体横向压缩。
     const widths = [...text].map((ch) => ctx.measureText(ch).width);
     const track = GLYPH_TRACKING * cell;
     const natural = widths.reduce((a, w) => a + w, 0) + track * (widths.length - 1);
-    const maxWidth = cell * 0.92;
+    const maxWidth = cell * 0.94;
     const squeeze = Math.min(1, maxWidth / natural);
     const capHeight = fontPx * 0.72 * GLYPH_STRETCH_Y;
     const baseline = cy - cell * 0.08 + capHeight / 2;
     ctx.save();
     ctx.translate(cx - (natural * squeeze) / 2, baseline);
     ctx.scale(squeeze, GLYPH_STRETCH_Y);
-    let x = 0;
+    ctx.lineJoin = "round";
+    ctx.miterLimit = 2;
+    // T257 · wide-frame pressed stamp: broader recess shadow + brighter lip highlight
+    const shadow = "rgba(5,2,0,0.94)";
+    const hi = "rgba(255,254,248,0.98)";
+    const ox = Math.max(7, fontPx * 0.16);
+    const oy = Math.max(7, fontPx * 0.17);
+    let xs = 0;
     [...text].forEach((ch, i) => {
-      ctx.fillText(ch, x, 0);
-      x += widths[i]! + track;
+      ctx.fillStyle = shadow;
+      ctx.fillText(ch, xs + ox, oy);
+      xs += widths[i]! + track;
+    });
+    xs = 0;
+    [...text].forEach((ch, i) => {
+      ctx.fillStyle = hi;
+      ctx.fillText(ch, xs - ox * 0.7, -oy * 0.7);
+      xs += widths[i]! + track;
+    });
+    xs = 0;
+    ctx.fillStyle = color;
+    ctx.strokeStyle = "rgba(255,248,230,0.35)";
+    ctx.lineWidth = Math.max(2, fontPx * 0.06);
+    [...text].forEach((ch, i) => {
+      ctx.strokeText(ch, xs, 0);
+      ctx.fillText(ch, xs, 0);
+      xs += widths[i]! + track;
     });
     ctx.restore();
     const pips = pipCount(n);
-    const r = cell * 0.03;
-    const gap = r * 2.7;
+    const r = cell * 0.068; // T099/T112/T118 · larger probability pips
+    const gap = r * 2.6;
     for (let i = 0; i < pips; i += 1) {
+      const px = cx + (i - (pips - 1) / 2) * gap;
+      const py = cy + cell * 0.4;
+      ctx.fillStyle = "rgba(12,5,2,0.62)";
       ctx.beginPath();
-      ctx.ellipse(cx + (i - (pips - 1) / 2) * gap, cy + cell * 0.4, r, r * GLYPH_STRETCH_Y, 0, 0, Math.PI * 2);
+      ctx.ellipse(px + 2.0, py + 2.2, r * 1.05, r * GLYPH_STRETCH_Y * 1.05, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.ellipse(px, py, r, r * GLYPH_STRETCH_Y, 0, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -141,6 +172,9 @@ export function buildLabelGeometry(labels: readonly NumberLabel[]): BufferGeomet
   const idx = new Uint16Array(labels.length * 6);
   labels.forEach((label, i) => {
     const h = label.size / 2;
+    // T129/T131/T133 · ortho UV plane: flatter depth so seat-close top-down does not over-elongate glyphs
+    const hx = h;
+    const hz = h * 0.85;
     const { x, y, z } = label.center;
     const { col, row } = atlasCell(label.number);
     const u0 = col / GRID;
@@ -148,7 +182,7 @@ export function buildLabelGeometry(labels: readonly NumberLabel[]): BufferGeomet
     const v1 = 1 - row / GRID; // flipY：行 0 在纹理顶部
     const v0 = 1 - (row + 1) / GRID;
     // 顶点顺序：左上(-x,-z) 右上(+x,-z) 右下(+x,+z) 左下(-x,+z)
-    pos.set([x - h, y, z - h, x + h, y, z - h, x + h, y, z + h, x - h, y, z + h], i * 12);
+    pos.set([x - hx, y, z - hz, x + hx, y, z - hz, x + hx, y, z + hz, x - hx, y, z + hz], i * 12);
     uv.set([u0, v1, u1, v1, u1, v0, u0, v0], i * 8);
     nrm.set([0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0], i * 12);
     const b = i * 4;
@@ -171,11 +205,12 @@ export function projectLabels(labels: readonly NumberLabel[], camera: Camera, wi
   const camPos = new Vector3();
   camera.getWorldPosition(camPos);
   return labels.map((label) => {
-    const h = label.size / 2;
+    const hx = label.size / 2;
+    const hz = (label.size / 2) * 0.85; // T129/T131/T133 aspect
     const xs: number[] = [];
     const ys: number[] = [];
     let inView = true;
-    for (const [dx, dz] of [[-h, -h], [h, -h], [h, h], [-h, h], [0, 0]] as const) {
+    for (const [dx, dz] of [[-hx, -hz], [hx, -hz], [hx, hz], [-hx, hz], [0, 0]] as const) {
       const p = new Vector3(label.center.x + dx, label.center.y, label.center.z + dz).project(camera);
       if (p.x < -1 || p.x > 1 || p.y < -1 || p.y > 1 || p.z < -1 || p.z > 1) inView = false;
       xs.push(((p.x + 1) / 2) * width);
@@ -208,11 +243,11 @@ export function createNumberLabelLayer(options: { atlas?: () => Texture } = {}):
     transparent: true,
     alphaTest: 0.35,
     depthWrite: false,
-    roughness: 0.85,
+    roughness: 0.94, // T253 · matte pressed ink (not glossy sticker)
     metalness: 0,
     polygonOffset: true,
-    polygonOffsetFactor: -2,
-    polygonOffsetUnits: -2,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
   });
   material.userData.gdShared = true;
   const mesh = new Mesh(new BufferGeometry(), material);

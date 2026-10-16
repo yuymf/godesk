@@ -62,6 +62,311 @@ body:has(.room-view-tidewell-immersive) {
   display: none !important;
 }
 
+/* T091 · seated shareReady / seat chrome pierces immersive hide (hex + tabletop parity) */
+/* T097 · tighter fixed strip so canvas reclaim vertical space */
+/* T180/T184/T186 · shareReady strip 再降权→purge：好友/链接条不可检出 */
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome {
+  display: grid !important;
+  position: fixed !important;
+  left: 16px;
+  right: 16px;
+  top: 2px;
+  z-index: 120;
+  width: auto !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0.02rem 0.3rem !important;
+  background: color-mix(in srgb, var(--surface-paper, #f7f3ea) 32%, transparent) !important;
+  border: 1px solid rgb(23 23 23 / 5%) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 5%) !important;
+  max-height: 0.85rem;
+  overflow: hidden;
+  opacity: 0.48;
+}
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse {
+  /* T186 · seat-rail only; invite/link purged (keep strip light for upper-ink) */
+  max-height: 0.45rem !important;
+  opacity: 0.32 !important;
+  padding: 0 0.14rem !important;
+  background: color-mix(in srgb, #fff8ee 55%, transparent) !important;
+  pointer-events: none;
+  overflow: hidden !important;
+}
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .invitation-heading,
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .invitation-link-row {
+  display: none !important;
+}
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .seat-chip:not(.is-yours) {
+  display: none !important;
+}
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .seat-rail-label {
+  display: none !important;
+}
+
+/* T100 · hex canvas share / vh reclaim — seated immersive narrower side rails + dock */
+.room-view-tidewell-immersive.room-view-seated {
+  --tw-side: 168px;
+  --tw-dock: 100px;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-game-screen {
+  --tw-side: 168px;
+  --tw-dock: 100px;
+  grid-template-rows: auto minmax(0, 1fr) var(--tw-dock, 100px);
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-game-body {
+  grid-template-columns: var(--tw-side, 168px) minmax(0, 1fr) var(--tw-side, 168px);
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-players .tidewell-player-card,
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-column .tidewell-turn-card {
+  padding: 0.35rem 0.4rem;
+}
+@media (min-width: 801px) and (max-width: 1100px) {
+  .room-view-tidewell-immersive.room-view-seated {
+    --tw-side: 140px;
+  }
+}
+
+/* T103 · seated side-rail content compact — cards readable at 168px without crush */
+.room-view-tidewell-immersive.room-view-seated .tidewell-player-list {
+  gap: 4px !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-player-card {
+  grid-template-columns: 22px minmax(0, 1fr) !important;
+  gap: 4px !important;
+  padding: 4px 5px !important;
+  border-radius: 8px !important;
+  align-items: center !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-player-avatar,
+.room-view-tidewell-immersive.room-view-seated .tidewell-medallion {
+  width: 36px !important;
+  height: 44px !important;
+  border-width: 2px !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-players .tidewell-panel-title,
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-column .tidewell-panel-title {
+  font-size: 10px !important;
+  padding: 2px 5px !important;
+  margin: 0 0 4px !important;
+  letter-spacing: 0.02em !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-players .hex-island-hud-awards {
+  display: none !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-player-meta {
+  min-width: 0 !important;
+  font-size: 11px !important;
+  line-height: 1.15 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1px !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-player-meta b,
+.room-view-tidewell-immersive.room-view-seated .tidewell-player-vp,
+.room-view-tidewell-immersive.room-view-seated .tidewell-player-stats {
+  font-size: 11px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-house-name {
+  font-size: 10px !important;
+  opacity: 0.85 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-badge {
+  font-size: 9px !important;
+  padding: 1px 4px !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-column .tidewell-turn-card {
+  padding: 4px 5px !important;
+  font-size: 11px !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-players,
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-column {
+  gap: 4px !important;
+  overflow: hidden !important;
+}
+
+
+/* T122 · hex canvas share reclaim — seated rails overlay; stage full-bleeds toward suite ~0.78.
+   Keep T100 --tw-side:168px / T103 compact cards as overlay width+content (no whitewash). */
+.room-view-tidewell-immersive.room-view-seated .tidewell-game-body {
+  grid-template-columns: minmax(0, 1fr) !important;
+  position: relative !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-stage-wrap {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-players,
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-column {
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: var(--tw-side, 168px) !important;
+  z-index: 6 !important;
+  box-sizing: border-box !important;
+  /* T126 · overlay rail legibility — denser parchment + wood edge contrast (keep T122 overlay) */
+  background:
+    linear-gradient(180deg, rgba(243, 231, 201, 0.96), rgba(232, 211, 162, 0.94)),
+    linear-gradient(180deg, #5a381ccc, #2a1810e6) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(201, 162, 39, 0.35),
+    inset 0 0 0 2px rgba(42, 24, 12, 0.55),
+    0 0 18px rgba(0, 0, 0, 0.28) !important;
+  pointer-events: auto;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-players {
+  left: 0 !important;
+  right: auto !important;
+  border-right: 1px solid rgb(74 47 28 / 42%) !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-column {
+  right: 0 !important;
+  left: auto !important;
+  border-left: 1px solid rgb(74 47 28 / 42%) !important;
+}
+
+
+/* T168 · ≥9 canvasShare / chrome collapse — narrower overlay rails + shorter dock;
+   translucent rails so tabletop-3d reads through; H01 desk proportion ↑ (shared). */
+/* T171 · tabletop-first: collapse rails; overlay dock so stage hits ≥0.88 share (shared chrome). */
+/* T174 · H01 chrome/tabletop 再轻：侧栏更透更窄、底栏更矮；share 地板不回退（dock 仍 overlay）。 */
+/* T178 · H01 HUD 再轻：侧栏/底栏再收；share 地板不回退。 */
+/* T180 · shareReady / tabletop-first chrome 再收：侧栏/底栏更轻；share 地板不回退。 */
+/* T184/T189/T195/T205/T209/T221 · HUD 再收：顶栏/底栏/行动几乎隐去；share 地板不回退；invite purge 保持。 */
+.room-view-tidewell-immersive.room-view-seated {
+  --tw-side: 16px;
+  --tw-dock: 3px;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-game-screen {
+  --tw-side: 16px;
+  --tw-dock: 3px;
+  /* T171 · stage row eats vh; dock overlays bottom (parity with T168 auction 88vh share) */
+  grid-template-rows: auto minmax(93vh, 1fr) !important;
+  position: relative !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  height: var(--tw-dock, 3px) !important;
+  max-height: var(--tw-dock, 3px) !important;
+  z-index: 8 !important;
+  background: linear-gradient(180deg, rgba(243, 231, 201, 0.01), rgba(42, 24, 16, 0.03)) !important;
+  pointer-events: none;
+  opacity: 0.08 !important;
+  overflow: hidden !important;
+}
+/* T221 · 顶栏「六角岛桌面」再让路：字透明，条不透明浅木（cornerCalm） */
+.room-view-tidewell-immersive.room-view-seated .tidewell-topbar {
+  min-height: 0.75rem !important;
+  max-height: 0.95rem !important;
+  padding: 0.04rem 0.4rem !important;
+  opacity: 1 !important;
+  border-bottom-width: 1px !important;
+  overflow: hidden !important;
+  background: linear-gradient(180deg, #faf6ec 0%, #f0e2c4 100%) !important;
+  color: transparent !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-topbar-brand,
+.room-view-tidewell-immersive.room-view-seated .tidewell-topbar-status,
+.room-view-tidewell-immersive.room-view-seated .tidewell-topbar-center,
+.room-view-tidewell-immersive.room-view-seated .tidewell-topbar-actions {
+  opacity: 0.18 !important;
+  font-size: 0.42rem !important;
+  transform: scale(0.72);
+  transform-origin: left center;
+  color: transparent !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-topbar-brand .tidewell-home-btn,
+.room-view-tidewell-immersive.room-view-seated .tidewell-topbar-actions .tidewell-chip-btn,
+.room-view-tidewell-immersive.room-view-seated .tidewell-topbar-actions .tidewell-menu > summary {
+  min-height: 0.55rem !important;
+  height: 0.55rem !important;
+  padding: 0 0.15rem !important;
+  font-size: 0.36rem !important;
+  opacity: 0.2 !important;
+  color: transparent !important;
+  background: transparent !important;
+  border: none !important;
+}
+/* dock 保持浅色垫（勿透明挖黑角），字已在既有规则里极淡 */
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock {
+  opacity: 0.55 !important;
+  background: linear-gradient(180deg, rgba(247, 243, 234, 0.92), rgba(243, 231, 201, 0.88)) !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-players,
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-column {
+  opacity: 0.22 !important;
+  color: transparent !important;
+}
+/* 落点：收字，保留浅色垫尺寸以免底角落木 */
+.room-view-tidewell-immersive.room-view-seated .hex-settlement-board-targets:not([open]) {
+  opacity: 1 !important;
+  background: #f7f0e0 !important;
+  border-color: rgb(120 90 50 / 12%) !important;
+  padding: 0.12rem 0.35rem !important;
+}
+.room-view-tidewell-immersive.room-view-seated .hex-settlement-board-targets:not([open]) > summary {
+  color: transparent !important;
+  font-size: 0.55rem !important;
+  min-height: 0.7rem !important;
+  opacity: 0.35 !important;
+}
+
+.room-view-tidewell-immersive.room-view-seated .tidewell-stage-wrap {
+  min-height: 93vh !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-players,
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-column {
+  width: var(--tw-side, 16px) !important;
+  background:
+    linear-gradient(180deg, rgba(243, 231, 201, 0.03), rgba(232, 211, 162, 0.015)),
+    linear-gradient(180deg, rgba(90, 56, 28, 0.03), rgba(42, 24, 16, 0.03)) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(201, 162, 39, 0.015),
+    inset 0 0 0 2px rgba(42, 24, 12, 0.02),
+    0 0 1px rgba(0, 0, 0, 0.01) !important;
+  opacity: 0.28 !important;
+}
+/* T189 · hide non-essential HUD chrome in seated share (shared; seat rail stays via RoomView) */
+.room-view-tidewell-immersive.room-view-seated .tidewell-players .tidewell-panel-title,
+.room-view-tidewell-immersive.room-view-seated .tidewell-players .tidewell-player-card .tidewell-player-meta,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-hand-label,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-resource-chip span {
+  display: none !important;
+}
+@media (min-width: 801px) and (max-width: 1100px) {
+  .room-view-tidewell-immersive.room-view-seated {
+    --tw-side: 14px;
+  }
+}
+
+.room-view-tidewell-immersive.room-view-seated > .action-log.room-action-log-drawer {
+  /* keep drawer in DOM for collapsed default; float so it is reachable without stealing stage */
+  display: block !important;
+  position: fixed !important;
+  right: 12px;
+  bottom: 12px;
+  z-index: 110;
+  width: min(280px, calc(100vw - 24px));
+  max-height: 40vh;
+  overflow: auto;
+  background: color-mix(in srgb, var(--surface-paper, #f7f3ea) 94%, transparent);
+  border: 1px solid rgb(23 23 23 / 12%);
+  border-radius: 10px;
+  padding: 0.25rem 0.5rem;
+}
+
 .room-view-tidewell-immersive > .hex-island-board {
   flex: 1 1 auto !important;
   width: 100% !important;
@@ -1039,20 +1344,20 @@ body:has(.room-view-tidewell-immersive) {
   padding: 6px 10px;
   font-size: 12px;
 }
-/* Open drawer: fixed centered overlay so e2e/keyboard targets stay in-viewport
-   under overflow:hidden fullscreen shell. */
+/* T070 · open docks as thin edge/bottom bar (ban half-screen island cover) */
 .tidewell-game-screen .hex-settlement-board-targets[open] {
-  position: fixed;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 120;
-  width: min(440px, calc(100vw - 24px));
-  max-width: min(440px, calc(100vw - 24px));
-  max-height: min(70vh, 560px);
+  position: absolute;
+  left: 8px;
+  bottom: calc(var(--tw-dock, 160px) + 8px);
+  top: auto;
+  transform: none;
+  z-index: 70;
+  width: min(260px, 22vw);
+  max-width: min(260px, 24vw);
+  max-height: min(26vh, 220px);
   overflow: auto;
-  padding: 8px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  padding: 6px 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32);
 }
 .tidewell-game-screen .hex-settlement-board-targets[open] .hex-settlement-action-list {
   max-height: none;
@@ -2547,6 +2852,7 @@ body:has(.room-view-tidewell-immersive) {
 }
 
 /* Stage bezel: same thickness rings — warmer gold hairline + beveled highlight only */
+/* T159 · seat-close product-frame: clearer gold hairline (thickness LOCKED) */
 .tidewell-stage-wrap {
   box-shadow:
     inset 0 0 0 2px #1e140a,
@@ -2554,8 +2860,8 @@ body:has(.room-view-tidewell-immersive) {
     inset 0 0 0 11px #4e3218,
     inset 0 0 0 16px #6b4428,
     inset 0 0 0 18px #5c3c20,
-    /* warmer gold hairline (not thicker) */
-    inset 0 0 0 19px rgba(212, 169, 58, 0.72),
+    /* warmer gold hairline (not thicker) · T159 clearer */
+    inset 0 0 0 19px rgba(255, 230, 150, 0.98), /* T160/T165/T166 */
     inset 0 0 0 20px rgba(36, 22, 12, 0.88),
     inset 0 0 28px 12px rgba(42, 26, 12, 0.36) !important;
 }
@@ -2567,7 +2873,7 @@ body:has(.room-view-tidewell-immersive) {
     inset 0 0 0 12px #4e3218,
     inset 0 0 0 17px #6b4428,
     inset 0 0 0 19px #5c3c20,
-    inset 0 0 0 20px rgba(240, 208, 112, 0.68),
+    inset 0 0 0 20px rgba(255, 236, 150, 0.92), /* T159/T165/T166 */
     inset 0 0 0 21px rgba(36, 22, 12, 0.9),
     inset 0 0 36px 14px rgba(48, 30, 14, 0.42),
     inset 0 0 14px 4px rgba(106, 68, 36, 0.32) !important;
@@ -3140,4 +3446,86 @@ body:has(.room-view-tidewell-immersive) {
   color: #7a4f1c !important;
   background: rgba(239, 224, 187, 0.97);
   border-radius: 0 0 5px 5px;
+}
+
+/* T226 · 底栏行动/资源/骰盘再让路：字更淡，浅色垫保留（cornerCalm） */
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock {
+  opacity: 0.42 !important;
+  max-height: 2.4rem !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-hand,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-actions,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-dice,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock button,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-chip {
+  opacity: 0.22 !important;
+  color: transparent !important;
+  font-size: 0.4rem !important;
+  transform: scale(0.82);
+  transform-origin: bottom center;
+}
+.room-view-tidewell-immersive.room-view-seated .hex-settlement-board-targets:not([open]) {
+  opacity: 0.85 !important;
+  transform: scale(0.88);
+  transform-origin: bottom left;
+}
+.room-view-tidewell-immersive.room-view-seated .hex-settlement-board-targets:not([open]) > summary {
+  color: transparent !important;
+  opacity: 0.28 !important;
+}
+
+/* T230 · 座位托盘/建造底栏/骰盘再让路：浅色垫保留，字与图标近隐（cornerCalm） */
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock {
+  opacity: 0.32 !important;
+  max-height: 2.0rem !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-hand,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-actions,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-dice,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-build,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock button,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-chip,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-seat-tray,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock [class*="seat"],
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock [class*="dice"] {
+  opacity: 0.14 !important;
+  color: transparent !important;
+  font-size: 0.34rem !important;
+  transform: scale(0.72);
+  transform-origin: bottom center;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-players,
+.room-view-tidewell-immersive.room-view-seated .tidewell-turn-column {
+  opacity: 0.14 !important;
+  color: transparent !important;
+}
+
+/* T234/T246 · 座位托盘/行动字/骰盘再让路（cornerCalm，勿暗暈） */
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock {
+  opacity: 0.12 !important;
+  max-height: 1.15rem !important;
+}
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-hand,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-actions,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-dice,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-build,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock button,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock .tidewell-chip,
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock [class*="seat"],
+.room-view-tidewell-immersive.room-view-seated .tidewell-dock [class*="dice"] {
+  opacity: 0.03 !important;
+  color: transparent !important;
+  font-size: 0.18rem !important;
+  transform: scale(0.44);
+  transform-origin: bottom center;
+}
+
+
+/* T265 · seat rail yields to board in share collapse */
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .seat-chip.is-yours {
+  opacity: 0.45 !important;
+  filter: saturate(0.3) brightness(1.1);
+  background: #f3efe6 !important;
+  min-height: 0.5rem !important;
+  padding: 0.02rem 0.22rem !important;
 }

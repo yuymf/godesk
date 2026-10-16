@@ -11,6 +11,7 @@ import {
 } from "./genre";
 import { isNonScoreHandLoopCorpus } from "./hand-play";
 import { isMultiActHiddenRoleCorpus } from "./hidden-role";
+import { SEAT_CAPACITY } from "./seat-capacity";
 import {
   isEconomyPlacementCorpus,
   kernelHasPlacementEconomy,
@@ -39,6 +40,29 @@ const GENRE_KERNEL: Record<Exclude<SourceGenre, "generic">, string | readonly st
   conversation: "conversation-relay-v1",
   placement: ["harbor-voyage-v1", "worker-placement-v1"],
 };
+
+
+/** Declared mechanics that already bound their matching board kernel (T008/T011). */
+const MECHANIC_ALIGNED_KERNEL: Record<string, string> = {
+  "hex-settlement": "hex-settlement-v1",
+  "route-network": "network-route-v1",
+  "disc-flipping": "disc-flipping-v1",
+  "auction-bidding": "auction-bidding-v1",
+  "auto-battler": "auto-battler-v1",
+  "gem-engine": "gem-engine-v1",
+  "pattern-draft": "pattern-draft-v1",
+};
+
+function mechanicsAlignWithKernel(
+  mechanics: readonly string[] | undefined,
+  kernelType: string,
+): boolean {
+  if (!mechanics?.length) return false;
+  return mechanics.some(
+    (mechanic) => MECHANIC_ALIGNED_KERNEL[mechanic] === kernelType,
+  );
+}
+
 
 export function ruleSystemCorpus(ruleSystem: RuleSystem) {
   return [
@@ -148,15 +172,70 @@ export function playabilityFloor(ruleSystem: RuleSystem): PlayabilityFloorReadin
   if (kernelType === "auction-bidding-v1") {
     const hasActions = ruleSystem.actions.some((action) => action.id === "bid") &&
       ruleSystem.actions.some((action) => action.id === "pass");
-    if (ruleSystem.playSurface.kind !== "table" || !hasActions ||
-        ruleSystem.runtimeSupport.kernel.playerCount !== 2) {
-      return { status: "failed", reason: "auction-bidding-v1 需要双人桌面与出价/放弃动作。", genre, kernelType };
+    const seats = ruleSystem.runtimeSupport.kernel.playerCount;
+    const gallery = ruleSystem.runtimeSupport.kernel.gallery === true;
+    const seatsOk = gallery
+      ? seats >= 2 && seats <= 5
+      : seats === 2;
+    if (ruleSystem.playSurface.kind !== "table" || !hasActions || !seatsOk) {
+      return {
+        status: "failed",
+        reason: gallery
+          ? "auction-bidding-v1 gallery 需要 2–5 人桌面与出价/放弃动作。"
+          : "auction-bidding-v1 需要双人桌面与出价/放弃动作。",
+        genre,
+        kernelType,
+      };
     }
   }
+  if (ruleSystem.generation?.requestedMechanics?.includes("auto-battler") &&
+      kernelType !== "auto-battler-v1") {
+    return { status: "failed", reason: "自走棋来源需要 auto-battler-v1 的商店买入与自动战斗环。", genre, kernelType };
+  }
+  if (kernelType === "auto-battler-v1") {
+    const hasShop = ruleSystem.actions.some((action) => action.id === "buy") &&
+      ruleSystem.actions.some((action) => action.id === "ready_place");
+    if (ruleSystem.playSurface.kind !== "table" || !hasShop ||
+        ruleSystem.runtimeSupport.kernel.playerCount !== 2) {
+      return { status: "failed", reason: "auto-battler-v1 需要双人桌面与购买/锁定阵容动作。", genre, kernelType };
+    }
+    // Intentionally NOT in SHAREABLE_KERNELS yet — decision-density share gate TBD.
+  }
+  if (ruleSystem.generation?.requestedMechanics?.includes("gem-engine") &&
+      kernelType !== "gem-engine-v1") {
+    return { status: "failed", reason: "宝石引擎来源需要 gem-engine-v1 的代币/发展牌/贵族声望环。", genre, kernelType };
+  }
+  if (kernelType === "gem-engine-v1") {
+    const hasTake = ruleSystem.actions.some((action) => action.id === "take_diverse" || action.id === "take_gems");
+    const hasBuy = ruleSystem.actions.some((action) => action.id === "buy" || action.id === "buy_card");
+    const seats = ruleSystem.runtimeSupport.kernel.playerCount;
+    const cap = SEAT_CAPACITY["gem-engine-v1"];
+    const seatsOk = seats >= cap.min && seats <= cap.max;
+    if (ruleSystem.playSurface.kind !== "table" || !hasTake || !hasBuy || !seatsOk) {
+      return { status: "failed", reason: "gem-engine-v1 需要 2–4 人桌面与拿取代币/购买发展牌动作。", genre, kernelType };
+    }
+  }
+  if (ruleSystem.generation?.requestedMechanics?.includes("pattern-draft") &&
+      kernelType !== "pattern-draft-v1") {
+    return { status: "failed", reason: "工厂草稿来源需要 pattern-draft-v1 的工厂拿色与准备行/墙贴环。", genre, kernelType };
+  }
+  if (kernelType === "pattern-draft-v1") {
+    const hasDraft = ruleSystem.actions.some((action) => action.id === "draft");
+    const seats = ruleSystem.runtimeSupport.kernel.playerCount;
+    const cap = SEAT_CAPACITY["pattern-draft-v1"];
+    const seatsOk = seats >= cap.min && seats <= cap.max;
+    if (ruleSystem.playSurface.kind !== "table" || !hasDraft || !seatsOk) {
+      return { status: "failed", reason: "pattern-draft-v1 需要 2–4 人桌面与草稿拿色动作。", genre, kernelType };
+    }
+  }
+  const aligned = mechanicsAlignWithKernel(
+    ruleSystem.generation?.requestedMechanics,
+    kernelType,
+  );
   const required = genre === "generic" ? null : GENRE_KERNEL[genre];
   if (required) {
     const allowed = typeof required === "string" ? [required] : required;
-    if (!allowed.includes(kernelType)) {
+    if (!allowed.includes(kernelType) && !aligned) {
       return {
         status: "failed",
         reason: `来源体裁是 ${genre}，不能用 ${kernelType} 换皮分享。`,
@@ -263,10 +342,32 @@ export function playabilityFloor(ruleSystem: RuleSystem): PlayabilityFloorReadin
       kernelType,
     };
   }
-  if (genre === "generic") {
+  if (genre === "generic" || aligned) {
+    if (
+      aligned &&
+      ruleSystem.playSurface.kind !== "table" &&
+      (
+        kernelType === "hex-settlement-v1" ||
+        kernelType === "network-route-v1" ||
+        kernelType === "disc-flipping-v1" ||
+        kernelType === "auction-bidding-v1" ||
+        kernelType === "auto-battler-v1" ||
+        kernelType === "gem-engine-v1" ||
+        kernelType === "pattern-draft-v1"
+      )
+    ) {
+      return {
+        status: "failed",
+        reason: `${kernelType} 需要 table Play Surface（声明机制已对齐内核，但表面不符）。`,
+        genre,
+        kernelType,
+      };
+    }
     return {
       status: "passed",
-      reason: `${kernelType} 与来源体裁一致，已满足 Playability Floor。`,
+      reason: aligned
+        ? `${kernelType} 与声明机制一致，已满足 Playability Floor。`
+        : `${kernelType} 与来源体裁一致，已满足 Playability Floor。`,
       genre,
       kernelType,
     };

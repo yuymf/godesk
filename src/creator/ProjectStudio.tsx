@@ -322,9 +322,20 @@ export function ProjectStudio({ projectId }: { projectId: string }) {
       const iterationJob = await trackJob(submitted);
       if (iterationJob.status === "failed") {
         const error = iterationJob.error ?? "自然语言迭代失败。";
+        // Guidance = "you can already do this elsewhere": neutral notice, not an error.
+        const guidance = error.match(/^iteration_guidance:\s*([\s\S]*)$/);
+        if (guidance) {
+          setNotice(`提示：${guidance[1]}`);
+          return;
+        }
         throw new Error(
           error.replace(/^iteration_(?:unsupported|action_not_found):\s*/, ""),
         );
+      }
+      const guidanceText = iterationJob.result?.guidance;
+      if (typeof guidanceText === "string") {
+        setNotice(`提示：${guidanceText}`);
+        return;
       }
       iterationApplied = true;
       const iteration = iterationJob.result?.iteration as

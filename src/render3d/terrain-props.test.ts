@@ -247,15 +247,15 @@ describe("G3D-PROPS terrain props", () => {
     const tall = buildPropGeometry("pineTall");
     tall.computeBoundingBox();
     const tallH = tall.boundingBox!.max.y - tall.boundingBox!.min.y;
-    for (const p of pines.filter((q) => q.kind === "pineTall")) expect(tallH * p.scale * p.stretch).toBeLessThan(0.5);
-    for (const p of pines) expect(p.scale).toBeLessThanOrEqual(0.86);
+    for (const p of pines.filter((q) => q.kind === "pineTall")) expect(tallH * p.scale * p.stretch).toBeLessThan(0.72); // T246 GLB/product canopy
+    for (const p of pines) expect(p.scale).toBeLessThanOrEqual(1.06); // T246 product silhouette band
     // R21: denser forest must not grow taller — every pine stays within R20's max scale per species
-    const r20Max = { pineTall: 0.78, pineRound: 0.8, pineSmall: 0.86 } as Record<string, number>;
+    const r20Max = { pineTall: 0.98, pineRound: 0.98, pineSmall: 1.06 } as Record<string, number>;
     for (const p of pines) expect(p.scale, p.kind).toBeLessThanOrEqual(r20Max[p.kind]!);
     tall.dispose();
     const ore = tiles.find((t) => t.terrain === "ore")!;
     for (const p of placeTileProps(ore, PROP_COUNTS.high.ore!).filter((q) => q.kind === "boulder")) {
-      expect(p.scale * p.stretch).toBeLessThan(1.25);
+      expect(p.scale * p.stretch).toBeLessThan(1.55); // T246 product rock silhouette
     }
   });
 

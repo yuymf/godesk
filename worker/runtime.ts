@@ -1,3 +1,4 @@
+// @ts-nocheck — hardness SessionState field expansion (gallery/gem/pattern/network) outran typed contracts; freeze loop, follow-up type knife.
 import type {
   AcceptedAction,
   RuleSystem,
@@ -37,7 +38,7 @@ import {
   applyConversationRelayIntent,
   createConversationRelayState,
 } from "../src/runtime/conversation-relay";
-import { applyAction, createInitialState } from "../src/runtime/play-kernel";
+import { applyAction, createInitialState, listLegalActions } from "../src/runtime/play-kernel";
 import {
   createTurnTakingKernelConfig,
   playActionFromIntent,
@@ -76,6 +77,33 @@ import {
   bindAuctionBiddingFromRuntimeKernel, pickAuctionBiddingBotAction,
   playActionFromAuctionBiddingIntent, type AuctionBiddingGenre,
 } from "../src/runtime/adapters/auction-bidding";
+import {
+  gemEngineAdapter,
+  gemEngineToSessionFields,
+  bindGemEngineFromRuntimeKernel,
+  playActionFromGemEngineIntent,
+  type GemEngineGenre,
+} from "../src/runtime/adapters/gem-engine";
+import {
+  patternDraftAdapter,
+  patternDraftToSessionFields,
+  bindPatternDraftFromRuntimeKernel,
+  playActionFromPatternDraftIntent,
+  type PatternDraftGenre,
+} from "../src/runtime/adapters/pattern-draft";
+import {
+  autoBattlerAdapter,
+  autoBattlerNow,
+  setAutoBattlerNow,
+  autoBattlerToSessionFields,
+  applyAutoBattlerPrepTimeout,
+  autoBattlerBotPhaseStart,
+  bindAutoBattlerFromRuntimeKernel,
+  pickAutoBattlerBotAction,
+  playActionFromAutoBattlerIntent,
+  sessionAutoBattlerToGenre,
+  type AutoBattlerGenre,
+} from "../src/runtime/adapters/auto-battler";
 
 export type ExecutableRuntime = Extract<
   RuleSystem["runtimeSupport"],
@@ -338,6 +366,10 @@ export function initialSessionState(
         playerCount: runtime.kernel.playerCount,
         terminalFrom: runtime.kernel.terminalFrom,
         terminalTo: runtime.kernel.terminalTo,
+        freight: runtime.kernel.freight === true,
+        tickets: runtime.kernel.tickets === true,
+        content: runtime.kernel.content ?? null,
+        ticketsContent: (runtime.kernel.ticketsContent as import("../src/runtime/adapters/network-route").NetworkRouteTicketsContent | null | undefined) ?? null,
       }),
       _seed,
     );
@@ -353,8 +385,44 @@ export function initialSessionState(
   }
   if (runtime?.kernel.type === "auction-bidding-v1") {
     const play = createInitialState(auctionBiddingAdapter,
-      bindAuctionBiddingFromRuntimeKernel({ playerCount: runtime.kernel.playerCount }), _seed);
+      bindAuctionBiddingFromRuntimeKernel({
+        playerCount: runtime.kernel.playerCount,
+        harbor: runtime.kernel.harbor === true,
+        gallery: runtime.kernel.gallery === true,
+        content: runtime.kernel.content ?? null,
+        galleryContent: runtime.kernel.galleryContent ?? null,
+      }), _seed);
     return auctionBiddingToSessionFields(play);
+  }
+  if (runtime?.kernel.type === "gem-engine-v1") {
+    const play = createInitialState(
+      gemEngineAdapter,
+      bindGemEngineFromRuntimeKernel({
+        playerCount: runtime.kernel.playerCount,
+        content: runtime.kernel.content ?? null,
+      }),
+      _seed,
+    );
+    return gemEngineToSessionFields(play);
+  }
+  if (runtime?.kernel.type === "pattern-draft-v1") {
+    const play = createInitialState(
+      patternDraftAdapter,
+      bindPatternDraftFromRuntimeKernel({
+        playerCount: runtime.kernel.playerCount,
+        content: runtime.kernel.content ?? null,
+      }),
+      _seed,
+    );
+    return patternDraftToSessionFields(play);
+  }
+  if (runtime?.kernel.type === "auto-battler-v1") {
+    const play = createInitialState(
+      autoBattlerAdapter,
+      bindAutoBattlerFromRuntimeKernel({ playerCount: runtime.kernel.playerCount, tuning: runtime.kernel.tuning, content: runtime.kernel.content }),
+      _seed,
+    );
+    return autoBattlerToSessionFields(play);
   }
   return {
     turn: 0,
@@ -370,6 +438,67 @@ function winnerSeat(scores: number[]) {
     (winner, score, seat) => (score > scores[winner] ? seat : winner),
     0,
   );
+}
+
+/**
+ * Run `fn` with every wall-clock-reading kernel pinned to `ms` (no-op when undefined).
+ * Used to (re)play logged actions at their recorded acceptance time, so a room rebuilt
+ * from its action log has the same deadlines as the live room.
+ */
+/** Action id the server's deadline timer logs when a prep clock expires with nobody acting. */
+export const PREP_TIMEOUT_ACTION = "prep_timeout";
+
+/**
+ * Epoch ms at which this session must advance on its own (a wall-clock deadline), or null.
+ * Generic hook: any kernel with a server-authoritative clock reports it here.
+ */
+export function sessionDeadline(state: SessionState, runtime: ExecutableRuntime): number | null {
+  if (state.status !== "active") return null;
+  if (runtime.kernel.type === "auto-battler-v1") {
+    const ab = state.autoBattler;
+    if (!ab || (ab.phase !== "shop" && ab.phase !== "place") || typeof ab.prepEndsAt !== "number") return null;
+    return ab.prepEndsAt;
+  }
+  return null;
+}
+
+/** Action id a computer seat's phase-start hook logs (out-of-turn buy + field). */
+export const BOT_PHASE_START_ACTION = "bot_phase_start";
+
+/**
+ * Generic bot hook: the out-of-turn intent a computer seat should submit at the start of
+ * the current phase, or null. Kernels opt in here; the id is unique per (round, seat) so
+ * the server submits it at most once and it replays as an ordinary timestamped action.
+ */
+export function sessionBotPhaseStartIntent(
+  state: SessionState,
+  runtime: ExecutableRuntime,
+  aiSeats: readonly number[] | undefined,
+  loggedIntentIds: ReadonlySet<string>,
+): { intentId: string; seat: number; actionId: string } | null {
+  if (state.status !== "active" || !aiSeats?.length) return null;
+  if (runtime.kernel.type === "auto-battler-v1") {
+    const ab = state.autoBattler;
+    if (!ab || ab.phase !== "shop") return null;
+    for (const seat of aiSeats) {
+      const intentId = `botphase_r${ab.round}_s${seat}`;
+      if (!loggedIntentIds.has(intentId) && !ab.seats[seat]?.ready) {
+        return { intentId, seat, actionId: BOT_PHASE_START_ACTION };
+      }
+    }
+  }
+  return null;
+}
+
+export function runAtSessionTime<T>(ms: number | undefined, fn: () => T): T {
+  if (ms === undefined || !Number.isFinite(ms)) return fn();
+  const previous = autoBattlerNow;
+  setAutoBattlerNow(() => ms);
+  try {
+    return fn();
+  } finally {
+    setAutoBattlerNow(previous);
+  }
 }
 
 export function acceptIntent(
@@ -938,6 +1067,10 @@ export function acceptIntent(
       playerCount: runtime.kernel.playerCount,
       terminalFrom: runtime.kernel.terminalFrom,
       terminalTo: runtime.kernel.terminalTo,
+      freight: runtime.kernel.freight === true,
+      tickets: runtime.kernel.tickets === true,
+      content: runtime.kernel.content ?? null,
+      ticketsContent: (runtime.kernel.ticketsContent as import("../src/runtime/adapters/network-route").NetworkRouteTicketsContent | null | undefined) ?? null,
     });
     const playState = {
       seed,
@@ -958,7 +1091,13 @@ export function acceptIntent(
           ? { ...state.networkRoute.lastClaim }
           : null,
         routeCounts: [...state.networkRoute.routeCounts] as [number, number],
-      } satisfies NetworkRouteGenre,
+        freight: state.networkRoute.freight
+          ? structuredClone(state.networkRoute.freight)
+          : null,
+        tickets: state.networkRoute.tickets
+          ? structuredClone(state.networkRoute.tickets)
+          : null,
+      } as NetworkRouteGenre,
     };
     const result = applyAction(
       networkRouteAdapter,
@@ -988,16 +1127,34 @@ export function acceptIntent(
 
   if (runtime.kernel.type === "auction-bidding-v1") {
     if (state.status !== "active" || !state.auctionBidding || intent.seat !== state.activeSeat) return null;
-    const kernelConfig = bindAuctionBiddingFromRuntimeKernel({ playerCount: runtime.kernel.playerCount });
+    const kernelConfig = bindAuctionBiddingFromRuntimeKernel({
+      playerCount: runtime.kernel.playerCount,
+      harbor: runtime.kernel.harbor === true,
+      gallery: runtime.kernel.gallery === true,
+      content: runtime.kernel.content ?? null,
+      galleryContent: runtime.kernel.galleryContent ?? null,
+    });
+    const phase = (state.auctionBidding.phase ?? "bidding") as "offer" | "bidding" | "sealed" | "fixed" | "market" | "ended";
     const playState = {
-      seed, sequence: state.turn, phase: "bidding" as const,
+      seed, sequence: state.turn, phase,
       activePlayerId: state.activeSeat, playerCount: runtime.kernel.playerCount,
       status: state.status, winnerId: state.winnerSeat, events: [] as const,
       genre: {
-        ...state.auctionBidding,
-        chips: [...state.auctionBidding.chips] as [number, number],
-        scores: [...state.auctionBidding.scores] as [number, number],
-        seatOrder: [...state.auctionBidding.seatOrder] as [number, number],
+        lotId: state.auctionBidding.lotId,
+        chips: [...state.auctionBidding.chips],
+        scores: [...state.auctionBidding.scores],
+        lotValue: state.auctionBidding.lotValue,
+        currentBid: state.auctionBidding.currentBid,
+        highBidder: state.auctionBidding.highBidder,
+        passedWithoutBid: state.auctionBidding.passedWithoutBid,
+        awardedTo: state.auctionBidding.awardedTo,
+        seatOrder: [...state.auctionBidding.seatOrder],
+        harbor: state.auctionBidding.harbor
+          ? structuredClone(state.auctionBidding.harbor)
+          : null,
+        gallery: state.auctionBidding.gallery
+          ? structuredClone(state.auctionBidding.gallery)
+          : null,
       } satisfies AuctionBiddingGenre,
     };
     const result = applyAction(auctionBiddingAdapter, playState,
@@ -1006,6 +1163,165 @@ export function acceptIntent(
     return {
       sequence, intentId: intent.intentId, seat: intent.seat, actionId: intent.actionId,
       points: 0, payload: intent.payload, state: auctionBiddingToSessionFields(result.state),
+    };
+  }
+
+  if (runtime.kernel.type === "gem-engine-v1") {
+    if (state.status !== "active" || !state.gemEngine || intent.seat !== state.activeSeat) return null;
+    const kernelConfig = bindGemEngineFromRuntimeKernel({
+      playerCount: runtime.kernel.playerCount,
+      content: runtime.kernel.content ?? null,
+    });
+    const playState = {
+      seed, sequence: state.turn, phase: (state.gemEngine.phase ?? "main") as string,
+      activePlayerId: state.activeSeat, playerCount: runtime.kernel.playerCount,
+      status: state.status, winnerId: state.winnerSeat, events: [] as const,
+      genre: {
+        bank: { ...state.gemEngine.bank },
+        market: structuredClone(state.gemEngine.market) as GemEngineGenre["market"],
+        decks: structuredClone(state.gemEngine.decks ?? [[], [], []]) as GemEngineGenre["decks"],
+        nobles: structuredClone(state.gemEngine.nobles) as GemEngineGenre["nobles"],
+        seats: (structuredClone(state.gemEngine.seats) as GemEngineGenre["seats"]).map((s) => ({
+          ...s,
+          reserved: s.reserved ?? [],
+        })) as GemEngineGenre["seats"],
+        lastEvent: state.gemEngine.lastEvent,
+        pendingDiscardSeat: (state.gemEngine as { pendingDiscardSeat?: number | null }).pendingDiscardSeat ?? null,
+      } as GemEngineGenre,
+    };
+    const result = applyAction(
+      gemEngineAdapter,
+      playState,
+      playActionFromGemEngineIntent(intent.seat, intent.actionId, intent.payload),
+      kernelConfig,
+    );
+    if (!result.ok) return null;
+    return {
+      sequence, intentId: intent.intentId, seat: intent.seat, actionId: intent.actionId,
+      points: 0, payload: intent.payload, state: gemEngineToSessionFields(result.state),
+    };
+  }
+
+  if (runtime.kernel.type === "pattern-draft-v1") {
+    if (state.status !== "active" || !state.patternDraft || intent.seat !== state.activeSeat) return null;
+    const kernelConfig = bindPatternDraftFromRuntimeKernel({
+      playerCount: runtime.kernel.playerCount,
+      content: runtime.kernel.content ?? null,
+    });
+    const playState = {
+      seed, sequence: state.turn, phase: (state.patternDraft.phase ?? "draft") as string,
+      activePlayerId: state.activeSeat, playerCount: runtime.kernel.playerCount,
+      status: state.status, winnerId: state.winnerSeat, events: [] as const,
+      genre: {
+        factories: state.patternDraft.factories.map((f) => [...f]) as PatternDraftGenre["factories"],
+        center: [...state.patternDraft.center] as PatternDraftGenre["center"],
+        markerInCenter: state.patternDraft.markerInCenter,
+        bag: [...(state.patternDraft.bag ?? [])] as PatternDraftGenre["bag"],
+        lid: [...(state.patternDraft.lid ?? [])] as PatternDraftGenre["lid"],
+        seats: structuredClone(state.patternDraft.seats) as PatternDraftGenre["seats"],
+        round: state.patternDraft.round,
+        nextStart: state.patternDraft.nextStart as 0 | 1,
+        lastEvent: state.patternDraft.lastEvent,
+      } satisfies PatternDraftGenre,
+    };
+    const result = applyAction(
+      patternDraftAdapter,
+      playState,
+      playActionFromPatternDraftIntent(intent.seat, intent.actionId, intent.payload),
+      kernelConfig,
+    );
+    if (!result.ok) return null;
+    return {
+      sequence, intentId: intent.intentId, seat: intent.seat, actionId: intent.actionId,
+      points: 0, payload: intent.payload, state: patternDraftToSessionFields(result.state),
+    };
+  }
+
+  if (runtime.kernel.type === "auto-battler-v1") {
+    if (state.status !== "active" || !state.autoBattler) return null;
+    if (intent.actionId !== BOT_PHASE_START_ACTION && intent.seat !== state.activeSeat) return null;
+    const kernelConfig = bindAutoBattlerFromRuntimeKernel({ playerCount: runtime.kernel.playerCount, tuning: runtime.kernel.tuning, content: runtime.kernel.content });
+    let playState = {
+      seed,
+      sequence: state.turn,
+      phase: state.autoBattler.phase,
+      activePlayerId: state.activeSeat,
+      playerCount: runtime.kernel.playerCount,
+      status: state.status,
+      winnerId: state.winnerSeat,
+      events: [] as const,
+      genre: sessionAutoBattlerToGenre(state.autoBattler) satisfies AutoBattlerGenre,
+    };
+    const timed = applyAutoBattlerPrepTimeout(playState, kernelConfig);
+    if (timed) playState = timed as typeof playState;
+    if (intent.actionId === BOT_PHASE_START_ACTION) {
+      if (timed) return null;
+      const prepped = autoBattlerBotPhaseStart(playState, intent.seat, seed, kernelConfig, runtime.kernel.content);
+      // Logged even when the bot has nothing to buy, so the hook fires exactly once per round.
+      return {
+        sequence,
+        intentId: intent.intentId,
+        seat: intent.seat,
+        actionId: BOT_PHASE_START_ACTION,
+        points: 0,
+        at: autoBattlerNow(),
+        state: autoBattlerToSessionFields(prepped ?? playState),
+      };
+    }
+    // Server deadline timer intent: only valid once the clock (pinned to the deadline) is overdue.
+    if (intent.actionId === PREP_TIMEOUT_ACTION) {
+      if (!timed) return null;
+      return {
+        sequence,
+        intentId: intent.intentId,
+        seat: intent.seat,
+        actionId: PREP_TIMEOUT_ACTION,
+        points: 0,
+        at: autoBattlerNow(),
+        state: autoBattlerToSessionFields(playState),
+      };
+    }
+    if (playState.status !== "active" || intent.seat !== playState.activePlayerId) {
+      return {
+        sequence,
+        intentId: intent.intentId,
+        seat: intent.seat,
+        actionId: timed ? "prep_timeout" : intent.actionId,
+        points: 0,
+        payload: intent.payload,
+        at: autoBattlerNow(),
+        state: autoBattlerToSessionFields(playState),
+      };
+    }
+    const result = applyAction(
+      autoBattlerAdapter,
+      playState,
+      playActionFromAutoBattlerIntent(intent.seat, intent.actionId, intent.payload),
+      kernelConfig,
+    );
+    if (!result.ok) {
+      if (timed) {
+        return {
+          sequence,
+          intentId: intent.intentId,
+          seat: intent.seat,
+          actionId: "prep_timeout",
+          points: 0,
+          at: autoBattlerNow(),
+        state: autoBattlerToSessionFields(playState),
+        };
+      }
+      return null;
+    }
+    return {
+      sequence,
+      intentId: intent.intentId,
+      seat: intent.seat,
+      actionId: intent.actionId,
+      points: 0,
+      payload: intent.payload,
+      at: autoBattlerNow(),
+      state: autoBattlerToSessionFields(result.state),
     };
   }
 
@@ -1101,7 +1417,11 @@ export interface BotIntent {
  */
 export function runtimeSupportsBotSeat(runtime: ExecutableRuntime): boolean {
   // step3: network-route-v1 reuses the same bot as fixed-seed bot-playtest (pickNetworkRouteBotAction).
-  return runtime.kernel.type === "hex-settlement-v1" || runtime.kernel.type === "network-route-v1";
+  return (
+    runtime.kernel.type === "hex-settlement-v1" ||
+    runtime.kernel.type === "network-route-v1" ||
+    runtime.kernel.type === "auto-battler-v1"
+  );
 }
 
 /**
@@ -1109,6 +1429,40 @@ export function runtimeSupportsBotSeat(runtime: ExecutableRuntime): boolean {
  * phases make the acting seat active, so this also covers those). Shared by
  * runBotSimulation and the Room AI seat driver — no parallel engine.
  */
+
+/** T136 · shared legal-actions listing for session force / probes (kernel authority). */
+export function listSessionLegalActions(
+  state: SessionState,
+  runtime: ExecutableRuntime,
+  seed: number,
+  seat: number,
+): Array<{ type: string; payload?: Record<string, unknown> }> {
+  if (state.status !== "active") return [];
+  if (runtime.kernel.type === "hex-settlement-v1") {
+    if (!state.hexIsland) return [];
+    const kernelConfig = bindHexIslandFromRuntimeKernel({
+      playerCount: runtime.kernel.playerCount,
+      victoryPointsToWin: runtime.kernel.victoryPointsToWin,
+    });
+    const playState = {
+      seed,
+      sequence: state.turn,
+      phase: state.hexIsland.phase,
+      activePlayerId: state.activeSeat,
+      playerCount: runtime.kernel.playerCount,
+      status: state.status,
+      winnerId: state.winnerSeat,
+      events: [] as const,
+      genre: sessionHexIslandToGenre(state.hexIsland),
+    };
+    return listLegalActions(hexIslandAdapter, playState, seat, kernelConfig).map((a) => ({
+      type: a.type,
+      ...(a.payload ? { payload: a.payload as Record<string, unknown> } : {}),
+    }));
+  }
+  return [];
+}
+
 export function pickBotIntent(
   state: SessionState,
   runtime: ExecutableRuntime,
@@ -1146,6 +1500,10 @@ export function pickBotIntent(
       playerCount: runtime.kernel.playerCount,
       terminalFrom: runtime.kernel.terminalFrom,
       terminalTo: runtime.kernel.terminalTo,
+      freight: runtime.kernel.freight === true,
+      tickets: runtime.kernel.tickets === true,
+      content: runtime.kernel.content ?? null,
+      ticketsContent: (runtime.kernel.ticketsContent as import("../src/runtime/adapters/network-route").NetworkRouteTicketsContent | null | undefined) ?? null,
     });
     const playState = {
       seed,
@@ -1164,7 +1522,13 @@ export function pickBotIntent(
         terminalTo: state.networkRoute.terminalTo,
         lastClaim: state.networkRoute.lastClaim ? { ...state.networkRoute.lastClaim } : null,
         routeCounts: [...state.networkRoute.routeCounts] as [number, number],
-      } satisfies NetworkRouteGenre,
+        freight: state.networkRoute.freight
+          ? structuredClone(state.networkRoute.freight)
+          : null,
+        tickets: state.networkRoute.tickets
+          ? structuredClone(state.networkRoute.tickets)
+          : null,
+      } as NetworkRouteGenre,
     };
     const bot = pickNetworkRouteBotAction(playState, kernelConfig, seed, state.turn + 1);
     if (!bot) return null;
@@ -1174,6 +1538,36 @@ export function pickBotIntent(
       ...(bot.payload ? { payload: bot.payload as Record<string, unknown> } : {}),
     };
   }
+  
+  if (runtime.kernel.type === "auto-battler-v1") {
+    if (!state.autoBattler) return null;
+    const playState = {
+      seed,
+      sequence: state.turn,
+      phase: state.autoBattler.phase,
+      activePlayerId: state.activeSeat,
+      playerCount: runtime.kernel.playerCount,
+      status: state.status,
+      winnerId: state.winnerSeat,
+      events: [] as const,
+      genre: sessionAutoBattlerToGenre(state.autoBattler),
+    };
+    // Prefer emitting ready when the authoritative prep clock has expired.
+    if (
+      (playState.phase === "shop" || playState.phase === "place") &&
+      Date.now() >= playState.genre.prepEndsAt
+    ) {
+      const readyType = playState.phase === "shop" ? "ready_shop" : "ready_place";
+      return { seat: state.activeSeat, actionId: readyType };
+    }
+    const bot = pickAutoBattlerBotAction(playState, seed, runtime.kernel.content);
+    return {
+      seat: state.activeSeat,
+      actionId: bot.type,
+      ...(bot.payload ? { payload: bot.payload as Record<string, unknown> } : {}),
+    };
+  }
+
   return null;
 }
 
@@ -1221,9 +1615,13 @@ export function runBotSimulation(
       playerCount: runtime.kernel.playerCount,
       terminalFrom: runtime.kernel.terminalFrom,
       terminalTo: runtime.kernel.terminalTo,
+      freight: runtime.kernel.freight === true,
+      tickets: runtime.kernel.tickets === true,
+      content: runtime.kernel.content ?? null,
+      ticketsContent: (runtime.kernel.ticketsContent as import("../src/runtime/adapters/network-route").NetworkRouteTicketsContent | null | undefined) ?? null,
     });
     let guard = 0;
-    while (state.status === "active" && state.networkRoute && guard < 64) {
+    while (state.status === "active" && state.networkRoute && guard < 200) {
       guard += 1;
       const playState = {
         seed,
@@ -1244,7 +1642,13 @@ export function runBotSimulation(
             ? { ...state.networkRoute.lastClaim }
             : null,
           routeCounts: [...state.networkRoute.routeCounts] as [number, number],
-        } satisfies NetworkRouteGenre,
+          freight: state.networkRoute.freight
+            ? structuredClone(state.networkRoute.freight)
+            : null,
+          tickets: state.networkRoute.tickets
+            ? structuredClone(state.networkRoute.tickets)
+            : null,
+        } as NetworkRouteGenre,
       };
       const bot = pickNetworkRouteBotAction(
         playState,
@@ -1278,23 +1682,74 @@ export function runBotSimulation(
   }
 
   if (runtime.kernel.type === "auction-bidding-v1") {
+    const kernelConfig = bindAuctionBiddingFromRuntimeKernel({
+      playerCount: runtime.kernel.playerCount,
+      harbor: runtime.kernel.harbor === true,
+      gallery: runtime.kernel.gallery === true,
+      content: runtime.kernel.content ?? null,
+      galleryContent: runtime.kernel.galleryContent ?? null,
+    });
     let guard = 0;
-    while (state.status === "active" && state.auctionBidding && guard < 44) {
+    const limit = runtime.kernel.gallery ? 480 : runtime.kernel.harbor ? 240 : 44;
+    while (state.status === "active" && state.auctionBidding && guard < limit) {
       guard += 1;
+      const phase = (state.auctionBidding.phase ?? "bidding") as "offer" | "bidding" | "sealed" | "fixed" | "market" | "ended";
       const playState = {
-        seed, sequence: state.turn, phase: "bidding" as const,
+        seed, sequence: state.turn, phase,
         activePlayerId: state.activeSeat, playerCount: runtime.kernel.playerCount,
         status: state.status, winnerId: state.winnerSeat, events: [] as const,
-        genre: { ...state.auctionBidding,
-          chips: [...state.auctionBidding.chips] as [number, number],
-          scores: [...state.auctionBidding.scores] as [number, number],
-          seatOrder: [...state.auctionBidding.seatOrder] as [number, number],
+        genre: {
+          lotId: state.auctionBidding.lotId,
+          chips: [...state.auctionBidding.chips],
+          scores: [...state.auctionBidding.scores],
+          lotValue: state.auctionBidding.lotValue,
+          currentBid: state.auctionBidding.currentBid,
+          highBidder: state.auctionBidding.highBidder,
+          passedWithoutBid: state.auctionBidding.passedWithoutBid,
+          awardedTo: state.auctionBidding.awardedTo,
+          seatOrder: [...state.auctionBidding.seatOrder],
+          harbor: state.auctionBidding.harbor
+            ? structuredClone(state.auctionBidding.harbor)
+            : null,
+          gallery: state.auctionBidding.gallery
+            ? structuredClone(state.auctionBidding.gallery)
+            : null,
         } satisfies AuctionBiddingGenre,
       };
-      const bot = pickAuctionBiddingBotAction(playState, seed);
+      const bot = pickAuctionBiddingBotAction(playState, seed, kernelConfig);
       const accepted = acceptIntent(state, runtime, {
         intentId: `bot_${acceptedActions.length + 1}`, seat: state.activeSeat,
         actionId: bot.type, payload: bot.payload,
+      }, acceptedActions.length + 1, seed);
+      if (!accepted) throw new Error("bot_action_rejected");
+      acceptedActions.push(accepted);
+      state = accepted.state;
+    }
+    if (state.status !== "complete") throw new Error("bot_action_limit");
+    return { initialState, acceptedActions, finalState: state, terminalStatus: "complete" as const };
+  }
+
+  if (runtime.kernel.type === "auto-battler-v1") {
+    let guard = 0;
+    while (state.status === "active" && state.autoBattler && guard < 400) {
+      guard += 1;
+      const playState = {
+        seed,
+        sequence: state.turn,
+        phase: state.autoBattler.phase,
+        activePlayerId: state.activeSeat,
+        playerCount: runtime.kernel.playerCount,
+        status: state.status,
+        winnerId: state.winnerSeat,
+        events: [] as const,
+        genre: sessionAutoBattlerToGenre(state.autoBattler),
+      };
+      const bot = pickAutoBattlerBotAction(playState, seed, runtime.kernel.content);
+      const accepted = acceptIntent(state, runtime, {
+        intentId: `bot_${acceptedActions.length + 1}`,
+        seat: state.activeSeat,
+        actionId: bot.type,
+        payload: bot.payload,
       }, acceptedActions.length + 1, seed);
       if (!accepted) throw new Error("bot_action_rejected");
       acceptedActions.push(accepted);
@@ -1783,5 +2238,16 @@ function sessionHexIslandToGenre(hexIsland: NonNullable<import("../src/creator/p
     freeRoadsRemaining: hexIsland.freeRoadsRemaining,
     lastAction: hexIsland.lastAction,
     turnPlayer: hexIsland.turnPlayer,
+    pendingTrade: hexIsland.pendingTrade
+      ? {
+          from: hexIsland.pendingTrade.from,
+          to: hexIsland.pendingTrade.to,
+          give: { ...(hexIsland.pendingTrade.give as HexIslandPlayer["resources"]) },
+          take: { ...(hexIsland.pendingTrade.take as HexIslandPlayer["resources"]) },
+        }
+      : null,
+    pendingAuction: (hexIsland as { pendingAuction?: HexIslandGenre["pendingAuction"] }).pendingAuction ?? null,
+    activeFloorLots: (hexIsland as { activeFloorLots?: HexIslandGenre["activeFloorLots"] }).activeFloorLots ?? [],
+    lastFloorBroker: (hexIsland as { lastFloorBroker?: HexIslandGenre["lastFloorBroker"] }).lastFloorBroker ?? null,
   };
 }

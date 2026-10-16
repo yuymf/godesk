@@ -1,4 +1,6 @@
 import type { RuleSystem } from "./project-contract";
+import { packMentionsAutoBattler } from "../runtime/adapters/auto-battler-packs";
+import { cueMatchIsPositive } from "./cue-negation";
 
 type KernelType = Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"]["type"];
 
@@ -20,6 +22,9 @@ export const KERNEL_CAPABILITIES = {
   "hex-settlement-v1": ["hex-topology", "resource-production", "player-trading", "network-building"],
   "network-route-v1": ["graph-topology", "route-claiming", "path-connectivity"],
   "auction-bidding-v1": ["bid-pass-resolution", "award-selection", "seeded-draw"],
+  "auto-battler-v1": ["shop-economy", "bench-board", "seeded-combat", "trait-synergy"],
+  "gem-engine-v1": ["gem-tokens", "development-discounts", "noble-prestige"],
+  "pattern-draft-v1": ["factory-draft", "pattern-line-placement", "wall-tiling-score", "floor-penalty"],
 } satisfies Record<KernelType, readonly string[]>;
 
 /** Mechanics are declarations, independent of a game's title or source language. */
@@ -40,6 +45,9 @@ export const MECHANIC_CAPABILITIES: Record<string, readonly string[]> = {
   "disc-flipping": ["grid-placement", "directional-flips", "forced-pass", "terminal-disc-count"],
   "route-network": ["graph-topology", "route-claiming", "path-connectivity"],
   "auction-bidding": ["bid-pass-resolution", "award-selection", "seeded-draw"],
+  "auto-battler": ["shop-economy", "bench-board", "seeded-combat", "trait-synergy"],
+  "gem-engine": ["gem-tokens", "development-discounts", "noble-prestige"],
+  "pattern-draft": ["factory-draft", "pattern-line-placement", "wall-tiling-score", "floor-penalty"],
 };
 
 export function kernelCapabilities(kernelType: string): readonly string[] | undefined {
@@ -62,22 +70,53 @@ export function mechanicsCapabilityGap(mechanics: readonly string[], kernelType?
 }
 
 /** Existing source guards now produce declarations consumed by the same registry. */
+/** Mechanic cue patterns — matched only when cueMatchIsPositive (T004 negation). */
+const MECHANIC_CUES: Array<{ id: string; cues: RegExp }> = [
+  { id: "auction-bidding", cues: /拍卖|竞价|出价|\bauction\b|\bbid(?:s|ding)?\b/i },
+  // T010: gem-token / development-discount / noble prestige engine.
+  { id: "gem-engine", cues: /宝石(?:代币|引擎)?|发展牌|永久折扣|贵族|声望\s*\d*|gem\s*engine|prestige\s*(?:points?|target)|development\s*cards?|nobles?\b/i },
+  { id: "hex-settlement", cues: /汐屿|\btidewell\b|hex[- ]?island|六角.*(?:资源|建造)|hex.*(?:resource|build)/i },
+  { id: "disc-flipping", cues: /\bothello\b|\breversi\b|黑白棋|翻转棋|翻子|flipp?ing.*dis[ck]|dis[ck].*flipp?ing/i },
+  // Line / route / logistics network (PR11 + hardness H02).
+  {
+    id: "route-network",
+    // Ticket-to-ride / rail cues (T008): 车票·车厢·认领路线·铺线·铁道 — not logistics-only.
+    cues: /线路网络|路线连接|铺设路线|连接城市|星港|物流|货运|运货|派车|星图节点|车票|车厢|认领路线|铺线|铁道|route\s*network|connect(?:ing)?\s+cities|claim(?:ing)?\s+routes|\blogistics\b|\bconvoy\b|train\s*cars?|destination\s*tickets?/i,
+  },
+  // T013: factory draft / pattern lines / wall tiling.
+  {
+    id: "pattern-draft",
+    cues: /工厂(?:展示)?(?:盘)?|准备行|纹样墙|地板(?:扣分)?|factory\s+(?:displays?|tiles?)|pattern\s*(?:wall|lines?)|floor\s*line|wall\s*tiling|中心(?:区|堆)/i,
+  },
+  {
+    id: "hand-play",
+    cues: /卡牌区域控制|出牌争夺区域|区域控制.*(?:卡牌|出牌)|area[- ]?control|play(?:ing)? cards?.*(area|region|zone)|claim(?:ing)? areas? with cards?/i,
+  },
+];
+
 export function inferRequestedMechanics(corpus: string): string[] {
   const mechanics: string[] = [];
-  if (/拍卖|竞价|出价|\bauction\b|\bbid(?:s|ding)?\b/i.test(corpus)) mechanics.push("auction-bidding");
-  if (/汐屿|\btidewell\b|hex[- ]?island|六角.*(?:资源|建造)|hex.*(?:resource|build)/i.test(corpus)) mechanics.push("hex-settlement");
-  if (/\bothello\b|\breversi\b|黑白棋|翻转棋|翻子|flipp?ing.*dis[ck]|dis[ck].*flipp?ing/i.test(corpus)) mechanics.push("disc-flipping");
-  // Line / route network (PR11) — must not also match hex or disc cues above.
-  if (/线路网络|路线连接|铺设路线|连接城市|route\s*network|connect(?:ing)?\s+cities|claim(?:ing)?\s+routes/i.test(corpus)) {
-    mechanics.push("route-network");
+  // Registrable auto-battler cues (packs + mechanic phrases) — negation-aware via packMentionsAutoBattler.
+  if (packMentionsAutoBattler(corpus)) {
+    mechanics.push("auto-battler");
   }
-  // Card / area-control (PR12) — reuse hand-play-v1; never also match hex/disc/route above.
-  if (
-    /卡牌区域控制|出牌争夺区域|区域控制.*(?:卡牌|出牌)|area[- ]?control|play(?:ing)? cards?.*(area|region|zone)|claim(?:ing)? areas? with cards?/i.test(
-      corpus,
-    )
-  ) {
-    mechanics.push("hand-play");
+  for (const { id, cues } of MECHANIC_CUES) {
+    if (cueMatchIsPositive(corpus, cues)) mechanics.push(id);
   }
   return mechanics;
+}
+
+/**
+ * Kernels the worker's built-in computer player (`pickBotIntent`) can drive in a Shared
+ * Session `aiSeats` slot. Keep in sync with worker/runtime.ts pickBotIntent (asserted by test).
+ */
+export const BOT_PLAYABLE_KERNELS: readonly string[] = ["hex-settlement-v1", "network-route-v1", "auto-battler-v1"];
+
+/** Seat the computer takes (last seat) for a bot-playable executable kernel; null otherwise. */
+export function computerSeatForRuleSystem(ruleSystem: Pick<RuleSystem, "runtimeSupport">): number | null {
+  const support = ruleSystem.runtimeSupport;
+  if (support?.status !== "executable") return null;
+  const kernel = support.kernel as { type: string; playerCount?: number };
+  if (!BOT_PLAYABLE_KERNELS.includes(kernel.type) || !kernel.playerCount || kernel.playerCount < 2) return null;
+  return kernel.playerCount - 1;
 }

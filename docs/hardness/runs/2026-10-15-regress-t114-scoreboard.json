@@ -1,0 +1,167 @@
+[
+  {
+    "suite": "H01",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 0,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 0
+    },
+    "playIsRoom": true,
+    "score": "PASS（可玩子集）",
+    "kernelType": "hex-settlement-v1",
+    "playIsDocs": false,
+    "sidecar": {
+      "suiteRaw": "H01",
+      "kernelType": "hex-settlement-v1",
+      "roomId": "room_8a16a9fe-88eb-473f-8f98-ff58147d8e10",
+      "buildId": "build_799d130a8cf62eb8844dc55a",
+      "projectId": "project_46c4fe85-32ff-46de-ab8f-2b19890f1ac6",
+      "sessionUrl": "http://127.0.0.1:8799/chatgpt-plugin/room/room_8a16a9fe-88eb-473f-8f98-ff58147d8e10?share=eyJ2IjoxLCJjIjoibG9jYWwtY3JlYXRvciIsInJvb20iOiJyb29tXzhhMTZhOWZlLTg4ZWItNDczZi04Zjk4LWZmNTgxNDdkOGUxMCIsImJ1aWxkIjoiYnVpbGRfNzk5ZDEzMGE4Y2Y2MmViODg0NGRjNTVhIiwicmVwbGF5IjoicmVwbGF5X2I0MjM2YTc1LTc5OGYtNDFmMS1iOTUwLThlNjhhYmY5ZTgxZCIsInByb2plY3QiOiJwcm9qZWN0XzQ2YzRmZTg1LTMyZmYtNDZkZS1hYjhmLTJiMTk4OTBmMWFjNiJ9.yeK2LhJ2WvJJKYvuSPevWyEbixUMt-9CjdY0EALYxU0",
+      "canvas": 1,
+      "hasStage": 0,
+      "hasSceneHost": 1,
+      "kernelAttr": 0,
+      "rejectedShell": false,
+      "shellNote": "ok",
+      "suite": "H01"
+    },
+    "rejectedShell": false
+  },
+  {
+    "suite": "H02",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 2
+    },
+    "playIsRoom": true,
+    "score": "PASS（可玩子集）",
+    "kernelType": "network-route-v1",
+    "playIsDocs": false,
+    "sidecar": {
+      "suiteRaw": "H02",
+      "kernelType": "network-route-v1",
+      "roomId": "room_b7dbe510-58d1-4c11-9bcc-ddd735408f68",
+      "buildId": "build_7e9a123d5a7f5ecb7b97e78f",
+      "projectId": "project_069ba879-63a4-4032-aebd-bddf7e2000f1",
+      "sessionUrl": "http://127.0.0.1:8799/chatgpt-plugin/room/room_b7dbe510-58d1-4c11-9bcc-ddd735408f68?share=eyJ2IjoxLCJjIjoibG9jYWwtY3JlYXRvciIsInJvb20iOiJyb29tX2I3ZGJlNTEwLTU4ZDEtNGMxMS05YmNjLWRkZDczNTQwOGY2OCIsImJ1aWxkIjoiYnVpbGRfN2U5YTEyM2Q1YTdmNWVjYjdiOTdlNzhmIiwicmVwbGF5IjoicmVwbGF5XzFiYzIzZjdmLTdlMDMtNDk0Ni05MzhiLTM0MDkxNjU1NDQxYSIsInByb2plY3QiOiJwcm9qZWN0XzA2OWJhODc5LTYzYTQtNDAzMi1hZWJkLWJkZGY3ZTIwMDBmMSJ9.G7XUxv2zSLhbAi3sm2cTBMTXD7-fUyVYhvnVRi2eNQw",
+      "canvas": 1,
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "kernelAttr": 2,
+      "rejectedShell": false,
+      "shellNote": "ok",
+      "suite": "H02"
+    },
+    "rejectedShell": false
+  },
+  {
+    "suite": "H03",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "score": "PASS（可玩子集）",
+    "kernelType": "gem-engine-v1",
+    "playIsDocs": false,
+    "sidecar": {
+      "suiteRaw": "H03",
+      "kernelType": "gem-engine-v1",
+      "roomId": "room_eb68d4fa-2663-46de-b243-ec4387f0b685",
+      "buildId": "build_3cbe000ba13a238a33f8e08a",
+      "projectId": "project_1ed4a131-e014-436f-83dd-c8aa367b24a5",
+      "sessionUrl": "http://127.0.0.1:8799/chatgpt-plugin/room/room_eb68d4fa-2663-46de-b243-ec4387f0b685?share=eyJ2IjoxLCJjIjoibG9jYWwtY3JlYXRvciIsInJvb20iOiJyb29tX2ViNjhkNGZhLTI2NjMtNDZkZS1iMjQzLWVjNDM4N2YwYjY4NSIsImJ1aWxkIjoiYnVpbGRfM2NiZTAwMGJhMTNhMjM4YTMzZjhlMDhhIiwicmVwbGF5IjoicmVwbGF5X2YyYzMzYzhhLTc0Y2EtNDRkNC1iYzE4LTMxOWJlZTQ2YTJmNyIsInByb2plY3QiOiJwcm9qZWN0XzFlZDRhMTMxLWUwMTQtNDM2Zi04M2RkLWM4YWEzNjdiMjRhNSJ9.Kz_CYgiyD1hrgskHUz1wVIzkqgqfZdCZ5oTBgPFniz8",
+      "canvas": 1,
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "kernelAttr": 1,
+      "rejectedShell": false,
+      "shellNote": "ok",
+      "suite": "H03"
+    },
+    "rejectedShell": false
+  },
+  {
+    "suite": "H04",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "score": "PASS（可玩子集）",
+    "kernelType": "pattern-draft-v1",
+    "playIsDocs": false,
+    "sidecar": {
+      "suiteRaw": "H04",
+      "kernelType": "pattern-draft-v1",
+      "roomId": "room_db16a36a-3415-4989-9d57-56cd0f0ef16a",
+      "buildId": "build_c45b9b267a037f7307f0f6ca",
+      "projectId": "project_e5309630-0bfc-485a-8d68-f0115a757940",
+      "sessionUrl": "http://127.0.0.1:8799/chatgpt-plugin/room/room_db16a36a-3415-4989-9d57-56cd0f0ef16a?share=eyJ2IjoxLCJjIjoibG9jYWwtY3JlYXRvciIsInJvb20iOiJyb29tX2RiMTZhMzZhLTM0MTUtNDk4OS05ZDU3LTU2Y2QwZjBlZjE2YSIsImJ1aWxkIjoiYnVpbGRfYzQ1YjliMjY3YTAzN2Y3MzA3ZjBmNmNhIiwicmVwbGF5IjoicmVwbGF5X2Y1ZWFkMDMxLWMyY2UtNGExNC05NDcyLTZlNTljNTQ0MWQ0MSIsInByb2plY3QiOiJwcm9qZWN0X2U1MzA5NjMwLTBiZmMtNDg1YS04ZDY4LWYwMTE1YTc1Nzk0MCJ9.g_Q5tWCYHg09bv2uumw8tAbjb6aJqQXl4kWVMFj-TsY",
+      "canvas": 1,
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "kernelAttr": 1,
+      "rejectedShell": false,
+      "shellNote": "ok",
+      "suite": "H04"
+    },
+    "rejectedShell": false
+  },
+  {
+    "suite": "H05",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "score": "PASS（可玩子集）",
+    "kernelType": "auction-bidding-v1",
+    "playIsDocs": false,
+    "sidecar": {
+      "suiteRaw": "H05",
+      "kernelType": "auction-bidding-v1",
+      "roomId": "room_d971701e-246d-4183-9532-74470c27b25b",
+      "buildId": "build_cd9fd92530bf5a1c6eebf761",
+      "projectId": "project_024c8f27-665d-41c4-bcc5-0dcc76965fb8",
+      "sessionUrl": "http://127.0.0.1:8799/chatgpt-plugin/room/room_d971701e-246d-4183-9532-74470c27b25b?share=eyJ2IjoxLCJjIjoibG9jYWwtY3JlYXRvciIsInJvb20iOiJyb29tX2Q5NzE3MDFlLTI0NmQtNDE4My05NTMyLTc0NDcwYzI3YjI1YiIsImJ1aWxkIjoiYnVpbGRfY2Q5ZmQ5MjUzMGJmNWExYzZlZWJmNzYxIiwicmVwbGF5IjoicmVwbGF5XzIyOWRlMDQwLTZhZTMtNGU1Ni05NzU2LTIyZjU0OGJmZWZhZSIsInByb2plY3QiOiJwcm9qZWN0XzAyNGM4ZjI3LTY2NWQtNDFjNC1iY2M1LTBkY2M3Njk2NWZiOCJ9.3EnC0omnPmit6C0gh82M_zBIaXhSNZRFpUGHOH2bbKk",
+      "canvas": 1,
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "kernelAttr": 1,
+      "rejectedShell": false,
+      "shellNote": "ok",
+      "suite": "H05"
+    },
+    "rejectedShell": false
+  }
+]

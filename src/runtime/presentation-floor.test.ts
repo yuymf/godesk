@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { RuleSystem } from "../creator/project-contract";
 import {
+  KERNEL_PRESENTATION,
+  UNPRESENTED_PREFIX,
+  boardPresentationGap,
   genreObjectFidelity,
   hasBoundImage,
+  kernelUsesTabletop3d,
   presentationFloor,
 } from "./presentation-floor";
+import type { AutoBattlerThemePatch } from "./adapters/auto-battler-theme";
 import { defaultRenderSpec } from "../creator/render-spec";
 
 const RENDER = defaultRenderSpec("score-race-v1", "table")!;
@@ -283,4 +288,109 @@ describe("presentationFloor", () => {
     expect(presentationFloor(ruleSystem).status).toBe("passed");
   });
 
+});
+
+describe("board presentation gate (T029 spatial 3D mid-layer)", () => {
+  it("fails a kernel whose only presentation is a generic form HUD", () => {
+    expect(boardPresentationGap("new-mech-v1", { "new-mech-v1": "generic-hud" })).toContain(UNPRESENTED_PREFIX);
+  });
+
+  it("fails DOM-only dedicated-board (must mount SceneHost / TabletopStage)", () => {
+    const gap = boardPresentationGap("new-mech-v1", { "new-mech-v1": "dedicated-board" });
+    expect(gap).toContain(UNPRESENTED_PREFIX);
+    expect(gap).toContain("SceneHost");
+    expect(gap).toContain("TabletopStage");
+  });
+
+  it("passes tabletop-3d registration", () => {
+    expect(boardPresentationGap("new-mech-v1", { "new-mech-v1": "tabletop-3d" })).toBeNull();
+  });
+
+  it("fails closed for kernels missing from the registry", () => {
+    expect(boardPresentationGap("never-registered-v1")).toContain("不能报告为可玩");
+  });
+
+  it("surfaces as Presentation Floor failure for a kernel without a 3D surface", () => {
+    const floor = presentationFloor(base({
+      runtimeSupport: { status: "executable", unsupported: [], kernel: { type: "never-registered-v1", playerCount: 2 } as never },
+    }));
+    expect(floor.status).toBe("failed");
+    expect(floor.reason).toContain(UNPRESENTED_PREFIX);
+  });
+
+  it("keeps spatial kernels that mount TabletopStage/SceneHost as tabletop-3d", () => {
+    expect(boardPresentationGap("score-race-v1")).toBeNull();
+    expect(boardPresentationGap("disc-flipping-v1")).toBeNull();
+    expect(boardPresentationGap("gem-engine-v1")).toBeNull();
+    expect(boardPresentationGap("pattern-draft-v1")).toBeNull();
+    expect(boardPresentationGap("auction-bidding-v1")).toBeNull();
+    expect(boardPresentationGap("hex-settlement-v1")).toBeNull();
+    expect(boardPresentationGap("network-route-v1")).toBeNull();
+    expect(KERNEL_PRESENTATION["auto-battler-v1"]).toBe("tabletop-3d");
+    expect(kernelUsesTabletop3d("gem-engine-v1")).toBe(true);
+    expect(kernelUsesTabletop3d("score-race-v1")).toBe(false);
+  });
+
+  it("presentationFloor passes gem-engine with kit + render (tabletop-3d)", () => {
+    const floor = presentationFloor(base({
+      playSurface: { kind: "table", layout: "gem-engine", regions: [] },
+      presentation: {
+        render: defaultRenderSpec("gem-engine-v1", "table")!,
+        visuals: [{ provenance: "kit", label: "主题 kit" }],
+      },
+      runtimeSupport: {
+        status: "executable",
+        unsupported: [],
+        kernel: { type: "gem-engine-v1", playerCount: 4 } as never,
+      },
+    }));
+    expect(floor.status).toBe("passed");
+  });
+});
+
+describe("presentationFloor theme hints (auto-battler)", () => {
+  const abBase = (theme: AutoBattlerThemePatch) => base({
+    playSurface: { kind: "table", layout: "auto-battler", regions: [] },
+    presentation: {
+      render: defaultRenderSpec("auto-battler-v1", "table")!,
+      visuals: [{ provenance: "kit", label: "主题 kit" }],
+    },
+    runtimeSupport: {
+      status: "executable",
+      unsupported: [],
+      kernel: { type: "auto-battler-v1", playerCount: 2, theme },
+    },
+  });
+
+  it("passes default / preset themes above the floor (incl. cyber night)", () => {
+    expect(presentationFloor(abBase({ preset: "ember" })).status).toBe("passed");
+    expect(presentationFloor(abBase({ preset: "night" })).status).toBe("passed");
+  });
+
+  it("keeps draft when camera pitch / unit scale fall below the floor", () => {
+    const floor = presentationFloor(abBase({
+      preset: "tide",
+      overrides: { camera: { pitchDeg: 28 }, unitScale: 0.9 },
+    }));
+    expect(floor.status).toBe("failed");
+    expect(floor.reason).toMatch(/机位|单位尺度|呈现底线/);
+  });
+
+  it("keeps draft when board width frac is below 55% (机位过远)", () => {
+    const floor = presentationFloor(abBase({
+      preset: "night",
+      overrides: { camera: { distance: 1.25 } },
+    }));
+    expect(floor.status).toBe("failed");
+    expect(floor.reason).toMatch(/机位过远|约占宽/);
+  });
+
+  it("keeps draft when card contrast is too weak", () => {
+    const floor = presentationFloor(abBase({
+      preset: "night",
+      overrides: { ui: { accent: "#1C2238", surface: "#1C2238" } },
+    }));
+    expect(floor.status).toBe("failed");
+    expect(floor.reason).toMatch(/卡面对比/);
+  });
 });

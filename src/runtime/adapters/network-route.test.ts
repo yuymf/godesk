@@ -24,8 +24,14 @@ import {
   networkRouteAdapter,
   networkRouteGraphTopology,
   playerConnectsTerminals,
+  defaultFreightContent,
+  defaultTicketsContent,
+  ideaRequestsFreightLogistics,
+  ideaRequestsTicketsRoute,
+  parseFreightTuningFromIdea,
   type NetworkRouteGenre,
 } from "./network-route";
+import { readFileSync } from "node:fs";
 
 const config = createNetworkRouteKernelConfig();
 
@@ -145,12 +151,347 @@ describe("network-route-v1 adapter", () => {
     expect(snapshotBody(replayed)).toEqual(snapshotBody(state));
   });
 
-  it("bindNetworkRouteFromRuntimeKernel requires two players", () => {
+  it("bindNetworkRouteFromRuntimeKernel clamps into 2–5 seats", () => {
     expect(bindNetworkRouteFromRuntimeKernel({}).kernelType).toBe(
       NETWORK_ROUTE_KERNEL_TYPE,
     );
     expect(() =>
       bindNetworkRouteFromRuntimeKernel({ playerCount: 3 }),
-    ).toThrow(/two_players/);
+    ).not.toThrow();
+    expect(() =>
+      bindNetworkRouteFromRuntimeKernel({ playerCount: 6 }),
+    ).not.toThrow(); // clamp to max 5
+    expect(bindNetworkRouteFromRuntimeKernel({ playerCount: 6 }).playerCount).toBe(5);
+  });
+});
+
+describe("network-route-v1 freight subset (T006)", () => {
+  const freightConfig = createNetworkRouteKernelConfig({
+    content: defaultFreightContent({ winReputation: 3, startingFunds: 20 }),
+  });
+
+  it("starts with funds, reputation, ships, and a 3-card market", () => {
+    const state = createInitialState(networkRouteAdapter, freightConfig, 11);
+    expect(state.genre.freight).not.toBeNull();
+    const f = state.genre.freight!;
+    expect(f.funds).toEqual([20, 20]);
+    expect(f.reputation).toEqual([0, 0]);
+    expect(f.shipIds[0]).toEqual(["barge"]);
+    expect(f.market).toHaveLength(3);
+    expect(f.winReputation).toBe(3);
+  });
+
+  it("accepts a contract into hand then claims toward delivery", () => {
+    let state = createInitialState(networkRouteAdapter, freightConfig, 5);
+    const market0 = state.genre.freight!.market[0]!;
+    const accept = applyAction(
+      networkRouteAdapter,
+      state,
+      {
+        type: "accept_contract",
+        playerId: 0,
+        payload: { instanceId: market0.instanceId },
+      },
+      freightConfig,
+    );
+    expect(accept.ok).toBe(true);
+    if (!accept.ok) return;
+    state = accept.state;
+    expect(state.genre.freight!.hand[0]).toHaveLength(1);
+    expect(state.activePlayerId).toBe(1);
+
+    // seat 1 also accepts something / or claims
+    const legal1 = listLegalActions(networkRouteAdapter, state, 1, freightConfig);
+    expect(legal1.length).toBeGreaterThan(0);
+    const act1 = legal1.find((a) => a.type === "claim") ?? legal1[0]!;
+    const r1 = applyAction(
+      networkRouteAdapter,
+      state,
+      { type: act1.type, playerId: 1, payload: act1.payload },
+      freightConfig,
+    );
+    expect(r1.ok).toBe(true);
+    if (!r1.ok) return;
+    state = r1.state;
+  });
+
+  it("delivers when claims connect contract endpoints and can win on reputation", () => {
+    // Force a short contract A→B (direct edge) via custom content
+    const content = defaultFreightContent({
+      winReputation: 1,
+      startingFunds: 50,
+      contracts: [
+        {
+          id: "c_ab",
+          name: "短途·北港→西岭",
+          from: "A",
+          to: "B",
+          reward: 5,
+          reputation: 1,
+          kind: "普通货",
+        },
+      ],
+      edgeTolls: {},
+    });
+    const cfg = createNetworkRouteKernelConfig({ content });
+    let state = createInitialState(networkRouteAdapter, cfg, 1);
+    const inst = state.genre.freight!.market[0]!;
+    const a0 = applyAction(
+      networkRouteAdapter,
+      state,
+      { type: "accept_contract", playerId: 0, payload: { instanceId: inst.instanceId } },
+      cfg,
+    );
+    expect(a0.ok).toBe(true);
+    if (!a0.ok) return;
+    state = a0.state;
+    // seat1 claims distractor
+    const a1 = applyAction(
+      networkRouteAdapter,
+      state,
+      { type: "claim", playerId: 1, payload: { edgeId: "E|F" } },
+      cfg,
+    );
+    expect(a1.ok).toBe(true);
+    if (!a1.ok) return;
+    state = a1.state;
+    const deliver = applyAction(
+      networkRouteAdapter,
+      state,
+      { type: "claim", playerId: 0, payload: { edgeId: "A|B" } },
+      cfg,
+    );
+    expect(deliver.ok).toBe(true);
+    if (!deliver.ok) return;
+    state = deliver.state;
+    expect(state.genre.freight!.reputation[0]).toBeGreaterThanOrEqual(1);
+    expect(state.genre.freight!.lastDelivery?.contractId).toBe("c_ab");
+    expect(state.status).toBe("complete");
+    expect(state.winnerId).toBe(0);
+  });
+
+  it("freight auto-play terminates without illegal actions", () => {
+    const cfg = createNetworkRouteKernelConfig({
+      content: defaultFreightContent({ winReputation: 4 }),
+    });
+    const { state, actions } = autoPlayNetworkRouteGame(77, cfg);
+    expect(actions.length).toBeGreaterThan(0);
+    expect(["active", "complete"]).toContain(state.status);
+  });
+});
+
+
+describe("freight cues for H02", () => {
+  it("detects logistics freight from H02 INPUT", () => {
+    const idea = readFileSync(
+      "docs/hardness/suites/_archive-fictional/H02-starport-convoy/INPUT.md",
+      "utf8",
+    );
+    expect(ideaRequestsFreightLogistics(idea)).toBe(true);
+    const tuning = parseFreightTuningFromIdea(idea);
+    expect(tuning.winReputation).toBe(10);
+    expect(tuning.startingFunds).toBe(20);
+    const content = defaultFreightContent(tuning);
+    expect(content.ships.map((s) => s.name)).toEqual([
+      "驳船",
+      "快艇",
+      "武装商船",
+      "巨型矿驳",
+    ]);
+    expect(content.contracts.length).toBeGreaterThanOrEqual(8);
+  });
+});
+
+describe("network-route tickets subset (T016)", () => {
+  it("detects tickets cues from H02 rail rulebook without freight", () => {
+    const idea = readFileSync(
+      "docs/hardness/suites/H02-ticket-to-ride/INPUT.md",
+      "utf8",
+    );
+    expect(ideaRequestsTicketsRoute(idea)).toBe(true);
+    expect(ideaRequestsFreightLogistics(idea)).toBe(false);
+  });
+
+  it("deals destination tickets and train hands", () => {
+    const cfg = createNetworkRouteKernelConfig({
+      tickets: true,
+      ticketsContent: defaultTicketsContent(),
+    });
+    const state = createInitialState(networkRouteAdapter, cfg, 7);
+    expect(state.genre.tickets).not.toBeNull();
+    const t = state.genre.tickets!;
+    expect(t.ticketHand[0].length).toBe(2);
+    expect(t.ticketHand[1].length).toBe(2);
+    expect(Object.values(t.trainHand[0]).reduce((a, b) => a + b, 0)).toBe(4);
+    expect(t.faceUp.length).toBe(5);
+    expect(Object.keys(t.edgeMeta).length).toBe(DEFAULT_NETWORK_EDGES.length);
+  });
+
+  it("claims a colored route by paying length with scoring table", () => {
+    const cfg = createNetworkRouteKernelConfig({
+      tickets: true,
+      ticketsContent: defaultTicketsContent({
+        startingTrainCards: 0,
+        startingTrains: 45,
+      }),
+    });
+    let state = createInitialState(networkRouteAdapter, cfg, 11);
+    // Force a known hand: give seat0 enough red + wild for a red or gray edge
+    const tickets = state.genre.tickets!;
+    const edgeId = DEFAULT_NETWORK_EDGES[0]!.id; // A|B
+    const meta = tickets.edgeMeta[edgeId]!;
+    const payColor = meta.color === "gray" ? "red" : (meta.color as "red");
+    const hand0 = {
+      red: 0,
+      orange: 0,
+      yellow: 0,
+      green: 0,
+      blue: 0,
+      purple: 0,
+      black: 0,
+      white: 0,
+      wild: 0,
+    } as typeof tickets.trainHand[0];
+    hand0[payColor] = meta.length;
+    tickets.trainHand[0] = hand0;
+    state = {
+      ...state,
+      genre: { ...state.genre, tickets: { ...tickets, trainHand: [tickets.trainHand[0], tickets.trainHand[1]] } },
+    };
+    const pts = tickets.lengthScores[meta.length] ?? meta.length;
+    const result = applyAction(
+      networkRouteAdapter,
+      state,
+      {
+        type: "claim",
+        playerId: 0,
+        payload: { edgeId, payColor },
+      },
+      cfg,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.genre.claims[edgeId]).toBe(0);
+    expect(result.state.genre.tickets!.routeScore[0]).toBe(pts);
+    expect(result.state.genre.tickets!.trainsLeft[0]).toBe(45 - meta.length);
+  });
+
+  it("draw_trains and draw_tickets are legal and advance turn", () => {
+    const cfg = createNetworkRouteKernelConfig({ tickets: true });
+    let state = createInitialState(networkRouteAdapter, cfg, 3);
+    const parsed = networkRouteAdapter.parseConfig(cfg.adapter)!;
+    const legal = networkRouteAdapter.listLegalActions(state, 0, parsed);
+    expect(legal.some((a) => a.type === "draw_trains")).toBe(true);
+    const drawn = applyAction(
+      networkRouteAdapter,
+      state,
+      { type: "draw_trains", playerId: 0, payload: {} },
+      cfg,
+    );
+    expect(drawn.ok).toBe(true);
+    if (!drawn.ok) return;
+    state = drawn.state;
+    expect(state.activePlayerId).toBe(1);
+  });
+
+  it("auto-play tickets game terminates", () => {
+    const cfg = createNetworkRouteKernelConfig({
+      tickets: true,
+      ticketsContent: defaultTicketsContent({ startingTrains: 8 }),
+    });
+    const { state, actions } = autoPlayNetworkRouteGame(99, cfg);
+    expect(actions.length).toBeGreaterThan(0);
+    expect(["active", "complete"]).toContain(state.status);
+  });
+});
+
+describe("network-route-v1 multi-seat (T019b / T020 companion)", () => {
+  it("boots tickets at 3–5 seats via seat-capacity", () => {
+    for (const n of [3, 4, 5] as const) {
+      const cfg = createNetworkRouteKernelConfig({
+        playerCount: n,
+        tickets: true,
+        ticketsContent: defaultTicketsContent(),
+      });
+      const state = createInitialState(networkRouteAdapter, cfg, 3);
+      expect(state.playerCount).toBe(n);
+      expect(state.genre.tickets!.trainsLeft).toHaveLength(n);
+      expect(state.genre.tickets!.ticketHand).toHaveLength(n);
+      expect(state.genre.routeCounts).toHaveLength(n);
+    }
+  });
+});
+
+describe("network-route-v1 T022 rainbow take limits + longest path", () => {
+  it("rejects second pick when first face-up is wild", () => {
+    const cfg = createNetworkRouteKernelConfig({
+      playerCount: 2,
+      tickets: true,
+      ticketsContent: defaultTicketsContent(),
+    });
+    let state = createInitialState(networkRouteAdapter, cfg, 3);
+    // Force a wild onto face-up[0]
+    state = {
+      ...state,
+      genre: {
+        ...state.genre,
+        tickets: {
+          ...state.genre.tickets!,
+          faceUp: ["wild", "red", "blue", "green", "yellow"],
+        },
+      },
+    };
+    const bad = applyAction(
+      networkRouteAdapter,
+      state,
+      {
+        type: "draw_trains",
+        playerId: state.activePlayerId,
+        payload: {
+          picks: [
+            { source: "faceUp", index: 0 },
+            { source: "deck" },
+          ],
+        },
+      },
+      cfg,
+    );
+    expect(bad.ok).toBe(false);
+    const good = applyAction(
+      networkRouteAdapter,
+      state,
+      {
+        type: "draw_trains",
+        playerId: state.activePlayerId,
+        payload: { picks: [{ source: "faceUp", index: 0 }] },
+      },
+      cfg,
+    );
+    expect(good.ok).toBe(true);
+    if (!good.ok) return;
+    expect(good.state.genre.tickets!.trainHand[state.activePlayerId].wild).toBeGreaterThan(0);
+  });
+
+  it("awards longest-path bonus at tickets end", async () => {
+    const { longestOwnedPathLength, applyLongestPathBonuses } = await import(
+      "./network-route-tickets"
+    );
+    const edges = [
+      { id: "A|B", from: "A", to: "B" },
+      { id: "B|C", from: "B", to: "C" },
+      { id: "C|D", from: "C", to: "D" },
+      { id: "A|D", from: "A", to: "D" },
+    ];
+    const claims: Record<string, number | null> = {
+      "A|B": 0,
+      "B|C": 0,
+      "C|D": 0,
+      "A|D": 1,
+    };
+    expect(longestOwnedPathLength(claims, edges, 0)).toBe(3);
+    expect(longestOwnedPathLength(claims, edges, 1)).toBe(1);
+    const { scores, awarded } = applyLongestPathBonuses([5, 5], claims, edges, 10);
+    expect(awarded).toEqual([0]);
+    expect(scores).toEqual([15, 5]);
   });
 });

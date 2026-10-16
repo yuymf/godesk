@@ -12,7 +12,7 @@ const LazySceneHost = lazy(async () => {
  */
 export function HexSettlementScenePreview({
   hexIsland,
-  ariaLabel = "汐屿六角岛",
+  ariaLabel = "六角岛桌面",
   importedModels,
 }: {
   hexIsland: HexSettlementBoardState;

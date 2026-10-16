@@ -24,7 +24,8 @@ import {
   isDiscFlipping,
   isHexSettlement,
   isNetworkRoute,
-  isAuctionBidding,
+  isAuctionBidding, isGemEngine, isPatternDraft,
+  isAutoBattler,
   isHarborVoyage,
   isWorkerPlacement,
   localizedRoomError,
@@ -56,6 +57,27 @@ const LazyHexSettlementBoard = lazy(async () => {
 });
 import { NetworkRouteBoard, type NetworkRouteBoardState } from "./NetworkRouteBoard";
 import { AuctionBiddingBoard } from "./AuctionBiddingBoard";
+import { GemEngineBoard } from "./GemEngineBoard";
+import { PatternDraftBoard } from "./PatternDraftBoard";
+import { TideArenaBoard } from "./TideArenaBoard";
+import type { AutoBattlerThemePatch } from "../runtime/adapters/auto-battler-theme";
+import type { AutoBattlerBranding } from "../runtime/adapters/auto-battler-packs";
+import type { AutoBattlerContentPatch } from "../runtime/adapters/auto-battler-content";
+
+function autoBattlerContent(ruleSystem: { runtimeSupport: unknown }): AutoBattlerContentPatch | undefined {
+  const support = ruleSystem.runtimeSupport as { status?: string; kernel?: { type?: string; content?: AutoBattlerContentPatch } };
+  return support?.status === "executable" && support.kernel?.type === "auto-battler-v1" ? support.kernel.content : undefined;
+}
+
+function autoBattlerTheme(ruleSystem: { runtimeSupport: unknown }): AutoBattlerThemePatch | undefined {
+  const support = ruleSystem.runtimeSupport as { status?: string; kernel?: { type?: string; theme?: AutoBattlerThemePatch } };
+  return support?.status === "executable" && support.kernel?.type === "auto-battler-v1" ? support.kernel.theme : undefined;
+}
+function autoBattlerBranding(ruleSystem: { runtimeSupport: unknown }): AutoBattlerBranding | undefined {
+  const support = ruleSystem.runtimeSupport as { status?: string; kernel?: { type?: string; branding?: AutoBattlerBranding } };
+  return support?.status === "executable" && support.kernel?.type === "auto-battler-v1" ? support.kernel.branding : undefined;
+}
+
 import { HandPlayBoard } from "./HandPlayBoard";
 import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import {
@@ -396,6 +418,14 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   const immersive = hexSettlement || woodChrome;
   const auctionState = room.state.auctionBidding;
   const auction = isAuctionBidding(build.ruleSystem) && Boolean(auctionState);
+  const gemEngineState = room.state.gemEngine;
+  const gemEngine = isGemEngine(build.ruleSystem) && Boolean(gemEngineState);
+  const patternDraftState = room.state.patternDraft;
+  const patternDraft = isPatternDraft(build.ruleSystem) && Boolean(patternDraftState);
+  const deskTabletop = Boolean(gemEngine || patternDraft || auction || discFlipping || workerPlacement || harbor || networkRoute); // T062 · network tabletop-first
+  const tabletopImmersive = woodChrome || deskTabletop;
+  const autoBattlerState = room.state.autoBattler;
+  const autoBattler = isAutoBattler(build.ruleSystem) && Boolean(autoBattlerState);
   const gameName = build.ruleSystem.name;
   const activeSeat = room.state.activeSeat;
   const isMyTurn = room.state.status === "active" && seat === activeSeat;
@@ -456,9 +486,19 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       ? copy.progress
       : copy.points;
 
+  // T080 · shareable Room: tabletop / immersive kernels keep playtest feedback in a
+  // collapsed off-table drawer so it does not steal desk focus. Non-desk kernels still
+  // defer the open panel until the match ends (or keep legacy open panel).
+  const feedbackAsDrawer = Boolean(tabletopImmersive || immersive);
+  const feedbackVisible = feedbackAsDrawer
+    ? true
+    : !(autoBattler || auction || immersive) || room.state.status === "complete";
+  // T091 · hex immersive seated gets the same compact shareReady strip as tabletop
+  // T097 · further collapse share/seat chrome after seating (canvas vh ↑)
+  const shareChromeCompact = Boolean((tabletopImmersive || hexSettlement) && seat !== null);
   return (
-    <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute || auction ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-hex-island room-view-tidewell-immersive" : ""} ${woodChrome ? "room-view-tidewell-immersive room-view-tabletop-immersive" : ""} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
-      <header className="room-shell-header">
+    <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute || auction || autoBattler || gemEngine || patternDraft ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-hex-island room-view-tidewell-immersive" : ""} ${tabletopImmersive ? "room-view-tidewell-immersive room-view-tabletop-immersive" : ""} ${seat !== null ? "room-view-seated" : "room-view-unseated"} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
+      <header className={`room-shell-header${shareChromeCompact ? " is-immersive-strip is-share-chrome" : ""}`}>
         <div className="room-title-block">
           <span className="room-brand-mark" aria-hidden="true"><GameMark /></span>
           <div>
@@ -468,7 +508,9 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         </div>
         <div className="room-header-actions">
           <a href={href("/games")}>{locale === "zh" ? "我的游戏" : "My games"}</a>
-          <a href={href("/settings")}>{locale === "zh" ? "设置" : "Settings"}</a>
+          {!shareChromeCompact ? (
+            <a href={href("/settings")}>{locale === "zh" ? "设置" : "Settings"}</a>
+          ) : null}
           <a
             href={validationStudioHref(room.projectId, {
               buildId: room.buildId,
@@ -485,8 +527,15 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         </div>
       </header>
 
-{!immersive ? (
-            <section aria-label={copy.invitation} className="room-invitation room-invitation-rich">
+{/* T091 · show compact share/seat chrome for seated hex immersive (parity with tabletop shareReady) */}
+{!immersive || shareChromeCompact ? (
+            <section
+              aria-label={copy.invitation}
+              className={`room-invitation room-invitation-rich${shareChromeCompact ? " is-collapsed room-share-chrome is-chrome-collapse" : ""}`}
+            >
+        {/* T186 · seated shareReady: purge invite/link strip from share frame (seat rail stays) */}
+        {!shareChromeCompact ? (
+          <>
         <div className="invitation-heading">
           <span className="room-kicker">{copy.invitation}</span>
           <strong>{copy.invitationHint}</strong>
@@ -494,7 +543,12 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         <div className="invitation-link-row">
           <label>
             <span>{copy.inviteLink}</span>
-            <input aria-label={copy.inviteLink} readOnly value={room.sessionUrl} />
+            <input
+              aria-label={copy.inviteLink}
+              className="invite-url"
+              readOnly
+              value={room.sessionUrl}
+            />
           </label>
           <button
             className={`invite-copy-btn${copied ? " is-copied" : ""}`}
@@ -504,6 +558,8 @@ export function RoomView({ sessionId }: { sessionId: string }) {
             {copied ? copy.copiedInvite : copy.copyInvite}
           </button>
         </div>
+          </>
+        ) : null}
         <div className="seat-rail" role="group" aria-label={locale === "zh" ? "席位栏" : "Seat rail"}>
           <span className="seat-rail-label">{copy.yourSeat}</span>
           <div className="seat-chip-row">
@@ -584,6 +640,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       ) : null}
 
       {!immersive &&
+        !(tabletopImmersive && seat !== null) &&
         room.state.status === "active" &&
         room.seats.length + (room.aiSeats?.length ?? 0) < room.state.scores.length && (
         <section aria-live="polite" className="room-waiting-empty">
@@ -656,7 +713,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
             activeSeat={activeSeat}
             aiSeats={room.aiSeats}
             busy={busy}
-            hexIsland={hexIslandState as HexSettlementBoardState}
+            hexIsland={hexIslandState as unknown as HexSettlementBoardState}
             enabled={isMyTurn}
             locale={locale}
             onAct={(actionId, payload) => {
@@ -696,6 +753,28 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         />
       ) : auction && auctionState ? (
         <AuctionBiddingBoard auction={auctionState} activeSeat={activeSeat}
+          enabled={isMyTurn} busy={busy} status={room.state.status} viewerSeat={seat}
+          render={build.ruleSystem.presentation.render}
+          importedModels={importedModels}
+          onAct={(actionId, payload) => { void act(actionId, -1, payload); }} />
+      ) : patternDraft && patternDraftState ? (
+        <PatternDraftBoard draft={patternDraftState} activeSeat={activeSeat}
+          enabled={isMyTurn} busy={busy} status={room.state.status} viewerSeat={seat}
+          render={build.ruleSystem.presentation.render}
+          importedModels={importedModels}
+          onAct={(actionId, payload) => { void act(actionId, -1, payload); }} />
+      ) : gemEngine && gemEngineState ? (
+        <GemEngineBoard gem={gemEngineState} activeSeat={activeSeat}
+          enabled={isMyTurn} busy={busy} status={room.state.status} viewerSeat={seat}
+          render={build.ruleSystem.presentation.render}
+          importedModels={importedModels}
+          onAct={(actionId, payload) => { void act(actionId, -1, payload); }} />
+      ) : autoBattler && autoBattlerState ? (
+        <TideArenaBoard arena={autoBattlerState} activeSeat={activeSeat}
+          content={autoBattlerContent(build.ruleSystem)}
+          theme={autoBattlerTheme(build.ruleSystem)}
+          branding={autoBattlerBranding(build.ruleSystem)}
+          importedModels={importedModels}
           enabled={isMyTurn} busy={busy} status={room.state.status} viewerSeat={seat}
           onAct={(actionId, payload) => { void act(actionId, -1, payload); }} />
       ) : (
@@ -1005,7 +1084,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         </section>
       )}
 
-{immersive ? (
+{!feedbackVisible ? null : feedbackAsDrawer ? (
         <details className="room-feedback-drawer" id="room-feedback-drawer">
           <summary>{copy.feedbackTitle}</summary>
                 <section aria-label={copy.feedbackTitle} className="room-feedback-panel">
@@ -1147,9 +1226,10 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       ) : null}
       {error && (harbor || workerPlacement || discFlipping || hexSettlement) && <p className="creator-error" role="alert">{error}</p>}
 
-      <aside className="action-log">
-        <span>{copy.log}</span>
-        <code>{room.id}</code>
+      {tabletopImmersive || hexSettlement ? (
+        <details className="action-log room-action-log-drawer" id="room-action-log-drawer">
+          <summary className="room-action-log-summary">{copy.log}</summary>
+          <code>{room.id}</code>
         {room.acceptedActions.length ? (
           <ol>
             {room.acceptedActions.map((action) => (
@@ -1189,7 +1269,52 @@ export function RoomView({ sessionId }: { sessionId: string }) {
               </ul>
             </div>
           )}
-      </aside>
+        </details>
+      ) : (
+        <aside className="action-log">
+          <span>{copy.log}</span>
+          <code>{room.id}</code>
+        {room.acceptedActions.length ? (
+          <ol>
+            {room.acceptedActions.map((action) => (
+              <li key={action.sequence}>
+                #{action.sequence} · {locale === "zh" ? "座位" : "Seat"} {action.seat} · {(() => {
+                  const actionIndex = runtimeActions.findIndex((candidate) => candidate.id === action.actionId);
+                  return actionIndex >= 0 ? roomActionTitle(locale, actionIndex) : action.actionId;
+                })()}
+                {typeof action.payload?.text === "string" ? ` · ${action.payload.text}` : ""}
+                {showActionPointChrome
+                  ? action.state.pushYourLuck
+                    ? action.actionId === "roll"
+                      ? ` · 🎲 ${action.points}${action.points === action.state.pushYourLuck.bustFace ? ` · ${copy.bust}` : ` · ${copy.unbanked} ${action.state.pushYourLuck.turnScore}`}`
+                      : ` · +${action.points} ${copy.points}`
+                    : action.points
+                      ? action.state.rollAndMove
+                        ? ` · 🎲 ${action.points} · +${action.points} ${copy.move}`
+                        : action.state.drawAndScore
+                          ? ` · 🎴 ${action.points} · +${action.points} ${copy.points}`
+                          : ` · ${action.state.takeAway ? "−" : "+"}${action.points} ${scoreLabel}`
+                      : ""
+                  : ""}
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p>{copy.noLog}</p>
+        )}
+        {build.ruleSystem.runtimeSupport.status === "executable" &&
+          build.ruleSystem.runtimeSupport.unsupported.length > 0 && (
+            <div className="room-unsupported">
+              <strong>{copy.unsupported}</strong>
+              <ul>
+                {build.ruleSystem.runtimeSupport.unsupported.map((item) => (
+                  <li key={item}>{displayUnsupported(item, locale)}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </aside>
+      )}
     </main>
   );
 }

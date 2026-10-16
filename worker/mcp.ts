@@ -690,6 +690,58 @@ const operationSchema = z.discriminatedUnion("op", [
       unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
     }),
   }),
+    z.object({
+    op: z.literal("configure_auto_battler"),
+    config: z.object({
+      playerCount: z.literal(2),
+      tuning: z.object({
+        prepShopSeconds: z.number().int().min(10).max(300).optional(),
+        prepPlaceSeconds: z.number().int().min(10).max(300).optional(),
+        startHp: z.number().int().min(1).max(200).optional(),
+        startGold: z.number().int().min(0).max(100).optional(),
+        boardCols: z.number().int().min(4).max(8).optional(),
+        boardRows: z.number().int().min(1).max(3).optional(),
+      }).strict().optional(),
+      // Content data layer (validated server-side by resolveAutoBattlerContent).
+      content: z.object({
+        units: z.array(z.object({
+          id: z.string().min(1).max(32), name: z.string().min(1).max(16),
+          cost: z.number().int().min(1).max(5), atk: z.number().int().min(1).max(500), hp: z.number().int().min(1).max(5000),
+          traits: z.array(z.string()).max(3), shape: z.string().optional(), proceduralPreset: z.string().optional(), modelRef: z.string().max(128).optional(),
+          combatFx: z.object({
+            attackVfx: z.string().optional(),
+            hitVfx: z.string().optional(),
+            attackEffect: z.object({ kind: z.string(), value: z.number(), label: z.string().optional() }).optional(),
+          }).optional(),
+        })).min(2).max(24).optional(),
+        traits: z.array(z.object({
+          id: z.string().min(1).max(32), label: z.string().min(1).max(24), glyph: z.string().min(1).max(2),
+          tiers: z.array(z.number().int().min(1).max(12)).min(1).max(4),
+          atkBonus: z.number().int().min(0).max(500), hpBonus: z.number().int().min(0).max(500),
+          effect: z.object({
+            kind: z.enum(["shield_start", "heal_first_strike", "extra_hit", "reflect"]),
+            label: z.string().min(1).max(24), values: z.array(z.number().min(0).max(1000)).min(1).max(4),
+          }).optional(),
+        })).max(8).optional(),
+        stars: z.object({
+          star2: z.boolean().optional(), star3: z.boolean().optional(),
+          mult2: z.number().min(1).max(10).optional(), mult3: z.number().min(1).max(10).optional(),
+        }).strict().optional(),
+      }).strict().optional(),
+      // Visual theme layer (validated server-side by resolveAutoBattlerTheme): preset tide|ember|frost|night + overrides.
+      theme: z.object({
+        preset: z.string().max(32).optional(),
+        overrides: z.record(z.string(), z.unknown()).optional(),
+      }).strict().optional(),
+      // Content+theme pack HUD labels (title / seat names).
+      branding: z.object({
+        title: z.string().min(1).max(24),
+        ownSeat: z.string().min(1).max(24),
+        enemySeat: z.string().min(1).max(24),
+      }).strict().optional(),
+      unsupported: z.array(z.string().min(1).max(500)).max(50).optional(),
+    }),
+  }),
   z.object({
     // G3D-15: partial 3D render patch (preset, camera, lighting, water, materials, bindings, motion, audio).
     op: z.literal("configure_render"),
@@ -1104,7 +1156,7 @@ export function createGodeskMcpServer(
     {
       title: "Submit durable GoDesk work",
       description:
-        "Submit idea-or-source Rule System materialization, a bounded natural-language Studio iteration, compilation, fixed-seed bot playtest, or build export work and return a durable job ID. After submit, poll track_job until status is succeeded or failed, then stop. On succeeded generate-rule-system: if result.session.sessionUrl (or result.sessionUrl) is present, paste that exact URL (it contains share=) and stop — never invent invite copy without the URL, never keep polling after terminal success. Else if result.build.id exists without session, call create_shared_session with that buildId (do not invent ids). If no build, a pending Generation Plan needs approve_generation_plan via apply_project_patch then compile-build. iterate-rule-system only edits one action description; it cannot invent or configure a kernel and returns iteration_unsupported for that request.",
+        "Submit idea-or-source Rule System materialization, a bounded natural-language Studio iteration, compilation, fixed-seed bot playtest, or build export work and return a durable job ID. After submit, poll track_job until status is succeeded or failed, then stop. On succeeded generate-rule-system: if result.session.sessionUrl (or result.sessionUrl) is present, paste that exact URL (it contains share=) and stop — never invent invite copy without the URL, never keep polling after terminal success. Else if result.build.id exists without session, call create_shared_session with that buildId (do not invent ids). If no build, a pending Generation Plan needs approve_generation_plan via apply_project_patch then compile-build. iterate-rule-system edits one action description or, for kernels with a tuning registry (e.g. auto-battler-v1), maps the prompt to kernel configuration (timers, start HP/gold, units, traits, star rules); it cannot invent a new kernel (iteration_unsupported). A succeeded iterate-rule-system with result.guidance (no project change) means the request is already available elsewhere (e.g. the built-in computer player): relay that hint.",
       inputSchema: z.discriminatedUnion("kind", [
         z.object({
           kind: z.literal("generate-rule-system"),

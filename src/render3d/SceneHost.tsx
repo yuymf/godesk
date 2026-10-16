@@ -197,6 +197,14 @@ function proceduralFor(
       };
     case "robber":
       return { geometry: pieceGeometry("robber"), material: vcMaterial(library, "figure-vc", FIGURE_VC_TOKEN), poolKey: "robber:vc" };
+    case "meeple": {
+      const meepleSeat = node.seat ?? 0;
+      return {
+        geometry: pieceGeometry("meeple", meepleSeat),
+        material: vcMaterial(library, "piece-vc", PIECE_VC_TOKEN),
+        poolKey: `meeple:s${meepleSeat}`,
+      };
+    }
     case "die":
       return { geometry: dieGeometry(), material: vcMaterial(library, "dice-vc", DICE_VC_TOKEN), poolKey: "die:vc" };
     case "dice-tray":
@@ -220,7 +228,7 @@ export const BOOT_REVEAL_CAP_MS = 6_000;
 export const BOOT_VEILED_FRAME_MS = 500;
 export const BOOT_SEA_COLOR = "#1f5f66";
 /** R26 hex play clear/fog stand-in (settlecoast bg ≈#6d8e8b): sea-teal, not cream, not navy. */
-export const PLAY_SEA_CLEAR = "#5a8a88";
+export const PLAY_SEA_CLEAR = "#a8d4cc"; // T257 cornerCalm
 
 
 function supportsWebGL2(): boolean {
@@ -252,13 +260,13 @@ let SHARED_DECOR_GEOM: BufferGeometry | null = null;
 function sharedTileGeom(): BufferGeometry {
   if (!SHARED_TILE_GEOM) {
     // R21: face radius 0.99 (was TILE_RADIUS − 0.04 = 0.91) → hairline light seams instead of a dark grid.
-    const geom = new ExtrudeGeometry(hexShape(TILE_FACE_RADIUS, 0), { depth: 0.28, bevelEnabled: false });
+    const geom = new ExtrudeGeometry(hexShape(TILE_FACE_RADIUS, 0), { depth: 0.34, bevelEnabled: false }); // T250 paperboard thickness
     geom.rotateX(-Math.PI / 2);
     // R22: faces touch (radius 1.0); the sides taper inward toward the base so neighbours leave no open slot
     // (no dark 1px side / shadow line) and outer sides stay tucked inside the coast wall top.
     const pos = geom.getAttribute("position");
     for (let i = 0; i < pos.count; i += 1) {
-      const k = TILE_BASE_SCALE + (1 - TILE_BASE_SCALE) * Math.min(1, Math.max(0, pos.getY(i) / 0.28));
+      const k = TILE_BASE_SCALE + (1 - TILE_BASE_SCALE) * Math.min(1, Math.max(0, pos.getY(i) / 0.34));
       pos.setXYZ(i, pos.getX(i) * k, pos.getY(i), pos.getZ(i) * k);
     }
     pos.needsUpdate = true;
@@ -321,7 +329,8 @@ export function materialFor(node: SceneNode): { key: string; token: MaterialToke
       return { key: "robber", token: PROP_MATERIALS.robber };
     case "settlement":
     case "city":
-    case "road": {
+    case "road":
+    case "meeple": {
       const seat = node.seat ?? 0;
       return { key: `seat-${seat}`, token: seatMaterial(seat) };
     }
@@ -344,6 +353,7 @@ function batchableKind(kind: SceneNode["kind"]): boolean {
     kind === "settlement" ||
     kind === "city" ||
     kind === "robber" ||
+    kind === "meeple" ||
     kind === "number-token" ||
     kind === "port" ||
     kind === "ship" ||
@@ -351,9 +361,68 @@ function batchableKind(kind: SceneNode["kind"]): boolean {
   );
 }
 
+/** T261 · carved face-well depth (world units before chip scale) — mesh topology, not stamp ox/oy. */
+export const CHIP_FACE_RECESS = 0.032;
+/** T261 · outer lip rise around the well. */
+export const CHIP_FACE_RIM = 0.014;
 let SHARED_NUMBER_GEOM: BufferGeometry | null = null;
+/** T241/T250/T261 · wood-chip: lathe body + carved top well for seated numeral (mesh recess). */
 function sharedNumberGeom(): BufferGeometry {
-  if (!SHARED_NUMBER_GEOM) SHARED_NUMBER_GEOM = new CylinderGeometry(0.22, 0.22, 0.06, 24);
+  if (!SHARED_NUMBER_GEOM) {
+    const shape = new Shape();
+    const r = 0.22;
+    shape.absarc(0, 0, r, 0, Math.PI * 2, false);
+    const geom = new ExtrudeGeometry(shape, {
+      depth: 0.138, // T250 · thicker wood-chip body
+      bevelEnabled: true,
+      bevelThickness: 0.034, // T250 · readable lathe lip
+      bevelSize: 0.024,
+      bevelSegments: 6,
+      curveSegments: 40,
+    });
+    geom.rotateX(-Math.PI / 2);
+    // T241 · side turning grooves: deeper ring notches on cylinder wall
+    geom.computeBoundingBox();
+    const bb0 = geom.boundingBox!;
+    const pos = geom.getAttribute("position");
+    const midY0 = (bb0.min.y + bb0.max.y) / 2;
+    const topY0 = bb0.max.y;
+    for (let i = 0; i < pos.count; i += 1) {
+      const y = pos.getY(i);
+      const x = pos.getX(i);
+      const z = pos.getZ(i);
+      const rad = Math.hypot(x, z);
+      if (rad > 0.188 && Math.abs(y - midY0) < 0.062) {
+        const band = Math.sin((y - midY0) * 96.0);
+        const k = 1 - 0.038 * Math.max(0, band); // T250 deeper side turning
+        pos.setXYZ(i, x * k, y, z * k);
+      }
+    }
+    // T261 · mesh face well: sink inner top disk, raise outer rim (real carved topology)
+    for (let i = 0; i < pos.count; i += 1) {
+      const y = pos.getY(i);
+      const x = pos.getX(i);
+      const z = pos.getZ(i);
+      const rad = Math.hypot(x, z);
+      if (y < topY0 - 0.012) continue; // top-cap band only
+      if (rad < 0.168) {
+        const t = 1 - rad / 0.168;
+        const well = CHIP_FACE_RECESS * t * t;
+        pos.setY(i, y - well);
+      } else if (rad < 0.212) {
+        const u = (rad - 0.168) / (0.212 - 0.168);
+        const rim = CHIP_FACE_RIM * Math.sin(u * Math.PI);
+        pos.setY(i, y + rim);
+      }
+    }
+    pos.needsUpdate = true;
+    geom.computeBoundingBox();
+    const bb = geom.boundingBox!;
+    const midY = (bb.min.y + bb.max.y) / 2;
+    geom.translate(0, -midY, 0);
+    geom.computeVertexNormals();
+    SHARED_NUMBER_GEOM = geom;
+  }
   return SHARED_NUMBER_GEOM;
 }
 
@@ -461,7 +530,7 @@ function createNodeObject(
   }
 
   if (node.kind === "number-token") {
-    return applyPose(new Mesh(new CylinderGeometry(0.22, 0.22, 0.06, 24), mat));
+    return applyPose(new Mesh(sharedNumberGeom().clone(), mat));
   }
 
   const tide = getTidewellGeometriesSync();
@@ -477,7 +546,7 @@ function updateNodeObject(object: Object3D, node: SceneNode, library: MaterialLi
   object.position.set(node.position[0], node.position[1], node.position[2]);
   if (node.rotationY !== undefined) object.rotation.y = node.rotationY;
   if (node.scale) object.scale.set(node.scale[0], node.scale[1], node.scale[2]);
-  else if (node.kind === "settlement" || node.kind === "city" || node.kind === "robber") object.scale.set(1, 1, 1);
+  else if (node.kind === "settlement" || node.kind === "city" || node.kind === "robber" || node.kind === "meeple") object.scale.set(1, 1, 1);
   if (node.kind === "die") applyDieOrientation(object, node.number, node.rotationY ?? 0);
   object.userData.baseY = node.position[1];
   const inst = object.userData.gdInstance as { poolKey: string; index: number } | undefined;
@@ -590,7 +659,14 @@ export function SceneHost({
   const [activeTier, setActiveTier] = useState<RenderTierId>("high");
   const runtimeFloorRef = useRef<RenderTierId | null>(null);
   // R19: hex island scenes default to the brighter picture-book rig.
-  const lightingSpec: LightingSpec = lighting ?? (hexSettlement ? HEX_ISLAND_LIGHTING : SCENE_TOKENS.lighting);
+  // T086 · merge shared fill/rim when a stored RenderSpec predates the layers
+  const lightingDefaults = hexSettlement ? HEX_ISLAND_LIGHTING : SCENE_TOKENS.lighting;
+  const lightingBase: LightingSpec = lighting ?? lightingDefaults;
+  const lightingSpec: LightingSpec = {
+    ...lightingBase,
+    fill: lightingBase.fill ?? lightingDefaults.fill,
+    rim: lightingBase.rim ?? lightingDefaults.rim,
+  };
   const lightingRef = useRef<LightingSpec>(lightingSpec);
   lightingRef.current = lightingSpec;
   const rigRef = useRef<ReturnType<typeof createLightingRig> | null>(null);
@@ -633,7 +709,7 @@ export function SceneHost({
             motion.place(object, node.id);
             return;
           }
-          if (node.kind !== "settlement" && node.kind !== "city" && node.kind !== "road") return;
+          if (node.kind !== "settlement" && node.kind !== "city" && node.kind !== "road" && node.kind !== "meeple") return;
           motion.place(object, node.id);
         },
         removed: (object: Object3D, id: string, detach: () => void) => {
@@ -909,6 +985,57 @@ export function SceneHost({
       onPickRef.current(matched);
     };
     renderer.domElement.addEventListener("pointerup", onPointerUp);
+    let hoverObject: Object3D | null = null;
+    const clearHover = () => {
+      if (hoverObject) {
+        const base = hoverObject.userData.gdHoverBaseY;
+        if (typeof base === "number") hoverObject.position.y = base;
+        hoverObject.userData.gdHover = false;
+        hoverObject = null;
+      }
+      if (interactiveRef.current) renderer.domElement.style.cursor = "default";
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      if (!interactiveRef.current || !adapterRef.current?.resolvePick) {
+        clearHover();
+        return;
+      }
+      const hit =
+        pickFromPointerEvent(event, renderer.domElement, camera, hitRoot.children.length > 0 ? hitRoot : contentRoot)
+        ?? pickFromPointerEvent(event, renderer.domElement, camera, contentRoot);
+      if (!hit) {
+        clearHover();
+        return;
+      }
+      const matched = adapterRef.current.resolvePick(hit);
+      if (!matched) {
+        clearHover();
+        return;
+      }
+      let found: Object3D | null = null;
+      contentRoot.traverse((obj) => {
+        if (found) return;
+        if (obj.userData?.nodeId === hit.nodeId) found = obj;
+      });
+      if (!found) {
+        clearHover();
+        return;
+      }
+      if (hoverObject !== found) {
+        clearHover();
+        const hover = found as Object3D;
+        hoverObject = hover;
+        if (typeof hover.userData.gdHoverBaseY !== "number") {
+          hover.userData.gdHoverBaseY = hover.position.y;
+        }
+        hover.position.y = hover.userData.gdHoverBaseY + 0.12;
+        hover.userData.gdHover = true;
+      }
+      renderer.domElement.style.cursor = "pointer";
+    };
+    const onPointerLeave = () => clearHover();
+    renderer.domElement.addEventListener("pointermove", onPointerMove);
+    renderer.domElement.addEventListener("pointerleave", onPointerLeave);
     // `?perf=1` only: recorder + harness load lazily (out of the render3d core bundle).
     // Leak samples wait for dressing + PBR ready (see tick) so lazy attach is safe.
     let perf: PerfRecorder | null = null;
@@ -1195,6 +1322,9 @@ export function SceneHost({
       streamer?.dispose();
       window.removeEventListener("resize", onWindowResize);
       renderer.domElement.removeEventListener("pointerup", onPointerUp);
+      renderer.domElement.removeEventListener("pointermove", onPointerMove);
+      renderer.domElement.removeEventListener("pointerleave", onPointerLeave);
+      clearHover();
       observer?.disconnect();
       // Fading objects detach + dispose via their completion callbacks.
       waterAliveRef.current = false;

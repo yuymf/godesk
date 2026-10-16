@@ -28,6 +28,7 @@ import {
   deriveHandPlayDeck,
   isNonScoreHandLoopCorpus,
 } from "../src/runtime/hand-play";
+import { isPatternDraftCorpus } from "../src/runtime/pattern-draft";
 import {
   deriveVictoryBuildings,
   deriveWorkerPlacementRegions,
@@ -47,7 +48,78 @@ import {
   createGenerationPlan,
   materializeRuleSystem,
 } from "./rulebook-generation";
-import { createActionDescriptionIterationPlan } from "./rule-system-iteration";
+import { createKernelTuningIterationPlan, parseKernelEdits } from "./kernel-tuning-iteration";
+import { fulfillAssetAttachIntents } from "./auto-battler-assets";
+import { resolveAutoBattlerContent, DEFAULT_AUTO_BATTLER_CONTENT } from "../src/runtime/adapters/auto-battler-content";
+import { packToContentPatch, resolveAutoBattlerPack } from "../src/runtime/adapters/auto-battler-packs";
+import { parseRulesBookContentTables, inferBrandingFromRulesBook } from "./rulesbook-content-tables";
+
+const AUTO_BATTLER_BASE_UNSUPPORTED =
+  "auto-battler-v1: 2-seat shop→place→combat→HP. Configurable: units/traits(add/del)/stars, boardCols/Rows 4–8×1–3, timers, HP/gold, themes, modelRef, VFX presets. Not: >2 seats, sealed shop.";
+
+/** Request-like clause (numbers or edit verbs) that the kernel could not map — listed honestly. */
+const REQUEST_LIKE = /[0-9一二三四五六七八九十]|改成|改为|加一个|新增|开启|关闭|设为/;
+
+/** Fold any configurable edits in the idea into the proposed configure_auto_battler op (sync; assets fulfilled separately). */
+function autoBattlerProposedRuntime(idea: string) {
+  const pack = resolveAutoBattlerPack(idea);
+  const packContent = packToContentPatch(pack);
+  // Long-form rules book: markdown unit/trait tables override pack roster when present.
+  const tables = parseRulesBookContentTables(idea);
+  let contentBase = packContent;
+  if (tables.found && tables.patch) {
+    const merged = {
+      ...packContent,
+      ...(tables.patch.traits ? { traits: tables.patch.traits } : {}),
+      ...(tables.patch.units ? { units: tables.patch.units } : {}),
+    };
+    // If units+traits both from tables, stars still from pack/default patch shape.
+    if (resolveAutoBattlerContent(merged)) contentBase = merged;
+  }
+  const branding = inferBrandingFromRulesBook(idea, pack.branding);
+  const seedKernel = {
+    type: "auto-battler-v1" as const,
+    playerCount: 2 as const,
+    content: contentBase,
+    theme: pack.theme,
+    branding,
+  };
+  // Clause parsers see the idea without table rows (avoids flooding unsupported).
+  const parsed = parseKernelEdits(seedKernel as never, tables.ideaWithoutTables);
+  const recognized = Boolean(parsed?.changes.length) || tables.found;
+  const leftovers = recognized ? (parsed?.unsupportedClauses ?? []).filter((c) => REQUEST_LIKE.test(c)) : [];
+  // Tables override pack; NL contentPatch overlays on top when present.
+  const content =
+    recognized && parsed?.contentPatch
+      ? { ...contentBase, ...parsed.contentPatch }
+      : contentBase;
+  const theme = recognized && parsed?.theme ? parsed.theme : pack.theme;
+  return {
+    configure: {
+      op: "configure_auto_battler" as const,
+      config: {
+        playerCount: 2,
+        unsupported: [
+          AUTO_BATTLER_BASE_UNSUPPORTED,
+          ...tables.unsupported,
+          ...leftovers.map((c) => `未执行的创作者要求：「${c}」——当前内核没有对应的可配置项。`),
+        ],
+        content,
+        theme,
+        branding,
+        ...((() => {
+          const tuning = { ...(tables.tuning ?? {}), ...(parsed?.tuning ?? {}) };
+          return Object.keys(tuning).length ? { tuning } : {};
+        })()),
+      },
+    },
+    assetIntents: parsed?.assetIntents,
+  };
+}
+
+/* applyAssetIntentsToConfigure defined after CreatorJobHost */
+
+import { createActionDescriptionIterationPlan, IterationPlanError } from "./rule-system-iteration";
 import {
   PROJECT_PREFIX,
   generationPlanKey,
@@ -58,9 +130,47 @@ import {
   type ProjectRecord,
   type StoredPlayableBuild,
 } from "./project-operations";
+import {
+  defaultFreightContent,
+  defaultTicketsContent,
+  freightUnsupportedNotes,
+  ideaRequestsFreightLogistics,
+  ideaRequestsTicketsRoute,
+  parseFreightTuningFromIdea,
+  ticketsUnsupportedNotes,
+} from "../src/runtime/adapters/network-route";
+import {
+  defaultHarborContent,
+  defaultGalleryContent,
+  galleryAuctionUnsupportedNotes,
+  harborAuctionUnsupportedNotes,
+  ideaRequestsGalleryAuction,
+  ideaRequestsHarborAuction,
+  parseGalleryTuningFromIdea,
+  parseGallerySeatsFromIdea,
+  parseHarborTuningFromIdea,
+} from "../src/runtime/adapters/auction-bidding";
+import {
+  defaultGemEngineContent,
+  gemEngineUnsupportedNotes,
+} from "../src/runtime/adapters/gem-engine";
+import {
+  defaultPatternDraftContent,
+  patternDraftUnsupportedNotes,
+} from "../src/runtime/adapters/pattern-draft";
+import {
+  SEAT_CAPACITY,
+  gemBankPerBasicForSeats,
+  patternFactoryCountForSeats,
+  resolveSeatCount,
+} from "../src/runtime/seat-capacity";
 
 interface CreatorJobHost {
   ctx: DurableObjectState;
+  /** Worker env (ASSET_SERVER_URL); optional in unit tests → asset search falls back to procedural. */
+  env?: Env;
+  /** Same-project HTTP helper used by CC0 pull / imported-assets list. */
+  projectRequest?: (path: string, init?: RequestInit) => Promise<Response>;
   saveJob(job: CreatorJob, input?: SubmitJobInput): Promise<void>;
   schedulePendingJobRecovery(): Promise<void>;
   /** Optional: alarm-merging job grace (keeps Room AI turns on time). */
@@ -87,6 +197,64 @@ interface CreatorJobHost {
       aiThinkMs?: unknown;
     },
   ): Promise<Response>;
+}
+
+async function applyAssetIntentsToConfigure(
+  host: CreatorJobHost,
+  projectId: string,
+  configure: { op: "configure_auto_battler"; config: Record<string, unknown> },
+  intents: NonNullable<ReturnType<typeof parseKernelEdits>>["assetIntents"],
+  idempotencyKey: string,
+  baseContent?: unknown,
+) {
+  if (!intents?.length) return { configure, lines: [] as string[] };
+  const content = resolveAutoBattlerContent(
+    (configure.config.content as unknown) ?? baseContent,
+  ) ?? DEFAULT_AUTO_BATTLER_CONTENT;
+  let contentPatch: Record<string, unknown> = {};
+  let lines: string[] = [];
+  if (host.env && host.projectRequest) {
+    const fulfilled = await fulfillAssetAttachIntents({
+      env: host.env,
+      projectRequest: host.projectRequest,
+      projectId,
+      content,
+      intents,
+      idempotencyKey,
+    });
+    contentPatch = fulfilled.contentPatch as Record<string, unknown>;
+    lines = fulfilled.report.lines;
+  } else {
+    // Unit tests / no sidecar: honest procedural fallback for every intent.
+    const units = content.units.map((u) => ({ ...u, traits: [...u.traits] }));
+    lines = intents.map((intent) => {
+      if (intent.kind === "procedural") {
+        return intent.allFallbacks
+          ? "资产：无素材时用程序化风格化棋子（本环境未接资产服务，保持 proceduralPreset）。"
+          : `资产：单位 ${intent.unitHint} → 程序化风格化棋子（本环境未接资产服务）。`;
+      }
+      return `资产：请求挂模型（${intent.kind}:${intent.unitHint}）但本环境未接资产服务 → 程序化风格化棋子兜底。`;
+    });
+    contentPatch = { units };
+  }
+  const unsupported = [
+    ...((configure.config.unsupported as string[] | undefined) ?? []),
+    ...lines,
+  ];
+  return {
+    configure: {
+      ...configure,
+      config: {
+        ...configure.config,
+        content: {
+          ...((configure.config.content as object) ?? {}),
+          ...contentPatch,
+        },
+        unsupported,
+      },
+    },
+    lines,
+  };
 }
 
 
@@ -158,9 +326,11 @@ export async function runCreatorJob(
     let operation: Response;
     let generationRuntimeConfigured = false;
     let proposedRuntime: RuntimeConfigureOperation | null = null;
+    let autoBattlerAssetIntents: NonNullable<ReturnType<typeof parseKernelEdits>>["assetIntents"];
     let nonScoreHandLoopRefused = false;
     let weakGenreScoreRaceRefused = false;
     let multiActHiddenRoleRefused = false;
+    let patternDraftRefused = false;
     if (input.kind === "generate-rule-system") {
       const pendingPlan = await host.ctx.storage.get<GenerationPlan>(
         generationPlanKey(job.projectId),
@@ -267,11 +437,23 @@ export async function runCreatorJob(
         isNonScoreHandLoopCorpus(authoredMaterial);
       // Finite shuffled draw-and-score wins over hand-play genre cues (W4-05).
       // PR12: also bind when requestedMechanics declares hand-play (card/area-control).
+      const autoBattlerRuntimeConfigured =
+        requestedMechanics.includes("auto-battler") &&
+        !requestedMechanics.some((mechanic) =>
+          ["hex-settlement", "disc-flipping", "route-network", "gem-engine"].includes(mechanic),
+        );
+      // T008: hand-play must not steal route-network / hex subjects (even when corpus says 手牌).
       const handPlayRuntimeConfigured =
         (sourceGenre === "hand-play" ||
           requestedMechanics.includes("hand-play")) &&
         drawAndScoreRule === null &&
-        !nonScoreHandLoopRefused;
+        !nonScoreHandLoopRefused &&
+        !autoBattlerRuntimeConfigured &&
+        !requestedMechanics.includes("route-network") &&
+        !requestedMechanics.includes("hex-settlement") &&
+        !requestedMechanics.includes("disc-flipping") &&
+        !requestedMechanics.includes("auction-bidding") &&
+        !requestedMechanics.includes("gem-engine");
       const harborLikePlacement =
         sourceGenre === "placement" && isHarborLikeCorpus(authoredMaterial);
       const workerPlacementRuntimeConfigured =
@@ -293,7 +475,23 @@ export async function runCreatorJob(
         !requestedMechanics.includes("disc-flipping");
       const auctionBiddingRuntimeConfigured =
         requestedMechanics.includes("auction-bidding") &&
-        !requestedMechanics.some((mechanic) => ["hex-settlement", "disc-flipping", "route-network", "hand-play"].includes(mechanic));
+        !autoBattlerRuntimeConfigured &&
+        !requestedMechanics.some((mechanic) => ["hex-settlement", "disc-flipping", "route-network", "hand-play", "gem-engine"].includes(mechanic));
+      const gemEngineRuntimeConfigured =
+        requestedMechanics.includes("gem-engine") &&
+        !autoBattlerRuntimeConfigured &&
+        !hexSettlementRuntimeConfigured &&
+        !discFlippingRuntimeConfigured &&
+        !networkRouteRuntimeConfigured &&
+        !auctionBiddingRuntimeConfigured;
+      const patternDraftRuntimeConfigured =
+        requestedMechanics.includes("pattern-draft") &&
+        !autoBattlerRuntimeConfigured &&
+        !hexSettlementRuntimeConfigured &&
+        !discFlippingRuntimeConfigured &&
+        !networkRouteRuntimeConfigured &&
+        !auctionBiddingRuntimeConfigured &&
+        !gemEngineRuntimeConfigured;
       weakGenreScoreRaceRefused =
         sourceGenre === "generic" &&
         drawAndScoreRule === null &&
@@ -338,6 +536,24 @@ export async function runCreatorJob(
         generatedRuleSystem.actions.length === 2 &&
         generatedRuleSystem.actions.some((action) => action.id === "roll") &&
         generatedRuleSystem.actions.some((action) => action.id === "bank");
+      // T009/T013: factory/pattern-wall corpus — bind pattern-draft-v1 when inferred; else refuse turn-taking.
+      patternDraftRefused =
+        isPatternDraftCorpus(authoredMaterial) &&
+        !patternDraftRuntimeConfigured &&
+        !requestedMechanics.includes("pattern-draft") &&
+        !requestedMechanics.includes("route-network") &&
+        !requestedMechanics.includes("hex-settlement") &&
+        !requestedMechanics.includes("disc-flipping") &&
+        !requestedMechanics.includes("auction-bidding") &&
+        !requestedMechanics.includes("auto-battler") &&
+        !requestedMechanics.includes("gem-engine") &&
+        !requestedMechanics.includes("hand-play") &&
+        !handPlayRuntimeConfigured &&
+        !hexSettlementRuntimeConfigured &&
+        !networkRouteRuntimeConfigured &&
+        !auctionBiddingRuntimeConfigured &&
+        !gemEngineRuntimeConfigured &&
+        !autoBattlerRuntimeConfigured;
       const turnTakingRuntimeConfigured =
         !sharedGoal &&
         !scoreRaceRuntimeConfigured &&
@@ -346,6 +562,7 @@ export async function runCreatorJob(
         !rollAndMoveRuntimeConfigured &&
         !drawAndScoreRuntimeConfigured &&
         !pushYourLuckRuntimeConfigured &&
+        !patternDraftRefused &&
         turnTaking &&
         sourceRuntimeActions.length === 0 &&
         generatedRuleSystem.actions.length > 0 &&
@@ -354,7 +571,10 @@ export async function runCreatorJob(
         hexSettlementRuntimeConfigured ||
         discFlippingRuntimeConfigured ||
         networkRouteRuntimeConfigured ||
+        autoBattlerRuntimeConfigured ||
         auctionBiddingRuntimeConfigured ||
+        gemEngineRuntimeConfigured ||
+        patternDraftRuntimeConfigured ||
         hiddenRoleRuntimeConfigured ||
         handPlayRuntimeConfigured ||
         harborVoyageRuntimeConfigured ||
@@ -379,24 +599,37 @@ export async function runCreatorJob(
       if (multiActHiddenRoleRefused) {
         generationRuntimeConfigured = false;
       }
+      // T009: factory / pattern-wall draft — keep draft, no turn-taking executable.
+      if (patternDraftRefused) {
+        generationRuntimeConfigured = false;
+      }
       const pushMaxActions = Math.min(10_000, Math.max(
         200,
         (pushYourLuckRule?.victoryTarget ?? 0) * generatedRuleSystem.participants.default * 5,
       ));
       // Refuse configure for non-score hand loops (no silent play-to-score / turn-taking fallthrough).
-      const runtimeOperation = nonScoreHandLoopRefused || weakGenreScoreRaceRefused || multiActHiddenRoleRefused
+      const runtimeOperation = nonScoreHandLoopRefused || weakGenreScoreRaceRefused || multiActHiddenRoleRefused || patternDraftRefused
         ? null
         : hexSettlementRuntimeConfigured
-        ? {
-            op: "configure_hex_settlement" as const,
-            config: {
-              playerCount: 2,
-              victoryPointsToWin: 10,
-              unsupported: [
-                "hex-settlement-v1 executes beginner-board hex-island basics (placement, production, robber/discard, build+connectivity, bank/port + simple player trade, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — full negotiated multi-resource trades remain out of scope.",
-              ],
-            },
-          }
+        ? (() => {
+            const playerCount = resolveSeatCount({
+              idea,
+              capacity: SEAT_CAPACITY["hex-settlement-v1"],
+              participantsDefault: generatedRuleSystem.participants.default,
+              participantsMax: generatedRuleSystem.participants.max,
+              participantsMin: generatedRuleSystem.participants.min,
+            });
+            return {
+              op: "configure_hex_settlement" as const,
+              config: {
+                playerCount,
+                victoryPointsToWin: 10,
+                unsupported: [
+                  "hex-settlement-v1 executes beginner-board hex-island basics (placement, production, robber/discard, build+connectivity, bank/port + negotiated domestic trade propose/accept, development cards, VP win) on the public play-kernel; board HUD + lobby thumbnail landed in PR7/PR8 — domestic sealed resource auction + multi-party brokerage cut (T023); live multi-lot floor + negotiated per-deal broker cut (T025).",
+                ],
+              },
+            };
+          })()
         : discFlippingRuntimeConfigured
         ? {
             op: "configure_disc_flipping" as const,
@@ -410,23 +643,139 @@ export async function runCreatorJob(
             },
           }
         : networkRouteRuntimeConfigured
-        ? {
-            op: "configure_network_route" as const,
-            config: {
-              playerCount: 2,
-              unsupported: [
-                "network-route-v1 executes a fixed city graph with alternate-turn route claims and first-to-connect terminal hubs on the public play-kernel; a minimal original route game (no tickets deck / multi-color routes / scoring table).",
-              ],
-            },
-          }
+        ? (() => {
+            const freight = ideaRequestsFreightLogistics(idea);
+            const tickets = !freight && ideaRequestsTicketsRoute(idea);
+            const tuning = freight ? parseFreightTuningFromIdea(idea) : {};
+            const content = freight ? defaultFreightContent(tuning) : undefined;
+            const ticketsContent = tickets ? defaultTicketsContent() : undefined;
+            const unsupported = freight
+              ? [
+                  "network-route-v1 freight subset: claim-graph cargo contracts + ship cargo slots + funds/reputation win; per-step sailing / pirate·storm events unsupported.",
+                  ...freightUnsupportedNotes(),
+                ]
+              : tickets
+                ? [...ticketsUnsupportedNotes()]
+                : [
+                    "network-route-v1 executes a fixed city graph with alternate-turn route claims and first-to-connect terminal hubs on the public play-kernel; a minimal original route game (no tickets deck / multi-color routes / scoring table).",
+                  ];
+            const playerCount = resolveSeatCount({
+              idea,
+              capacity: SEAT_CAPACITY["network-route-v1"],
+              participantsDefault: generatedRuleSystem.participants.default,
+              participantsMax: generatedRuleSystem.participants.max,
+              participantsMin: generatedRuleSystem.participants.min,
+            });
+            return {
+              op: "configure_network_route" as const,
+              config: {
+                playerCount,
+                ...(freight ? { freight: true as const } : {}),
+                ...(tickets ? { tickets: true as const } : {}),
+                ...(content ? { content } : {}),
+                ...(ticketsContent ? { ticketsContent } : {}),
+                unsupported,
+              },
+            };
+          })()
+        : autoBattlerRuntimeConfigured
+        ? (() => { const ab = autoBattlerProposedRuntime(idea); autoBattlerAssetIntents = ab.assetIntents; return ab.configure; })()
         : auctionBiddingRuntimeConfigured
-        ? {
-            op: "configure_auction_bidding" as const,
-            config: {
-              playerCount: 2,
-              unsupported: ["auction-bidding-v1 plays one open lot with alternate raise/pass, 20 chips per seat, and award or unsold resolution; multi-lot economies and sealed bids are unsupported."],
-            },
-          }
+        ? (() => {
+            const gallery = ideaRequestsGalleryAuction(idea);
+            const harbor = !gallery && ideaRequestsHarborAuction(idea);
+            if (gallery) {
+              const tuning = parseGalleryTuningFromIdea(idea);
+              const seats =
+                tuning.playerCount ??
+                parseGallerySeatsFromIdea(idea) ??
+                Math.max(
+                  2,
+                  Math.min(5, generatedRuleSystem.participants.default || 3),
+                );
+              const playerCount = Math.max(2, Math.min(5, seats));
+              const galleryContent = defaultGalleryContent({
+                ...tuning,
+                playerCount,
+              });
+              return {
+                op: "configure_auction_bidding" as const,
+                config: {
+                  playerCount,
+                  gallery: true as const,
+                  galleryContent,
+                  unsupported: [
+                    ...galleryAuctionUnsupportedNotes(),
+                  ],
+                },
+              };
+            }
+            const tuning = harbor ? parseHarborTuningFromIdea(idea) : {};
+            const content = harbor ? defaultHarborContent(tuning) : undefined;
+            const unsupported = harbor
+              ? [
+                  "auction-bidding-v1 harbor subset: multi-lot queue + open/sealed resolve + black-market resale; 3–4 seats / live simultaneous sealed / negotiated trades unsupported.",
+                  ...harborAuctionUnsupportedNotes(),
+                ]
+              : [
+                  "auction-bidding-v1 plays one open lot with alternate raise/pass, 20 chips per seat, and award or unsold resolution; multi-lot economies and sealed bids are unsupported.",
+                ];
+            return {
+              op: "configure_auction_bidding" as const,
+              config: {
+                playerCount: 2,
+                ...(harbor ? { harbor: true as const } : {}),
+                ...(content ? { content } : {}),
+                unsupported,
+              },
+            };
+          })()
+        : gemEngineRuntimeConfigured
+        ? (() => {
+            const playerCount = resolveSeatCount({
+              idea,
+              capacity: SEAT_CAPACITY["gem-engine-v1"],
+              participantsDefault: generatedRuleSystem.participants.default,
+              participantsMax: generatedRuleSystem.participants.max,
+              participantsMin: generatedRuleSystem.participants.min,
+            });
+            return {
+              op: "configure_gem_engine" as const,
+              config: {
+                playerCount,
+                content: defaultGemEngineContent({
+                  bankPerBasic: gemBankPerBasicForSeats(playerCount),
+                }),
+                unsupported: [
+                  `gem-engine-v1 executes a ${playerCount}-seat gem-token / development-card / noble prestige loop on the public play-kernel.`,
+                  ...gemEngineUnsupportedNotes(),
+                ],
+              },
+            };
+          })()
+        : patternDraftRuntimeConfigured
+        ? (() => {
+            const playerCount = resolveSeatCount({
+              idea,
+              capacity: SEAT_CAPACITY["pattern-draft-v1"],
+              participantsDefault: generatedRuleSystem.participants.default,
+              participantsMax: generatedRuleSystem.participants.max,
+              participantsMin: generatedRuleSystem.participants.min,
+            });
+            return {
+              op: "configure_pattern_draft" as const,
+              config: {
+                playerCount,
+                content: defaultPatternDraftContent({
+                  factoryCount: patternFactoryCountForSeats(playerCount),
+                }),
+                unsupported: [
+                  `pattern-draft-v1 executes a ${playerCount}-seat factory draft / pattern-line / wall-tile / floor-penalty loop on the public play-kernel.`,
+                  ...patternDraftUnsupportedNotes(),
+                ],
+              },
+            };
+          })()
         : hiddenRoleRuntimeConfigured
         ? {
             op: "configure_hidden_role" as const,
@@ -662,7 +1011,15 @@ export async function runCreatorJob(
               }
             : null;
       const capabilityGap = gameSpecCapabilityGap(`${input.name ?? ""}\n${idea}\n${authoredMaterial}`);
-      proposedRuntime = capabilityGap ? null : runtimeOperation;
+      proposedRuntime = capabilityGap ? null : (runtimeOperation as any);
+      if (proposedRuntime?.op === "configure_auto_battler" && autoBattlerAssetIntents?.length) {
+        const applied = await applyAssetIntentsToConfigure(
+          host, job.projectId, proposedRuntime as { op: "configure_auto_battler"; config: Record<string, unknown> },
+          autoBattlerAssetIntents, `job:${input.idempotencyKey}:gen-assets`,
+          (proposedRuntime as { config?: { content?: unknown } }).config?.content,
+        );
+        proposedRuntime = applied.configure as typeof proposedRuntime;
+      }
       if (capabilityGap) generationRuntimeConfigured = false;
       operation = await host.applyProjectChanges(job.projectId, {
         expectedVersion: input.expectedVersion,
@@ -734,17 +1091,70 @@ export async function runCreatorJob(
       ) {
         throw new Error("finding_not_found");
       }
-      const plan = createActionDescriptionIterationPlan({
+      const iterationInput = {
         ruleSystem: record.ruleSystem,
         prompt: input.prompt,
         sourceId: `source_${job.id}`,
-      });
-      operation = await host.applyProjectChanges(job.projectId, {
-        expectedVersion: input.expectedVersion,
+      };
+      // Generic: numeric knobs the active kernel declares (timers, start HP/gold…) first,
+      // then the original single-action description rewrite.
+      let plan: ReturnType<typeof createActionDescriptionIterationPlan> | NonNullable<ReturnType<typeof createKernelTuningIterationPlan>> | undefined;
+      try {
+        plan =
+          createKernelTuningIterationPlan(iterationInput) ??
+          createActionDescriptionIterationPlan(iterationInput);
+      } catch (reason) {
+        // Guidance is a successful, no-change answer ("already available elsewhere").
+        if (reason instanceof IterationPlanError && reason.code === "iteration_guidance") {
+          plan = undefined;
+          operation = json({ guidance: reason.message.replace(/^iteration_guidance:\s*/, ""), prompt: input.prompt });
+        } else {
+          throw reason;
+        }
+      }
+      const tuningPlan = plan && "assetIntents" in plan
+        ? (plan as NonNullable<ReturnType<typeof createKernelTuningIterationPlan>>)
+        : undefined;
+      let expectedVersion = input.expectedVersion;
+      if (tuningPlan?.assetIntents?.length) {
+        const ops = [...tuningPlan.operations];
+        const cfgIdx = ops.findIndex((op) => op.op === "configure_auto_battler");
+        if (cfgIdx >= 0) {
+          const support = record.ruleSystem.runtimeSupport;
+          const baseContent = support.status === "executable" && support.kernel.type === "auto-battler-v1"
+            ? (support.kernel as { content?: unknown }).content
+            : undefined;
+          const applied = await applyAssetIntentsToConfigure(
+            host,
+            job.projectId,
+            ops[cfgIdx] as { op: "configure_auto_battler"; config: Record<string, unknown> },
+            tuningPlan.assetIntents,
+            `job:${input.idempotencyKey}:iter-assets`,
+            baseContent,
+          );
+          ops[cfgIdx] = applied.configure as (typeof ops)[number];
+          plan = {
+            ...tuningPlan,
+            operations: ops,
+            summary: `${tuningPlan.summary}${applied.lines.length ? ` ${applied.lines.join(" ")}` : ""}`,
+          };
+          // CC0 import bumps project.version — refresh before configure apply.
+          if (host.projectRequest) {
+            const fresh = await host.projectRequest(`/projects/${job.projectId}`);
+            if (fresh.ok) {
+              const body = await fresh.json() as { version?: number; project?: { version?: number } };
+              const v = body.project?.version ?? body.version;
+              if (typeof v === "number" && v >= expectedVersion) expectedVersion = v;
+            }
+          }
+        }
+      }
+      operation = !plan ? operation! : await host.applyProjectChanges(job.projectId, {
+        expectedVersion,
         idempotencyKey: `job:${input.idempotencyKey}`,
         operations: plan.operations,
       });
-      if (operation.ok) {
+      if (plan && operation.ok) {
         const operationBody = await operation.clone().json<Record<string, unknown>>();
         operationBody.iteration = {
           prompt: plan.prompt,
@@ -796,7 +1206,9 @@ export async function runCreatorJob(
           ? "multi-act-hidden-role"
           : weakGenreScoreRaceRefused
             ? "weak-genre-score-race"
-            : undefined;
+            : patternDraftRefused
+              ? "pattern-draft"
+              : undefined;
       const generationPlan = createGenerationPlan({
         id: `generation_plan_${job.id}`,
         projectId: job.projectId,
@@ -958,8 +1370,14 @@ export async function runCreatorJob(
           ? "规则结构来自体裁识别；方格翻子、八方向翻转、强制跳过与终盘计分将在批准 Generation Plan 后配置为 disc-flipping-v1（公共 play-kernel 适配器）。"
           : proposedRuntime?.op === "configure_network_route"
           ? "规则结构来自体裁识别；城市图铺线、交替占领路线与连通枢纽获胜将在批准 Generation Plan 后配置为 network-route-v1（公共 play-kernel 适配器；最小原创铺线规则）。"
+          : proposedRuntime?.op === "configure_auto_battler"
+          ? "规则结构来自体裁识别；两人商店买棋、备战上阵与自动战斗将在批准 Generation Plan 后配置为 auto-battler-v1。"
           : proposedRuntime?.op === "configure_auction_bidding"
           ? "规则结构来自体裁识别；两人公开轮流出价或放弃，最高有效出价获得拍品，将在批准 Generation Plan 后配置为 auction-bidding-v1。"
+          : proposedRuntime?.op === "configure_gem_engine"
+          ? "规则结构来自体裁识别；宝石代币、发展牌永久折扣与贵族声望将在批准 Generation Plan 后配置为 gem-engine-v1。"
+          : proposedRuntime?.op === "configure_pattern_draft"
+          ? "规则结构来自体裁识别；工厂拿色、准备行与纹样墙计分将在批准 Generation Plan 后配置为 pattern-draft-v1。"
           : proposedRuntime?.op === "configure_hidden_role"
           ? "规则结构来自体裁识别；秘密身份、公开发言与指控将在批准 Generation Plan 后配置为 hidden-role-v1。"
           : proposedRuntime?.op === "configure_hand_play"
@@ -989,6 +1407,8 @@ export async function runCreatorJob(
           ? generationRefuseReason("multi-act-hidden-role")
           : weakGenreScoreRaceRefused
           ? generationRefuseReason("weak-genre-score-race")
+          : patternDraftRefused
+          ? generationRefuseReason("pattern-draft")
           : generatedRuleSystem.actions.length > 12
           ? "来源识别出超过 Kernel 上限的行动；为避免静默丢弃规则，Rule System 保持 draft，等待创作者明确缩减或配置 Executable Kernel。"
           : "规则结构来自确定性文本抽取；来源不足以证明可执行语义，Rule System 保持 draft，等待显式配置 Executable Kernel。"];

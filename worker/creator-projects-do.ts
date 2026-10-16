@@ -2,8 +2,13 @@ import { refreshGameSpec, ruleSystemSpecIssues } from "../src/creator/game-spec"
 import { DurableObject } from "cloudflare:workers";
 import {
   acceptIntent,
+  listSessionLegalActions,
   executableRuntime,
   initialSessionState,
+  runAtSessionTime,
+  sessionDeadline,
+  sessionBotPhaseStartIntent,
+  PREP_TIMEOUT_ACTION,
   pickBotIntent,
   runBotSimulation,
   runtimeSupportsBotSeat,
@@ -109,6 +114,47 @@ export function sendableCloseCode(code: number): number {
 
 /** Next time queued/running jobs should be recovered by the alarm (ms epoch). */
 const JOB_RECOVERY_AT_KEY = "alarm:job-recovery-at";
+
+const ROOM_DEADLINE_PREFIX = "room-deadline:";
+interface RoomDeadline {
+  sessionId: string;
+  /** acceptedActions.length when scheduled; any later action makes it stale. */
+  expectedActions: number;
+  dueAt: number;
+  /** "timer" = prep clock expiry; "bot" = a computer seat's phase-start hook. */
+  kind?: "timer" | "bot";
+  intent?: { intentId: string; seat: number; actionId: string };
+}
+function roomDeadlineKey(sessionId: string) {
+  return `${ROOM_DEADLINE_PREFIX}${sessionId}`;
+}
+const IDLE_ROOM_SERVER_ACTION_LIMIT = 4;
+function trailingServerActions(room: StoredSharedSession) {
+  let count = 0;
+  for (let i = room.acceptedActions.length - 1; i >= 0; i -= 1) {
+    if (!/^(timer|botphase)_/.test(room.acceptedActions[i]!.intentId)) break;
+    count += 1;
+  }
+  return count;
+}
+function roomDeadlineFor(room: StoredSharedSession, build: StoredPlayableBuild): RoomDeadline | null {
+  const runtime = executableRuntime(build.ruleSystem);
+  if (runtime) {
+    const bot = sessionBotPhaseStartIntent(room.state, runtime, room.aiSeats, new Set(room.acceptedActions.map((a) => a.intentId)));
+    if (bot) {
+      // Anchored to the session clock (the action that opened this phase), not wall time,
+      // so the hook lands inside the phase even when the alarm runs late.
+      const last = room.acceptedActions.at(-1)?.at;
+      const anchor = typeof last === "number" ? last : Date.now();
+      return { sessionId: room.id, expectedActions: room.acceptedActions.length, dueAt: anchor + Math.min(room.aiThinkMs ?? 600, 1500), kind: "bot", intent: bot };
+    }
+  }
+  // Rooms with no computer seat stop ticking after two idle rounds of pure server actions
+  // (nobody is there); the next human action re-arms the clock.
+  if (!room.aiSeats?.length && trailingServerActions(room) >= IDLE_ROOM_SERVER_ACTION_LIMIT) return null;
+  const dueAt = runtime ? sessionDeadline(room.state, runtime) : null;
+  return dueAt === null ? null : { sessionId: room.id, expectedActions: room.acceptedActions.length, dueAt };
+}
 
 export class CreatorProjects extends DurableObject<Env> {
   private broadcastSession(session: StoredSharedSession) {
@@ -231,7 +277,10 @@ export class CreatorProjects extends DurableObject<Env> {
       candidate.id === persistedRoom.id ? persistedRoom : candidate,
     );
     const aiPending = aiPendingFor(updatedRoom, Date.now());
+    const deadline = roomDeadlineFor(updatedRoom, build);
+    if (!deadline) await transaction.delete(roomDeadlineKey(room.id));
     await transaction.put({
+      ...(deadline ? { [roomDeadlineKey(room.id)]: deadline } : {}),
       [roomKey]: persistedRoom,
       [`replay:${room.replayId}`]: updatedReplay,
       [projectKey]: record,
@@ -257,6 +306,8 @@ export class CreatorProjects extends DurableObject<Env> {
       prefix: AI_TURN_PREFIX,
     });
     for (const turn of pending.values()) times.push(Math.max(turn.dueAt, now));
+    const deadlines = await this.ctx.storage.list<RoomDeadline>({ prefix: ROOM_DEADLINE_PREFIX });
+    for (const deadline of deadlines.values()) times.push(Math.max(deadline.dueAt, now));
     if (times.length) {
       await this.ctx.storage.setAlarm(Math.min(...times));
     } else {
@@ -366,6 +417,64 @@ export class CreatorProjects extends DurableObject<Env> {
     if (outcome.kind === "moved") this.broadcastSession(outcome.room);
   }
 
+  /**
+   * Room deadline step: log a timer action AT the deadline (runAtSessionTime pins the
+   * kernel clock), so the timeout is an ordinary timestamped action that replays exactly.
+   */
+  private async runRoomDeadline(deadline: RoomDeadline) {
+    const lateMs = Date.now() - deadline.dueAt;
+    if (lateMs > 2_000) console.warn("room_deadline_late", deadline.sessionId, deadline.kind ?? "timer", lateMs);
+    const roomKey = `session:${deadline.sessionId}`;
+    const outcome = await this.ctx.storage.transaction(async (transaction) => {
+      const current = await transaction.get<RoomDeadline>(roomDeadlineKey(deadline.sessionId));
+      if (!current || current.expectedActions !== deadline.expectedActions || current.dueAt !== deadline.dueAt) {
+        return { kind: "stale" as const };
+      }
+      const storedRoom = await transaction.get<StoredSharedSession>(roomKey);
+      const storedBuild = storedRoom ? await transaction.get<StoredPlayableBuild>(`build:${storedRoom.buildId}`) : undefined;
+      const build = storedBuild ? normalizedBuild(storedBuild) : undefined;
+      const runtime = build && executableRuntime(build.ruleSystem);
+      if (!storedRoom || !build || !runtime) {
+        await transaction.delete(roomDeadlineKey(deadline.sessionId));
+        return { kind: "dropped" as const };
+      }
+      const room = await this.loadRoom(storedRoom, build, transaction);
+      const due = deadline.kind === "bot" ? deadline.dueAt : sessionDeadline(room.state, runtime);
+      if (room.acceptedActions.length !== deadline.expectedActions || due !== deadline.dueAt) {
+        const next = roomDeadlineFor(room, build);
+        if (next) await transaction.put(roomDeadlineKey(room.id), next);
+        else await transaction.delete(roomDeadlineKey(room.id));
+        return { kind: "stale" as const };
+      }
+      const sequence = room.acceptedActions.length + 1;
+      const accepted = deadline.kind === "bot" && deadline.intent
+        // Pinned to the scheduled time (always before the prep deadline), so a busy alarm
+        // that runs late still applies the hook and replays to the same state.
+        ? runAtSessionTime(deadline.dueAt, () => acceptIntent(room.state, runtime, deadline.intent!, sequence, room.seed))
+        : runAtSessionTime(deadline.dueAt, () => acceptIntent(
+        room.state,
+        runtime,
+        { intentId: `timer_${sequence}`, seat: room.state.activeSeat, actionId: PREP_TIMEOUT_ACTION },
+        sequence,
+        room.seed,
+      ));
+      if (!accepted) {
+        // A bot hook that can no longer apply (clock already overdue) falls back to the timer.
+        const due = deadline.kind === "bot" ? sessionDeadline(room.state, runtime) : null;
+        if (due !== null) await transaction.put(roomDeadlineKey(room.id), { sessionId: room.id, expectedActions: room.acceptedActions.length, dueAt: due, kind: "timer" });
+        else await transaction.delete(roomDeadlineKey(room.id));
+        return { kind: "dropped" as const };
+      }
+      const persisted = await this.persistAcceptedAction(transaction, room, accepted, build);
+      if ("error" in persisted) {
+        await transaction.delete(roomDeadlineKey(room.id));
+        return { kind: "dropped" as const };
+      }
+      return { kind: "moved" as const, room: persisted.room };
+    });
+    if (outcome.kind === "moved") this.broadcastSession(outcome.room);
+  }
+
   private async saveJob(job: CreatorJob, input?: SubmitJobInput) {
     const projectKey = `${PROJECT_PREFIX}${job.projectId}`;
     const stored =
@@ -402,6 +511,11 @@ export class CreatorProjects extends DurableObject<Env> {
   private async runJob(jobId: string, submittedInput?: SubmitJobInput) {
     return runCreatorJob({
       ctx: this.ctx,
+      env: this.env,
+      projectRequest: (path, init) => {
+        const url = path.startsWith("http") ? path : `https://do${path.startsWith("/") ? path : `/${path}`}`;
+        return this.fetch(new Request(url, init));
+      },
       saveJob: (job, input) => this.saveJob(job, input),
       schedulePendingJobRecovery: () => this.schedulePendingJobRecovery(),
       requestJobRecoveryAlarm: () => this.requestJobRecoveryAlarm(),
@@ -1107,10 +1221,11 @@ export class CreatorProjects extends DurableObject<Env> {
         }
         const now = new Date().toISOString();
         const replayId = `replay_${crypto.randomUUID()}`;
-        const state = initialSessionState(
+        // Pin wall-clock kernels to the room's createdAt so log replay rebuilds the same deadlines.
+        const state = runAtSessionTime(Date.parse(now), () => initialSessionState(
           build.ruleSystem,
           Number(input.seed),
-        );
+        ));
         const aiSeats = normalizeAiSeats(input.aiSeats, state.scores.length);
         const aiThinkMs = normalizeAiThinkMs(input.aiThinkMs);
         if (aiSeats === null || aiThinkMs === null) {
@@ -1155,19 +1270,23 @@ export class CreatorProjects extends DurableObject<Env> {
         };
         record.sessions.push(room);
         const aiPending = aiPendingFor(room, Date.now());
+        const deadline = roomDeadlineFor(room, build);
         await transaction.put({
+          ...(deadline ? { [roomDeadlineKey(room.id)]: deadline } : {}),
           [projectKey]: record,
           [`session:${room.id}`]: room,
           [`replay:${replay.id}`]: replay,
           [idempotencyKey]: room,
           ...(aiPending ? { [aiTurnKey(room.id)]: aiPending } : {}),
         });
-        return { status: 201, value: room, aiPending };
+        return { status: 201, value: room, aiPending, deadline };
       });
-      if ("aiPending" in outcome && outcome.aiPending) await this.rescheduleAlarm();
+      if (("aiPending" in outcome && outcome.aiPending) || ("deadline" in outcome && outcome.deadline)) await this.rescheduleAlarm();
       return json(outcome.value, outcome.status);
   }
 
+
+  private jobRecoveryRunning = false;
 
   async alarm() {
     // Room AI turns first: they are short and the human is waiting on them.
@@ -1184,19 +1303,45 @@ export class CreatorProjects extends DurableObject<Env> {
         }
       }
     }
+    // Room deadlines (server-authoritative clocks): advance rooms nobody touched in time.
+    const deadlines = await this.ctx.storage.list<RoomDeadline>({ prefix: ROOM_DEADLINE_PREFIX });
+    for (const deadline of deadlines.values()) {
+      if (deadline.dueAt <= Date.now() + 25) {
+        try {
+          const t0 = Date.now();
+          await this.runRoomDeadline(deadline);
+          if (Date.now() - t0 > 1_000) console.warn("room_deadline_slow", deadline.sessionId, Date.now() - t0);
+        } catch (reason) {
+          console.error("room_deadline_failed", deadline.sessionId, reason);
+        }
+      }
+    }
     // Job recovery keeps its 30 s grace: only run when due (or legacy alarm
     // without a recorded recovery time).
     const jobRecoveryAt = await this.ctx.storage.get<number>(JOB_RECOVERY_AT_KEY);
-    if (jobRecoveryAt === undefined || jobRecoveryAt <= Date.now() + 25) {
-      const jobs = await this.ctx.storage.list<CreatorJob>({ prefix: "job:" });
-      for (const job of [...jobs.values()].sort((left, right) =>
-        left.createdAt.localeCompare(right.createdAt)
-      )) {
-        if (job.status === "queued" || job.status === "running") {
-          await this.runJob(job.id);
+    if ((jobRecoveryAt === undefined || jobRecoveryAt <= Date.now() + 25) && !this.jobRecoveryRunning) {
+      // Job recovery can take seconds per job; run it off the alarm path so room clocks
+      // (deadlines / bot hooks) keep firing on time meanwhile.
+      this.jobRecoveryRunning = true;
+      const recovery = (async () => {
+        try {
+          const jobs = await this.ctx.storage.list<CreatorJob>({ prefix: "job:" });
+          for (const job of [...jobs.values()].sort((left, right) =>
+            left.createdAt.localeCompare(right.createdAt)
+          )) {
+            if (job.status === "queued" || job.status === "running") {
+              const t0 = Date.now();
+              await this.runJob(job.id);
+              if (Date.now() - t0 > 1_000) console.warn("alarm_job_slow", job.id, job.kind, Date.now() - t0);
+            }
+          }
+          await this.schedulePendingJobRecovery();
+        } finally {
+          this.jobRecoveryRunning = false;
         }
-      }
-      await this.schedulePendingJobRecovery();
+      })();
+      this.ctx.waitUntil(recovery);
+      await this.rescheduleAlarm();
     } else {
       await this.rescheduleAlarm();
     }
@@ -2126,12 +2271,14 @@ export class CreatorProjects extends DurableObject<Env> {
         seatToken?: unknown;
         actionId?: unknown;
         payload?: unknown;
+        chainSetup?: unknown;
       }>().catch(() => ({
         intentId: undefined,
         seat: undefined,
         seatToken: undefined,
         actionId: undefined,
         payload: undefined,
+        chainSetup: undefined,
       }));
       if (
         typeof input.intentId !== "string" ||
@@ -2209,20 +2356,85 @@ export class CreatorProjects extends DurableObject<Env> {
             value: { error: "intent_rejected", state: room.state },
           };
         }
-        const persisted = await this.persistAcceptedAction(transaction, room, accepted, build);
+        let persisted = await this.persistAcceptedAction(transaction, room, accepted, build);
         if ("error" in persisted) return persisted.error;
-        const updatedRoom = persisted.room;
+        let updatedRoom = persisted.room;
+        let chained = 0;
+        // T146 · optional setup chain (listLegalActions)
+        // T149 · extend chain hops
+        // T152 · longer chain for sub-5s force
+        const wantChain = input.chainSetup === true || input.chainSetup === 1 || input.chainSetup === "1";
+        if (wantChain) {
+          for (let hop = 0; hop < 16; hop++) { // T152 · up to 16 setup hops / RTT (full 4p setup)
+            const p0goal = updatedRoom.state.hexIsland?.players?.[0];
+            if (
+              (p0goal?.settlements?.length ?? 0) >= 2 &&
+              (p0goal?.roads?.length ?? 0) >= 2
+            ) {
+              break;
+            }
+            const active = updatedRoom.state.activeSeat;
+            const legal = listSessionLegalActions(
+              updatedRoom.state,
+              runtime,
+              updatedRoom.seed,
+              active,
+            );
+            const next = legal.find(
+              (a) => a.type === "place_settlement" || a.type === "place_road",
+            );
+            if (!next) break;
+            const chainedAccepted = acceptIntent(
+              updatedRoom.state,
+              runtime,
+              {
+                intentId: `${String(input.intentId)}:chain${hop + 1}`,
+                seat: active,
+                actionId: next.type,
+                payload: next.payload as Record<string, unknown> | undefined,
+              },
+              updatedRoom.acceptedActions.length + 1,
+              updatedRoom.seed,
+            );
+            if (!chainedAccepted) break;
+            const nextPersisted = await this.persistAcceptedAction(
+              transaction,
+              updatedRoom,
+              chainedAccepted,
+              build,
+            );
+            if ("error" in nextPersisted) break;
+            updatedRoom = nextPersisted.room;
+            persisted = nextPersisted;
+            chained += 1;
+          }
+        }
         // Response/broadcast keep full in-memory actions; DO stores slim logs.
+        // T143 · pipe next-seat legal actions (listLegalActions) to cut force RTT.
+        const nextLegalSeat = updatedRoom.state.activeSeat;
+        const nextLegalActions = listSessionLegalActions(
+          updatedRoom.state,
+          runtime,
+          updatedRoom.seed,
+          nextLegalSeat,
+        );
         return {
           status: 200,
-          value: visibleSession(updatedRoom, Number(input.seat)),
+          value: {
+            ...visibleSession(updatedRoom, Number(input.seat)),
+            nextLegalActions,
+            nextLegalSeat,
+            chained,
+            via: "listLegalActions",
+          },
           broadcast: updatedRoom,
           aiPending: persisted.aiPending,
         };
       });
       if (outcome.status === 200 && "broadcast" in outcome && outcome.broadcast) {
         this.broadcastSession(outcome.broadcast);
-        if ("aiPending" in outcome && outcome.aiPending) await this.rescheduleAlarm();
+        // Always re-arm: the accepted action may have moved (or cleared) a room deadline.
+        if (outcome.status === 200 || ("aiPending" in outcome && outcome.aiPending)) await this.rescheduleAlarm();
       }
       return json(outcome.value, outcome.status);
     }
@@ -2340,6 +2552,37 @@ export class CreatorProjects extends DurableObject<Env> {
         `playtest:${playtestMatch[1]}`,
       );
       return playtest ? json(playtest) : error("没有找到这个试玩。", 404);
+    }
+
+    // T136 · legal-actions for hardness force / shared probes (listLegalActions authority)
+    const roomLegalMatch = url.pathname.match(/^\/sessions\/([^/]+)\/legal-actions$/);
+    if (request.method === "GET" && roomLegalMatch) {
+      const room = await this.ctx.storage.get<StoredSharedSession>(
+        `session:${roomLegalMatch[1]}`,
+      );
+      if (!room) return error("没有找到这个 Shared Session。", 404);
+      const storedBuild = await this.ctx.storage.get<StoredPlayableBuild>(
+        `build:${room.buildId}`,
+      );
+      const build = storedBuild ? normalizedBuild(storedBuild) : undefined;
+      if (!build) return error("Shared Session 引用的 Build 不存在。", 500);
+      const runtime = executableRuntime(build.ruleSystem);
+      if (!runtime) return error("runtime_not_executable", 422);
+      const loaded = await this.loadRoom(room, build);
+      const seatParam = url.searchParams.get("seat");
+      const seat = seatParam != null && Number.isInteger(Number(seatParam))
+        ? Number(seatParam)
+        : loaded.state.activeSeat;
+      const actions = listSessionLegalActions(loaded.state, runtime, loaded.seed, seat);
+      return json({
+        seat,
+        activeSeat: loaded.state.activeSeat,
+        status: loaded.state.status,
+        phase: loaded.state.hexIsland?.phase ?? null,
+        setupStep: loaded.state.hexIsland?.setupStep ?? null,
+        actions,
+        via: "listLegalActions",
+      });
     }
 
     const roomMatch = url.pathname.match(/^\/sessions\/([^/]+)$/);

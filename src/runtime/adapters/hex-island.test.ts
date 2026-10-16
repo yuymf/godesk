@@ -222,3 +222,388 @@ describe("hex-settlement-v1 hexIsland adapter", () => {
     expect(result.state.phase).toBe("setup");
   });
 });
+
+describe("hex-settlement negotiated trade (T014)", () => {
+  it("propose → accept swaps multi-resource bags", () => {
+    const config = createHexIslandKernelConfig({ playerCount: 2 });
+    let state = createInitialState(hexIslandAdapter, config, 11);
+    state = {
+      ...state,
+      phase: "main",
+      activePlayerId: 0,
+      genre: {
+        ...state.genre,
+        pendingTrade: null,
+        players: state.genre.players.map((player, seat) => ({
+          ...player,
+          resources:
+            seat === 0
+              ? { wood: 2, brick: 0, sheep: 1, wheat: 0, ore: 0 }
+              : { wood: 0, brick: 1, sheep: 0, wheat: 0, ore: 1 },
+        })),
+      },
+    };
+    const propose = applyAction(
+      hexIslandAdapter,
+      state,
+      {
+        type: "propose_trade",
+        playerId: 0,
+        payload: {
+          withSeat: 1,
+          give: { wood: 1, sheep: 1, brick: 0, wheat: 0, ore: 0 },
+          take: { ore: 1, wood: 0, brick: 0, sheep: 0, wheat: 0 },
+        },
+      },
+      config,
+    );
+    expect(propose.ok).toBe(true);
+    if (!propose.ok) return;
+    expect(propose.state.phase).toBe("trade_response");
+    expect(propose.state.activePlayerId).toBe(1);
+    const accept = applyAction(
+      hexIslandAdapter,
+      propose.state,
+      { type: "accept_trade", playerId: 1 },
+      config,
+    );
+    expect(accept.ok).toBe(true);
+    if (!accept.ok) return;
+    expect(accept.state.phase).toBe("main");
+    expect(accept.state.activePlayerId).toBe(0);
+    expect(accept.state.genre.players[0].resources.ore).toBe(1);
+    expect(accept.state.genre.players[0].resources.wood).toBe(1);
+    expect(accept.state.genre.players[1].resources.wood).toBe(1);
+    expect(accept.state.genre.pendingTrade).toBeNull();
+  });
+
+  it("reject returns initiative to proposer without swapping", () => {
+    const config = createHexIslandKernelConfig({ playerCount: 2 });
+    let state = createInitialState(hexIslandAdapter, config, 5);
+    state = {
+      ...state,
+      phase: "main",
+      activePlayerId: 0,
+      genre: {
+        ...state.genre,
+        pendingTrade: null,
+        players: state.genre.players.map((player, seat) => ({
+          ...player,
+          resources:
+            seat === 0
+              ? { wood: 2, brick: 0, sheep: 0, wheat: 0, ore: 0 }
+              : { wood: 0, brick: 1, sheep: 0, wheat: 0, ore: 0 },
+        })),
+      },
+    };
+    const propose = applyAction(
+      hexIslandAdapter,
+      state,
+      {
+        type: "propose_trade",
+        playerId: 0,
+        payload: {
+          withSeat: 1,
+          give: { wood: 1, brick: 0, sheep: 0, wheat: 0, ore: 0 },
+          take: { brick: 1, wood: 0, sheep: 0, wheat: 0, ore: 0 },
+        },
+      },
+      config,
+    );
+    expect(propose.ok).toBe(true);
+    if (!propose.ok) return;
+    const reject = applyAction(
+      hexIslandAdapter,
+      propose.state,
+      { type: "reject_trade", playerId: 1 },
+      config,
+    );
+    expect(reject.ok).toBe(true);
+    if (!reject.ok) return;
+    expect(reject.state.genre.players[0].resources.wood).toBe(2);
+    expect(reject.state.genre.players[1].resources.brick).toBe(1);
+    expect(reject.state.activePlayerId).toBe(0);
+  });
+});
+
+describe("hex-settlement-v1 domestic auction + brokerage (T023)", () => {
+  it("runs a 3-seat sealed resource auction with second-place cut", () => {
+    const config = createHexIslandKernelConfig({ playerCount: 3 });
+    let state = createInitialState(hexIslandAdapter, config, 11);
+    // Jump to main with resources by mutating after create (setup is long).
+    // Force main phase with stocked banks.
+    state = {
+      ...state,
+      phase: "main",
+      activePlayerId: 0,
+      status: "active",
+      genre: {
+        ...state.genre,
+        setupStep: state.genre.playerCount * 4,
+        pendingRoadVertex: null,
+        turnPlayer: 0,
+        players: state.genre.players.map((p, i) => ({
+          ...p,
+          resources: {
+            wood: i === 0 ? 2 : 0,
+            brick: 0,
+            sheep: 0,
+            wheat: i === 0 ? 0 : 5,
+            ore: 0,
+          },
+        })),
+      },
+    };
+    const start = applyAction(
+      hexIslandAdapter,
+      state,
+      {
+        type: "start_domestic_auction",
+        playerId: 0,
+        payload: { resource: "wood", qty: 1, reserve: 1, mode: "sealed" },
+      },
+      config,
+    );
+    expect(start.ok).toBe(true);
+    if (!start.ok) return;
+    state = start.state;
+    expect(state.phase).toBe("domestic_auction");
+    expect(state.genre.players[0].resources.wood).toBe(1); // escrowed 1 of 2
+
+    // Seat 2 bids off-turn
+    const off = applyAction(
+      hexIslandAdapter,
+      state,
+      { type: "auction_bid", playerId: 2, payload: { amount: 2 } },
+      config,
+    );
+    expect(off.ok).toBe(true);
+    if (!off.ok) return;
+    state = off.state;
+
+    const bid1 = applyAction(
+      hexIslandAdapter,
+      state,
+      { type: "auction_bid", playerId: 1, payload: { amount: 4 } },
+      config,
+    );
+    expect(bid1.ok).toBe(true);
+    if (!bid1.ok) return;
+    state = bid1.state;
+    expect(state.phase).toBe("main");
+    // Winner seat 1 paid 4 wheat, got wood; seller got payment minus 10% cut to seat 2
+    expect(state.genre.players[1].resources.wood).toBe(1);
+    expect(state.genre.players[1].resources.wheat).toBe(1); // 5-4
+    expect(state.genre.players[0].resources.wheat).toBe(4); // seller gets 4 (cut 0 if second got from paid - 10% of 4 = 0)
+    // With amount 4 and 1000 bps, cut = 0. Use higher bid to see cut.
+  });
+
+  it("pays brokerage cut on larger sealed award", () => {
+    const config = createHexIslandKernelConfig({ playerCount: 3 });
+    let state = createInitialState(hexIslandAdapter, config, 5);
+    state = {
+      ...state,
+      phase: "main",
+      activePlayerId: 0,
+      status: "active",
+      genre: {
+        ...state.genre,
+        setupStep: 12,
+        pendingRoadVertex: null,
+        turnPlayer: 0,
+        players: state.genre.players.map((p, i) => ({
+          ...p,
+          resources: {
+            wood: i === 0 ? 1 : 0,
+            brick: 0,
+            sheep: 0,
+            wheat: i === 0 ? 0 : 10,
+            ore: 0,
+          },
+        })),
+      },
+    };
+    let r = applyAction(
+      hexIslandAdapter,
+      state,
+      {
+        type: "start_domestic_auction",
+        playerId: 0,
+        payload: { resource: "wood", qty: 1, reserve: 1, mode: "sealed" },
+      },
+      config,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    r = applyAction(
+      hexIslandAdapter,
+      state,
+      { type: "auction_bid", playerId: 1, payload: { amount: 10 } },
+      config,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    r = applyAction(
+      hexIslandAdapter,
+      state,
+      { type: "auction_bid", playerId: 2, payload: { amount: 6 } },
+      config,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    // cut = floor(10 * 1000 / 10000) = 1; seat 2 second gets cut, did not pay bid
+    expect(state.genre.players[2].resources.wheat).toBe(11); // 10 + 1 cut
+    expect(state.genre.players[0].resources.wheat).toBe(9); // seller 10-1
+    expect(state.genre.players[1].resources.wheat).toBe(0); // winner paid 10
+    expect(state.genre.players[1].resources.wood).toBe(1);
+  });
+});
+
+describe("hex-settlement-v1 domestic live multi-lot + negotiated brokerage (T025)", () => {
+  function stockedMain(seed: number, playerCount = 3) {
+    const config = createHexIslandKernelConfig({ playerCount });
+    let state = createInitialState(hexIslandAdapter, config, seed);
+    state = {
+      ...state,
+      phase: "main",
+      activePlayerId: 0,
+      status: "active",
+      genre: {
+        ...state.genre,
+        setupStep: playerCount * 4,
+        pendingRoadVertex: null,
+        turnPlayer: 0,
+        activeFloorLots: [],
+        lastFloorBroker: null,
+        players: state.genre.players.map((p, i) => ({
+          ...p,
+          resources: {
+            wood: i === 0 ? 3 : 0,
+            brick: i === 0 ? 1 : 0,
+            sheep: 0,
+            wheat: i === 0 ? 0 : 12,
+            ore: 0,
+          },
+        })),
+      },
+    };
+    return { config, state };
+  }
+
+  it("runs two concurrent live lots and awards with negotiated broker cut", () => {
+    let { config, state } = stockedMain(17);
+    let r = applyAction(
+      hexIslandAdapter,
+      state,
+      {
+        type: "start_domestic_auction",
+        playerId: 0,
+        payload: {
+          resource: "wood",
+          qty: 1,
+          reserve: 1,
+          mode: "live",
+          brokerSeat: 2,
+          cutBps: 1500,
+        },
+      },
+      config,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    expect(state.phase).toBe("domestic_live_floor");
+    expect(state.genre.activeFloorLots).toHaveLength(1);
+    // Add second lot while first is live
+    r = applyAction(
+      hexIslandAdapter,
+      state,
+      {
+        type: "start_domestic_auction",
+        playerId: 0,
+        payload: {
+          resource: "brick",
+          qty: 1,
+          reserve: 1,
+          mode: "live",
+          brokerSeat: 2,
+          cutBps: 2000,
+        },
+      },
+      config,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    expect(state.genre.activeFloorLots).toHaveLength(2);
+    const lotA = state.genre.activeFloorLots[0]!;
+    const amount = Math.max(lotA.currentBid + 1, 10);
+    r = applyAction(
+      hexIslandAdapter,
+      state,
+      {
+        type: "floor_raise",
+        playerId: 1,
+        payload: { lotId: lotA.lotId, amount },
+      },
+      config,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    for (const s of [0, 2]) {
+      if (!state.genre.activeFloorLots.some((l) => l.lotId === lotA.lotId)) break;
+      r = applyAction(
+        hexIslandAdapter,
+        state,
+        { type: "floor_pass", playerId: s, payload: { lotId: lotA.lotId } },
+        config,
+      );
+      expect(r.ok).toBe(true);
+      if (!r.ok) return;
+      state = r.state;
+    }
+    expect(state.genre.lastFloorBroker?.seat).toBe(2);
+    expect(state.genre.lastFloorBroker?.cut).toBe(
+      Math.floor((amount * 1500) / 10000),
+    );
+    expect(state.genre.activeFloorLots).toHaveLength(1);
+    expect(state.genre.players[1].resources.wood).toBe(1);
+  });
+
+  it("set_broker_terms updates negotiated cut before first raise", () => {
+    let { config, state } = stockedMain(9);
+    let r = applyAction(
+      hexIslandAdapter,
+      state,
+      {
+        type: "start_domestic_auction",
+        playerId: 0,
+        payload: { resource: "wood", qty: 1, reserve: 1, mode: "live" },
+      },
+      config,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    const lotId = state.genre.activeFloorLots[0]!.lotId;
+    r = applyAction(
+      hexIslandAdapter,
+      state,
+      {
+        type: "set_broker_terms",
+        playerId: 0,
+        payload: { lotId, brokerSeat: 2, cutBps: 2500 },
+      },
+      config,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    state = r.state;
+    expect(state.genre.activeFloorLots[0]!.brokerSeat).toBe(2);
+    expect(state.genre.activeFloorLots[0]!.brokerCutBps).toBe(2500);
+  });
+});

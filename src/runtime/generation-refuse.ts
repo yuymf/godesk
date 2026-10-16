@@ -9,13 +9,17 @@ export const REFUSE_NON_SCORE_HAND =
 export const REFUSE_MULTI_ACT_HIDDEN_ROLE =
   "来源是多幕/线索板剧本杀；hidden-role-v1 仅支持单轮发言→指控→揭晓，Rule System 保持 draft，不会用单轮环顶替分享。";
 
+export const REFUSE_PATTERN_DRAFT =
+  "来源是工厂草稿/准备行/纹样墙类拼贴计分环；当前无对应 Executable Kernel，Rule System 保持 draft，不会用 turn-taking-v1 空转冒充可玩。";
+
 export const REFUSE_WEAK_GENRE_SCORE_RACE =
   "来源含弱体裁信号（卡牌/放置/身份/对话），不能静默配置 score-race-v1；Rule System 保持 draft，请改写为明确体裁或纯计分赛。";
 
 export type GenerationRefuseKind =
   | "non-score-hand"
   | "multi-act-hidden-role"
-  | "weak-genre-score-race";
+  | "weak-genre-score-race"
+  | "pattern-draft";
 
 export function generationRefuseReason(
   kind: GenerationRefuseKind,
@@ -27,5 +31,7 @@ export function generationRefuseReason(
       return REFUSE_MULTI_ACT_HIDDEN_ROLE;
     case "weak-genre-score-race":
       return REFUSE_WEAK_GENRE_SCORE_RACE;
+    case "pattern-draft":
+      return REFUSE_PATTERN_DRAFT;
   }
 }

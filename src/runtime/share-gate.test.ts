@@ -141,3 +141,35 @@ describe("GameSpec share gate with passing presentation and playability", () => 
     expect(shareGateRefusal(build({ ruleSystem: rule }))).toMatchObject({ error: "playability_floor_unmet" });
   });
 });
+
+describe("share gate T029 DOM dedicated-board", () => {
+  it("refuses share when presentationFloor fails for DOM-only dedicated-board", () => {
+    const refusal = shareGateRefusal({
+      presentationFloor: {
+        status: "failed",
+        reason: "未呈现：demo-v1 只有 DOM 专用棋盘，未挂 SceneHost / TabletopStage 3D 中层，不能作为可分享呈现；保持草稿。",
+        visuals: [{ provenance: "kit", label: "主题 kit" }],
+      },
+      playabilityFloor: { status: "passed", reason: "ok" },
+      ruleSystem: {
+        id: "rs",
+        version: 1,
+        name: "x",
+        pitch: "x",
+        participants: { min: 2, max: 2, default: 2, roles: [] },
+        durationMinutes: 10,
+        rules: [],
+        constraints: [],
+        entities: [],
+        setup: [],
+        actions: [],
+        playSurface: { kind: "table", layout: "x", regions: [] },
+        stages: [],
+        outcomes: [],
+        presentation: { visuals: [{ provenance: "kit", label: "主题 kit" }] },
+        runtimeSupport: { status: "executable", unsupported: [], kernel: { type: "score-race-v1", victoryTarget: 8, maxTurns: 12, actions: [{ id: "a", label: "a", points: 1 }] } },
+      } as never,
+    });
+    expect(refusal?.error).toBe("visual_floor_unmet");
+  });
+});

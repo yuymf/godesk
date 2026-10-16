@@ -43,7 +43,7 @@ import {
 } from "three";
 import { SEAT_COLORS } from "../tokens";
 
-export type PieceKind = "settlement" | "city" | "road" | "robber";
+export type PieceKind = "settlement" | "city" | "road" | "robber" | "meeple";
 
 type Vec3 = readonly [number, number, number];
 
@@ -368,8 +368,8 @@ function houseParts({ width, depth, wallHeight, ridgeHeight, base, wall, roof, s
  * (no cottage/manor glTF suitable for InstancedMesh+vertexColors) — keep
  * procedural miniatures; survey noted in assets/LICENSES.md.
  */
-export const SETTLEMENT_SCALE = 1.62;
-export const CITY_SCALE = 1.95;
+export const SETTLEMENT_SCALE = 2.38; // T060/T225 · taller pitched cottage
+export const CITY_SCALE = 2.80; // T060/T225 · taller keep silhouette
 
 function scaled(geom: BufferGeometry, s: number): BufferGeometry {
   geom.scale(s, s, s);
@@ -389,7 +389,7 @@ export function buildSettlementGeometry(seat: number): BufferGeometry {
   parts.push(paintPart(new BoxGeometry(0.018, 0.05, 0.018), PIECE_PALETTE.timber, { pos: [0.04, 0.04, 0.13] }));
   parts.push(paintPart(new BoxGeometry(0.11, 0.012, 0.018), PIECE_PALETTE.timber, { pos: [0, 0.068, 0.13] }));
   parts.push(
-    ...houseParts({ width: 0.24, depth: 0.175, wallHeight: 0.135, ridgeHeight: 0.105, base: [0, 0, 0], wall, roof }),
+    ...houseParts({ width: 0.26, depth: 0.185, wallHeight: 0.14, ridgeHeight: 0.125, base: [0, 0, 0], wall, roof }),
   );
   const frontZ = 0.08;
   parts.push(...frontDoor(0.048, 0.082, -0.03, 0.032, frontZ));
@@ -469,16 +469,16 @@ export function buildCityGeometry(seat: number): BufferGeometry {
   return scaled(bakeShading(mergeParts(parts), 0.3), CITY_SCALE);
 }
 
-export const ROAD_LENGTH = 0.56;
+export const ROAD_LENGTH = 1.02; // T060/T225 · edge-aligned prism span
 
 export function buildRoadGeometry(seat: number): BufferGeometry {
   const main = seatColor(seat);
   const parts: BufferGeometry[] = [];
   const plankCount = 5;
   const plankLen = ROAD_LENGTH - 0.06;
-  const plankW = 0.034;
-  const plankH = 0.028;
-  const span = 0.175;
+  const plankW = 0.038;
+  const plankH = 0.036;
+  const span = 0.2;
   // Sleepers under the planks.
   for (const x of [-plankLen * 0.42, -plankLen * 0.14, plankLen * 0.14, plankLen * 0.42]) {
     parts.push(paintPart(new BoxGeometry(0.04, 0.02, span + 0.02), PIECE_PALETTE.beamWoodDark, { pos: [x, 0.01, 0] }));
@@ -499,8 +499,45 @@ export function buildRoadGeometry(seat: number): BufferGeometry {
   return bakeShading(mergeParts(parts), 0.55);
 }
 
+
+/** T123 · shared seat marker for hex layout — was meeple silhouette; T171 → seat tray on desk. */
+/** T163/T165 · dual-lip product-frame language retained on tray rim. */
+export const MEEPLE_HEX_SCALE = 1.95; // T171…T198/T217 · tray scale (shared seat marker)
+export const MEEPLE_RIM_HEX = "#f6dcb0"; // T171…T196/T198 · wood tray lip
+export const MEEPLE_RIM_UNDERCUT = "#3a2414"; // T163 · dark undercut
+
+export function buildMeepleGeometry(seat = 0): BufferGeometry {
+  const seatColor = SEAT_COLORS[seat % SEAT_COLORS.length] ?? "#ffffff";
+  const parts: BufferGeometry[] = [];
+  // T171 · seat tray on desk (shared): wood oval tray + small seat-color chip (not color-swatch meeple)
+  parts.push(
+    paintPart(new CylinderGeometry(0.42, 0.46, 0.05, 24), MEEPLE_RIM_UNDERCUT, {
+      pos: [0, 0.025, 0],
+    }),
+  );
+  parts.push(
+    paintPart(new CylinderGeometry(0.38, 0.42, 0.06, 24), MEEPLE_RIM_HEX, {
+      pos: [0, 0.055, 0],
+    }),
+  );
+  // shallow tray well
+  parts.push(
+    paintPart(new CylinderGeometry(0.30, 0.32, 0.02, 20), "#5a3a1c", {
+      pos: [0, 0.078, 0],
+    }),
+  );
+  // seat-color chip (small, on tray — reads as seat token, not swatch tower)
+  parts.push(
+    paintPart(new CylinderGeometry(0.14, 0.15, 0.07, 16), seatColor, {
+      pos: [0, 0.12, 0],
+    }),
+  );
+  parts.push(contactShadow(0.36, 0.32, 0.003));
+  return scaled(bakeShading(mergeParts(parts), 0.18), MEEPLE_HEX_SCALE);
+}
+
 /** Robber ≈ hooded miniature (not a lathe cylinder). */
-export const ROBBER_SCALE = 1.55;
+export const ROBBER_SCALE = 1.78; // T217
 
 function invertHull(geom: BufferGeometry): BufferGeometry {
   for (const name of ["position", "normal", "color"]) {
@@ -584,7 +621,9 @@ export function pieceGeometry(kind: PieceKind, seat = 0): BufferGeometry {
           ? buildCityGeometry(seat)
           : kind === "road"
             ? buildRoadGeometry(seat)
-            : buildRobberGeometry();
+            : kind === "meeple"
+              ? buildMeepleGeometry(seat)
+              : buildRobberGeometry();
     geom.userData.gdShared = true;
     CACHE.set(key, geom);
   }

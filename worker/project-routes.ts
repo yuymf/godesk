@@ -101,6 +101,7 @@ const PROJECT_API_ROUTES: ApiRoute[] = [
   pattern("GET", /^\/api\/sessions\/([^/]+)\/events$/, (m) => `/sessions/${m[1]}/events`, "none", { websocket: true }),
   pattern("POST", /^\/api\/sessions\/([^/]+)\/seats$/, (m) => `/sessions/${m[1]}/seats`, "seat", { forwardShare: true }),
   pattern("POST", /^\/api\/sessions\/([^/]+)\/intents$/, (m) => `/sessions/${m[1]}/intents`, "session", { forwardShare: true }),
+  pattern("GET", /^\/api\/sessions\/([^/]+)\/legal-actions$/, (m) => `/sessions/${m[1]}/legal-actions`, "session", { forwardShare: true }),
   pattern("POST", /^\/api\/sessions\/([^/]+)\/feedback$/, (m) => `/sessions/${m[1]}/feedback`, "session", { forwardShare: true }),
   pattern("GET", /^\/api\/playtests\/([^/]+)$/, (m) => `/playtests/${m[1]}`, "playtest"),
   pattern("GET", /^\/api\/sessions\/([^/]+)$/, (m) => `/sessions/${m[1]}`, "session"),

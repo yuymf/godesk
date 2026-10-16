@@ -1,10 +1,14 @@
 import { generationMetadataSchema, migrateRuleSystemToV2 } from "../src/creator/game-spec";
+import { normalizeAutoBattlerTuning } from "../src/runtime/adapters/auto-battler";
+import { resolveAutoBattlerContent } from "../src/runtime/adapters/auto-battler-content";
+import { resolveAutoBattlerTheme } from "../src/runtime/adapters/auto-battler-theme";
 import { defaultRenderSpec, isSpatialPresentationKind, patchRenderSpec, renderSpecIssues, renderSpecSchema } from "../src/creator/render-spec";
 import type { ImportedProjectAsset } from "../src/creator/asset-search/types";
 import {
   acceptIntent,
   executableRuntime,
   initialSessionState,
+  runAtSessionTime,
   scopeSessionState,
 } from "./runtime";
 import type {
@@ -380,8 +384,17 @@ type RuntimeConfiguration =
   | Extract<ProjectChangeOperation, { op: "configure_network_route" }> & {
       op: "configure_network_route";
     }
+  | Extract<ProjectChangeOperation, { op: "configure_gem_engine" }> & {
+      op: "configure_gem_engine";
+    }
+  | Extract<ProjectChangeOperation, { op: "configure_pattern_draft" }> & {
+      op: "configure_pattern_draft";
+    }
   | Extract<ProjectChangeOperation, { op: "configure_auction_bidding" }> & {
       op: "configure_auction_bidding";
+    }
+  | Extract<ProjectChangeOperation, { op: "configure_auto_battler" }> & {
+      op: "configure_auto_battler";
     };
 
 function configureDedicatedKernel(
@@ -389,7 +402,7 @@ function configureDedicatedKernel(
   op: string,
   kernel: Extract<
     Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],
-    { type: "harbor-voyage-v1" | "worker-placement-v1" | "hidden-role-v1" | "hand-play-v1" | "conversation-relay-v1" | "disc-flipping-v1" | "hex-settlement-v1" | "network-route-v1" | "auction-bidding-v1" }
+    { type: "harbor-voyage-v1" | "worker-placement-v1" | "hidden-role-v1" | "hand-play-v1" | "conversation-relay-v1" | "disc-flipping-v1" | "hex-settlement-v1" | "network-route-v1" | "auction-bidding-v1" | "gem-engine-v1" | "pattern-draft-v1" | "auto-battler-v1" }
   >,
   unsupported: string[],
   config: unknown,
@@ -504,9 +517,73 @@ function configureDedicatedKernel(
           confidence: 1,
         },
         {
-          id: "player_trade",
-          label: "玩家交易",
-          description: "与其他玩家进行 1:1 资源交换。",
+          id: "propose_trade",
+          label: "提议交易",
+          description: "向其他玩家提议多资源交换；对方可接受或拒绝。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+        {
+          id: "start_domestic_auction",
+          label: "发起资源拍卖",
+          description: "将自有资源作为标的发起密封短拍或实时多拍场；可约定经纪席与分成。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+        {
+          id: "auction_bid",
+          label: "拍卖出价",
+          description: "对国内资源拍卖提交密封出价。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+        {
+          id: "auction_pass",
+          label: "拍卖弃权",
+          description: "放弃本次国内资源拍卖。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+        {
+          id: "floor_raise",
+          label: "实时场加价",
+          description: "对国内实时多拍场中某一标的报出更高价。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+        {
+          id: "floor_pass",
+          label: "实时场放弃",
+          description: "对国内实时多拍场某一标的放弃。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+        {
+          id: "set_broker_terms",
+          label: "约定经纪分成",
+          description: "为国内在拍标的指定经纪席与分成比例。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+        {
+          id: "accept_trade",
+          label: "接受交易",
+          description: "接受当前议价提议并交换资源。",
+          sourceId: runtimeSource.id,
+          provenance: "system-generated" as const,
+          confidence: 1,
+        },
+        {
+          id: "reject_trade",
+          label: "拒绝交易",
+          description: "拒绝当前议价提议。",
           sourceId: runtimeSource.id,
           provenance: "system-generated" as const,
           confidence: 1,
@@ -546,14 +623,94 @@ function configureDedicatedKernel(
         ],
       },
     } : kernel.type === "auction-bidding-v1" ? {
-      actions: [
+      actions: kernel.gallery ? [
+        { id: "play_painting", label: "打出画作并选拍卖方式", description: "拍卖官从手牌打出一张画作，并指定公开加价 / 一次暗标 / 定价购买。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "bid", label: "出价", description: "公开加价时报出更高价。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "pass", label: "放弃", description: "公开加价时放弃；已有出价则落槌。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "floor_raise", label: "实时场加价", description: "对多标的实时拍卖场中的某一拍品报出更高价。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "floor_pass", label: "实时场放弃", description: "对某一在拍标的放弃；齐后落槌或流拍。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "set_broker_terms", label: "约定经纪分成", description: "卖家为在拍标的指定经纪席与分成比例（超出固定次高 award-cut）。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "sealed_bid", label: "暗标出价", description: "一次暗标提交密封出价。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "buy_fixed", label: "定价购买", description: "按拍卖官标价买入。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "sell", label: "行情卖出", description: "按画家行情价将藏品卖给银行。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "pass_market", label: "跳过卖出", description: "本轮行情阶段不卖出。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+      ] : [
         { id: "bid", label: "出价", description: "报出高于当前价且不超过持有筹码的整数。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
         { id: "pass", label: "放弃", description: "若已有出价，拍品归最高出价者；双方均放弃则流拍。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
       ],
       participants: { ...record.ruleSystem.participants, min: 2, max: 2, default: 2 },
-      playSurface: { kind: "table" as const, layout: "auction-table", regions: [{ id: "lot", name: "拍品", description: "公开叫价与筹码" }] },
-      stages: [{ id: "bidding", name: "竞价" }, { id: "ended", name: "结算" }],
-      outcomes: [{ id: "award", name: "最高有效出价获得拍品" }, { id: "unsold", name: "无人出价则流拍" }],
+      playSurface: { kind: "table" as const, layout: "auction-table", regions: kernel.gallery
+        ? [
+            { id: "lot", name: "拍卖台", description: "多模式拍卖与当前画作" },
+            { id: "market", name: "行情表", description: "画家行情与卖出" },
+            { id: "hand", name: "画作手牌", description: "拍卖官打出的手牌" },
+          ]
+        : [{ id: "lot", name: "拍品", description: "公开叫价与筹码" }] },
+      stages: kernel.gallery
+        ? [
+            { id: "offer", name: "拍卖官出牌" },
+            { id: "bidding", name: "公开加价" },
+            { id: "live_floor", name: "实时多拍场" },
+            { id: "sealed", name: "一次暗标" },
+            { id: "fixed", name: "定价购买" },
+            { id: "market", name: "行情卖出" },
+            { id: "ended", name: "结算" },
+          ]
+        : [{ id: "bidding", name: "竞价" }, { id: "ended", name: "结算" }],
+      outcomes: kernel.gallery
+        ? [
+            { id: "award", name: "拍得画作入藏" },
+            { id: "market_sell", name: "按画家行情卖出得分" },
+            { id: "unsold", name: "无人购买则流拍" },
+          ]
+        : [{ id: "award", name: "最高有效出价获得拍品" }, { id: "unsold", name: "无人出价则流拍" }],
+    } : kernel.type === "gem-engine-v1" ? {
+      actions: [
+        { id: "take_diverse", label: "拿三色宝石", description: "从供应堆拿三枚不同颜色的基本宝石。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "take_pair", label: "拿两枚同色", description: "当某色堆足够多时拿两枚同色基本宝石。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "buy", label: "购买发展牌", description: "支付宝石（可用永久折扣抵扣）购买一张可见发展牌。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "reserve", label: "预留发展牌", description: "预留一张可见发展牌并可拿黄金（若有）。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "discard_gems", label: "弃回宝石", description: "代币超过上限时弃回至供应堆。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+      ],
+      participants: { ...record.ruleSystem.participants, min: 2, max: 4, default: kernel.playerCount },
+      playSurface: { kind: "table" as const, layout: "gem-engine-table", regions: [
+        { id: "bank", name: "宝石供应", description: "基本色与黄金代币堆" },
+        { id: "market", name: "发展牌列", description: "三级可见发展牌" },
+        { id: "nobles", name: "贵族", description: "满足永久折扣需求时自动拜访" },
+      ] },
+      stages: [{ id: "main", name: "回合" }, { id: "ended", name: "终局" }],
+      outcomes: [{ id: "prestige", name: "先到声望目标者获胜" }],
+    } : kernel.type === "pattern-draft-v1" ? {
+      actions: [
+        { id: "draft", label: "拿色并放入准备行", description: "从工厂或中心拿走某一颜色全部瓷砖，放入一条准备行或地板。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+      ],
+      participants: { ...record.ruleSystem.participants, min: 2, max: 4, default: kernel.playerCount },
+      playSurface: { kind: "table" as const, layout: "pattern-draft-table", regions: [
+        { id: "factories", name: "工厂展示", description: "各盘同色拿取" },
+        { id: "center", name: "中心堆", description: "先手标记与余砖" },
+        { id: "lines", name: "准备行", description: "按色铺满后贴墙" },
+        { id: "wall", name: "纹样墙", description: "正交相连计分" },
+      ] },
+      stages: [{ id: "draft", name: "草稿" }, { id: "ended", name: "结算" }],
+      outcomes: [{ id: "score", name: "墙贴得分减去地板扣分后最高者获胜" }],
+    } : kernel.type === "auto-battler-v1" ? {
+      actions: [
+        { id: "buy", label: "购买", description: "从商店购买单位到备战席。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "sell", label: "出售", description: "出售备战席单位换取金币。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "refresh", label: "刷新商店", description: "支付费用刷新商店。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "ready_shop", label: "准备完毕", description: "结束购买阶段。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "place", label: "上阵", description: "从备战席放到己方半场。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "recall", label: "撤回", description: "从棋盘撤回备战席。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+        { id: "ready_place", label: "锁定阵容", description: "锁定后进入自动战斗。", sourceId: runtimeSource.id, provenance: "system-generated" as const, confidence: 1 },
+      ],
+      participants: { ...record.ruleSystem.participants, min: 2, max: 2, default: 2 },
+      playSurface: { kind: "table" as const, layout: "auto-battler", regions: [
+        { id: "shop", name: "商店", description: "购买单位" },
+        { id: "bench", name: "备战席", description: "未上阵单位" },
+        { id: "board", name: "战场", description: "己方半场上阵" },
+      ] },
+      stages: [{ id: "shop", name: "商店" }, { id: "place", name: "布阵" }, { id: "ended", name: "终局" }],
+      outcomes: [{ id: "hp", name: "对手生命值耗尽者获胜" }],
     } : kernel.type === "network-route-v1" ? {
       actions: [
         {
@@ -568,8 +725,8 @@ function configureDedicatedKernel(
       participants: {
         ...record.ruleSystem.participants,
         min: 2,
-        max: 2,
-        default: 2,
+        max: 5,
+        default: kernel.playerCount,
       },
       playSurface: {
         kind: "table" as const,
@@ -694,6 +851,14 @@ function configureRuntimeKernel(
         ...(configuration.config.terminalTo
           ? { terminalTo: configuration.config.terminalTo }
           : {}),
+        ...(configuration.config.freight ? { freight: true } : {}),
+        ...(configuration.config.tickets ? { tickets: true } : {}),
+        ...(configuration.config.content
+          ? { content: structuredClone(configuration.config.content) }
+          : {}),
+        ...(configuration.config.ticketsContent
+          ? { ticketsContent: structuredClone(configuration.config.ticketsContent) }
+          : {}),
       },
       configuration.config.unsupported?.map((item) => item.trim()) ?? [],
       configuration.config,
@@ -704,6 +869,46 @@ function configureRuntimeKernel(
   if (configuration.op === "configure_auction_bidding") {
     configureDedicatedKernel(record, configuration.op, {
       type: "auction-bidding-v1", playerCount: configuration.config.playerCount,
+      ...(configuration.config.gallery ? { gallery: true } : {}),
+      ...(configuration.config.harbor && !configuration.config.gallery ? { harbor: true } : {}),
+      ...(configuration.config.galleryContent
+        ? { galleryContent: structuredClone(configuration.config.galleryContent) }
+        : {}),
+      ...(configuration.config.content && !configuration.config.gallery
+        ? { content: structuredClone(configuration.config.content) }
+        : {}),
+    }, configuration.config.unsupported?.map((item) => item.trim()) ?? [], configuration.config, affectedEntities);
+    return;
+  }
+  if (configuration.op === "configure_gem_engine") {
+    configureDedicatedKernel(record, configuration.op, {
+      type: "gem-engine-v1", playerCount: configuration.config.playerCount,
+      ...(configuration.config.content
+        ? { content: structuredClone(configuration.config.content) }
+        : {}),
+    }, configuration.config.unsupported?.map((item) => item.trim()) ?? [], configuration.config, affectedEntities);
+    return;
+  }
+  if (configuration.op === "configure_pattern_draft") {
+    configureDedicatedKernel(record, configuration.op, {
+      type: "pattern-draft-v1", playerCount: configuration.config.playerCount,
+      ...(configuration.config.content
+        ? { content: structuredClone(configuration.config.content) }
+        : {}),
+    }, configuration.config.unsupported?.map((item) => item.trim()) ?? [], configuration.config, affectedEntities);
+    return;
+  }
+  if (configuration.op === "configure_auto_battler") {
+    configureDedicatedKernel(record, configuration.op, {
+      type: "auto-battler-v1", playerCount: configuration.config.playerCount,
+      ...(configuration.config.tuning && Object.keys(configuration.config.tuning).length
+        ? { tuning: { ...configuration.config.tuning } }
+        : {}),
+      ...(configuration.config.content && Object.keys(configuration.config.content).length
+        ? { content: structuredClone(configuration.config.content) }
+        : {}),
+      ...(configuration.config.theme ? { theme: structuredClone(configuration.config.theme) } : {}),
+      ...(configuration.config.branding ? { branding: structuredClone(configuration.config.branding) } : {}),
     }, configuration.config.unsupported?.map((item) => item.trim()) ?? [], configuration.config, affectedEntities);
     return;
   }
@@ -1569,7 +1774,8 @@ const RUNTIME_HANDLERS: {
       Boolean(config) &&
       typeof config === "object" &&
       Number.isInteger(config.playerCount) &&
-      config.playerCount === 2 &&
+      config.playerCount >= 2 &&
+      config.playerCount <= 5 &&
       (config.terminalFrom === undefined ||
         typeof config.terminalFrom === "string") &&
       (config.terminalTo === undefined ||
@@ -1577,8 +1783,40 @@ const RUNTIME_HANDLERS: {
       validUnsupported(config.unsupported),
   },
   configure_auction_bidding: {
+    validate: (config) => {
+      if (!config || typeof config !== "object") return false;
+      if (!validUnsupported(config.unsupported)) return false;
+      if (!Number.isInteger(config.playerCount)) return false;
+      if (config.gallery) {
+        return config.playerCount >= 2 && config.playerCount <= 5;
+      }
+      return config.playerCount === 2;
+    },
+  },
+  configure_gem_engine: {
     validate: (config) => Boolean(config) && typeof config === "object" &&
-      config.playerCount === 2 && validUnsupported(config.unsupported),
+      Number.isInteger(config.playerCount) &&
+      config.playerCount >= 2 && config.playerCount <= 4 &&
+      validUnsupported(config.unsupported),
+  },
+  configure_pattern_draft: {
+    validate: (config) => Boolean(config) && typeof config === "object" &&
+      Number.isInteger(config.playerCount) &&
+      config.playerCount >= 2 && config.playerCount <= 4 &&
+      validUnsupported(config.unsupported),
+  },
+  configure_auto_battler: {
+    validate: (config) => Boolean(config) && typeof config === "object" &&
+      config.playerCount === 2 && validUnsupported(config.unsupported) &&
+      normalizeAutoBattlerTuning(config.tuning) !== null &&
+      (config.content === undefined || resolveAutoBattlerContent(config.content) !== null) &&
+      (config.theme === undefined || resolveAutoBattlerTheme(config.theme) !== null) &&
+      (config.branding === undefined || (
+        typeof config.branding === "object" && config.branding !== null &&
+        typeof config.branding.title === "string" && config.branding.title.length > 0 &&
+        typeof config.branding.ownSeat === "string" && config.branding.ownSeat.length > 0 &&
+        typeof config.branding.enemySeat === "string" && config.branding.enemySeat.length > 0
+      )),
   },
 };
 
@@ -2313,6 +2551,7 @@ export function slimAcceptedActionForStorage(action: AcceptedAction): AcceptedAc
     actionId: action.actionId,
     points: action.points,
     ...(action.payload !== undefined ? { payload: action.payload } : {}),
+    ...(action.at !== undefined ? { at: action.at } : {}),
     state: slimState,
   };
 }
@@ -2327,12 +2566,17 @@ export function reconstructActions(
   build: StoredPlayableBuild,
   acceptedActions: GameReplay["acceptedActions"],
   seed = 42,
+  startedAtMs?: number,
 ) {
   const runtime = executableRuntime(build.ruleSystem);
   if (!runtime) throw new Error("runtime_not_executable");
-  let state = initialSessionState(build.ruleSystem, seed);
+  let state = runAtSessionTime(startedAtMs, () => initialSessionState(build.ruleSystem, seed));
+  // Legacy logs (before `at` was recorded) replay at the last known time, never at "now",
+  // so an old room cannot spuriously hit a prep deadline mid-replay.
+  let clock = startedAtMs;
   const reconstructed = acceptedActions.map((logged, index) => {
-    const accepted = acceptIntent(
+    clock = logged.at ?? clock;
+    const accepted = runAtSessionTime(clock, () => acceptIntent(
       state,
       runtime,
       {
@@ -2343,7 +2587,7 @@ export function reconstructActions(
       },
       index + 1,
       seed,
-    );
+    ));
     if (!accepted) throw new Error("action_log_invalid");
     state = accepted.state;
     return accepted;
@@ -2433,6 +2677,7 @@ export function reconstructSession(
       build,
       session.acceptedActions,
       session.seed,
+      Date.parse(session.createdAt),
     );
     return {
       ...session,
@@ -2471,7 +2716,7 @@ export function replayTail(
   if (!runtime) throw new Error("runtime_not_executable");
   let current = state;
   const acceptedActions = tail.map((logged, index) => {
-    const accepted = acceptIntent(
+    const accepted = runAtSessionTime(logged.at, () => acceptIntent(
       current,
       runtime,
       {
@@ -2482,7 +2727,7 @@ export function replayTail(
       },
       offset + index + 1,
       seed,
-    );
+    ));
     if (!accepted) throw new Error("action_log_invalid");
     current = accepted.state;
     return accepted;
@@ -2494,14 +2739,16 @@ export function reconstructReplay(
   replay: StoredReplay,
   build: StoredPlayableBuild,
 ): StoredReplay {
+  const startedAtMs = Date.parse(replay.createdAt);
   const reconstructed = reconstructActions(
     build,
     replay.acceptedActions,
     replay.seed,
+    startedAtMs,
   );
   return {
     ...replay,
-    initialState: initialSessionState(build.ruleSystem, replay.seed),
+    initialState: runAtSessionTime(startedAtMs, () => initialSessionState(build.ruleSystem, replay.seed)),
     acceptedActions: reconstructed.acceptedActions,
     finalState: reconstructed.state,
   };

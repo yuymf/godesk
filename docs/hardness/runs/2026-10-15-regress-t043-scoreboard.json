@@ -1,0 +1,102 @@
+[
+  {
+    "suite": "H01",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 0,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 0
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS（可玩子集）",
+    "kernelType": "hex-settlement-v1"
+  },
+  {
+    "suite": "H02",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS（可玩子集）",
+    "kernelType": "network-route-v1"
+  },
+  {
+    "suite": "H03",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS（可玩子集）",
+    "kernelType": "gem-engine-v1"
+  },
+  {
+    "suite": "H04",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS（可玩子集）",
+    "kernelType": "pattern-draft-v1",
+    "t036TileGuard": {
+      "ok": true,
+      "via": "vitest tabletop-stacking-t036.test.ts",
+      "note": "T036 guard: factory 2×2 countable glazed tiles still emitted after T043 (unit)",
+      "tip": "386c2c4",
+      "log_tail": [
+        "RUN  v4.1.11 /workspace/godesk-tide-arena",
+        "",
+        "",
+        " Test Files  1 passed (1)",
+        "      Tests  3 passed (3)",
+        "   Start at  04:18:50",
+        "   Duration  230ms (transform 95ms, setup 0ms, import 113ms, tests 6ms, environment 0ms)"
+      ]
+    }
+  },
+  {
+    "suite": "H05",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS（可玩子集）",
+    "kernelType": "auction-bidding-v1"
+  }
+]

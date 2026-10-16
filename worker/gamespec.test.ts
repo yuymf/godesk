@@ -277,6 +277,25 @@ describe("unseen prompts never silent-bind hex-island or Othello", () => {
     });
     expect([200, 201]).toContain(built.status);
   });
+
+  it("gem-engine prompt proposes gem-engine-v1 and passes the build gate", async () => {
+    const { project } = await generate("宝石作坊。拿宝石代币买发展牌获得永久折扣，贵族拜访，先到声望15。非自走棋。");
+    const rule = await readRule(project.id);
+    expect(rule.generation?.requestedMechanics).toEqual(["gem-engine"]);
+    const { generationPlan } = await (await SELF.fetch(`${origin}/api/projects/${project.id}?view=generation-plan`)).json<{ generationPlan: GenerationPlan }>();
+    expect(generationPlan.proposedRuntime).toMatchObject({ op: "configure_gem_engine", config: { playerCount: 2 } });
+    const approved = await (await post(`/api/projects/${project.id}/changes`, {
+      expectedVersion: 2, idempotencyKey: "approve-gem",
+      operations: [{ op: "approve_generation_plan", planId: generationPlan.id }, generationPlan.proposedRuntime!],
+    })).json<{ project: GameProject; ruleSystem: RuleSystem }>();
+    expect(approved.ruleSystem.runtimeSupport).toMatchObject({ status: "executable", kernel: { type: "gem-engine-v1", playerCount: 2 } });
+    expect(ruleSystemSpecIssues(approved.ruleSystem)).toEqual([]);
+    const built = await post(`/api/projects/${project.id}/builds`, {
+      expectedVersion: approved.project.version, idempotencyKey: "gem-build",
+    });
+    expect([200, 201]).toContain(built.status);
+  });
+
   it("线路网络 proposes network-route-v1 (never hex-island/Othello)", async () => {
     const { project, job } = await generate(NETWORK_PROMPT);
     expect(job.status).toBe("succeeded");

@@ -10,7 +10,9 @@ import {
   isDiscFlipping,
   isHexSettlement,
   isNetworkRoute,
-  isAuctionBidding,
+  isAuctionBidding, isPatternDraft,
+  auctionBiddingKernel, patternDraftKernel,
+  isAutoBattler,
   isHarborVoyage,
   networkRouteKernel,
   workerPlacementKernel,
@@ -30,7 +32,11 @@ import { createInitialHexIslandSessionSlice } from "./hex-settlement-session";
 import { NetworkRouteBoard } from "./NetworkRouteBoard";
 import { createInitialNetworkRouteSessionSlice } from "./network-route-thumbnail";
 import { AuctionBiddingBoard } from "./AuctionBiddingBoard";
-import { auctionBiddingAdapter, createAuctionBiddingKernelConfig, auctionBiddingToSessionFields } from "../runtime/adapters/auction-bidding";
+import { PatternDraftBoard } from "./PatternDraftBoard";
+import { auctionBiddingAdapter, bindAuctionBiddingFromRuntimeKernel, auctionBiddingToSessionFields } from "../runtime/adapters/auction-bidding";
+import { patternDraftAdapter, bindPatternDraftFromRuntimeKernel, patternDraftToSessionFields } from "../runtime/adapters/pattern-draft";
+import { TideArenaBoard } from "./TideArenaBoard";
+import { autoBattlerAdapter, createAutoBattlerKernelConfig, autoBattlerToSessionFields } from "../runtime/adapters/auto-battler";
 import { createInitialState } from "../runtime/play-kernel";
 import { WorkerPlacementBoard } from "./WorkerPlacementBoard";
 import { href, readShareToken } from "./studio-utils";
@@ -92,6 +98,10 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
   const networkRoute = isNetworkRoute(build.ruleSystem);
   const networkKernel = networkRouteKernel(build.ruleSystem);
   const auction = isAuctionBidding(build.ruleSystem);
+  const auctionKernel = auctionBiddingKernel(build.ruleSystem);
+  const patternDraft = isPatternDraft(build.ruleSystem);
+  const patternKernel = patternDraftKernel(build.ruleSystem);
+  const autoBattler = isAutoBattler(build.ruleSystem);
   const scoreTrackSurface = usesScoreTrackSurface(build.ruleSystem);
   const runtimeValues = new Map(
     race?.actions.map((action) => [action.id, action.points]) ??
@@ -187,16 +197,53 @@ export function PlayablePreview({ buildId }: { buildId: string }) {
             activeSeat={0}
             enabled={false}
             importedModels={importedModels}
-            networkRoute={createInitialNetworkRouteSessionSlice()}
+            networkRoute={createInitialNetworkRouteSessionSlice({
+              playerCount: networkKernel.playerCount,
+              terminalFrom: networkKernel.terminalFrom,
+              terminalTo: networkKernel.terminalTo,
+              freight: networkKernel.freight === true,
+              tickets: networkKernel.tickets === true,
+              content: networkKernel.content ?? null,
+              ticketsContent: (networkKernel.ticketsContent as import("../runtime/adapters/network-route").NetworkRouteTicketsContent | null | undefined) ?? null,
+            })}
             readOnly
             status="active"
-            viewerSeat={null}
+            viewerSeat={0}
           />
         </section>
-      ) : auction ? (
+      ) : auction && auctionKernel ? (
         <section className="preview-board" aria-label="拍卖竞价可玩桌面">
           <AuctionBiddingBoard
-            auction={auctionBiddingToSessionFields(createInitialState(auctionBiddingAdapter, createAuctionBiddingKernelConfig(), 42)).auctionBidding}
+            auction={auctionBiddingToSessionFields(createInitialState(
+              auctionBiddingAdapter,
+              bindAuctionBiddingFromRuntimeKernel({
+                playerCount: auctionKernel.playerCount,
+                harbor: auctionKernel.harbor === true,
+                content: auctionKernel.content ?? null,
+              }),
+              42,
+            )).auctionBidding!}
+            activeSeat={0} enabled={false} readOnly status="active" viewerSeat={0}
+          />
+        </section>
+      ) : patternDraft && patternKernel ? (
+        <section className="preview-board" aria-label="工厂草稿可玩桌面">
+          <PatternDraftBoard
+            draft={patternDraftToSessionFields(createInitialState(
+              patternDraftAdapter,
+              bindPatternDraftFromRuntimeKernel({
+                playerCount: patternKernel.playerCount,
+                content: patternKernel.content ?? null,
+              }),
+              42,
+            )).patternDraft! as React.ComponentProps<typeof PatternDraftBoard>["draft"]}
+            activeSeat={0} enabled={false} readOnly status="active" viewerSeat={0}
+          />
+        </section>
+      ) : autoBattler ? (
+        <section className="preview-board" aria-label="潮阵可玩桌面">
+          <TideArenaBoard
+            arena={autoBattlerToSessionFields(createInitialState(autoBattlerAdapter, createAutoBattlerKernelConfig(), 42)).autoBattler!}
             activeSeat={0} enabled={false} readOnly status="active" viewerSeat={null}
           />
         </section>

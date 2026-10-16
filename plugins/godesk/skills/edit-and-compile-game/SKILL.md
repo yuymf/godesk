@@ -64,7 +64,7 @@ Keep Codex edits and manual Web Studio edits on the same optimistic-version path
 - New spatial projects get an explicit render at generation time; when the
   Generation Plan binds a spatial Kernel (`hex-settlement-v1`,
   `disc-flipping-v1`, `harbor-voyage-v1`, `worker-placement-v1`,
-  `network-route-v1`), an untouched default is swapped for that Kernel's preset
+  `network-route-v1`, `auto-battler-v1`), an untouched default is swapped for that Kernel's preset
   and bindings. An edited render is kept.
 - To change the look, send one `configure_render` operation with a partial
   `patch` through `apply_project_patch`. Sections merge one level deep

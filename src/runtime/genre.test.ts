@@ -84,3 +84,17 @@ describe("hasWeakGenreScoreRaceLeak (W4-05)", () => {
     expect(hasWeakGenreScoreRaceLeak("轮流发言得 1 分，先到 5 分。")).toBe(false);
   });
 });
+
+
+describe("T008/T011 board mechanics do not steal hand-play genre", () => {
+  it("keeps hex settlement corpus generic despite incidental 手牌", () => {
+    const book =
+      "六角岛开拓。掷骰获得资源，建造道路与定居点。若掷出7，所有手牌≥7的玩家弃一半。非自走棋。";
+    expect(inferSourceGenre(book)).toBe("generic");
+  });
+  it("keeps route-network rail corpus generic despite 车厢手牌", () => {
+    const book =
+      "洲际铁道。每人抽车厢手牌；认领路线铺线，完成车票起终点。";
+    expect(inferSourceGenre(book)).toBe("generic");
+  });
+});

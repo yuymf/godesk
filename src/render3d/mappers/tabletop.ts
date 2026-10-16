@@ -7,6 +7,7 @@
  */
 import type { SceneModel, SceneNode, SceneVec3 } from "../scene-model";
 import type { LightingSpec, MaterialPattern, MaterialToken, PbrSetId } from "../tokens";
+import { FACE_SCHEMA_KINDS } from "./tabletop-face-schema";
 
 export type TabletopAction = { type: string; payload?: Record<string, unknown> };
 
@@ -54,7 +55,7 @@ export type TabletopPiece = {
   objectKind: string;
   x: number;
   z: number;
-  /** 底面高度（缺省：放在格位 / 底板顶面）。 */
+  /** 底面相对 playTop 的抬高（缺省 0：贴格位顶 / 毡面）。T047：不得再用绝对世界 Y。 */
   y?: number;
   /** 基准尺寸（世界单位），再乘 binding.scale。 */
   size: number;
@@ -119,16 +120,22 @@ const TABLE_Y = -0.06;
 
 /** 没有 binding 时的内置图元（SPEC：mapper 找不到 binding 时回退内置图元）。 */
 const FALLBACK_MESH: Record<string, string> = {
+  plate: "porcelain-plate",
+  signal: "signal-post",
   cell: "tile-square",
   region: "tile-square",
   berth: "tile-square",
   map: "tile-square",
   disc: "disc",
   station: "disc",
-  resource: "disc",
+  resource: "gem-chip",
   cargo: "disc",
-  worker: "pawn",
-  token: "pawn",
+  worker: "meeple",
+  token: "disc",
+  tile: "glazed-tile",
+  plaque: "plaque",
+  lot: "framed-art",
+  "line-trough": "line-trough",
   building: "house",
   ship: "ship",
   route: "road-bar",
@@ -449,14 +456,72 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
   }
 
   const boardBinding = bindingFor(render, board.objectKind);
-  nodes.push({
-    id: "board",
-    kind: "cell",
-    mesh: "tile-square",
-    position: [0, boardTop / 2, 0],
-    scale: [round(board.width), BOARD_THICKNESS, round(board.depth)],
-    material: libraryKey(board.materialKey ?? boardBinding.materialKey, undefined, Math.max(board.width, board.depth)),
-  });
+  const boardMatKey = board.materialKey ?? boardBinding.materialKey;
+  // T033 · when RenderSpec has cloth board + wood table, emit wood rim + felt inset
+  // (desk layouts often mark the slab as materialKey "table"; still prefer felt center).
+  const clothKey = render.materials.board?.pattern === "cloth"
+    ? "board"
+    : render.materials.map?.pattern === "cloth"
+      ? "map"
+      : null;
+  const feltInset = Boolean(render.materials.table && clothKey);
+  if (feltInset && clothKey) {
+    // T041 · product frame: wood-edge bevel rim + cloth inset + stitch lip + soft vignette corners.
+    const rim = 0.72;
+    const feltShrink = 0.38;
+    nodes.push({
+      id: "board-rim",
+      kind: "cell",
+      mesh: "felt-wood-rim",
+      position: [0, boardTop / 2 - 0.01, 0],
+      scale: [round(board.width + rim), BOARD_THICKNESS + 0.06, round(board.depth + rim)],
+      material: libraryKey("table", undefined, Math.max(board.width, board.depth) + rim),
+    });
+    // Bevel lip: thin wood ring sitting above the rim, outside the felt.
+    nodes.push({
+      id: "board-rim-lip",
+      kind: "cell",
+      mesh: "felt-wood-lip",
+      position: [0, boardTop + 0.02, 0],
+      scale: [round(board.width + rim * 0.92), 0.045, round(board.depth + rim * 0.92)],
+    });
+    // T044: felt must sit ABOVE solid wood rim top (rim top ≈ boardTop+0.02).
+    nodes.push({
+      id: "board",
+      kind: "cell",
+      mesh: "felt-inset",
+      position: [0, boardTop + 0.12, 0],
+      scale: [round(board.width - feltShrink), 0.08, round(board.depth - feltShrink)],
+      material: libraryKey(clothKey, undefined, Math.max(board.width, board.depth)),
+    });
+    nodes.push({
+      id: "board-stitch",
+      kind: "cell",
+      mesh: "felt-stitch",
+      position: [0, boardTop + 0.17, 0],
+      scale: [round(board.width - feltShrink + 0.08), 1, round(board.depth - feltShrink + 0.08)],
+      material: libraryKey("ink", render.materials.ink ?? { base: "#3f3428", roughness: 0.85, metalness: 0.05, pattern: "none" }),
+    });
+    nodes.push({
+      id: "table-vignette",
+      kind: "table",
+      mesh: "table-vignette",
+      position: [0, boardTop + 0.001, 0],
+      scale: [round(board.width + rim + 1.6), 1, round(board.depth + rim + 1.6)],
+    });
+  } else {
+    nodes.push({
+      id: "board",
+      kind: "cell",
+      mesh: "tile-square",
+      position: [0, boardTop / 2, 0],
+      scale: [round(board.width), BOARD_THICKNESS, round(board.depth)],
+      material: libraryKey(boardMatKey, undefined, Math.max(board.width, board.depth)),
+    });
+  }
+
+  // Play surface Y: with felt inset, pieces sit on felt top (not buried under wood rim).
+  const playTop = feltInset ? boardTop + 0.16 : boardTop;
 
   let grid: TabletopScene["grid"] = null;
   if (board.grid) {
@@ -484,7 +549,7 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
       id,
       kind: "cell",
       mesh,
-      position: [round(cell.x), boardTop + CELL_THICKNESS / 2, round(cell.z)],
+      position: [round(cell.x), playTop + CELL_THICKNESS / 2, round(cell.z)],
       scale: [round(cell.width), CELL_THICKNESS, round(cell.depth)],
       material: libraryKey(resolved.materialKey),
     });
@@ -492,7 +557,7 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
   }
 
   if (render.decor?.ground === "varied") {
-    for (const g of groundVariation(layout, render.decor.seed || 1, boardTop, surround?.kind === "sea")) {
+    for (const g of groundVariation(layout, render.decor.seed || 1, playTop, surround?.kind === "sea")) {
       nodes.push({ id: g.id, kind: "piece", mesh: g.mesh, position: [g.x, g.y, g.z], rotationY: g.r, scale: [g.sx, g.sy, g.sz], material: libraryKey(g.key) });
     }
   }
@@ -502,29 +567,54 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
   ];
   for (const piece of layout.pieces) {
     if (!piece.label) continue;
+    // T037: card/plaque labels are face schema tags — do not spawn debug parchment nameplates.
+    if (FACE_SCHEMA_KINDS.has(piece.objectKind)) continue;
+    // T039: forbid persistent Eng pad boards (F0/F1) and seat debug plates.
+    if (/^F\d+$/i.test(piece.label)) continue;
+    if (/^S\d+:/i.test(piece.label)) continue;
+    // T051: station names render on-station plaques — no faint floating parchment.
+    if (piece.objectKind === "station") continue;
+    // T045: forbid translucent numeric cash/score billboards on the desk (cash → chip towers or HUD only).
+    if (/^\$?\d+(\.\d+)?$/.test(piece.label.trim())) continue;
+    // T074 · purge bank/debug color counts + Eng ordinal chips (gold: 0, 1st, …)
+    if (/^(white|blue|green|red|black|gold|yellow):\d+$/i.test(piece.label.trim())) continue;
+    if (/^(1st|2nd|3rd|nth)$/i.test(piece.label.trim())) continue;
     // 名牌：平放在棋子南侧（朝向默认机位），羊皮纸底 + 墨字（tabletop-objects `label` 网格）。
     nodes.push({
       id: `label:${piece.id}`,
       kind: "label",
       mesh: "label",
       tag: piece.label,
-      position: [round(piece.x), boardTop + 0.02, round(piece.z + piece.size * 0.9 + 0.3)],
+      position: [round(piece.x), playTop + 0.02, round(piece.z + piece.size * 0.9 + 0.3)],
       scale: [1, 1, 1],
     });
   }
   for (const piece of [...layout.pieces, ...decorPieces]) {
     const resolved = bindingFor(render, piece.objectKind);
-    const size = round(piece.size * resolved.scale);
+    // T087 · shared stage-wide card scale boost (all kernels; no gem/auction fork)
+    const cardBoost = resolved.mesh === "card" ? 1.14 : 1;
+    const size = round(piece.size * resolved.scale * cardBoost);
     const id = `piece:${resolved.mesh}:${piece.id}`;
     const onCell = layout.cells.some((cell) =>
       Math.abs(cell.x - piece.x) <= cell.width / 2 && Math.abs(cell.z - piece.z) <= cell.depth / 2);
-    const baseY = piece.y ?? (onCell ? boardTop + CELL_THICKNESS : boardTop);
+    // T047: piece.y is height ABOVE playTop (not absolute world Y). Absolute y buried
+    // glazed factory tiles under the felt after T044 raised playTop.
+    const baseY = playTop + (piece.y ?? (onCell ? CELL_THICKNESS : 0));
+    // Face-schema labels win; else emphasis → major (stations); else plain label tag.
+    // T051: stations keep hub:/name tags (do not collapse emphasis to bare "major").
+    const pieceTag = FACE_SCHEMA_KINDS.has(piece.objectKind) && piece.label
+      ? piece.label
+      : piece.objectKind === "station" && piece.label
+        ? piece.label
+        : piece.emphasis
+          ? "major"
+          : piece.label;
     nodes.push({
       id,
       kind: "piece",
       mesh: resolved.mesh,
       position: [round(piece.x), round(baseY), round(piece.z)],
-      ...(piece.emphasis ? { tag: "major" } : {}),
+      ...(pieceTag ? { tag: pieceTag } : {}),
       ...(piece.rotationY ? { rotationY: round(piece.rotationY) } : {}),
       scale: [size, size, size],
       ...(piece.seat !== null && piece.seat !== undefined ? { seat: piece.seat } : {}),
@@ -536,6 +626,34 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
         : libraryKey(piece.materialKey ?? seatKey(piece.seat, resolved.materialKey)),
     });
     if (piece.action) actions[id] = piece.action;
+    // T038: soft contact shadow under instanced discs/tokens (groups already embed theirs).
+    // T081: also absolute ground blobs for tile/plate — parent-scaled embeds read too faint on small pieces.
+    if (
+      piece.objectKind === "disc"
+      || piece.objectKind === "token"
+      || piece.objectKind === "tile"
+      || piece.objectKind === "plate"
+      || piece.objectKind === "resource"
+    ) {
+      const s = piece.objectKind === "plate"
+        ? Math.max(0.55, size * 0.95)
+        : piece.objectKind === "tile"
+          ? Math.max(0.28, size * 1.65)
+          : piece.objectKind === "resource"
+            ? Math.max(0.62, size * 1.55) // T270 · short grounded ring under chip stacks
+            : Math.max(0.26, size * 1.05); // T269 · disc/token ground HARD (H02/H04)
+      // T270 · resource/chip stacks ground at playTop (not mid-stack baseY) so contact stays sharp
+      const contactY = piece.objectKind === "resource" ? playTop + 0.003 : baseY + 0.003;
+      nodes.push({
+        // Slash-encode so T047 factory/:tile: filters do not treat ground blobs as tiles.
+        id: `contact/${piece.id.replace(/:/g, "/")}`,
+        kind: "piece",
+        mesh: "contact-shadow",
+        position: [round(piece.x), round(contactY), round(piece.z)],
+        scale: [s, 1, s],
+        ...(piece.objectKind === "resource" ? { tag: "grounded-contact" } : {}),
+      });
+    }
   }
 
   for (const link of layout.links) {
@@ -555,7 +673,7 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
       mesh: linkMesh,
       // rail-track：几何按长度生成（枕木间距不随缩放拉伸），tag 带长度 / 轨距，scale 保持 1。
       ...(track ? { tag: `${round(length)}:${round(width)}` } : {}),
-      position: [round((link.from[0] + link.to[0]) / 2), round(track ? boardTop : boardTop + width * 0.3), round((link.from[1] + link.to[1]) / 2)],
+      position: [round((link.from[0] + link.to[0]) / 2), round(track ? playTop : playTop + width * 0.3), round((link.from[1] + link.to[1]) / 2)],
       rotationY: round(-Math.atan2(dz, dx)),
       scale: track ? [1, 1, 1] : [round(length), round(width * 0.6), round(width)],
       ...(link.seat !== null && link.seat !== undefined ? { seat: link.seat } : {}),
@@ -570,7 +688,7 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
       id,
       kind: "hint",
       mesh: "ring",
-      position: [round(hint.x), boardTop + CELL_THICKNESS + 0.03, round(hint.z)],
+      position: [round(hint.x), playTop + CELL_THICKNESS + 0.03, round(hint.z)],
       scale: [round(hint.radius), 1, round(hint.radius)],
     });
     actions[id] = hint.action;

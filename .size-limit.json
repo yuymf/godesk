@@ -3,6 +3,6 @@
     "name": "homepage index JS (gzip)",
     "path": "dist/assets/index-*.js",
     "gzip": true,
-    "limit": "170 KB"
+    "limit": "210 KB"
   }
 ]

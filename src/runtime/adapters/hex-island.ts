@@ -6,8 +6,10 @@
  * share `listLegalActions` → `applyAction`.
  *
  * Basic Settlers subset: fixed beginner board, initial placement, production,
- * robber+discard, build with connectivity/cost, bank/port trade, simple
- * player trade, development cards, VP win at 10. See PR body for deferred.
+ * robber+discard, build with connectivity/cost, bank/port trade, negotiated
+ * player trade (propose → accept/reject, multi-resource), domestic sealed
+ * resource auction with multi-party brokerage cut (T023), development cards,
+ * VP win at 10. See PR body for deferred.
  */
 
 import {
@@ -23,6 +25,19 @@ import {
   type PlayerId,
 } from "../play-kernel";
 import {
+  resolveSealedBids,
+  splitBrokerageAward,
+  splitNegotiatedBrokerage,
+} from "../brokerage";
+import {
+  createLiveFloorLot,
+  passOnLiveLot,
+  raiseOnLiveLot,
+  setLiveLotBrokerTerms,
+  suggestRaiseAmounts,
+  type LiveFloorLot,
+} from "../auction-floor";
+import {
   createHexBoardGraph,
   type HexBoardGraph,
 } from "../topology-stub";
@@ -35,6 +50,9 @@ const HEX_ISLAND_PHASES = [
   { id: "discard", name: "Discard on 7" },
   { id: "robber", name: "Move robber" },
   { id: "main", name: "Build / trade" },
+  { id: "trade_response", name: "Respond to trade" },
+  { id: "domestic_auction", name: "Domestic resource auction" },
+  { id: "domestic_live_floor", name: "Domestic live multi-lot floor" },
   { id: "ended", name: "Ended" },
 ] as const;
 
@@ -86,6 +104,35 @@ export type HexIslandPort = {
   kind: PortKind;
 };
 
+/** Negotiated domestic trade awaiting counterparty response (T014). */
+export type PendingTrade = {
+  from: PlayerId;
+  to: PlayerId;
+  /** Resources the proposer gives. */
+  give: ResourceBank;
+  /** Resources the proposer receives. */
+  take: ResourceBank;
+};
+
+/** Domestic sealed resource auction (T023). */
+export type PendingAuction = {
+  seller: PlayerId;
+  /** Lot the seller posts (removed from seller on resolve). */
+  lot: ResourceBank;
+  reserve: number;
+  /** null=pending, number=bid total, -1=pass. Seller slot stays -1. */
+  sealedBids: Array<number | null>;
+  brokerCutBps: number;
+  lastBroker: { seat: number; cut: number } | null;
+};
+
+/** Live-floor lot payload: escrowed resource bag (T025). */
+export type DomesticFloorPayload = {
+  lot: ResourceBank;
+};
+
+export const HEX_MAX_LIVE_LOTS = 2;
+
 export type HexIslandGenre = {
   playerCount: number;
   victoryPointsToWin: number;
@@ -112,6 +159,13 @@ export type HexIslandGenre = {
   lastAction: string | null;
   /** Seat whose turn it is (roller); survives discard rotations. */
   turnPlayer: PlayerId;
+  /** Open domestic trade offer; phase trade_response while set. */
+  pendingTrade: PendingTrade | null;
+  /** Open domestic sealed auction; phase domestic_auction while set. */
+  pendingAuction: PendingAuction | null;
+  /** T025 live multi-lot floor (shared auction-floor). */
+  activeFloorLots: Array<LiveFloorLot<DomesticFloorPayload>>;
+  lastFloorBroker: { seat: number; cut: number } | null;
 };
 
 const EMPTY_BANK = (): ResourceBank => ({
@@ -143,6 +197,34 @@ function pay(bank: ResourceBank, cost: Partial<ResourceBank>): ResourceBank | nu
 function canPay(bank: ResourceBank, cost: Partial<ResourceBank>): boolean {
   return pay(bank, cost) !== null;
 }
+
+/** Pay `amount` total resources from bank (stable resource order). */
+function extractResources(
+  bank: ResourceBank,
+  amount: number,
+): { bank: ResourceBank; paid: ResourceBank } | null {
+  if (amount < 0 || totalResources(bank) < amount) return null;
+  const next = cloneBank(bank);
+  const paid = EMPTY_BANK();
+  let remain = amount;
+  for (const key of RESOURCES) {
+    if (remain <= 0) break;
+    const take = Math.min(next[key], remain);
+    next[key] -= take;
+    paid[key] += take;
+    remain -= take;
+  }
+  if (remain > 0) return null;
+  return { bank: next, paid };
+}
+
+function addBanks(a: ResourceBank, b: ResourceBank): ResourceBank {
+  const out = cloneBank(a);
+  for (const key of RESOURCES) out[key] += b[key];
+  return out;
+}
+
+
 
 function addResources(bank: ResourceBank, gain: Partial<ResourceBank>): ResourceBank {
   const next = cloneBank(bank);
@@ -480,6 +562,34 @@ function cloneGenre(genre: HexIslandGenre): HexIslandGenre {
     players: clonePlayers(genre.players),
     discardQueue: [...genre.discardQueue],
     devDeck: [...genre.devDeck],
+    pendingTrade: genre.pendingTrade
+      ? {
+          from: genre.pendingTrade.from,
+          to: genre.pendingTrade.to,
+          give: cloneBank(genre.pendingTrade.give),
+          take: cloneBank(genre.pendingTrade.take),
+        }
+      : null,
+    pendingAuction: genre.pendingAuction
+      ? {
+          seller: genre.pendingAuction.seller,
+          lot: cloneBank(genre.pendingAuction.lot),
+          reserve: genre.pendingAuction.reserve,
+          sealedBids: [...genre.pendingAuction.sealedBids],
+          brokerCutBps: genre.pendingAuction.brokerCutBps,
+          lastBroker: genre.pendingAuction.lastBroker
+            ? { ...genre.pendingAuction.lastBroker }
+            : null,
+        }
+      : null,
+    activeFloorLots: (genre.activeFloorLots ?? []).map((lot) => ({
+      ...lot,
+      passedSinceRaise: [...lot.passedSinceRaise],
+      payload: { lot: cloneBank(lot.payload.lot) },
+    })),
+    lastFloorBroker: genre.lastFloorBroker
+      ? { ...genre.lastFloorBroker }
+      : null,
   };
 }
 
@@ -569,6 +679,70 @@ function payloadNumber(action: PlayAction, key: string): number | null {
   return Number.isInteger(value) ? (value as number) : null;
 }
 
+function parseResourceBag(
+  payload: Record<string, unknown> | undefined,
+  key: string,
+): ResourceBank | null {
+  const raw = payload?.[key];
+  if (!raw || typeof raw !== "object") return null;
+  const bag = EMPTY_BANK();
+  let any = false;
+  for (const resource of RESOURCES) {
+    const amount = (raw as Record<string, unknown>)[resource];
+    if (amount === undefined) continue;
+    if (!Number.isInteger(amount) || (amount as number) < 0) return null;
+    bag[resource] = amount as number;
+    if ((amount as number) > 0) any = true;
+  }
+  return any ? bag : null;
+}
+
+function canAffordBag(player: HexIslandPlayer, bag: ResourceBank): boolean {
+  return RESOURCES.every((resource) => player.resources[resource] >= bag[resource]);
+}
+
+function transferBag(
+  from: HexIslandPlayer,
+  to: HexIslandPlayer,
+  bag: ResourceBank,
+): void {
+  for (const resource of RESOURCES) {
+    from.resources[resource] -= bag[resource];
+    to.resources[resource] += bag[resource];
+  }
+}
+
+function formatBag(bag: ResourceBank): string {
+  return (
+    RESOURCES.filter((resource) => bag[resource] > 0)
+      .map((resource) => `${bag[resource]}${resource}`)
+      .join("+") || "∅"
+  );
+}
+
+function previewAfterTrade(
+  bank: ResourceBank,
+  give: ResourceBank,
+  take: ResourceBank,
+): ResourceBank {
+  const next = cloneBank(bank);
+  for (const resource of RESOURCES) {
+    next[resource] = next[resource] - give[resource] + take[resource];
+  }
+  return next;
+}
+
+function tradeHelpsBuild(before: ResourceBank, after: ResourceBank): boolean {
+  const costs: Array<Partial<ResourceBank>> = [
+    { wood: 1, brick: 1 },
+    { wood: 1, brick: 1, sheep: 1, wheat: 1 },
+    { wheat: 2, ore: 3 },
+    { sheep: 1, wheat: 1, ore: 1 },
+  ];
+  return costs.some(
+    (cost) => !canPay(before, cost) && Boolean(canPay(after, cost)),
+  );
+}
 
 function playableDevCount(player: HexIslandPlayer, kind: DevCardKind): number {
   const held = player.devCards.filter((card) => card === kind).length;
@@ -576,10 +750,104 @@ function playableDevCount(player: HexIslandPlayer, kind: DevCardKind): number {
   return Math.max(0, held - fresh);
 }
 
+
+function awardDomesticFloorLot(
+  genre: HexIslandGenre,
+  floorLot: LiveFloorLot<DomesticFloorPayload>,
+  winner: PlayerId,
+  price: number,
+): boolean {
+  const winnerPlayer = genre.players[winner]!;
+  const seller = genre.players[floorLot.seller]!;
+  const extracted = extractResources(winnerPlayer.resources, price);
+  if (!extracted) return false;
+  winnerPlayer.resources = extracted.bank;
+  let paid = extracted.paid;
+  genre.lastFloorBroker = null;
+  const split = splitNegotiatedBrokerage({
+    price,
+    seller: floorLot.seller,
+    winner,
+    brokerSeat: floorLot.brokerSeat,
+    cutBps: floorLot.brokerCutBps,
+  });
+  if (split.brokerSeat !== null && split.toBroker > 0) {
+    const brokerPay = extractResources(paid, split.toBroker);
+    if (brokerPay) {
+      paid = brokerPay.bank;
+      genre.players[split.brokerSeat]!.resources = addBanks(
+        genre.players[split.brokerSeat]!.resources,
+        brokerPay.paid,
+      );
+      genre.lastFloorBroker = { seat: split.brokerSeat, cut: split.toBroker };
+    }
+  }
+  seller.resources = addBanks(seller.resources, paid);
+  winnerPlayer.resources = addBanks(winnerPlayer.resources, floorLot.payload.lot);
+  genre.activeFloorLots = genre.activeFloorLots.filter(
+    (l) => l.lotId !== floorLot.lotId,
+  );
+  return true;
+}
+
+function unsoldDomesticFloorLot(
+  genre: HexIslandGenre,
+  floorLot: LiveFloorLot<DomesticFloorPayload>,
+): void {
+  const seller = genre.players[floorLot.seller]!;
+  seller.resources = addBanks(seller.resources, floorLot.payload.lot);
+  genre.activeFloorLots = genre.activeFloorLots.filter(
+    (l) => l.lotId !== floorLot.lotId,
+  );
+}
+
+function pushDomesticLiveLot(
+  genre: HexIslandGenre,
+  seller: PlayerId,
+  lot: ResourceBank,
+  reserve: number,
+  brokerSeat: number | null,
+  cutBps: number,
+): LiveFloorLot<DomesticFloorPayload> {
+  const lotId = `dom_${seller}_${Object.entries(lot)
+    .filter(([, q]) => q > 0)
+    .map(([r, q]) => `${r}${q}`)
+    .join("_")}_${genre.activeFloorLots.length}`;
+  const floorLot = createLiveFloorLot({
+    lotId,
+    seller,
+    reserve,
+    playerCount: genre.playerCount,
+    payload: { lot },
+    brokerSeat,
+    brokerCutBps: cutBps,
+  });
+  genre.activeFloorLots.push(floorLot);
+  return floorLot;
+}
+
 export const hexIslandAdapter: PlayKernelAdapter<HexIslandGenre, HexIslandConfig> = {
   kernelType: HEX_SETTLEMENT_KERNEL_TYPE,
 
   parseConfig: parseHexIslandConfig,
+
+  allowsOffTurnAction(state, action) {
+    if (state.phase === "domestic_live_floor") {
+      return (
+        action.type === "floor_raise" ||
+        action.type === "floor_pass" ||
+        action.type === "set_broker_terms" ||
+        action.type === "start_domestic_auction"
+      );
+    }
+    const auction = state.genre.pendingAuction;
+    if (!auction || state.phase !== "domestic_auction") return false;
+    if (action.type !== "auction_bid" && action.type !== "auction_pass") {
+      return false;
+    }
+    if (action.playerId === auction.seller) return false;
+    return auction.sealedBids[action.playerId] === null;
+  },
 
   createGenreState(config, seed, playerCount) {
     const graph = hexIslandBoardGraph();
@@ -602,6 +870,10 @@ export const hexIslandAdapter: PlayKernelAdapter<HexIslandGenre, HexIslandConfig
       freeRoadsRemaining: 0,
       lastAction: null,
       turnPlayer: 0,
+      pendingTrade: null,
+      pendingAuction: null,
+      activeFloorLots: [],
+      lastFloorBroker: null,
     };
   },
 
@@ -610,8 +882,23 @@ export const hexIslandAdapter: PlayKernelAdapter<HexIslandGenre, HexIslandConfig
   },
 
   listLegalActions(state, playerId) {
-    if (state.status !== "active" || playerId !== state.activePlayerId) return [];
+    if (state.status !== "active") return [];
     const genre = state.genre;
+    // Harden older session snapshots missing T023/T025 floor fields.
+    if (!genre.activeFloorLots) genre.activeFloorLots = [];
+    if (genre.pendingAuction === undefined) genre.pendingAuction = null;
+    if (genre.lastFloorBroker === undefined) genre.lastFloorBroker = null;
+    if (genre.pendingTrade === undefined) genre.pendingTrade = null;
+    const auction = genre.pendingAuction;
+    const offTurnAuction =
+      Boolean(auction) &&
+      state.phase === "domestic_auction" &&
+      playerId !== auction!.seller &&
+      auction!.sealedBids[playerId] === null;
+    const offTurnLive = state.phase === "domestic_live_floor";
+    if (playerId !== state.activePlayerId && !offTurnAuction && !offTurnLive) {
+      return [];
+    }
     const graph = hexIslandBoardGraph();
     const phase = state.phase;
     const actions: LegalAction[] = [];
@@ -671,6 +958,99 @@ export const hexIslandAdapter: PlayKernelAdapter<HexIslandGenre, HexIslandConfig
           payload: { hex: key },
         });
       }
+      return actions;
+    }
+
+    if (phase === "domestic_live_floor") {
+      for (const lot of genre.activeFloorLots) {
+        if (playerId !== lot.seller) {
+          const funds = totalResources(genre.players[playerId]!.resources);
+          for (const amount of suggestRaiseAmounts(lot, funds)) {
+            actions.push({
+              type: "floor_raise",
+              label: `Floor raise ${lot.lotId} → ${amount}`,
+              payload: { lotId: lot.lotId, amount },
+            });
+          }
+        }
+        if (!lot.passedSinceRaise[playerId]) {
+          actions.push({
+            type: "floor_pass",
+            label: `Floor pass ${lot.lotId}`,
+            payload: { lotId: lot.lotId },
+          });
+        }
+        if (
+          playerId === lot.seller &&
+          lot.highBidder === null &&
+          genre.playerCount >= 3
+        ) {
+          for (let s = 0; s < genre.playerCount; s += 1) {
+            if (s === lot.seller) continue;
+            for (const bps of [1000, 1500, 2000]) {
+              actions.push({
+                type: "set_broker_terms",
+                label: `Broker seat ${s} @ ${bps / 100}%`,
+                payload: { lotId: lot.lotId, brokerSeat: s, cutBps: bps },
+              });
+            }
+          }
+        }
+      }
+      // Seller may add another live lot under cap (no sealed pending).
+      if (
+        !genre.pendingAuction &&
+        genre.activeFloorLots.length < HEX_MAX_LIVE_LOTS &&
+        genre.activeFloorLots.some((l) => l.seller === playerId)
+      ) {
+        const player = genre.players[playerId]!;
+        for (const resource of RESOURCES) {
+          if (player.resources[resource] < 1) continue;
+          actions.push({
+            type: "start_domestic_auction",
+            label: `Live auction +1 ${resource}`,
+            payload: { resource, qty: 1, reserve: 1, mode: "live" },
+          });
+        }
+      }
+      return actions;
+    }
+
+    if (phase === "domestic_auction") {
+      const pending = genre.pendingAuction;
+      if (!pending) return [];
+      if (playerId === pending.seller) return [];
+      if (pending.sealedBids[playerId] !== null) return [];
+      const bank = genre.players[playerId]!.resources;
+      const maxBid = totalResources(bank);
+      const amounts = [
+        pending.reserve,
+        Math.min(maxBid, pending.reserve + 1),
+        Math.min(maxBid, pending.reserve + 2),
+        maxBid,
+      ].filter(
+        (a, i, arr) =>
+          a >= pending.reserve && a <= maxBid && arr.indexOf(a) === i,
+      );
+      for (const amount of amounts) {
+        actions.push({
+          type: "auction_bid",
+          label: `Auction bid ${amount}`,
+          payload: { amount },
+        });
+      }
+      actions.push({ type: "auction_pass", label: "Auction pass" });
+      return actions;
+    }
+
+    if (phase === "trade_response") {
+      const pending = genre.pendingTrade;
+      if (!pending || playerId !== pending.to) return [];
+      actions.push({
+        type: "accept_trade",
+        label: `Accept ${formatBag(pending.give)}→${formatBag(pending.take)}`,
+      });
+      actions.push({ type: "reject_trade", label: "Reject trade" });
       return actions;
     }
 
@@ -747,51 +1127,80 @@ export const hexIslandAdapter: PlayKernelAdapter<HexIslandGenre, HexIslandConfig
       }
     }
 
-    // Simple player trade: only list 1:1 swaps that complete a build/dev cost
-    // the player cannot currently afford (prevents endless circular trading).
+    // Negotiated domestic trade (T014): propose multi-resource bundles that
+    // unlock a build/dev cost the proposer cannot currently afford.
     const needsBuild =
       !canPay(player.resources, { wood: 1, brick: 1 }) ||
       !canPay(player.resources, { wood: 1, brick: 1, sheep: 1, wheat: 1 }) ||
       !canPay(player.resources, { wheat: 2, ore: 3 }) ||
       !canPay(player.resources, { sheep: 1, wheat: 1, ore: 1 });
     if (needsBuild) {
-      let tradeBudget = 6;
+      let tradeBudget = 8;
+      const pushPropose = (
+        seat: number,
+        give: ResourceBank,
+        take: ResourceBank,
+      ) => {
+        if (tradeBudget <= 0) return;
+        if (totalResources(give) < 1 || totalResources(take) < 1) return;
+        if (totalResources(give) > 4 || totalResources(take) > 4) return;
+        const opponent = genre.players[seat];
+        if (!canAffordBag(player, give) || !canAffordBag(opponent, take)) return;
+        const preview = previewAfterTrade(player.resources, give, take);
+        if (!tradeHelpsBuild(player.resources, preview)) return;
+        actions.push({
+          type: "propose_trade",
+          label: `Offer P${seat}: ${formatBag(give)}→${formatBag(take)}`,
+          payload: { withSeat: seat, give: { ...give }, take: { ...take } },
+        });
+        tradeBudget -= 1;
+      };
       for (let seat = 0; seat < genre.playerCount && tradeBudget > 0; seat += 1) {
         if (seat === playerId) continue;
         const opponent = genre.players[seat];
-        for (const give of RESOURCES) {
-          if (tradeBudget <= 0) break;
-          if (player.resources[give] < 1) continue;
-          // Don't give away a resource of which we hold only one copy of a needed cost key.
-          for (const take of RESOURCES) {
-            if (tradeBudget <= 0) break;
-            if (take === give) continue;
-            if (opponent.resources[take] < 1) continue;
-            const preview = addResources(
-              pay(player.resources, { [give]: 1 }) ?? player.resources,
-              { [take]: 1 },
-            );
-            const helps =
-              (!canPay(player.resources, { wood: 1, brick: 1 }) &&
-                canPay(preview, { wood: 1, brick: 1 })) ||
-              (!canPay(player.resources, {
-                wood: 1,
-                brick: 1,
-                sheep: 1,
-                wheat: 1,
-              }) &&
-                canPay(preview, { wood: 1, brick: 1, sheep: 1, wheat: 1 })) ||
-              (!canPay(player.resources, { wheat: 2, ore: 3 }) &&
-                canPay(preview, { wheat: 2, ore: 3 })) ||
-              (!canPay(player.resources, { sheep: 1, wheat: 1, ore: 1 }) &&
-                canPay(preview, { sheep: 1, wheat: 1, ore: 1 }));
-            if (!helps) continue;
-            actions.push({
-              type: "player_trade",
-              label: `Trade 1 ${give} with P${seat} for ${take}`,
-              payload: { give, take, withSeat: seat },
-            });
-            tradeBudget -= 1;
+        for (const giveRes of RESOURCES) {
+          if (player.resources[giveRes] < 1) continue;
+          for (const takeRes of RESOURCES) {
+            if (takeRes === giveRes || opponent.resources[takeRes] < 1) continue;
+            const g = EMPTY_BANK();
+            const tk = EMPTY_BANK();
+            g[giveRes] = 1;
+            tk[takeRes] = 1;
+            pushPropose(seat, g, tk);
+          }
+        }
+        for (let i = 0; i < RESOURCES.length && tradeBudget > 0; i += 1) {
+          for (let j = i + 1; j < RESOURCES.length && tradeBudget > 0; j += 1) {
+            const a = RESOURCES[i]!;
+            const b = RESOURCES[j]!;
+            if (player.resources[a] < 1 || player.resources[b] < 1) continue;
+            for (const takeRes of RESOURCES) {
+              if (opponent.resources[takeRes] < 1) continue;
+              if (takeRes === a || takeRes === b) continue;
+              const g = EMPTY_BANK();
+              const tk = EMPTY_BANK();
+              g[a] = 1;
+              g[b] = 1;
+              tk[takeRes] = 1;
+              pushPropose(seat, g, tk);
+            }
+          }
+        }
+        for (const giveRes of RESOURCES) {
+          if (player.resources[giveRes] < 1) continue;
+          for (let i = 0; i < RESOURCES.length && tradeBudget > 0; i += 1) {
+            for (let j = i + 1; j < RESOURCES.length && tradeBudget > 0; j += 1) {
+              const a = RESOURCES[i]!;
+              const b = RESOURCES[j]!;
+              if (opponent.resources[a] < 1 || opponent.resources[b] < 1) continue;
+              if (giveRes === a || giveRes === b) continue;
+              const g = EMPTY_BANK();
+              const tk = EMPTY_BANK();
+              g[giveRes] = 1;
+              tk[a] = 1;
+              tk[b] = 1;
+              pushPropose(seat, g, tk);
+            }
           }
         }
       }
@@ -811,12 +1220,55 @@ export const hexIslandAdapter: PlayKernelAdapter<HexIslandGenre, HexIslandConfig
       actions.push({ type: "play_road_building", label: "Play road building" });
     }
 
+    // Domestic auction (T023 sealed / T025 live multi-lot).
+    if (
+      !genre.pendingTrade &&
+      !genre.pendingAuction &&
+      (genre.activeFloorLots?.length ?? 0) === 0
+    ) {
+      for (const resource of RESOURCES) {
+        if (player.resources[resource] < 1) continue;
+        actions.push({
+          type: "start_domestic_auction",
+          label: `Sealed auction 1 ${resource}`,
+          payload: { resource, qty: 1, reserve: 1, mode: "sealed" },
+        });
+        actions.push({
+          type: "start_domestic_auction",
+          label: `Live auction 1 ${resource}`,
+          payload: { resource, qty: 1, reserve: 1, mode: "live" },
+        });
+      }
+    }
+
     actions.push({ type: "end_turn", label: "End turn" });
     return actions;
   },
 
   reduce(state, action) {
-    if (state.status !== "active" || action.playerId !== state.activePlayerId) {
+    if (state.status !== "active") return null;
+    if (!state.genre.activeFloorLots) state.genre.activeFloorLots = [];
+    if (state.genre.pendingAuction === undefined) state.genre.pendingAuction = null;
+    if (state.genre.lastFloorBroker === undefined) state.genre.lastFloorBroker = null;
+    if (state.genre.pendingTrade === undefined) state.genre.pendingTrade = null;
+    const auction0 = state.genre.pendingAuction;
+    const offTurnAuction =
+      Boolean(auction0) &&
+      state.phase === "domestic_auction" &&
+      (action.type === "auction_bid" || action.type === "auction_pass") &&
+      action.playerId !== auction0!.seller &&
+      auction0!.sealedBids[action.playerId] === null;
+    const offTurnLive =
+      state.phase === "domestic_live_floor" &&
+      (action.type === "floor_raise" ||
+        action.type === "floor_pass" ||
+        action.type === "set_broker_terms" ||
+        action.type === "start_domestic_auction");
+    if (
+      action.playerId !== state.activePlayerId &&
+      !offTurnAuction &&
+      !offTurnLive
+    ) {
       return null;
     }
     const graph = hexIslandBoardGraph();
@@ -937,7 +1389,293 @@ export const hexIslandAdapter: PlayKernelAdapter<HexIslandGenre, HexIslandConfig
       return finish("robber", genre.turnPlayer);
     }
 
-    // ---- ROBBER ----
+    // ---- DOMESTIC LIVE FLOOR (T025) ----
+    if (phase === "domestic_live_floor") {
+      const n = genre.playerCount;
+      if (action.type === "start_domestic_auction") {
+        if (genre.pendingAuction) return null;
+        if (genre.activeFloorLots.length >= HEX_MAX_LIVE_LOTS) return null;
+        if (!genre.activeFloorLots.some((l) => l.seller === playerId)) return null;
+        const resource = action.payload?.resource as Resource | undefined;
+        const qty = Number(action.payload?.qty ?? 1);
+        const reserve = Number(action.payload?.reserve ?? 1);
+        if (!resource || !RESOURCES.includes(resource)) return null;
+        if (!Number.isInteger(qty) || qty < 1 || qty > 3) return null;
+        if (!Number.isInteger(reserve) || reserve < 1) return null;
+        if (player.resources[resource] < qty) return null;
+        player.resources[resource] -= qty;
+        const lot = EMPTY_BANK();
+        lot[resource] = qty;
+        const brokerSeat =
+          typeof action.payload?.brokerSeat === "number"
+            ? (action.payload.brokerSeat as number)
+            : n >= 3
+              ? (((playerId + 1) % n) as number)
+              : null;
+        const cutBps =
+          typeof action.payload?.cutBps === "number"
+            ? (action.payload.cutBps as number)
+            : n >= 3
+              ? 1500
+              : 0;
+        pushDomesticLiveLot(
+          genre,
+          playerId,
+          lot,
+          reserve,
+          brokerSeat === playerId ? null : brokerSeat,
+          cutBps,
+        );
+        genre.lastAction = "start_domestic_auction";
+        return {
+          genre,
+          phase: "domestic_live_floor" as PlayPhaseId,
+          activePlayerId: state.activePlayerId,
+          status: "active" as const,
+          winnerId: null,
+        };
+      }
+      if (action.type === "set_broker_terms") {
+        const lotId = action.payload?.lotId;
+        if (typeof lotId !== "string") return null;
+        const floorLot = genre.activeFloorLots.find((l) => l.lotId === lotId);
+        if (!floorLot || action.playerId !== floorLot.seller) return null;
+        const brokerSeatRaw = action.payload?.brokerSeat;
+        const brokerSeat =
+          brokerSeatRaw === null || brokerSeatRaw === undefined
+            ? null
+            : (brokerSeatRaw as number);
+        const cutBps = action.payload?.cutBps;
+        if (!Number.isSafeInteger(cutBps)) return null;
+        if (
+          !setLiveLotBrokerTerms(
+            floorLot,
+            typeof brokerSeat === "number" ? brokerSeat : null,
+            cutBps as number,
+            n,
+          )
+        ) {
+          return null;
+        }
+        genre.lastAction = "set_broker_terms";
+        return {
+          genre,
+          phase: "domestic_live_floor" as PlayPhaseId,
+          activePlayerId: state.activePlayerId,
+          status: "active" as const,
+          winnerId: null,
+        };
+      }
+      if (action.type === "floor_raise") {
+        const lotId = action.payload?.lotId;
+        const amount = action.payload?.amount;
+        if (typeof lotId !== "string" || !Number.isSafeInteger(amount)) {
+          return null;
+        }
+        const floorLot = genre.activeFloorLots.find((l) => l.lotId === lotId);
+        if (!floorLot) return null;
+        const funds = totalResources(player.resources);
+        if (!raiseOnLiveLot(floorLot, playerId, amount as number, funds)) {
+          return null;
+        }
+        genre.lastAction = "floor_raise";
+        const next = ((playerId + 1) % n) as PlayerId;
+        return {
+          genre,
+          phase: "domestic_live_floor" as PlayPhaseId,
+          activePlayerId: next,
+          status: "active" as const,
+          winnerId: null,
+        };
+      }
+      if (action.type === "floor_pass") {
+        const lotId = action.payload?.lotId;
+        if (typeof lotId !== "string") return null;
+        const floorLot = genre.activeFloorLots.find((l) => l.lotId === lotId);
+        if (!floorLot) return null;
+        const settle = passOnLiveLot(floorLot, playerId, n);
+        if (settle === "award") {
+          if (
+            !awardDomesticFloorLot(
+              genre,
+              floorLot,
+              floorLot.highBidder as PlayerId,
+              floorLot.currentBid,
+            )
+          ) {
+            // Winner cannot pay (edge) — return lot to seller.
+            unsoldDomesticFloorLot(genre, floorLot);
+            genre.lastAction = "auction_unsold";
+            if (genre.activeFloorLots.length > 0) {
+              return {
+                genre,
+                phase: "domestic_live_floor" as PlayPhaseId,
+                activePlayerId: genre.turnPlayer,
+                status: "active" as const,
+                winnerId: null,
+                passed: true,
+              };
+            }
+            return finish("main", genre.turnPlayer, { passed: true });
+          }
+          genre.lastAction = "auction_awarded";
+          if (genre.activeFloorLots.length > 0) {
+            return {
+              genre,
+              phase: "domestic_live_floor" as PlayPhaseId,
+              activePlayerId: genre.turnPlayer,
+              status: "active" as const,
+              winnerId: null,
+              passed: true,
+            };
+          }
+          return finish("main", genre.turnPlayer, { passed: true });
+        }
+        if (settle === "unsold") {
+          unsoldDomesticFloorLot(genre, floorLot);
+          genre.lastAction = "auction_unsold";
+          if (genre.activeFloorLots.length > 0) {
+            return {
+              genre,
+              phase: "domestic_live_floor" as PlayPhaseId,
+              activePlayerId: genre.turnPlayer,
+              status: "active" as const,
+              winnerId: null,
+              passed: true,
+            };
+          }
+          return finish("main", genre.turnPlayer, { passed: true });
+        }
+        genre.lastAction = "floor_pass";
+        const next = ((playerId + 1) % n) as PlayerId;
+        return {
+          genre,
+          phase: "domestic_live_floor" as PlayPhaseId,
+          activePlayerId: next,
+          status: "active" as const,
+          winnerId: null,
+          passed: true,
+        };
+      }
+      return null;
+    }
+
+    // ---- DOMESTIC AUCTION (T023) ----
+    if (phase === "domestic_auction") {
+      const pending = genre.pendingAuction;
+      if (!pending) return null;
+      if (playerId === pending.seller) return null;
+      if (pending.sealedBids[playerId] !== null) return null;
+      if (action.type === "auction_pass") {
+        pending.sealedBids[playerId] = -1;
+      } else if (action.type === "auction_bid") {
+        const amount = Number(action.payload?.amount);
+        if (
+          !Number.isInteger(amount) ||
+          amount < pending.reserve ||
+          totalResources(player.resources) < amount
+        ) {
+          return null;
+        }
+        pending.sealedBids[playerId] = amount;
+      } else {
+        return null;
+      }
+
+      if (pending.sealedBids.some((b, seat) => seat !== pending.seller && b === null)) {
+        let next = ((playerId + 1) % genre.playerCount) as PlayerId;
+        for (let step = 0; step < genre.playerCount; step += 1) {
+          const s = ((playerId + 1 + step) % genre.playerCount) as PlayerId;
+          if (s === pending.seller) continue;
+          if (pending.sealedBids[s] === null) {
+            next = s;
+            break;
+          }
+        }
+        genre.lastAction = action.type;
+        return {
+          genre,
+          phase: "domestic_auction" as PlayPhaseId,
+          activePlayerId: next,
+          status: "active" as const,
+          winnerId: null,
+        };
+      }
+
+      const seatOrder = Array.from({ length: genre.playerCount }, (_, i) => i);
+      const resolved = resolveSealedBids(pending.sealedBids, seatOrder);
+      if (!resolved) {
+        // All passed — return escrowed lot to seller.
+        const sellerPlayer = genre.players[pending.seller]!;
+        sellerPlayer.resources = addBanks(sellerPlayer.resources, pending.lot);
+        genre.pendingAuction = null;
+        genre.lastAction = "auction_unsold";
+        return finish("main", pending.seller);
+      }
+
+      const winner = genre.players[resolved.winner]!;
+      const seller = genre.players[pending.seller]!;
+      const extracted = extractResources(winner.resources, resolved.amount);
+      if (!extracted) return null;
+      winner.resources = extracted.bank;
+
+      const split = splitBrokerageAward({
+        price: resolved.amount,
+        seller: pending.seller,
+        winner: resolved.winner,
+        second: resolved.second,
+        enabled: genre.playerCount >= 3,
+        cutBps: pending.brokerCutBps,
+        playerCount: genre.playerCount,
+      });
+
+      // Seller receives lot proceeds (resources); broker gets cut from paid pile.
+      let paid = extracted.paid;
+      if (split.brokerSeat !== null && split.toBroker > 0) {
+        const brokerPay = extractResources(paid, split.toBroker);
+        if (brokerPay) {
+          paid = brokerPay.bank;
+          genre.players[split.brokerSeat]!.resources = addBanks(
+            genre.players[split.brokerSeat]!.resources,
+            brokerPay.paid,
+          );
+          pending.lastBroker = { seat: split.brokerSeat, cut: split.toBroker };
+        }
+      }
+      seller.resources = addBanks(seller.resources, paid);
+      // Lot was escrowed at start — deliver to winner.
+      winner.resources = addBanks(winner.resources, pending.lot);
+
+      genre.pendingAuction = null;
+      genre.lastAction = "auction_awarded";
+      return finish("main", pending.seller);
+    }
+
+    // ---- TRADE RESPONSE ----
+    if (phase === "trade_response") {
+      const pending = genre.pendingTrade;
+      if (!pending || playerId !== pending.to) return null;
+      if (action.type === "reject_trade") {
+        genre.pendingTrade = null;
+        return finish("main", pending.from);
+      }
+      if (action.type === "accept_trade") {
+        const fromPlayer = genre.players[pending.from];
+        const toPlayer = genre.players[pending.to];
+        if (
+          !canAffordBag(fromPlayer, pending.give) ||
+          !canAffordBag(toPlayer, pending.take)
+        ) {
+          return null;
+        }
+        transferBag(fromPlayer, toPlayer, pending.give);
+        transferBag(toPlayer, fromPlayer, pending.take);
+        genre.pendingTrade = null;
+        return finish("main", pending.from);
+      }
+      return null;
+    }
+
     if (phase === "robber") {
       if (action.type === "play_knight") {
         // Knight already moved us here via play_knight → robber; disallow.
@@ -1033,27 +1771,112 @@ export const hexIslandAdapter: PlayKernelAdapter<HexIslandGenre, HexIslandConfig
         return finish("main", playerId);
       }
 
-      if (action.type === "player_trade") {
-        const give = payloadString(action, "give") as Resource | null;
-        const take = payloadString(action, "take") as Resource | null;
+      if (action.type === "start_domestic_auction") {
+        if (genre.pendingTrade || genre.pendingAuction) return null;
+        if (genre.activeFloorLots.length > 0) return null;
+        const resource = action.payload?.resource as Resource | undefined;
+        const qty = Number(action.payload?.qty ?? 1);
+        const reserve = Number(action.payload?.reserve ?? 1);
+        const mode =
+          action.payload?.mode === "sealed"
+            ? "sealed"
+            : action.payload?.mode === "live"
+              ? "live"
+              : "live";
+        if (!resource || !RESOURCES.includes(resource)) return null;
+        if (!Number.isInteger(qty) || qty < 1 || qty > 3) return null;
+        if (!Number.isInteger(reserve) || reserve < 1) return null;
+        if (player.resources[resource] < qty) return null;
+        // Escrow lot off seller immediately so it cannot be spent mid-auction.
+        player.resources[resource] -= qty;
+        const lot = EMPTY_BANK();
+        lot[resource] = qty;
+        genre.lastAction = "start_domestic_auction";
+        let next = ((playerId + 1) % genre.playerCount) as PlayerId;
+        if (next === playerId) next = 0 as PlayerId;
+        if (mode === "live") {
+          const n = genre.playerCount;
+          const brokerSeat =
+            typeof action.payload?.brokerSeat === "number"
+              ? (action.payload.brokerSeat as number)
+              : n >= 3
+                ? (((playerId + 1) % n) as number)
+                : null;
+          const cutBps =
+            typeof action.payload?.cutBps === "number"
+              ? (action.payload.cutBps as number)
+              : n >= 3
+                ? 1500
+                : 0;
+          pushDomesticLiveLot(
+            genre,
+            playerId,
+            lot,
+            reserve,
+            brokerSeat === playerId ? null : brokerSeat,
+            cutBps,
+          );
+          return {
+            genre,
+            phase: "domestic_live_floor" as PlayPhaseId,
+            activePlayerId: next,
+            status: "active" as const,
+            winnerId: null,
+          };
+        }
+        const sealedBids = Array.from({ length: genre.playerCount }, () => null as number | null);
+        sealedBids[playerId] = -1; // seller does not bid
+        genre.pendingAuction = {
+          seller: playerId,
+          lot,
+          reserve,
+          sealedBids,
+          brokerCutBps: 1000,
+          lastBroker: null,
+        };
+        return {
+          genre,
+          phase: "domestic_auction" as PlayPhaseId,
+          activePlayerId: next,
+          status: "active" as const,
+          winnerId: null,
+        };
+      }
+
+      if (action.type === "propose_trade") {
+        if (genre.pendingTrade) return null;
         const withSeat = payloadNumber(action, "withSeat");
+        const give = parseResourceBag(action.payload, "give");
+        const take = parseResourceBag(action.payload, "take");
         if (
-          !give ||
-          !take ||
           withSeat === null ||
           withSeat === playerId ||
           withSeat < 0 ||
-          withSeat >= genre.playerCount
+          withSeat >= genre.playerCount ||
+          !give ||
+          !take
         ) {
           return null;
         }
+        if (totalResources(give) > 4 || totalResources(take) > 4) return null;
         const opponent = genre.players[withSeat];
-        if (player.resources[give] < 1 || opponent.resources[take] < 1) return null;
-        player.resources[give] -= 1;
-        player.resources[take] += 1;
-        opponent.resources[take] -= 1;
-        opponent.resources[give] += 1;
-        return finish("main", playerId);
+        if (!canAffordBag(player, give) || !canAffordBag(opponent, take)) {
+          return null;
+        }
+        genre.pendingTrade = {
+          from: playerId,
+          to: withSeat as PlayerId,
+          give: cloneBank(give),
+          take: cloneBank(take),
+        };
+        genre.lastAction = "propose_trade";
+        return {
+          genre,
+          phase: "trade_response" as PlayPhaseId,
+          activePlayerId: withSeat as PlayerId,
+          status: "active" as const,
+          winnerId: null,
+        };
       }
 
       if (action.type === "buy_dev") {
@@ -1189,6 +2012,10 @@ export function hexIslandToSessionFields(state: PlayState<HexIslandGenre>): {
     freeRoadsRemaining: number;
     lastAction: string | null;
     turnPlayer: PlayerId;
+    pendingTrade: PendingTrade | null;
+    pendingAuction: PendingAuction | null;
+    activeFloorLots: Array<LiveFloorLot<DomesticFloorPayload>>;
+    lastFloorBroker: { seat: number; cut: number } | null;
   };
 } {
   const scores = state.genre.players.map((_, seat) =>
@@ -1224,6 +2051,34 @@ export function hexIslandToSessionFields(state: PlayState<HexIslandGenre>): {
       freeRoadsRemaining: state.genre.freeRoadsRemaining,
       lastAction: state.genre.lastAction,
       turnPlayer: state.genre.turnPlayer,
+      pendingTrade: state.genre.pendingTrade
+        ? {
+            from: state.genre.pendingTrade.from,
+            to: state.genre.pendingTrade.to,
+            give: cloneBank(state.genre.pendingTrade.give),
+            take: cloneBank(state.genre.pendingTrade.take),
+          }
+        : null,
+      pendingAuction: state.genre.pendingAuction
+        ? {
+            seller: state.genre.pendingAuction.seller,
+            lot: cloneBank(state.genre.pendingAuction.lot),
+            reserve: state.genre.pendingAuction.reserve,
+            sealedBids: [...state.genre.pendingAuction.sealedBids],
+            brokerCutBps: state.genre.pendingAuction.brokerCutBps,
+            lastBroker: state.genre.pendingAuction.lastBroker
+              ? { ...state.genre.pendingAuction.lastBroker }
+              : null,
+          }
+        : null,
+      activeFloorLots: (state.genre.activeFloorLots ?? []).map((lot) => ({
+        ...lot,
+        passedSinceRaise: [...lot.passedSinceRaise],
+        payload: { lot: cloneBank(lot.payload.lot) },
+      })),
+      lastFloorBroker: state.genre.lastFloorBroker
+        ? { ...state.genre.lastFloorBroker }
+        : null,
     },
   };
 }
@@ -1271,8 +2126,24 @@ function botActionWeight(action: LegalAction): number {
       return 50;
     case "bank_trade":
       return 25;
-    case "player_trade":
+    case "propose_trade":
+      return 22;
+    case "accept_trade":
+      return 60;
+    case "reject_trade":
+      return 15;
+    case "start_domestic_auction":
+      return 1;
+    case "auction_bid":
+      return 55;
+    case "auction_pass":
       return 20;
+    case "floor_raise":
+      return 55;
+    case "floor_pass":
+      return 20;
+    case "set_broker_terms":
+      return 2;
     case "roll_dice":
     case "discard":
     case "move_robber":
@@ -1292,7 +2163,21 @@ export function pickHexIslandBotAction(
 ): PlayAction | null {
   const parsed = parseHexIslandConfig(config.adapter);
   if (!parsed) return null;
-  const legal = hexIslandAdapter.listLegalActions(state, state.activePlayerId, parsed);
+  let legal = hexIslandAdapter.listLegalActions(state, state.activePlayerId, parsed);
+  if (!legal.length) return null;
+  // Autoplay: settle live floor; avoid opening auctions / broker spam.
+  if (state.phase === "domestic_live_floor") {
+    const raises = legal.filter((a) => a.type === "floor_raise");
+    const passes = legal.filter((a) => a.type === "floor_pass");
+    if (raises.length) legal = raises;
+    else if (passes.length) legal = passes;
+    else legal = legal.filter((a) => a.type !== "set_broker_terms");
+  } else {
+    legal = legal.filter((a) => a.type !== "start_domestic_auction");
+    if (!legal.length) {
+      legal = hexIslandAdapter.listLegalActions(state, state.activePlayerId, parsed);
+    }
+  }
   if (!legal.length) return null;
   const weights = legal.map(botActionWeight);
   const total = weights.reduce((sum, value) => sum + value, 0);

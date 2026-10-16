@@ -143,10 +143,12 @@ const FRAG_COLOR = [
   "  strokeGate *= smoothstep(0.18, 0.6, foamN2);",
   // Shore foam fringe (settlecoast): white hug at wet-foot ↔ water only. uTideShoreFoam gates
   // intensity by tier (high strong / medium faint / low 0). Open-ocean lace stays dim.
-  "  float shoreMask = 1.0 - smoothstep(0.0, 0.055, d);",
+  // T266 · wider wet-sand contact band (shore seam, not vignette)
+  "  float shoreMask = 1.0 - smoothstep(0.0, 0.11, d);",
+  "  float wetSandMask = (1.0 - smoothstep(0.01, 0.18, d)) * smoothstep(0.0, 0.02, d);",
   "  float shoreBreak = mix(0.5, 1.0, foamN) * mix(0.6, 1.0, foamN2);",
   "  float shoreHug = shoreMask * uTideShoreFoam * shoreBreak;",
-  "  float foamSoft = (1.0 - smoothstep(0.0, 0.07, d)) * uTideFoam * (0.22 + 0.7 * uTideShoreFoam);",
+  "  float foamSoft = (1.0 - smoothstep(0.0, 0.11, d)) * uTideFoam * (0.28 + 0.75 * uTideShoreFoam);",
   "  float r1 = exp(-pow((d - 0.005) / 0.0048, 2.0));",
   "  float r2 = exp(-pow((d - 0.016) / 0.0062, 2.0));",
   "  float r3 = exp(-pow((d - 0.03) / 0.0075, 2.0));",
@@ -156,8 +158,9 @@ const FRAG_COLOR = [
   "  float ridges = (r1 * 1.15 + r2 * 0.95 + r3 * 0.6 + r4 * 0.3) * uTideFoam * mix(0.45, 1.0, strokeGate) * (0.6 + 0.85 * uTideShoreFoam);",
   "  float lace = (rLace * 0.22 + rSpray * 0.08) * uTideFoam * strokeGate * (0.3 + 0.35 * foamN);",
   "  float crest = r1 * mix(0.2, 0.95, strokeGate) * uTideFoam * (0.75 + 0.7 * uTideShoreFoam) * (0.65 + 0.35 * foamN3);",
+  "  waterCol = mix(waterCol, vec3(0.94, 0.86, 0.62), clamp(wetSandMask * (1.25 + 0.55 * uTideShoreFoam), 0.0, 0.95)); // T266 wet sand HARD",
   "  waterCol = mix(waterCol, vec3(0.85, 0.93, 0.91), foamSoft);",
-  "  waterCol = mix(waterCol, vec3(0.97, 0.99, 0.98), clamp(shoreHug * 1.15, 0.0, 1.0));",
+  "  waterCol = mix(waterCol, vec3(0.97, 0.99, 0.98), clamp(shoreHug * 1.45, 0.0, 1.0)); // T266",
   "  waterCol = mix(waterCol, vec3(0.92, 0.97, 0.95), clamp(ridges, 0.0, 0.95) * (0.5 + 0.5 * foamN));",
   "  waterCol = mix(waterCol, vec3(0.96, 0.99, 0.98), clamp(crest, 0.0, 0.9));",
   "  waterCol = mix(waterCol, vec3(0.86, 0.94, 0.92), lace);",

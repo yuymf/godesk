@@ -1,0 +1,117 @@
+[
+  {
+    "suite": "H01",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 0,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 0
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS（可玩子集）",
+    "kernelType": "hex-settlement-v1"
+  },
+  {
+    "suite": "H02",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS（可玩子集）",
+    "kernelType": "network-route-v1"
+  },
+  {
+    "suite": "H03",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS（可玩子集）",
+    "kernelType": "gem-engine-v1"
+  },
+  {
+    "suite": "H04",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS（可玩子集）",
+    "kernelType": "pattern-draft-v1",
+    "t036TileGuard": {
+      "ok": true,
+      "via": "vitest tabletop-stacking-t036 + tabletop-factory-glaze-t047",
+      "note": "T036+T047 factory glaze guards after T052 tip 1c1c65f (regress-t052)",
+      "tip": "1c1c65f",
+      "log_tail": [
+        "RUN  v4.1.11 /workspace/godesk-tide-arena",
+        "",
+        "",
+        " Test Files  2 passed (2)",
+        "      Tests  5 passed (5)",
+        "   Start at  05:31:25",
+        "   Duration  519ms (transform 235ms, setup 0ms, import 399ms, tests 17ms, environment 0ms)"
+      ]
+    },
+    "t047FactoryGlazeGuard": {
+      "ok": true,
+      "via": "vitest tabletop-stacking-t036 + tabletop-factory-glaze-t047",
+      "note": "T036+T047 factory glaze guards after T052 tip 1c1c65f (regress-t052)",
+      "tip": "1c1c65f",
+      "log_tail": [
+        "RUN  v4.1.11 /workspace/godesk-tide-arena",
+        "",
+        "",
+        " Test Files  2 passed (2)",
+        "      Tests  5 passed (5)",
+        "   Start at  05:31:25",
+        "   Duration  519ms (transform 235ms, setup 0ms, import 399ms, tests 17ms, environment 0ms)"
+      ]
+    }
+  },
+  {
+    "suite": "H05",
+    "floors": {
+      "play": "passed",
+      "pres": "passed"
+    },
+    "room": {
+      "hasStage": 1,
+      "hasSceneHost": 1,
+      "canvas": 1,
+      "kernelAttr": 1
+    },
+    "playIsRoom": true,
+    "playIsDocs": false,
+    "score": "PASS（可玩子集）",
+    "kernelType": "auction-bidding-v1"
+  }
+]

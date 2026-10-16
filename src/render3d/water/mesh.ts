@@ -42,8 +42,8 @@ const DEFAULT_SPEC: TideWaterSpec = {
   // R21：#26b2aa/#065a6a → #2ab8af/#086070（略提亮，补偿崖脚白沫闪点减弱带来的水面均值下降；c 门槛 ①）。
   // R24：外海再提亮（#086070→#1aa0a8），54° 斜视下远海占比升高时 a-default 水面 L 不掉破 c 闸。
   // R25：外海回收向 settlecoast 深青绿（#1aa0a8→#0a6c74，近 R23 #086070；c 闸实测调）；正交后远海无透视压暗，勿再为 c 闸加码提亮。
-  shallow: "#2ab8af",
-  deep: "#0a6c74",
+  shallow: "#7affd8", // T266 wet-sand seam shallow
+  deep: "#029098",
   waveHeight: 0.065,
   waveSpeed: 0.55,
   foam: 1.0,

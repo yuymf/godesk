@@ -112,6 +112,15 @@ export type PlayKernelAdapter<TGenre, TConfig extends Record<string, unknown>> =
     winnerId: PlayerId | null;
     endReason?: string;
   } | null;
+  /**
+   * When true, `applyAction` allows this seat to act even if it is not
+   * `activePlayerId` (simultaneous commit windows, e.g. sealed bids).
+   */
+  allowsOffTurnAction?(
+    state: PlayState<TGenre>,
+    action: PlayAction,
+    config: TConfig,
+  ): boolean;
 };
 
 /** Deterministic xorshift32 RNG (matches worker/runtime nextRandom). */
@@ -244,12 +253,15 @@ export function applyAction<TGenre, TConfig extends Record<string, unknown>>(
   if (state.status !== "active") {
     return { ok: false, state, reason: "game_complete" };
   }
-  if (action.playerId !== state.activePlayerId) {
-    return { ok: false, state, reason: "not_active_player" };
-  }
   const parsed = adapter.parseConfig(config.adapter);
   if (!parsed) {
     return { ok: false, state, reason: "invalid_adapter_config" };
+  }
+  if (action.playerId !== state.activePlayerId) {
+    const offOk = adapter.allowsOffTurnAction?.(state, action, parsed) === true;
+    if (!offOk) {
+      return { ok: false, state, reason: "not_active_player" };
+    }
   }
   const legal = adapter.listLegalActions(state, action.playerId, parsed);
   const allowed = legal.some((entry) => entry.type === action.type);

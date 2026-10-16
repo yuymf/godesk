@@ -90,3 +90,71 @@ describe("inferRequestedMechanics — baseline vs unseen", () => {
     }
   });
 });
+
+
+describe("T004 mechanics cue negation", () => {
+  it("does not infer auto-battler from 非自走棋 / 不是 auto-battler", () => {
+    expect(inferRequestedMechanics("星际物流竞速（非自走棋默认包、非潮汐）。星港节点派车运货")).not.toContain("auto-battler");
+    expect(inferRequestedMechanics("这不是已有 auto-battler 默认包；星港物流车队")).not.toContain("auto-battler");
+    expect(inferRequestedMechanics("非棋盘自走棋 HUD；星图节点路线")).not.toContain("auto-battler");
+  });
+  it("binds H02-like logistics corpus to route-network only", () => {
+    const m = inferRequestedMechanics(
+      "星港车队。星际物流竞速（非自走棋、非潮汐棋盘）。玩家在星港节点间派车运货，货运合约。星图节点 + 路线高亮。",
+    );
+    expect(m).toEqual(["route-network"]);
+    expect(m).not.toContain("auto-battler");
+  });
+  it("does not infer hex from 非六角结算-style negation when no positive hex cue", () => {
+    expect(inferRequestedMechanics("做一款竞速，非六角资源建造")).not.toContain("hex-settlement");
+  });
+  it("does not infer auction from 不是拍卖 when no positive auction cue", () => {
+    expect(inferRequestedMechanics("做一款竞速，不是拍卖竞价")).not.toContain("auction-bidding");
+  });
+});
+
+describe("Tide Arena / auto-battler mechanics", () => {
+  it("binds 自走棋 / 潮阵 / 机甲 cues to auto-battler only", () => {
+    for (const prompt of [
+      "做一款两人自走棋，商店买棋上阵自动打架",
+      "潮阵自动战斗",
+      "Tide Arena auto-battler",
+      "备战席买棋上阵",
+      "赛博机甲自走棋",
+    ]) {
+      expect(inferRequestedMechanics(prompt)).toEqual(["auto-battler"]);
+    }
+    expect(mechanicsCapabilityGap(["auto-battler"], "auto-battler-v1")).toBeNull();
+  });
+});
+
+describe("BOT_PLAYABLE_KERNELS", () => {
+  it("seats the computer in the last seat only for bot-playable executable kernels", async () => {
+    const { computerSeatForRuleSystem } = await import("./kernel-capabilities");
+    expect(computerSeatForRuleSystem({ runtimeSupport: { status: "executable", unsupported: [], kernel: { type: "auto-battler-v1", playerCount: 2 } } } as never)).toBe(1);
+    expect(computerSeatForRuleSystem({ runtimeSupport: { status: "executable", unsupported: [], kernel: { type: "hex-settlement-v1", playerCount: 3 } } } as never)).toBe(2);
+    expect(computerSeatForRuleSystem({ runtimeSupport: { status: "executable", unsupported: [], kernel: { type: "turn-taking-v1", maxTurns: 4, actions: [] } } } as never)).toBeNull();
+    expect(computerSeatForRuleSystem({ runtimeSupport: { status: "draft", unsupported: [] } } as never)).toBeNull();
+  });
+});
+
+
+describe("T008 route-network ticket/rail cues", () => {
+  it("binds 车票/车厢/认领路线/铺线/铁道 corpus to route-network only", () => {
+    const book = `洲际铁道。收集彩色车厢牌，支付认领路线；持有车票连通起终点得分。铺线，非自走棋。`;
+    expect(inferRequestedMechanics(book)).toEqual(["route-network"]);
+  });
+  it("does not need logistics tokens when rail cues are present", () => {
+    expect(inferRequestedMechanics("认领路线并铺线，用车厢与车票连通城市")).toEqual(["route-network"]);
+  });
+});
+
+
+describe("T010 gem-engine cues", () => {
+  it("binds gem-token / development / noble corpus to gem-engine", () => {
+    const m = inferRequestedMechanics(
+      "宝石作坊。拿宝石代币买发展牌获得永久折扣，贵族拜访，先到声望15。",
+    );
+    expect(m).toEqual(["gem-engine"]);
+  });
+});

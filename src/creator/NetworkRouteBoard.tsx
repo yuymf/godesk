@@ -23,6 +23,8 @@ export type NetworkRouteBoardState = {
   terminalTo: string;
   lastClaim: { edgeId: string; playerId: number } | null;
   routeCounts: [number, number];
+  freight?: NetworkRouteGenre["freight"];
+  tickets?: NetworkRouteGenre["tickets"];
 };
 
 const COPY = {
@@ -45,6 +47,21 @@ const COPY = {
     linked: "已连通",
     unlinked: "未连通",
     connectHint: "先连通南北枢纽获胜",
+    funds: "资金",
+    reputation: "信誉",
+    market: "货运市场",
+    hand: "我的合约",
+    ships: "船队",
+    accept: "接合约",
+    freightHint: "接合约 → 铺线连通起终点 → 交付赚信誉；先到目标信誉获胜",
+    ticketsHint: "抽车厢牌 / 认领彩色路线 / 抽车票；按长度表计分，车票通加分未通扣分",
+    tickets: "车票",
+    trains: "车厢牌",
+    trainsLeft: "剩余车厢",
+    routePts: "路线分",
+    drawTrains: "抽车厢",
+    drawTickets: "抽车票",
+    winRep: "目标信誉",
   },
   en: {
     board: "Route network board",
@@ -65,6 +82,21 @@ const COPY = {
     linked: "linked",
     unlinked: "open",
     connectHint: "Connect the terminal hubs to win",
+    funds: "Funds",
+    reputation: "Reputation",
+    market: "Cargo market",
+    hand: "My contracts",
+    ships: "Fleet",
+    accept: "Accept",
+    freightHint: "Accept a contract, claim a path, deliver for reputation",
+    ticketsHint: "Draw trains / claim colored routes / draw tickets; length table + ticket ±",
+    tickets: "Tickets",
+    trains: "Train cards",
+    trainsLeft: "Trains left",
+    routePts: "Route pts",
+    drawTrains: "Draw trains",
+    drawTickets: "Draw tickets",
+    winRep: "Rep to win",
   },
 } as const;
 
@@ -79,6 +111,8 @@ function toGenre(board: NetworkRouteBoardState): NetworkRouteGenre {
     terminalTo: board.terminalTo,
     lastClaim: board.lastClaim ? { ...board.lastClaim } : null,
     routeCounts: [...board.routeCounts] as [number, number],
+    freight: board.freight ?? null,
+    tickets: board.tickets ?? null,
   };
 }
 
@@ -223,9 +257,7 @@ export function NetworkRouteBoard({
     linked0 ? copy.linked : copy.unlinked
   } · ${copy.seat} 1 ${linked1 ? copy.linked : copy.unlinked}`;
 
-  const width = 400;
-  const height = 360;
-
+  // T062: SVG board retired from primary return; wood chrome keeps TabletopGameScreen.
   if (render?.chrome === "wood") {
     const cityName = (id: string) => cityById(networkRoute.cities, id)?.name ?? id;
     const edgeName = (edgeId: string) => {
@@ -280,7 +312,7 @@ export function NetworkRouteBoard({
           stage={<TabletopStage kernel="network-route-v1" legal={[...legalEdges]} onAct={showLegal ? onAct : undefined} render={render} state={networkRoute} importedModels={importedModels} />}
           turnTitle={zh ? "本回合" : "This turn"}
           turnBlurb={statusLine}
-          turnDetail={copy.connectHint}
+          turnDetail={networkRoute.tickets ? copy.ticketsHint : networkRoute.freight ? copy.freightHint : copy.connectHint}
           primary={null}
           idleLine={showLegal ? (zh ? "点地图上的虚线路段，或在下方选一段铺设。" : "Tap a dashed route on the map, or pick one below.") : copy.waiting}
           chronicle={chronicle}
@@ -290,181 +322,184 @@ export function NetworkRouteBoard({
             { key: "rival", label: zh ? "对手铁轨" : "Rival track", value: viewerSeat === null ? "—" : viewerSeat === 0 ? count1 : count0, color: color(viewerSeat === null ? 1 : 1 - viewerSeat), glyph: "敌", art: seatPortrait(render.hud, viewerSeat === null ? 1 : 1 - viewerSeat) },
             { key: "open", label: zh ? "剩余路线" : "Open", value: open, glyph: "路", art: actionCardArt(render.hud, "open-routes") },
             { key: "goal", label: zh ? "连通" : "Linked", value: viewerSeat === null ? "—" : linked[viewerSeat] ? "✓" : "✗", glyph: "枢", art: actionCardArt(render.hud, "terminals") },
+            ...(networkRoute.freight
+              ? [
+                  {
+                    key: "rep",
+                    label: copy.reputation,
+                    value: viewerSeat === null ? "—" : networkRoute.freight.reputation[viewerSeat],
+                    glyph: "信",
+                    art: actionCardArt(render.hud, "terminals"),
+                  },
+                  {
+                    key: "funds",
+                    label: copy.funds,
+                    value: viewerSeat === null ? "—" : networkRoute.freight.funds[viewerSeat],
+                    glyph: "资",
+                    art: actionCardArt(render.hud, "open-routes"),
+                  },
+                ]
+              : []),
+            ...(networkRoute.tickets
+              ? [
+                  {
+                    key: "rpts",
+                    label: copy.routePts,
+                    value: viewerSeat === null ? "—" : networkRoute.tickets.routeScore[viewerSeat],
+                    glyph: "分",
+                    art: actionCardArt(render.hud, "terminals"),
+                  },
+                  {
+                    key: "tleft",
+                    label: copy.trainsLeft,
+                    value: viewerSeat === null ? "—" : networkRoute.tickets.trainsLeft[viewerSeat],
+                    glyph: "车",
+                    art: actionCardArt(render.hud, "open-routes"),
+                  },
+                ]
+              : []),
           ]}
           actionsLabel={zh ? "可铺路线" : "Claimable"}
-          actions={networkRoute.edges
-            .filter((edge) => networkRoute.claims[edge.id] === null || networkRoute.claims[edge.id] === undefined)
-            .map((edge) => ({
-              key: edge.id,
-              label: edgeName(edge.id),
-              detail: `${copy.claim} · ${edge.from}–${edge.to}`,
-              enabled: showLegal && legalEdges.has(edge.id),
-              onClick: () => onAct?.("claim", { edgeId: edge.id }),
-              art: actionCardArt(render.hud, edge.id),
-            }))}
+          actions={[
+            ...legalActions
+              .filter((a) => a.type === "draw_trains" || a.type === "draw_tickets")
+              .map((a) => ({
+                key: a.type,
+                label: a.type === "draw_trains" ? copy.drawTrains : copy.drawTickets,
+                detail: a.label,
+                enabled: showLegal,
+                onClick: () => onAct?.(a.type, {}),
+                art: actionCardArt(render.hud, "open-routes"),
+              })),
+            ...legalActions
+              .filter((a) => a.type === "accept_contract")
+              .map((a) => ({
+                key: String(a.payload?.instanceId ?? a.label),
+                label: a.label,
+                detail: copy.accept,
+                enabled: showLegal,
+                onClick: () =>
+                  onAct?.("accept_contract", {
+                    instanceId: a.payload?.instanceId,
+                  }),
+                art: actionCardArt(render.hud, "open-routes"),
+              })),
+            ...networkRoute.edges
+              .filter((edge) => networkRoute.claims[edge.id] === null || networkRoute.claims[edge.id] === undefined)
+              .map((edge) => {
+                const claimActs = legalActions.filter(
+                  (a) => a.type === "claim" && a.payload?.edgeId === edge.id,
+                );
+                const first = claimActs[0];
+                return {
+                  key: edge.id,
+                  label: edgeName(edge.id),
+                  detail: `${copy.claim} · ${edge.from}–${edge.to}`,
+                  enabled: showLegal && claimActs.length > 0,
+                  onClick: () =>
+                    onAct?.("claim", {
+                      edgeId: edge.id,
+                      ...(first?.payload?.payColor
+                        ? { payColor: first.payload.payColor }
+                        : {}),
+                    }),
+                  art: actionCardArt(render.hud, edge.id),
+                };
+              }),
+          ]}
           emptyActions={copy.noLast}
         />
       </Suspense>
     );
   }
 
+  // T062 · tabletop-first: 3D canvas primary; HTML HUD collapsed to drawer (not the board).
   return (
-    <div
+    <section
       aria-label={copy.board}
-      className="network-route-board"
+      className="network-route-board room-view-tabletop-immersive"
       data-status={status}
+      data-kernel="network-route-v1"
       role="region"
     >
-      <section aria-label={copy.hud} className="network-route-hud">
-        <div className="network-route-hud-status">
-          <span className="network-route-kicker">{copy.active}</span>
-          <strong>
-            {copy.seat} {activeSeat}
-          </strong>
-          <p>{statusLine}</p>
+      <TabletopStage
+        kernel="network-route-v1"
+        legal={[...legalEdges]}
+        onAct={showLegal ? onAct : undefined}
+        render={render}
+        state={networkRoute}
+        importedModels={importedModels}
+      />
+      <div className="desk-stage-hud" aria-live="polite">
+        <span className="desk-stage-hud-kicker">{copy.active}</span>
+        <strong className="desk-stage-hud-turn">{statusLine}</strong>
+        <span className="desk-stage-hud-supply">
+          {copy.routes} {count0}:{count1}
+        </span>
+      </div>
+      {/* T071 · production action chip */}
+      <details className="desk-chrome desk-action-drawer">
+        <summary className="desk-action-drawer-summary">
+          行动
+        </summary>
+        <div className="desk-action-drawer-body">
+          <p className="network-route-terminals">{terminalsLine}</p>
+          <p className="network-route-goal">{goalLine}</p>
           <p className="network-route-hint">{copy.connectHint}</p>
+          {networkRoute.tickets ? (
+            <div className="network-route-tickets" aria-label="tickets">
+              <p>
+                {copy.routePts}: 0={networkRoute.tickets.routeScore[0]} · 1=
+                {networkRoute.tickets.routeScore[1]} · {copy.trainsLeft}: 0=
+                {networkRoute.tickets.trainsLeft[0]} · 1={networkRoute.tickets.trainsLeft[1]}
+              </p>
+              {showLegal ? (
+                <div className="network-route-tickets-actions">
+                  {legalActions
+                    .filter((a) => a.type === "draw_trains" || a.type === "draw_tickets")
+                    .map((a) => (
+                      <button key={a.type} type="button" onClick={() => onAct?.(a.type, {})}>
+                        {a.type === "draw_trains" ? copy.drawTrains : copy.drawTickets}
+                      </button>
+                    ))}
+                  {legalActions
+                    .filter((a) => a.type === "claim")
+                    .slice(0, 8)
+                    .map((a) => (
+                      <button
+                        key={String(a.payload?.edgeId)}
+                        type="button"
+                        onClick={() =>
+                          onAct?.("claim", {
+                            edgeId: a.payload?.edgeId,
+                            ...(a.payload?.payColor ? { payColor: a.payload.payColor } : {}),
+                          })
+                        }
+                      >
+                        {copy.claim} · {String(a.payload?.edgeId)}
+                      </button>
+                    ))}
+                </div>
+              ) : null}
+            </div>
+          ) : showLegal ? (
+            <div className="network-route-tickets-actions">
+              {legalActions
+                .filter((a) => a.type === "claim")
+                .slice(0, 8)
+                .map((a) => (
+                  <button
+                    key={String(a.payload?.edgeId)}
+                    type="button"
+                    onClick={() => onAct?.("claim", { edgeId: a.payload?.edgeId })}
+                  >
+                    {copy.claim} · {String(a.payload?.edgeId)}
+                  </button>
+                ))}
+            </div>
+          ) : null}
         </div>
-        <div className="network-route-hud-scores" aria-label={copy.routes}>
-          <div className="network-route-score">
-            <span
-              aria-hidden="true"
-              className="network-route-swatch"
-              style={{ background: SEAT_COLOR[0] }}
-            />
-            <b>
-              {copy.seat} 0 · {count0}
-            </b>
-          </div>
-          <div className="network-route-score">
-            <span
-              aria-hidden="true"
-              className="network-route-swatch"
-              style={{ background: SEAT_COLOR[1] }}
-            />
-            <b>
-              {copy.seat} 1 · {count1}
-            </b>
-          </div>
-        </div>
-        <p className="network-route-hud-last">{lastLine}</p>
-        <p aria-label={copy.terminals} className="network-route-terminals">
-          {terminalsLine}
-        </p>
-        <p aria-label={copy.goal} className="network-route-goal">
-          {goalLine}
-        </p>
-      </section>
-
-      <TabletopStage kernel="network-route-v1" legal={[...legalEdges]} onAct={showLegal ? onAct : undefined} render={render} state={networkRoute} importedModels={importedModels} />
-
-      <svg
-        aria-label={copy.board}
-        className="network-route-svg"
-        height={height}
-        role="img"
-        viewBox={`0 0 ${width} ${height}`}
-        width="100%"
-      >
-        {networkRoute.edges.map((edge) => {
-          const from = cityById(networkRoute.cities, edge.from);
-          const to = cityById(networkRoute.cities, edge.to);
-          if (!from || !to) return null;
-          const owner = networkRoute.claims[edge.id];
-          const legal = showLegal && legalEdges.has(edge.id);
-          const isLast = networkRoute.lastClaim?.edgeId === edge.id;
-          const stroke =
-            owner === 0 || owner === 1
-              ? SEAT_COLOR[owner]
-              : legal
-                ? "#16a34a"
-                : "#94a3b8";
-          const clickable = legal && interactive;
-          return (
-            <g key={edge.id}>
-              <line
-                stroke={stroke}
-                strokeLinecap="round"
-                strokeWidth={owner !== null ? 8 : legal ? 6 : 4}
-                x1={from.x}
-                x2={to.x}
-                y1={from.y}
-                y2={to.y}
-                opacity={owner === null && !legal ? 0.55 : 1}
-              />
-              {isLast && (
-                <line
-                  stroke="#fbbf24"
-                  strokeDasharray="4 4"
-                  strokeLinecap="round"
-                  strokeWidth={2}
-                  x1={from.x}
-                  x2={to.x}
-                  y1={from.y}
-                  y2={to.y}
-                />
-              )}
-              {clickable && (
-                <line
-                  aria-label={`${copy.claim} ${edge.from}-${edge.to}`}
-                  className="network-route-hit"
-                  onClick={() => onAct?.("claim", { edgeId: edge.id })}
-                  role="button"
-                  stroke="transparent"
-                  strokeWidth={18}
-                  style={{ cursor: "pointer" }}
-                  tabIndex={0}
-                  x1={from.x}
-                  x2={to.x}
-                  y1={from.y}
-                  y2={to.y}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      onAct?.("claim", { edgeId: edge.id });
-                    }
-                  }}
-                />
-              )}
-            </g>
-          );
-        })}
-        {networkRoute.cities.map((city) => {
-          const terminal =
-            city.id === networkRoute.terminalFrom ||
-            city.id === networkRoute.terminalTo;
-          return (
-            <g key={city.id}>
-              <circle
-                cx={city.x}
-                cy={city.y}
-                fill={terminal ? "#0f172a" : "#1e293b"}
-                r={terminal ? 16 : 12}
-                stroke={terminal ? "#fbbf24" : "#cbd5e1"}
-                strokeWidth={terminal ? 3 : 2}
-              />
-              <text
-                fill="#f8fafc"
-                fontSize={11}
-                fontWeight={700}
-                textAnchor="middle"
-                x={city.x}
-                y={city.y + 4}
-              >
-                {city.id}
-              </text>
-              <text
-                fill="#334155"
-                fontSize={10}
-                textAnchor="middle"
-                x={city.x}
-                y={city.y + 28}
-              >
-                {city.name}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-    </div>
+      </details>
+    </section>
   );
 }

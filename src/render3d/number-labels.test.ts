@@ -53,7 +53,7 @@ describe("number token decals (G3D-ART-2)", () => {
     for (const label of labels) {
       const token = tokens.find((t) => t.id === label.id)!;
       expect(label.number).toBe(token.number);
-      expect(label.center.y).toBeCloseTo(token.position[1] + NUMBER_TOKEN_HALF_HEIGHT + LABEL_LIFT, 6);
+      expect(label.center.y).toBeCloseTo(token.position[1] + NUMBER_TOKEN_HALF_HEIGHT * (token.scale?.[1] ?? 1) + LABEL_LIFT, 6);
       expect(label.hot).toBe(label.number === 6 || label.number === 8);
     }
   });
@@ -93,14 +93,14 @@ describe("number token decals (G3D-ART-2)", () => {
   });
 
   it("highlights 6 and 8 in terracotta, others in ink, with probability pips", () => {
-    expect(LABEL_HOT).toBe("#a3442a");
+    expect(LABEL_HOT).toBe("#8a1c08");
     expect(LABEL_INK).not.toBe(LABEL_HOT);
     expect([2, 3, 4, 5, 6, 8, 9, 10, 11, 12].map(pipCount)).toEqual([1, 2, 3, 4, 5, 5, 4, 3, 2, 1]);
     const cells = new Set([2, 3, 4, 5, 6, 8, 9, 10, 11, 12].map((n) => JSON.stringify(atlasCell(n))));
     expect(cells.size).toBe(10);
     // 6/8 的筹码底不再整块涂红（不盖数字、不与座位 0 红混淆）
     expect(PROP_MATERIALS["number-token-hot"].base).not.toBe("#c0392b");
-    expect(PROP_MATERIALS["number-token-hot"].pbrSet).toBe("t11-parchment");
+    expect(PROP_MATERIALS["number-token-hot"].pbrSet).toBe("t08-wood");
   });
 
   it("re-syncs only when tokens change", () => {

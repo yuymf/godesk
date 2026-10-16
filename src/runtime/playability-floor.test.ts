@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { RuleSystem } from "../creator/project-contract";
 import { playabilityFloor } from "./playability-floor";
-import { executableAuctionBiddingSpecFixture } from "../creator/fixtures/game-spec";
+import { executableAuctionBiddingSpecFixture, executableHexIslandSpecFixture } from "../creator/fixtures/game-spec";
 
 function base(overrides: Partial<RuleSystem> = {}): RuleSystem {
   return {
@@ -518,4 +518,26 @@ describe("playabilityFloor", () => {
     expect(floor.reason).toMatch(/多幕|线索/);
   });
 
+});
+
+
+describe("T011 hex-settlement playabilityFloor with aligned mechanics", () => {
+  it("passes hex-settlement-v1 when requestedMechanics align despite incidental 手牌", () => {
+    const rule = executableHexIslandSpecFixture();
+    rule.pitch =
+      "六角岛盘掷产资源建造。若掷出7，所有手牌≥7的玩家弃一半。非自走棋。";
+    rule.rules = [
+      {
+        id: "robber-hand",
+        text: "若掷出7，所有手牌≥7的玩家弃一半。",
+        sourceId: null,
+        provenance: "source-anchored",
+        confidence: 1,
+      },
+      ...rule.rules,
+    ];
+    const floor = playabilityFloor(rule);
+    expect(floor.status).toBe("passed");
+    expect(floor.reason).toMatch(/声明机制|体裁一致/);
+  });
 });

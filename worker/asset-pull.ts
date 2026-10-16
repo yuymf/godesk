@@ -10,6 +10,9 @@ import { assetServerUrlFromEnv } from "./asset-server";
 import { toGlb } from "./gltf-zip-to-glb";
 
 const ZH_TERMS: Array<[RegExp, string]> = [
+  [/螃蟹|蟹/, "crab"],
+  [/机器人|机甲|机兵|mech(?:a)?|robot/i, "robot"],
+  [/巫师|法师|女巫|巫/, "wizard"],
   [/木?桶/, "barrel"],
   [/箱/, "crate"],
   [/树桩|树墩/, "stump"],
@@ -105,6 +108,10 @@ export async function pullCc0GlbFromPrompt(
     .sort((a, b) => {
       const ts = titleScore(b) - titleScore(a);
       if (ts) return ts;
+      // Prefer sidecar `local` curated import-sized GLBs over upstream blend-only CC0 hits.
+      const al = a.provider === "local" ? 0 : 1;
+      const bl = b.provider === "local" ? 0 : 1;
+      if (al !== bl) return al - bl;
       const ag = a.formats?.includes("glb") ? 0 : 1;
       const bg = b.formats?.includes("glb") ? 0 : 1;
       if (ag !== bg) return ag - bg;

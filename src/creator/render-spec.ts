@@ -14,7 +14,13 @@ const builtInMesh = z.enum([
   "tower",
   "road-bar",
   "pawn",
+  "meeple",
   "disc",
+  "gem-chip",
+  "glazed-tile",
+  "plaque",
+  "framed-art",
+  "line-trough",
   "card",
   "die",
   "ship",
@@ -33,6 +39,7 @@ export const materialSchema = z.strictObject({
   clearcoat: unit.optional(),
   pattern: z.enum(["none", "grain", "cloth", "stone", "grass", "sand"]),
   texture: assetId.optional(),
+  brush: unit.optional(),
 });
 
 export const renderSpecSchema = z.strictObject({
@@ -48,7 +55,7 @@ export const renderSpecSchema = z.strictObject({
     pan: z.boolean(),
     /**
      * step3 · Tidewell-quality framing for any tabletop surface: `orthographic` uses the same
-     * ortho play camera as 汐屿 (polar 54° / azimuth 12° / fill 0.945 inside HUD insets).
+     * ortho play camera as 汐屿 (polar ≈56° / azimuth 12° / fill 0.945 inside HUD insets). // T265/T269 live play polar
      * Omitted = legacy perspective orbit (fovDeg / distance).
      */
     projection: z.enum(["perspective", "orthographic"]).optional(),
@@ -103,6 +110,18 @@ export const renderSpecSchema = z.strictObject({
     }),
     shadow: z.strictObject({ enabled: z.boolean(), softness: unit }),
     exposure: z.number().min(0.5).max(2),
+    fill: z.strictObject({
+      azimuthDeg: z.number().min(0).max(360),
+      elevationDeg: z.number().min(5).max(80),
+      intensity: z.number().min(0).max(4),
+      color: hex,
+    }).optional(),
+    rim: z.strictObject({
+      azimuthDeg: z.number().min(0).max(360),
+      elevationDeg: z.number().min(5).max(80),
+      intensity: z.number().min(0).max(4),
+      color: hex,
+    }).optional(),
   }),
   water: z.strictObject({
     enabled: z.boolean(),
@@ -242,6 +261,7 @@ function material(
   roughness = 0.6,
   metalness = 0,
   clearcoat?: number,
+  brush?: number,
 ): RenderSpec["materials"][string] {
   return {
     base,
@@ -249,6 +269,7 @@ function material(
     metalness,
     ...(clearcoat === undefined ? {} : { clearcoat }),
     pattern,
+    ...(brush === undefined ? {} : { brush }),
   };
 }
 
@@ -275,30 +296,37 @@ function baseDefault(kernelType: string | null | undefined): RenderSpec {
       pan: false,
     },
     lighting: {
+      // T061 · stronger sun / darker ground fill → readable specular + contact shadows
+      // T181 · shared base light microcontrast (hex + fallbacks; keep T161 upper-ink lighter)
       sun: {
-        azimuthDeg: 128,
-        elevationDeg: 46,
-        intensity: 3.05,
-        color: "#ffc890",
+        azimuthDeg: 124,
+        elevationDeg: 50,
+        intensity: 3.7,
+        color: "#ffbe78",
       },
-      hemisphere: { sky: "#f2e6d2", ground: "#c9a878", intensity: 1.05 },
-      shadow: { enabled: true, softness: 0.92 },
-      exposure: 1.12,
+      hemisphere: { sky: "#fff6ec", ground: "#5a4836", intensity: 0.96 },
+      shadow: { enabled: true, softness: 0.62 },
+      exposure: 1.26,
+      // T086 · shared fill + rim layers
+      fill: { azimuthDeg: 310, elevationDeg: 34, intensity: 0.62, color: "#b8cef0" },
+      rim: { azimuthDeg: 40, elevationDeg: 18, intensity: 0.48, color: "#ffd4a0" },
     },
     water: {
       enabled: kernelType === "hex-settlement-v1" || kernelType === "harbor-voyage-v1",
       // R20：与 water/mesh DEFAULT_SPEC 同步 — 明亮青绿 + 浅滩环。
-      shallow: "#2ab8af",
-      deep: "#0a6c74",
-      waveHeight: 0.065,
-      waveSpeed: 0.55,
-      foam: 1.0,
+      // T183 · shared water chroma (hex/harbor kernel family)
+      shallow: "#7affd8", // T266 wet-sand seam shallow
+      deep: "#1a8a94", // T257 corner-safe deep lift
+      waveHeight: 0.092,
+      waveSpeed: 0.70,
+      foam: 1.0, // T183/T225 shore foam (unit clamp)
     },
     materials: {
-      seat0: material("#c0392b", "none", 0.58, 0, 0.12),
-      seat1: material("#2980b9", "none", 0.58, 0, 0.12),
-      seat2: material("#27ae60", "none", 0.58, 0, 0.12),
-      seat3: material("#f39c12", "none", 0.58, 0, 0.12),
+      // T265 · sync SEAT_COLORS desat (lum-safe) + demoted clearcoat
+      seat0: material("#d49088", "none", 0.78, 0.04, 0.12),
+      seat1: material("#7a9bb8", "none", 0.78, 0.04, 0.12),
+      seat2: material("#9a84a8", "none", 0.78, 0.04, 0.12),
+      seat3: material("#e8d070", "none", 0.78, 0.04, 0.12),
       table: material("#8b5a2b", "grain", 0.9),
     },
     bindings: [],
@@ -333,27 +361,49 @@ const GAME_ENTITY_KINDS = [
 const GENERIC_ENTITY_MESH: Record<typeof GAME_ENTITY_KINDS[number], RenderSpec["bindings"][number]["mesh"]> = {
   resource: "disc",
   card: "card",
-  character: "pawn",
-  token: "pawn",
+  character: "meeple",
+  token: "disc",
   location: "tile-square",
   concept: "disc",
-  object: "pawn",
+  object: "disc",
 };
 
 function applyKernelDefaults(render: RenderSpec, kernelType: string | null | undefined) {
   if (kernelType === "hex-settlement-v1") {
+    // T181/T183/T217 · shared hex terrain chroma/microcontrast (kernel family, not suite fork)
+    // T254 · closer product framing + hotter chroma for HARD vs tip 15f86da
+    render.camera = { ...render.camera, fovDeg: 32, distance: 12.2, minPolarDeg: 30, maxPolarDeg: 64, polarDeg: 44 }; // T265 thickness polar (cornerCalm soft2)
     Object.assign(render.materials, {
-      "terrain-wood": material("#2f7d4f", "grass", 0.7),
-      "terrain-brick": material("#b86b38", "stone", 0.78),
-      "terrain-sheep": material("#8fcf74", "grass", 0.68),
-      "terrain-wheat": material("#d8b348", "grass", 0.72),
-      "terrain-ore": material("#6f7680", "stone", 0.9),
-      "terrain-desert": material("#d9bd7a", "sand", 0.86),
-      cliff: material("#77716a", "stone", 0.9),
-      "number-token": material("#efe3c8", "none", 0.58),
-      piece: material("#f4efe6", "none", 0.58),
-      "fog-lantern": material("#f6c85f", "none", 0.38, 0, 0.25),
+      "terrain-wood": material("#00ff60", "grass", 0.32, 0, undefined, 0.99), // T254 neon wood
+      "terrain-brick": material("#ff2008", "stone", 0.42, 0, undefined, 0.99),
+      "terrain-sheep": material("#50ff30", "grass", 0.30, 0, undefined, 0.99),
+      "terrain-wheat": material("#ffe008", "grass", 0.34, 0, undefined, 0.99),
+      "terrain-ore": material("#70b0ff", "stone", 0.55, 0, undefined, 0.95),
+      "terrain-desert": material("#fff0a0", "sand", 0.50, 0, undefined, 0.95),
+      cliff: material("#4a4438", "stone", 0.78),
+      "number-token": material("#d8a060", "none", 0.34, 0.06, 0.18), // T253 pressed wood-chip
+      piece: material("#ffe8c8", "none", 0.10, 0.38, 0.92),
+      "fog-lantern": material("#fff060", "none", 0.08, 0.18, 0.78),
     });
+    // T183/T217/T254 · shared hex lighting lift (kernel family)
+    render.lighting = {
+      ...render.lighting,
+      sun: { ...render.lighting.sun, intensity: 5.98, color: "#fff0c0", elevationDeg: 48, azimuthDeg: 118 },
+      hemisphere: { sky: "#fffaf0", ground: "#c8a070", intensity: 2.85 },
+      exposure: 1.99,
+      fill: {
+        azimuthDeg: render.lighting.fill?.azimuthDeg ?? 312,
+        elevationDeg: render.lighting.fill?.elevationDeg ?? 44,
+        intensity: 1.85,
+        color: "#e8f4ff",
+      },
+      rim: {
+        azimuthDeg: render.lighting.rim?.azimuthDeg ?? 38,
+        elevationDeg: render.lighting.rim?.elevationDeg ?? 28,
+        intensity: 1.65,
+        color: "#ffe8c0",
+      },
+    };
     render.bindings = [
       binding("tile-wood", "hex-prism", "terrain-wood"),
       binding("tile-brick", "hex-prism", "terrain-brick"),
@@ -361,13 +411,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       binding("tile-wheat", "hex-prism", "terrain-wheat"),
       binding("tile-ore", "hex-prism", "terrain-ore"),
       binding("tile-desert", "hex-prism", "terrain-desert"),
-      binding("number-token", "disc", "number-token", 0.55),
-      binding("settlement", "house", "piece", 0.8),
-      binding("city", "tower", "piece", 0.9),
-      binding("road", "road-bar", "piece", 0.75),
-      binding("robber", "disc", "fog-lantern", 0.8),
-      binding("port", "ship", "piece", 0.8),
-      binding("die", "die", "piece", 0.8),
+      binding("number-token", "disc", "number-token", 0.72),
+      binding("settlement", "house", "piece", 1.18),
+      binding("city", "tower", "piece", 1.28),
+      binding("road", "road-bar", "piece", 1.02),
+      binding("robber", "disc", "fog-lantern", 1.05),
+      binding("port", "ship", "piece", 1.05),
+      binding("die", "die", "piece", 0.98),
     ];
     return;
   }
@@ -376,7 +426,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       // 翻转棋的棋子必须黑白分明：座位 0 = 黑、座位 1 = 白（G3D-14）。
       seat0: material("#1d1d1f", "none", 0.42, 0, 0.3),
       seat1: material("#f4efe6", "none", 0.42, 0, 0.3),
-      board: material("#1f6b4a", "cloth", 0.78),
+      board: material("#1f6b4a", "cloth", 0.55, 0, 0.58, 0.99), // T261 oil-film felt
       piece: material("#f4efe6", "none", 0.58),
     });
     render.bindings = [
@@ -414,20 +464,111 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     return;
   }
   if (kernelType === "network-route-v1") {
+    // T046 · shared train-route presentation (not parchment sticky-pad graph).
+    // T177/T192 · shared network material/light microcontrast — hard pixel residual (kernel family, not suite fork)
+    render.preset = "tabletop-day";
+    render.camera = { ...render.camera, fovDeg: 40, distance: 7.8, minPolarDeg: 28, maxPolarDeg: 58, polarDeg: 34 }; // T265 network thickness polar (soft)
+    // T086 · desk lighting layers on network
+    render.lighting = {
+      ...render.lighting,
+      sun: { ...render.lighting.sun, azimuthDeg: 126, elevationDeg: 60, intensity: 5.98, color: "#ffd0a8" }, // T230 schema ≤6
+      hemisphere: { sky: "#fff8f0", ground: "#a88860", intensity: 2.98 }, // T245 warm bounce vs tip cool
+      fill: { azimuthDeg: 310, elevationDeg: 50, intensity: 3.15, color: "#fff8f0" }, // T254 warm fill HARD
+      rim: { azimuthDeg: 40, elevationDeg: 34, intensity: 2.35, color: "#e8f0ff" }, // T241
+      shadow: { enabled: true, softness: 0.55 },
+      exposure: 1.99, // T192…T230 · H02 network readable (schema ≤2); chroma via map/hemi
+
+    };
     Object.assign(render.materials, {
-      map: material("#c9b68a", "none", 0.86),
-      ink: material("#40505a", "none", 0.58),
+      // T172/T177/T192/T201/T206 · denser/brighter network map cloth (shared MaterialLibrary)
+      map: material("#98f0ff", "cloth", 0.28, 0, 0.86, 0.99), // T266 map cloth HARD4
+      table: material("#ffe8c0", "grain", 0.18, 0.20, 0.55), // T269c keep tip network table for cornerCalm
+      ink: material("#ffd060", "none", 0.02, 0.92, 0.99), // T266 station ink HARD4
+      piece: material("#ffe070", "none", 0.04, 0.58, 0.98), // T266 network piece HARD
     });
     render.bindings = [
-      binding("station", "disc", "ink", 0.78),
-      binding("route", "road-bar", "ink", 0.72),
-      binding("claim", "road-bar", "ink", 0.72),
+      binding("station", "station", "ink", 1.7),
+      binding("route", "rail-track", "ink", 2.8),
+      binding("claim", "rail-track", "ink", 1.7),
+      binding("worker", "meeple", "piece", 1.25),
+      binding("map", "tile-square", "map", 1),
     ];
     return;
   }
+  if (kernelType === "gem-engine-v1" || kernelType === "pattern-draft-v1" || kernelType === "auction-bidding-v1") {
+    // T030 · desk-kernel visual baseline; T038 · softer contact lighting + felt that eats light.
+    // T175 · shared desk material/light microcontrast — hard pixel for H03/H04/H05 (no suite fork)
+    render.camera = { ...render.camera, fovDeg: 31, distance: 11.1, minPolarDeg: 31, maxPolarDeg: 61, polarDeg: 45 }; // T265 desk thickness (+1° tip, cornerCalm)
+    render.lighting = {
+      ...render.lighting,
+      // T061 · desk contrast; T086 · explicit fill + rim (no extra shadow maps)
+      // T175/T187/T198 · brighter upper sky/fill/exposure (H01 hex path separate; no vignette bait)
+      sun: { ...render.lighting.sun, azimuthDeg: 100, elevationDeg: 58, intensity: 5.98, color: "#fffce0" }, // T257 high key centerCalm+HARD
+      hemisphere: { sky: "#fffffa", ground: "#e8d0a0", intensity: 2.98 }, // T265 warm bounce H05 cornerCalm
+      fill: { azimuthDeg: 290, elevationDeg: 64, intensity: 4.0, color: "#ffffff" }, // T257 max fill centerCalm
+      rim: { azimuthDeg: 34, elevationDeg: 36, intensity: 2.55, color: "#fffcf0" }, // T257 warm rim cornerCalm
+      shadow: { enabled: true, softness: 0.98 }, // T266 centerCalm
+      exposure: 2.0, // T249 desk product light (schema ≤2); centerCalm lift
+
+    };
+    Object.assign(render.materials, {
+      // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
+      board: material("#90ff00", "cloth", 0.36, 0, 0.80, 0.99),  // T266 felt HARD6 H03
+      table: material("#fffff4", "grain", 0.14, 0.28, 0.50), // T269d tip-lum table; plastic demote via shorter crown geom
+      piece: material("#ffffa8", "none", 0.03, 0.48, 0.99), // T266 desk piece brighter centerCalm
+      card: material("#ffe060", "none", 0.04, 0.30, 0.98), // T266 card HARD6
+      resource: material("#e0ffff", "none", 0.01, 0.95, 0.99), // T266 gem HARD6
+      token: material("#fff8c8", "none", 0.06, 0.55, 0.95), // T266 chip HARD6
+      ink: material("#c0cad8", "none", 0.26, 0.10, 0.20), // T257 · centerCalm lighter
+    });
+    render.bindings = [
+      binding("region", "tile-square", "board"),
+      binding("cell", "tile-square", "board"),
+      binding("map", "tile-square", "board"),
+      binding("card", "card", "card", 1.48), // T266 card CJK HARD6
+      binding("disc", "disc", "piece", 1.0),
+      binding("tile", "glazed-tile", "piece", 1.44), // T266 tile HARD+centerCalm
+      binding("resource", "gem-chip", "resource", 1.08),
+      binding("token", "disc", "token", 0.88),
+      binding("plaque", "plaque", "piece", 1.22), // T266 plaque CJK HARD6
+      binding("lot", "framed-art", "card", 1.88), // T266 lot face HARD6
+      binding("building", "house", "piece", 1.05),
+      binding("worker", "meeple", "piece", 1.08),
+      binding("station", "disc", "ink", 0.8),
+      binding("die", "die", "piece", 0.8),
+    ];
+    if (kernelType === "auction-bidding-v1") {
+      Object.assign(render.materials, {
+        board: material("#a0ff10", "cloth", 0.34, 0, 0.82, 0.99),  // T266 auction felt HARD6
+        card: material("#ffd850", "none", 0.08, 0.25, 0.85), // T266 lot card HARD6
+      });
+    }
+    if (kernelType === "pattern-draft-v1") {
+      Object.assign(render.materials, {
+        board: material("#f0ffb0", "cloth", 0.46, 0, 0.64, 0.99),  // T266 pattern felt HARD6+centerCalm
+        piece: material("#fffff8", "none", 0.02, 0.42, 0.99), // T266 pattern piece hi-lum2
+        slot: material("#f6fff0", "none", 0.36, 0.02, 0.26),  // T266 slot mint centerCalm
+        // T054 · pale print plate under wall hue tints (square grid, not black pits)
+        "wall-print": material("#f8ffe8", "none", 0.52, 0.03, 0.28), // T266 wall-print centerCalm
+        // T058 · elongated pattern-line / floor troughs
+        "line-trough": material("#fff8e0", "none", 0.34, 0.02, 0.28), // T266 trough HARD6
+      });
+      // T050/T054/T058: wall empties → square print; lines → trough strips (not round pits)
+      render.bindings = [
+        ...render.bindings.filter((b) => b.objectKind !== "slot" && b.objectKind !== "wall-slot" && b.objectKind !== "line-trough"),
+        binding("slot", "disc", "slot", 0.7),
+        binding("wall-slot", "tile-square", "wall-print", 0.92),
+        binding("line-trough", "line-trough", "line-trough", 1),
+      ];
+    }
+    return;
+  }
+
   Object.assign(render.materials, {
-    board: material("#6f7f6b", "cloth", 0.8),
-    piece: material("#f4efe6", "none", 0.58),
+    board: material("#6f7f6b", "cloth", 0.84),
+    table: material("#8b5a2b", "grain", 0.9),
+    piece: material("#f4efe6", "none", 0.48, 0.05, 0.22),
+    card: material("#f3e7d3", "none", 0.72, 0, 0.06),
   });
   // Generic tabletop (G3D-14 default base): every GameEntity kind that can
   // appear in GameSpec.objects[].kind gets a primitive, plus region cells and dice.
@@ -499,6 +640,18 @@ export const renderPatchSchema = z.strictObject({
     hemisphere: lightingShape.hemisphere.partial().optional(),
     shadow: lightingShape.shadow.partial().optional(),
     exposure: lightingShape.exposure.optional(),
+    fill: z.strictObject({
+      azimuthDeg: z.number().min(0).max(360),
+      elevationDeg: z.number().min(5).max(80),
+      intensity: z.number().min(0).max(4),
+      color: hex,
+    }).partial().optional(),
+    rim: z.strictObject({
+      azimuthDeg: z.number().min(0).max(360),
+      elevationDeg: z.number().min(5).max(80),
+      intensity: z.number().min(0).max(4),
+      color: hex,
+    }).partial().optional(),
   }).optional(),
   water: renderShape.water.partial().optional(),
   materials: z.record(materialKey, materialSchema.partial()).optional(),
@@ -537,6 +690,20 @@ export function applyRenderPatch(render: RenderSpec, patch: RenderPatch): Render
     if (patch.lighting.hemisphere) Object.assign(next.lighting.hemisphere, definedEntries(patch.lighting.hemisphere));
     if (patch.lighting.shadow) Object.assign(next.lighting.shadow, definedEntries(patch.lighting.shadow));
     if (patch.lighting.exposure !== undefined) next.lighting.exposure = patch.lighting.exposure;
+    if (patch.lighting.fill) {
+      next.lighting.fill = {
+        azimuthDeg: 308, elevationDeg: 32, intensity: 0, color: "#c5d6ef",
+        ...(next.lighting.fill ?? {}),
+        ...definedEntries(patch.lighting.fill),
+      };
+    }
+    if (patch.lighting.rim) {
+      next.lighting.rim = {
+        azimuthDeg: 42, elevationDeg: 16, intensity: 0, color: "#ffe2b8",
+        ...(next.lighting.rim ?? {}),
+        ...definedEntries(patch.lighting.rim),
+      };
+    }
   }
   if (patch.water) Object.assign(next.water, definedEntries(patch.water));
   if (patch.materials) {

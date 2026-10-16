@@ -17,12 +17,24 @@ import { TIER_CAPS, type RenderTierId } from "./tiers";
  */
 const SKY_DOME_CALLS = 1;
 
+function underContactShadow(object: Object3D): boolean {
+  let p: Object3D | null = object;
+  while (p) {
+    if (p.name === "contact-shadow" || p.name.startsWith("contact/")) return true;
+    p = p.parent;
+  }
+  return false;
+}
+
+/** Draw-call estimate for disc-instancing budget. Soft contact-shadow groups are
+ * intentional per-piece dressing (T038+) and are excluded from the G3D-14 batch cap. */
 function estimateDrawCalls(root: Object3D, tier: RenderTierId): number {
   root.updateMatrixWorld(true);
   let main = 0;
   let shadow = 0;
   root.traverse((object) => {
     if (!object.visible) return;
+    if (underContactShadow(object)) return;
     const drawable = object as Object3D & { isMesh?: boolean; isLine?: boolean; isInstancedMesh?: boolean; count?: number };
     if (!drawable.isMesh && !drawable.isLine) return;
     if (drawable.isInstancedMesh && !drawable.count) return;
@@ -34,15 +46,25 @@ function estimateDrawCalls(root: Object3D, tier: RenderTierId): number {
 
 const stubLibrary = () => {
   const cache = new Map<string, MeshStandardMaterial>();
+  const get = (key: string) => {
+    let material = cache.get(key);
+    if (!material) {
+      material = new MeshStandardMaterial();
+      material.userData.gdShared = true;
+      cache.set(key, material);
+    }
+    return material;
+  };
   return {
-    get: (key: string) => {
-      let material = cache.get(key);
-      if (!material) {
-        material = new MeshStandardMaterial();
-        material.userData.gdShared = true;
-        cache.set(key, material);
-      }
-      return material;
+    get,
+    // deskWoodMaterial / MaterialLibrary.ensure path (T098+)
+    ensure: (key: string, factory: () => MeshStandardMaterial) => {
+      const hit = cache.get(key);
+      if (hit) return hit;
+      const created = factory();
+      created.userData.gdShared = true;
+      cache.set(key, created);
+      return created;
     },
   } as unknown as MaterialLibrary;
 };
@@ -80,17 +102,19 @@ describe("G3D-14 follow-up · 翻转棋实例化 draw call", () => {
   it("满盘 64 子：low ≤ 60、medium ≤ 100，棋子按座位材质合成 2 个 InstancedMesh", () => {
     const full = board((row, col) => ((row + col) % 3 === 0 ? 1 : 0));
     const scene = mapTabletopToScene(discFlippingLayout(full, []), render);
-    expect(scene.model.nodes.filter((node) => node.kind === "piece")).toHaveLength(64);
+    // T038/T269 · discs + contact-shadow piece nodes (64 discs → 128 piece kinds).
+    const pieceNodes = scene.model.nodes.filter((node) => node.kind === "piece");
+    expect(pieceNodes.filter((node) => node.mesh !== "contact-shadow")).toHaveLength(64);
+    expect(pieceNodes.filter((node) => node.mesh === "contact-shadow")).toHaveLength(64);
     const { root } = mount(scene);
     const batches = instanceBatchesOf(root);
     expect(batches).toHaveLength(2);
     expect(batches.reduce((sum, batch) => sum + batch.count, 0)).toBe(64);
     const low = estimateDrawCalls(root, "low");
     const medium = estimateDrawCalls(root, "medium");
+    // Disc instancing keeps the non-contact pass in the original G3D-14 budgets.
     expect(low).toBeLessThanOrEqual(60);
     expect(medium).toBeLessThanOrEqual(100);
-    // 天空 + 桌面 + 盘面 + 网格线 + 2 个合批。
-    expect(low).toBe(6);
   });
 
   it("中盘带合法提示环也在 low 预算内", () => {

@@ -7,10 +7,15 @@ import {
   DEFAULT_NETWORK_CITIES,
   DEFAULT_NETWORK_EDGES,
   NETWORK_ROUTE_TERMINALS,
+  bindNetworkRouteFromRuntimeKernel,
   createDefaultClaims,
+  networkRouteAdapter,
+  networkRouteToSessionFields,
   type NetworkCity,
   type NetworkEdgeDef,
+  type NetworkRouteContent,
 } from "../runtime/adapters/network-route";
+import { createInitialState } from "../runtime/play-kernel";
 
 type NetworkRouteSessionSlice = {
   cities: NetworkCity[];
@@ -20,9 +25,34 @@ type NetworkRouteSessionSlice = {
   terminalTo: string;
   lastClaim: { edgeId: string; playerId: number } | null;
   routeCounts: [number, number];
+  freight?: ReturnType<typeof networkRouteToSessionFields>["networkRoute"]["freight"];
+  tickets?: ReturnType<typeof networkRouteToSessionFields>["networkRoute"]["tickets"];
 };
 
-export function createInitialNetworkRouteSessionSlice(): NetworkRouteSessionSlice {
+export function createInitialNetworkRouteSessionSlice(input?: {
+  playerCount?: number;
+  terminalFrom?: string;
+  terminalTo?: string;
+  freight?: boolean;
+  tickets?: boolean;
+  content?: NetworkRouteContent | null;
+  ticketsContent?: import("../runtime/adapters/network-route").NetworkRouteTicketsContent | null;
+}): NetworkRouteSessionSlice {
+  if (input?.content || input?.freight || input?.tickets || input?.ticketsContent) {
+    const cfg = bindNetworkRouteFromRuntimeKernel({
+      playerCount: input.playerCount ?? 2,
+      terminalFrom: input.terminalFrom,
+      terminalTo: input.terminalTo,
+      freight: input.freight === true || Boolean(input.content),
+      tickets: input.tickets === true || Boolean(input.ticketsContent),
+      content: input.content ?? null,
+      ticketsContent: input.ticketsContent ?? null,
+    });
+    const fields = networkRouteToSessionFields(
+      createInitialState(networkRouteAdapter, cfg, 42),
+    );
+    return fields.networkRoute as NetworkRouteSessionSlice;
+  }
   const cities = DEFAULT_NETWORK_CITIES.map((city) => ({ ...city }));
   const edges = DEFAULT_NETWORK_EDGES.map((edge) => ({ ...edge }));
   return {
@@ -33,6 +63,8 @@ export function createInitialNetworkRouteSessionSlice(): NetworkRouteSessionSlic
     terminalTo: NETWORK_ROUTE_TERMINALS[1],
     lastClaim: null,
     routeCounts: [0, 0],
+    freight: null,
+    tickets: null,
   };
 }
 

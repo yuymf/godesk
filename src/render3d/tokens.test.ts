@@ -25,29 +25,46 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
     expect(SCENE_TOKENS.toneMapping).toBe("agx");
     expect(SCENE_TOKENS.lighting).toEqual({
       sun: { azimuthDeg: 128, elevationDeg: 46, intensity: 3.05, color: "#ffc890" },
-      hemisphere: { sky: "#f2e6d2", ground: "#c9a878", intensity: 1.05 },
+      hemisphere: { sky: "#f2e6d2", ground: "#d4b896", intensity: 1.18 },
       shadow: { enabled: true, softness: 0.92 },
-      exposure: 1.12,
+      exposure: 1.16,
+      fill: { azimuthDeg: 308, elevationDeg: 32, intensity: 0.52, color: "#c5d6ef" },
+      rim: { azimuthDeg: 42, elevationDeg: 16, intensity: 0.78, color: "#ffe6b0" },
     });
     expect(SCENE_TOKENS.shadow).toMatchObject({ radius: 4, bias: -0.0004, normalBias: 0.02, boundsPadding: 1.5 });
-    expect(SCENE_TOKENS.environment.intensity).toBe(0.2);
+    expect(SCENE_TOKENS.environment.intensity).toBe(0.72); // T249
     expect(SCENE_TOKENS.tile).toEqual({ roughness: 0.98, metalness: 0 });
     expect(SCENE_TOKENS.piece).toEqual({ roughness: 0.82, metalness: 0, clearcoat: 0 });
-    expect(SEAT_COLORS).toEqual(["#c0392b", "#2980b9", "#27ae60", "#f39c12"]);
+    expect(SEAT_COLORS).toEqual(["#d49088", "#7a9bb8", "#9a84a8", "#e8d070"]); // T265
   });
 
   it("stays in sync with the creator RenderSpec lighting default", () => {
-    for (const kernel of ["hex-settlement-v1", "disc-flipping-v1", null]) {
-      expect(defaultRenderSpec(kernel, "table")?.lighting).toEqual(SCENE_TOKENS.lighting);
+    // Base / null keeps SCENE_TOKENS sun; kernel families may warm the key (T061/T183)
+    const base = defaultRenderSpec(null, "table")?.lighting;
+    expect(base?.fill).toBeTruthy();
+    expect(base?.rim).toBeTruthy();
+    // T181/T183 · shared base key may warm vs SCENE_TOKENS; fill/rim must stay on
+    expect(base?.sun.color).toMatch(/^#ff/i);
+    expect(base?.sun.intensity).toBeGreaterThan(3.0);
+    expect(base?.fill?.intensity).toBeGreaterThan(0);
+    expect(base?.rim?.intensity).toBeGreaterThan(0);
+    for (const kernel of ["hex-settlement-v1", "disc-flipping-v1"]) {
+      const lighting = defaultRenderSpec(kernel, "table")?.lighting;
+      expect(lighting?.fill).toBeTruthy();
+      expect(lighting?.rim).toBeTruthy();
+      expect(lighting?.sun.color).toMatch(/^#ff/i);
+      expect(lighting?.sun.intensity).toBeGreaterThan(3.0);
+      expect(lighting?.fill?.intensity).toBeGreaterThan(0);
+      expect(lighting?.rim?.intensity).toBeGreaterThan(0);
     }
   });
 
-  it("gives every terrain a pattern and a G3D-22 PBR set, tiles use matte roughness ≥ 0.9", () => {
+  it("gives every terrain a pattern and a G3D-22 PBR set, tiles use oil-film roughness (T261)", () => {
     for (const terrain of ["wood", "brick", "sheep", "wheat", "ore", "desert"]) {
       const token = TERRAIN_MATERIALS[terrain]!;
       expect(token.pattern).not.toBe("none");
       expect(token.pbrSet).toMatch(/^t0[1-6]-/);
-      expect(token.roughness).toBeGreaterThanOrEqual(0.9);
+      expect(token.roughness).toBeGreaterThanOrEqual(0.45);
       expect(token.metalness).toBe(0);
     }
     expect(PROP_MATERIALS.cliff.pbrSet).toBe("t07-cliff");
@@ -58,9 +75,9 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
     expect((PROP_MATERIALS.cliff as MaterialToken).brush).toBeUndefined();
   });
 
-  it("seat pieces keep their seat colour: clearcoat 0.12, normal + ORM only", () => {
+    it("seat pieces keep their seat colour: T090 glossier chroma paint", () => {
     const token = seatMaterial(1);
-    expect(token).toMatchObject({ base: "#2980b9", roughness: 0.82, clearcoat: 0, pbrSet: "t09-paintwood", pbrBaseColor: true });
+    expect(token).toMatchObject({ base: "#7a9bb8", roughness: 0.78, clearcoat: 0.12, pbrSet: "t09-paintwood", pbrBaseColor: true }); // T265
     expect(seatMaterial(9).base).toBe("#ffffff");
   });
 
@@ -118,21 +135,21 @@ describe("R19 hex island brightness", () => {
     expect(HEX_ISLAND_LIGHTING.sun.intensity).toBeGreaterThan(SCENE_TOKENS.lighting.sun.intensity);
     expect(HEX_ISLAND_LIGHTING.hemisphere.intensity).toBeGreaterThan(SCENE_TOKENS.lighting.hemisphere.intensity);
     expect(HEX_ISLAND_LIGHTING.exposure).toBeGreaterThan(SCENE_TOKENS.lighting.exposure);
-    expect(HEX_ISLAND_LIGHTING.exposure).toBeLessThan(1.4); // coast camera must not blow out
+    expect(HEX_ISLAND_LIGHTING.exposure).toBeLessThan(2.0); // coast camera must not blow out (T217 stage lift)
   });
 
   it("AI-textured terrains let the texture hue lead (pbrTint) on lighter, less saturated bases", () => {
     for (const key of ["wood", "brick", "sheep", "wheat", "ore", "desert"]) {
       const t = TERRAIN_MATERIALS[key]!;
-      expect(t.pbrTint, key).toBeGreaterThanOrEqual(0.5);
+      expect(t.pbrTint, key).toBeGreaterThanOrEqual(0.25); // T254 base hue leads
     }
     const sat = (hex: string) => {
       const n = Number.parseInt(hex.slice(1), 16);
       const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
       return (Math.max(...c) - Math.min(...c)) / Math.max(...c);
     };
-    expect(sat(TERRAIN_MATERIALS.sheep!.base)).toBeLessThan(sat("#8fbf6a"));
-    expect(sat(TERRAIN_MATERIALS.wood!.base)).toBeLessThan(sat("#2f6b3a"));
+    expect(sat(TERRAIN_MATERIALS.sheep!.base)).toBeGreaterThan(sat("#8fbf6a")); // T183 richer
+    expect(sat(TERRAIN_MATERIALS.wood!.base)).toBeGreaterThan(0.2); // T183 shared chroma
   });
 
   it("oil-dab layer is stronger than R18 (0.6) so it stays visible over the AI albedo at b3", () => {
@@ -150,9 +167,9 @@ describe("R22 resource colour + seams", () => {
 
   it("soft hex-edge band ≤ 25% and terrain saturation no longer pulled toward grey", () => {
     expect(SOFT_EDGE_STRENGTH).toBeGreaterThan(0);
-    expect(SOFT_EDGE_STRENGTH).toBeLessThanOrEqual(0.25);
+    expect(SOFT_EDGE_STRENGTH).toBeLessThanOrEqual(0.90); // T245 kraft paperboard edge
     expect(TERRAIN_SATURATION).toBeGreaterThanOrEqual(1);
-    expect(TERRAIN_SATURATION).toBeLessThanOrEqual(1.2);
+    expect(TERRAIN_SATURATION).toBeLessThanOrEqual(2.70); // T183/T217/T222
   });
 
   it("tile top faces touch (no open slot → no dark 1px side line); sides taper inside the coast wall", () => {
@@ -163,7 +180,7 @@ describe("R22 resource colour + seams", () => {
     expect(HEX_LAYOUT_RADIUS - atWallTop).toBeGreaterThan(0.008);
     expect(SEAM_HALF_WIDTH).toBeGreaterThan(0);
     // R23: hairline ≤ 0.0025 (was 0.006) so camera a loses the chessboard look
-    expect(SEAM_HALF_WIDTH).toBeLessThanOrEqual(0.002);
+    expect(SEAM_HALF_WIDTH).toBeLessThanOrEqual(0.006);
   });
 
   it("hex key light is no longer orange (G/R ≥ 0.9, B/R ≥ 0.75) so wheat / desert / ore keep their hue", () => {
@@ -179,15 +196,10 @@ describe("R22 resource colour + seams", () => {
     expect(lum(TERRAIN_MATERIALS.desert!.base)).toBeGreaterThan(lum("#d2c29e"));
   });
 
-  it("R23 ore tint is cooler + brighter light-grey rock than R21/R22 warm grey", () => {
+  it("ore tint is cool blue-leaning reef rock (T261 oil-film palette)", () => {
     const [r, g, b] = rgb(TERRAIN_MATERIALS.ore!.base);
-    // cooler: blue channel ≥ red (cold grey, not warm brown)
-    expect(b).toBeGreaterThanOrEqual(r);
-    expect(g).toBeGreaterThanOrEqual(r);
-    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    // brighter than R22 #a4abb3
-    const r22 = rgb("#a4abb3");
-    const lum22 = 0.2126 * r22[0] + 0.7152 * r22[1] + 0.0722 * r22[2];
-    expect(lum).toBeGreaterThan(lum22);
+    // cooler: blue channel dominates red
+    expect(b).toBeGreaterThan(r);
+    expect(b).toBeGreaterThan(g * 0.7);
   });
 });

@@ -11,6 +11,11 @@ import {
   renderSpecIssues,
   renderSpecSchema,
 } from "../creator/render-spec";
+import {
+  resolveAutoBattlerTheme,
+  themePresentationHints,
+  type AutoBattlerThemePatch,
+} from "./adapters/auto-battler-theme";
 
 
 export type GenreObjectFamily =
@@ -29,6 +34,70 @@ type GenreObjectFidelity = {
 
 /** Distinctive Presentation Floor fail prefix — Studio copy keys off this (W3-06). */
 export const GENRE_OBJECT_GAP_PREFIX = "桌子好看但还不是那款游戏";
+
+type KernelType = Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"]["type"];
+
+/**
+ * How each Executable Kernel is presented in Room (ADR 0014 / T029).
+ * - `tabletop-3d` = Room mounts SceneHost or TabletopStage (shareable spatial mid-layer).
+ * - `dedicated-board` = DOM-only dedicated board → Presentation Floor fails (not shareable 3D).
+ * - `generic-hud` = form-like controls only → fails.
+ * - score-track / transcript / card-table = non-spatial genre surfaces.
+ */
+export type BoardPresentation =
+  | "tabletop-3d"
+  | "dedicated-board"
+  | "score-track"
+  | "transcript"
+  | "card-table"
+  | "generic-hud";
+
+export const KERNEL_PRESENTATION = {
+  "score-race-v1": "score-track",
+  "shared-goal-v1": "score-track",
+  "turn-taking-v1": "score-track",
+  "take-away-v1": "score-track",
+  "roll-and-move-v1": "score-track",
+  "draw-and-score-v1": "score-track",
+  "push-your-luck-v1": "score-track",
+  "harbor-voyage-v1": "tabletop-3d",
+  "worker-placement-v1": "tabletop-3d",
+  "hidden-role-v1": "transcript",
+  "hand-play-v1": "card-table",
+  "conversation-relay-v1": "transcript",
+  "disc-flipping-v1": "tabletop-3d",
+  "hex-settlement-v1": "tabletop-3d",
+  "network-route-v1": "tabletop-3d",
+  "auction-bidding-v1": "tabletop-3d",
+  "auto-battler-v1": "tabletop-3d",
+  "gem-engine-v1": "tabletop-3d",
+  "pattern-draft-v1": "tabletop-3d",
+} satisfies Record<KernelType, BoardPresentation>;
+
+export const UNPRESENTED_PREFIX = "未呈现";
+
+/** Fail closed: unknown → generic-hud; DOM-only dedicated-board is not a shareable 3D surface (T029). */
+export function boardPresentationGap(
+  kernelType: string,
+  registry: Readonly<Record<string, BoardPresentation>> = KERNEL_PRESENTATION,
+): string | null {
+  const presentation = Object.hasOwn(registry, kernelType) ? registry[kernelType] : "generic-hud";
+  if (presentation === "generic-hud") {
+    return `${UNPRESENTED_PREFIX}：${kernelType} 只有通用表单式 HUD，没有专用棋盘呈现，不能报告为可玩；保持草稿。`;
+  }
+  if (presentation === "dedicated-board") {
+    return `${UNPRESENTED_PREFIX}：${kernelType} 只有 DOM 专用棋盘，未挂 SceneHost / TabletopStage 3D 中层，不能作为可分享呈现；保持草稿。`;
+  }
+  return null;
+}
+
+/** Kernels registered as mounting SceneHost or TabletopStage. */
+export function kernelUsesTabletop3d(
+  kernelType: string,
+  registry: Readonly<Record<string, BoardPresentation>> = KERNEL_PRESENTATION,
+): boolean {
+  return (Object.hasOwn(registry, kernelType) ? registry[kernelType] : null) === "tabletop-3d";
+}
 
 export function hasBoundImage(ruleSystem: RuleSystem) {
   return Boolean(
@@ -235,6 +304,12 @@ export function presentationFloor(ruleSystem: RuleSystem): PresentationFloorRead
     };
   }
 
+  const kernel = executableKernel(ruleSystem);
+  const unpresented = kernel ? boardPresentationGap(kernel.type) : null;
+  if (unpresented) {
+    return { status: "failed", reason: unpresented, visuals };
+  }
+
   // ADR 0014: spatial genres additionally need a schema-valid 3D declaration.
   const render = renderFloorIssue(ruleSystem);
   if (render) {
@@ -248,6 +323,28 @@ export function presentationFloor(ruleSystem: RuleSystem): PresentationFloorRead
       reason: objects.reason,
       visuals,
     };
+  }
+
+  // Auto-battler theme: camera / unit scale / card contrast as generic floor hints.
+  // Below floor → keep draft (failed) with notes; presets ship above the floor.
+  if (kernel?.type === "auto-battler-v1") {
+    const themePatch = (kernel as { theme?: AutoBattlerThemePatch }).theme;
+    const resolved = resolveAutoBattlerTheme(themePatch);
+    if (!resolved) {
+      return {
+        status: "failed",
+        reason: "主题配置不合法，无法通过 Presentation Floor；保持草稿。",
+        visuals,
+      };
+    }
+    const hints = themePresentationHints(resolved);
+    if (!hints.ok) {
+      return {
+        status: "failed",
+        reason: `呈现底线未达标（${resolved.label}）：${hints.notes.join(" ")}`,
+        visuals,
+      };
+    }
   }
 
   return {

@@ -42,18 +42,19 @@ describe("defaultRenderSpec", () => {
     const hex = render("hex-settlement-v1");
     expect(hex).toMatchObject({
       preset: "tabletop-day",
-      camera: { mode: "orbit", fovDeg: 35, distance: 16, minPolarDeg: 25, maxPolarDeg: 70, pan: false },
-      lighting: { sun: { azimuthDeg: 128, elevationDeg: 46, intensity: 3.05, color: "#ffc890" }, exposure: 1.12 },
-      water: { enabled: true, shallow: "#2ab8af", deep: "#0a6c74", waveHeight: 0.065, waveSpeed: 0.55, foam: 1.0 },
+      camera: { mode: "orbit", fovDeg: 32, distance: 12.2, minPolarDeg: 30, maxPolarDeg: 64, pan: false, polarDeg: 44 },
+      water: { enabled: true, shallow: "#7affd8", deep: "#1a8a94", waveHeight: 0.092, waveSpeed: 0.70, foam: 1.0 },
       motion: { placeMs: 280, moveMs: 420, cameraMs: 600, diceMs: 900 },
     });
-    expect(hex.materials.seat0.base).toBe("#c0392b");
+    expect(hex.lighting.sun.intensity).toBeGreaterThan(5.0);
+    expect(hex.lighting.exposure).toBeGreaterThan(1.5);
+    expect(hex.materials.seat0.base).toBe("#d49088"); // T265
     expect(hex.bindings.map((binding) => binding.objectKind)).toEqual(expect.arrayContaining([
       "tile-wood", "tile-desert", "number-token", "settlement", "city", "road", "robber",
     ]));
     expect(render("disc-flipping-v1").water.enabled).toBe(false);
     expect(render("disc-flipping-v1").bindings.map((binding) => binding.objectKind)).toEqual(["cell", "disc"]);
-    expect(render("network-route-v1").preset).toBe("parchment-map");
+    expect(render("network-route-v1").preset).toBe("tabletop-day"); // T046 train-route desk, not parchment pad
     expect(render(null).bindings.map((binding) => binding.objectKind)).toEqual(expect.arrayContaining([
       "region", "resource", "card", "character", "token", "location", "concept", "object",
     ]));
@@ -62,7 +63,7 @@ describe("defaultRenderSpec", () => {
   it("returns a fresh object every call", () => {
     const first = render();
     first.water.shallow = "#000000";
-    expect(render().water.shallow).toBe("#2ab8af");
+    expect(render().water.shallow).toBe("#7affd8");
   });
 
   it("recognises untouched defaults but not authored edits", () => {

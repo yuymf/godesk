@@ -2,6 +2,7 @@ import type {
   ProjectChangeOperation,
   RuleSystem,
 } from "../src/creator/project-contract";
+import { computerSeatForRuleSystem } from "../src/creator/kernel-capabilities";
 import { parseRuleNumber, RULE_NUMBER_TOKEN } from "./rule-numbers";
 
 interface ActionDescriptionIterationPlan {
@@ -15,7 +16,7 @@ interface ActionDescriptionIterationPlan {
 
 export class IterationPlanError extends Error {
   constructor(
-    readonly code: "iteration_unsupported" | "iteration_action_not_found",
+    readonly code: "iteration_unsupported" | "iteration_action_not_found" | "iteration_guidance",
     detail: string,
   ) {
     super(`${code}: ${detail}`);
@@ -98,6 +99,13 @@ export function createActionDescriptionIterationPlan(input: {
   const prompt = input.prompt.trim();
   const parsed = parseDescriptionRequest(prompt);
   if (!parsed) {
+    if (/电脑|人机|机器人|\bai\b|\bbot\b|computer/i.test(prompt) && computerSeatForRuleSystem(input.ruleSystem) !== null) {
+      // Not a failure: the capability exists elsewhere in the product; the UI shows this neutrally.
+      throw new IterationPlanError(
+        "iteration_guidance",
+        "这款游戏已内置电脑玩家，不需要改规则：到「我的游戏」点这款游戏的「和电脑对战」即可单人开局。",
+      );
+    }
     throw new IterationPlanError(
       "iteration_unsupported",
       "Studio 目前只支持一次聚焦的行动说明改写，例如：把行动 2 的说明改成“先说明新增约束，再说明获得 2 分”。规则数值、行动增删和胜利条件请回到 Rule System 编辑器或交给 Codex。",

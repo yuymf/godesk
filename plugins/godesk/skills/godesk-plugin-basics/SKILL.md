@@ -77,6 +77,8 @@ iteration tools, not the destination.
 
 ## Executable Kernel choice
 
+- New mechanics must ship a dedicated board presentation (declared in `KERNEL_PRESENTATION`) before being called playable; a kernel with only a generic form-like DOM HUD stays draft / 未呈现 and fails Presentation Floor.
+
 Playability Floor (ADR 0012) gates share on genre fidelity **and decision
 density**: a named Kernel with an empty contract (no hands, fewer than 2
 placeable regions, no speech actions, no roles/accuse path) must fail the
@@ -97,6 +99,7 @@ floor.
   fail Playability Floor until a faithful subset exists.
 - `conversation-relay-v1` records required speech into the transcript and
   ends on a turn budget; people judge prose (no kernel score race).
+- `auto-battler-v1` (Tide Arena / 潮阵) executes a **2-seat** shop → place → seeded auto-combat → HP resolve loop with bench/board, gold economy, and trait synergies. Use for 自走棋 / 自动战斗 / 买棋上阵 / 潮阵 briefs. ★2 merge and >2 seats remain unsupported. Do **not** map onto hand-play or score-race.
 - `harbor-voyage-v1` executes worker placement on a **harbor-themed** table (cargo / berths / pilot). Use it only for harbor-like sources.
 - `worker-placement-v1` executes source-derived named regions with capacity and workers per seat. Pure score briefs use place→occupy→resolvePoints. Economy briefs (wood yield + workshop convert + build-N) use the economy subset and win by buildings — never share resolvePoints-as-building. Do **not** map non-harbor briefs onto harbor cargo IDs.
 - `score-race-v1` executes explicit per-seat point actions, a victory target,
@@ -127,8 +130,8 @@ floor.
 - To revise Kernel values on an existing project, use the matching
   `configure_*` op via `apply_project_patch`: genre kernels use
   `configure_hidden_role`, `configure_hand_play`,
-  `configure_conversation_relay`, `configure_harbor_voyage`, or
-  `configure_worker_placement`; score-track
+  `configure_conversation_relay`, `configure_harbor_voyage`,
+  `configure_worker_placement`, or `configure_auto_battler`; score-track
   and related ops are listed in `$edit-and-compile-game`.
 - To change only the 3D look of a spatial surface (water, light, materials,
   preset), use `configure_render` with a partial `patch`; it never touches Kernel

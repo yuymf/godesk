@@ -21,7 +21,7 @@ describe("G3D-07 lighting rig", () => {
     expect(rig.hemisphere).toBeInstanceOf(HemisphereLight);
     expect(rig.sun.intensity).toBe(3.05);
     expect(rig.sun.color.getHexString()).toBe(new DirectionalLight("#ffc890").color.getHexString());
-    expect(rig.hemisphere.intensity).toBe(1.05);
+    expect(rig.hemisphere.intensity).toBe(1.18); // T166 warmer ground
     expect(rig.sun.castShadow).toBe(true);
     expect(rig.sun.shadow.mapSize.x).toBe(2048);
     expect(rig.sun.shadow.radius).toBe(6.5);
@@ -59,6 +59,21 @@ describe("G3D-07 lighting rig", () => {
     expect(rig.sun.intensity).toBe(1.5);
     expect(rig.sun.castShadow).toBe(false);
     expect(rig.sun.shadow.radius).toBe(7);
+    rig.dispose();
+  });
+
+
+  it("T086 builds soft fill + rim layers without casting shadows", () => {
+    const scene = new Scene();
+    const rig = createLightingRig(scene, SCENE_TOKENS.lighting, TIER_CAPS.high);
+    expect(rig.fill).toBeInstanceOf(DirectionalLight);
+    expect(rig.rim).toBeInstanceOf(DirectionalLight);
+    expect(rig.fill.castShadow).toBe(false);
+    expect(rig.rim.castShadow).toBe(false);
+    expect(rig.fill.intensity).toBeGreaterThan(0);
+    expect(rig.rim.intensity).toBeGreaterThan(0);
+    expect(rig.fill.name).toBe("gd:fill");
+    expect(rig.rim.name).toBe("gd:rim");
     rig.dispose();
   });
 
