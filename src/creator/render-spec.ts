@@ -510,13 +510,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#e8c890", "cloth", 0.99, 0, undefined, 0.99),  // T245 product ochre felt
+      board: material("#f6e8b8", "cloth", 0.99, 0, undefined, 0.99),  // T245 product parchment felt (centerCalm)
       table: material("#f0f4ff", "grain", 0.22, 0.32), // T092…T241 · cooler wood rim (corner-calm)
       piece: material("#ffe8c8", "none", 0.10, 0.36, 0.94), // T198…T241 · cream piece
       card: material("#e0f0ff", "none", 0.08, 0.32, 0.94), // T198…T241 · card stock cool
       resource: material("#ffe0a0", "none", 0.02, 0.78, 0.99), // T198…T241 · gem crystal warm vs tip
       token: material("#ffd0a0", "none", 0.12, 0.40, 0.86), // T198/T241 · chip
-      ink: material("#6878a0", "none", 0.26, 0.18, 0.30), // T241 · centerCalm
+      ink: material("#8a98b0", "none", 0.30, 0.14, 0.26), // T245 · centerCalm lighter
     });
     render.bindings = [
       binding("region", "tile-square", "board"),
@@ -536,7 +536,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     ];
     if (kernelType === "auction-bidding-v1") {
       Object.assign(render.materials, {
-        board: material("#d8a060", "cloth", 0.99, 0, undefined, 0.99),  // T245 auction ochre
+        board: material("#e8c878", "cloth", 0.99, 0, undefined, 0.99),  // T245 auction parchment
         card: material("#fffaf4", "none", 0.28, 0.10, 0.48), // T061/T175/T213
       });
     }
