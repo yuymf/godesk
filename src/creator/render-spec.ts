@@ -468,17 +468,17 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     // T086 · desk lighting layers on network
     render.lighting = {
       ...render.lighting,
-      sun: { ...render.lighting.sun, azimuthDeg: 126, elevationDeg: 60, intensity: 5.98, color: "#ffce9a" },
-      hemisphere: { sky: "#ffffff", ground: "#8a7860", intensity: 2.18 }, // T230 network product light
+      sun: { ...render.lighting.sun, azimuthDeg: 126, elevationDeg: 60, intensity: 6.12, color: "#ffcea0" }, // T230
+      hemisphere: { sky: "#ffffff", ground: "#8a7860", intensity: 2.28 }, // T230 network product light
       fill: { azimuthDeg: 310, elevationDeg: 50, intensity: 1.82, color: "#d8ecfc" },
       rim: { azimuthDeg: 40, elevationDeg: 34, intensity: 1.55, color: "#ffecbe" },
       shadow: { enabled: true, softness: 0.55 },
-      exposure: 2.08, // T192…T230 · H02 network readable stage-wide (product map cloth)
+      exposure: 1.99, // T192…T230 · H02 network readable (schema ≤2); chroma via map/hemi
 
     };
     Object.assign(render.materials, {
       // T172/T177/T192/T201/T206 · denser/brighter network map cloth (shared MaterialLibrary)
-      map: material("#5afff0", "cloth", 0.99, 0, undefined, 0.99), // T177…T230
+      map: material("#62fff2", "cloth", 0.99, 0, undefined, 0.99), // T177…T230
       table: material("#f8d0a0", "grain", 0.30, 0.26), // T110…T218/T221 · warmer exterior/rim (corner-calm)
       ink: material("#081420", "none", 0.22, 0.28, 0.58), // T214/T213/T218 route ink
       piece: material("#fffaf0", "none", 0.08, 0.38, 0.96), // T201…T230 · plastic-wood piece
@@ -505,7 +505,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       fill: { azimuthDeg: 312, elevationDeg: 54, intensity: 1.95, color: "#f0f6fc" },
       rim: { azimuthDeg: 38, elevationDeg: 32, intensity: 1.22, color: "#ffeed0" },
       shadow: { enabled: true, softness: 0.58 },
-      exposure: 2.08, // T187…T230 · desk product light (H03/H05 card table readable)
+      exposure: 1.99, // T187…T230 · desk product light (schema ≤2); chroma via felt/piece
 
     };
     Object.assign(render.materials, {
