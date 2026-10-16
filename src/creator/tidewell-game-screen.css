@@ -3618,21 +3618,23 @@ body:has(.room-view-tidewell-immersive) {
 .room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome,
 .room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse,
 .room-view-tidewell-immersive.room-view-seated > .room-invitation[data-ui-share-ready="1"] {
+  /* Keep fixed overlay (T091) — relative in-flow strip stole canvas vh and
+     put the clipped sound FAB over the stage (tidewell-hud-polish iPhone). */
   display: grid !important;
-  position: relative !important;
-  left: auto !important;
-  right: auto !important;
-  top: auto !important;
+  position: fixed !important;
+  left: 12px !important;
+  right: 12px !important;
+  top: 8px !important;
   width: auto !important;
   max-width: none !important;
-  margin: 0.35rem 0.5rem !important;
+  margin: 0 !important;
   padding: 0.45rem 0.75rem !important;
   max-height: none !important;
   min-height: 3.1rem !important;
   opacity: 1 !important;
   overflow: visible !important;
   pointer-events: auto !important;
-  z-index: 14 !important;
+  z-index: 120 !important;
   background: color-mix(in srgb, #1c1917 90%, #0c0a09) !important;
   color: #fafaf9 !important;
   border: 1px solid color-mix(in srgb, #fafaf9 18%, transparent) !important;

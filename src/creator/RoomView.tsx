@@ -604,7 +604,11 @@ export function RoomView({ sessionId }: { sessionId: string }) {
               </span>
             )}
           </div>
-          {/* Keep a visually-hidden select for keyboard/AT parity with prior control. */}
+          {/* Single accessible seat <select aria-label="你的席位">:
+              Tidewell boards (hex / wood chrome) already mount one in the ⚙ menu.
+              Share-seat chips stay for invite/seat click UX — do not clone the label
+              (UI-share-seat regression: strict-mode 2× getByLabel('你的席位')). */}
+          {immersive ? null : (
           <label className="seat-picker seat-picker-fallback">
             <span>{copy.yourSeat}</span>
             <select
@@ -633,6 +637,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
               })}
             </select>
           </label>
+          )}
         </div>
       </section>
       ) : null}

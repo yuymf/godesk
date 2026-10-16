@@ -32,5 +32,20 @@ describe("UI-share-seat · shareReady + seat/invite row playable", () => {
     expect(tw).toContain("UI-share-seat");
     expect(tw).toMatch(/room-share-chrome\.is-chrome-collapse[\s\S]*?pointer-events:\s*auto/);
     expect(tw).toMatch(/min-height:\s*3\.1rem/);
+    expect(tw).toMatch(/position:\s*fixed\s*!important/);
+    expect(tw).toContain("stole canvas vh");
+  });
+
+  it("immersive Room chrome does not clone 你的席位 labeled select (Tidewell menu owns it)", () => {
+    const src = readFileSync("src/creator/RoomView.tsx", "utf8");
+    // Share-seat chips stay; fallback select is gated behind !immersive
+    expect(src).toMatch(/immersive \? null/);
+    expect(src).toContain("seat-picker-fallback");
+    const hex = readFileSync("src/creator/HexSettlementBoard.tsx", "utf8");
+    const roomLabels = src.split("aria-label={copy.yourSeat}").length - 1;
+    const hexLabels = hex.split("aria-label={copy.yourSeat}").length - 1;
+    expect(hexLabels).toBeGreaterThanOrEqual(1);
+    // RoomView keeps one labeled select for non-immersive rooms only
+    expect(roomLabels).toBe(1);
   });
 });

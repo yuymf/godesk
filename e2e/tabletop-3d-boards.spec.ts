@@ -60,8 +60,9 @@ test.describe("G3D-14 generic 3D tabletop", () => {
     await page.getByLabel("你的席位").selectOption("0");
     await expect(board.getByRole("region", { name: "对局状态" })).toContainText("轮到你落子");
     const { stage, host } = await expectTabletop(page, "disc-flipping-v1");
-    // 开局 4 子 + 4 个合法提示环 + 桌面 / 底板 / 网格线。
-    await expect.poll(async () => Number(await host.getAttribute("data-scene-nodes"))).toBe(11);
+    // 开局: table+rim+lip+felt+stitch+vignette+grid + 4 discs + 4 contacts + 4 hints = 19
+    // (legacy 11 omitted contact shadows / felt frame parts — stale vs mapper).
+    await expect.poll(async () => Number(await host.getAttribute("data-scene-nodes"))).toBe(19);
     await stage.scrollIntoViewIfNeeded();
 
     const legal = board.getByRole("gridcell", { name: /可落子/ }).first();
