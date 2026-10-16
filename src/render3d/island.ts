@@ -42,7 +42,7 @@ export const WATER_Y = -0.08;
 /** 岩壁顶面低于地块顶 4cm：地块间的缝里露出岩石，外圈形成岛的岩壁。 */
 export const SKIRT_TOP_Y = 0.24;
 /** R12：更深岸崖，穿过水面，嵌进桌面读感（非托盘窗框）。 */
-export const SKIRT_BOTTOM_Y = -0.84;
+export const SKIRT_BOTTOM_Y = -1.45; // T262 · deeper cardboard skirt into water
 
 export type IslandTile = { q: number; r: number; terrain: string; center: SceneVec3 };
 export type IslandPort = { kind: string; vertices: SceneVec3[] };
@@ -442,19 +442,20 @@ export function coastWallGeometry(tiles: readonly IslandTile[], opts: { wetFootD
     const h1 = hash01(panel * 12.9898 + 78.23);
     const h2 = hash01(panel * 78.233 + 19.1);
     const h3 = hash01(panel * 41.17 + 3.9);
-    // 体块深度大跨度跳变：有的几乎贴边，有的深外凸巨块。
-    const blockDepth = 0.02 + h1 * 0.22 + mass * 0.14;
-    const undercut = 0.01 + h2 * 0.11 + mass * 0.06;
+    // T262 · thicker cardboard stand-off at waterline (mesh flare, not gdHi apothem)
+    const blockDepth = 0.12 + h1 * 0.48 + mass * 0.36;
+    const undercut = 0.06 + h2 * 0.24 + mass * 0.16;
     // 每面独立 flare 曲线（非全岛同一台阶环）。
     const flarePow = 1.4 + h3 * 1.4;
-    const flare = Math.pow(t, flarePow) * (0.12 + h1 * 0.16) + t * t * t * (0.04 + h2 * 0.08);
+    const flare = Math.pow(t, flarePow) * (0.26 + h1 * 0.30) + t * t * t * (0.10 + h2 * 0.16); // T262 flare
     const face = t * blockDepth + (t > 0.48 ? (t - 0.48) * undercut * (1.8 + mass) : 0);
     // 切向噪声破径向同心；顶部小凹口打破平整环唇。
     const tangX = -nz, tangZ = nx;
     const notch = t < 0.08 ? (hash01(panel * 2.3 + x * 0.1) - 0.5) * 0.035 : 0;
     const sidePush = (hash01(panel * 11.1 + t * 7.0) - 0.5) * (0.02 + mass * 0.03);
     const noise = t === 0 ? notch : Math.sin(x * 3.9 + panel * 1.7) * 0.018 + Math.sin(z * 4.6 - panel) * 0.014;
-    const out = 0.015 + flare + face + noise;
+    // T262 · top-lip overhang readable above waterline in ortho wide
+    const out = 0.06 + flare + face + noise + (1.0 - t) * 0.18;
     const wx = x + nx * out + tangX * sidePush;
     const wz = z + nz * out + tangZ * sidePush;
     const u = (Math.atan2(z, x) / (Math.PI * 2) + 0.5) * 26;
@@ -586,8 +587,9 @@ export function dockGeometry(length = 0.62, wetFoot = 0): BufferGeometry {
   // docksFor base y=0.1 → local waterline = WATER_Y - 0.1.
   if (wetFoot > 0) {
     const waterLocal = WATER_Y - 0.1;
-    const skirtH = 0.06 + 0.03 * wetFoot;
-    const skirtR = 0.032 + 0.01 * wetFoot;
+    // T262 · taller/wider wet-contact skirt under pier (mesh contact, not vertex darken)
+    const skirtH = 0.09 + 0.045 * wetFoot;
+    const skirtR = 0.042 + 0.014 * wetFoot;
     const wetHex = wetFoot > 0.55 ? "#16120e" : "#2a2118";
     for (const [px, pz] of postXZ) {
       const ring = new CylinderGeometry(skirtR, skirtR * 1.06, skirtH, 4, 1, true);
@@ -706,7 +708,7 @@ function applyBoatWetLine(g: BufferGeometry, strength: number): void {
 
 /** 帆船停泊点：岛外一圈，避开右前方骰盘（≈(4.2, 3.2)）。 */
 /** 港口牌半径 / 帆船缩放（round-2d2：放大，远景可读）。 */
-export const SIGN_RADIUS = 0.382; // T118/T241 · wooden harbor plaque product
+export const SIGN_RADIUS = 0.46 /* T262 larger harbor plaque mesh */; // T118/T241 · wooden harbor plaque product
 export const BOAT_SCALE = 1.7;
 
 export const BOAT_SPOTS: ReadonlyArray<{ x: number; z: number; yaw: number; phase: number }> = [
@@ -800,8 +802,8 @@ export function createIslandLayer(): IslandLayer {
       wallGeom?.dispose();
       wallGeom = coastWallGeometry(tiles, {
         // T225 · wet foot on high only (cornerCalm); shore microcontrast via water shallow/foam
-        wetFootDark: tier === "high",
-        midBandDark: tier === "high" ? 1 : tier === "medium" ? 0.38 : 0,
+        wetFootDark: true, // T262 · waterline wet foot on all tiers (mesh contact)
+        midBandDark: 1, // T262 · cardboard mid-band rock on all tiers (mesh/albedo, not gdHi)
       });
       rockMat.map = tier === "high" ? rockMapHigh : tier === "medium" ? rockMapMed : rockMapLow;
       rockMat.needsUpdate = true;
@@ -814,8 +816,8 @@ export function createIslandLayer(): IslandLayer {
 
       // 岸石：每条外圈海岸边常规圆石；high 另在部分边加断续扁平礁石浅滩簇（非整圈砂台）。
       const edges = coastEdges(tiles);
-      const perEdge = tier === "low" ? 2 : 4;
-      const reefBudget = tier === "high" ? edges.length * 6 : 0; // clusters + gap wall-huggers
+      const perEdge = tier === "low" ? 6 : 9; // T262 denser shore-stone mesh
+      const reefBudget = edges.length * 8; // T262 reef stones all tiers // clusters + gap wall-huggers
       const stones = new InstancedMesh(stoneGeom, vertexMat, Math.max(1, edges.length * perEdge + reefBudget));
       let n = 0;
       let edgeIdx = 0;

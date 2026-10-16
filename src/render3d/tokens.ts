@@ -116,20 +116,20 @@ export const HEX_ISLAND_LIGHTING = {
 /** R17: matte hex faces + denser PBR repeat — continuous oil-paint brush, not flat plastic. */
 /** T183/T192/T198 · shared terrain chroma lift (MaterialLibrary; hex/harbor/any terrain consumer). */
 export const TERRAIN_MATERIALS: Record<string, MaterialToken> = {
-  // T257 · oil-paint albedo restored + hot chroma vs tip T255 solid neon (shared MaterialLibrary)
-  wood: { base: "#00e8a8", roughness: 0.90, metalness: 0, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 2.55, pbrTint: 0.48, brush: 0.99 },
-  brick: { base: "#ff4818", roughness: 0.90, metalness: 0, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 2.55, pbrTint: 0.48, brush: 0.99 },
-  sheep: { base: "#b0ff50", roughness: 0.90, metalness: 0, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 2.65, pbrTint: 0.50, brush: 0.99 },
-  wheat: { base: "#fff028", roughness: 0.90, metalness: 0, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 2.65, pbrTint: 0.48, brush: 0.99 },
-  ore: { base: "#50b8ff", roughness: 0.90, metalness: 0, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 2.45, pbrTint: 0.48, brush: 0.99 },
-  desert: { base: "#ffe070", roughness: 0.90, metalness: 0, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 2.35, pbrTint: 0.50, brush: 0.99 },
+  // T261 · oil-film clearcoat varnish on continuous brush field (MeshPhysical; not pbrTint churn)
+  wood: { base: "#00e8a8", roughness: 0.52, metalness: 0, clearcoat: 0.68, pattern: "grass", pbrSet: "t01-pine", pbrRepeat: 2.55, pbrTint: 0.48, brush: 0.99 },
+  brick: { base: "#ff4818", roughness: 0.52, metalness: 0, clearcoat: 0.68, pattern: "stone", pbrSet: "t02-clay", pbrRepeat: 2.55, pbrTint: 0.48, brush: 0.99 },
+  sheep: { base: "#b0ff50", roughness: 0.52, metalness: 0, clearcoat: 0.68, pattern: "grass", pbrSet: "t03-meadow", pbrRepeat: 2.65, pbrTint: 0.50, brush: 0.99 },
+  wheat: { base: "#fff028", roughness: 0.52, metalness: 0, clearcoat: 0.68, pattern: "grass", pbrSet: "t04-wheat", pbrRepeat: 2.65, pbrTint: 0.48, brush: 0.99 },
+  ore: { base: "#50b8ff", roughness: 0.52, metalness: 0, clearcoat: 0.68, pattern: "stone", pbrSet: "t05-reef", pbrRepeat: 2.45, pbrTint: 0.48, brush: 0.99 },
+  desert: { base: "#ffe070", roughness: 0.52, metalness: 0, clearcoat: 0.68, pattern: "sand", pbrSet: "t06-sand", pbrRepeat: 2.35, pbrTint: 0.50, brush: 0.99 },
 };
 
 /** 其余物件材质。 */
 export const PROP_MATERIALS = {
   cliff: { base: "#6e675c", roughness: 0.90, metalness: 0, pattern: "stone", pbrSet: "t07-cliff", pbrRepeat: 5.2 }, // T257
   // R22: warmer cream (was #f5f0e1) — keeps the parchment token cream under the less-orange R22 key light.
-  "number-token": { base: "#c09050", roughness: 0.62, metalness: 0.04, clearcoat: 0.28, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 2.2, pbrTint: 0.32 }, // T257 matte chip for stamp
+  "number-token": { base: "#c09050", roughness: 0.62, metalness: 0.04, clearcoat: 0.28, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 2.2, pbrTint: 0.32 }, // T241/T257 matte chip for stamp
   // G3D-ART-2：6/8 不再整块涂红（与座位 0 红色混淆、且盖住数字）；同用 N1 筹码面，数字用赤陶色高亮（number-labels.ts）。
   "number-token-hot": { base: "#d89040", roughness: 0.50, metalness: 0.06, clearcoat: 0.48, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 2.1, pbrTint: 0.22 }, // T253
   robber: { base: "#2c3e50", roughness: 0.7, metalness: 0, pattern: "none" },

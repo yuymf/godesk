@@ -22,7 +22,7 @@ function compile(material: MeshStandardMaterial) {
   const shader = {
     uniforms: {} as Record<string, { value: unknown }>,
     vertexShader: "#include <common>\nvoid main() {\n#include <project_vertex>\n}",
-    fragmentShader: "#include <common>\nvoid main() {\n#include <color_fragment>\n#include <roughnessmap_fragment>\n}",
+    fragmentShader: "#include <common>\nvoid main() {\n#include <normal_fragment_maps>\n#include <color_fragment>\n#include <roughnessmap_fragment>\n}",
   };
   material.onBeforeCompile(shader as never, undefined as never);
   return shader;
@@ -59,8 +59,12 @@ describe("G3D-07 materials", () => {
     const seat = createMaterial(seatMaterial(0), { clearcoat: true });
     expect(seat).toBeInstanceOf(MeshPhysicalMaterial);
     expect((seat as MeshPhysicalMaterial).clearcoat).toBeCloseTo(0.35);
-    // terrain wood stays MeshStandard (no clearcoat token)
-    expect(createMaterial(TERRAIN_MATERIALS.wood!, { clearcoat: true })).not.toBeInstanceOf(MeshPhysicalMaterial);
+    // T261 · brush terrain oil-film → MeshPhysical even when tier clearcoat flag is off
+    const oil = createMaterial(TERRAIN_MATERIALS.wood!, { clearcoat: false });
+    expect(oil).toBeInstanceOf(MeshPhysicalMaterial);
+    expect((oil as MeshPhysicalMaterial).clearcoat).toBeGreaterThan(0.3);
+    // cliff (no brush/clearcoat) stays MeshStandard
+    expect(createMaterial(PROP_MATERIALS.cliff, { clearcoat: true })).not.toBeInstanceOf(MeshPhysicalMaterial);
   });
 
   it("shares one material per key and lists the PBR sets in use", () => {
@@ -138,7 +142,8 @@ describe("G3D-07 environment reflections", () => {
     library.setEnvironment(env, 0.2);
     expect(glossy.envMap).toBe(env);
     expect(glossy.envMapIntensity).toBe(0.2);
-    expect(tile.envMap).toBeNull();
+    // T261 · oil-film terrain roughness ≤ ENV_REFLECTION_MAX → catches RoomEnvironment
+    expect(tile.envMap).toBe(env);
     const robber = library.get("robber", PROP_MATERIALS.robber);
     expect(robber.envMap).toBeNull();
     library.setEnvironment(null, 0);
@@ -148,10 +153,14 @@ describe("G3D-07 environment reflections", () => {
   it("R18 oil brush layer only on terrain tiles (brush > 0): own program, AA-faded dabs", () => {
     const tile = createMaterial(TERRAIN_MATERIALS.sheep!, { clearcoat: false });
     expect(tile.defines?.GD_BRUSH).toBe(1);
-    expect(tile.customProgramCacheKey()).toBe("gd-pattern-4-brush");
+    expect(tile.customProgramCacheKey()).toBe("gd-pattern-4-brush-t261");
+    // T261 · oil-film MeshPhysical clearcoat on brush terrain
+    expect(tile.type).toBe("MeshPhysicalMaterial");
+    expect((tile as import("three").MeshPhysicalMaterial).clearcoat).toBeGreaterThan(0.3);
     const shader = compile(tile);
     expect(shader.uniforms.uGdBrush).toEqual({ value: TERRAIN_MATERIALS.sheep!.brush });
     expect(shader.fragmentShader).toContain("vec3 gdB = gdBrushStroke(vGdWorld);");
+    expect(shader.fragmentShader).toContain("gdBn");
     expect(shader.fragmentShader).toContain("fwidth(g)");
     const cliff = createMaterial(PROP_MATERIALS.cliff, { clearcoat: false });
     expect(cliff.defines?.GD_BRUSH).toBeUndefined();

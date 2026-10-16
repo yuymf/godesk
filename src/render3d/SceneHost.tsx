@@ -361,8 +361,12 @@ function batchableKind(kind: SceneNode["kind"]): boolean {
   );
 }
 
+/** T261 · carved face-well depth (world units before chip scale) — mesh topology, not stamp ox/oy. */
+export const CHIP_FACE_RECESS = 0.032;
+/** T261 · outer lip rise around the well. */
+export const CHIP_FACE_RIM = 0.014;
 let SHARED_NUMBER_GEOM: BufferGeometry | null = null;
-/** T241/T250 · wood-chip number token: thicker body + lathe lip / side turning. */
+/** T241/T250/T261 · wood-chip: lathe body + carved top well for seated numeral (mesh recess). */
 function sharedNumberGeom(): BufferGeometry {
   if (!SHARED_NUMBER_GEOM) {
     const shape = new Shape();
@@ -382,6 +386,7 @@ function sharedNumberGeom(): BufferGeometry {
     const bb0 = geom.boundingBox!;
     const pos = geom.getAttribute("position");
     const midY0 = (bb0.min.y + bb0.max.y) / 2;
+    const topY0 = bb0.max.y;
     for (let i = 0; i < pos.count; i += 1) {
       const y = pos.getY(i);
       const x = pos.getX(i);
@@ -391,6 +396,23 @@ function sharedNumberGeom(): BufferGeometry {
         const band = Math.sin((y - midY0) * 96.0);
         const k = 1 - 0.038 * Math.max(0, band); // T250 deeper side turning
         pos.setXYZ(i, x * k, y, z * k);
+      }
+    }
+    // T261 · mesh face well: sink inner top disk, raise outer rim (real carved topology)
+    for (let i = 0; i < pos.count; i += 1) {
+      const y = pos.getY(i);
+      const x = pos.getX(i);
+      const z = pos.getZ(i);
+      const rad = Math.hypot(x, z);
+      if (y < topY0 - 0.012) continue; // top-cap band only
+      if (rad < 0.168) {
+        const t = 1 - rad / 0.168;
+        const well = CHIP_FACE_RECESS * t * t;
+        pos.setY(i, y - well);
+      } else if (rad < 0.212) {
+        const u = (rad - 0.168) / (0.212 - 0.168);
+        const rim = CHIP_FACE_RIM * Math.sin(u * Math.PI);
+        pos.setY(i, y + rim);
       }
     }
     pos.needsUpdate = true;

@@ -426,7 +426,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       // 翻转棋的棋子必须黑白分明：座位 0 = 黑、座位 1 = 白（G3D-14）。
       seat0: material("#1d1d1f", "none", 0.42, 0, 0.3),
       seat1: material("#f4efe6", "none", 0.42, 0, 0.3),
-      board: material("#1f6b4a", "cloth", 0.78),
+      board: material("#1f6b4a", "cloth", 0.55, 0, 0.58, 0.99), // T261 oil-film felt
       piece: material("#f4efe6", "none", 0.58),
     });
     render.bindings = [
@@ -481,8 +481,8 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T172/T177/T192/T201/T206 · denser/brighter network map cloth (shared MaterialLibrary)
-      map: material("#143048", "cloth", 0.99, 0, undefined, 0.99), // T257 teal map HARD
-      table: material("#f0ece0", "grain", 0.24, 0.16), // T257 light desk HARD+cornerCalm
+      map: material("#1a3c58", "cloth", 0.50, 0, 0.60, 0.99), // T261 oil-film map cloth
+      table: material("#f0ece0", "grain", 0.24, 0.16, 0.45), // T261 lacquer desk
       ink: material("#ff5808", "none", 0.04, 0.72, 0.99), // T257 neon amber HARD
       piece: material("#ffc040", "none", 0.05, 0.52, 0.96), // T257 warm piece HARD
     });
@@ -513,8 +513,8 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#ffffb0", "cloth", 0.99, 0, undefined, 0.99),  // T257 hot lime HARD
-      table: material("#fafcf8", "grain", 0.16, 0.26), // T257 corner-calm desk
+      board: material("#ffffb0", "cloth", 0.55, 0, 0.58, 0.99),  // T261 oil-film felt
+      table: material("#fafcf8", "grain", 0.16, 0.26, 0.45), // T261 lacquer desk
       piece: material("#ffe878", "none", 0.05, 0.52, 0.96), // T254 cream piece HARD
       card: material("#fff8e0", "none", 0.10, 0.28, 0.90), // T249 warm card stock
       resource: material("#88e0ff", "none", 0.02, 0.82, 0.99), // T249 crystal cyan gem
@@ -525,13 +525,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       binding("region", "tile-square", "board"),
       binding("cell", "tile-square", "board"),
       binding("map", "tile-square", "board"),
-      binding("card", "card", "card", 1.12),
+      binding("card", "card", "card", 1.38), // T262 ortho card scale
       binding("disc", "disc", "piece", 1.0),
-      binding("tile", "glazed-tile", "piece", 1.12),
+      binding("tile", "glazed-tile", "piece", 1.42), // T262 ortho tile scale
       binding("resource", "gem-chip", "resource", 1.08),
       binding("token", "disc", "token", 0.88),
       binding("plaque", "plaque", "piece", 1),
-      binding("lot", "framed-art", "card", 1.28),
+      binding("lot", "framed-art", "card", 1.58), // T262 ortho lot scale
       binding("building", "house", "piece", 1.05),
       binding("worker", "meeple", "piece", 1.08),
       binding("station", "disc", "ink", 0.8),
@@ -539,13 +539,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     ];
     if (kernelType === "auction-bidding-v1") {
       Object.assign(render.materials, {
-        board: material("#ffffc8", "cloth", 0.99, 0, undefined, 0.99),  // T257 auction hot HARD
+        board: material("#ffffc8", "cloth", 0.55, 0, 0.58, 0.99),  // T261 oil-film felt
         card: material("#fffaf4", "none", 0.28, 0.10, 0.48), // T061/T175/T213
       });
     }
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
-        board: material("#ffffdc", "cloth", 0.99, 0, undefined, 0.99),  // T257 pattern hot HARD+centerCalm
+        board: material("#fffffa", "cloth", 0.50, 0, 0.55, 0.99),  // T261 oil-film felt centerCalm
         piece: material("#ffffff", "none", 0.04, 0.52, 0.99), // T257 warm piece centerCalm
         slot: material("#fcfdfe", "none", 0.38, 0.02, 0.22),  // T257 pale slots centerCalm
         // T054 · pale print plate under wall hue tints (square grid, not black pits)

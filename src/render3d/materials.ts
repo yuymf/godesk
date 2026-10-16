@@ -219,10 +219,31 @@ export function installPattern(material: MeshStandardMaterial, pattern: Material
         [
           "#include <roughnessmap_fragment>",
           "roughnessFactor = clamp(roughnessFactor + (gdP - 0.5) * 0.55 * uGdPattern, 0.04, 1.0);", // T245
+          ...(brush > 0
+            ? [
+                // T261 · wet oil film: dab peaks slightly glossier under clearcoat
+                "vec3 gdBr = gdBrushStroke(vGdWorld);",
+                "roughnessFactor = clamp(roughnessFactor - (gdBr.x - 0.5) * 0.38 * uGdBrush * gdBr.z, 0.04, 1.0);",
+              ]
+            : []),
         ].join("\n"),
+      )
+      .replace(
+        "#include <normal_fragment_maps>",
+        brush > 0
+          ? [
+              "#include <normal_fragment_maps>",
+              // T261 · impasto: recompute dab field → bend shading normal (mesh-feel continuous oil)
+              "vec3 gdBn = gdBrushStroke(vGdWorld);",
+              "float gdTopN = smoothstep(0.5, 0.9, vGdUp);",
+              "float gdNx = dFdx(gdBn.x) * 42.0 * uGdBrush * gdBn.z * gdTopN;",
+              "float gdNz = dFdy(gdBn.x) * 42.0 * uGdBrush * gdBn.z * gdTopN;",
+              "normal = normalize(normal + vec3(gdNx, 0.0, gdNz));",
+            ].join("\n")
+          : "#include <normal_fragment_maps>",
       );
   };
-  material.customProgramCacheKey = () => (brush > 0 ? `gd-pattern-${id}-brush` : `gd-pattern-${id}`);
+  material.customProgramCacheKey = () => (brush > 0 ? `gd-pattern-${id}-brush-t261` : `gd-pattern-${id}`);
   return strength;
 }
 
@@ -359,14 +380,16 @@ export function createMaterial(token: MaterialToken, features: MaterialFeatures)
     roughness: token.roughness,
     metalness: token.metalness,
   };
-  // T245 · lacquered wood / glazed piece: MeshPhysical even when tier clearcoat flag is off for grain tokens
+  // T245/T261 · lacquered wood OR oil-film terrain brush: MeshPhysical clearcoat varnish
   const coat = token.clearcoat ?? 0;
-  const wantPhysical = coat > 0 && (features.clearcoat || token.pattern === "grain");
+  const oilFilm = coat > 0 && ((token.brush ?? 0) > 0 || token.pattern === "cloth");
+  const wantPhysical = coat > 0 && (features.clearcoat || token.pattern === "grain" || oilFilm);
   const material = wantPhysical
     ? new MeshPhysicalMaterial({
         ...params,
         clearcoat: coat,
-        clearcoatRoughness: token.pattern === "grain" ? 0.28 : 0.48, // T245 wood lacquer vs plastic
+        // T261 · oil varnish on brush terrain (wet film); grain stays lacquer
+        clearcoatRoughness: oilFilm ? 0.14 : token.pattern === "grain" ? 0.28 : 0.48,
       })
     : new MeshStandardMaterial(params);
   installPattern(material, token.pattern, token.brush ?? 0);

@@ -24,7 +24,7 @@ import type { SceneNode } from "./scene-model";
 export const NUMBER_TOKEN_RADIUS = 0.258; // T222/T237 · chip footprint
 export const NUMBER_TOKEN_HALF_HEIGHT = 0.092; // T250 · product wood-chip lip / side thickness
 /** 贴花离筹码顶面的高度（避免 z-fighting；配合 polygonOffset）。 */
-export const LABEL_LIFT = 0.00012; // T257 · deeper seated stamp recess
+export const LABEL_LIFT = -0.026; // T261 · seat numeral into carved mesh well (not canvas ox/oy)
 /** 贴花边长 = 筹码半径 × 1.85 × 节点缩放：略小于筹码直径（G3D-ART-3 由 1.6 放大，字形更大）。 */
 export const LABEL_SIZE_PER_RADIUS = 2.72; // T257 · wider stamp footprint stage-wide
 export { NUMBER_TOKEN_SCALE } from "./tokens";

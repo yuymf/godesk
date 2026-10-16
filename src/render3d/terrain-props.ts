@@ -442,23 +442,27 @@ function blobShadowGeometry(): BufferGeometry {
 /** R19 羊：白色羊毛小羊群（settlecoast 基准的读感：白绒身体 + 深色头腿，低头吃草），
  *  脚下只留牧场底色的软溶片（alpha→0，无硬边圆盘、无深色接触阴影）。 */
 function sheepGeometry(): BufferGeometry {
-  // T253 · clearer head/leg silhouette vs meadow bushes
+  // T262 · LOD silhouette mesh: longer legs + ear fins + neck stalk (topology, not vertex-color deepen)
   const leg = (x: number, z: number) =>
-    grad(at(new CylinderGeometry(0.0125, 0.010, 0.088, 8, 1, true), x, 0.044, z), "#1a1410", "#2e2620", 0, 0.09);
+    grad(at(new CylinderGeometry(0.011, 0.009, 0.108, 8, 1, true), x, 0.054, z), "#14100c", "#26201a", 0, 0.11);
   const puff = (x: number, y: number, z: number, r: number) =>
     grad(at(new SphereGeometry(r, 16, 14), x, y, z), "#e8e2d4", "#fffdf8", y - r, y + r, 0.04);
+  const ear = (z: number) =>
+    grad(at(new SphereGeometry(0.012, 6, 4), 0.148, 0.128, z, 0.55, 1.35, 0.35), "#1a1410", "#2a221c", 0.1, 0.15);
   const parts: BufferGeometry[] = [
-    grad(at(new SphereGeometry(0.082, 20, 16), 0, 0.145, 0, 1.50, 0.96, 1.10), "#ddd6c6", "#fffdf6", 0.06, 0.24, 0.03),
-    puff(0.05, 0.182, 0.03, 0.04), puff(-0.01, 0.192, -0.028, 0.042), puff(-0.06, 0.176, 0.03, 0.038),
-    puff(0.035, 0.174, -0.045, 0.036), puff(-0.055, 0.164, -0.045, 0.035), puff(0.075, 0.152, 0.0, 0.034),
-    puff(-0.095, 0.154, 0.0, 0.033), puff(0.0, 0.164, 0.06, 0.036), puff(0.0, 0.126, -0.062, 0.034),
-    puff(-0.115, 0.164, 0, 0.022),
-    // head + neck stub: darker, more forward for flock read
-    grad(at(new SphereGeometry(0.028, 10, 7), 0.118, 0.118, 0, 1.1, 0.85, 0.9), "#1c1612", "#2a221c", 0.08, 0.14),
-    grad(at(new SphereGeometry(0.034, 10, 7), 0.155, 0.092, 0, 1.35, 0.95, 0.88), "#1a1410", "#2c241e", 0.05, 0.12),
-    grad(at(new SphereGeometry(0.013, 6, 4), 0.138, 0.118, 0.038, 0.7, 0.55, 1.4), "#1a1410", "#2c241e", 0.1, 0.14),
-    grad(at(new SphereGeometry(0.013, 6, 4), 0.138, 0.118, -0.038, 0.7, 0.55, 1.4), "#1a1410", "#2c241e", 0.1, 0.14),
-    puff(0.12, 0.138, 0, 0.024),
+    grad(at(new SphereGeometry(0.082, 20, 16), 0, 0.155, 0, 1.50, 0.96, 1.10), "#ddd6c6", "#fffdf6", 0.07, 0.25, 0.03),
+    puff(0.05, 0.192, 0.03, 0.04), puff(-0.01, 0.202, -0.028, 0.042), puff(-0.06, 0.186, 0.03, 0.038),
+    puff(0.035, 0.184, -0.045, 0.036), puff(-0.055, 0.174, -0.045, 0.035), puff(0.075, 0.162, 0.0, 0.034),
+    puff(-0.095, 0.164, 0.0, 0.033), puff(0.0, 0.174, 0.06, 0.036), puff(0.0, 0.136, -0.062, 0.034),
+    puff(-0.115, 0.174, 0, 0.022),
+    // head + neck stalk: forward mesh mass for far-flock read
+    grad(at(new CylinderGeometry(0.016, 0.022, 0.055, 8, 1, true), 0.118, 0.128, 0), "#1a1410", "#2a221c", 0.1, 0.16),
+    grad(at(new SphereGeometry(0.030, 10, 7), 0.128, 0.128, 0, 1.1, 0.85, 0.9), "#1c1612", "#2a221c", 0.09, 0.15),
+    grad(at(new SphereGeometry(0.038, 10, 7), 0.168, 0.100, 0, 1.4, 0.95, 0.9), "#14100c", "#2a221c", 0.06, 0.13),
+    ear(0.042), ear(-0.042),
+    // short tail nub
+    grad(at(new SphereGeometry(0.016, 6, 4), -0.12, 0.148, 0, 1.2, 0.7, 0.7), "#cfc8ba", "#ebe4d6", 0.12, 0.17),
+    puff(0.12, 0.148, 0, 0.024),
     leg(0.052, 0.036), leg(0.052, -0.036), leg(-0.052, 0.036), leg(-0.052, -0.036),
   ].map(rgba);
   // ground-colour soft dissolve under the hooves: pasture tone, alpha → 0 at rim (no hard disc)
@@ -889,7 +893,7 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
         y: TILE_TOP + 0.004,
         z: b.z,
         yaw: b.yaw,
-        scale: (isPine(b.kind) ? 1.28 : b.kind === "boulder" ? 1.18 : b.kind === "sheep" ? 1.02 : 1.0) * b.scale, // T253 sheep silhouette footprint
+        scale: (isPine(b.kind) ? 1.28 : b.kind === "boulder" ? 1.18 : b.kind === "sheep" ? 1.85 : 1.0) * b.scale, // T262 sheep LOD silhouette footprint
         stretch: 1,
         tone: 0.5,
         hue: 0.5,

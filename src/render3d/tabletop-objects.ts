@@ -261,9 +261,9 @@ function translated(geom: Geometry, y: number): Geometry {
 function cardStock(): Geometry {
   const shape = new Shape();
   // T213 · thicker board-game card stock + fuller corner radius (readable stage-wide)
-  const w = 0.34;
-  const h = 0.48;
-  const r = 0.05;
+  const w = 0.40; // T262 · larger card footprint (ortho)
+  const h = 0.56;
+  const r = 0.055;
   shape.moveTo(-w + r, -h);
   shape.lineTo(w - r, -h);
   shape.quadraticCurveTo(w, -h, w, -h + r);
@@ -275,7 +275,7 @@ function cardStock(): Geometry {
   shape.quadraticCurveTo(-w, -h, -w + r, -h);
   shape.closePath();
   const geom = new ExtrudeGeometry(shape, {
-    depth: 0.062,
+    depth: 0.15, // T262 · thicker card stock body (mesh height)
     bevelEnabled: true,
     bevelThickness: 0.014,
     bevelSize: 0.012,
@@ -292,8 +292,9 @@ function cardStock(): Geometry {
 /** T033 · cut gem chip: short faceted cylinder. */
 function gemChip(): Geometry {
   // T213 · cut gem: taller faceted cylinder (tabletop crystal chip, not a flat slug)
-  const geom = new CylinderGeometry(0.40, 0.48, 0.26, 10);
-  geom.translate(0, 0.13, 0);
+  // T262 · taller cut gem crystal (mesh height)
+  const geom = new CylinderGeometry(0.50, 0.58, 0.48, 10);
+  geom.translate(0, 0.24, 0);
   geom.computeVertexNormals();
   return geom;
 }
@@ -302,14 +303,14 @@ function gemChip(): Geometry {
 /** T058 · elongated recessed trough for pattern lines / floor row (not a round pit). */
 function lineTroughGeom(): Geometry {
   // Unit footprint: length along X, shallow Y, narrow Z — scaled by node.scale[0].
-  return translated(new BoxGeometry(1, 0.08, 0.34), 0.04);
+  return translated(new BoxGeometry(1, 0.12, 0.48), 0.06); // T262 · wider pattern trough
 }
 
 function glazedTileGeom(): Geometry {
   const shape = new Shape();
   // T210 · thicker porcelain tile + fuller corner radius (reads as ceramic, not flat chip)
-  const s = 0.46;
-  const r = 0.08;
+  const s = 0.62; // T262 · larger ceramic footprint (ortho)
+  const r = 0.09;
   shape.moveTo(-s + r, -s);
   shape.lineTo(s - r, -s);
   shape.quadraticCurveTo(s, -s, s, -s + r);
@@ -321,7 +322,7 @@ function glazedTileGeom(): Geometry {
   shape.quadraticCurveTo(-s, -s, -s + r, -s);
   shape.closePath();
   const geom = new ExtrudeGeometry(shape, {
-    depth: 0.12,
+    depth: 0.30, // T262 · thicker ceramic body (mesh height, bevel sizes unchanged)
     bevelEnabled: true,
     bevelThickness: 0.028,
     bevelSize: 0.026,
@@ -453,17 +454,26 @@ function plaqueWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     const tex = new CanvasTexture(canvas);
     tex.colorSpace = SRGBColorSpace;
     tex.anisotropy = 4;
+    // T261 · mesh-recessed parchment plate sunk under wood frame lip (topology, not canvas ox/oy)
     const face = new Mesh(
       (() => {
-        const plane = new PlaneGeometry(0.72, 0.44);
-        plane.rotateX(-Math.PI / 2);
-        plane.translate(0, 0.09, 0);
-        return plane;
+        const plate = new BoxGeometry(0.70, 0.016, 0.42);
+        plate.translate(0, 0.028, 0); // seated in frame cavity
+        return plate;
       })(),
-      new MeshBasicMaterial({ map: tex, toneMapped: false }),
+      new MeshStandardMaterial({ map: tex, roughness: 0.86, metalness: 0.02 }),
     );
+    face.castShadow = false;
+    face.receiveShadow = true;
     face.renderOrder = 2;
     group.add(face);
+    // T261 · raised frame lip ring (outer wood rim catches key light)
+    const lip = new Mesh(
+      translated(new BoxGeometry(0.85, 0.022, 0.55), 0.055),
+      new MeshStandardMaterial({ color: "#4a2f12", roughness: 0.48, metalness: 0.18 }),
+    );
+    lip.castShadow = true;
+    group.add(lip);
   }
   return group;
 }
@@ -596,10 +606,10 @@ function cardWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
     tex.anisotropy = 4;
     const face = new Mesh(
       (() => {
-        const plane = new PlaneGeometry(0.64, 0.90);
+        const plane = new PlaneGeometry(0.76, 1.06); // T262 larger face plate
         plane.rotateX(-Math.PI / 2);
-        // T213 · sit clearly above thicker card stock
-        plane.translate(0, 0.11, 0);
+        // T262 · sit clearly above thicker card stock
+        plane.translate(0, 0.20, 0);
         return plane;
       })(),
       new MeshBasicMaterial({ map: tex, toneMapped: false }),
@@ -617,7 +627,7 @@ function geometryFor(mesh: string): Geometry {
       return new BoxGeometry(1, 1, 1);
     case "road-bar":
       // T060 · edge-aligned prism (length X, shallow Y, narrow Z); base at y=0
-      return translated(new BoxGeometry(1, 0.18, 0.32), 0.09);
+      return translated(new BoxGeometry(1, 0.22, 0.42), 0.11); // T262 wider road prism
     case "hex-prism":
       return hexPrism();
     case "disc":
@@ -841,7 +851,7 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const step = claimed ? 0.17 : 0.2;
   const count = Math.max(2, Math.floor(usable / step));
   const start = -((count - 1) * step) / 2;
-  const railZ = gauge * 0.32;
+  const railZ = gauge * 0.42; // T262 · wider track gauge silhouette (ortho-readable)
   // T078 · cold board: wood sleepers even when unclaimed (not bald faint slots)
   // T094 · sleeper/steel microdetail (shared route path)
   const tieMat = railSleeperMaterial(ctx);
@@ -850,16 +860,18 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   for (let i = 0; i < count; i += 1) {
     const x = start + i * step;
     // T210 · thicker / taller ties — lumber blocks, not printed dashes
-    ties.push(boxAt(claimed ? 0.10 : 0.09, claimed ? 0.055 : 0.048, gauge * 1.22, x, claimed ? 0.07 : 0.05, 0));
+    // T262 · taller lumber ties (mesh height, not bevel constant)
+    ties.push(boxAt(claimed ? 0.11 : 0.10, claimed ? 0.072 : 0.062, gauge * 1.28, x, claimed ? 0.09 : 0.07, 0));
   }
   const sleepers = new Mesh(mergeGeometries(ties) ?? ties[0]!, tieMat);
   sleepers.castShadow = true;
   sleepers.receiveShadow = true;
   // T210 · I-ish rail: taller web + head for raised steel bar in stage-wide
-  const railY = claimed ? 0.125 : 0.09;
-  const railH = claimed ? 0.055 : 0.045;
-  const head = claimed ? 0.046 : 0.036;
-  const web = claimed ? 0.022 : 0.018;
+  // T262 · raised steel rail web/head for stage-wide track read
+  const railY = claimed ? 0.185 : 0.140;
+  const railH = claimed ? 0.088 : 0.070;
+  const head = claimed ? 0.070 : 0.055;
+  const web = claimed ? 0.034 : 0.026;
   const railGeoms = [
     boxAt(usable, railH, web, 0, railY, railZ),
     boxAt(usable, head * 0.55, head, 0, railY + railH * 0.55, railZ),
@@ -905,9 +917,10 @@ function railTrack(node: SceneNode, ctx: TabletopObjectContext): Object3D {
         }
       }
       // T210 · seat-colored body + pitched roof lip (rolling stock, not sugar cubes)
-      bodies.push(boxAt(cw, 0.18, cd, cx, 0.2, 0));
-      bodies.push(boxAt(cw * 0.96, 0.06, cd * 0.88, cx, 0.31, 0)); // roof lip
-      bodies.push(boxAt(cw * 0.7, 0.03, cd * 0.7, cx, 0.35, 0)); // roof crown
+      // T262 · taller rolling-stock body + pitched roof (mesh LOD)
+      bodies.push(boxAt(cw, 0.30, cd, cx, 0.28, 0));
+      bodies.push(boxAt(cw * 0.96, 0.08, cd * 0.88, cx, 0.45, 0)); // roof lip
+      bodies.push(boxAt(cw * 0.7, 0.05, cd * 0.7, cx, 0.51, 0)); // roof crown
       // coupler knuckle between cars
       bodies.push(boxAt(0.05, 0.06, cd * 0.35, cx - cw * 0.52, 0.14, 0));
       // window panes (dark recesses — readable vs solid box)
@@ -1614,13 +1627,14 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
           const h0 = height[i]!;
           const hx = height[y * W + ((x + 1) % W)]!;
           const hy = height[((y + 1) % H) * W + x]!;
-          const dx = (h0 - hx) * 14;
-          const dy = (h0 - hy) * 14;
-          const shade = (h0 - 0.5) * 360; // T083…T214/T217 · wide-stage albedo amplitude
+          const dx = (h0 - hx) * 18;
+          const dy = (h0 - hy) * 18; // T261 pile slope centerCalm
+          const shade = Math.max(0, (h0 - 0.5) * 520); // T261 · peak-only weave lift (HARD+centerCalm)
           const o = i * 4;
-          aImg.data[o] = Math.max(0, Math.min(255, br + shade));
-          aImg.data[o + 1] = Math.max(0, Math.min(255, bg + shade));
-          aImg.data[o + 2] = Math.max(0, Math.min(255, bb + shade * 0.85));
+          const lift = 28; // T261 centerCalm · peak-only weave floor
+          aImg.data[o] = Math.max(0, Math.min(255, br + shade + lift));
+          aImg.data[o + 1] = Math.max(0, Math.min(255, bg + shade + lift));
+          aImg.data[o + 2] = Math.max(0, Math.min(255, bb + shade * 0.85 + lift));
           aImg.data[o + 3] = 255;
           nImg.data[o] = Math.max(0, Math.min(255, 128 + dx * 110));
           nImg.data[o + 1] = Math.max(0, Math.min(255, 128 + dy * 110));
@@ -1657,26 +1671,44 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
     tex.repeat.set(2.4, 2.4); // T083…T190/T196 · weave cells at stage-wide
   }
   if (map) map.colorSpace = SRGBColorSpace;
-  const mat = new MeshStandardMaterial({
+  // T261 · oil-film felt: MeshPhysical clearcoat varnish + brush nap (not tip matte Standard)
+  const mat = new MeshPhysicalMaterial({
     color: base,
     map: map ?? undefined,
     normalMap: normalMap ?? undefined,
-    normalScale: new Vector2(6.85, 6.85), // T083…T214/T217 · weave microcontrast
+    normalScale: new Vector2(9.0, 9.0), // T261 · pile weave lacquer
     roughnessMap: roughnessMap ?? undefined,
-    roughness: Math.max(0.9, token?.roughness ?? 0.97),
+    roughness: Math.min(0.62, token?.roughness ?? 0.55),
     metalness: 0,
-    // T083/T169 · AO-ish darkening so weave separates from wood surround
-    aoMapIntensity: 0.95,
+    clearcoat: 0.62,
+    clearcoatRoughness: 0.18,
+    aoMapIntensity: 0.82, // T261 centerCalm
   });
-  // T082 · procedural cloth weave on top of maps (MaterialLibrary cloth pattern)
-  installPattern(mat, token?.pattern === "cloth" || !token?.pattern ? "cloth" : token.pattern, 0);
+  // T261 · cloth + oil brush dabs so felt continuous with terrain oil-film language
+  installPattern(mat, token?.pattern === "cloth" || !token?.pattern ? "cloth" : token.pattern, 0.92);
   const strength = mat.userData.gdPatternStrength as { value: number } | undefined;
   if (strength) strength.value = 1;
   return mat;
 }
 
 function feltInsetGeom(): Geometry {
-  return new BoxGeometry(1, 1, 1);
+  // T261 · subdivided felt plate with pile-height displacement (mesh nap topology)
+  const g = new BoxGeometry(1, 1, 1, 28, 1, 28);
+  const pos = g.getAttribute("position");
+  for (let i = 0; i < pos.count; i += 1) {
+    const y = pos.getY(i);
+    if (y < 0.48) continue; // top cap only
+    const x = pos.getX(i);
+    const z = pos.getZ(i);
+    const pile =
+      Math.abs(Math.sin(x * 32.0) * Math.sin(z * 28.0)) * 0.014 +
+      Math.sin(x * 11.0 + z * 9.0) * 0.005 +
+      Math.sin((x + z) * 6.5) * 0.004; // T261 nap peak-biased
+    pos.setY(i, y + pile);
+  }
+  pos.needsUpdate = true;
+  g.computeVertexNormals();
+  return g;
 }
 
 /** Stitch / piping ring on the felt lip (thin dark frame). */
@@ -1685,7 +1717,7 @@ function feltStitchMesh(): Object3D {
   const mat = new MeshBasicMaterial({
     color: "#2a2118",
     transparent: true,
-    opacity: 0.38, // T202 · calmer felt lip stitch
+    opacity: 0.48, // T261 · stitch lip under oil-film felt
     depthWrite: false,
     toneMapped: false,
   });
@@ -1852,7 +1884,7 @@ function framedArtWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3
   const group = new Group();
   // T213 · Wood frame (outer) — thicker product gallery frame
   const frame = new Mesh(
-    translated(new BoxGeometry(1.02, 0.11, 1.28), 0.055),
+    translated(new BoxGeometry(1.22, 0.14, 1.52), 0.07), // T262 larger gallery frame
     new MeshStandardMaterial({ color: "#c49858", roughness: 0.68, metalness: 0.08 }), // T137…T157/T213
   );
   frame.castShadow = true;
@@ -1860,7 +1892,7 @@ function framedArtWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3
   group.add(frame);
   // T159/T213 · shared product-frame bevel lip (seat-close readable across suites)
   const lip = new Mesh(
-    translated(new BoxGeometry(1.05, 0.018, 1.32), 0.115),
+    translated(new BoxGeometry(1.26, 0.022, 1.56), 0.14),
     new MeshStandardMaterial({ color: "#ffe8b8", roughness: 0.32, metalness: 0.18 }), // T159/T160/T163/T213
   );
   lip.castShadow = false;
@@ -1868,7 +1900,7 @@ function framedArtWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3
   group.add(lip);
   // Inner mat
   const mat = new Mesh(
-    translated(new BoxGeometry(0.84, 0.025, 1.06), 0.09),
+    translated(new BoxGeometry(1.02, 0.03, 1.28), 0.11),
     new MeshStandardMaterial({ color: "#fffaf2", roughness: 0.82, metalness: 0 }), // T157/T213 mat lift
   );
   mat.receiveShadow = true;
@@ -1885,13 +1917,13 @@ function framedArtWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3
   });
   const tex = canvas ? new CanvasTexture(canvas) : null;
   if (tex) tex.colorSpace = SRGBColorSpace;
-  const artGeom = new PlaneGeometry(0.78, 0.98);
+  const artGeom = new PlaneGeometry(0.96, 1.20); // T262 larger lot canvas
   artGeom.rotateX(-Math.PI / 2);
   const art = new Mesh(
     artGeom,
     new MeshBasicMaterial({ map: tex, toneMapped: false }),
   );
-  art.position.set(0, 0.12, 0);
+  art.position.set(0, 0.15, 0);
   art.renderOrder = 2;
   group.add(art);
   group.add(softContactShadow(0.66, 0.82, { opacity: 0.12, boost: 0.62 })); // T139…T213/T218 lot shadow (corner-calm)
