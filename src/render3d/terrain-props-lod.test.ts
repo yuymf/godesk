@@ -19,9 +19,10 @@ const { appendFileSync } = (await import(/* @vite-ignore */ nodeId("fs"))) as { 
  * this same file (see REPORT in g3d-evidence/…/lod-high).
  */
 // T088 · medium baseline refreshed (shore dressing + denser sparse PROP_COUNTS); low unchanged.
+// T088+ shore/prop dressing refresh (2026-10-16 tip digests).
 const BASELINE: Record<"medium" | "low", Record<"shadow" | "noshadow", string>> = {
-  medium: { shadow: "4eb756e17092602e8cc9d258acfba081f41825f353382cb65c8aa2c8603eb1e6", noshadow: "258bbca57e989e9de011ac54650ef5ead1a35cbb2308d0e534cd8da43c88295e" },
-  low: { shadow: "8cd04aa93fad8514394b19aa9d70524a830d3a4cd9363664509b09ea246450c4", noshadow: "5cfc19a7f0486003fafc6ec978fba4fe70929566cf14869edb5e8280ce774b83" },
+  medium: { shadow: "542bf3d8ac3c6474ad8a845d9038cf1af5351273871da55e1a0098107c6aa916", noshadow: "a030d68609f7f20b74c745e8f1b5595406898e78303160d753233ce39bf74e61" },
+  low: { shadow: "f52e0f0051e1d75b125b3962c4a3b00225c5a991980859fcfb3cc20e80a1fcb4", noshadow: "89a3949a121df63a7230a8ac210bcd2ee8a4849bff4c9adf84cd65a34639cca8" },
 };
 
 function digestLayer(tier: RenderTierId, castShadow: boolean): string {

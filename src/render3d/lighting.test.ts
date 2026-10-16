@@ -21,7 +21,7 @@ describe("G3D-07 lighting rig", () => {
     expect(rig.hemisphere).toBeInstanceOf(HemisphereLight);
     expect(rig.sun.intensity).toBe(3.05);
     expect(rig.sun.color.getHexString()).toBe(new DirectionalLight("#ffc890").color.getHexString());
-    expect(rig.hemisphere.intensity).toBe(1.05);
+    expect(rig.hemisphere.intensity).toBe(1.18); // T166 warmer ground
     expect(rig.sun.castShadow).toBe(true);
     expect(rig.sun.shadow.mapSize.x).toBe(2048);
     expect(rig.sun.shadow.radius).toBe(6.5);

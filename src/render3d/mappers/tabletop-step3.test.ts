@@ -54,9 +54,12 @@ describe("step3 · configure_render: ortho camera / wood chrome / decor / track 
 
   it("adds a flat name label per city and tags terminals as major stations", () => {
     const scene = mapTabletopToScene(layout(), render());
-    const labels = scene.model.nodes.filter((n) => n.kind === "label").map((n) => n.tag);
-    expect(labels).toEqual(DEFAULT_NETWORK_CITIES.map((c) => c.name));
-    const majors = scene.model.nodes.filter((n) => n.mesh === "station" && n.tag === "major").map((n) => n.id);
+    // T051 · station plaques live on mesh tags (hub:Name / Name); no floating label nodes.
+    const stations = scene.model.nodes.filter((n) => n.mesh === "station");
+    expect(stations.map((n) => n.tag)).toEqual(
+      DEFAULT_NETWORK_CITIES.map((c) => (c.id === "A" || c.id === "F" ? `hub:${c.name}` : c.name)),
+    );
+    const majors = stations.filter((n) => String(n.tag).startsWith("hub:")).map((n) => n.id);
     expect(majors).toEqual(["piece:station:A", "piece:station:F"]);
   });
 
@@ -94,7 +97,7 @@ describe("step3 · configure_render: ortho camera / wood chrome / decor / track 
     expect(shore.scale![0]).toBeCloseTo(b.width + 1.8, 2);
     expect(shore.position[1] + shore.scale![1] / 2).toBeLessThan(board.position[1] + board.scale![1] / 2);
     const rim = scatterSurround(layout(), spec.surround, 0.17);
-    expect(rim.length).toBeGreaterThan(10);
+    expect(rim.length).toBeGreaterThanOrEqual(9); // T046 denser board / fewer rim rocks
     for (const p of rim) expect(Math.abs(p.x) > b.width / 2 || Math.abs(p.z) > b.depth / 2).toBe(true);
     expect(scatterSurround(layout({ "A|B": 0 }), spec.surround, 0.17)).toEqual(rim);
   });

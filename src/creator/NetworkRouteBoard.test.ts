@@ -19,15 +19,14 @@ describe("NetworkRouteBoard", () => {
       }),
     );
     expect(html).toContain('aria-label="线路网络盘"');
-    expect(html).toContain('aria-label="对局状态"');
-    expect(html).toContain('aria-label="已铺路线"');
-    expect(html).toContain('aria-label="枢纽"');
-    expect(html).toContain('aria-label="连通进度"');
+    // T189+ desk-stage HUD / drawer chrome (immersive tabletop-first)
+    expect(html).toContain("desk-stage-hud");
     expect(html).toContain("轮到你铺线");
+    expect(html).toContain("已铺路线");
     expect(html).toContain("北港");
     expect(html).toContain("南站");
     expect(html).toContain("座位 0 未连通");
     expect(html).toContain("座位 1 未连通");
-    expect(html).toContain("座位 0 · 0");
+    expect(html).toContain("desk-action-drawer");
   });
 });

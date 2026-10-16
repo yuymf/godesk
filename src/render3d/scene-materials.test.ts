@@ -13,7 +13,7 @@ describe("G3D-07 SceneNode → shared material preset", () => {
   it("gives all seat pieces one material per seat (settlement / city / road share it)", () => {
     const keys = (["settlement", "city", "road"] as const).map((kind) => materialFor(node({ kind, seat: 2 })).key);
     expect(new Set(keys)).toEqual(new Set(["seat-2"]));
-    expect(materialFor(node({ kind: "city", seat: 2 })).token.base).toBe("#8e44ad");
+    expect(materialFor(node({ kind: "city", seat: 2 })).token.base).toBe("#9a84a8"); // T265 desat
   });
 
   it("keeps decor procedural only (too small for texture streaming)", () => {
@@ -25,7 +25,7 @@ describe("G3D-07 SceneNode → shared material preset", () => {
 
   it("maps props: hot tokens, wood for ports / ships / tray, cliff fallback", () => {
     expect(materialFor(node({ kind: "number-token", tag: "hot" })).key).toBe("number-token-hot");
-    expect(materialFor(node({ kind: "number-token", tag: "normal" })).token.pbrSet).toBe("t11-parchment");
+    expect(materialFor(node({ kind: "number-token", tag: "normal" })).token.pbrSet).toBe("t08-wood"); // T241 wood chip
     for (const kind of ["port", "ship", "dice-tray"] as const) expect(materialFor(node({ kind })).key).toBe("wood");
     expect(materialFor(node({ kind: "cliff" })).token.pbrSet).toBe("t07-cliff");
   });
