@@ -12,7 +12,7 @@ describe("T198 H01+H03 shared hard residual", () => {
     expect(spec).toContain("T198");
     expect(spec).toMatch(/#(03c24e|02c852|01cc56|00d45a|00dc5e|00e868)/); // T198→T214 desk felt
     const obj = readFileSync("src/render3d/tabletop-objects.ts", "utf8");
-    expect(obj).toMatch(/W \* 0\.58/); // T193 vignette calm kept
+    expect(obj).toMatch(/W \* 0\.(58|72)/); // T193 vignette calm kept
     expect(spec).not.toMatch(/suite === ["']H0/);
   });
 });

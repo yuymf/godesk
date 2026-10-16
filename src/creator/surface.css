@@ -7250,3 +7250,51 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   cursor: default !important;
   opacity: 0.85 !important;
 }
+
+
+/* ========== UI-surface-contrast · shell/overlay tokens on bright 3D (P1) ==========
+ * White bars/buttons must not dissolve into washed tabletop. Generic tokens only.
+ */
+:root {
+  --ui-surface-ink: #1c1917;
+  --ui-surface-ink-soft: #44403c;
+  --ui-surface-paper: #faf6ec;
+  --ui-surface-paper-strong: #fffdf8;
+  --ui-surface-overlay: color-mix(in srgb, #1c1917 88%, #0c0a09);
+  --ui-surface-overlay-border: color-mix(in srgb, #fafaf9 20%, transparent);
+  --ui-surface-contrast-min: 4.5; /* documentation floor — WCAG-ish for chrome text */
+  --ui-chrome-on-3d-bg: var(--ui-surface-overlay);
+  --ui-chrome-on-3d-fg: #fafaf9;
+  --ui-chrome-on-3d-muted: #d6d3d1;
+  --ui-chrome-on-light-bg: color-mix(in srgb, #fff 94%, #f5f5f4);
+  --ui-chrome-on-light-fg: #1c1917;
+  --ui-chrome-on-light-border: color-mix(in srgb, #1c1917 16%, transparent);
+}
+
+.room-playable-shell,
+.room-invitation-rich[data-ui-share-ready="1"],
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud {
+  background: var(--ui-chrome-on-3d-bg) !important;
+  color: var(--ui-chrome-on-3d-fg) !important;
+  border-color: var(--ui-surface-overlay-border) !important;
+}
+
+.desk-action-drawer[data-ui-action-drawer="1"],
+.room-view-tabletop-immersive.room-view-seated .desk-action-drawer {
+  background: var(--ui-chrome-on-light-bg) !important;
+  color: var(--ui-chrome-on-light-fg) !important;
+  border-color: var(--ui-chrome-on-light-border) !important;
+}
+
+/* Keep white chrome from dissolving into washed felt/paperboard */
+.room-view-tabletop-immersive.room-view-seated .desk-action-drawer .desk-action-drawer-summary,
+.desk-action-drawer[data-ui-action-drawer="1"] .desk-action-drawer-summary {
+  color: var(--ui-chrome-on-light-fg) !important;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 55%);
+}
+.room-view-tabletop-immersive.room-view-seated .room-shell-header.is-share-chrome,
+.room-view-hex-island.room-view-seated .room-shell-header.is-share-chrome {
+  background: var(--ui-chrome-on-light-bg) !important;
+  color: var(--ui-chrome-on-light-fg) !important;
+  border-bottom: 1px solid var(--ui-chrome-on-light-border) !important;
+}

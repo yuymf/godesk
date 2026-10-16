@@ -7,7 +7,7 @@ describe("T214 shared desk product light / felt / wood rim", () => {
     expect(obj).toContain("T214");
     expect(obj).toMatch(/Vector2\((6\.05|6\.45|6\.85),\s*(6\.05|6\.45|6\.85)\)/);
     expect(obj).toMatch(/Vector2\((3\.05|3\.35|3\.65),\s*(3\.05|3\.35|3\.65)\)/);
-    expect(obj).toMatch(/W \* 0\.58/);
+    expect(obj).toMatch(/W \* 0\.(58|72)/);
     const spec = readFileSync("src/creator/render-spec.ts", "utf8");
     expect(spec).toContain("T214");
     expect(spec).toMatch(/exposure: (1\.(78|84|86|90|96)|1\.99|2\.(02|08))/);

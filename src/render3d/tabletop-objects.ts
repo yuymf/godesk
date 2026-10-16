@@ -1253,18 +1253,18 @@ function softContactShadow(
   if (opts?.grounded) {
     // T270 · clear short-contact under tall chips (wide-frame readable)
     // UI-light-floors · shorter/lighter rings — no radial black blob over disc heart
-    group.add(mk(0.72, Math.min(0.72, opacity * 1.35), 0.00076, "contact-shadow"));
-    group.add(mk(1.00, Math.min(0.40, opacity * 0.65), 0.00058));
-    group.add(mk(1.28, Math.min(0.12, opacity * 0.18), 0.00042));
-    group.add(mk(1.55, Math.min(0.04, opacity * 0.06), 0.00028));
+    // UI-surface-contrast · foot-only rings: kill stacked mid/outer that pooled as center radial blot
+    group.add(mk(0.62, Math.min(0.48, opacity * 0.95), 0.00076, "contact-shadow"));
+    group.add(mk(0.88, Math.min(0.18, opacity * 0.32), 0.00058));
+    group.add(mk(1.08, Math.min(0.04, opacity * 0.07), 0.00042));
     return group;
   }
   // T218/T226/T230 · product contact shadow: denser core hug + smoother veil (no bands / no center blot)
   // UI-light-floors · mid/outer veil near-zero so H04 radial blot cannot crush center
-  group.add(mk(1.02, Math.min(0.58, opacity * 0.90), 0.00066, "contact-shadow")); // tight core hug
-  group.add(mk(1.22, Math.min(0.22, opacity * 0.32), 0.00050)); // near core blend
-  group.add(mk(1.55, Math.min(0.06, opacity * 0.10), 0.00038)); // soft mid · no blot
-  group.add(mk(2.10, Math.min(0.015, opacity * 0.022), 0.00028)); // mid-outer whisper
+  // UI-surface-contrast · core-only hug; drop wide mid/outer rings that stack into disc-heart blot
+  group.add(mk(0.92, Math.min(0.42, opacity * 0.72), 0.00066, "contact-shadow")); // tight core hug
+  group.add(mk(1.12, Math.min(0.10, opacity * 0.16), 0.00050)); // near core blend
+  group.add(mk(1.28, Math.min(0.018, opacity * 0.028), 0.00038)); // soft mid whisper · no blot
   return group;
 }
 
@@ -1765,10 +1765,11 @@ function tableVignetteMesh(): Object3D {
     if (g) {
       // T193/T202 · softer shared table vignette — larger clear center, milder rim (no hard bait)
       // UI-light-floors · kill center black blot / radial veil that crushed disc heart (H02/H04)
-      const grd = g.createRadialGradient(W / 2, H / 2, W * 0.58, W / 2, H / 2, W * 0.94);
+      // UI-surface-contrast · clear center through W*0.72; rim whisper only (no center wash)
+      const grd = g.createRadialGradient(W / 2, H / 2, W * 0.72, W / 2, H / 2, W * 0.98);
       grd.addColorStop(0, "rgba(0,0,0,0)");
-      grd.addColorStop(0.72, "rgba(0,0,0,0)");
-      grd.addColorStop(1, "rgba(12,8,4,0.04)");
+      grd.addColorStop(0.82, "rgba(0,0,0,0)");
+      grd.addColorStop(1, "rgba(12,8,4,0.02)");
       g.fillStyle = grd;
       g.fillRect(0, 0, W, H);
     }
@@ -2065,14 +2066,16 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = meepleFigure(node, ctx);
   } else if (mesh === "card") {
     object = cardWithFace(node, ctx);
-    (object as Group).add(softContactShadow(1.05, 1.28, { opacity: 0.32 })); // T096…T213/T218 card (center/corner-calm)
+    (object as Group).add(softContactShadow(0.88, 1.05, { opacity: 0.22 })); // UI-surface-contrast · lighter card foot
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
     // T081 · larger local blob so small tiles still ground at H02/H03 visibility
-    (object as Group).add(softContactShadow(1.05, 1.05, { opacity: 0.70, boost: 0.95, grounded: true })); // T269 · tile grounded HARD/centerCalm
+    // UI-surface-contrast · tighter tile foot — ring layouts must not pool mid/outer into center blot
+    (object as Group).add(softContactShadow(0.72, 0.72, { opacity: 0.34, boost: 0.70, grounded: true }));
   } else if (mesh === "plaque") {
     object = plaqueWithFace(node, ctx);
-    (object as Group).add(softContactShadow(0.70, 0.55, { opacity: 0.62, boost: 0.92, grounded: true })); // T269 · plaque grounded
+    // UI-surface-contrast · plaque foot lighter so seat-close type stays readable
+    (object as Group).add(softContactShadow(0.52, 0.40, { opacity: 0.34, boost: 0.72, grounded: true }));
   } else if (mesh === "gem-chip") {
     // T213 · shared gem chip with clearcoat crystal feel (MaterialLibrary base + physical coat)
     const baseTok = node.material ? ctx.materials[node.material] : undefined;

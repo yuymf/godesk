@@ -375,8 +375,8 @@ export class MaterialLibrary {
 }
 
 
-/** UI-light-floors · cap wash-white albedo so paperboard/felt cannot crush UI chrome (H01/H03/H05). */
-export const PLAYABLE_ALBEDO_MAX = 0.92;
+/** UI-light-floors / UI-surface-contrast · cap wash-white albedo so paperboard/felt cannot crush UI chrome. */
+export const PLAYABLE_ALBEDO_MAX = 0.86;
 export function clampPlayableAlbedo(color: Color): Color {
   const maxCh = Math.max(color.r, color.g, color.b);
   if (maxCh > PLAYABLE_ALBEDO_MAX) {

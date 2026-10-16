@@ -30,13 +30,14 @@ import {
 
 /** UI-light-floors · playable exposure / key ceilings (kill wash-out that crushes UI text).
  *  Applies at renderer+rig time so RenderSpec/HARD authoring stays schema-valid; no suite forks. */
+/** UI-surface-contrast · tighter ceilings so wash-out white cannot crush chrome/text. */
 export const PLAYABLE_LIGHT_FLOORS = {
   exposureMin: 0.85,
-  exposureMax: 1.32,
-  sunIntensityMax: 3.35,
-  fillIntensityMax: 1.85,
-  rimIntensityMax: 1.45,
-  hemiIntensityMax: 1.55,
+  exposureMax: 1.22,
+  sunIntensityMax: 3.05,
+  fillIntensityMax: 1.55,
+  rimIntensityMax: 1.25,
+  hemiIntensityMax: 1.35,
 } as const;
 
 export function clampPlayableLighting(lighting: LightingSpec): LightingSpec {
