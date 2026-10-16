@@ -89,7 +89,7 @@ export const SCENE_TOKENS = {
     /** 阴影相机正交范围 = 岛屿包围半径 + 1.5 单位（§4.3）。 */
     boundsPadding: 1.5,
   },
-  environment: { intensity: 0.2, pmremSigma: 0.05 },
+  environment: { intensity: 0.58, pmremSigma: 0.04 }, // T245 · wood/felt catch room light
   /** §5.5 S-01 程序化渐变天空穹顶。 */
   sky: { top: "#9ab8cc", horizon: "#efe6d4", bottom: "#d4c4a4", exponent: 0.75, radius: 60 },
   camera: { fovDeg: 35, distance: 16, minPolarDeg: 25, maxPolarDeg: 70 },
@@ -132,11 +132,11 @@ export const TERRAIN_MATERIALS: Record<string, MaterialToken> = {
 export const PROP_MATERIALS = {
   cliff: { base: "#7a7368", roughness: 0.9, metalness: 0, pattern: "stone", pbrSet: "t07-cliff", pbrRepeat: 5 },
   // R22: warmer cream (was #f5f0e1) — keeps the parchment token cream under the less-orange R22 key light.
-  "number-token": { base: "#e0b870", roughness: 0.60, metalness: 0.06, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 1.72, pbrTint: 0.52 }, // T241 wood-chip bevel+lathe
+  "number-token": { base: "#d4a868", roughness: 0.48, metalness: 0.08, clearcoat: 0.55, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 2.1, pbrTint: 0.22 }, // T245 lacquered wood-chip
   // G3D-ART-2：6/8 不再整块涂红（与座位 0 红色混淆、且盖住数字）；同用 N1 筹码面，数字用赤陶色高亮（number-labels.ts）。
-  "number-token-hot": { base: "#f2b060", roughness: 0.58, metalness: 0.06, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 1.72, pbrTint: 0.48 }, // T241
+  "number-token-hot": { base: "#e8a050", roughness: 0.44, metalness: 0.08, clearcoat: 0.62, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 2.1, pbrTint: 0.18 }, // T245
   robber: { base: "#2c3e50", roughness: 0.7, metalness: 0, pattern: "none" },
-  wood: { base: "#8b6914", roughness: 0.7, metalness: 0, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 1 },
+  wood: { base: "#8b6914", roughness: 0.55, metalness: 0.04, clearcoat: 0.35, pattern: "grain", pbrSet: "t08-wood", pbrRepeat: 1.4, pbrTint: 0.15 }, // T245
   die: { base: "#f8f8f8", roughness: 0.5, metalness: 0, pattern: "none" },
   ground: { base: "#d7e6c8", roughness: 0.9, metalness: 0, pattern: "cloth" },
 } satisfies Record<string, MaterialToken>;

@@ -1,5 +1,6 @@
 /**
  * G3D-ISLAND / G3D-PROPS 胶水：汐屿棋盘输入 → 地形道具 + 岛屿海岸两个图层（SceneHost 只调这一个对象）。
+ * T246 · terrain-props 在 Tidewell GLB ready 后切换到 sculpted tree/sheep/rock meshes。
  * 被取代的 #138 节点（灰石板 cliff / 灰盒港口 port / 船 ship / 地块中心装饰 decor）由
  * `withoutReplacedNodes` 从 SceneModel 中滤掉，不改 mapper（mapper 归属 Track C）。
  */

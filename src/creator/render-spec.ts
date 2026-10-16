@@ -478,9 +478,9 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T172/T177/T192/T201/T206 · denser/brighter network map cloth (shared MaterialLibrary)
-      map: material("#a0ffe0", "cloth", 0.99, 0, undefined, 0.99), // T177…T241 H02 HARD chroma
+      map: material("#f0c878", "cloth", 0.99, 0, undefined, 0.99), // T245 H02 parchment felt
       table: material("#e8f0ff", "grain", 0.22, 0.34), // T110…T241 · cooler exterior/rim (corner-calm)
-      ink: material("#c05028", "none", 0.28, 0.48, 0.78), // T214…T241 route ink product
+      ink: material("#1a2838", "none", 0.22, 0.36, 0.70), // T245 route ink
       piece: material("#fff8e8", "none", 0.06, 0.42, 0.95), // T201…T241 · cream piece vs tip white
     });
     render.bindings = [
@@ -510,7 +510,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#70ffe8", "cloth", 0.99, 0, undefined, 0.99),  // T044…T241 product mint felt · vs tip warm
+      board: material("#e8c890", "cloth", 0.99, 0, undefined, 0.99),  // T245 product ochre felt
       table: material("#f0f4ff", "grain", 0.22, 0.32), // T092…T241 · cooler wood rim (corner-calm)
       piece: material("#ffe8c8", "none", 0.10, 0.36, 0.94), // T198…T241 · cream piece
       card: material("#e0f0ff", "none", 0.08, 0.32, 0.94), // T198…T241 · card stock cool
@@ -536,13 +536,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     ];
     if (kernelType === "auction-bidding-v1") {
       Object.assign(render.materials, {
-        board: material("#60d0ff", "cloth", 0.99, 0, undefined, 0.99),  // T044…T241 auction felt
+        board: material("#d8a060", "cloth", 0.99, 0, undefined, 0.99),  // T245 auction ochre
         card: material("#fffaf4", "none", 0.28, 0.10, 0.48), // T061/T175/T213
       });
     }
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
-        board: material("#70ffe0", "cloth", 0.99, 0, undefined, 0.99),  // T044…T241 pattern felt · mint vs tip warm
+        board: material("#f0d8a0", "cloth", 0.99, 0, undefined, 0.99),  // T245 pattern parchment
         piece: material("#fff0d0", "none", 0.08, 0.38, 0.94), // T061…T241 warm piece vs tip white
         slot: material("#7a7a82", "none", 0.76, 0.06, 0.14),  // T241 recessed slots · centerCalm
         // T054 · pale print plate under wall hue tints (square grid, not black pits)

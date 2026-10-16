@@ -3500,7 +3500,7 @@ body:has(.room-view-tidewell-immersive) {
   color: transparent !important;
 }
 
-/* T234/T242 · 座位托盘/行动字/骰盘再让路（cornerCalm） */
+/* T234/T246 · 座位托盘/行动字/骰盘再让路（cornerCalm，勿暗暈） */
 .room-view-tidewell-immersive.room-view-seated .tidewell-dock {
   opacity: 0.12 !important;
   max-height: 1.15rem !important;

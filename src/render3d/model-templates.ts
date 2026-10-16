@@ -120,12 +120,13 @@ async function loadOne(fragment: string, gltf: GLTFLoader): Promise<Map<string, 
 }
 
 const DECOR_PICK: Record<string, string[]> = {
-  wood: ["tree_pineTallA", "tree_pineRoundA", "tree_pineSmallA", "log"],
-  brick: ["rock_largeA", "rock_tallA", "stone_smallA"],
-  sheep: ["plant_bush", "plant_bushSmall", "sheep"],
-  wheat: ["crops_wheatStageB"],
-  ore: ["rock_tallA", "rock_smallA", "stone_smallB"],
-  desert: ["campfire_bricks", "stone_smallA"],
+  // T245/T246 · prefer highest-fidelity named meshes from decor/props GLB
+  wood: ["tree_pineTallA", "tree_pineTallB", "tree_pineRoundA", "tree_pineRoundB", "tree_pineSmallA", "log"],
+  brick: ["rock_largeA", "rock_largeB", "rock_tallA", "stone_smallA"],
+  sheep: ["sheep", "sheep_A", "plant_bush", "plant_bushSmall"],
+  wheat: ["crops_wheatStageB", "crops_wheatStageA", "crops_wheatStageC"],
+  ore: ["rock_tallA", "rock_tallB", "rock_smallA", "stone_smallB"],
+  desert: ["campfire_bricks", "stone_smallA", "rock_smallA"],
 };
 
 /**
@@ -160,14 +161,16 @@ export async function ensureTidewellGeometries(): Promise<TidewellGeometries> {
       const shipA = pick(props, "boat-a", "boat_a") ?? FALLBACK.shipA;
       const shipB = pick(props, "boat-b", "boat_b") ?? FALLBACK.shipB;
       // G3D-13 proportions vs TILE_RADIUS≈0.95 (≈hex edge): settlement footprint ~0.25 edge, dock <0.6 edge.
-      if (dock !== FALLBACK.dock) normalizeExtent(dock, 0.52);
-      if (shipA !== FALLBACK.shipA) normalizeExtent(shipA, 0.4);
-      if (shipB !== FALLBACK.shipB) normalizeExtent(shipB, 0.4);
+      if (dock !== FALLBACK.dock) normalizeExtent(dock, 0.62); // T246 product dock scale
+      if (shipA !== FALLBACK.shipA) normalizeExtent(shipA, 0.48);
+      if (shipB !== FALLBACK.shipB) normalizeExtent(shipB, 0.48);
       for (const [key, geom] of Object.entries(decorByTerrain)) {
-        if (geom !== FALLBACK.decorByTerrain[key]) normalizeExtent(geom, 0.4);
+        // T246 · trees/rocks read as tabletop miniatures, not pixel stubs
+        const extent = key === "wood" ? 0.58 : key === "ore" || key === "brick" ? 0.48 : 0.44;
+        if (geom !== FALLBACK.decorByTerrain[key]) normalizeExtent(geom, extent);
       }
       cache = {
-        sheep: sheep !== FALLBACK.sheep ? normalizeExtent(sheep, 0.35) : sheep,
+        sheep: sheep !== FALLBACK.sheep ? normalizeExtent(sheep, 0.42) : sheep, // T246
         dock,
         shipA,
         shipB,

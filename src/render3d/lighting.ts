@@ -31,6 +31,7 @@ import {
 /** 色调映射 AgX、曝光、sRGB 输出、PCF 阴影（r186 已移除 PCFSoft）。 */
 export function configureRenderer(renderer: WebGLRenderer, lighting: LightingSpec): void {
   renderer.toneMapping = AgXToneMapping;
+  // T245 · product tabletop: AgX keeps wood grain / paperboard from blowing out under sun
   renderer.toneMappingExposure = lighting.exposure;
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.shadowMap.enabled = lighting.shadow.enabled;

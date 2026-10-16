@@ -38,6 +38,7 @@ import {
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { RenderTierId } from "./tiers";
 import { installPattern } from "./materials";
+import { getTidewellGeometriesSync } from "./model-templates";
 import { NUMBER_TOKEN_SCALE } from "./tokens";
 
 export type PropKind =
@@ -573,10 +574,49 @@ function pebbleGeometry(): BufferGeometry {
   ]);
 }
 
+/** T246 · when Tidewell GLB templates are ready, prefer sculpted tree/sheep/rock meshes over procedural low-poly. */
+function glbOr(kind: PropKind, procedural: () => BufferGeometry): BufferGeometry {
+  const tide = getTidewellGeometriesSync();
+  if (!tide.ready) return procedural();
+  if (kind === "sheep" && tide.sheep) {
+    const g = tide.sheep.clone();
+    g.computeVertexNormals();
+    return g;
+  }
+  if (isPine(kind) || kind === "canopy") {
+    const tree = tide.decorByTerrain.wood;
+    if (tree && tree !== tide.decorByTerrain.desert) {
+      const g = tree.clone();
+      g.computeVertexNormals();
+      return g;
+    }
+  }
+  if (kind === "boulder") {
+    const rock = tide.decorByTerrain.ore ?? tide.decorByTerrain.brick;
+    if (rock) {
+      const g = rock.clone();
+      g.computeVertexNormals();
+      return g;
+    }
+  }
+  return procedural();
+}
+
 const BUILDERS: Record<PropKind, () => BufferGeometry> = {
-  pineTall: pineTallGeometry, pineRound: pineRoundGeometry, pineSmall: pineSmallGeometry,
-  canopy: canopyGeometry, sheep: sheepGeometry, trough: troughGeometry, boulder: boulderGeometry, clay: clayGeometry,
-  bricks: bricksGeometry, sheaf: sheafGeometry, wheatrow: wheatRowGeometry, dune: duneGeometry, pebble: pebbleGeometry, blobshadow: blobShadowGeometry,
+  pineTall: () => glbOr("pineTall", pineTallGeometry),
+  pineRound: () => glbOr("pineRound", pineRoundGeometry),
+  pineSmall: () => glbOr("pineSmall", pineSmallGeometry),
+  canopy: () => glbOr("canopy", canopyGeometry),
+  sheep: () => glbOr("sheep", sheepGeometry),
+  trough: troughGeometry,
+  boulder: () => glbOr("boulder", boulderGeometry),
+  clay: clayGeometry,
+  bricks: bricksGeometry,
+  sheaf: sheafGeometry,
+  wheatrow: wheatRowGeometry,
+  dune: duneGeometry,
+  pebble: pebbleGeometry,
+  blobshadow: blobShadowGeometry,
 };
 
 export function buildPropGeometry(kind: PropKind, options: { cullInterior?: boolean; shadowProxy?: boolean } = {}): BufferGeometry {
@@ -760,7 +800,7 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
             : TILE_TOP,
         z: tile.center[2] + dz,
         yaw: kind === "wheatrow" ? -rowYaw + (rand() - 0.5) * 0.06 : rand() * Math.PI * 2,
-        // R20/T229/T242: product tabletop props — fuller silhouette, still ground-hugging.
+        // R20/T246: product tabletop props — GLB fidelity when ready; still ground-hugging.
         scale: isPine(kind)
           ? (kind === "pineTall" ? 0.74 + rand() * 0.24 : kind === "pineRound" ? 0.76 + rand() * 0.22 : 0.80 + rand() * 0.26)
           : kind === "canopy" ? 0.84 + rand() * 0.22
@@ -1061,17 +1101,20 @@ export type TerrainPropLayer = {
 export function createTerrainPropLayer(): TerrainPropLayer {
   const group = new Group();
   group.name = "terrain-props";
-  // R16: fully matte + canopy feather — dissolve into hex brush, kill plastic toy specular.
+  // T246 · product props: soft shading + grass/stone pattern (not flat-shaded toy plastic)
   const material = new MeshStandardMaterial({
-    vertexColors: true, flatShading: true, roughness: 1, metalness: 0, envMapIntensity: 0,
+    vertexColors: true, flatShading: false, roughness: 0.92, metalness: 0.02, envMapIntensity: 0.25,
   });
+  installPattern(material, "grass", 0.55);
   const smoothMaterial = new MeshStandardMaterial({
-    vertexColors: true, flatShading: false, roughness: 1, metalness: 0, envMapIntensity: 0,
+    vertexColors: true, flatShading: false, roughness: 0.88, metalness: 0.04, envMapIntensity: 0.3,
   });
+  installPattern(smoothMaterial, "stone", 0.4);
   const canopyMaterial = new MeshStandardMaterial({
-    vertexColors: true, flatShading: false, roughness: 1, metalness: 0, envMapIntensity: 0,
-    transparent: true, opacity: 0.4,
+    vertexColors: true, flatShading: false, roughness: 0.95, metalness: 0, envMapIntensity: 0.15,
+    transparent: true, opacity: 0.55,
   });
+  installPattern(canopyMaterial, "grass", 0.7);
   canopyMaterial.depthWrite = false;
   const sheepMaterial = createSheepDissolveMaterial();
   const shadowMaterial = new MeshStandardMaterial({
@@ -1099,8 +1142,14 @@ export function createTerrainPropLayer(): TerrainPropLayer {
   return {
     group,
     sync(tiles, nextTier, castShadow) {
-      const nextKey = `${nextTier}|${castShadow}|${tiles.map((t) => `${t.q},${t.r}:${t.terrain}`).join(";")}`;
+      const glb = getTidewellGeometriesSync().ready ? "glb" : "proc";
+      const nextKey = `${nextTier}|${castShadow}|${glb}|${tiles.map((t) => `${t.q},${t.r}:${t.terrain}`).join(";")}`;
       if (nextKey === key) return group.children.length;
+      // T246 · drop cached procedural geos when GLB flips ready
+      if (glb === "glb") {
+        for (const g of geometries.values()) g.dispose();
+        geometries.clear();
+      }
       key = nextKey;
       tier = nextTier;
       clear();

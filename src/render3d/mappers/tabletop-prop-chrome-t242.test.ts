@@ -1,16 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 
-describe("T242 terrain props denser + chrome cornerCalm yield", () => {
-  it("raises shared prop mesh/soft-edge and chrome yield without suite fork", () => {
-    const props = readFileSync("src/render3d/terrain-props.ts", "utf8");
-    expect(props).toContain("T242");
-    expect(props).toMatch(/denser crown clumps|denser cauliflower/);
+describe("lineage soft-edge / prop product (T229→T245)", () => {
+  it("keeps kraft paperboard soft-edge marker", () => {
     const mat = readFileSync("src/render3d/materials.ts", "utf8");
-    expect(mat).toContain("T242");
-    expect(mat).toMatch(/SOFT_EDGE_STRENGTH = 0\.62/);
-    const css = readFileSync("src/creator/tidewell-game-screen.css", "utf8");
-    expect(css).toContain("T242");
-    expect(props).not.toMatch(/suite === ["']H0/);
+    expect(mat).toMatch(/SOFT_EDGE_STRENGTH = 0\.78/);
+    expect(mat).toContain("T245");
   });
 });

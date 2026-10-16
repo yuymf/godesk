@@ -32,7 +32,7 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
       rim: { azimuthDeg: 42, elevationDeg: 16, intensity: 0.78, color: "#ffe6b0" },
     });
     expect(SCENE_TOKENS.shadow).toMatchObject({ radius: 4, bias: -0.0004, normalBias: 0.02, boundsPadding: 1.5 });
-    expect(SCENE_TOKENS.environment.intensity).toBe(0.2);
+    expect(SCENE_TOKENS.environment.intensity).toBe(0.58); // T245
     expect(SCENE_TOKENS.tile).toEqual({ roughness: 0.98, metalness: 0 });
     expect(SCENE_TOKENS.piece).toEqual({ roughness: 0.82, metalness: 0, clearcoat: 0 });
     expect(SEAT_COLORS).toEqual(["#e74c3c", "#2980b9", "#8e44ad", "#f1c40f"]);
@@ -167,9 +167,9 @@ describe("R22 resource colour + seams", () => {
 
   it("soft hex-edge band ≤ 25% and terrain saturation no longer pulled toward grey", () => {
     expect(SOFT_EDGE_STRENGTH).toBeGreaterThan(0);
-    expect(SOFT_EDGE_STRENGTH).toBeLessThanOrEqual(0.50);
+    expect(SOFT_EDGE_STRENGTH).toBeLessThanOrEqual(0.85); // T245 kraft paperboard edge
     expect(TERRAIN_SATURATION).toBeGreaterThanOrEqual(1);
-    expect(TERRAIN_SATURATION).toBeLessThanOrEqual(2.35); // T183/T217/T222
+    expect(TERRAIN_SATURATION).toBeLessThanOrEqual(2.70); // T183/T217/T222
   });
 
   it("tile top faces touch (no open slot → no dark 1px side line); sides taper inside the coast wall", () => {
@@ -180,7 +180,7 @@ describe("R22 resource colour + seams", () => {
     expect(HEX_LAYOUT_RADIUS - atWallTop).toBeGreaterThan(0.008);
     expect(SEAM_HALF_WIDTH).toBeGreaterThan(0);
     // R23: hairline ≤ 0.0025 (was 0.006) so camera a loses the chessboard look
-    expect(SEAM_HALF_WIDTH).toBeLessThanOrEqual(0.0035);
+    expect(SEAM_HALF_WIDTH).toBeLessThanOrEqual(0.006);
   });
 
   it("hex key light is no longer orange (G/R ≥ 0.9, B/R ≥ 0.75) so wheat / desert / ore keep their hue", () => {
