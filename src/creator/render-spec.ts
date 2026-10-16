@@ -315,8 +315,8 @@ function baseDefault(kernelType: string | null | undefined): RenderSpec {
       enabled: kernelType === "hex-settlement-v1" || kernelType === "harbor-voyage-v1",
       // R20：与 water/mesh DEFAULT_SPEC 同步 — 明亮青绿 + 浅滩环。
       // T183 · shared water chroma (hex/harbor kernel family)
-      shallow: "#2ef4e0", // T183/T225 · shallow reef microcontrast
-      deep: "#0e7284", // T225 corner-safe deep
+      shallow: "#48ffe8", // T257 · brighter reef HARD vs tip
+      deep: "#1a8a94", // T257 corner-safe deep lift
       waveHeight: 0.092,
       waveSpeed: 0.70,
       foam: 1.0, // T183/T225 shore foam (unit clamp)
@@ -467,7 +467,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     // T046 · shared train-route presentation (not parchment sticky-pad graph).
     // T177/T192 · shared network material/light microcontrast — hard pixel residual (kernel family, not suite fork)
     render.preset = "tabletop-day";
-    render.camera = { ...render.camera, fovDeg: 38, distance: 8.4, minPolarDeg: 26, maxPolarDeg: 56, polarDeg: 30 }; // T254 network HARD framing
+    render.camera = { ...render.camera, fovDeg: 40, distance: 7.8, minPolarDeg: 24, maxPolarDeg: 54, polarDeg: 28 }; // T257 network HARD framing
     // T086 · desk lighting layers on network
     render.lighting = {
       ...render.lighting,
@@ -481,10 +481,10 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T172/T177/T192/T201/T206 · denser/brighter network map cloth (shared MaterialLibrary)
-      map: material("#2a2a32", "cloth", 0.99, 0, undefined, 0.99), // T254 dark map bed (visible board)
-      table: material("#e8e4d8", "grain", 0.28, 0.18), // T254 light desk HARD+cornerCalm
-      ink: material("#ff9020", "none", 0.06, 0.62, 0.96), // T254 hot amber rail HARD
-      piece: material("#ffd070", "none", 0.06, 0.45, 0.94), // T254 warm piece HARD
+      map: material("#143048", "cloth", 0.99, 0, undefined, 0.99), // T257 teal map HARD
+      table: material("#f0ece0", "grain", 0.24, 0.16), // T257 light desk HARD+cornerCalm
+      ink: material("#ff5808", "none", 0.04, 0.72, 0.99), // T257 neon amber HARD
+      piece: material("#ffc040", "none", 0.05, 0.52, 0.96), // T257 warm piece HARD
     });
     render.bindings = [
       binding("station", "station", "ink", 1.7),
@@ -498,28 +498,28 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
   if (kernelType === "gem-engine-v1" || kernelType === "pattern-draft-v1" || kernelType === "auction-bidding-v1") {
     // T030 · desk-kernel visual baseline; T038 · softer contact lighting + felt that eats light.
     // T175 · shared desk material/light microcontrast — hard pixel for H03/H04/H05 (no suite fork)
-    render.camera = { ...render.camera, fovDeg: 32, distance: 11.1, minPolarDeg: 31, maxPolarDeg: 61, polarDeg: 44 }; // T254 desk HARD+centerCalm
+    render.camera = { ...render.camera, fovDeg: 31, distance: 11.1, minPolarDeg: 31, maxPolarDeg: 61, polarDeg: 44 }; // T257 desk HARD+centerCalm
     render.lighting = {
       ...render.lighting,
       // T061 · desk contrast; T086 · explicit fill + rim (no extra shadow maps)
       // T175/T187/T198 · brighter upper sky/fill/exposure (H01 hex path separate; no vignette bait)
-      sun: { ...render.lighting.sun, azimuthDeg: 95, elevationDeg: 56, intensity: 5.98, color: "#fff8d0" }, // T254 high key centerCalm+HARD
-      hemisphere: { sky: "#fff5e0", ground: "#c8a060", intensity: 2.98 }, // T249 warm bounce (schema max 3)
-      fill: { azimuthDeg: 300, elevationDeg: 60, intensity: 4.0, color: "#ffffff" }, // T254 max fill centerCalm
-      rim: { azimuthDeg: 38, elevationDeg: 32, intensity: 2.10, color: "#fff0d8" }, // T249 warm rim
-      shadow: { enabled: true, softness: 0.88 }, // T254 softer contact shadow centerCalm
+      sun: { ...render.lighting.sun, azimuthDeg: 100, elevationDeg: 58, intensity: 5.98, color: "#fffce0" }, // T257 high key centerCalm+HARD
+      hemisphere: { sky: "#fffaf0", ground: "#d0a870", intensity: 2.98 }, // T257 warm bounce cornerCalm
+      fill: { azimuthDeg: 290, elevationDeg: 64, intensity: 4.0, color: "#ffffff" }, // T257 max fill centerCalm
+      rim: { azimuthDeg: 34, elevationDeg: 36, intensity: 2.55, color: "#fffcf0" }, // T257 warm rim cornerCalm
+      shadow: { enabled: true, softness: 0.92 }, // T257 softer contact shadow centerCalm
       exposure: 2.0, // T249 desk product light (schema ≤2); centerCalm lift
 
     };
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#f4ffb0", "cloth", 0.99, 0, undefined, 0.99),  // T254 bright lime HARD+centerCalm
-      table: material("#f2f4f0", "grain", 0.22, 0.30), // T249 near-tip corner-calm desk
-      piece: material("#ffd858", "none", 0.05, 0.52, 0.96), // T254 cream piece HARD
+      board: material("#ffffb0", "cloth", 0.99, 0, undefined, 0.99),  // T257 hot lime HARD
+      table: material("#fafcf8", "grain", 0.16, 0.26), // T257 corner-calm desk
+      piece: material("#ffe878", "none", 0.05, 0.52, 0.96), // T254 cream piece HARD
       card: material("#fff8e0", "none", 0.10, 0.28, 0.90), // T249 warm card stock
       resource: material("#88e0ff", "none", 0.02, 0.82, 0.99), // T249 crystal cyan gem
       token: material("#ffe898", "none", 0.10, 0.45, 0.88), // T249 bright chip
-      ink: material("#a8b4c8", "none", 0.28, 0.12, 0.22), // T254 · centerCalm lighter
+      ink: material("#c0cad8", "none", 0.26, 0.10, 0.20), // T257 · centerCalm lighter
     });
     render.bindings = [
       binding("region", "tile-square", "board"),
@@ -539,19 +539,19 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     ];
     if (kernelType === "auction-bidding-v1") {
       Object.assign(render.materials, {
-        board: material("#f6ffb8", "cloth", 0.99, 0, undefined, 0.99),  // T254 auction bright HARD+centerCalm
+        board: material("#ffffc8", "cloth", 0.99, 0, undefined, 0.99),  // T257 auction hot HARD
         card: material("#fffaf4", "none", 0.28, 0.10, 0.48), // T061/T175/T213
       });
     }
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
-        board: material("#f8ffc0", "cloth", 0.99, 0, undefined, 0.99),  // T254 pattern bright HARD+centerCalm
-        piece: material("#fffaf0", "none", 0.05, 0.48, 0.98), // T254 warm piece centerCalm
-        slot: material("#d8dee4", "none", 0.55, 0.02, 0.16),  // T254 pale slots centerCalm
+        board: material("#ffffdc", "cloth", 0.99, 0, undefined, 0.99),  // T257 pattern hot HARD+centerCalm
+        piece: material("#ffffff", "none", 0.04, 0.52, 0.99), // T257 warm piece centerCalm
+        slot: material("#fcfdfe", "none", 0.38, 0.02, 0.22),  // T257 pale slots centerCalm
         // T054 · pale print plate under wall hue tints (square grid, not black pits)
-        "wall-print": material("#f8fcff", "none", 0.60, 0.04, 0.22), // T254 pale wall centerCalm
+        "wall-print": material("#fcfeff", "none", 0.55, 0.03, 0.24), // T257 pale wall centerCalm
         // T058 · elongated pattern-line / floor troughs
-        "line-trough": material("#ddd8d0", "none", 0.55, 0.02, 0.18), // T254 pale trough centerCalm
+        "line-trough": material("#fdfaf6", "none", 0.38, 0.02, 0.24), // T257 pale trough centerCalm
       });
       // T050/T054/T058: wall empties → square print; lines → trough strips (not round pits)
       render.bindings = [

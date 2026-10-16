@@ -38,7 +38,7 @@ export const PATTERN_IDS: Record<MaterialPattern, number> = {
 /** 贴图到达后 pattern 保留的强度（只做细节扰动）。 */
 /** R17: oil-paint continuous brush under PBR — hex faces read as painted color fields, not flat plastic.
  *  R18: 0.42 → 0.5 (painted fields read at a glance in default a/b cameras). */
-export const PATTERN_STRENGTH_WITH_PBR = 0.78; // T245 · keep weave/grain under PBR maps
+export const PATTERN_STRENGTH_WITH_PBR = 0.98; // T257 · oil-paint dab read under albedo
 /** 贴图到达后底色向白色混合的比例：保留地形色相，又不让贴图被压暗。 */
 export const PBR_TINT_TO_WHITE = 0.10; // T245 · let KTX2 albedo carry wood/paperboard
 
@@ -200,16 +200,16 @@ export function installPattern(material: MeshStandardMaterial, pattern: Material
                 "float gdTop = smoothstep(0.5, 0.9, vGdUp);",
                 "gdEdge = gdEdge * gdEdge * (0.7 + 0.6 * gdB.x) * gdTop;",
                 // T254 · thin cut-edge highlight just inside kraft lip (pinchable paperboard)
-                `float gdHi = smoothstep(${(TILE_FACE_APOTHEM - 0.22).toFixed(4)}, ${(TILE_FACE_APOTHEM - 0.03).toFixed(4)}, gdHexM) * (1.0 - smoothstep(${(TILE_FACE_APOTHEM - 0.03).toFixed(4)}, ${TILE_FACE_APOTHEM.toFixed(4)}, gdHexM)) * gdTop;`,
+                `float gdHi = smoothstep(${(TILE_FACE_APOTHEM - 0.36).toFixed(4)}, ${(TILE_FACE_APOTHEM - 0.03).toFixed(4)}, gdHexM) * (1.0 - smoothstep(${(TILE_FACE_APOTHEM - 0.03).toFixed(4)}, ${TILE_FACE_APOTHEM.toFixed(4)}, gdHexM)) * gdTop;`,
                 `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 1.0, 0.95), clamp(gdHi, 0.0, 1.0) * ${HEX_EDGE_HIGHLIGHT.toFixed(2)} * uGdBrush);`,
                 // R22: band strength 0.45 → 0.25 (faded halo gone; tiles keep their own colour up to the edge).
-                `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.32, 0.20, 0.10), clamp(gdEdge, 0.0, 1.0) * ${SOFT_EDGE_STRENGTH.toFixed(2)} * uGdBrush);`, // T254 kraft paperboard
+                `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.16, 0.08, 0.04), clamp(gdEdge, 0.0, 1.0) * ${SOFT_EDGE_STRENGTH.toFixed(2)} * uGdBrush);`, // T254 kraft paperboard
                 "diffuseColor.rgb *= 1.0 - clamp(gdEdge, 0.0, 1.0) * 0.18 * uGdBrush;", // T254 pressed lip (keep highlight)
                 // R22: faces touch (TILE_FACE_RADIUS 1.0). R23: seam narrower (0.002) + ground-coloured
                 // (slight self-darken, not bright sandy paths) so camera a no longer reads as a chessboard.
                 "float gdSeamFw = max(fwidth(gdHexM), 1e-4);",
                 `float gdSeam = smoothstep(${(TILE_FACE_APOTHEM - SEAM_HALF_WIDTH).toFixed(4)} - gdSeamFw, ${(TILE_FACE_APOTHEM - SEAM_HALF_WIDTH).toFixed(4)} + gdSeamFw * 0.5, gdHexM) * gdTop;`,
-                "diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.55, gdSeam * 0.78);", // T254 pressed seam
+                "diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.48, gdSeam * 0.85);", // T254 pressed seam
               ]
             : []),
         ].join("\n"),

@@ -610,16 +610,16 @@ function liftGlbSheepSilhouette(g: BufferGeometry): BufferGeometry {
       const o = i * item;
       const r = arr[o]!, g0 = arr[o + 1]!, b = arr[o + 2]!;
       const lum = 0.2126 * r + 0.7152 * g0 + 0.0722 * b;
-      if (lum >= 0.42) {
-        // wool: bright readable fleece
-        arr[o] = Math.min(1, 0.62 + r * 0.48);
-        arr[o + 1] = Math.min(1, 0.62 + g0 * 0.48);
-        arr[o + 2] = Math.min(1, 0.58 + b * 0.48);
+      if (lum >= 0.38) {
+        // T258 · wool: brighter fleece vs tip for far-cluster read
+        arr[o] = Math.min(1, 0.72 + r * 0.42);
+        arr[o + 1] = Math.min(1, 0.72 + g0 * 0.42);
+        arr[o + 2] = Math.min(1, 0.68 + b * 0.42);
       } else {
-        // head/legs: deepen for silhouette (not lift toward meadow green)
-        arr[o] = Math.min(1, r * 0.55 + 0.02);
-        arr[o + 1] = Math.min(1, g0 * 0.50 + 0.015);
-        arr[o + 2] = Math.min(1, b * 0.48 + 0.01);
+        // T258 · head/legs: deeper silhouette for panorama decor clusters
+        arr[o] = Math.min(1, r * 0.38 + 0.01);
+        arr[o + 1] = Math.min(1, g0 * 0.34 + 0.008);
+        arr[o + 2] = Math.min(1, b * 0.32 + 0.006);
       }
     }
     col.needsUpdate = true;
@@ -889,7 +889,7 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
         y: TILE_TOP + 0.004,
         z: b.z,
         yaw: b.yaw,
-        scale: (isPine(b.kind) ? 1.28 : b.kind === "boulder" ? 1.18 : b.kind === "sheep" ? 0.92 : 1.0) * b.scale, // T253 sheep silhouette footprint
+        scale: (isPine(b.kind) ? 1.28 : b.kind === "boulder" ? 1.18 : b.kind === "sheep" ? 1.02 : 1.0) * b.scale, // T253 sheep silhouette footprint
         stretch: 1,
         tone: 0.5,
         hue: 0.5,
@@ -1120,7 +1120,7 @@ export function createSheepDissolveMaterial(): MeshStandardMaterial {
   m.polygonOffsetFactor = -1;
   m.polygonOffsetUnits = -2;
   const pattern = installPattern(m, "grass");
-  pattern.value = 0.06; // T253 wool/head chroma over grass dissolve
+  pattern.value = 0.03; // T253 wool/head chroma over grass dissolve
   const base = m.onBeforeCompile;
   const ground = { value: new Color(SHEEP_GROUND_TINT) };
   const [y0, y1] = SHEEP_DISSOLVE_BAND;

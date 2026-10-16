@@ -228,7 +228,7 @@ export const BOOT_REVEAL_CAP_MS = 6_000;
 export const BOOT_VEILED_FRAME_MS = 500;
 export const BOOT_SEA_COLOR = "#1f5f66";
 /** R26 hex play clear/fog stand-in (settlecoast bg ≈#6d8e8b): sea-teal, not cream, not navy. */
-export const PLAY_SEA_CLEAR = "#5a8a88";
+export const PLAY_SEA_CLEAR = "#a8d4cc"; // T257 cornerCalm
 
 
 function supportsWebGL2(): boolean {

@@ -24,9 +24,9 @@ import type { SceneNode } from "./scene-model";
 export const NUMBER_TOKEN_RADIUS = 0.258; // T222/T237 · chip footprint
 export const NUMBER_TOKEN_HALF_HEIGHT = 0.092; // T250 · product wood-chip lip / side thickness
 /** 贴花离筹码顶面的高度（避免 z-fighting；配合 polygonOffset）。 */
-export const LABEL_LIFT = 0.00015; // T253 · seated in chip recess (pressed stamp)
+export const LABEL_LIFT = 0.00012; // T257 · deeper seated stamp recess
 /** 贴花边长 = 筹码半径 × 1.85 × 节点缩放：略小于筹码直径（G3D-ART-3 由 1.6 放大，字形更大）。 */
-export const LABEL_SIZE_PER_RADIUS = 2.50; // T241 · glyph inset on thicker beveled chip
+export const LABEL_SIZE_PER_RADIUS = 2.72; // T257 · wider stamp footprint stage-wide
 export { NUMBER_TOKEN_SCALE } from "./tokens";
 
 export const LABEL_INK = "#0a0604"; // T225 · stamped ink on chip
@@ -97,11 +97,11 @@ export function drawNumberAtlas(size = 1024): Texture {
     let x = 0;
     ctx.lineJoin = "round";
     ctx.miterLimit = 2;
-    // T253 · pressed stamp: soft recess shadow + thin highlight + ink fill (not sticker stroke)
-    const shadow = "rgba(12,6,2,0.72)";
-    const hi = "rgba(255,252,240,0.7)";
-    const ox = Math.max(3, fontPx * 0.07);
-    const oy = Math.max(3, fontPx * 0.08);
+    // T257 · wide-frame pressed stamp: broader recess shadow + brighter lip highlight
+    const shadow = "rgba(5,2,0,0.94)";
+    const hi = "rgba(255,254,248,0.98)";
+    const ox = Math.max(7, fontPx * 0.16);
+    const oy = Math.max(7, fontPx * 0.17);
     let xs = 0;
     [...text].forEach((ch, i) => {
       ctx.fillStyle = shadow;
@@ -130,9 +130,9 @@ export function drawNumberAtlas(size = 1024): Texture {
     for (let i = 0; i < pips; i += 1) {
       const px = cx + (i - (pips - 1) / 2) * gap;
       const py = cy + cell * 0.4;
-      ctx.fillStyle = "rgba(20,10,4,0.45)";
+      ctx.fillStyle = "rgba(12,5,2,0.62)";
       ctx.beginPath();
-      ctx.ellipse(px + 1.2, py + 1.4, r, r * GLYPH_STRETCH_Y, 0, 0, Math.PI * 2);
+      ctx.ellipse(px + 2.0, py + 2.2, r * 1.05, r * GLYPH_STRETCH_Y * 1.05, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = color;
       ctx.beginPath();
