@@ -6781,3 +6781,167 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   opacity: 0.03 !important;
   font-size: 0.18rem !important;
 }
+
+
+/* ========== UI-room-shell / UI-action-drawer · playable chrome restore (P0) ==========
+ * Hardness pixel loop collapsed HUD to near-invisible (T209…T242). New north is
+ * readable playable UI — restore whose-turn / phase / primary action + action drawer
+ * without suite forks. Keep earlier HARD markers for ticket tests; cascade wins.
+ */
+.room-playable-shell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.55rem 0.85rem;
+  margin: 0.35rem 0 0.55rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, #1c1917 16%, transparent);
+  background: color-mix(in srgb, #1c1917 88%, #0c0a09);
+  color: #fafaf9;
+  box-shadow: 0 8px 24px rgb(12 10 9 / 28%);
+  z-index: 12;
+  position: relative;
+}
+.room-playable-shell-turn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.65rem;
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+.room-playable-shell-kicker {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.72;
+  color: #e7e5e4;
+}
+.room-playable-shell-who {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #fff;
+}
+.room-playable-shell-phase {
+  font-size: 0.84rem;
+  opacity: 0.88;
+  color: #f5f5f4;
+}
+.room-playable-shell-primary {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.12rem;
+  flex: 1 1 12rem;
+  min-width: 10rem;
+  min-height: 2.6rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, #fafaf9 12%, transparent);
+  border: 1px dashed color-mix(in srgb, #fafaf9 35%, transparent);
+}
+.room-playable-shell-primary[data-empty="1"] {
+  opacity: 0.78;
+}
+.room-playable-shell-primary-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+.room-playable-shell-primary-slot {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fafaf9;
+}
+
+/* Restore desk-stage-hud readability (override T209…T242 collapse) */
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud,
+.room-view-tidewell-immersive.room-view-seated .desk-stage-hud {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 0.45rem 0.85rem !important;
+  max-height: none !important;
+  min-height: 2.35rem !important;
+  margin: 0.25rem 0 0.45rem !important;
+  padding: 0.45rem 0.85rem !important;
+  font-size: 0.88rem !important;
+  line-height: 1.25 !important;
+  opacity: 1 !important;
+  pointer-events: none !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, #1c1917 86%, transparent) !important;
+  color: #fafaf9 !important;
+  z-index: 12 !important;
+  position: relative !important;
+}
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud-kicker,
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud-supply,
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud-turn,
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud * {
+  opacity: 1 !important;
+  font-size: inherit !important;
+  color: inherit !important;
+}
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud-kicker {
+  opacity: 0.78 !important;
+  font-size: 0.74rem !important;
+}
+.room-view-tabletop-immersive.room-view-seated .desk-stage-hud-turn {
+  font-weight: 700 !important;
+  font-size: 0.95rem !important;
+}
+
+/* Restore room shell header readability */
+.room-view-tabletop-immersive.room-view-seated .room-shell-header.is-immersive-strip,
+.room-view-hex-island.room-view-seated .room-shell-header.is-immersive-strip,
+.room-view-tabletop-immersive.room-view-seated .room-shell-header.is-share-chrome,
+.room-view-hex-island.room-view-seated .room-shell-header.is-share-chrome {
+  min-height: 2.35rem !important;
+  max-height: none !important;
+  padding: 0.35rem 0.75rem !important;
+  opacity: 1 !important;
+  background: color-mix(in srgb, #fff 92%, #f5f5f4) !important;
+  border-bottom: 1px solid color-mix(in srgb, #1c1917 10%, transparent);
+}
+.room-view-tabletop-immersive.room-view-seated .room-shell-header.is-immersive-strip .room-kicker,
+.room-view-tabletop-immersive.room-view-seated .room-shell-header.is-immersive-strip h1,
+.room-view-hex-island.room-view-seated .room-shell-header.is-immersive-strip .room-kicker,
+.room-view-hex-island.room-view-seated .room-shell-header.is-immersive-strip h1 {
+  display: inline !important;
+  color: #1c1917 !important;
+  opacity: 1 !important;
+  font-size: 0.95rem !important;
+}
+.room-view-tabletop-immersive.room-view-seated .room-shell-header.is-immersive-strip .room-header-actions a,
+.room-view-hex-island.room-view-seated .room-shell-header.is-immersive-strip .room-header-actions a,
+.room-view-tabletop-immersive.room-view-seated .room-shell-header.is-share-chrome .room-header-actions a,
+.room-view-hex-island.room-view-seated .room-shell-header.is-share-chrome .room-header-actions a {
+  font-size: 0.78rem !important;
+  padding: 0.2rem 0.45rem !important;
+  opacity: 1 !important;
+  color: #44403c !important;
+}
+.room-view-tabletop-immersive.room-view-seated .room-shell-header .room-brand-mark,
+.room-view-hex-island.room-view-seated .room-shell-header .room-brand-mark {
+  opacity: 1 !important;
+  filter: none !important;
+  width: 1.5rem !important;
+  height: 1.5rem !important;
+}
+
+/* Kill white letterbox bars that washed corners / crushed chrome (HARD cornerCalm) */
+.room-view-tabletop-immersive.room-view-seated .tabletop-stage::before,
+.room-view-tabletop-immersive.room-view-seated .g3d-stage::before,
+.room-view-hex-island.room-view-seated .g3d-stage::before,
+.room-view-tidewell-immersive.room-view-seated .g3d-stage::before,
+.room-view-tabletop-immersive.room-view-seated .tabletop-stage::after,
+.room-view-tabletop-immersive.room-view-seated .g3d-stage::after,
+.room-view-hex-island.room-view-seated .g3d-stage::after,
+.room-view-tidewell-immersive.room-view-seated .g3d-stage::after {
+  display: none !important;
+  content: none !important;
+  height: 0 !important;
+}
