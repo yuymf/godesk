@@ -503,14 +503,14 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       sun: { ...render.lighting.sun, azimuthDeg: 128, elevationDeg: 60, intensity: 5.98, color: "#fff0d0" },
       hemisphere: { sky: "#ffffff", ground: "#a0b0c8", intensity: 2.98 }, // T241 desk product light
       fill: { azimuthDeg: 312, elevationDeg: 54, intensity: 3.40, color: "#ffffff" }, // T241
-      rim: { azimuthDeg: 38, elevationDeg: 32, intensity: 1.55, color: "#fff6e0" }, // T237
+      rim: { azimuthDeg: 38, elevationDeg: 32, intensity: 1.85, color: "#f0f4ff" }, // T241
       shadow: { enabled: true, softness: 0.58 },
       exposure: 1.99, // T187…T230 · desk product light (schema ≤2); chroma via felt/piece
 
     };
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#c8a8ff", "cloth", 0.99, 0, undefined, 0.99),  // T044…T241 product lavender felt
+      board: material("#e0d8ff", "cloth", 0.99, 0, undefined, 0.99),  // T044…T241 product lavender felt · centerCalm
       table: material("#f0f4ff", "grain", 0.22, 0.32), // T092…T241 · cooler wood rim (corner-calm)
       piece: material("#ffffff", "none", 0.08, 0.38, 0.96), // T198…T237 · plastic-wood piece
       card: material("#fff0e0", "none", 0.10, 0.28, 0.90), // T198…T241 · card stock warm
@@ -542,11 +542,11 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     }
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
-        board: material("#e8e0ff", "cloth", 0.99, 0, undefined, 0.99),  // T044…T241 pattern felt · brighter
-        piece: material("#ffffff", "none", 0.05, 0.44, 0.99), // T061…T237
+        board: material("#70ffe0", "cloth", 0.99, 0, undefined, 0.99),  // T044…T241 pattern felt · mint vs tip warm
+        piece: material("#fff0d0", "none", 0.08, 0.38, 0.94), // T061…T241 warm piece vs tip white
         slot: material("#7a7a82", "none", 0.76, 0.06, 0.14),  // T241 recessed slots · centerCalm
         // T054 · pale print plate under wall hue tints (square grid, not black pits)
-        "wall-print": material("#fffef8", "none", 0.74, 0.06, 0.16), // T237
+        "wall-print": material("#e8f8ff", "none", 0.72, 0.08, 0.18), // T241 cool wall
         // T058 · elongated pattern-line / floor troughs
         "line-trough": material("#7a7874", "none", 0.80, 0.06, 0.12), // T241 · centerCalm
       });
