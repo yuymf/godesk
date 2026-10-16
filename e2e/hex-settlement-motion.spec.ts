@@ -36,6 +36,10 @@ async function joinSeat1(browser: Browser, url: string, reducedMotion: "reduce" 
   await claimTidewellSeat(page, 1);
   const board = page.getByRole("region", { name: "六角岛桌面" });
   await expect(board).toBeVisible({ timeout: 30_000 });
+  // Drawer only mounts when seat 1 has place_* legal actions (your turn).
+  await expect(board.locator("details.hex-settlement-board-targets")).toHaveCount(1, {
+    timeout: 60_000,
+  });
   return { ctx, page, board };
 }
 

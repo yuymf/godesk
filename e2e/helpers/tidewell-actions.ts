@@ -3,7 +3,9 @@ import { expect, type Locator, type Page } from "@playwright/test";
 /** Expand the keyboard/assistive board-target drawer (G3D-13). */
 export async function openTidewellBoardTargets(board: Locator): Promise<void> {
   const drawer = board.locator("details.hex-settlement-board-targets");
-  await expect(drawer).toHaveCount(1, { timeout: 30_000 });
+  // Product only mounts this <details> when the viewer has place_* legal actions
+  // (your turn). Wait for mount — not just visibility of the board region.
+  await expect(drawer).toHaveCount(1, { timeout: 60_000 });
   if ((await drawer.getAttribute("open")) !== null) return;
   await drawer.locator("summary").click();
   // Controlled <details open>: wait until React commits open so clipped buttons re-enter a11y.

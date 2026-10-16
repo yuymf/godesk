@@ -33,8 +33,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command:
-      `(test -f .dev.vars || cp .dev.vars.example .dev.vars) && pnpm build && pnpm exec wrangler dev --local --ip 127.0.0.1 --port ${port} --persist-to .wrangler/e2e`,
+    // Restart wrapper: wrangler/workerd sometimes dies mid-suite (empty ✘ [ERROR]);
+    // without it every later spec becomes ERR_CONNECTION_REFUSED.
+    command: `bash scripts/e2e-webserver.sh`,
     url: origin,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
