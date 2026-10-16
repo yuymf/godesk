@@ -13,12 +13,12 @@ describe("T080 room share chrome production", () => {
     expect(src).toContain("T080");
   });
 
-  it("collapsed share chrome purges invite/link strip (T186); copy stays production-friendly", () => {
+  it("share chrome keeps production copy; UI-share-seat remounts invite for playable chrome", () => {
     const src = readFileSync("src/creator/RoomView.tsx", "utf8");
-    // T186 · seated shareReady no longer mounts shareLinkReady / is-share-ready input
     expect(src).toContain("room-share-chrome");
-    expect(src).toContain("T186");
-    expect(src).not.toMatch(/shareChromeCompact \? copy\.shareLinkReady/);
+    expect(src).toContain("UI-share-seat");
+    expect(src).toContain("is-share-ready");
+    expect(src).toMatch(/shareChromeCompact \? copy\.shareLinkReady/);
     expect(ROOM_COPY.zh.shareLinkReady).toMatch(/复制链接/);
     expect(ROOM_COPY.en.shareLinkReady).toMatch(/Copy link/i);
   });

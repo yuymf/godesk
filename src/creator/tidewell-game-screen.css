@@ -3610,3 +3610,50 @@ body:has(.room-view-tidewell-immersive) {
   font-size: 0.85rem !important;
   padding: 0.35rem 0.65rem !important;
 }
+
+
+/* ========== UI-share-seat · tidewell shareReady strip restore (P1) ==========
+ * Undo T180/T186 purge + pointer-events:none so invite/seat remain playable.
+ */
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome,
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse,
+.room-view-tidewell-immersive.room-view-seated > .room-invitation[data-ui-share-ready="1"] {
+  display: grid !important;
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  width: auto !important;
+  max-width: none !important;
+  margin: 0.35rem 0.5rem !important;
+  padding: 0.45rem 0.75rem !important;
+  max-height: none !important;
+  min-height: 3.1rem !important;
+  opacity: 1 !important;
+  overflow: visible !important;
+  pointer-events: auto !important;
+  z-index: 14 !important;
+  background: color-mix(in srgb, #1c1917 90%, #0c0a09) !important;
+  color: #fafaf9 !important;
+  border: 1px solid color-mix(in srgb, #fafaf9 18%, transparent) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 22px rgb(12 10 9 / 28%) !important;
+}
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .invitation-heading,
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .invitation-link-row,
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .seat-rail-label,
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .seat-chip,
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .seat-chip:not(.is-yours) {
+  display: flex !important;
+  max-height: none !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  overflow: visible !important;
+  color: #fafaf9 !important;
+}
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .seat-chip:not(.is-yours) {
+  display: inline-flex !important;
+}
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .seat-rail-label {
+  display: inline !important;
+}
