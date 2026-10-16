@@ -21,12 +21,12 @@ import {
 import type { SceneNode } from "./scene-model";
 
 /** 筹码圆柱：半径 0.22、高 0.06，节点 position 为圆柱中心。 */
-export const NUMBER_TOKEN_RADIUS = 0.258; // T222/T233 · chip footprint
-export const NUMBER_TOKEN_HALF_HEIGHT = 0.053; // T233 · beveled wood-chip half-height
+export const NUMBER_TOKEN_RADIUS = 0.258; // T222/T237 · chip footprint
+export const NUMBER_TOKEN_HALF_HEIGHT = 0.062; // T237 · thicker beveled wood-chip half-height
 /** 贴花离筹码顶面的高度（避免 z-fighting；配合 polygonOffset）。 */
 export const LABEL_LIFT = 0.0005; // T131/T225 · decal seated on chip face
 /** 贴花边长 = 筹码半径 × 1.85 × 节点缩放：略小于筹码直径（G3D-ART-3 由 1.6 放大，字形更大）。 */
-export const LABEL_SIZE_PER_RADIUS = 2.58; // T233 · glyph inset on beveled chip face
+export const LABEL_SIZE_PER_RADIUS = 2.52; // T237 · glyph inset on thicker beveled chip
 export { NUMBER_TOKEN_SCALE } from "./tokens";
 
 export const LABEL_INK = "#0a0604"; // T225 · stamped ink on chip

@@ -18,11 +18,11 @@ import type { MaterialPattern, MaterialToken, PbrSetId } from "./tokens";
 import { TILE_FACE_APOTHEM } from "./tokens";
 
 /** R21 soft hex-edge band: max share the top-face albedo eases toward the shared light earth tone (× brush). R22: 0.45 → 0.25. */
-export const SOFT_EDGE_STRENGTH = 0.46; // T229/T234 · paperboard edge bevel read
+export const SOFT_EDGE_STRENGTH = 0.54; // T229/T238 · paperboard edge bevel read
 /** R22: terrain albedo saturation (1 = texture as-is; R19–R21 used 0.86, a 14% pull toward grey). */
-export const TERRAIN_SATURATION = 2.32; // T183…T234 shared terrain chroma
+export const TERRAIN_SATURATION = 2.48; // T183…T238 shared terrain chroma
 /** R22 hairline seam; R23: 0.006 → 0.002 (whole-board a no longer chessboard). */
-export const SEAM_HALF_WIDTH = 0.0030; // T229 · cardboard hairline seam
+export const SEAM_HALF_WIDTH = 0.0036; // T238 · cardboard hairline seam
 
 export const PATTERN_IDS: Record<MaterialPattern, number> = {
   none: 0,
@@ -70,7 +70,7 @@ float gdPattern(vec3 w) {
   float weave = abs(step(0.5, g.x) - step(0.5, g.y));
   float pile = gdNoise(w.xz * 16.0);
   float rib = gdNoise(w.xz * 7.2);
-  return mix(0.14, 0.86, weave) + (pile - 0.5) * 0.48 + (rib - 0.5) * 0.20; // T234 cloth contrast
+  return mix(0.12, 0.88, weave) + (pile - 0.5) * 0.52 + (rib - 0.5) * 0.22; // T238 cloth contrast
 #elif GD_PATTERN == 3
   float rock = gdFbm(w.xz * 2.8 + w.y * 1.2);
   float seam = gdNoise(w.xz * 7.0 + w.y);
