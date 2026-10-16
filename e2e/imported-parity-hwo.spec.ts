@@ -96,7 +96,9 @@ test.describe("imported models parity: Harbor / Worker / Othello", () => {
     if (EVIDENCE_DIR) mkdirSync(EVIDENCE_DIR, { recursive: true });
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/chatgpt-plugin/new");
-    await page.getByText("先玩一局现成的").scrollIntoViewIfNeeded();
+    // G3D-17 homepage showcase is Tidewell-only; Harbor lives under 更多示例.
+    await page.getByTestId("more-examples").click();
+    await page.waitForURL(/[?&]examples=all/);
     const harbor = page.locator("article").filter({ hasText: "港口十三号" });
     await expect(harbor).toBeVisible({ timeout: 15_000 });
     await harbor.getByRole("button", { name: "先玩这一局" }).click();

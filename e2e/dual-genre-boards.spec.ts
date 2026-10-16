@@ -128,12 +128,12 @@ test.describe("dual-genre boards: Othello + hex-island generate → lobby → ac
     await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
     expect(new URL(page.url()).searchParams.get("share")).toBeTruthy();
 
-    const board = page.getByRole("region", { name: "汐屿六角岛" });
+    const board = page.getByRole("region", { name: "六角岛桌面" });
     await expect(board).toBeVisible();
     const hud = board.getByRole("region", { name: "对局状态" });
     await expect(hud).toBeVisible();
     await expect(hud).toContainText("初始放置");
-    await expect(page.getByRole("img", { name: "汐屿六角岛" })).toBeVisible();
+    await expect(page.getByRole("img", { name: "六角岛桌面" })).toBeVisible();
 
     await claimTidewellSeat(page, 0);
     await expect(hud).toContainText("轮到你行动");
@@ -155,6 +155,6 @@ test.describe("dual-genre boards: Othello + hex-island generate → lobby → ac
       timeout: 15_000,
     });
 
-    await assertBoardHudNotClipped(page, "汐屿六角岛");
+    await assertBoardHudNotClipped(page, "六角岛桌面");
   });
 });

@@ -629,6 +629,8 @@ export function HexSettlementBoard({
                     onChange={(event) => {
                       const next = Number(event.currentTarget.value);
                       if (Number.isInteger(next)) onClaimSeat(next);
+                      const details = event.currentTarget.closest("details");
+                      if (details instanceof HTMLDetailsElement) details.open = false;
                     }}
                     value={viewerSeat ?? ""}
                   >

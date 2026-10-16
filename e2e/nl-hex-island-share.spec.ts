@@ -12,7 +12,7 @@ const evidenceDir = process.env.GODESK_E2E_EVIDENCE_DIR;
 async function evidenceScreenshot(page: Page, name: string) {
   if (!evidenceDir) return;
   await mkdir(evidenceDir, { recursive: true });
-  await page.getByRole("region", { name: "汐屿六角岛" }).screenshot({
+  await page.getByRole("region", { name: "六角岛桌面" }).screenshot({
     path: `${evidenceDir}/${name}.png`,
   });
 }
@@ -73,11 +73,11 @@ test("NL hex-island proposal → hex-settlement build → share= guest setup set
     expect(new URL(guestPage.url()).searchParams.get("share")).toBeTruthy();
     await claimTidewellSeat(page, 1);
     await claimTidewellSeat(guestPage, 0);
-    const hostBoard = page.getByRole("region", { name: "汐屿六角岛" });
-    const guestBoard = guestPage.getByRole("region", { name: "汐屿六角岛" });
+    const hostBoard = page.getByRole("region", { name: "六角岛桌面" });
+    const guestBoard = guestPage.getByRole("region", { name: "六角岛桌面" });
     await expect(hostBoard).toBeVisible();
     await expect(guestBoard).toBeVisible();
-    await expect(guestBoard.getByRole("img", { name: "汐屿六角岛" })).toBeVisible();
+    await expect(guestBoard.getByRole("img", { name: "六角岛桌面" })).toBeVisible();
     const hostHud = hostBoard.getByRole("region", { name: "对局状态" });
     const guestHud = guestBoard.getByRole("region", { name: "对局状态" });
     await expect(hostHud).toContainText("座位 0 · 阶段 初始放置");

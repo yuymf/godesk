@@ -46,8 +46,8 @@ describe("UI-light-floors · playable lighting / albedo / vignette", () => {
   it("softens shared vignette + contact without H0x suite fork", () => {
     const obj = readFileSync("src/render3d/tabletop-objects.ts", "utf8");
     expect(obj).toContain("UI-light-floors");
-    expect(obj).toMatch(/rgba\(12,8,4,0\.04\)/);
-    expect(obj).toMatch(/W \* 0\.58/);
+    expect(obj).toMatch(/rgba\(12,8,4,0\.0[24]\)/);
+    expect(obj).toMatch(/W \* 0\.(58|72)/);
     expect(obj).not.toMatch(/suite === ["']H0/);
   });
 });

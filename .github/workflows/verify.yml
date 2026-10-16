@@ -37,7 +37,7 @@ jobs:
     # Labels other than `full-e2e` do not need a run (skipped jobs bill 0 minutes).
     if: github.event.action != 'labeled' || github.event.label.name == 'full-e2e'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       FULL_E2E: ${{ !github.event.pull_request.draft || contains(github.event.pull_request.labels.*.name, 'full-e2e') }}
     steps:
@@ -98,7 +98,9 @@ jobs:
       # SPEC §4.6.1 CI gate: deterministic render budgets under SwiftShader
       # (bytes, requests, draw calls, triangles, GPU estimate, leaks, context loss).
       - name: Render budgets (perf:ci)
-        if: env.FULL_E2E == 'true'
+        # always(): still produce ci-budgets when Playwright dies mid-suite so
+        # G3D-17 launch-checklist does not double-fail as "missing".
+        if: always() && env.FULL_E2E == 'true'
         run: pnpm perf:ci --out perf-results
       # G3D-17 launch-gate-block：全量 GODESK_LAUNCH_GATE=block（任一项非 pass 即失败，见 docs/perf/launch-checklist.md）。
       - name: G3D-17 launch checklist

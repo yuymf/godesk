@@ -420,36 +420,45 @@ function plaqueWithFace(node: SceneNode, ctx: TabletopObjectContext): Object3D {
         g.fillText(String(prestige), W - 52, 52);
       }
       // T115 · shared plaque title ink+halo (same family as station plaques)
-      g.font = '700 34px "Noto Serif CJK SC","Songti SC",serif';
+      // UI-card-schema · larger carved plaque title for seat-close
+      g.font = '700 44px "Noto Serif CJK SC","Songti SC",serif';
       g.textAlign = "center";
       g.textBaseline = "middle";
       // T257 · carved plaque title (wide-frame)
       g.fillStyle = "rgba(15,23,42,0.4)";
       g.fillText(title.slice(0, 8), W / 2 + 2, 110);
-      g.fillStyle = "rgba(255,250,240,0.65)";
+      g.fillStyle = "rgba(255,250,240,0.7)";
       g.fillText(title.slice(0, 8), W / 2 - 1.5, 106);
-      g.lineWidth = 3;
-      g.strokeStyle = "rgba(250,246,239,0.5)";
+      g.lineWidth = 3.5;
+      g.strokeStyle = "rgba(250,246,239,0.55)";
       g.strokeText(title.slice(0, 8), W / 2, 108);
       g.fillStyle = "#0f172a";
       g.fillText(title.slice(0, 8), W / 2, 108);
-      // requirement dots
+      // requirement dots — UI-card-schema · seat-close readable cost dots + underlay
+      g.fillStyle = "rgba(28,25,23,0.08)";
+      g.fillRect(36, 130, W - 72, 78);
+      g.fillStyle = "rgba(255,252,245,0.94)";
+      g.fillRect(40, 134, W - 80, 70);
       const entries = Object.entries(reqs).filter(([, n]) => n > 0);
       entries.forEach(([color, n], i) => {
-        const cx = 56 + i * 52;
-        const cy = 158;
+        const cx = 64 + i * 64;
+        const cy = 168;
+        g.fillStyle = "rgba(15,23,42,0.22)";
+        g.beginPath();
+        g.arc(cx + 1, cy + 2, 24, 0, Math.PI * 2);
+        g.fill();
         g.fillStyle = chipColors[color] ?? "#a78bfa";
         g.beginPath();
-        g.arc(cx, cy, 16, 0, Math.PI * 2);
+        g.arc(cx, cy, 22, 0, Math.PI * 2);
         g.fill();
-        g.strokeStyle = "rgba(0,0,0,0.35)";
-        g.lineWidth = 2;
+        g.strokeStyle = "#0f172a";
+        g.lineWidth = 3.5;
         g.stroke();
-        g.fillStyle = color === "white" || color === "yellow" ? "#1f2937" : "#fff";
-        g.font = "700 18px sans-serif";
+        g.fillStyle = color === "white" || color === "yellow" || color === "gold" ? "#0f172a" : "#fff";
+        g.font = "700 28px /* UI-card-schema */ sans-serif";
         g.textAlign = "center";
         g.textBaseline = "middle";
-        g.fillText(String(n), cx, cy);
+        g.fillText(String(n), cx, cy + 1);
       });
     }
     const tex = new CanvasTexture(canvas);
@@ -1253,18 +1262,18 @@ function softContactShadow(
   if (opts?.grounded) {
     // T270 · clear short-contact under tall chips (wide-frame readable)
     // UI-light-floors · shorter/lighter rings — no radial black blob over disc heart
-    group.add(mk(0.72, Math.min(0.72, opacity * 1.35), 0.00076, "contact-shadow"));
-    group.add(mk(1.00, Math.min(0.40, opacity * 0.65), 0.00058));
-    group.add(mk(1.28, Math.min(0.12, opacity * 0.18), 0.00042));
-    group.add(mk(1.55, Math.min(0.04, opacity * 0.06), 0.00028));
+    // UI-surface-contrast · foot-only rings: kill stacked mid/outer that pooled as center radial blot
+    group.add(mk(0.62, Math.min(0.48, opacity * 0.95), 0.00076, "contact-shadow"));
+    group.add(mk(0.88, Math.min(0.18, opacity * 0.32), 0.00058));
+    group.add(mk(1.08, Math.min(0.04, opacity * 0.07), 0.00042));
     return group;
   }
   // T218/T226/T230 · product contact shadow: denser core hug + smoother veil (no bands / no center blot)
   // UI-light-floors · mid/outer veil near-zero so H04 radial blot cannot crush center
-  group.add(mk(1.02, Math.min(0.58, opacity * 0.90), 0.00066, "contact-shadow")); // tight core hug
-  group.add(mk(1.22, Math.min(0.22, opacity * 0.32), 0.00050)); // near core blend
-  group.add(mk(1.55, Math.min(0.06, opacity * 0.10), 0.00038)); // soft mid · no blot
-  group.add(mk(2.10, Math.min(0.015, opacity * 0.022), 0.00028)); // mid-outer whisper
+  // UI-surface-contrast · core-only hug; drop wide mid/outer rings that stack into disc-heart blot
+  group.add(mk(0.92, Math.min(0.42, opacity * 0.72), 0.00066, "contact-shadow")); // tight core hug
+  group.add(mk(1.12, Math.min(0.10, opacity * 0.16), 0.00050)); // near core blend
+  group.add(mk(1.28, Math.min(0.018, opacity * 0.028), 0.00038)); // soft mid whisper · no blot
   return group;
 }
 
@@ -1305,7 +1314,7 @@ function porcelainPlate(node: SceneNode, ctx: TabletopObjectContext): Object3D {
   const glaze = new Mesh(translated(new CylinderGeometry(0.36, 0.36, 0.02, 28), 0.065), glazeMat);
   glaze.receiveShadow = true;
   group.add(bed, rim, glaze);
-  group.add(softContactShadow(0.40, 0.40, { opacity: 0.52, boost: 0.95 })); // T269 · plate ground
+  group.add(softContactShadow(0.32, 0.32, { opacity: 0.22, boost: 0.75 })); // UI-surface-contrast · plate foot
   return group;
 }
 
@@ -1765,10 +1774,11 @@ function tableVignetteMesh(): Object3D {
     if (g) {
       // T193/T202 · softer shared table vignette — larger clear center, milder rim (no hard bait)
       // UI-light-floors · kill center black blot / radial veil that crushed disc heart (H02/H04)
-      const grd = g.createRadialGradient(W / 2, H / 2, W * 0.58, W / 2, H / 2, W * 0.94);
+      // UI-surface-contrast · clear center through W*0.72; rim whisper only (no center wash)
+      const grd = g.createRadialGradient(W / 2, H / 2, W * 0.72, W / 2, H / 2, W * 0.98);
       grd.addColorStop(0, "rgba(0,0,0,0)");
-      grd.addColorStop(0.72, "rgba(0,0,0,0)");
-      grd.addColorStop(1, "rgba(12,8,4,0.04)");
+      grd.addColorStop(0.82, "rgba(0,0,0,0)");
+      grd.addColorStop(1, "rgba(12,8,4,0.02)");
       g.fillStyle = grd;
       g.fillRect(0, 0, W, H);
     }
@@ -1970,8 +1980,15 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     const sx = Math.max(0.2, Math.abs(node.scale?.[0] ?? 1));
     const sz = Math.max(0.2, Math.abs(node.scale?.[2] ?? sx));
     // T270 · grounded short-contact path for chip stacks (tag from mapper)
+    // UI-surface-contrast · absolute blobs stay foot-only (no opacity 1.0 / boost 1.2 blot pool)
     const grounded = node.tag === "grounded-contact";
-    object = softContactShadow(sx, sz, grounded ? { opacity: 1.0, boost: 1.20, grounded: true } : undefined);
+    object = softContactShadow(
+      sx,
+      sz,
+      grounded
+        ? { opacity: 0.42, boost: 0.78, grounded: true }
+        : { opacity: 0.28, boost: 0.82 },
+    );
   } else if (mesh === "felt-wood-rim") {
     // T044: hollow wood frame — solid box was burying the green felt inset.
     // T092 · grain/normal/roughness microdetail on shared wood rim
@@ -2065,14 +2082,16 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
     object = meepleFigure(node, ctx);
   } else if (mesh === "card") {
     object = cardWithFace(node, ctx);
-    (object as Group).add(softContactShadow(1.05, 1.28, { opacity: 0.32 })); // T096…T213/T218 card (center/corner-calm)
+    (object as Group).add(softContactShadow(0.88, 1.05, { opacity: 0.22 })); // UI-surface-contrast · lighter card foot
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
     // T081 · larger local blob so small tiles still ground at H02/H03 visibility
-    (object as Group).add(softContactShadow(1.05, 1.05, { opacity: 0.70, boost: 0.95, grounded: true })); // T269 · tile grounded HARD/centerCalm
+    // UI-surface-contrast · whisper embed only — absolute contact/ blob is primary foot
+    (object as Group).add(softContactShadow(0.48, 0.48, { opacity: 0.16, boost: 0.62, grounded: true }));
   } else if (mesh === "plaque") {
     object = plaqueWithFace(node, ctx);
-    (object as Group).add(softContactShadow(0.70, 0.55, { opacity: 0.62, boost: 0.92, grounded: true })); // T269 · plaque grounded
+    // UI-surface-contrast · plaque foot lighter so seat-close type stays readable
+    (object as Group).add(softContactShadow(0.52, 0.40, { opacity: 0.34, boost: 0.72, grounded: true }));
   } else if (mesh === "gem-chip") {
     // T213 · shared gem chip with clearcoat crystal feel (MaterialLibrary base + physical coat)
     const baseTok = node.material ? ctx.materials[node.material] : undefined;

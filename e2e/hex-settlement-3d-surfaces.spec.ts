@@ -26,7 +26,7 @@ test("汐屿: preview + replay render 3D canvas, no SVG board", async ({ page })
   await page.goto(`/chatgpt-plugin/play/${encodeURIComponent(buildId)}`);
   const preview = page.getByRole("region", { name: "汐屿可玩桌面" });
   await expect(preview).toBeVisible({ timeout: 30_000 });
-  await expect(preview.getByRole("img", { name: "汐屿六角岛" })).toBeVisible();
+  await expect(preview.getByRole("img", { name: "六角岛桌面" })).toBeVisible();
   await expect(preview.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
   await expect(preview.locator("svg polygon")).toHaveCount(0);
 
@@ -37,7 +37,7 @@ test("汐屿: preview + replay render 3D canvas, no SVG board", async ({ page })
   await page.goto(tryUrl);
   await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
   await claimTidewellSeat(page, 0);
-  const board = page.getByRole("region", { name: "汐屿六角岛" });
+  const board = page.getByRole("region", { name: "六角岛桌面" });
   const { clickTidewellBoardAction } = await import("./helpers/tidewell-actions");
   await clickTidewellBoardAction(board, /建造渔村/);
   await expect(board.getByRole("region", { name: "对局状态" })).toContainText(
@@ -45,7 +45,7 @@ test("汐屿: preview + replay render 3D canvas, no SVG board", async ({ page })
   );
   await page.getByRole("link", { name: "只读回放" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/replay\//, { timeout: 30_000 });
-  const replayBoard = page.getByRole("region", { name: "汐屿六角岛" });
+  const replayBoard = page.getByRole("region", { name: "六角岛桌面" });
   await expect(replayBoard).toBeVisible();
   await expect(replayBoard.locator("canvas")).toHaveCount(1, { timeout: 30_000 });
   await expect(replayBoard.locator("svg polygon")).toHaveCount(0);

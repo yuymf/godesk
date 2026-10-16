@@ -98,6 +98,8 @@ export default function TabletopGameScreen(props: TabletopGameScreenProps) {
                     onChange={(event) => {
                       const next = Number(event.currentTarget.value);
                       if (event.currentTarget.value !== "" && Number.isInteger(next)) props.onClaimSeat?.(next);
+                      const details = event.currentTarget.closest("details");
+                      if (details instanceof HTMLDetailsElement) details.open = false;
                     }}
                     value={props.viewerSeat ?? ""}
                   >

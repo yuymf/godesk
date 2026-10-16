@@ -92,7 +92,7 @@ export const SCENE_TOKENS = {
   },
   environment: { intensity: 0.72, pmremSigma: 0.035 }, // T249 · bright readable tabletop (un-burnt props/felt)
   /** §5.5 S-01 程序化渐变天空穹顶。 */
-  sky: { top: "#9ab8cc", horizon: "#efe6d4", bottom: "#e6d8bc", exponent: 0.75, radius: 60 }, // UI-light-floors · lift bottom void
+  sky: { top: "#9ab8cc", horizon: "#f2eadc", bottom: "#ebe0c8", exponent: 0.72, radius: 60 }, // UI-surface-contrast · lift bottom void
   camera: { fovDeg: 35, distance: 16, minPolarDeg: 25, maxPolarDeg: 70 },
   tile: { roughness: 0.98, metalness: 0 },
   piece: { roughness: 0.82, metalness: 0, clearcoat: 0 },

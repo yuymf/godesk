@@ -528,24 +528,24 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       </header>
 
 {/* T091 · show compact share/seat chrome for seated hex immersive (parity with tabletop shareReady) */}
+{/* UI-share-seat · shareReady invite + seat row always mounted when chrome shows (undo T186 purge) */}
 {!immersive || shareChromeCompact ? (
             <section
               aria-label={copy.invitation}
               className={`room-invitation room-invitation-rich${shareChromeCompact ? " is-collapsed room-share-chrome is-chrome-collapse" : ""}`}
+              data-ui-share-ready={shareChromeCompact ? "1" : undefined}
+              data-share-ready-visible="1"
             >
-        {/* T186 · seated shareReady: purge invite/link strip from share frame (seat rail stays) */}
-        {!shareChromeCompact ? (
-          <>
         <div className="invitation-heading">
           <span className="room-kicker">{copy.invitation}</span>
-          <strong>{copy.invitationHint}</strong>
+          <strong>{shareChromeCompact ? copy.shareLinkReady : copy.invitationHint}</strong>
         </div>
-        <div className="invitation-link-row">
+        <div className="invitation-link-row" data-invite-link-row="1">
           <label>
             <span>{copy.inviteLink}</span>
             <input
               aria-label={copy.inviteLink}
-              className="invite-url"
+              className={`invite-url${shareChromeCompact ? " is-share-ready" : ""}`}
               readOnly
               value={room.sessionUrl}
             />
@@ -555,11 +555,9 @@ export function RoomView({ sessionId }: { sessionId: string }) {
             onClick={() => void copyInvitation()}
             type="button"
           >
-            {copied ? copy.copiedInvite : copy.copyInvite}
+            {copied ? copy.copiedInvite : (shareChromeCompact ? copy.shareLinkReady : copy.copyInvite)}
           </button>
         </div>
-          </>
-        ) : null}
         <div className="seat-rail" role="group" aria-label={locale === "zh" ? "席位栏" : "Seat rail"}>
           <span className="seat-rail-label">{copy.yourSeat}</span>
           <div className="seat-chip-row">
@@ -606,7 +604,11 @@ export function RoomView({ sessionId }: { sessionId: string }) {
               </span>
             )}
           </div>
-          {/* Keep a visually-hidden select for keyboard/AT parity with prior control. */}
+          {/* Single accessible seat <select aria-label="你的席位">:
+              Tidewell boards (hex / wood chrome) already mount one in the ⚙ menu.
+              Share-seat chips stay for invite/seat click UX — do not clone the label
+              (UI-share-seat regression: strict-mode 2× getByLabel('你的席位')). */}
+          {immersive ? null : (
           <label className="seat-picker seat-picker-fallback">
             <span>{copy.yourSeat}</span>
             <select
@@ -635,6 +637,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
               })}
             </select>
           </label>
+          )}
         </div>
       </section>
       ) : null}
