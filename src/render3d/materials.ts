@@ -66,11 +66,11 @@ float gdPattern(vec3 w) {
   return 0.5 + 0.42 * ring + (pore - 0.5) * 0.22;
 #elif GD_PATTERN == 2
   // T082/T083 · cloth weave readable at wide desk cameras (H02 debt)
-  vec2 g = fract(w.xz * 28.0);
+  vec2 g = fract(w.xz * 32.0);
   float weave = abs(step(0.5, g.x) - step(0.5, g.y));
-  float pile = gdNoise(w.xz * 14.0);
-  float rib = gdNoise(w.xz * 6.5);
-  return mix(0.22, 0.78, weave) + (pile - 0.5) * 0.42 + (rib - 0.5) * 0.16;
+  float pile = gdNoise(w.xz * 16.0);
+  float rib = gdNoise(w.xz * 7.2);
+  return mix(0.14, 0.86, weave) + (pile - 0.5) * 0.48 + (rib - 0.5) * 0.20; // T234 cloth contrast
 #elif GD_PATTERN == 3
   float rock = gdFbm(w.xz * 2.8 + w.y * 1.2);
   float seam = gdNoise(w.xz * 7.0 + w.y);

@@ -500,9 +500,9 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       ...render.lighting,
       // T061 · desk contrast; T086 · explicit fill + rim (no extra shadow maps)
       // T175/T187/T198 · brighter upper sky/fill/exposure (H01 hex path separate; no vignette bait)
-      sun: { ...render.lighting.sun, azimuthDeg: 128, elevationDeg: 60, intensity: 5.85, color: "#ffe0c0" },
-      hemisphere: { sky: "#ffffff", ground: "#b8a898", intensity: 2.78 }, // T234 desk product light
-      fill: { azimuthDeg: 312, elevationDeg: 54, intensity: 2.15, color: "#f4f8ff" }, // T234
+      sun: { ...render.lighting.sun, azimuthDeg: 128, elevationDeg: 60, intensity: 5.95, color: "#ffe8c8" },
+      hemisphere: { sky: "#ffffff", ground: "#c0b098", intensity: 2.92 }, // T234 desk product light
+      fill: { azimuthDeg: 312, elevationDeg: 54, intensity: 2.38, color: "#f8fbff" }, // T234
       rim: { azimuthDeg: 38, elevationDeg: 32, intensity: 1.22, color: "#ffeed0" },
       shadow: { enabled: true, softness: 0.58 },
       exposure: 1.99, // T187…T230 · desk product light (schema ≤2); chroma via felt/piece
@@ -510,8 +510,8 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#62ffc0", "cloth", 0.99, 0, undefined, 0.99),  // T044…T234 product green felt
-      table: material("#ffe4b8", "grain", 0.30, 0.24), // T092…T234 · brighter wood rim (corner-calm)
+      board: material("#6affd0", "cloth", 0.99, 0, undefined, 0.99),  // T044…T234 product green felt
+      table: material("#fff0d0", "grain", 0.26, 0.28), // T092…T234 · brighter wood rim (corner-calm)
       piece: material("#fffaf0", "none", 0.10, 0.34, 0.92), // T198…T234 · plastic-wood piece
       card: material("#fffffa", "none", 0.10, 0.26, 0.88), // T198…T234 · card stock
       resource: material("#ffefc0", "none", 0.03, 0.62, 0.99), // T198…T234 · gem crystal
@@ -542,13 +542,13 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     }
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
-        board: material("#52ffb0", "cloth", 0.99, 0, undefined, 0.99),  // T044…T234 pattern felt
-        piece: material("#ffffff", "none", 0.08, 0.34, 0.94), // T061…T234
-        slot: material("#3f3f46", "none", 0.82, 0.05, 0.12),  // legacy recessed slots
+        board: material("#98fff0", "cloth", 0.99, 0, undefined, 0.99),  // T044…T234 pattern felt · hue vs tip #10fc80
+        piece: material("#fffef8", "none", 0.06, 0.40, 0.98), // T061…T234
+        slot: material("#1c1c22", "none", 0.88, 0.04, 0.08),  // T234 recessed slots
         // T054 · pale print plate under wall hue tints (square grid, not black pits)
-        "wall-print": material("#f2f0ee", "none", 0.82, 0.04, 0.12), // T234
+        "wall-print": material("#faf9f6", "none", 0.78, 0.05, 0.14), // T234
         // T058 · elongated pattern-line / floor troughs
-        "line-trough": material("#2a2826", "none", 0.88, 0.06, 0.08), // T234
+        "line-trough": material("#141210", "none", 0.90, 0.05, 0.06), // T234
       });
       // T050/T054/T058: wall empties → square print; lines → trough strips (not round pits)
       render.bindings = [

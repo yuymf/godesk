@@ -1219,8 +1219,8 @@ function softContactShadow(
     return mesh;
   };
   // T218/T226/T230 · product contact shadow: denser core hug + smoother veil (no bands / no center blot)
-  group.add(mk(1.02, Math.min(0.95, opacity * 1.50), 0.00066, "contact-shadow")); // T233/T234 tight core hug
-  group.add(mk(1.28, Math.min(0.64, opacity * 0.86), 0.00050)); // near core blend
+  group.add(mk(1.02, Math.min(0.96, opacity * 1.58), 0.00066, "contact-shadow")); // T233/T234 tight core hug
+  group.add(mk(1.32, Math.min(0.68, opacity * 0.90), 0.00050)); // near core blend
   group.add(mk(1.72, Math.min(0.32, opacity * 0.46), 0.00038)); // soft mid · center-calm
   group.add(mk(2.55, Math.min(0.07, opacity * 0.10), 0.00032)); // mid-outer · corner-calm
   group.add(mk(3.10, Math.min(0.022, opacity * 0.035), 0.00018)); // soft outer · T230 corner-calm
@@ -2010,7 +2010,7 @@ export function createTabletopObject(node: SceneNode, ctx: TabletopObjectContext
   } else if (mesh === "glazed-tile") {
     object = glazedTileWithFace(node, ctx);
     // T081 · larger local blob so small tiles still ground at H02/H03 visibility
-    (object as Group).add(softContactShadow(1.18, 1.18, { opacity: 0.78, boost: 1.08 })); // T081…T161/T201/T210 tile mean
+    (object as Group).add(softContactShadow(1.28, 1.28, { opacity: 0.88, boost: 1.16 })); // T081…T234 tile mean
   } else if (mesh === "plaque") {
     object = plaqueWithFace(node, ctx);
     (object as Group).add(softContactShadow(0.78, 0.62, { opacity: 0.58 })); // T106/T150 plaque
