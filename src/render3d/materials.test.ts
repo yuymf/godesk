@@ -4,6 +4,8 @@ import {
   MaterialLibrary,
   PATTERN_IDS,
   PATTERN_STRENGTH_WITH_PBR,
+  PLAYABLE_ALBEDO_MAX,
+  clampPlayableAlbedo,
   createMaterial,
   installPattern,
 } from "./materials";
@@ -92,10 +94,15 @@ describe("G3D-07 materials", () => {
     expect(wood.roughnessMap).toBe(woodMaps.ormMap);
     expect(wood.metalnessMap).toBe(woodMaps.ormMap);
     expect((wood.userData.gdPatternStrength as { value: number }).value).toBe(PATTERN_STRENGTH_WITH_PBR);
-    // R19: AI baseColor leads — token.base lerps toward white by token.pbrTint.
-    const expected = new Color(TERRAIN_MATERIALS.wood!.base).lerp(new Color(0xffffff), TERRAIN_MATERIALS.wood!.pbrTint!);
+    // R19: AI baseColor leads — token.base lerps toward white by token.pbrTint,
+    // then UI-surface-contrast / UI-light-floors clampPlayableAlbedo floors apply.
+    const expected = clampPlayableAlbedo(
+      new Color(TERRAIN_MATERIALS.wood!.base).lerp(new Color(0xffffff), TERRAIN_MATERIALS.wood!.pbrTint!),
+    );
+    expect(Math.max(expected.r, expected.g, expected.b)).toBeLessThanOrEqual(PLAYABLE_ALBEDO_MAX + 1e-6);
     expect(wood.color.r).toBeCloseTo(expected.r, 5);
     expect(wood.color.g).toBeCloseTo(expected.g, 5);
+    expect(wood.color.b).toBeCloseTo(expected.b, 5);
     const seatMaps = maps();
     library.applyPbrSet("t09-paintwood", seatMaps);
     // Round-6tex: wood albedo on (multiplies with vertex / seat colour).

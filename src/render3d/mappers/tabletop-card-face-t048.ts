@@ -364,7 +364,6 @@ export function paintCardFace(
     const col = i % 4;
     const row = Math.floor(i / 4);
     const cx = costBox.x + 32 + col * step;
-    const cy = costBox.y + costBox.h / 2 + row * (floors.costDotRadius * 2 + 8) - (row ? 0 : 0);
     const cyDot = costBox.y + Math.min(costBox.h - floors.costDotRadius - 6, floors.costDotRadius + 10 + row * (floors.costDotRadius * 2 + 10));
     // under-disc for contrast on washed stock
     g.fillStyle = "rgba(15,23,42,0.22)";
