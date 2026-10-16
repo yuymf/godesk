@@ -468,8 +468,8 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     // T086 · desk lighting layers on network
     render.lighting = {
       ...render.lighting,
-      sun: { ...render.lighting.sun, azimuthDeg: 126, elevationDeg: 60, intensity: 6.12, color: "#ffcea0" }, // T230
-      hemisphere: { sky: "#ffffff", ground: "#8a7860", intensity: 2.28 }, // T230 network product light
+      sun: { ...render.lighting.sun, azimuthDeg: 126, elevationDeg: 60, intensity: 5.98, color: "#ffd0a8" }, // T230 schema ≤6
+      hemisphere: { sky: "#ffffff", ground: "#908468", intensity: 2.35 }, // T230 network product light
       fill: { azimuthDeg: 310, elevationDeg: 50, intensity: 1.82, color: "#d8ecfc" },
       rim: { azimuthDeg: 40, elevationDeg: 34, intensity: 1.55, color: "#ffecbe" },
       shadow: { enabled: true, softness: 0.55 },
@@ -478,10 +478,10 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     };
     Object.assign(render.materials, {
       // T172/T177/T192/T201/T206 · denser/brighter network map cloth (shared MaterialLibrary)
-      map: material("#62fff2", "cloth", 0.99, 0, undefined, 0.99), // T177…T230
-      table: material("#f8d0a0", "grain", 0.30, 0.26), // T110…T218/T221 · warmer exterior/rim (corner-calm)
-      ink: material("#081420", "none", 0.22, 0.28, 0.58), // T214/T213/T218 route ink
-      piece: material("#fffaf0", "none", 0.08, 0.38, 0.96), // T201…T230 · plastic-wood piece
+      map: material("#6efff4", "cloth", 0.99, 0, undefined, 0.99), // T177…T230 H02 HARD chroma
+      table: material("#fad8a8", "grain", 0.28, 0.28), // T110…T230 · warmer exterior/rim (corner-calm)
+      ink: material("#061018", "none", 0.18, 0.32, 0.62), // T214…T230 route ink product
+      piece: material("#fffbf2", "none", 0.06, 0.42, 0.98), // T201…T230 · plastic-wood piece
     });
     render.bindings = [
       binding("station", "station", "ink", 1.2),
