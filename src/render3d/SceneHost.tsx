@@ -260,13 +260,13 @@ let SHARED_DECOR_GEOM: BufferGeometry | null = null;
 function sharedTileGeom(): BufferGeometry {
   if (!SHARED_TILE_GEOM) {
     // R21: face radius 0.99 (was TILE_RADIUS − 0.04 = 0.91) → hairline light seams instead of a dark grid.
-    const geom = new ExtrudeGeometry(hexShape(TILE_FACE_RADIUS, 0), { depth: 0.28, bevelEnabled: false });
+    const geom = new ExtrudeGeometry(hexShape(TILE_FACE_RADIUS, 0), { depth: 0.34, bevelEnabled: false }); // T250 paperboard thickness
     geom.rotateX(-Math.PI / 2);
     // R22: faces touch (radius 1.0); the sides taper inward toward the base so neighbours leave no open slot
     // (no dark 1px side / shadow line) and outer sides stay tucked inside the coast wall top.
     const pos = geom.getAttribute("position");
     for (let i = 0; i < pos.count; i += 1) {
-      const k = TILE_BASE_SCALE + (1 - TILE_BASE_SCALE) * Math.min(1, Math.max(0, pos.getY(i) / 0.28));
+      const k = TILE_BASE_SCALE + (1 - TILE_BASE_SCALE) * Math.min(1, Math.max(0, pos.getY(i) / 0.34));
       pos.setXYZ(i, pos.getX(i) * k, pos.getY(i), pos.getZ(i) * k);
     }
     pos.needsUpdate = true;
@@ -362,18 +362,18 @@ function batchableKind(kind: SceneNode["kind"]): boolean {
 }
 
 let SHARED_NUMBER_GEOM: BufferGeometry | null = null;
-/** T241 · wood-chip number token: deeper rim bevel + stronger side turning bands (lathe read). */
+/** T241/T250 · wood-chip number token: thicker body + lathe lip / side turning. */
 function sharedNumberGeom(): BufferGeometry {
   if (!SHARED_NUMBER_GEOM) {
     const shape = new Shape();
     const r = 0.22;
     shape.absarc(0, 0, r, 0, Math.PI * 2, false);
     const geom = new ExtrudeGeometry(shape, {
-      depth: 0.108,
+      depth: 0.138, // T250 · thicker wood-chip body
       bevelEnabled: true,
-      bevelThickness: 0.026,
-      bevelSize: 0.020,
-      bevelSegments: 5,
+      bevelThickness: 0.034, // T250 · readable lathe lip
+      bevelSize: 0.024,
+      bevelSegments: 6,
       curveSegments: 40,
     });
     geom.rotateX(-Math.PI / 2);
@@ -387,9 +387,9 @@ function sharedNumberGeom(): BufferGeometry {
       const x = pos.getX(i);
       const z = pos.getZ(i);
       const rad = Math.hypot(x, z);
-      if (rad > 0.190 && Math.abs(y - midY0) < 0.048) {
-        const band = Math.sin((y - midY0) * 110.0);
-        const k = 1 - 0.028 * Math.max(0, band);
+      if (rad > 0.188 && Math.abs(y - midY0) < 0.062) {
+        const band = Math.sin((y - midY0) * 96.0);
+        const k = 1 - 0.038 * Math.max(0, band); // T250 deeper side turning
         pos.setXYZ(i, x * k, y, z * k);
       }
     }

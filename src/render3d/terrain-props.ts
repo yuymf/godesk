@@ -574,21 +574,47 @@ function pebbleGeometry(): BufferGeometry {
   ]);
 }
 
-/** T246 · when Tidewell GLB templates are ready, prefer sculpted tree/sheep/rock meshes over procedural low-poly. */
+/** T249 · GLB meshes often carry dark baked vertex colours; lift to near-white so instanceColor drives tabletop albedo. */
+function liftGlbAlbedo(g: BufferGeometry): BufferGeometry {
+  const col = g.getAttribute("color");
+  if (col && "array" in col) {
+    const arr = col.array as Float32Array;
+    const item = col.itemSize;
+    for (let i = 0; i < col.count; i += 1) {
+      const o = i * item;
+      // keep relative micro-variation but lift mean toward 1.0
+      arr[o] = Math.min(1, 0.55 + arr[o]! * 0.55);
+      arr[o + 1] = Math.min(1, 0.55 + arr[o + 1]! * 0.55);
+      arr[o + 2] = Math.min(1, 0.55 + arr[o + 2]! * 0.55);
+    }
+    col.needsUpdate = true;
+  } else {
+    // no colour attr — seed bright white so InstancedMesh instanceColor shows
+    const n = g.getAttribute("position")?.count ?? 0;
+    if (n > 0) {
+      const colors = new Float32Array(n * 3);
+      colors.fill(1);
+      g.setAttribute("color", new BufferAttribute(colors, 3));
+    }
+  }
+  return g;
+}
+
+/** T246/T249 · prefer sculpted Tidewell GLB meshes; brighten baked albedo (keep mesh fidelity). */
 function glbOr(kind: PropKind, procedural: () => BufferGeometry): BufferGeometry {
   const tide = getTidewellGeometriesSync();
   if (!tide.ready) return procedural();
   if (kind === "sheep" && tide.sheep) {
     const g = tide.sheep.clone();
     g.computeVertexNormals();
-    return g;
+    return liftGlbAlbedo(g);
   }
   if (isPine(kind) || kind === "canopy") {
     const tree = tide.decorByTerrain.wood;
     if (tree && tree !== tide.decorByTerrain.desert) {
       const g = tree.clone();
       g.computeVertexNormals();
-      return g;
+      return liftGlbAlbedo(g);
     }
   }
   if (kind === "boulder") {
@@ -596,7 +622,7 @@ function glbOr(kind: PropKind, procedural: () => BufferGeometry): BufferGeometry
     if (rock) {
       const g = rock.clone();
       g.computeVertexNormals();
-      return g;
+      return liftGlbAlbedo(g);
     }
   }
   return procedural();
@@ -834,7 +860,7 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
         y: TILE_TOP + 0.004,
         z: b.z,
         yaw: b.yaw,
-        scale: (isPine(b.kind) ? 1.1 : b.kind === "sheep" ? 0.85 : 1.0) * b.scale,
+        scale: (isPine(b.kind) ? 1.28 : b.kind === "boulder" ? 1.18 : b.kind === "sheep" ? 0.85 : 1.0) * b.scale, // T250 GLB contact footprint
         stretch: 1,
         tone: 0.5,
         hue: 0.5,
@@ -993,15 +1019,15 @@ export function layoutProps(tiles: readonly PropTile[], tier: RenderTierId): Map
 
 /** 树种底调：贴近 wood tile；再叠 instance 抖动。 */
 const PINE_SPECIES_TONE: Record<"pineTall" | "pineRound" | "pineSmall", Color> = {
-  // R21: ~35% darker / cooler so the dense low stand reads as a dark-green field at camera a.
-  pineTall: new Color(0.5, 0.64, 0.53),
-  pineRound: new Color(0.58, 0.68, 0.53),
-  pineSmall: new Color(0.54, 0.65, 0.5),
+  // T249 · bright tabletop miniature green (fix T246 burnt/dark GLB canopy)
+  pineTall: new Color(0.72, 0.86, 0.58),
+  pineRound: new Color(0.78, 0.90, 0.60),
+  pineSmall: new Color(0.74, 0.88, 0.56),
 };
 const PEBBLE_TINT: Record<string, Color> = { desert: new Color("#e6d2a6"), ore: new Color("#d8dee4") };
 /** R17: instance multiply biased toward TERRAIN_MATERIALS.base — sheep/meadow continuous dissolve. */
 const TERRAIN_ALBEDO: Record<string, Color> = {
-  wood: new Color("#2f6b3a"),
+  wood: new Color("#4a9a52"), // T249 brighter prop blend target
   sheep: new Color("#8fbf6a"),
   ore: new Color("#c2ced6"),
   brick: new Color("#b85a3a"),
@@ -1030,7 +1056,7 @@ function toneFor(p: PropPlacement, out: Color): Color {
   if (albedo && p.kind !== "blobshadow" && p.kind !== "trough" && p.kind !== "sheep") {
     // R17: sheep strongly → meadow tile; pines/canopy keep dissolve; hex-face continuous with props
     // R21: pines 0.34 → 0.42 toward the dark wood albedo (dark-green field at camera a)
-    const blend = isPine(p.kind) || p.kind === "canopy" ? 0.42
+    const blend = isPine(p.kind) || p.kind === "canopy" ? 0.18 // T249 less pull toward dark wood
       : p.kind === "wheatrow" || p.kind === "sheaf" ? 0.32
       : p.kind === "boulder" || p.kind === "clay" || p.kind === "bricks" ? 0.36
       : 0.16;
@@ -1065,7 +1091,7 @@ export function createSheepDissolveMaterial(): MeshStandardMaterial {
   m.polygonOffsetFactor = -1;
   m.polygonOffsetUnits = -2;
   const pattern = installPattern(m, "grass");
-  pattern.value = 0.8;
+  pattern.value = 0.18; // T249 bright wool readable (was burnt 0.8)
   const base = m.onBeforeCompile;
   const ground = { value: new Color(SHEEP_GROUND_TINT) };
   const [y0, y1] = SHEEP_DISSOLVE_BAND;
@@ -1101,25 +1127,27 @@ export type TerrainPropLayer = {
 export function createTerrainPropLayer(): TerrainPropLayer {
   const group = new Group();
   group.name = "terrain-props";
-  // T246 · product props: soft shading + grass/stone pattern (not flat-shaded toy plastic)
+  // T249 · keep sculpted GLB mesh; matte bright tabletop albedo (no burnt pattern/AO)
   const material = new MeshStandardMaterial({
-    vertexColors: true, flatShading: false, roughness: 0.92, metalness: 0.02, envMapIntensity: 0.25,
+    vertexColors: true, flatShading: false, roughness: 0.98, metalness: 0, envMapIntensity: 0,
   });
-  installPattern(material, "grass", 0.55);
+  // light micro-detail only — strength low so canopy/sheep stay readable
+  installPattern(material, "grass", 0.12);
   const smoothMaterial = new MeshStandardMaterial({
-    vertexColors: true, flatShading: false, roughness: 0.88, metalness: 0.04, envMapIntensity: 0.3,
+    vertexColors: true, flatShading: false, roughness: 0.96, metalness: 0, envMapIntensity: 0,
   });
-  installPattern(smoothMaterial, "stone", 0.4);
+  installPattern(smoothMaterial, "stone", 0.10);
   const canopyMaterial = new MeshStandardMaterial({
-    vertexColors: true, flatShading: false, roughness: 0.95, metalness: 0, envMapIntensity: 0.15,
-    transparent: true, opacity: 0.55,
+    vertexColors: true, flatShading: false, roughness: 0.98, metalness: 0, envMapIntensity: 0,
+    transparent: true, opacity: 0.82,
   });
-  installPattern(canopyMaterial, "grass", 0.7);
+  installPattern(canopyMaterial, "grass", 0.14);
   canopyMaterial.depthWrite = false;
   const sheepMaterial = createSheepDissolveMaterial();
   const shadowMaterial = new MeshStandardMaterial({
-    color: "#1a1814", flatShading: true, roughness: 1, metalness: 0, envMapIntensity: 0,
-    transparent: true, opacity: 0.22,
+    // T250 · soft GLB ground-contact disc (readable rooted props, not dark halo pad)
+    color: "#2a241c", flatShading: true, roughness: 1, metalness: 0, envMapIntensity: 0,
+    transparent: true, opacity: 0.30,
   });
   shadowMaterial.depthWrite = false;
   const geometries = new Map<string, BufferGeometry>();

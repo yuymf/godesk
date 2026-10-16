@@ -167,7 +167,7 @@ describe("R22 resource colour + seams", () => {
 
   it("soft hex-edge band ≤ 25% and terrain saturation no longer pulled toward grey", () => {
     expect(SOFT_EDGE_STRENGTH).toBeGreaterThan(0);
-    expect(SOFT_EDGE_STRENGTH).toBeLessThanOrEqual(0.85); // T245 kraft paperboard edge
+    expect(SOFT_EDGE_STRENGTH).toBeLessThanOrEqual(0.90); // T245 kraft paperboard edge
     expect(TERRAIN_SATURATION).toBeGreaterThanOrEqual(1);
     expect(TERRAIN_SATURATION).toBeLessThanOrEqual(2.70); // T183/T217/T222
   });

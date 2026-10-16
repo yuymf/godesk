@@ -11,7 +11,7 @@ describe("T245 MaterialLibrary / shader product step", () => {
   it("raises PBR relief + wood/felt shader identity without suite fork", () => {
     expect(PATTERN_STRENGTH_WITH_PBR).toBeGreaterThanOrEqual(0.7);
     expect(PBR_TINT_TO_WHITE).toBeLessThanOrEqual(0.15);
-    expect(SOFT_EDGE_STRENGTH).toBeGreaterThanOrEqual(0.7);
+    expect(SOFT_EDGE_STRENGTH).toBeGreaterThanOrEqual(0.8);
     expect(ENV_REFLECTION_MAX_ROUGHNESS).toBeGreaterThanOrEqual(0.62);
     const src = readFileSync("src/render3d/materials.ts", "utf8");
     expect(src).toContain("lathe-turned wood");

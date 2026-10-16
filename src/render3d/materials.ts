@@ -18,7 +18,7 @@ import type { MaterialPattern, MaterialToken, PbrSetId } from "./tokens";
 import { TILE_FACE_APOTHEM } from "./tokens";
 
 /** R21 soft hex-edge band: max share the top-face albedo eases toward the shared light earth tone (× brush). R22: 0.45 → 0.25. */
-export const SOFT_EDGE_STRENGTH = 0.78; // T245 · kraft paperboard edge bevel (product read)
+export const SOFT_EDGE_STRENGTH = 0.82; // T250 · kraft paperboard side-lip read
 /** R22: terrain albedo saturation (1 = texture as-is; R19–R21 used 0.86, a 14% pull toward grey). */
 export const TERRAIN_SATURATION = 2.55; // T245 · keep chroma under stronger PBR maps
 /** R22 hairline seam; R23: 0.006 → 0.002 (whole-board a no longer chessboard). */
@@ -199,7 +199,7 @@ export function installPattern(material: MeshStandardMaterial, pattern: Material
                 "gdEdge = gdEdge * gdEdge * (0.7 + 0.6 * gdB.x) * gdTop;",
                 // R22: band strength 0.45 → 0.25 (faded halo gone; tiles keep their own colour up to the edge).
                 `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.78, 0.62, 0.42), clamp(gdEdge, 0.0, 1.0) * ${SOFT_EDGE_STRENGTH.toFixed(2)} * uGdBrush);`, // T245 kraft paperboard
-                "diffuseColor.rgb *= 1.0 - clamp(gdEdge, 0.0, 1.0) * 0.18 * uGdBrush;", // pressed lip darken
+                "diffuseColor.rgb *= 1.0 - clamp(gdEdge, 0.0, 1.0) * 0.22 * uGdBrush;", // T250 pressed side lip
                 // R22: faces touch (TILE_FACE_RADIUS 1.0). R23: seam narrower (0.002) + ground-coloured
                 // (slight self-darken, not bright sandy paths) so camera a no longer reads as a chessboard.
                 "float gdSeamFw = max(fwidth(gdHexM), 1e-4);",
