@@ -64,6 +64,7 @@ import { TideArenaBoard } from "./TideArenaBoard";
 import type { AutoBattlerThemePatch } from "../runtime/adapters/auto-battler-theme";
 import type { AutoBattlerBranding } from "../runtime/adapters/auto-battler-packs";
 import type { AutoBattlerContentPatch } from "../runtime/adapters/auto-battler-content";
+import { readUiThemeFromPresentation } from "./ui-theme-packs";
 
 function autoBattlerContent(ruleSystem: { runtimeSupport: unknown }): AutoBattlerContentPatch | undefined {
   const support = ruleSystem.runtimeSupport as { status?: string; kernel?: { type?: string; content?: AutoBattlerContentPatch } };
@@ -497,8 +498,10 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   // T091 · hex immersive seated gets the same compact shareReady strip as tabletop
   // T097 · further collapse share/seat chrome after seating (canvas vh ↑)
   const shareChromeCompact = Boolean((tabletopImmersive || hexSettlement) && seat !== null);
+  // UI-theme-packs · P3 — mount data-ui-theme from presentation / render config (default harbor-wood)
+  const uiThemeId = readUiThemeFromPresentation(build.ruleSystem.presentation);
   return (
-    <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute || auction || autoBattler || gemEngine || patternDraft ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-hex-island room-view-tidewell-immersive" : ""} ${tabletopImmersive ? "room-view-tidewell-immersive room-view-tabletop-immersive" : ""} ${seat !== null ? "room-view-seated" : "room-view-unseated"} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} id="main">
+    <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute || auction || autoBattler || gemEngine || patternDraft ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-hex-island room-view-tidewell-immersive" : ""} ${tabletopImmersive ? "room-view-tidewell-immersive room-view-tabletop-immersive" : ""} ${seat !== null ? "room-view-seated" : "room-view-unseated"} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} data-ui-theme={uiThemeId} id="main">
       <header className={`room-shell-header${shareChromeCompact ? " is-immersive-strip is-share-chrome" : ""}`}>
         <div className="room-title-block">
           <span className="room-brand-mark" aria-hidden="true"><GameMark /></span>
