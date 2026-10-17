@@ -7327,3 +7327,463 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   overflow: hidden !important;
   clip: rect(0, 0, 0, 0) !important;
 }
+
+
+/* ========== UI-room-hud · settlecoast-grade Room density (P2) ==========
+ * Left seat rail + bottom hand/resource bar + right turn/chronicle panel.
+ * Paper / float / wood surface hierarchy — kill thin black engineering bars.
+ * Generic Room shell only; no suite forks. Boards that ship a full HUD opt out via data-board-owns-hud.
+ */
+.room-playable-shell.room-density-hud,
+.room-density-hud[data-ui-room-hud="1"] {
+  display: grid !important;
+  grid-template-columns: minmax(11rem, var(--hud-seat-rail-w, 13.5rem)) minmax(0, 1fr) minmax(12rem, var(--hud-turn-panel-w, 15.5rem));
+  grid-template-rows: auto minmax(var(--hud-hand-h, 7.25rem), auto);
+  grid-template-areas:
+    "seats main turn"
+    "seats hand turn";
+  align-items: stretch;
+  gap: 0.65rem 0.75rem;
+  margin: 0.45rem 0 0.7rem;
+  padding: 0.7rem 0.75rem 0.8rem;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--surface-wood-edge, #5a4330) 55%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-wood, #3a2a1c) 92%, #1a120c), var(--surface-wood-deep, #24180f));
+  color: var(--hud-ink-on-wood, #f6efe2);
+  box-shadow: var(--shadow-wood, 0 2px 0 rgba(20, 12, 6, 0.35), 0 10px 28px rgba(20, 12, 6, 0.28));
+  z-index: 14;
+  position: relative;
+}
+
+/* Board-owned full density HUD — avoid double chrome (boards self-declare) */
+.room-view:has([data-board-owns-hud="1"]) > .room-playable-shell.room-density-hud {
+  display: none !important;
+}
+
+.room-hud-seat-rail {
+  grid-area: seats;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0.45rem 0.4rem;
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-wood-edge, #5a4330) 70%, #2a1c12), color-mix(in srgb, var(--surface-wood-deep, #24180f) 88%, #120c08));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #c4a35a 22%, transparent);
+}
+
+.room-hud-panel-title {
+  margin: 0 0.25rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--hud-ink-on-wood, #f6efe2) 78%, transparent);
+  font-weight: 650;
+}
+
+.room-hud-seat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.room-hud-seat-card {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 0.45rem;
+  row-gap: 0.15rem;
+  width: 100%;
+  padding: 0.45rem 0.5rem 0.5rem;
+  text-align: left;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--seat-color, #c4a35a) 45%, transparent);
+  background:
+    linear-gradient(180deg, var(--surface-parchment, #f3e7c9), var(--surface-parchment-deep, #e8d3a2));
+  color: #2a1c12;
+  box-shadow: var(--shadow-paper, 0 1px 0 rgba(255, 250, 235, 0.55), 0 8px 22px rgba(41, 33, 20, 0.14));
+  cursor: pointer;
+  font: inherit;
+  position: relative;
+}
+
+.room-hud-seat-card:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.room-hud-seat-card.is-active {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--hud-accent-edge, #c4a35a) 85%, #fff),
+    0 0 0 4px color-mix(in srgb, var(--seat-color, #c4a35a) 55%, transparent),
+    var(--shadow-paper);
+}
+
+.room-hud-seat-card.is-you {
+  background:
+    linear-gradient(180deg, var(--surface-float, #fffdf6), var(--surface-parchment, #f3e7c9));
+}
+
+.room-hud-seat-swatch {
+  grid-row: 1 / span 2;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 999px;
+  align-self: center;
+  background:
+    radial-gradient(circle at 35% 30%, #fff8, transparent 45%),
+    var(--seat-color, #c4a35a);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, #2a1c12 35%, transparent);
+}
+
+.room-hud-seat-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  min-width: 0;
+}
+
+.room-hud-seat-meta b {
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.room-hud-seat-score,
+.room-hud-seat-hand {
+  font-size: 0.72rem;
+  color: #5a4632;
+  font-weight: 600;
+}
+
+.room-hud-seat-turn {
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin-top: 0.1rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff8ee;
+  background: linear-gradient(180deg, var(--hud-accent, #8b1e1e), #5c1212);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--hud-accent-edge, #c4a35a) 55%, transparent);
+}
+
+.room-hud-main {
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.room-density-hud .room-playable-shell-turn {
+  padding: 0.35rem 0.55rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-parchment, #f3e7c9) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--hud-accent-edge, #c4a35a) 28%, transparent);
+}
+
+.room-density-hud .room-playable-shell-kicker,
+.room-density-hud .room-playable-shell-phase {
+  color: color-mix(in srgb, var(--hud-ink-on-wood, #f6efe2) 82%, transparent);
+}
+
+.room-density-hud .room-playable-shell-who {
+  color: #fffaf0;
+}
+
+.room-hud-hand-bar {
+  grid-area: hand;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.55rem 0.7rem;
+  min-height: var(--hud-hand-h, 7.25rem);
+  padding: 0.55rem 0.65rem;
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-wood-edge, #5a4330) 75%, #3a2a1c), var(--surface-wood-deep, #24180f));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #c4a35a 25%, transparent),
+    inset 0 -2px 0 rgba(12, 8, 4, 0.35);
+}
+
+.room-hud-hand-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.room-hud-hand-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.2rem;
+  width: 4.4rem;
+  min-height: 5.6rem;
+  padding: 0.35rem 0.3rem 0.4rem;
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, var(--surface-float, #fffdf6), var(--surface-parchment, #f3e7c9));
+  border: 1px solid color-mix(in srgb, var(--slot-tone, #6a5438) 40%, transparent);
+  box-shadow: var(--shadow-paper);
+  color: #2a1c12;
+}
+
+.room-hud-hand-art {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 30% 25%, #fff6, transparent 50%),
+    linear-gradient(145deg, color-mix(in srgb, var(--slot-tone, #6a5438) 70%, #fff), var(--slot-tone, #6a5438));
+  box-shadow: inset 0 0 0 1px rgb(42 28 18 / 25%);
+}
+
+.room-hud-hand-label {
+  font-size: 0.68rem;
+  font-weight: 650;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.room-hud-hand-qty {
+  min-width: 1.35rem;
+  padding: 0.08rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #fff8ee;
+  background: color-mix(in srgb, var(--slot-tone, #6a5438) 88%, #1a120c);
+  box-shadow: 0 1px 0 rgb(255 250 235 / 35%);
+}
+
+.room-hud-action-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-content: center;
+  flex: 0 1 16rem;
+}
+
+.room-hud-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.2rem;
+  min-width: 4.6rem;
+  min-height: 4.4rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--hud-accent-edge, #c4a35a) 45%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-wood-edge, #5a4330) 80%, #6a4e34), var(--surface-wood, #3a2a1c));
+  color: var(--hud-ink-on-wood, #f6efe2);
+  box-shadow: inset 0 1px 0 rgb(255 230 180 / 18%);
+  cursor: pointer;
+  font: inherit;
+}
+
+.room-hud-action-btn.is-legal {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-wood-edge, #5a4330) 55%, #8a6a44), #4a3422);
+  border-color: color-mix(in srgb, var(--hud-accent-edge, #c4a35a) 70%, transparent);
+  cursor: pointer;
+}
+
+.room-hud-action-btn.is-disabled,
+.room-hud-action-btn:disabled {
+  filter: brightness(0.62) saturate(0.75);
+  opacity: 1 !important;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.room-hud-action-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.room-hud-action-cost {
+  font-size: 0.68rem;
+  opacity: 0.88;
+}
+
+.room-hud-turn-panel {
+  grid-area: turn;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.55rem;
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, var(--surface-parchment, #f3e7c9), var(--surface-parchment-deep, #e8d3a2));
+  color: #2a1c12;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, #c4a35a 35%, transparent),
+    var(--shadow-paper);
+}
+
+.room-density-hud .room-playable-shell-primary {
+  background: color-mix(in srgb, var(--surface-float, #fffdf6) 70%, transparent);
+  border: 1px solid color-mix(in srgb, #5a4330 18%, transparent);
+  border-style: solid;
+  color: #2a1c12;
+  gap: 0.35rem;
+}
+
+.room-density-hud .room-playable-shell-primary-label {
+  color: #6a5438;
+}
+
+.room-density-hud .room-playable-shell-primary-slot {
+  color: #2a1c12;
+}
+
+.room-hud-primary-cta {
+  margin-top: 0.15rem;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--hud-accent-edge, #c4a35a) 65%, transparent);
+  background: linear-gradient(180deg, #a32626, var(--hud-accent, #8b1e1e));
+  color: #fff8ee;
+  font-weight: 750;
+  font-size: 0.92rem;
+  cursor: pointer;
+  box-shadow: 0 2px 0 #5c1212, 0 6px 14px rgb(42 18 12 / 22%);
+}
+
+.room-hud-primary-cta.is-disabled,
+.room-hud-primary-cta:disabled {
+  filter: brightness(0.7) saturate(0.7);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.room-hud-chronicle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.room-hud-chronicle-tabs {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.room-hud-chronicle-tabs [role="tab"] {
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: #6a5438;
+  background: transparent;
+}
+
+.room-hud-chronicle-tabs [role="tab"].is-active {
+  color: #2a1c12;
+  background: color-mix(in srgb, var(--surface-float, #fffdf6) 80%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #5a4330 18%, transparent);
+}
+
+.room-hud-chronicle-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem 0.4rem;
+  max-height: 9rem;
+  overflow: auto;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-float, #fffdf6) 72%, transparent);
+  border: 1px solid color-mix(in srgb, #5a4330 14%, transparent);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.room-hud-chronicle-list li {
+  padding: 0.2rem 0.1rem;
+  border-bottom: 1px solid color-mix(in srgb, #5a4330 10%, transparent);
+}
+
+.room-hud-chronicle-list li:last-child {
+  border-bottom: none;
+}
+
+.room-hud-chronicle-list li.is-empty {
+  color: #7a6550;
+  font-style: italic;
+}
+
+/* Kill thin black engineering bars on share-seat / shell chrome */
+.room-invitation-rich[data-ui-share-ready="1"],
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.room-share-chrome.is-chrome-collapse,
+.room-view-hex-island.room-view-seated .room-invitation-rich.room-share-chrome.is-chrome-collapse {
+  border: 1px solid color-mix(in srgb, var(--surface-wood-edge, #5a4330) 40%, transparent) !important;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-wood, #3a2a1c) 90%, #1a120c), var(--surface-wood-deep, #24180f)) !important;
+  color: var(--hud-ink-on-wood, #f6efe2) !important;
+  box-shadow: var(--shadow-wood) !important;
+  border-radius: 14px !important;
+}
+
+.room-invitation-rich[data-ui-share-ready="1"] .seat-chip,
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-chrome-collapse .seat-chip {
+  border: 1px solid color-mix(in srgb, var(--hud-accent-edge, #c4a35a) 35%, transparent) !important;
+  background:
+    linear-gradient(180deg, var(--surface-parchment, #f3e7c9), var(--surface-parchment-deep, #e8d3a2)) !important;
+  color: #2a1c12 !important;
+  box-shadow: var(--shadow-paper) !important;
+}
+
+.room-invitation-rich[data-ui-share-ready="1"] .seat-chip.is-yours,
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-chrome-collapse .seat-chip.is-yours {
+  background:
+    linear-gradient(180deg, var(--surface-float, #fffdf6), var(--surface-parchment, #f3e7c9)) !important;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--hud-accent-edge, #c4a35a) 70%, transparent),
+    var(--shadow-paper) !important;
+}
+
+.desk-action-drawer[data-ui-action-drawer="1"],
+.room-view-tabletop-immersive.room-view-seated .desk-action-drawer {
+  border: 1px solid color-mix(in srgb, var(--surface-wood-edge, #5a4330) 28%, transparent) !important;
+  background:
+    linear-gradient(180deg, var(--surface-float, #fffdf6), var(--surface-parchment, #f3e7c9)) !important;
+  box-shadow: var(--shadow-paper) !important;
+  border-radius: 14px !important;
+}
+
+@media (max-width: 960px) {
+  .room-playable-shell.room-density-hud,
+  .room-density-hud[data-ui-room-hud="1"] {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "seats"
+      "main"
+      "hand"
+      "turn";
+  }
+  .room-hud-seat-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .room-hud-seat-card {
+    width: auto;
+    min-width: 8.5rem;
+    flex: 1 1 8.5rem;
+  }
+}

@@ -26,12 +26,13 @@ export const CARD_FACE_ZONES: ReadonlyArray<CardFaceZone> = [
 ];
 
 /** UI-card-schema · minimum seat-close glyph floors (canvas px at 512-wide face). */
+/** UI-room-hud · P2 hand/cost qty remains readable beside denser Room chrome. */
 export const CARD_SCHEMA_FLOORS = {
-  costDotRadius: 24,
-  costDigitPx: 32,
-  titlePx: 42,
-  prestigePx: 40,
-  underlayPad: 6,
+  costDotRadius: 26,
+  costDigitPx: 34,
+  titlePx: 44,
+  prestigePx: 42,
+  underlayPad: 7,
 } as const;
 
 const CHIP: Record<string, string> = {

@@ -8,6 +8,8 @@ describe("UI-room-shell · playable chrome always visible", () => {
     expect(src).toContain("data-ui-room-shell");
     expect(src).toContain("room-playable-shell-primary");
     expect(src).toContain("room-playable-shell-who");
+    expect(src).toContain("room-density-hud");
+    expect(src).toContain('data-ui-room-hud="1"');
   });
 
   it("surface.css restores desk-stage-hud + playable shell without suite fork", () => {

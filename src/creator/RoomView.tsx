@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState, type CSSProperties } from "react";
+import { SEAT_COLORS } from "../render3d/tokens";
 import { GameMark } from "./CreatorBrand";
 import {
   claimSessionSeat,
@@ -670,41 +671,283 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       )}
 
       {/* UI-room-shell · generic playable chrome: whose turn / phase / primary action placeholder */}
+      {/* UI-room-hud · settlecoast-grade density: left seat rail / bottom hand bar / right turn panel */}
       {(tabletopImmersive || immersive || hexSettlement) ? (
         <section
           aria-label={locale === "zh" ? "对局状态" : "Match status"}
-          className="room-playable-shell"
+          className="room-playable-shell room-density-hud"
           data-ui-room-shell="1"
+          data-ui-room-hud="1"
         >
-          <div className="room-playable-shell-turn" aria-live="polite">
-            <span className="room-playable-shell-kicker">
-              {locale === "zh" ? "回合" : "Turn"}
-            </span>
-            <strong className="room-playable-shell-who">
-              {room.state.status === "complete"
-                ? copy.gameOver
-                : isMyTurn
-                  ? copy.yourTurn
-                  : `${copy.waitingFor} ${activeSeat}`}
-            </strong>
-            <span className="room-playable-shell-phase">
-              {room.state.status === "complete"
-                ? copy.gameOver
-                : isMyTurn
-                  ? copy.currentTurn
-                  : copy.waitForOther}
-            </span>
+          <aside
+            aria-label={locale === "zh" ? "席位栏" : "Seat rail"}
+            className="room-hud-seat-rail"
+            data-ui-seat-rail="1"
+            role="group"
+          >
+            <h2 className="room-hud-panel-title">
+              {locale === "zh" ? "席位" : "Seats"}
+            </h2>
+            <ul className="room-hud-seat-list">
+              {room.state.scores.map((score, availableSeat) => {
+                const occupant = room.seats.find((entry) => entry.seat === availableSeat);
+                const isCurrentClient = seat === availableSeat;
+                const isAi = Boolean(room.aiSeats?.includes(availableSeat));
+                const isActive = availableSeat === activeSeat && room.state.status === "active";
+                const isOccupied = Boolean((occupant || isAi) && !isCurrentClient);
+                const isOpen = !occupant && !isAi && !isCurrentClient;
+                const disabled =
+                  busy || isOccupied || isCurrentClient || (seat !== null && !isCurrentClient);
+                const handCount = (() => {
+                  const handPlayHands = room.state.handPlay?.hands?.[availableSeat];
+                  if (handPlayHands) return handPlayHands.length;
+                  const gemSeat = room.state.gemEngine?.seats?.[availableSeat as 0 | 1];
+                  if (gemSeat?.gems) {
+                    return Object.values(gemSeat.gems).reduce((a, b) => a + (Number(b) || 0), 0);
+                  }
+                  const othelloDiscs = room.state.othello?.discCounts?.[availableSeat as 0 | 1];
+                  if (typeof othelloDiscs === "number") return othelloDiscs;
+                  return Math.max(0, score);
+                })();
+                const seatColor = SEAT_COLORS[availableSeat % SEAT_COLORS.length];
+                return (
+                  <li key={`hud-seat-${availableSeat}`}>
+                    <button
+                      aria-current={isActive ? "true" : undefined}
+                      aria-pressed={isCurrentClient}
+                      className={[
+                        "room-hud-seat-card",
+                        isActive ? "is-active" : "",
+                        isCurrentClient ? "is-you" : "",
+                        isOpen ? "is-open" : "",
+                        isOccupied ? "is-occupied" : "",
+                      ].filter(Boolean).join(" ")}
+                      disabled={disabled}
+                      onClick={() => {
+                        if (!disabled && !isCurrentClient) void claimSeat(availableSeat);
+                      }}
+                      style={{ "--seat-color": seatColor } as CSSProperties}
+                      type="button"
+                    >
+                      <span aria-hidden="true" className="room-hud-seat-swatch" />
+                      <span className="room-hud-seat-meta">
+                        <b>
+                          {isCurrentClient
+                            ? copy.you
+                            : isAi
+                              ? copy.computer
+                              : `${locale === "zh" ? "座位" : "Seat"} ${availableSeat}`}
+                        </b>
+                        <small className="room-hud-seat-score">
+                          {locale === "zh" ? "分" : "Score"} {score}
+                        </small>
+                        <small className="room-hud-seat-hand" title={locale === "zh" ? "手牌/资源" : "Hand"}>
+                          {locale === "zh" ? "手" : "Hand"} {handCount}
+                        </small>
+                      </span>
+                      {isActive ? (
+                        <span className="room-hud-seat-turn">
+                          {isCurrentClient ? copy.yourTurn : (locale === "zh" ? "行动中" : "Active")}
+                        </span>
+                      ) : null}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </aside>
+
+          <div className="room-hud-main">
+            <div className="room-playable-shell-turn" aria-live="polite">
+              <span className="room-playable-shell-kicker">
+                {locale === "zh" ? "回合" : "Turn"}
+              </span>
+              <strong className="room-playable-shell-who">
+                {room.state.status === "complete"
+                  ? copy.gameOver
+                  : isMyTurn
+                    ? copy.yourTurn
+                    : `${copy.waitingFor} ${activeSeat}`}
+              </strong>
+              <span className="room-playable-shell-phase">
+                {room.state.status === "complete"
+                  ? copy.gameOver
+                  : isMyTurn
+                    ? copy.currentTurn
+                    : copy.waitForOther}
+              </span>
+            </div>
+
+            <div
+              aria-label={locale === "zh" ? "手牌与资源" : "Hand and resources"}
+              className="room-hud-hand-bar"
+              data-ui-hand-bar="1"
+            >
+              <div className="room-hud-hand-slots" role="list">
+                {(() => {
+                  const slots: Array<{ key: string; label: string; qty: number | string; tone?: string }> = [];
+                  if (seat !== null && room.state.handPlay?.hands?.[seat]) {
+                    const hand = room.state.handPlay.hands[seat];
+                    slots.push({
+                      key: "hand",
+                      label: locale === "zh" ? "手牌" : "Hand",
+                      qty: hand.length,
+                      tone: "#8b6914",
+                    });
+                    slots.push({
+                      key: "deck",
+                      label: locale === "zh" ? "牌库" : "Deck",
+                      qty: room.state.handPlay.deckRemaining,
+                      tone: "#5c6b4a",
+                    });
+                  } else if (seat !== null && room.state.gemEngine?.seats?.[seat as 0 | 1]?.gems) {
+                    const gems = room.state.gemEngine.seats[seat as 0 | 1].gems;
+                    for (const [gem, qty] of Object.entries(gems)) {
+                      slots.push({ key: `gem-${gem}`, label: gem, qty: Number(qty) || 0, tone: "#6b4c9a" });
+                    }
+                  } else if (room.state.othello && seat !== null) {
+                    slots.push({
+                      key: "discs",
+                      label: locale === "zh" ? "棋子" : "Discs",
+                      qty: room.state.othello.discCounts[seat as 0 | 1] ?? 0,
+                      tone: "#2f4a3c",
+                    });
+                  } else {
+                    const myScore = seat !== null ? (room.state.scores[seat] ?? 0) : 0;
+                    slots.push({
+                      key: "score",
+                      label: locale === "zh" ? "得分" : "Score",
+                      qty: myScore,
+                      tone: "#8b1e1e",
+                    });
+                    slots.push({
+                      key: "turn",
+                      label: locale === "zh" ? "回合" : "Turn",
+                      qty: room.state.turn,
+                      tone: "#4a5d73",
+                    });
+                    slots.push({
+                      key: "seats",
+                      label: locale === "zh" ? "席位" : "Seats",
+                      qty: room.state.scores.length,
+                      tone: "#6a5438",
+                    });
+                  }
+                  return slots.slice(0, 6).map((slot) => (
+                    <div
+                      className="room-hud-hand-slot"
+                      key={slot.key}
+                      role="listitem"
+                      style={{ "--slot-tone": slot.tone ?? "#6a5438" } as CSSProperties}
+                    >
+                      <span aria-hidden="true" className="room-hud-hand-art" />
+                      <span className="room-hud-hand-label">{slot.label}</span>
+                      <b className="room-hud-hand-qty">{slot.qty}</b>
+                    </div>
+                  ));
+                })()}
+              </div>
+
+              <div
+                aria-label={locale === "zh" ? "行动组" : "Actions"}
+                className="room-hud-action-group"
+                data-ui-action-group="1"
+                role="group"
+              >
+                {(runtimeActions.length
+                  ? runtimeActions
+                  : [
+                      {
+                        id: "primary",
+                        label: locale === "zh" ? "主操作" : "Primary",
+                        value: null as number | null,
+                      },
+                    ]
+                ).slice(0, 4).map((action, index) => {
+                  const enabled = Boolean(isMyTurn && !busy && runtimeActions.length > 0);
+                  return (
+                    <button
+                      className={`room-hud-action-btn${enabled ? " is-legal" : " is-disabled"}`}
+                      disabled={!enabled}
+                      key={action.id}
+                      onClick={() => {
+                        if (enabled) void act(action.id, index);
+                      }}
+                      type="button"
+                    >
+                      <span className="room-hud-action-label">{action.label}</span>
+                      {action.value !== null ? (
+                        <span className="room-hud-action-cost">
+                          {action.value > 0 ? `+${action.value}` : String(action.value)}
+                        </span>
+                      ) : (
+                        <span className="room-hud-action-cost">
+                          {enabled
+                            ? (locale === "zh" ? "可用" : "Ready")
+                            : (locale === "zh" ? "不可用" : "Locked")}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-          <div className="room-playable-shell-primary" data-empty={isMyTurn ? "0" : "1"}>
-            <span className="room-playable-shell-primary-label">
-              {locale === "zh" ? "主操作" : "Primary action"}
-            </span>
-            <span className="room-playable-shell-primary-slot">
-              {isMyTurn
-                ? (locale === "zh" ? "选择下方行动或桌面目标" : "Pick an action or board target")
-                : (locale === "zh" ? "等待行动…" : "Waiting for action…")}
-            </span>
-          </div>
+
+          <aside
+            aria-label={locale === "zh" ? "回合面板" : "Turn panel"}
+            className="room-hud-turn-panel"
+            data-ui-turn-panel="1"
+          >
+            <div className="room-playable-shell-primary" data-empty={isMyTurn ? "0" : "1"}>
+              <span className="room-playable-shell-primary-label">
+                {locale === "zh" ? "主操作" : "Primary action"}
+              </span>
+              <span className="room-playable-shell-primary-slot">
+                {isMyTurn
+                  ? (locale === "zh" ? "选择下方行动或桌面目标" : "Pick an action or board target")
+                  : (locale === "zh" ? "等待行动…" : "Waiting for action…")}
+              </span>
+              <button
+                className={`room-hud-primary-cta${isMyTurn && !busy ? " is-legal" : " is-disabled"}`}
+                disabled={!isMyTurn || busy || runtimeActions.length === 0}
+                onClick={() => {
+                  if (isMyTurn && runtimeActions[0]) void act(runtimeActions[0].id, 0);
+                }}
+                type="button"
+              >
+                {isMyTurn
+                  ? (runtimeActions[0]?.label ?? (locale === "zh" ? "行动" : "Act"))
+                  : (locale === "zh" ? "等待中" : "Waiting")}
+              </button>
+            </div>
+            <section
+              aria-label={locale === "zh" ? "纪事" : "Chronicle"}
+              className="room-hud-chronicle"
+              data-ui-chronicle="1"
+            >
+              <div className="room-hud-chronicle-tabs" role="tablist">
+                <span className="is-active" role="tab">
+                  {locale === "zh" ? "纪事" : "Chronicle"}
+                </span>
+                <span role="tab">{locale === "zh" ? "闲谈" : "Chat"}</span>
+              </div>
+              <ol className="room-hud-chronicle-list">
+                {room.acceptedActions.length === 0 ? (
+                  <li className="is-empty">
+                    {locale === "zh" ? "尚无行动记录" : "No actions yet"}
+                  </li>
+                ) : (
+                  [...room.acceptedActions].slice(-8).reverse().map((entry) => (
+                    <li key={`${entry.sequence}-${entry.intentId}`}>
+                      {locale === "zh" ? "座位" : "Seat"} {entry.seat} · {entry.actionId}
+                      {entry.points ? ` · +${entry.points}` : ""}
+                    </li>
+                  ))
+                )}
+              </ol>
+            </section>
+          </aside>
         </section>
       ) : null}
 
