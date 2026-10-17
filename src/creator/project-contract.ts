@@ -3,6 +3,7 @@ import type { AutoBattlerThemePatch } from "../runtime/adapters/auto-battler-the
 import type { AutoBattlerBranding } from "../runtime/adapters/auto-battler-packs";
 import type { GameSpec, GenerationMetadata } from "./game-spec";
 import type { RenderPatch, RenderSpec } from "./render-spec";
+import type { UiThemeId } from "./ui-theme-packs";
 
 export interface GameProject {
   id: string;
@@ -163,6 +164,8 @@ export interface RuleSystem {
     render?: RenderSpec;
     image?: BoundImage;
     visuals?: VisualTreatment[];
+    /** UI-P3 · Room HUD Theme Pack id (harbor-wood default when omitted). */
+    uiTheme?: UiThemeId;
   };
   runtimeSupport:
     | { status: "draft"; unsupported: string[] }

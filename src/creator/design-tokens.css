@@ -47,7 +47,8 @@
   --shadow-float: 0 6px 12px rgba(41, 33, 20, 0.10), 0 20px 48px rgba(41, 33, 20, 0.18);
   --hud-glass: rgba(251, 248, 241, 0.86);
   --hud-glass-blur: blur(12px);
-  /* UI-room-hud · settlecoast-grade surface hierarchy (paper / float / wood) */
+  /* UI-room-hud · settlecoast-grade surface hierarchy (paper / float / wood)
+   * UI-theme-packs · harbor-wood defaults; other packs override via [data-ui-theme]. */
   --surface-wood: #3a2a1c;
   --surface-wood-deep: #24180f;
   --surface-wood-edge: #5a4330;
@@ -59,9 +60,25 @@
   --hud-hand-h: 7.25rem;
   --hud-accent: #8b1e1e;
   --hud-accent-edge: #c4a35a;
+  --hud-accent-deep: #5c1212;
   --hud-ink-on-wood: #f6efe2;
+  --hud-ink-on-paper: #2a1c12;
+  --hud-ink-bright: #fff8ee;
+  --hud-ink-muted: #6a5438;
+  --hud-shell-deep: #1a120c;
+  --hud-shell-mid: #2a1c12;
+  --hud-slot-tone: #6a5438;
   --shadow-wood: 0 2px 0 rgba(20, 12, 6, 0.35), 0 10px 28px rgba(20, 12, 6, 0.28);
   --shadow-paper: 0 1px 0 rgba(255, 250, 235, 0.55), 0 8px 22px rgba(41, 33, 20, 0.14);
+  --hud-shell-bg: linear-gradient(180deg, color-mix(in srgb, var(--surface-wood) 92%, var(--hud-shell-deep)), var(--surface-wood-deep));
+  --hud-rail-bg: linear-gradient(180deg, color-mix(in srgb, var(--surface-wood-edge) 70%, var(--hud-shell-mid)), color-mix(in srgb, var(--surface-wood-deep) 88%, var(--hud-shell-deep)));
+  --hud-hand-bg: linear-gradient(180deg, color-mix(in srgb, var(--surface-wood-edge) 75%, var(--surface-wood)), var(--surface-wood-deep));
+  --hud-card-bg: linear-gradient(180deg, var(--surface-parchment), var(--surface-parchment-deep));
+  --hud-card-bg-you: linear-gradient(180deg, var(--surface-float), var(--surface-parchment));
+  --hud-action-bg: linear-gradient(180deg, color-mix(in srgb, var(--surface-wood-edge) 80%, #6a4e34), var(--surface-wood));
+  --hud-action-bg-hover: linear-gradient(180deg, color-mix(in srgb, var(--surface-wood-edge) 55%, #8a6a44), #4a3422);
+  --hud-cta-bg: linear-gradient(180deg, #a32626, var(--hud-accent));
+  --hud-brass-glow: color-mix(in srgb, var(--hud-accent-edge) 22%, transparent);
   color: var(--ink);
   background: var(--canvas);
   font-family: Manrope, "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { UI_THEME_IDS } from "./ui-theme-packs";
 import { KERNEL_CAPABILITIES } from "./kernel-capabilities";
 import { isClearedRenderAsset } from "./render-asset-registry";
 import type { PlaySurfaceKind } from "./project-contract";
@@ -65,6 +66,8 @@ export const renderSpecSchema = z.strictObject({
   }),
   /** step3 · Room chrome: `wood` = full-viewport carved-wood game screen (汐屿 shell, generic). */
   chrome: z.enum(["plain", "wood"]).optional(),
+  /** UI-P3 · Room HUD Theme Pack (CSS `data-ui-theme`). Omitted → harbor-wood. */
+  uiTheme: z.enum(UI_THEME_IDS).optional(),
   /** step3 · deterministic scenery scattered on the board, clear of routes / pieces / cells. */
   decor: z.strictObject({
     trees: z.number().int().min(0).max(120),
@@ -632,6 +635,7 @@ export const renderPatchSchema = z.strictObject({
   preset: renderShape.preset.optional(),
   camera: renderShape.camera.partial().optional(),
   chrome: renderShape.chrome,
+  uiTheme: renderShape.uiTheme,
   decor: renderShape.decor,
   surround: renderShape.surround,
   hud: renderShape.hud,
@@ -682,6 +686,7 @@ export function applyRenderPatch(render: RenderSpec, patch: RenderPatch): Render
   if (patch.preset) next.preset = patch.preset;
   if (patch.camera) Object.assign(next.camera, definedEntries(patch.camera));
   if (patch.chrome) next.chrome = patch.chrome;
+  if (patch.uiTheme) next.uiTheme = patch.uiTheme;
   if (patch.decor) next.decor = { ...patch.decor };
   if (patch.surround) next.surround = { ...patch.surround };
   if (patch.hud) next.hud = { ...next.hud, ...definedEntries(patch.hud) };

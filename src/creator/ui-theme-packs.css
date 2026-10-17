@@ -1,0 +1,199 @@
+/* ========== UI-theme-packs · P3 switchable Room HUD chrome ==========
+ * Mount: `.room-view[data-ui-theme="<id>"]` (see ui-theme-packs.ts).
+ * Density-shell CSS consumes these tokens only — no wood-only hardcodes.
+ * Packs stay generic — no sample/suite forks.
+ */
+
+/* ---- harbor-wood (default; also :root in design-tokens.css) ---- */
+.room-view[data-ui-theme="harbor-wood"],
+:root {
+  --surface-wood: #3a2a1c;
+  --surface-wood-deep: #24180f;
+  --surface-wood-edge: #5a4330;
+  --surface-float: #fffdf6;
+  --surface-parchment: #f3e7c9;
+  --surface-parchment-deep: #e8d3a2;
+  --hud-accent: #8b1e1e;
+  --hud-accent-edge: #c4a35a;
+  --hud-accent-deep: #5c1212;
+  --hud-ink-on-wood: #f6efe2;
+  --hud-ink-on-paper: #2a1c12;
+  --hud-ink-bright: #fff8ee;
+  --hud-ink-muted: #6a5438;
+  --hud-shell-deep: #1a120c;
+  --hud-shell-mid: #2a1c12;
+  --hud-slot-tone: #6a5438;
+  --shadow-wood: 0 2px 0 rgba(20, 12, 6, 0.35), 0 10px 28px rgba(20, 12, 6, 0.28);
+  --shadow-paper: 0 1px 0 rgba(255, 250, 235, 0.55), 0 8px 22px rgba(41, 33, 20, 0.14);
+  --hud-shell-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-wood) 92%, var(--hud-shell-deep)),
+    var(--surface-wood-deep)
+  );
+  --hud-rail-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-wood-edge) 70%, var(--hud-shell-mid)),
+    color-mix(in srgb, var(--surface-wood-deep) 88%, var(--hud-shell-deep))
+  );
+  --hud-hand-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-wood-edge) 75%, var(--surface-wood)),
+    var(--surface-wood-deep)
+  );
+  --hud-card-bg: linear-gradient(180deg, var(--surface-parchment), var(--surface-parchment-deep));
+  --hud-card-bg-you: linear-gradient(180deg, var(--surface-float), var(--surface-parchment));
+  --hud-action-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-wood-edge) 80%, #6a4e34),
+    var(--surface-wood)
+  );
+  --hud-action-bg-hover: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-wood-edge) 55%, #8a6a44),
+    #4a3422
+  );
+  --hud-cta-bg: linear-gradient(180deg, #a32626, var(--hud-accent));
+  --hud-brass-glow: color-mix(in srgb, var(--hud-accent-edge) 22%, transparent);
+}
+
+
+/* ---- atelier-paper · bright studio paper density (not P1 thin bars) ---- */
+.room-view[data-ui-theme="atelier-paper"] {
+  --surface-wood: #e8e2d6;
+  --surface-wood-deep: #d4ccc0;
+  --surface-wood-edge: #c2b8a8;
+  --surface-float: #ffffff;
+  --surface-parchment: #f7f4ec;
+  --surface-parchment-deep: #ebe4d6;
+  --hud-accent: #2f5d8a;
+  --hud-accent-edge: #8aa4c0;
+  --hud-accent-deep: #1e3d5c;
+  --hud-ink-on-wood: #2a2420;
+  --hud-ink-on-paper: #1f1a16;
+  --hud-ink-bright: #ffffff;
+  --hud-ink-muted: #6b6358;
+  --hud-shell-deep: #cfc6b8;
+  --hud-shell-mid: #ddd5c8;
+  --hud-slot-tone: #8a7e6e;
+  --shadow-wood: 0 1px 0 rgba(255, 255, 255, 0.7), 0 10px 28px rgba(41, 33, 20, 0.12);
+  --shadow-paper: 0 1px 0 rgba(255, 255, 255, 0.9), 0 6px 18px rgba(41, 33, 20, 0.1);
+  --hud-shell-bg: linear-gradient(180deg, #f4f0e8, #e4ddd2);
+  --hud-rail-bg: linear-gradient(180deg, #efe9df, #ddd4c6);
+  --hud-hand-bg: linear-gradient(180deg, #f0ebe2, #d9d0c2);
+  --hud-card-bg: linear-gradient(180deg, #ffffff, #f3efe6);
+  --hud-card-bg-you: linear-gradient(180deg, #ffffff, #eef6ff);
+  --hud-action-bg: linear-gradient(180deg, #f7f3eb, #e2d9cb);
+  --hud-action-bg-hover: linear-gradient(180deg, #ffffff, #ebe3d6);
+  --hud-cta-bg: linear-gradient(180deg, #3d6f9e, var(--hud-accent));
+  --hud-brass-glow: color-mix(in srgb, var(--hud-accent-edge) 35%, transparent);
+}
+
+/* ---- casino-felt · green felt + brass ---- */
+.room-view[data-ui-theme="casino-felt"] {
+  --surface-wood: #1a4a32;
+  --surface-wood-deep: #0f2e1f;
+  --surface-wood-edge: #2d6b4a;
+  --surface-float: #f7f1df;
+  --surface-parchment: #efe2b8;
+  --surface-parchment-deep: #e0cd92;
+  --hud-accent: #b8860b;
+  --hud-accent-edge: #d4af37;
+  --hud-accent-deep: #7a5a08;
+  --hud-ink-on-wood: #f3eedc;
+  --hud-ink-on-paper: #1a2418;
+  --hud-ink-bright: #fff8e8;
+  --hud-ink-muted: #5a4a28;
+  --hud-shell-deep: #0a1c12;
+  --hud-shell-mid: #123024;
+  --hud-slot-tone: #3d6b4a;
+  --shadow-wood: 0 2px 0 rgba(8, 24, 14, 0.45), 0 12px 32px rgba(8, 24, 14, 0.35);
+  --shadow-paper: 0 1px 0 rgba(255, 240, 200, 0.45), 0 8px 22px rgba(20, 40, 24, 0.18);
+  --hud-shell-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-wood) 90%, var(--hud-shell-deep)),
+    var(--surface-wood-deep)
+  );
+  --hud-rail-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-wood-edge) 65%, var(--hud-shell-mid)),
+    color-mix(in srgb, var(--surface-wood-deep) 90%, #06140c)
+  );
+  --hud-hand-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-wood-edge) 70%, var(--surface-wood)),
+    var(--surface-wood-deep)
+  );
+  --hud-card-bg: linear-gradient(180deg, var(--surface-parchment), var(--surface-parchment-deep));
+  --hud-card-bg-you: linear-gradient(180deg, var(--surface-float), var(--surface-parchment));
+  --hud-action-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-wood-edge) 75%, #3d7a55),
+    var(--surface-wood)
+  );
+  --hud-action-bg-hover: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--hud-accent-edge) 40%, var(--surface-wood-edge)),
+    #164030
+  );
+  --hud-cta-bg: linear-gradient(180deg, #d4a017, var(--hud-accent));
+  --hud-brass-glow: color-mix(in srgb, var(--hud-accent-edge) 40%, transparent);
+}
+
+/* ---- midnight-ink · deep ink / glass ---- */
+.room-view[data-ui-theme="midnight-ink"] {
+  --surface-wood: #12181f;
+  --surface-wood-deep: #0a0e14;
+  --surface-wood-edge: #2a3444;
+  --surface-float: #1c2430;
+  --surface-parchment: #1a222e;
+  --surface-parchment-deep: #141b26;
+  --hud-accent: #5b8def;
+  --hud-accent-edge: #7aa2f7;
+  --hud-accent-deep: #2a4a8a;
+  --hud-ink-on-wood: #e8eef8;
+  --hud-ink-on-paper: #dce4f0;
+  --hud-ink-bright: #f4f7fc;
+  --hud-ink-muted: #8a96a8;
+  --hud-shell-deep: #05070b;
+  --hud-shell-mid: #0e141c;
+  --hud-slot-tone: #3a4a62;
+  --shadow-wood: 0 2px 0 rgba(0, 0, 0, 0.45), 0 14px 36px rgba(0, 0, 0, 0.4);
+  --shadow-paper: 0 1px 0 rgba(255, 255, 255, 0.06), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --hud-shell-bg: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--surface-wood) 88%, #1a2740),
+    var(--surface-wood-deep)
+  );
+  --hud-rail-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-wood-edge) 55%, rgba(90, 140, 220, 0.18)),
+    color-mix(in srgb, var(--surface-wood-deep) 92%, #000)
+  );
+  --hud-hand-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-wood-edge) 50%, rgba(90, 140, 220, 0.12)),
+    var(--surface-wood-deep)
+  );
+  --hud-card-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-parchment) 90%, rgba(90, 140, 220, 0.15)),
+    var(--surface-parchment-deep)
+  );
+  --hud-card-bg-you: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-float) 85%, rgba(90, 140, 220, 0.22)),
+    var(--surface-parchment)
+  );
+  --hud-action-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-wood-edge) 70%, #3a4a62),
+    var(--surface-wood)
+  );
+  --hud-action-bg-hover: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--hud-accent-edge) 35%, var(--surface-wood-edge)),
+    #152030
+  );
+  --hud-cta-bg: linear-gradient(180deg, #6b9af5, var(--hud-accent));
+  --hud-brass-glow: color-mix(in srgb, var(--hud-accent-edge) 28%, transparent);
+}
