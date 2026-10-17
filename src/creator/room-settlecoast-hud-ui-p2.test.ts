@@ -35,6 +35,18 @@ describe("UI-room-hud · settlecoast-grade Room density", () => {
     expect(css).toMatch(/surface-wood|surface-parchment|surface-float/);
     expect(css).toContain("Kill thin black engineering bars");
     expect(css).not.toMatch(/suite === ["']H0/);
+    // Generic board opt-out — no sample-named hide of room-density-hud
+    expect(css).toMatch(/\[data-board-owns-hud=["']1["']\]/);
+    expect(css).toMatch(
+      /\.room-view:has\(\[data-board-owns-hud=["']1["']\]\)\s*>\s*\.room-playable-shell\.room-density-hud/,
+    );
+    expect(css).not.toMatch(
+      /\.tidewell-game-body[\s\S]{0,120}room-density-hud[\s\S]{0,80}display:\s*none/,
+    );
+    expect(css).not.toMatch(
+      /room-density-hud[\s\S]{0,120}\.tidewell-game-body[\s\S]{0,80}display:\s*none/,
+    );
+    expect(css).not.toContain("Board-owned tidewell density");
   });
 
   it("design-tokens.css exposes paper/float/wood HUD tokens", () => {
@@ -57,5 +69,12 @@ describe("UI-room-hud · settlecoast-grade Room density", () => {
     expect(drawer).toContain("UI-action-drawer");
     const share = readFileSync("src/creator/room-share-seat-ui-p1.test.ts", "utf8");
     expect(share).toContain("UI-share-seat");
+  });
+
+  it("boards that ship full HUD self-declare data-board-owns-hud", () => {
+    const hex = readFileSync("src/creator/HexSettlementBoard.tsx", "utf8");
+    const tabletop = readFileSync("src/creator/TabletopGameScreen.tsx", "utf8");
+    expect(hex).toContain('data-board-owns-hud="1"');
+    expect(tabletop).toContain('data-board-owns-hud="1"');
   });
 });

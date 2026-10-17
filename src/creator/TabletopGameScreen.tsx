@@ -66,6 +66,7 @@ export default function TabletopGameScreen(props: TabletopGameScreenProps) {
     <div
       aria-label={props.boardLabel}
       className="tidewell-game-screen tabletop-game-screen"
+      data-board-owns-hud="1"
       role="region"
       style={{
         ["--tw-tex-wood" as string]: WOOD_GRAIN_URL ? `url("${WOOD_GRAIN_URL}")` : "none",

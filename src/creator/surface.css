@@ -7332,7 +7332,7 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
 /* ========== UI-room-hud · settlecoast-grade Room density (P2) ==========
  * Left seat rail + bottom hand/resource bar + right turn/chronicle panel.
  * Paper / float / wood surface hierarchy — kill thin black engineering bars.
- * Generic Room shell only; no suite forks. Board-owned tidewell density hides shell.
+ * Generic Room shell only; no suite forks. Boards that ship a full HUD opt out via data-board-owns-hud.
  */
 .room-playable-shell.room-density-hud,
 .room-density-hud[data-ui-room-hud="1"] {
@@ -7356,8 +7356,8 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   position: relative;
 }
 
-/* Board-owned full density HUD (wood chrome / hex board) — avoid double chrome */
-.room-view:has(.tidewell-game-body) > .room-playable-shell.room-density-hud {
+/* Board-owned full density HUD — avoid double chrome (boards self-declare) */
+.room-view:has([data-board-owns-hud="1"]) > .room-playable-shell.room-density-hud {
   display: none !important;
 }
 

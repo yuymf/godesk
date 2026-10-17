@@ -553,6 +553,7 @@ export function HexSettlementBoard({
     <div
       aria-label={copy.board}
       className="hex-island-board hex-settlement-board tidewell-game-screen"
+      data-board-owns-hud="1"
       data-status={status}
       role="region"
       style={
