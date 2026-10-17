@@ -65,6 +65,12 @@ import type { AutoBattlerThemePatch } from "../runtime/adapters/auto-battler-the
 import type { AutoBattlerBranding } from "../runtime/adapters/auto-battler-packs";
 import type { AutoBattlerContentPatch } from "../runtime/adapters/auto-battler-content";
 import { readUiThemeFromPresentation } from "./ui-theme-packs";
+import {
+  buildDensityBuildGroup,
+  buildDensityHandSlots,
+  buildDensitySeatBadges,
+  densityCapabilities,
+} from "./room-density-fill";
 
 function autoBattlerContent(ruleSystem: { runtimeSupport: unknown }): AutoBattlerContentPatch | undefined {
   const support = ruleSystem.runtimeSupport as { status?: string; kernel?: { type?: string; content?: AutoBattlerContentPatch } };
@@ -500,6 +506,36 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   const shareChromeCompact = Boolean((tabletopImmersive || hexSettlement) && seat !== null);
   // UI-theme-packs · P3 — mount data-ui-theme from presentation / render config (default harbor-wood)
   const uiThemeId = readUiThemeFromPresentation(build.ruleSystem.presentation);
+  // UI-density-fill · P4 — multi-slot hand / build group / seat badges (capability + schema driven)
+  const densityCaps = densityCapabilities(build.ruleSystem);
+  const densityHandSlots = buildDensityHandSlots({
+    ruleSystem: build.ruleSystem,
+    live: {
+      handPlay: room.state.handPlay
+        ? {
+            hands: room.state.handPlay.hands,
+            deckRemaining: room.state.handPlay.deckRemaining,
+          }
+        : undefined,
+      gemSeats: room.state.gemEngine?.seats as
+        | Record<number, { gems?: Record<string, number> }>
+        | undefined,
+      seatPieceCounts: room.state.othello?.discCounts,
+      myResources: undefined,
+      scores: room.state.scores,
+      turn: room.state.turn,
+      seatCount: room.state.scores.length,
+      mySeat: seat,
+    },
+    locale,
+  });
+  const densityBuildActions = buildDensityBuildGroup({
+    ruleSystemActions: build.ruleSystem.actions ?? [],
+    runtimeActions,
+    isMyTurn,
+    busy,
+    locale,
+  });
   return (
     <main className={`room-view ${harbor || workerPlacement || discFlipping || hexSettlement || networkRoute || auction || autoBattler || gemEngine || patternDraft ? "room-view-voyage" : ""} ${discFlipping ? "room-view-othello" : ""} ${hexSettlement ? "room-view-hex-island room-view-tidewell-immersive" : ""} ${tabletopImmersive ? "room-view-tidewell-immersive room-view-tabletop-immersive" : ""} ${seat !== null ? "room-view-seated" : "room-view-unseated"} ${networkRoute ? "room-view-network" : ""} ${hiddenRole ? "room-view-hidden-role" : ""} ${handPlay ? "room-view-hand-play" : ""} ${conversationRelay ? "room-view-conversation" : ""} ${sharedGoal ? "room-view-shared-goal" : ""} ${takeAway ? "room-view-take-away" : ""} ${rollAndMove ? "room-view-roll-and-move" : ""} ${drawAndScore ? "room-view-draw-and-score" : ""} ${pushYourLuck ? "room-view-push-your-luck" : ""} ${turnTaking ? "room-view-turn-taking" : ""}`} data-locale={locale} data-ui-theme={uiThemeId} id="main">
       <header className={`room-shell-header${shareChromeCompact ? " is-immersive-strip is-share-chrome" : ""}`}>
@@ -675,6 +711,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
 
       {/* UI-room-shell · generic playable chrome: whose turn / phase / primary action placeholder */}
       {/* UI-room-hud · settlecoast-grade density: left seat rail / bottom hand bar / right turn panel */}
+      {/* UI-density-fill · P4 hand-from-content / build-group-shell / seat-rail-rich */}
       {(tabletopImmersive || immersive || hexSettlement) ? (
         <section
           aria-label={locale === "zh" ? "对局状态" : "Match status"}
@@ -708,10 +745,34 @@ export function RoomView({ sessionId }: { sessionId: string }) {
                   if (gemSeat?.gems) {
                     return Object.values(gemSeat.gems).reduce((a, b) => a + (Number(b) || 0), 0);
                   }
-                  const othelloDiscs = room.state.othello?.discCounts?.[availableSeat as 0 | 1];
-                  if (typeof othelloDiscs === "number") return othelloDiscs;
+                  const pieceCount = room.state.othello?.discCounts?.[availableSeat as 0 | 1];
+                  if (typeof pieceCount === "number") return pieceCount;
                   return Math.max(0, score);
                 })();
+                const gemBag = room.state.gemEngine?.seats?.[availableSeat as 0 | 1]?.gems;
+                const resourceSummary = gemBag
+                  ? Object.entries(gemBag)
+                      .filter(([, n]) => Number(n) > 0)
+                      .map(([k, n]) => `${k}:${n}`)
+                      .slice(0, 3)
+                      .join(" ")
+                  : undefined;
+                const seatBadges = buildDensitySeatBadges({
+                  capabilities: densityCaps,
+                  presentationFloor: build.presentationFloor,
+                  score,
+                  handCount,
+                  pieceCount: room.state.othello?.discCounts?.[availableSeat as 0 | 1],
+                  resourceSummary,
+                  vp: score,
+                  vpToWin: (() => {
+                    const support = build.ruleSystem.runtimeSupport;
+                    if (support?.status !== "executable") return undefined;
+                    const kernel = support.kernel as { victoryPointsToWin?: number; prestigeToWin?: number };
+                    return kernel.victoryPointsToWin ?? kernel.prestigeToWin;
+                  })(),
+                  locale,
+                });
                 const seatColor = SEAT_COLORS[availableSeat % SEAT_COLORS.length];
                 return (
                   <li key={`hud-seat-${availableSeat}`}>
@@ -741,12 +802,17 @@ export function RoomView({ sessionId }: { sessionId: string }) {
                               ? copy.computer
                               : `${locale === "zh" ? "座位" : "Seat"} ${availableSeat}`}
                         </b>
-                        <small className="room-hud-seat-score">
-                          {locale === "zh" ? "分" : "Score"} {score}
-                        </small>
-                        <small className="room-hud-seat-hand" title={locale === "zh" ? "手牌/资源" : "Hand"}>
-                          {locale === "zh" ? "手" : "Hand"} {handCount}
-                        </small>
+                        <span className="room-hud-seat-badges" data-ui-seat-badges="1">
+                          {seatBadges.map((badge) => (
+                            <small
+                              className={`room-hud-seat-badge is-${badge.kind}`}
+                              key={badge.key}
+                              title={badge.label}
+                            >
+                              {badge.label} {badge.value}
+                            </small>
+                          ))}
+                        </span>
                       </span>
                       {isActive ? (
                         <span className="room-hud-seat-turn">
@@ -786,88 +852,30 @@ export function RoomView({ sessionId }: { sessionId: string }) {
               className="room-hud-hand-bar"
               data-ui-hand-bar="1"
             >
-              <div className="room-hud-hand-slots" role="list">
-                {(() => {
-                  const slots: Array<{ key: string; label: string; qty: number | string; tone?: string }> = [];
-                  if (seat !== null && room.state.handPlay?.hands?.[seat]) {
-                    const hand = room.state.handPlay.hands[seat];
-                    slots.push({
-                      key: "hand",
-                      label: locale === "zh" ? "手牌" : "Hand",
-                      qty: hand.length,
-                      tone: "#8b6914",
-                    });
-                    slots.push({
-                      key: "deck",
-                      label: locale === "zh" ? "牌库" : "Deck",
-                      qty: room.state.handPlay.deckRemaining,
-                      tone: "#5c6b4a",
-                    });
-                  } else if (seat !== null && room.state.gemEngine?.seats?.[seat as 0 | 1]?.gems) {
-                    const gems = room.state.gemEngine.seats[seat as 0 | 1].gems;
-                    for (const [gem, qty] of Object.entries(gems)) {
-                      slots.push({ key: `gem-${gem}`, label: gem, qty: Number(qty) || 0, tone: "#6b4c9a" });
-                    }
-                  } else if (room.state.othello && seat !== null) {
-                    slots.push({
-                      key: "discs",
-                      label: locale === "zh" ? "棋子" : "Discs",
-                      qty: room.state.othello.discCounts[seat as 0 | 1] ?? 0,
-                      tone: "#2f4a3c",
-                    });
-                  } else {
-                    const myScore = seat !== null ? (room.state.scores[seat] ?? 0) : 0;
-                    slots.push({
-                      key: "score",
-                      label: locale === "zh" ? "得分" : "Score",
-                      qty: myScore,
-                      tone: "#8b1e1e",
-                    });
-                    slots.push({
-                      key: "turn",
-                      label: locale === "zh" ? "回合" : "Turn",
-                      qty: room.state.turn,
-                      tone: "#4a5d73",
-                    });
-                    slots.push({
-                      key: "seats",
-                      label: locale === "zh" ? "席位" : "Seats",
-                      qty: room.state.scores.length,
-                      tone: "#6a5438",
-                    });
-                  }
-                  return slots.slice(0, 6).map((slot) => (
-                    <div
-                      className="room-hud-hand-slot"
-                      key={slot.key}
-                      role="listitem"
-                      style={{ "--slot-tone": slot.tone ?? "#6a5438" } as CSSProperties}
-                    >
-                      <span aria-hidden="true" className="room-hud-hand-art" />
-                      <span className="room-hud-hand-label">{slot.label}</span>
-                      <b className="room-hud-hand-qty">{slot.qty}</b>
-                    </div>
-                  ));
-                })()}
+              <div className="room-hud-hand-slots" data-ui-hand-from-content="1" role="list">
+                {densityHandSlots.map((slot) => (
+                  <div
+                    className="room-hud-hand-slot"
+                    key={slot.key}
+                    role="listitem"
+                    style={{ "--slot-tone": slot.tone ?? "#6a5438" } as CSSProperties}
+                  >
+                    <span aria-hidden="true" className="room-hud-hand-art" />
+                    <span className="room-hud-hand-label">{slot.label}</span>
+                    <b className="room-hud-hand-qty">{slot.qty}</b>
+                  </div>
+                ))}
               </div>
 
               <div
-                aria-label={locale === "zh" ? "行动组" : "Actions"}
-                className="room-hud-action-group"
+                aria-label={locale === "zh" ? "建造与行动" : "Build and actions"}
+                className="room-hud-action-group room-hud-build-group"
                 data-ui-action-group="1"
+                data-ui-build-group="1"
                 role="group"
               >
-                {(runtimeActions.length
-                  ? runtimeActions
-                  : [
-                      {
-                        id: "primary",
-                        label: locale === "zh" ? "主操作" : "Primary",
-                        value: null as number | null,
-                      },
-                    ]
-                ).slice(0, 4).map((action, index) => {
-                  const enabled = Boolean(isMyTurn && !busy && runtimeActions.length > 0);
+                {densityBuildActions.map((action, index) => {
+                  const enabled = action.enabled;
                   return (
                     <button
                       className={`room-hud-action-btn${enabled ? " is-legal" : " is-disabled"}`}
@@ -879,6 +887,19 @@ export function RoomView({ sessionId }: { sessionId: string }) {
                       type="button"
                     >
                       <span className="room-hud-action-label">{action.label}</span>
+                      {action.costPips.length > 0 ? (
+                        <span aria-hidden="true" className="room-hud-cost-pips" data-ui-cost-pips="1">
+                          {action.costPips.map((pip) =>
+                            Array.from({ length: Math.max(1, pip.amount) }, (_, pipIndex) => (
+                              <i
+                                className="room-hud-cost-pip"
+                                key={`${action.id}-${pip.kind}-${pipIndex}`}
+                                style={{ "--pip-tone": pip.tone ?? "#c4a35a" } as CSSProperties}
+                              />
+                            )),
+                          )}
+                        </span>
+                      ) : null}
                       {action.value !== null ? (
                         <span className="room-hud-action-cost">
                           {action.value > 0 ? `+${action.value}` : String(action.value)}

@@ -58,6 +58,9 @@
   --hud-seat-rail-w: 13.5rem;
   --hud-turn-panel-w: 15.5rem;
   --hud-hand-h: 7.25rem;
+  /* UI-density-fill · P4 denser hand / badge floors */
+  --hud-badge-h: 1.15rem;
+  --hud-cost-pip: 0.55rem;
   --hud-accent: #8b1e1e;
   --hud-accent-edge: #c4a35a;
   --hud-accent-deep: #5c1212;
