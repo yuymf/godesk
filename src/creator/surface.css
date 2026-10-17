@@ -7458,6 +7458,42 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   font-weight: 600;
 }
 
+/* UI-density-fill · P4 seat-rail-rich badges */
+.room-hud-seat-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.18rem 0.28rem;
+  margin-top: 0.12rem;
+}
+
+.room-hud-seat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.06rem 0.35rem;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--hud-ink-on-paper);
+  background: color-mix(in srgb, var(--surface-float) 72%, var(--surface-parchment));
+  border: 1px solid color-mix(in srgb, var(--hud-accent-edge) 35%, transparent);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-hud-seat-badge.is-vp,
+.room-hud-seat-badge.is-capability {
+  background: color-mix(in srgb, var(--hud-accent) 18%, var(--surface-float));
+  border-color: color-mix(in srgb, var(--hud-accent-edge) 55%, transparent);
+}
+
+.room-hud-seat-badge.is-resource-summary {
+  background: color-mix(in srgb, var(--hud-slot-tone) 16%, var(--surface-float));
+}
+
 .room-hud-seat-turn {
   grid-column: 1 / -1;
   justify-self: start;
@@ -7611,6 +7647,34 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
 .room-hud-action-cost {
   font-size: 0.68rem;
   opacity: 0.88;
+}
+
+/* UI-density-fill · P4 build-group shell + card-schema cost pips */
+.room-hud-build-group {
+  min-width: 12rem;
+}
+
+.room-hud-cost-pips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.18rem;
+  align-items: center;
+  min-height: 0.7rem;
+}
+
+.room-hud-cost-pip {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: var(--pip-tone, var(--hud-accent-edge));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--hud-ink-on-paper) 35%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--hud-shell-deep) 25%, transparent);
+}
+
+.room-hud-action-btn.is-disabled .room-hud-cost-pip,
+.room-hud-action-btn:disabled .room-hud-cost-pip {
+  filter: grayscale(0.35) brightness(0.85);
 }
 
 .room-hud-turn-panel {
