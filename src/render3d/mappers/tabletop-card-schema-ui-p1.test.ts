@@ -4,9 +4,9 @@ import { CARD_FACE_ZONES, CARD_SCHEMA_FLOORS } from "./tabletop-card-face-t048";
 
 describe("UI-card-schema · seat-close cost dots / typography", () => {
   it("raises cost + title zone floors without center-number-only layout", () => {
-    expect(CARD_SCHEMA_FLOORS.costDotRadius).toBeGreaterThanOrEqual(24);
-    expect(CARD_SCHEMA_FLOORS.costDigitPx).toBeGreaterThanOrEqual(32);
-    expect(CARD_SCHEMA_FLOORS.titlePx).toBeGreaterThanOrEqual(42);
+    expect(CARD_SCHEMA_FLOORS.costDotRadius).toBeGreaterThanOrEqual(26);
+    expect(CARD_SCHEMA_FLOORS.costDigitPx).toBeGreaterThanOrEqual(34);
+    expect(CARD_SCHEMA_FLOORS.titlePx).toBeGreaterThanOrEqual(44);
     const cost = CARD_FACE_ZONES.find((z) => z.id === "cost")!;
     const title = CARD_FACE_ZONES.find((z) => z.id === "title")!;
     const ill = CARD_FACE_ZONES.find((z) => z.id === "illustration")!;
@@ -18,6 +18,7 @@ describe("UI-card-schema · seat-close cost dots / typography", () => {
   it("paintCardFace draws underlay + dark-stroked cost dots", () => {
     const src = readFileSync("src/render3d/mappers/tabletop-card-face-t048.ts", "utf8");
     expect(src).toContain("UI-card-schema");
+    expect(src).toContain("UI-room-hud");
     expect(src).toContain("CARD_SCHEMA_FLOORS");
     expect(src).toMatch(/costDotRadius/);
     expect(src).toMatch(/underlayPad/);

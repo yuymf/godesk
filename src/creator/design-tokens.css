@@ -47,6 +47,21 @@
   --shadow-float: 0 6px 12px rgba(41, 33, 20, 0.10), 0 20px 48px rgba(41, 33, 20, 0.18);
   --hud-glass: rgba(251, 248, 241, 0.86);
   --hud-glass-blur: blur(12px);
+  /* UI-room-hud · settlecoast-grade surface hierarchy (paper / float / wood) */
+  --surface-wood: #3a2a1c;
+  --surface-wood-deep: #24180f;
+  --surface-wood-edge: #5a4330;
+  --surface-float: #fffdf6;
+  --surface-parchment: #f3e7c9;
+  --surface-parchment-deep: #e8d3a2;
+  --hud-seat-rail-w: 13.5rem;
+  --hud-turn-panel-w: 15.5rem;
+  --hud-hand-h: 7.25rem;
+  --hud-accent: #8b1e1e;
+  --hud-accent-edge: #c4a35a;
+  --hud-ink-on-wood: #f6efe2;
+  --shadow-wood: 0 2px 0 rgba(20, 12, 6, 0.35), 0 10px 28px rgba(20, 12, 6, 0.28);
+  --shadow-paper: 0 1px 0 rgba(255, 250, 235, 0.55), 0 8px 22px rgba(41, 33, 20, 0.14);
   color: var(--ink);
   background: var(--canvas);
   font-family: Manrope, "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
