@@ -5,8 +5,8 @@
  * lighting, background, camera and unit scale. The renderer only interprets these
  * fields. The shipped seaside look is simply the default preset.
  */
-export const TABLE_MATERIALS = ["wood", "stone", "frost", "felt"] as const;
-export type TableMaterial = (typeof TABLE_MATERIALS)[number];
+const TABLE_MATERIALS = ["wood", "stone", "frost", "felt"] as const;
+type TableMaterial = (typeof TABLE_MATERIALS)[number];
 
 export type ThemeSpec = {
   id: string;

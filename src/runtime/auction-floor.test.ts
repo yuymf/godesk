@@ -6,7 +6,7 @@ import {
   setLiveLotBrokerTerms,
 } from "./auction-floor";
 
-describe("auction-floor live multi-lot (T024)", () => {
+describe("auction-floor live multi-lot", () => {
   it("allows two lots open and settles independently", () => {
     const a = createLiveFloorLot({
       lotId: "A",

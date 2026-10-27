@@ -17,7 +17,7 @@ import card5 from "../../assets/illustrations/tabletop/card-landscape-5.svg?url"
 const PORTRAITS = { travelers: [portrait0, portrait1, portrait2, portrait3] } as const;
 const CARDS = { landscape: [card0, card1, card2, card3, card4, card5] } as const;
 
-export type TabletopHudArt = { portraits?: "none" | "travelers"; cardArt?: "none" | "landscape" } | undefined;
+type TabletopHudArt = { portraits?: "none" | "travelers"; cardArt?: "none" | "landscape" } | undefined;
 
 export function seatPortrait(hud: TabletopHudArt, seat: number): string | null {
   const pack = hud?.portraits && hud.portraits !== "none" ? PORTRAITS[hud.portraits] : null;

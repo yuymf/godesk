@@ -11,7 +11,7 @@ import type { UnitModelSource } from "../render3d/tide-arena/unit-models";
 import { detectEnvFromBrowser, resolveTier } from "../render3d/tiers";
 import type { Timeline } from "../render3d/tide-arena/timeline";
 
-export type TideArenaSceneProps = {
+type TideArenaSceneProps = {
   ownBoard: Array<Piece | null>;
   ownBench: Array<Piece | null>;
   enemyBoard: Array<Piece | null>;

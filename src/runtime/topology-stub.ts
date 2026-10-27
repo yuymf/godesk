@@ -17,9 +17,9 @@ export type GridTopologyStub = {
 };
 
 /** Hex axial coordinates — hex-island will use these in PR6. Not required by public kernel. */
-export type HexCoord = { q: number; r: number };
+type HexCoord = { q: number; r: number };
 
-export type HexTopologyStub = {
+type HexTopologyStub = {
   kind: "hex";
   /** Axial hex cells; vertices/edges are adapter-private. */
   cells: readonly HexCoord[];

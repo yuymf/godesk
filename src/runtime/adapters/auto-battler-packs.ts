@@ -23,7 +23,7 @@ export type AutoBattlerBranding = {
   enemySeat: string;
 };
 
-export type AutoBattlerPack = {
+type AutoBattlerPack = {
   id: string;
   /** Idea / prompt cues that select this pack (first match wins). */
   cues: RegExp;
@@ -63,7 +63,7 @@ const CYBER_CONTENT: AutoBattlerContent = {
   stars: { ...TIDE_CONTENT.stars },
 };
 
-export const AUTO_BATTLER_PACKS: readonly AutoBattlerPack[] = [
+const AUTO_BATTLER_PACKS: readonly AutoBattlerPack[] = [
   {
     id: "cyber",
     cues: /机甲|赛博|赛博朋克|\bmech(?:a)?\b|\bcyber\b|霓虹.*自走|自走.*霓虹/i,

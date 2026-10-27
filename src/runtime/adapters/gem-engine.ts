@@ -28,11 +28,11 @@ import {
 
 export const GEM_ENGINE_KERNEL_TYPE = "gem-engine-v1" as const;
 
-export const GEM_COLORS = ["white", "blue", "green", "red", "black"] as const;
-export type GemColor = (typeof GEM_COLORS)[number];
-export type GemToken = GemColor | "gold";
+const GEM_COLORS = ["white", "blue", "green", "red", "black"] as const;
+type GemColor = (typeof GEM_COLORS)[number];
+type GemToken = GemColor | "gold";
 
-export type GemCardDef = {
+type GemCardDef = {
   id: string;
   tier: 1 | 2 | 3;
   cost: Partial<Record<GemColor, number>>;
@@ -40,14 +40,14 @@ export type GemCardDef = {
   discount: GemColor;
 };
 
-export type GemNobleDef = {
+type GemNobleDef = {
   id: string;
   name: string;
   requirements: Partial<Record<GemColor, number>>;
   prestige: number;
 };
 
-export type GemEngineContent = {
+type GemEngineContent = {
   cards: GemCardDef[];
   nobles: GemNobleDef[];
   prestigeToWin: number;
@@ -60,10 +60,10 @@ type GemEngineConfig = {
   content: GemEngineContent;
 };
 
-export const MAX_GEM_TOKENS = 10;
-export const MAX_RESERVED_CARDS = 3;
+const MAX_GEM_TOKENS = 10;
+const MAX_RESERVED_CARDS = 3;
 
-export type GemSeatState = {
+type GemSeatState = {
   gems: Record<GemToken, number>;
   discounts: Record<GemColor, number>;
   prestige: number;
@@ -85,7 +85,7 @@ export type GemEngineGenre = {
 };
 
 /** Generic gem-engine / jewel-workshop cues (not brand-specific). */
-export const GEM_ENGINE_CUES =
+const GEM_ENGINE_CUES =
   /宝石(?:代币|引擎)?|发展牌|永久折扣|贵族|声望\s*\d*|gem\s*engine|prestige\s*(?:points?|target)|development\s*cards?|noble(?:s)?\b/i;
 
 export function ideaRequestsGemEngine(idea: string): boolean {
@@ -644,7 +644,7 @@ export function playActionFromGemEngineIntent(
   };
 }
 
-export function pickGemEngineBotAction(
+function pickGemEngineBotAction(
   state: PlayState<GemEngineGenre>,
   seed: number,
   config?: PlayKernelConfig,

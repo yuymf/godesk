@@ -31,7 +31,7 @@ export type AudioEngineSnapshot = {
   currentTrack: string | null;
 };
 
-export type AudioEngineOptions = {
+type AudioEngineOptions = {
   sources: AudioSources;
   settings: AudioSettings;
   backend: AudioBackend;

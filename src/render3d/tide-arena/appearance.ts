@@ -1,5 +1,5 @@
 /** unitId → look for content-defined units (filled by the board from kernel content). */
-export type UnitLook = {
+type UnitLook = {
   proceduralPreset: string;
   cost: number;
   /** Imported asset id; when set the scene prefers the GLB over procedural geometry. */

@@ -32,10 +32,10 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
       rim: { azimuthDeg: 42, elevationDeg: 16, intensity: 0.78, color: "#ffe6b0" },
     });
     expect(SCENE_TOKENS.shadow).toMatchObject({ radius: 4, bias: -0.0004, normalBias: 0.02, boundsPadding: 1.5 });
-    expect(SCENE_TOKENS.environment.intensity).toBe(0.72); // T249
+    expect(SCENE_TOKENS.environment.intensity).toBe(0.72);
     expect(SCENE_TOKENS.tile).toEqual({ roughness: 0.98, metalness: 0 });
     expect(SCENE_TOKENS.piece).toEqual({ roughness: 0.82, metalness: 0, clearcoat: 0 });
-    expect(SEAT_COLORS).toEqual(["#d49088", "#7a9bb8", "#9a84a8", "#e8d070"]); // T265
+    expect(SEAT_COLORS).toEqual(["#d49088", "#7a9bb8", "#9a84a8", "#e8d070"]);
   });
 
   it("stays in sync with the creator RenderSpec lighting default", () => {
@@ -43,7 +43,7 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
     const base = defaultRenderSpec(null, "table")?.lighting;
     expect(base?.fill).toBeTruthy();
     expect(base?.rim).toBeTruthy();
-    // T181/T183 · shared base key may warm vs SCENE_TOKENS; fill/rim must stay on
+    // shared base key may warm vs SCENE_TOKENS; fill/rim must stay on
     expect(base?.sun.color).toMatch(/^#ff/i);
     expect(base?.sun.intensity).toBeGreaterThan(3.0);
     expect(base?.fill?.intensity).toBeGreaterThan(0);
@@ -59,7 +59,7 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
     }
   });
 
-  it("gives every terrain a pattern and a G3D-22 PBR set, tiles use oil-film roughness (T261)", () => {
+  it("gives every terrain a pattern and a G3D-22 PBR set, tiles use oil-film roughness", () => {
     for (const terrain of ["wood", "brick", "sheep", "wheat", "ore", "desert"]) {
       const token = TERRAIN_MATERIALS[terrain]!;
       expect(token.pattern).not.toBe("none");
@@ -77,7 +77,7 @@ describe("G3D-07 3D tokens (SPEC §3.7)", () => {
 
     it("seat pieces keep their seat colour: T090 glossier chroma paint", () => {
     const token = seatMaterial(1);
-    expect(token).toMatchObject({ base: "#7a9bb8", roughness: 0.78, clearcoat: 0.12, pbrSet: "t09-paintwood", pbrBaseColor: true }); // T265
+    expect(token).toMatchObject({ base: "#7a9bb8", roughness: 0.78, clearcoat: 0.12, pbrSet: "t09-paintwood", pbrBaseColor: true });
     expect(seatMaterial(9).base).toBe("#ffffff");
   });
 
@@ -141,15 +141,15 @@ describe("R19 hex island brightness", () => {
   it("AI-textured terrains let the texture hue lead (pbrTint) on lighter, less saturated bases", () => {
     for (const key of ["wood", "brick", "sheep", "wheat", "ore", "desert"]) {
       const t = TERRAIN_MATERIALS[key]!;
-      expect(t.pbrTint, key).toBeGreaterThanOrEqual(0.25); // T254 base hue leads
+      expect(t.pbrTint, key).toBeGreaterThanOrEqual(0.25); // base hue leads
     }
     const sat = (hex: string) => {
       const n = Number.parseInt(hex.slice(1), 16);
       const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
       return (Math.max(...c) - Math.min(...c)) / Math.max(...c);
     };
-    expect(sat(TERRAIN_MATERIALS.sheep!.base)).toBeGreaterThan(sat("#8fbf6a")); // T183 richer
-    expect(sat(TERRAIN_MATERIALS.wood!.base)).toBeGreaterThan(0.2); // T183 shared chroma
+    expect(sat(TERRAIN_MATERIALS.sheep!.base)).toBeGreaterThan(sat("#8fbf6a")); // richer
+    expect(sat(TERRAIN_MATERIALS.wood!.base)).toBeGreaterThan(0.2); // shared chroma
   });
 
   it("oil-dab layer is stronger than R18 (0.6) so it stays visible over the AI albedo at b3", () => {
@@ -167,9 +167,9 @@ describe("R22 resource colour + seams", () => {
 
   it("soft hex-edge band ≤ 25% and terrain saturation no longer pulled toward grey", () => {
     expect(SOFT_EDGE_STRENGTH).toBeGreaterThan(0);
-    expect(SOFT_EDGE_STRENGTH).toBeLessThanOrEqual(0.90); // T245 kraft paperboard edge
+    expect(SOFT_EDGE_STRENGTH).toBeLessThanOrEqual(0.90); // kraft paperboard edge
     expect(TERRAIN_SATURATION).toBeGreaterThanOrEqual(1);
-    expect(TERRAIN_SATURATION).toBeLessThanOrEqual(2.70); // T183/T217/T222
+    expect(TERRAIN_SATURATION).toBeLessThanOrEqual(2.70);
   });
 
   it("tile top faces touch (no open slot → no dark 1px side line); sides taper inside the coast wall", () => {

@@ -5,8 +5,8 @@
 import { createSeededRng, type PlayerId } from "../play-kernel";
 
 /** Minimal city/edge shapes (avoid circular import with network-route.ts). */
-export type TicketsCity = { id: string; name: string };
-export type TicketsEdge = { id: string; from: string; to: string };
+type TicketsCity = { id: string; name: string };
+type TicketsEdge = { id: string; from: string; to: string };
 
 export const TRAIN_COLORS = [
   "red",
@@ -47,11 +47,11 @@ export type DestinationTicketDef = {
   points: number;
 };
 
-export type DestinationTicketInstance = DestinationTicketDef & {
+type DestinationTicketInstance = DestinationTicketDef & {
   instanceId: string;
 };
 
-export type EdgeColorMeta = {
+type EdgeColorMeta = {
   color: RouteEdgeColor | string;
   length: number;
 };
@@ -73,7 +73,7 @@ export type NetworkRouteTicketsContent = {
   longestPathBonus: number;
 };
 
-export type HandCounts = Record<TrainCardColor, number>;
+type HandCounts = Record<TrainCardColor, number>;
 
 export type NetworkRouteTicketsState = {
   edgeMeta: Record<string, EdgeColorMeta>;
@@ -361,7 +361,7 @@ export function cloneTicketsState(
 }
 
 /** Can seat pay `length` of `payColor` (wilds fill)? */
-export function canPayForClaim(
+function canPayForClaim(
   hand: HandCounts,
   edgeColor: RouteEdgeColor | string,
   length: number,
@@ -373,7 +373,7 @@ export function canPayForClaim(
   return colored + wild >= length;
 }
 
-export function payForClaim(
+function payForClaim(
   hand: HandCounts,
   length: number,
   payColor: TrainColor,
@@ -390,7 +390,7 @@ export function payForClaim(
   return { hand: next, spent };
 }
 
-export function scoreTicketsForSeat(
+function scoreTicketsForSeat(
   claims: Record<string, PlayerId | null>,
   edges: readonly TicketsEdge[],
   connects: (

@@ -8,7 +8,7 @@ const PACK_FORMATS = ["zip", "glb", "gltf"] as const;
 const ANY_DOWNLOADABLE = [...MAP_FORMATS, ...MODEL_FORMATS, ...PACK_FORMATS, ...HDRI_FORMATS];
 const SMALL_RESOLUTIONS = ["1k", "0.5k", "512", "2k"] as const;
 
-export interface DownloadSpec {
+interface DownloadSpec {
   format?: string;
   resolution?: string;
 }

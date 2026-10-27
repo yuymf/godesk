@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { isPatternDraftCorpus } from "./pattern-draft";
 import { generationRefuseReason, REFUSE_PATTERN_DRAFT } from "./generation-refuse";
 
-describe("T009 pattern-draft corpus", () => {
+describe("pattern-draft corpus", () => {
   it("detects factory + pattern-wall style briefs", () => {
     expect(
       isPatternDraftCorpus(

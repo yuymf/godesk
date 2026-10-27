@@ -2536,7 +2536,7 @@ export function visibleSession(
  *  Reconstruct rebuilds full state from intentId/actionId/payload + seed.
  *  Keeps DO/SQLite under SQLITE_TOOBIG for long seeded bot runs (~800+ plies).
  */
-export function slimAcceptedActionForStorage(action: AcceptedAction): AcceptedAction {
+function slimAcceptedActionForStorage(action: AcceptedAction): AcceptedAction {
   const slimState: SessionState = {
     turn: action.state.turn,
     activeSeat: action.state.activeSeat,
@@ -2705,7 +2705,7 @@ export function reconstructSession(
 }
 
 /** Apply logged actions after `offset` starting from `state` (kernel only). */
-export function replayTail(
+function replayTail(
   build: StoredPlayableBuild,
   state: SessionState,
   tail: GameReplay["acceptedActions"],

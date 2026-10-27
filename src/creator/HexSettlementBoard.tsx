@@ -46,7 +46,7 @@ const RESOURCE_LABEL = {
 
 const COPY = {
   zh: {
-    board: "六角岛桌面", // T064 · generic (no product-shell brand)
+    board: "六角岛桌面", // generic (no product-shell brand)
     island: "群岛",
     hud: "对局状态",
     active: "当前行动",
@@ -119,7 +119,7 @@ const COPY = {
     toWin: "还需胜利点",
   },
   en: {
-    board: "Hex island table", // T064
+    board: "Hex island table",
     island: "Archipelago",
     hud: "Match status",
     active: "Active seat",
@@ -340,7 +340,7 @@ export function HexSettlementBoard({
   homeHref?: string;
   replayUrl?: string;
 }) {
-  // T067 · placement assist folded by default so island canvas stays primary
+  // placement assist folded by default so island canvas stays primary
   const [boardTargetsOpen, setBoardTargetsOpen] = useState(false);
   const [logTab, setLogTab] = useState<"chronicle" | "chat" | "coach">("chronicle");
   const [logOpenMobile, setLogOpenMobile] = useState(false);
@@ -361,7 +361,7 @@ export function HexSettlementBoard({
   const [resourceGain, setResourceGain] = useState<Partial<Record<Resource, number>>>({});
   const prevResourcesRef = useRef<Record<Resource, number> | null>(null);
 
-  // T067 · do not auto-open placement drawer on desktop (island stays primary)
+  // do not auto-open placement drawer on desktop (island stays primary)
 
   const copy = COPY[locale];
   const resourceLabel = RESOURCE_LABEL[locale];

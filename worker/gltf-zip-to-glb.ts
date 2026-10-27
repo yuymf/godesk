@@ -4,11 +4,11 @@
  * DecompressionStream) and packs gltf + buffers + images into one GLB binary chunk.
  */
 
-export type ZipEntries = Map<string, Uint8Array>;
+type ZipEntries = Map<string, Uint8Array>;
 
 const GLB_MAGIC = 0x46546c67;
 
-export function isZip(bytes: Uint8Array): boolean {
+function isZip(bytes: Uint8Array): boolean {
   return bytes.length > 4 && bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04;
 }
 
@@ -84,7 +84,7 @@ function pad4(length: number) {
 }
 
 /** Pack a .gltf (with sibling files in `entries`) into one GLB. */
-export function packGltfToGlb(gltfPath: string, entries: ZipEntries): Uint8Array {
+function packGltfToGlb(gltfPath: string, entries: ZipEntries): Uint8Array {
   const source = entries.get(gltfPath);
   if (!source) throw new Error("gltf_missing");
   const json = JSON.parse(new TextDecoder().decode(source)) as GltfJson;

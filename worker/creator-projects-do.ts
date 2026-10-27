@@ -2360,12 +2360,12 @@ export class CreatorProjects extends DurableObject<Env> {
         if ("error" in persisted) return persisted.error;
         let updatedRoom = persisted.room;
         let chained = 0;
-        // T146 · optional setup chain (listLegalActions)
-        // T149 · extend chain hops
-        // T152 · longer chain for sub-5s force
+        // optional setup chain (listLegalActions)
+        // extend chain hops
+        // longer chain for sub-5s force
         const wantChain = input.chainSetup === true || input.chainSetup === 1 || input.chainSetup === "1";
         if (wantChain) {
-          for (let hop = 0; hop < 16; hop++) { // T152 · up to 16 setup hops / RTT (full 4p setup)
+          for (let hop = 0; hop < 16; hop++) { // up to 16 setup hops / RTT (full 4p setup)
             const p0goal = updatedRoom.state.hexIsland?.players?.[0];
             if (
               (p0goal?.settlements?.length ?? 0) >= 2 &&
@@ -2410,7 +2410,7 @@ export class CreatorProjects extends DurableObject<Env> {
           }
         }
         // Response/broadcast keep full in-memory actions; DO stores slim logs.
-        // T143 · pipe next-seat legal actions (listLegalActions) to cut force RTT.
+        // pipe next-seat legal actions (listLegalActions) to cut force RTT.
         const nextLegalSeat = updatedRoom.state.activeSeat;
         const nextLegalActions = listSessionLegalActions(
           updatedRoom.state,
@@ -2554,7 +2554,7 @@ export class CreatorProjects extends DurableObject<Env> {
       return playtest ? json(playtest) : error("没有找到这个试玩。", 404);
     }
 
-    // T136 · legal-actions for hardness force / shared probes (listLegalActions authority)
+    // legal-actions for hardness force / shared probes (listLegalActions authority)
     const roomLegalMatch = url.pathname.match(/^\/sessions\/([^/]+)\/legal-actions$/);
     if (request.method === "GET" && roomLegalMatch) {
       const room = await this.ctx.storage.get<StoredSharedSession>(

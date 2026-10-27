@@ -33,7 +33,7 @@ const builtInMesh = z.enum([
   "shore-natural",
 ]);
 
-export const materialSchema = z.strictObject({
+const materialSchema = z.strictObject({
   base: hex,
   roughness: unit,
   metalness: unit,
@@ -56,7 +56,7 @@ export const renderSpecSchema = z.strictObject({
     pan: z.boolean(),
     /**
      * step3 · Tidewell-quality framing for any tabletop surface: `orthographic` uses the same
-     * ortho play camera as 汐屿 (polar ≈56° / azimuth 12° / fill 0.945 inside HUD insets). // T265/T269 live play polar
+     * ortho play camera as 汐屿 (polar ≈56° / azimuth 12° / fill 0.945 inside HUD insets). // live play polar
      * Omitted = legacy perspective orbit (fovDeg / distance).
      */
     projection: z.enum(["perspective", "orthographic"]).optional(),
@@ -66,7 +66,7 @@ export const renderSpecSchema = z.strictObject({
   }),
   /** step3 · Room chrome: `wood` = full-viewport carved-wood game screen (汐屿 shell, generic). */
   chrome: z.enum(["plain", "wood"]).optional(),
-  /** UI-P3 · Room HUD Theme Pack (CSS `data-ui-theme`). Omitted → harbor-wood. */
+  /** Room HUD Theme Pack (CSS `data-ui-theme`). Omitted → harbor-wood. */
   uiTheme: z.enum(UI_THEME_IDS).optional(),
   /** step3 · deterministic scenery scattered on the board, clear of routes / pieces / cells. */
   decor: z.strictObject({
@@ -299,8 +299,8 @@ function baseDefault(kernelType: string | null | undefined): RenderSpec {
       pan: false,
     },
     lighting: {
-      // T061 · stronger sun / darker ground fill → readable specular + contact shadows
-      // T181 · shared base light microcontrast (hex + fallbacks; keep T161 upper-ink lighter)
+      // stronger sun / darker ground fill → readable specular + contact shadows
+      // shared base light microcontrast (hex + fallbacks; keep T161 upper-ink lighter)
       sun: {
         azimuthDeg: 124,
         elevationDeg: 50,
@@ -310,22 +310,22 @@ function baseDefault(kernelType: string | null | undefined): RenderSpec {
       hemisphere: { sky: "#fff6ec", ground: "#5a4836", intensity: 0.96 },
       shadow: { enabled: true, softness: 0.62 },
       exposure: 1.26,
-      // T086 · shared fill + rim layers
+      // shared fill + rim layers
       fill: { azimuthDeg: 310, elevationDeg: 34, intensity: 0.62, color: "#b8cef0" },
       rim: { azimuthDeg: 40, elevationDeg: 18, intensity: 0.48, color: "#ffd4a0" },
     },
     water: {
       enabled: kernelType === "hex-settlement-v1" || kernelType === "harbor-voyage-v1",
       // R20：与 water/mesh DEFAULT_SPEC 同步 — 明亮青绿 + 浅滩环。
-      // T183 · shared water chroma (hex/harbor kernel family)
-      shallow: "#7affd8", // T266 wet-sand seam shallow
-      deep: "#1a8a94", // T257 corner-safe deep lift
+      // shared water chroma (hex/harbor kernel family)
+      shallow: "#7affd8", // wet-sand seam shallow
+      deep: "#1a8a94", // corner-safe deep lift
       waveHeight: 0.092,
       waveSpeed: 0.70,
-      foam: 1.0, // T183/T225 shore foam (unit clamp)
+      foam: 1.0, // shore foam (unit clamp)
     },
     materials: {
-      // T265 · sync SEAT_COLORS desat (lum-safe) + demoted clearcoat
+      // sync SEAT_COLORS desat (lum-safe) + demoted clearcoat
       seat0: material("#d49088", "none", 0.78, 0.04, 0.12),
       seat1: material("#7a9bb8", "none", 0.78, 0.04, 0.12),
       seat2: material("#9a84a8", "none", 0.78, 0.04, 0.12),
@@ -373,22 +373,22 @@ const GENERIC_ENTITY_MESH: Record<typeof GAME_ENTITY_KINDS[number], RenderSpec["
 
 function applyKernelDefaults(render: RenderSpec, kernelType: string | null | undefined) {
   if (kernelType === "hex-settlement-v1") {
-    // T181/T183/T217 · shared hex terrain chroma/microcontrast (kernel family, not suite fork)
-    // T254 · closer product framing + hotter chroma for HARD vs tip 15f86da
-    render.camera = { ...render.camera, fovDeg: 32, distance: 12.2, minPolarDeg: 30, maxPolarDeg: 64, polarDeg: 44 }; // T265 thickness polar (cornerCalm soft2)
+    // shared hex terrain chroma/microcontrast (kernel family, not suite fork)
+    // closer product framing + hotter chroma for HARD vs tip 15f86da
+    render.camera = { ...render.camera, fovDeg: 32, distance: 12.2, minPolarDeg: 30, maxPolarDeg: 64, polarDeg: 44 }; // thickness polar (cornerCalm soft2)
     Object.assign(render.materials, {
-      "terrain-wood": material("#00ff60", "grass", 0.32, 0, undefined, 0.99), // T254 neon wood
+      "terrain-wood": material("#00ff60", "grass", 0.32, 0, undefined, 0.99), // neon wood
       "terrain-brick": material("#ff2008", "stone", 0.42, 0, undefined, 0.99),
       "terrain-sheep": material("#50ff30", "grass", 0.30, 0, undefined, 0.99),
       "terrain-wheat": material("#ffe008", "grass", 0.34, 0, undefined, 0.99),
       "terrain-ore": material("#70b0ff", "stone", 0.55, 0, undefined, 0.95),
       "terrain-desert": material("#fff0a0", "sand", 0.50, 0, undefined, 0.95),
       cliff: material("#4a4438", "stone", 0.78),
-      "number-token": material("#d8a060", "none", 0.34, 0.06, 0.18), // T253 pressed wood-chip
+      "number-token": material("#d8a060", "none", 0.34, 0.06, 0.18), // pressed wood-chip
       piece: material("#ffe8c8", "none", 0.10, 0.38, 0.92),
       "fog-lantern": material("#fff060", "none", 0.08, 0.18, 0.78),
     });
-    // T183/T217/T254 · shared hex lighting lift (kernel family)
+    // shared hex lighting lift (kernel family)
     render.lighting = {
       ...render.lighting,
       sun: { ...render.lighting.sun, intensity: 5.98, color: "#fff0c0", elevationDeg: 48, azimuthDeg: 118 },
@@ -429,7 +429,7 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
       // 翻转棋的棋子必须黑白分明：座位 0 = 黑、座位 1 = 白（G3D-14）。
       seat0: material("#1d1d1f", "none", 0.42, 0, 0.3),
       seat1: material("#f4efe6", "none", 0.42, 0, 0.3),
-      board: material("#1f6b4a", "cloth", 0.55, 0, 0.58, 0.99), // T261 oil-film felt
+      board: material("#1f6b4a", "cloth", 0.55, 0, 0.58, 0.99), // oil-film felt
       piece: material("#f4efe6", "none", 0.58),
     });
     render.bindings = [
@@ -467,27 +467,27 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     return;
   }
   if (kernelType === "network-route-v1") {
-    // T046 · shared train-route presentation (not parchment sticky-pad graph).
-    // T177/T192 · shared network material/light microcontrast — hard pixel residual (kernel family, not suite fork)
+    // shared train-route presentation (not parchment sticky-pad graph).
+    // shared network material/light microcontrast — hard pixel residual (kernel family, not suite fork)
     render.preset = "tabletop-day";
-    render.camera = { ...render.camera, fovDeg: 40, distance: 7.8, minPolarDeg: 28, maxPolarDeg: 58, polarDeg: 34 }; // T265 network thickness polar (soft)
-    // T086 · desk lighting layers on network
+    render.camera = { ...render.camera, fovDeg: 40, distance: 7.8, minPolarDeg: 28, maxPolarDeg: 58, polarDeg: 34 }; // network thickness polar (soft)
+    // desk lighting layers on network
     render.lighting = {
       ...render.lighting,
-      sun: { ...render.lighting.sun, azimuthDeg: 126, elevationDeg: 60, intensity: 5.98, color: "#ffd0a8" }, // T230 schema ≤6
-      hemisphere: { sky: "#fff8f0", ground: "#a88860", intensity: 2.98 }, // T245 warm bounce vs tip cool
-      fill: { azimuthDeg: 310, elevationDeg: 50, intensity: 3.15, color: "#fff8f0" }, // T254 warm fill HARD
-      rim: { azimuthDeg: 40, elevationDeg: 34, intensity: 2.35, color: "#e8f0ff" }, // T241
+      sun: { ...render.lighting.sun, azimuthDeg: 126, elevationDeg: 60, intensity: 5.98, color: "#ffd0a8" }, // schema ≤6
+      hemisphere: { sky: "#fff8f0", ground: "#a88860", intensity: 2.98 }, // warm bounce vs tip cool
+      fill: { azimuthDeg: 310, elevationDeg: 50, intensity: 3.15, color: "#fff8f0" }, // warm fill HARD
+      rim: { azimuthDeg: 40, elevationDeg: 34, intensity: 2.35, color: "#e8f0ff" },
       shadow: { enabled: true, softness: 0.55 },
-      exposure: 1.99, // T192…T230 · H02 network readable (schema ≤2); chroma via map/hemi
+      exposure: 1.99, // H02 network readable (schema ≤2); chroma via map/hemi
 
     };
     Object.assign(render.materials, {
-      // T172/T177/T192/T201/T206 · denser/brighter network map cloth (shared MaterialLibrary)
-      map: material("#98f0ff", "cloth", 0.28, 0, 0.86, 0.99), // T266 map cloth HARD4
+      // denser/brighter network map cloth (shared MaterialLibrary)
+      map: material("#98f0ff", "cloth", 0.28, 0, 0.86, 0.99), // map cloth HARD4
       table: material("#ffe8c0", "grain", 0.18, 0.20, 0.55), // T269c keep tip network table for cornerCalm
-      ink: material("#ffd060", "none", 0.02, 0.92, 0.99), // T266 station ink HARD4
-      piece: material("#ffe070", "none", 0.04, 0.58, 0.98), // T266 network piece HARD
+      ink: material("#ffd060", "none", 0.02, 0.92, 0.99), // station ink HARD4
+      piece: material("#ffe070", "none", 0.04, 0.58, 0.98), // network piece HARD
     });
     render.bindings = [
       binding("station", "station", "ink", 1.7),
@@ -499,42 +499,42 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     return;
   }
   if (kernelType === "gem-engine-v1" || kernelType === "pattern-draft-v1" || kernelType === "auction-bidding-v1") {
-    // T030 · desk-kernel visual baseline; T038 · softer contact lighting + felt that eats light.
-    // T175 · shared desk material/light microcontrast — hard pixel for H03/H04/H05 (no suite fork)
-    render.camera = { ...render.camera, fovDeg: 31, distance: 11.1, minPolarDeg: 31, maxPolarDeg: 61, polarDeg: 45 }; // T265 desk thickness (+1° tip, cornerCalm)
+    // desk-kernel visual baseline; T038 · softer contact lighting + felt that eats light.
+    // shared desk material/light microcontrast — hard pixel for H03/H04/H05 (no suite fork)
+    render.camera = { ...render.camera, fovDeg: 31, distance: 11.1, minPolarDeg: 31, maxPolarDeg: 61, polarDeg: 45 }; // desk thickness (+1° tip, cornerCalm)
     render.lighting = {
       ...render.lighting,
-      // T061 · desk contrast; T086 · explicit fill + rim (no extra shadow maps)
-      // T175/T187/T198 · brighter upper sky/fill/exposure (H01 hex path separate; no vignette bait)
-      sun: { ...render.lighting.sun, azimuthDeg: 100, elevationDeg: 58, intensity: 5.98, color: "#fffce0" }, // T257 high key centerCalm+HARD
-      hemisphere: { sky: "#fffffa", ground: "#e8d0a0", intensity: 2.98 }, // T265 warm bounce H05 cornerCalm
-      fill: { azimuthDeg: 290, elevationDeg: 64, intensity: 4.0, color: "#ffffff" }, // T257 max fill centerCalm
-      rim: { azimuthDeg: 34, elevationDeg: 36, intensity: 2.55, color: "#fffcf0" }, // T257 warm rim cornerCalm
-      shadow: { enabled: true, softness: 0.98 }, // T266 centerCalm
-      exposure: 2.0, // T249 desk product light (schema ≤2); centerCalm lift
+      // desk contrast; T086 · explicit fill + rim (no extra shadow maps)
+      // brighter upper sky/fill/exposure (H01 hex path separate; no vignette bait)
+      sun: { ...render.lighting.sun, azimuthDeg: 100, elevationDeg: 58, intensity: 5.98, color: "#fffce0" }, // high key centerCalm+HARD
+      hemisphere: { sky: "#fffffa", ground: "#e8d0a0", intensity: 2.98 }, // warm bounce H05 cornerCalm
+      fill: { azimuthDeg: 290, elevationDeg: 64, intensity: 4.0, color: "#ffffff" }, // max fill centerCalm
+      rim: { azimuthDeg: 34, elevationDeg: 36, intensity: 2.55, color: "#fffcf0" }, // warm rim cornerCalm
+      shadow: { enabled: true, softness: 0.98 }, // centerCalm
+      exposure: 2.0, // desk product light (schema ≤2); centerCalm lift
 
     };
     Object.assign(render.materials, {
-      // T175/T206/T214 · richer felt chroma + weave (shared MaterialLibrary board cloth)
-      board: material("#90ff00", "cloth", 0.36, 0, 0.80, 0.99),  // T266 felt HARD6 H03
+      // richer felt chroma + weave (shared MaterialLibrary board cloth)
+      board: material("#90ff00", "cloth", 0.36, 0, 0.80, 0.99),  // felt HARD6 H03
       table: material("#fffff4", "grain", 0.14, 0.28, 0.50), // T269d tip-lum table; plastic demote via shorter crown geom
-      piece: material("#ffffa8", "none", 0.03, 0.48, 0.99), // T266 desk piece brighter centerCalm
-      card: material("#ffe060", "none", 0.04, 0.30, 0.98), // T266 card HARD6
-      resource: material("#e0ffff", "none", 0.01, 0.95, 0.99), // T266 gem HARD6
-      token: material("#fff8c8", "none", 0.06, 0.55, 0.95), // T266 chip HARD6
-      ink: material("#c0cad8", "none", 0.26, 0.10, 0.20), // T257 · centerCalm lighter
+      piece: material("#ffffa8", "none", 0.03, 0.48, 0.99), // desk piece brighter centerCalm
+      card: material("#ffe060", "none", 0.04, 0.30, 0.98), // card HARD6
+      resource: material("#e0ffff", "none", 0.01, 0.95, 0.99), // gem HARD6
+      token: material("#fff8c8", "none", 0.06, 0.55, 0.95), // chip HARD6
+      ink: material("#c0cad8", "none", 0.26, 0.10, 0.20), // centerCalm lighter
     });
     render.bindings = [
       binding("region", "tile-square", "board"),
       binding("cell", "tile-square", "board"),
       binding("map", "tile-square", "board"),
-      binding("card", "card", "card", 1.48), // T266 card CJK HARD6
+      binding("card", "card", "card", 1.48), // card CJK HARD6
       binding("disc", "disc", "piece", 1.0),
-      binding("tile", "glazed-tile", "piece", 1.44), // T266 tile HARD+centerCalm
+      binding("tile", "glazed-tile", "piece", 1.44), // tile HARD+centerCalm
       binding("resource", "gem-chip", "resource", 1.08),
       binding("token", "disc", "token", 0.88),
-      binding("plaque", "plaque", "piece", 1.22), // T266 plaque CJK HARD6
-      binding("lot", "framed-art", "card", 1.88), // T266 lot face HARD6
+      binding("plaque", "plaque", "piece", 1.22), // plaque CJK HARD6
+      binding("lot", "framed-art", "card", 1.88), // lot face HARD6
       binding("building", "house", "piece", 1.05),
       binding("worker", "meeple", "piece", 1.08),
       binding("station", "disc", "ink", 0.8),
@@ -542,21 +542,21 @@ function applyKernelDefaults(render: RenderSpec, kernelType: string | null | und
     ];
     if (kernelType === "auction-bidding-v1") {
       Object.assign(render.materials, {
-        board: material("#a0ff10", "cloth", 0.34, 0, 0.82, 0.99),  // T266 auction felt HARD6
-        card: material("#ffd850", "none", 0.08, 0.25, 0.85), // T266 lot card HARD6
+        board: material("#a0ff10", "cloth", 0.34, 0, 0.82, 0.99),  // auction felt HARD6
+        card: material("#ffd850", "none", 0.08, 0.25, 0.85), // lot card HARD6
       });
     }
     if (kernelType === "pattern-draft-v1") {
       Object.assign(render.materials, {
-        board: material("#f0ffb0", "cloth", 0.46, 0, 0.64, 0.99),  // T266 pattern felt HARD6+centerCalm
-        piece: material("#fffff8", "none", 0.02, 0.42, 0.99), // T266 pattern piece hi-lum2
-        slot: material("#f6fff0", "none", 0.36, 0.02, 0.26),  // T266 slot mint centerCalm
-        // T054 · pale print plate under wall hue tints (square grid, not black pits)
-        "wall-print": material("#f8ffe8", "none", 0.52, 0.03, 0.28), // T266 wall-print centerCalm
-        // T058 · elongated pattern-line / floor troughs
-        "line-trough": material("#fff8e0", "none", 0.34, 0.02, 0.28), // T266 trough HARD6
+        board: material("#f0ffb0", "cloth", 0.46, 0, 0.64, 0.99),  // pattern felt HARD6+centerCalm
+        piece: material("#fffff8", "none", 0.02, 0.42, 0.99), // pattern piece hi-lum2
+        slot: material("#f6fff0", "none", 0.36, 0.02, 0.26),  // slot mint centerCalm
+        // pale print plate under wall hue tints (square grid, not black pits)
+        "wall-print": material("#f8ffe8", "none", 0.52, 0.03, 0.28), // wall-print centerCalm
+        // elongated pattern-line / floor troughs
+        "line-trough": material("#fff8e0", "none", 0.34, 0.02, 0.28), // trough HARD6
       });
-      // T050/T054/T058: wall empties → square print; lines → trough strips (not round pits)
+      // wall empties → square print; lines → trough strips (not round pits)
       render.bindings = [
         ...render.bindings.filter((b) => b.objectKind !== "slot" && b.objectKind !== "wall-slot" && b.objectKind !== "line-trough"),
         binding("slot", "disc", "slot", 0.7),
@@ -728,7 +728,7 @@ export function applyRenderPatch(render: RenderSpec, patch: RenderPatch): Render
   return next;
 }
 
-export type RenderPatchResult =
+type RenderPatchResult =
   | { ok: true; render: RenderSpec }
   | { ok: false; issues: string[] };
 

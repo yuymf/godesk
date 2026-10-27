@@ -9,7 +9,7 @@ import { useState, type CSSProperties, type ReactNode } from "react";
 import { PARCHMENT_GRAIN_URL, WOOD_GRAIN_URL } from "./tidewell-hud-assets";
 import "./tidewell-game-screen.css";
 
-export type TabletopScreenSeat = {
+type TabletopScreenSeat = {
   seat: number;
   name: string;
   subtitle: string;
@@ -23,10 +23,10 @@ export type TabletopScreenSeat = {
   portrait?: string | null;
 };
 
-export type TabletopScreenTile = { key: string; label: string; value: string | number; color?: string; glyph?: string; art?: string | null };
-export type TabletopScreenAction = { key: string; label: string; detail?: string; enabled: boolean; onClick: () => void; art?: string | null };
+type TabletopScreenTile = { key: string; label: string; value: string | number; color?: string; glyph?: string; art?: string | null };
+type TabletopScreenAction = { key: string; label: string; detail?: string; enabled: boolean; onClick: () => void; art?: string | null };
 
-export type TabletopGameScreenProps = {
+type TabletopGameScreenProps = {
   locale: "zh" | "en";
   boardLabel: string;
   title: string;

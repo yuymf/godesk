@@ -33,16 +33,13 @@ export const WATER_HALF_EXTENT = 9;
  * 距离场仍按 WATER_HALF_EXTENT 采样，外圈 clamp 成深水。
  */
 export const WATER_SEA_HALF_EXTENT = 80;
-/** @deprecated 用 WATER_SEA_HALF_EXTENT；保留别名以免旧引用挂掉。 */
-export const WATER_FAR_HALF_EXTENT = WATER_SEA_HALF_EXTENT;
-
 
 const DEFAULT_SPEC: TideWaterSpec = {
   // R20：明亮青绿（浅滩环亮水绿 → 外海亮青），不再沉到海军蓝；浪高不变。
   // R21：#26b2aa/#065a6a → #2ab8af/#086070（略提亮，补偿崖脚白沫闪点减弱带来的水面均值下降；c 门槛 ①）。
   // R24：外海再提亮（#086070→#1aa0a8），54° 斜视下远海占比升高时 a-default 水面 L 不掉破 c 闸。
   // R25：外海回收向 settlecoast 深青绿（#1aa0a8→#0a6c74，近 R23 #086070；c 闸实测调）；正交后远海无透视压暗，勿再为 c 闸加码提亮。
-  shallow: "#7affd8", // T266 wet-sand seam shallow
+  shallow: "#7affd8", // wet-sand seam shallow
   deep: "#029098",
   waveHeight: 0.065,
   waveSpeed: 0.55,
@@ -51,7 +48,7 @@ const DEFAULT_SPEC: TideWaterSpec = {
 
 /** 矩形陆地 → 圆盘样本（间距 ≤ 半径，外沿圆弧形成柔和的岸线）。 */
 /** step3 R3 · undulating island coast samples (matches shore-natural silhouette). */
-export function naturalCoast(cx: number, cz: number, width: number, depth: number, seed = 7): CoastSample[] {
+function naturalCoast(cx: number, cz: number, width: number, depth: number, seed = 7): CoastSample[] {
   const out: CoastSample[] = [];
   const r = 0.42;
   for (let i = 0; i < 64; i += 1) {

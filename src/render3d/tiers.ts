@@ -6,10 +6,10 @@
 export type RenderTierId = "high" | "medium" | "low";
 export type QualityPreference = "high" | "medium" | "auto";
 export type SaverPreference = "auto" | "on" | "off";
-export type TierSource = "query" | "settings" | "auto" | "runtime-downgrade";
+type TierSource = "query" | "settings" | "auto" | "runtime-downgrade";
 
-export const TIER_STORAGE_KEY = "godesk.render.tier";
-export const SAVER_STORAGE_KEY = "godesk.render.saver";
+const TIER_STORAGE_KEY = "godesk.render.tier";
+const SAVER_STORAGE_KEY = "godesk.render.saver";
 
 export type TierCaps = {
   id: RenderTierId;
@@ -118,7 +118,7 @@ export function writeSaverPreference(value: SaverPreference, storage: Pick<Stora
   storage.setItem(SAVER_STORAGE_KEY, value);
 }
 
-export function parseTierQuery(search: string): RenderTierId | null {
+function parseTierQuery(search: string): RenderTierId | null {
   const value = new URLSearchParams(search).get("tier");
   if (value === "high" || value === "medium" || value === "low") return value;
   return null;

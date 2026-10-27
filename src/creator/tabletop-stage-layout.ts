@@ -32,14 +32,14 @@ export function fallbackTabletopRender(kernel: TabletopStageProps["kernel"]): Ta
   const seat = (base: string) => ({ base, roughness: 0.48, metalness: 0.05, clearcoat: 0.28, pattern: "none" as const });
   const colors = kernel === "disc-flipping-v1" ? ["#1d1d1f", "#f4efe6", SEAT_COLORS[2], SEAT_COLORS[3]] : SEAT_COLORS;
   const desk = kernel === "gem-engine-v1" || kernel === "pattern-draft-v1" || kernel === "auction-bidding-v1";
-  const boardBase = kernel === "disc-flipping-v1" ? "#1f6b4a" : desk ? "#1a8a45" : "#b9a77d"; // T044 desk green felt
+  const boardBase = kernel === "disc-flipping-v1" ? "#1f6b4a" : desk ? "#1a8a45" : "#b9a77d"; // desk green felt
   return {
     camera: { ...SCENE_TOKENS.camera, ...(desk ? { fovDeg: 30, distance: 12.5 } : {}), pan: false },
     lighting: SCENE_TOKENS.lighting,
     water: { enabled: kernel === "harbor-voyage-v1", shallow: "#4aa8a8", deep: "#0e3a55" },
     materials: {
       ...Object.fromEntries(colors.map((base, index) => [`seat${index}`, seat(base)])),
-      table: { base: "#a87338", roughness: 0.74, metalness: 0.06, pattern: "grain" }, // T110
+      table: { base: "#a87338", roughness: 0.74, metalness: 0.06, pattern: "grain" },
       piece: { base: "#f7f1e6", roughness: desk ? 0.42 : 0.58, metalness: desk ? 0.08 : 0, clearcoat: desk ? 0.35 : 0.12, pattern: "none" },
       card: { base: "#f3e7d3", roughness: 0.72, metalness: 0, clearcoat: 0.08, pattern: "none" },
       resource: { base: "#e8d9b8", roughness: 0.48, metalness: 0.12, clearcoat: 0.28, pattern: "none" },

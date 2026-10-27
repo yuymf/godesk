@@ -6124,7 +6124,7 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
 .room-view-hex-island.room-view-seated .room-invitation-rich.is-collapsed .seat-picker-fallback {
   display: none !important;
 }
-/* UI-share-seat · never expose a second labeled seat <select> from the share rail */
+/* never expose a second labeled seat <select> from the share rail */
 .room-view-tidewell-immersive.room-view-seated .seat-picker-fallback,
 .room-invitation-rich[data-ui-share-ready="1"] .seat-picker-fallback {
   display: none !important;
@@ -7256,7 +7256,7 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   opacity: 0.85 !important;
 }
 
-/* UI-share-seat · tidewell immersive: fixed overlay (do not override T091 fixed with relative) */
+/* tidewell immersive: fixed overlay (do not override T091 fixed with relative) */
 .room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse,
 .room-view-tidewell-immersive.room-view-seated > .room-invitation[data-ui-share-ready="1"] {
   position: fixed !important;
@@ -7316,7 +7316,7 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   border-bottom: 1px solid var(--ui-chrome-on-light-border) !important;
 }
 
-/* UI-share-seat · keep floating sound FAB clipped on immersive (hud-polish iPhone) */
+/* keep floating sound FAB clipped on immersive (hud-polish iPhone) */
 .room-view-tidewell-immersive .room-sound-settings:not([data-open="1"]):not(:focus-within),
 .room-view-tidewell-immersive .room-sound-settings:not([data-open="1"]):not(:focus-within) .room-sound-settings-trigger {
   position: fixed !important;
@@ -7458,7 +7458,7 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   font-weight: 600;
 }
 
-/* UI-density-fill · P4 seat-rail-rich badges */
+/* P4 seat-rail-rich badges */
 .room-hud-seat-badges {
   display: flex;
   flex-wrap: wrap;
@@ -7649,7 +7649,7 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   opacity: 0.88;
 }
 
-/* UI-density-fill · P4 build-group shell + card-schema cost pips */
+/* P4 build-group shell + card-schema cost pips */
 .room-hud-build-group {
   min-width: 12rem;
 }

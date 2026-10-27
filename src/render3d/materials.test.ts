@@ -57,11 +57,11 @@ describe("G3D-07 materials", () => {
     const medium = createMaterial(GLOSSY_SEAT, { clearcoat: false });
     expect(medium).not.toBeInstanceOf(MeshPhysicalMaterial);
     expect(medium.roughness).toBeCloseTo(0.5);
-    // T104 · T090 seatMaterial keeps light clearcoat for chroma on felt (not r6tex matte)
+    // T090 seatMaterial keeps light clearcoat for chroma on felt (not r6tex matte)
     const seat = createMaterial(seatMaterial(0), { clearcoat: true });
     expect(seat).toBeInstanceOf(MeshPhysicalMaterial);
-    expect((seat as MeshPhysicalMaterial).clearcoat).toBeCloseTo(0.12); // T265
-    // T261 · brush terrain oil-film → MeshPhysical even when tier clearcoat flag is off
+    expect((seat as MeshPhysicalMaterial).clearcoat).toBeCloseTo(0.12);
+    // brush terrain oil-film → MeshPhysical even when tier clearcoat flag is off
     const oil = createMaterial(TERRAIN_MATERIALS.wood!, { clearcoat: false });
     expect(oil).toBeInstanceOf(MeshPhysicalMaterial);
     expect((oil as MeshPhysicalMaterial).clearcoat).toBeGreaterThan(0.3);
@@ -149,7 +149,7 @@ describe("G3D-07 environment reflections", () => {
     library.setEnvironment(env, 0.2);
     expect(glossy.envMap).toBe(env);
     expect(glossy.envMapIntensity).toBe(0.2);
-    // T261 · oil-film terrain roughness ≤ ENV_REFLECTION_MAX → catches RoomEnvironment
+    // oil-film terrain roughness ≤ ENV_REFLECTION_MAX → catches RoomEnvironment
     expect(tile.envMap).toBe(env);
     const robber = library.get("robber", PROP_MATERIALS.robber);
     expect(robber.envMap).toBeNull();
@@ -161,7 +161,7 @@ describe("G3D-07 environment reflections", () => {
     const tile = createMaterial(TERRAIN_MATERIALS.sheep!, { clearcoat: false });
     expect(tile.defines?.GD_BRUSH).toBe(1);
     expect(tile.customProgramCacheKey()).toBe("gd-pattern-4-brush-t261");
-    // T261 · oil-film MeshPhysical clearcoat on brush terrain
+    // oil-film MeshPhysical clearcoat on brush terrain
     expect(tile.type).toBe("MeshPhysicalMaterial");
     expect((tile as import("three").MeshPhysicalMaterial).clearcoat).toBeGreaterThan(0.3);
     const shader = compile(tile);

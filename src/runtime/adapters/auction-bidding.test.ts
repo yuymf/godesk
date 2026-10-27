@@ -81,7 +81,7 @@ describe("auction-bidding-v1", () => {
 });
 
 
-describe("auction-bidding-v1 harbor subset (T007)", () => {
+describe("auction-bidding-v1 harbor subset", () => {
   const harborCfg = createAuctionBiddingKernelConfig({
     content: defaultHarborContent({ startingFunds: 30, bidVisibility: "open" }),
   });
@@ -189,7 +189,7 @@ describe("auction-bidding-v1 harbor subset (T007)", () => {
   });
 });
 
-describe("auction-bidding-v1 gallery subset (T012)", () => {
+describe("auction-bidding-v1 gallery subset", () => {
   const galleryCfg = createAuctionBiddingKernelConfig({
     galleryContent: defaultGalleryContent({ startingFunds: 100, salesToEndRound: 2 }),
   });

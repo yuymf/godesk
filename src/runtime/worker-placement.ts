@@ -1,6 +1,6 @@
 /** Source-parameterized worker-placement kernel (honest subset; not harbor-as-universal). */
 
-export type WorkerPlacementRegion = {
+type WorkerPlacementRegion = {
   id: string;
   name: string;
   capacity: number;
@@ -15,7 +15,7 @@ export type WorkerPlacementRegion = {
   convertWoodToBuilding?: number;
 };
 
-export type WorkerPlacementPlayer = {
+type WorkerPlacementPlayer = {
   seat: number;
   name: string;
   color: string;
@@ -26,14 +26,14 @@ export type WorkerPlacementPlayer = {
   buildings: number;
 };
 
-export type WorkerPlacementRecord = {
+type WorkerPlacementRecord = {
   id: string;
   seat: number;
   regionId: string;
   cost: number;
 };
 
-export type WorkerPlacementPhase = "placement" | "resolved";
+type WorkerPlacementPhase = "placement" | "resolved";
 
 export type WorkerPlacementState = {
   phase: WorkerPlacementPhase;

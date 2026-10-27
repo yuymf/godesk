@@ -14,7 +14,7 @@ import {
 } from "three";
 import type { WaterTierFeatures } from "./tiers";
 
-export type TideWaterUniforms = {
+type TideWaterUniforms = {
   uTideTime: IUniform<number>;
   uTideDist: IUniform<Texture | null>;
   uTideHalf: IUniform<number>;
@@ -143,7 +143,7 @@ const FRAG_COLOR = [
   "  strokeGate *= smoothstep(0.18, 0.6, foamN2);",
   // Shore foam fringe (settlecoast): white hug at wet-foot ↔ water only. uTideShoreFoam gates
   // intensity by tier (high strong / medium faint / low 0). Open-ocean lace stays dim.
-  // T266 · wider wet-sand contact band (shore seam, not vignette)
+  // wider wet-sand contact band (shore seam, not vignette)
   "  float shoreMask = 1.0 - smoothstep(0.0, 0.11, d);",
   "  float wetSandMask = (1.0 - smoothstep(0.01, 0.18, d)) * smoothstep(0.0, 0.02, d);",
   "  float shoreBreak = mix(0.5, 1.0, foamN) * mix(0.6, 1.0, foamN2);",
@@ -158,7 +158,7 @@ const FRAG_COLOR = [
   "  float ridges = (r1 * 1.15 + r2 * 0.95 + r3 * 0.6 + r4 * 0.3) * uTideFoam * mix(0.45, 1.0, strokeGate) * (0.6 + 0.85 * uTideShoreFoam);",
   "  float lace = (rLace * 0.22 + rSpray * 0.08) * uTideFoam * strokeGate * (0.3 + 0.35 * foamN);",
   "  float crest = r1 * mix(0.2, 0.95, strokeGate) * uTideFoam * (0.75 + 0.7 * uTideShoreFoam) * (0.65 + 0.35 * foamN3);",
-  "  waterCol = mix(waterCol, vec3(0.94, 0.86, 0.62), clamp(wetSandMask * (1.25 + 0.55 * uTideShoreFoam), 0.0, 0.95)); // T266 wet sand HARD",
+  "  waterCol = mix(waterCol, vec3(0.94, 0.86, 0.62), clamp(wetSandMask * (1.25 + 0.55 * uTideShoreFoam), 0.0, 0.95)); // wet sand HARD",
   "  waterCol = mix(waterCol, vec3(0.85, 0.93, 0.91), foamSoft);",
   "  waterCol = mix(waterCol, vec3(0.97, 0.99, 0.98), clamp(shoreHug * 1.45, 0.0, 1.0)); // T266",
   "  waterCol = mix(waterCol, vec3(0.92, 0.97, 0.95), clamp(ridges, 0.0, 0.95) * (0.5 + 0.5 * foamN));",
@@ -175,7 +175,7 @@ const FRAG_NORMAL = [
   "}",
 ].join("\n");
 
-export type TideWaterMaterialBundle = {
+type TideWaterMaterialBundle = {
   material: MeshStandardMaterial;
   uniforms: TideWaterUniforms;
   setOwnedTexture(slot: "uTideDist" | "uTideNormal" | "uTideFoamMap", next: Texture | null): void;

@@ -16,8 +16,8 @@
 import type { StoredSharedSession } from "./public-urls";
 
 export const AI_TURN_PREFIX = "ai-turn:";
-export const AI_THINK_MS_DEFAULT = 900;
-export const AI_THINK_MS_MAX = 5_000;
+const AI_THINK_MS_DEFAULT = 900;
+const AI_THINK_MS_MAX = 5_000;
 /** Safety valve: never let one AI seat take more than this many actions in a row. */
 export const AI_MAX_CONSECUTIVE_ACTIONS = 200;
 

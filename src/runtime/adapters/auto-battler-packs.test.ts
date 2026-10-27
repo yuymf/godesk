@@ -22,7 +22,7 @@ describe("auto-battler packs", () => {
     expect(patch.traits?.every((t) => !["潮汐", "珊瑚咒", "远航", "硬壳"].includes(t.label))).toBe(true);
   });
 
-  it("packMentionsAutoBattler ignores negated 自走棋 (T004)", () => {
+  it("packMentionsAutoBattler ignores negated 自走棋", () => {
     expect(packMentionsAutoBattler("星际物流竞速（非自走棋默认包）。星港节点派车运货")).toBe(false);
     expect(packMentionsAutoBattler("做一款两人自走棋，商店买棋上阵")).toBe(true);
     expect(packMentionsAutoBattler("这不是已有 auto-battler 默认包能冒充的题材；星港物流")).toBe(false);

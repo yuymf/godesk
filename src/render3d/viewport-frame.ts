@@ -20,7 +20,7 @@ export const DEFAULT_DESKTOP_FRAME: Required<ViewportFrame> = {
   // R24：对齐 settlecoast 源码默认 φ≈54° / θ≈11.5°；FOV 锁 40°。
   // R27：fill 0.96→0.945，略松留白贴 settlecoast（勿再挤向 0.98）。
   fill: 0.945,
-  polarDeg: 56, // T265 · product thickness (cornerCalm soft2)
+  polarDeg: 56, // product thickness (cornerCalm soft2)
   azimuthDeg: 12,
   fovDeg: 40,
 };

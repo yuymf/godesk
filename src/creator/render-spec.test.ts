@@ -48,13 +48,13 @@ describe("defaultRenderSpec", () => {
     });
     expect(hex.lighting.sun.intensity).toBeGreaterThan(5.0);
     expect(hex.lighting.exposure).toBeGreaterThan(1.5);
-    expect(hex.materials.seat0.base).toBe("#d49088"); // T265
+    expect(hex.materials.seat0.base).toBe("#d49088");
     expect(hex.bindings.map((binding) => binding.objectKind)).toEqual(expect.arrayContaining([
       "tile-wood", "tile-desert", "number-token", "settlement", "city", "road", "robber",
     ]));
     expect(render("disc-flipping-v1").water.enabled).toBe(false);
     expect(render("disc-flipping-v1").bindings.map((binding) => binding.objectKind)).toEqual(["cell", "disc"]);
-    expect(render("network-route-v1").preset).toBe("tabletop-day"); // T046 train-route desk, not parchment pad
+    expect(render("network-route-v1").preset).toBe("tabletop-day"); // train-route desk, not parchment pad
     expect(render(null).bindings.map((binding) => binding.objectKind)).toEqual(expect.arrayContaining([
       "region", "resource", "card", "character", "token", "location", "concept", "object",
     ]));

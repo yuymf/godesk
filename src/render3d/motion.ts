@@ -27,10 +27,7 @@ export const MOTION_MS = {
   camera: 600,
 } as const;
 
-export type MotionKind = keyof typeof MOTION_MS;
-
-/** User drag within this window suppresses automatic camera reframes (§4.5). */
-export const CAMERA_DRAG_GRACE_MS = 3000;
+type MotionKind = keyof typeof MOTION_MS;
 
 export function prefersReducedMotion(
   win: Pick<Window, "matchMedia"> | undefined = typeof window === "undefined" ? undefined : window,
@@ -46,7 +43,7 @@ export function motionDurationMs(kind: MotionKind, reduced: boolean): number {
   return reduced ? 0 : MOTION_MS[kind];
 }
 
-export type MotionLogEntry = {
+type MotionLogEntry = {
   kind: MotionKind;
   id: string;
   durationMs: number;
@@ -57,7 +54,7 @@ export type MotionLogEntry = {
 type MotionLogHost = { __g3dMotionLog?: MotionLogEntry[] };
 
 /** Bounded in-page log (read by e2e: `window.__g3dMotionLog`). */
-export function recordMotion(entry: MotionLogEntry): void {
+function recordMotion(entry: MotionLogEntry): void {
   const host = globalThis as MotionLogHost;
   const log = (host.__g3dMotionLog ??= []);
   log.push(entry);
@@ -78,7 +75,7 @@ export function dieFaceEuler(face: number | null | undefined): SceneVec3 {
   return DIE_FACE_EULER[face ?? 1] ?? DIE_FACE_EULER[1]!;
 }
 
-export type DiceKeyframe = {
+type DiceKeyframe = {
   /** Normalised time 0..1. */
   t: number;
   rotation: SceneVec3;
@@ -201,7 +198,7 @@ export function applyDieOrientation(object: Object3D, face: number | null | unde
   object.quaternion.copy(_yawQ.multiply(_faceQ));
 }
 
-export type MotionControllerOptions = {
+type MotionControllerOptions = {
   reduced?: () => boolean;
   now?: () => number;
 };

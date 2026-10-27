@@ -73,7 +73,7 @@ export function mechanicsCapabilityGap(mechanics: readonly string[], kernelType?
 /** Mechanic cue patterns — matched only when cueMatchIsPositive (T004 negation). */
 const MECHANIC_CUES: Array<{ id: string; cues: RegExp }> = [
   { id: "auction-bidding", cues: /拍卖|竞价|出价|\bauction\b|\bbid(?:s|ding)?\b/i },
-  // T010: gem-token / development-discount / noble prestige engine.
+  // gem-token / development-discount / noble prestige engine.
   { id: "gem-engine", cues: /宝石(?:代币|引擎)?|发展牌|永久折扣|贵族|声望\s*\d*|gem\s*engine|prestige\s*(?:points?|target)|development\s*cards?|nobles?\b/i },
   { id: "hex-settlement", cues: /汐屿|\btidewell\b|hex[- ]?island|六角.*(?:资源|建造)|hex.*(?:resource|build)/i },
   { id: "disc-flipping", cues: /\bothello\b|\breversi\b|黑白棋|翻转棋|翻子|flipp?ing.*dis[ck]|dis[ck].*flipp?ing/i },
@@ -83,7 +83,7 @@ const MECHANIC_CUES: Array<{ id: string; cues: RegExp }> = [
     // Ticket-to-ride / rail cues (T008): 车票·车厢·认领路线·铺线·铁道 — not logistics-only.
     cues: /线路网络|路线连接|铺设路线|连接城市|星港|物流|货运|运货|派车|星图节点|车票|车厢|认领路线|铺线|铁道|route\s*network|connect(?:ing)?\s+cities|claim(?:ing)?\s+routes|\blogistics\b|\bconvoy\b|train\s*cars?|destination\s*tickets?/i,
   },
-  // T013: factory draft / pattern lines / wall tiling.
+  // factory draft / pattern lines / wall tiling.
   {
     id: "pattern-draft",
     cues: /工厂(?:展示)?(?:盘)?|准备行|纹样墙|地板(?:扣分)?|factory\s+(?:displays?|tiles?)|pattern\s*(?:wall|lines?)|floor\s*line|wall\s*tiling|中心(?:区|堆)/i,

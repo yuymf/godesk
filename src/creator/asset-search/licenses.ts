@@ -12,13 +12,13 @@ export const LICENSE_WHITELIST = [
 
 export type LicenseSpdx = (typeof LICENSE_WHITELIST)[number];
 
-export const LICENSES_TABLE_HEADER =
+const LICENSES_TABLE_HEADER =
   "| 资产 id | 文件路径 | 名称 | 来源类型 | 来源 URL | 许可证 SPDX | 作者 | 获取日期 | 是否修改 | 修改说明 | 使用任务 |";
 
-export const LICENSES_TABLE_DIVIDER =
+const LICENSES_TABLE_DIVIDER =
   "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |";
 
-export const LICENSES_PREAMBLE = `# 资产许可证登记册（assets/LICENSES.md）
+const LICENSES_PREAMBLE = `# 资产许可证登记册（assets/LICENSES.md）
 
 本表按 SPEC §5.4：每个资产文件 1 行。Game Project 导入的外部素材写在 \`assets/imported/\`。
 提升进仓库 Tidewell 套件时，须同步登记 \`src/render3d/assets/manifest.ts\`，否则 \`pnpm verify:assets\` 会失败。
@@ -35,25 +35,25 @@ const SOURCE_TYPE: Record<LicenseSpdx, string> = {
   "LicenseRef-AI-Generated": "AI生成",
 };
 
-export interface MappedLicense {
+interface MappedLicense {
   spdx: LicenseSpdx;
   sourceType: string;
   attributionRequired: boolean;
 }
 
-export interface ImportRefusal {
+interface ImportRefusal {
   ok: false;
   reason: string;
 }
 
-export interface ImportReady {
+interface ImportReady {
   ok: true;
   license: MappedLicense;
 }
 
-export type ImportEligibility = ImportReady | ImportRefusal;
+type ImportEligibility = ImportReady | ImportRefusal;
 
-export function sanitizeCell(value: string): string {
+function sanitizeCell(value: string): string {
   const trimmed = value.replace(/\s+/g, " ").replace(/\|/g, "/").trim();
   return trimmed.length > 0 ? trimmed : "无";
 }
@@ -114,7 +114,7 @@ export function importedAssetFolder(asset: Pick<AssetServerAsset, "provider" | "
   return `assets/imported/${importedAssetId(asset).slice("imported/".length)}`;
 }
 
-export function licenseRowCells(input: {
+function licenseRowCells(input: {
   id: string;
   filePath: string;
   title: string;
@@ -142,7 +142,7 @@ export function licenseRowCells(input: {
   ];
 }
 
-export function formatLicenseRow(cells: string[]): string {
+function formatLicenseRow(cells: string[]): string {
   if (cells.length !== 11) {
     throw new Error(`LICENSES 行列数必须为 11，实际 ${cells.length}。`);
   }

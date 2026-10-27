@@ -19,7 +19,7 @@ describe("NetworkRouteBoard", () => {
       }),
     );
     expect(html).toContain('aria-label="线路网络盘"');
-    // T189+ desk-stage HUD / drawer chrome (immersive tabletop-first)
+    // desk-stage HUD / drawer chrome (immersive tabletop-first)
     expect(html).toContain("desk-stage-hud");
     expect(html).toContain("轮到你铺线");
     expect(html).toContain("已铺路线");

@@ -26,28 +26,28 @@ import {
 } from "./auto-battler-content";
 import type { CombatVfxEntry } from "./auto-battler-vfx";
 
-export const AUTO_BATTLER_KERNEL_TYPE = "auto-battler-v1" as const;
+const AUTO_BATTLER_KERNEL_TYPE = "auto-battler-v1" as const;
 
 /** Own half: 7 columns × 2 rows (row 0 = front, at the tide line). */
 export const BOARD_COLS = 7;
 export const BOARD_ROWS = 2;
 export const BOARD_SLOTS = BOARD_COLS * BOARD_ROWS;
 export const BENCH_SLOTS = 5;
-export const SHOP_SIZE = 5;
-export const START_GOLD = 10;
+const SHOP_SIZE = 5;
+const START_GOLD = 10;
 export const REFRESH_COST = 1;
-export const BASE_INCOME = 5;
+const BASE_INCOME = 5;
 export const START_HP = 20;
-export const START_LEVEL = 3;
+const START_LEVEL = 3;
 export const MAX_LEVEL = 9;
 /** Gold cost to buy XP (TFT-style 「升级」). */
 export const BUY_XP_COST = 4;
 /** XP granted per purchase; level-up when xp >= xpToNext(level). */
-export const XP_PER_BUY = 4;
-export const MAX_COMBAT_TICKS = 64;
-export const SELL_REFUND_RATIO = 0.5;
+const XP_PER_BUY = 4;
+const MAX_COMBAT_TICKS = 64;
+const SELL_REFUND_RATIO = 0.5;
 export const PREP_SHOP_SECONDS = 45;
-export const PREP_PLACE_SECONDS = 30;
+const PREP_PLACE_SECONDS = 30;
 
 /** Injectable clock for deterministic prep-timer tests. */
 export let autoBattlerNow: () => number = () => Date.now();
@@ -69,14 +69,14 @@ export function boardCap(level: number, slots: number = BOARD_SLOTS): number {
 }
 
 /** Star multiplier from the active content's star rules (default ★★ ×1.8, ★★★ ×3.2). */
-export function starMult(stars: number, content: AutoBattlerContent = active.content): number {
+function starMult(stars: number, content: AutoBattlerContent = active.content): number {
   if (stars >= 3) return content.stars.mult3;
   if (stars >= 2) return content.stars.mult2;
   return 1;
 }
 
 export type TraitId = string;
-export type StarLevel = 1 | 2 | 3;
+type StarLevel = 1 | 2 | 3;
 export type { UnitDef, TraitDef, AutoBattlerContent, AutoBattlerContentPatch };
 
 type ResolvedContent = {
@@ -101,7 +101,7 @@ const DEFAULT_RESOLVED = indexContent(DEFAULT_AUTO_BATTLER_CONTENT);
 let active: ResolvedContent = DEFAULT_RESOLVED;
 const resolvedCache = new WeakMap<AutoBattlerContent, ResolvedContent>();
 
-export function withAutoBattlerContent<T>(content: AutoBattlerContent | undefined, fn: () => T): T {
+function withAutoBattlerContent<T>(content: AutoBattlerContent | undefined, fn: () => T): T {
   if (!content || content === active.content) return fn();
   let resolved = resolvedCache.get(content);
   if (!resolved) {
@@ -136,7 +136,7 @@ export type Piece = {
   maxHp: number;
 };
 
-export type SeatState = {
+type SeatState = {
   gold: number;
   hp: number;
   level: number;
@@ -147,7 +147,7 @@ export type SeatState = {
   ready: boolean;
 };
 
-export type CombatLogEntry =
+type CombatLogEntry =
   | { kind: "combat_start"; round: number }
   | { kind: "strike"; attackerUid: string; targetUid: string; damage: number; targetHp: number; crit?: boolean; splash?: boolean }
   | { kind: "heal"; uid: string; amount: number; targetHp: number }
@@ -160,7 +160,7 @@ export type CombatLogEntry =
  * Creator-tunable genre knobs (generic auto-battler rules, not roster content).
  * Every field is optional; omitted fields fall back to the kernel defaults.
  */
-export type AutoBattlerTuning = {
+type AutoBattlerTuning = {
   prepShopSeconds?: number;
   prepPlaceSeconds?: number;
   startHp?: number;
@@ -182,7 +182,7 @@ export const AUTO_BATTLER_TUNING_LIMITS: Record<keyof AutoBattlerTuning, { min: 
 };
 
 /** Resolve board half size from tuning (falls back to defaults). */
-export function boardDims(tuning?: AutoBattlerTuning | null): { cols: number; rows: number; slots: number } {
+function boardDims(tuning?: AutoBattlerTuning | null): { cols: number; rows: number; slots: number } {
   const cols = tuning?.boardCols ?? BOARD_COLS;
   const rows = tuning?.boardRows ?? BOARD_ROWS;
   return { cols, rows, slots: cols * rows };
@@ -201,7 +201,7 @@ export function normalizeAutoBattlerTuning(raw: unknown): AutoBattlerTuning | nu
   return out;
 }
 
-export type AutoBattlerConfig = { playerCount: number; tuning?: AutoBattlerTuning; content?: AutoBattlerContent };
+type AutoBattlerConfig = { playerCount: number; tuning?: AutoBattlerTuning; content?: AutoBattlerContent };
 
 export type AutoBattlerGenre = {
   round: number;
@@ -215,7 +215,7 @@ export type AutoBattlerGenre = {
   tuning?: AutoBattlerTuning;
 };
 
-export type AutoBattlerPhase = "shop" | "place" | "ended";
+type AutoBattlerPhase = "shop" | "place" | "ended";
 
 function parseAutoBattlerConfig(
   raw: Record<string, unknown>,
@@ -1238,7 +1238,7 @@ export function autoPlayAutoBattlerGame(seed: number, maxActions = 200) {
 type WirePiece = Omit<Piece, "stars"> & { stars?: number };
 
 /** Session blob shape (synergies.trait may be widened to string across the wire). */
-export type AutoBattlerSessionBlob = {
+type AutoBattlerSessionBlob = {
   phase: AutoBattlerPhase;
   round: number;
   prepEndsAt?: number;

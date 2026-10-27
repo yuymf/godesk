@@ -11,7 +11,7 @@ import type { MaterialToken } from "../render3d/tokens";
 type Ref<T> = { current: T };
 type Kit = { pieceGeometry: (kind: "robber" | "settlement" | "city" | "road", seat?: number) => import("three").BufferGeometry };
 
-export type JudgeMotionCtx = {
+type JudgeMotionCtx = {
   registryRef: Ref<Map<string, Object3D>>;
   contentRootRef: Ref<Object3D | null>;
   cameraRef: Ref<PlayCamera | null>;

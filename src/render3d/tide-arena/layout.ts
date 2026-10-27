@@ -18,11 +18,11 @@ export let BENCH_Z = BOARD_Z + FRAME_D / 2 + (CELL + 0.4) / 2;
 export const BENCH_TOP = 0.32;
 
 /** Own-half rows currently in effect. */
-export function arenaHalfRows(): number {
+function arenaHalfRows(): number {
   return ARENA_ROWS / 2;
 }
 
-export function arenaHalfSlots(): number {
+function arenaHalfSlots(): number {
   return ARENA_COLS * arenaHalfRows();
 }
 
@@ -93,7 +93,7 @@ export function dragAction(
   return null;
 }
 
-export type LegalDropOpts = {
+type LegalDropOpts = {
   boardFull?: boolean;
 };
 

@@ -1,9 +1,9 @@
 /** step3 · generic tabletop ortho framing (汐屿 φ54/az12/fill0.945). */
 import type { SceneVec3 } from "./scene-model";
 
-export type HudInsetsPx = { top: number; bottom: number; left: number; right: number };
+type HudInsetsPx = { top: number; bottom: number; left: number; right: number };
 
-export type TabletopOrthoInput = {
+type TabletopOrthoInput = {
   points: readonly SceneVec3[];
   polarDeg: number;
   azimuthDeg: number;
@@ -18,7 +18,7 @@ export type TabletopOrthoInput = {
   focus?: SceneVec3;
 };
 
-export type TabletopOrthoFrame = {
+type TabletopOrthoFrame = {
   position: SceneVec3;
   target: SceneVec3;
   left: number;

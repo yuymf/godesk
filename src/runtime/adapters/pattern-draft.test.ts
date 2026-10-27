@@ -15,7 +15,7 @@ import { readFileSync } from "node:fs";
 
 const config = createPatternDraftKernelConfig();
 
-describe("pattern-draft-v1 (T013)", () => {
+describe("pattern-draft-v1", () => {
   it("registers capabilities", () => {
     expect(KERNEL_CAPABILITIES["pattern-draft-v1"]).toEqual([
       "factory-draft",
@@ -82,7 +82,7 @@ describe("pattern-draft-v1 (T013)", () => {
 });
 
 
-describe("pattern-draft-v1 end bonuses (T018)", () => {
+describe("pattern-draft-v1 end bonuses", () => {
   const bonuses = defaultPatternDraftContent().endBonuses;
 
   it("scores complete rows (+2 each)", () => {
@@ -139,7 +139,7 @@ describe("pattern-draft-v1 end bonuses (T018)", () => {
   });
 });
 
-describe("pattern-draft-v1 multi-seat (T019)", () => {
+describe("pattern-draft-v1 multi-seat", () => {
   it("boots 3 and 4 seats with scaled factories", () => {
     for (const n of [3, 4] as const) {
       const cfg = createPatternDraftKernelConfig({ playerCount: n });

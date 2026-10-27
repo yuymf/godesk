@@ -6,7 +6,7 @@
 import { lazy, Suspense } from "react";
 import type { RenderSpec } from "./render-spec";
 
-export type TabletopKernelType =
+type TabletopKernelType =
   | "disc-flipping-v1"
   | "network-route-v1"
   | "worker-placement-v1"

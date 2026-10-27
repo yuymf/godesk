@@ -19,7 +19,7 @@ export type LiveFloorLot<TPayload = unknown> = {
   payload: TPayload;
 };
 
-export type FloorSettle = "continue" | "award" | "unsold";
+type FloorSettle = "continue" | "award" | "unsold";
 
 export function createLiveFloorLot<T>(input: {
   lotId: string;

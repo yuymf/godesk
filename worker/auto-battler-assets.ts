@@ -11,7 +11,7 @@ export type AssetAttachIntent =
   | { kind: "imported"; unitHint: string; nameHint?: string }
   | { kind: "procedural"; unitHint?: string; allFallbacks?: boolean };
 
-export type AssetPipelineReport = {
+type AssetPipelineReport = {
   searched: string[];
   attached: Array<{ unitId: string; unitName: string; modelRef: string; title?: string; via: "search" | "imported" }>;
   fallback: Array<{ unitId: string; unitName: string; proceduralPreset: string; reason: string }>;

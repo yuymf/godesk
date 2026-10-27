@@ -16,7 +16,7 @@ import type { ProjectRecord } from "./project-operations";
 
 const LICENSES_SOURCE_NAME = "assets/LICENSES.md";
 
-export interface DecodedImportFile {
+interface DecodedImportFile {
   path: string;
   mimeType: string;
   bytes: Uint8Array;
@@ -45,7 +45,7 @@ export function decodeImportFiles(files: ImportedAssetFile[]): DecodedImportFile
   return decoded;
 }
 
-export function safeImportedPath(relativePath: string): string {
+function safeImportedPath(relativePath: string): string {
   const normalized = relativePath.replace(/\\/g, "/").replace(/^\/+/, "");
   const path = normalized.startsWith("assets/imported/")
     ? normalized

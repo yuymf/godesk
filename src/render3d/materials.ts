@@ -18,13 +18,13 @@ import type { MaterialPattern, MaterialToken, PbrSetId } from "./tokens";
 import { TILE_FACE_APOTHEM } from "./tokens";
 
 /** R21 soft hex-edge band: max share the top-face albedo eases toward the shared light earth tone (× brush). R22: 0.45 → 0.25. */
-export const SOFT_EDGE_STRENGTH = 0.82; // T250 · kraft paperboard side-lip read
+export const SOFT_EDGE_STRENGTH = 0.82; // kraft paperboard side-lip read
 /** T254 · thin cut-edge highlight band (paperboard lip catch-light). */
-export const HEX_EDGE_HIGHLIGHT = 1.0;
+const HEX_EDGE_HIGHLIGHT = 1.0;
 /** R22: terrain albedo saturation (1 = texture as-is; R19–R21 used 0.86, a 14% pull toward grey). */
-export const TERRAIN_SATURATION = 2.70; // T254 · product terrain chroma (test ≤2.70)
+export const TERRAIN_SATURATION = 2.70; // product terrain chroma (test ≤2.70)
 /** R22 hairline seam; R23: 0.006 → 0.002 (whole-board a no longer chessboard). */
-export const SEAM_HALF_WIDTH = 0.006; // T254 · readable pressed seam (test ≤0.006)
+export const SEAM_HALF_WIDTH = 0.006; // readable pressed seam (test ≤0.006)
 
 export const PATTERN_IDS: Record<MaterialPattern, number> = {
   none: 0,
@@ -38,9 +38,9 @@ export const PATTERN_IDS: Record<MaterialPattern, number> = {
 /** 贴图到达后 pattern 保留的强度（只做细节扰动）。 */
 /** R17: oil-paint continuous brush under PBR — hex faces read as painted color fields, not flat plastic.
  *  R18: 0.42 → 0.5 (painted fields read at a glance in default a/b cameras). */
-export const PATTERN_STRENGTH_WITH_PBR = 0.98; // T257 · oil-paint dab read under albedo
+export const PATTERN_STRENGTH_WITH_PBR = 0.98; // oil-paint dab read under albedo
 /** 贴图到达后底色向白色混合的比例：保留地形色相，又不让贴图被压暗。 */
-export const PBR_TINT_TO_WHITE = 0.10; // T245 · let KTX2 albedo carry wood/paperboard
+export const PBR_TINT_TO_WHITE = 0.10; // let KTX2 albedo carry wood/paperboard
 
 const PATTERN_GLSL = /* glsl */ `
 varying vec3 vGdWorld;
@@ -61,7 +61,7 @@ float gdFbm(vec2 p) {
 }
 float gdPattern(vec3 w) {
 #if GD_PATTERN == 1
-  // T245 · lathe-turned wood: concentric ring bands + pith darkening + pore clusters (chip/plaque read)
+  // lathe-turned wood: concentric ring bands + pith darkening + pore clusters (chip/plaque read)
   float n = gdNoise(vec2(w.x * 1.8, w.z * 11.0));
   float radial = length(w.xz + vec2(n * 0.08, -n * 0.05));
   float ring = sin(radial * 52.0 + n * 3.5);
@@ -71,14 +71,14 @@ float gdPattern(vec3 w) {
   float poreCluster = smoothstep(0.55, 0.95, pore) * 0.35;
   return 0.42 + 0.38 * ring + 0.18 * ring2 - pith * 0.22 - poreCluster;
 #elif GD_PATTERN == 2
-  // T245/T249 · pressed felt / paperboard: brighter pulp (readable tabletop, not burnt)
+  // pressed felt / paperboard: brighter pulp (readable tabletop, not burnt)
   vec2 pulp = w.xz * 22.0;
   float strand = sin(pulp.x * 1.7 + gdNoise(pulp * 0.35) * 2.4) * cos(pulp.y * 0.55);
   float dimple = gdNoise(floor(w.xz * 14.0) * 1.7);
   float nap = gdFbm(w.xz * 9.0);
   return mix(0.42, 0.92, 0.5 + 0.5 * strand) + (dimple - 0.5) * 0.22 + (nap - 0.5) * 0.16;
 #elif GD_PATTERN == 3
-  // T245 · sedimentary stone strata + fracture
+  // sedimentary stone strata + fracture
   float strata = sin(w.y * 28.0 + gdFbm(w.xz * 1.4) * 4.0);
   float rock = gdFbm(w.xz * 3.2 + w.y * 1.4);
   float fracture = abs(sin(w.x * 11.0 + w.z * 7.0 + rock * 2.0));
@@ -199,17 +199,17 @@ export function installPattern(material: MeshStandardMaterial, pattern: Material
                 // top face only — tile sides keep their own darker material so cliffs / shoreline stay readable
                 "float gdTop = smoothstep(0.5, 0.9, vGdUp);",
                 "gdEdge = gdEdge * gdEdge * (0.7 + 0.6 * gdB.x) * gdTop;",
-                // T254 · thin cut-edge highlight just inside kraft lip (pinchable paperboard)
+                // thin cut-edge highlight just inside kraft lip (pinchable paperboard)
                 `float gdHi = smoothstep(${(TILE_FACE_APOTHEM - 0.36).toFixed(4)}, ${(TILE_FACE_APOTHEM - 0.03).toFixed(4)}, gdHexM) * (1.0 - smoothstep(${(TILE_FACE_APOTHEM - 0.03).toFixed(4)}, ${TILE_FACE_APOTHEM.toFixed(4)}, gdHexM)) * gdTop;`,
                 `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 1.0, 0.95), clamp(gdHi, 0.0, 1.0) * ${HEX_EDGE_HIGHLIGHT.toFixed(2)} * uGdBrush);`,
                 // R22: band strength 0.45 → 0.25 (faded halo gone; tiles keep their own colour up to the edge).
-                `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.16, 0.08, 0.04), clamp(gdEdge, 0.0, 1.0) * ${SOFT_EDGE_STRENGTH.toFixed(2)} * uGdBrush);`, // T254 kraft paperboard
-                "diffuseColor.rgb *= 1.0 - clamp(gdEdge, 0.0, 1.0) * 0.18 * uGdBrush;", // T254 pressed lip (keep highlight)
+                `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.16, 0.08, 0.04), clamp(gdEdge, 0.0, 1.0) * ${SOFT_EDGE_STRENGTH.toFixed(2)} * uGdBrush);`, // kraft paperboard
+                "diffuseColor.rgb *= 1.0 - clamp(gdEdge, 0.0, 1.0) * 0.18 * uGdBrush;", // pressed lip (keep highlight)
                 // R22: faces touch (TILE_FACE_RADIUS 1.0). R23: seam narrower (0.002) + ground-coloured
                 // (slight self-darken, not bright sandy paths) so camera a no longer reads as a chessboard.
                 "float gdSeamFw = max(fwidth(gdHexM), 1e-4);",
                 `float gdSeam = smoothstep(${(TILE_FACE_APOTHEM - SEAM_HALF_WIDTH).toFixed(4)} - gdSeamFw, ${(TILE_FACE_APOTHEM - SEAM_HALF_WIDTH).toFixed(4)} + gdSeamFw * 0.5, gdHexM) * gdTop;`,
-                "diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.48, gdSeam * 0.85);", // T254 pressed seam
+                "diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.48, gdSeam * 0.85);", // pressed seam
               ]
             : []),
         ].join("\n"),
@@ -218,10 +218,10 @@ export function installPattern(material: MeshStandardMaterial, pattern: Material
         "#include <roughnessmap_fragment>",
         [
           "#include <roughnessmap_fragment>",
-          "roughnessFactor = clamp(roughnessFactor + (gdP - 0.5) * 0.55 * uGdPattern, 0.04, 1.0);", // T245
+          "roughnessFactor = clamp(roughnessFactor + (gdP - 0.5) * 0.55 * uGdPattern, 0.04, 1.0);",
           ...(brush > 0
             ? [
-                // T261 · wet oil film: dab peaks slightly glossier under clearcoat
+                // wet oil film: dab peaks slightly glossier under clearcoat
                 "vec3 gdBr = gdBrushStroke(vGdWorld);",
                 "roughnessFactor = clamp(roughnessFactor - (gdBr.x - 0.5) * 0.38 * uGdBrush * gdBr.z, 0.04, 1.0);",
               ]
@@ -233,7 +233,7 @@ export function installPattern(material: MeshStandardMaterial, pattern: Material
         brush > 0
           ? [
               "#include <normal_fragment_maps>",
-              // T261 · impasto: recompute dab field → bend shading normal (mesh-feel continuous oil)
+              // impasto: recompute dab field → bend shading normal (mesh-feel continuous oil)
               "vec3 gdBn = gdBrushStroke(vGdWorld);",
               "float gdTopN = smoothstep(0.5, 0.9, vGdUp);",
               "float gdNx = dFdx(gdBn.x) * 42.0 * uGdBrush * gdBn.z * gdTopN;",
@@ -247,7 +247,7 @@ export function installPattern(material: MeshStandardMaterial, pattern: Material
   return strength;
 }
 
-export type MaterialFeatures = {
+type MaterialFeatures = {
   /** high 档：座位棋子 clearcoat（MeshPhysicalMaterial）。 */
   clearcoat: boolean;
 };
@@ -391,7 +391,7 @@ export function createMaterial(token: MaterialToken, features: MaterialFeatures)
     roughness: token.roughness,
     metalness: token.metalness,
   };
-  // T245/T261 · lacquered wood OR oil-film terrain brush: MeshPhysical clearcoat varnish
+  // lacquered wood OR oil-film terrain brush: MeshPhysical clearcoat varnish
   const coat = token.clearcoat ?? 0;
   const oilFilm = coat > 0 && ((token.brush ?? 0) > 0 || token.pattern === "cloth");
   const wantPhysical = coat > 0 && (features.clearcoat || token.pattern === "grain" || oilFilm);
@@ -399,7 +399,7 @@ export function createMaterial(token: MaterialToken, features: MaterialFeatures)
     ? new MeshPhysicalMaterial({
         ...params,
         clearcoat: coat,
-        // T261 · oil varnish on brush terrain (wet film); grain stays lacquer
+        // oil varnish on brush terrain (wet film); grain stays lacquer
         clearcoatRoughness: oilFilm ? 0.14 : token.pattern === "grain" ? 0.28 : 0.48,
       })
     : new MeshStandardMaterial(params);
@@ -408,7 +408,7 @@ export function createMaterial(token: MaterialToken, features: MaterialFeatures)
 }
 
 /** 光泽材质阈值：roughness ≤ 0.6 的材质接收环境反射。 */
-export const ENV_REFLECTION_MAX_ROUGHNESS = 0.62; // T245 · wood-chip / lacquer catch RoomEnvironment; matte robber stays null
+const ENV_REFLECTION_MAX_ROUGHNESS = 0.62; // wood-chip / lacquer catch RoomEnvironment; matte robber stays null
 
 function applyEnvironment(
   material: MeshStandardMaterial,
@@ -433,9 +433,9 @@ function applyMaps(material: MeshStandardMaterial, token: MaterialToken, maps: P
   material.map = useBaseColor ? maps.map : null;
   material.normalMap = maps.normalMap;
   // R17: stronger oil-paint micro-relief + AO so hex faces read continuous painted fields.
-  material.normalScale.set(2.55, 2.55); // T245 paperboard/wood micro-relief
+  material.normalScale.set(2.55, 2.55); // paperboard/wood micro-relief
   material.aoMap = maps.ormMap;
-  material.aoMapIntensity = 1.85; // T245 cavity AO
+  material.aoMapIntensity = 1.85; // cavity AO
   material.roughnessMap = maps.ormMap;
   material.metalnessMap = maps.ormMap;
   material.color.set(token.base);

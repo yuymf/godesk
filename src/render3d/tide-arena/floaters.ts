@@ -3,7 +3,7 @@
  * HP bar). Damage = coral/red, heal = green. Pure — Step 2 replay reuses this.
  */
 export type FloaterEvent = { uid: string; amount: number; kind: "damage" | "heal" };
-export type StackedFloater = FloaterEvent & { text: string; slot: number; offsetPx: number };
+type StackedFloater = FloaterEvent & { text: string; slot: number; offsetPx: number };
 
 export const FLOATER_LINE_PX = 18;
 /** Clear gap above the HP bar anchor so slot 0 never touches the bar. */
@@ -55,7 +55,7 @@ export function floaterText(event: { kind: "damage" | "heal"; amount: number }):
 }
 
 /** Approximate floater label box (px) used for screen-space collision. */
-export const FLOATER_BOX = { w: 46, h: FLOATER_LINE_PX };
+const FLOATER_BOX = { w: 46, h: FLOATER_LINE_PX };
 
 /**
  * Greedy de-overlap across cells: anchors are processed bottom-up; a stack whose box

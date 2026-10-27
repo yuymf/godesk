@@ -85,9 +85,9 @@ export function networkRouteLayout(
   const pieces: TabletopPiece[] = state.cities.map((city) => {
     const [x, z] = position.get(city.id)!;
     const terminal = city.id === state.terminalFrom || city.id === state.terminalTo;
-    // T051: readable station plaque tag (hub:Name / Name) — not faint debug mush.
+    // readable station plaque tag (hub:Name / Name) — not faint debug mush.
     const label = terminal ? `hub:${city.name}` : city.name;
-    // T172 · denser station footprint on felt
+    // denser station footprint on felt
     return { id: city.id, objectKind: "station", x, z, size: terminal ? 0.82 : 0.60, label };
   });
   const links: TabletopLink[] = [];
@@ -106,7 +106,7 @@ export function networkRouteLayout(
       objectKind: claimed ? "claim" : "route",
       from,
       to,
-      width: claimed ? 0.38 : 0.18, // T078 · cold ballast corridor readable; claim still thicker
+      width: claimed ? 0.38 : 0.18, // cold ballast corridor readable; claim still thicker
       seat: claimed ? owner : null,
       ...(action ? { action } : {}),
     });
@@ -114,7 +114,7 @@ export function networkRouteLayout(
       hints.push({ id: edge.id, x: (from[0] + to[0]) / 2, z: (from[1] + to[1]) / 2, radius: 0.24, action });
     }
   }
-  // T078 · wayside signal / switch posts on cold board (decorative; claim semantics unchanged)
+  // wayside signal / switch posts on cold board (decorative; claim semantics unchanged)
   let signalIdx = 0;
   for (const edge of state.edges) {
     const from = position.get(edge.from);
@@ -140,7 +140,7 @@ export function networkRouteLayout(
     });
   }
 
-  // T172/T177 · board-interior density: felt pads + crates/tokens in empty map (shared desk props)
+  // board-interior density: felt pads + crates/tokens in empty map (shared desk props)
   {
     const bw = (spanX * scale + 2.6) / 2;
     const bd = (spanY * scale + 2.6) / 2;
@@ -175,7 +175,7 @@ export function networkRouteLayout(
     }
   }
 
-  // T042: shared seat meeples (per-seat color) along the near edge.
+  // shared seat meeples (per-seat color) along the near edge.
   const counts = state.routeCounts ?? [];
   const seatN = Math.max(counts.length, 2);
   for (let seatId = 0; seatId < seatN; seatId += 1) {
@@ -193,7 +193,7 @@ export function networkRouteLayout(
 
   return {
     kernelType: "network-route-v1",
-    // T172 · slightly larger felt map so interior reads (shared layout, not sample hack)
+    // slightly larger felt map so interior reads (shared layout, not sample hack)
     board: { objectKind: "map", materialKey: "map", width: spanX * scale + 2.6, depth: spanY * scale + 2.6 },
     cells: [],
     pieces,
@@ -247,7 +247,7 @@ function regionGrid(
   return { cells, pieces, hints, depth: rows * depth };
 }
 
-export type WorkerPlacementTabletopInput = {
+type WorkerPlacementTabletopInput = {
   regions: ReadonlyArray<RegionLike & { name: string }>;
   placements: ReadonlyArray<PlacementLike>;
   players: ReadonlyArray<{ seat: number; buildings: number }>;
@@ -287,14 +287,14 @@ export function workerPlacementLayout(
   };
 }
 
-export type HarborVoyageTabletopInput = {
+type HarborVoyageTabletopInput = {
   punts: ReadonlyArray<{ cargoId: string; position: number; color?: string }>;
   placements: ReadonlyArray<{ id: string; seat: number; targetId: string }>;
   targets: ReadonlyArray<{ id: string; capacity: number }>;
 };
 
 /** 航道：0–13 格 + 港口；每种货一条航道，货船按位置前进。 */
-export const HARBOR_TRACK_CELLS = 14;
+const HARBOR_TRACK_CELLS = 14;
 
 export function harborVoyageLayout(
   state: HarborVoyageTabletopInput,
@@ -327,7 +327,7 @@ export function harborVoyageLayout(
       objectKind: "cargo",
       x: x - 0.18,
       z,
-      y: 0.30,  // T047: offset above playTop (was absolute boardTop+deck)
+      y: 0.30,  // offset above playTop (was absolute boardTop+deck)
       size: 0.36,
       ...(punt.color ? { tint: punt.color } : {}),
     });
@@ -337,7 +337,7 @@ export function harborVoyageLayout(
         objectKind: "worker",
         x: x + 0.06 + slot * 0.2,
         z,
-        y: 0.30,  // T047: offset above playTop (was absolute boardTop+deck)
+        y: 0.30,  // offset above playTop (was absolute boardTop+deck)
         size: 0.38,
         seat: placement.seat,
       });
@@ -390,7 +390,7 @@ const GEM_TINT: Record<string, string> = {
 
 const GEM_BANK_ORDER = ["white", "blue", "green", "red", "black", "gold"] as const;
 
-export type DeskLegalAction = { type: string; payload?: Record<string, unknown> | null };
+type DeskLegalAction = { type: string; payload?: Record<string, unknown> | null };
 
 function legalMatch(legal: ReadonlyArray<DeskLegalAction> | undefined, type: string, payload: Record<string, unknown>): boolean {
   if (legal === undefined) return true; // legacy / preview: keep affordances
@@ -410,7 +410,7 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
   const pieces: TabletopPiece[] = [];
   const hints: TabletopHint[] = [];
   const bankY = -3.2;
-  // T036: bank = vertical same-color stacks + readable count tip; forbid single disc for whole pile.
+  // bank = vertical same-color stacks + readable count tip; forbid single disc for whole pile.
   GEM_BANK_ORDER.forEach((color, i) => {
     const count = Math.max(0, Math.floor(Number(state.bank[color] ?? 0)));
     const x = -3.5 + i * 1.4;
@@ -425,7 +425,7 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
         y: 0.01,
         size: 0.4,
         tint: "#d6d3d1",
-        // T074 · no `${color}:0` parchment nameplate on empty bank
+        // no `${color}:0` parchment nameplate on empty bank
       });
     } else {
       const stack = Math.min(count, 6);
@@ -455,7 +455,7 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
   });
 
   state.market.forEach((tierCards, tier) => {
-    // T113 · shared card-column spacing (wider tray footprint; not gem-special)
+    // shared card-column spacing (wider tray footprint; not gem-special)
     const z = -1.75 + tier * 1.32;
     tierCards.forEach((card, index) => {
       const x = -3.05 + index * 2.08;
@@ -470,7 +470,7 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
         objectKind: "card",
         x,
         z,
-        // T077/T113 · stage-wide readable; slightly smaller so columns breathe
+        // stage-wide readable; slightly smaller so columns breathe
         size: 1.28,
         tint: GEM_TINT[discount] ?? "#d6d3d1",
         label: encodeCardFace({
@@ -503,7 +503,7 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
   });
 
   state.nobles.forEach((noble, i) => {
-    const x = -2.8 + i * 1.65; // T113 · plaque row breathes with card columns
+    const x = -2.8 + i * 1.65; // plaque row breathes with card columns
     const title = String(noble.name ?? "").trim() || "贵族";
     pieces.push({
       id: `noble:${noble.id ?? i}`,
@@ -533,7 +533,7 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
       rotationY: Math.PI,
       seat: seatId,
     });
-    // T036/T052: gem supply stacks in seat-front tableau (not hidden behind meeple).
+    // gem supply stacks in seat-front tableau (not hidden behind meeple).
     let gemSlot = 0;
     for (const color of GEM_BANK_ORDER) {
       const n = Math.max(0, Math.floor(Number(seat.gems[color] ?? 0)));
@@ -555,7 +555,7 @@ export function gemEngineLayout(state: GemEngineTabletopInput, legal?: ReadonlyA
       }
       gemSlot += 1;
     }
-    // T052 · purchased development cards fan in seat-front owned zone (shared tableau).
+    // purchased development cards fan in seat-front owned zone (shared tableau).
     (seat.cards ?? []).slice(0, 6).forEach((card, ci) => {
       const reward = String(card.discount ?? "");
       pieces.push({
@@ -654,7 +654,7 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
   const hints: TabletopHint[] = [];
   const factoryCount = state.factories.length;
   const factoryRadius = 2.8;
-  // T036: pads only when inventory > 0; N glazed-tile children in color-visible stacks.
+  // pads only when inventory > 0; N glazed-tile children in color-visible stacks.
   state.factories.forEach((tiles, fi) => {
     if (tiles.length === 0) return; // forbid empty pads pretending to be factories
     const angle = (Math.PI * 2 * fi) / Math.max(factoryCount, 1) - Math.PI / 2;
@@ -662,14 +662,14 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
     const fz = Math.sin(angle) * factoryRadius * 0.75 - 1.2;
     pieces.push({
       id: `factory:${fi}:pad`,
-      // T076 · porcelain plate under glazed tiles
+      // porcelain plate under glazed tiles
       objectKind: "plate",
       x: fx,
       z: fz,
       size: 1.15,
       tint: "#f3efe6",
     });
-    // T036: N glazed-tile children in a 2×2 pad grid (color-visible, countable at a glance).
+    // N glazed-tile children in a 2×2 pad grid (color-visible, countable at a glance).
     const GRID: ReadonlyArray<readonly [number, number]> = [
       [-0.3, -0.3], [0.3, -0.3],
       [-0.3, 0.3], [0.3, 0.3],
@@ -684,7 +684,7 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
         objectKind: "tile",
         x: fx + ox,
         z: fz + oz,
-        y: 0.14 + layer * 0.12,  // T047: on-pad stack above playTop
+        y: 0.14 + layer * 0.12,  // on-pad stack above playTop
         size: 0.50,
         tint: PATTERN_TINT[color] ?? "#64748b",
         ...(pick ? { action: { type: pick.type, payload: { ...(pick.payload ?? {}) } }, emphasis: true } : {}),
@@ -707,7 +707,7 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
     }
   });
 
-  // T076 · central discard porcelain dish
+  // central discard porcelain dish
   pieces.push({
     id: "center:dish",
     objectKind: "plate",
@@ -743,7 +743,7 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
       z: -0.1,
       size: 0.35,
       tint: "#f97316",
-      // T074 · no Eng "1st" desk nameplate
+      // no Eng "1st" desk nameplate
       emphasis: true,
     });
   }
@@ -777,7 +777,7 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
       seat: seatId,
       ...(seat.hasMarker ? { emphasis: true } : {}),
     });
-    // T050 · pattern lines (capacity 1..5): empty = recessed slot, filled = glazed tile.
+    // pattern lines (capacity 1..5): empty = recessed slot, filled = glazed tile.
     // Forbid blank solid boards posing as the personal board.
     const lines = seat.lines.length > 0
       ? seat.lines
@@ -786,7 +786,7 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
         tiles: [] as string[],
         capacity: li + 1,
       }));
-    // T058 · pattern lines as readable trough strips (not round disc pits); distinct from T054 wall-slot squares.
+    // pattern lines as readable trough strips (not round disc pits); distinct from T054 wall-slot squares.
     lines.forEach((line, li) => {
       const lz = z0 - li * 0.28;
       const cap = Math.max(line.capacity, li + 1, 1);
@@ -817,7 +817,7 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
         });
       }
     });
-    // T058 · floor row: elongated trough under floor penalty discs
+    // floor row: elongated trough under floor penalty discs
     pieces.push({
       id: `seat:${seatId}:floor:trough`,
       objectKind: "line-trough",
@@ -829,7 +829,7 @@ export function patternDraftLayout(state: PatternDraftTabletopInput, legal?: Rea
       materialKey: "line-trough",
       tint: "#57534e",
     });
-    // T050/T054 · 5×5 wall grid: empty = hue print squares (not black disc pits);
+    // 5×5 wall grid: empty = hue print squares (not black disc pits);
     // glazed-on-wall tiles stay color-countable and distinct from empty print.
     // No solid marble `wall:board` region slab (that read as blank seat boards).
     const wall = seat.wall;
@@ -959,7 +959,7 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
     });
   }
 
-  // T043: phase/mode lives in desk-stage HUD — forbid persistent desktop "open r1" tokens.
+  // phase/mode lives in desk-stage HUD — forbid persistent desktop "open r1" tokens.
 
   // Live multi-lot floor → framed art boards (gallery T024 path; currentLot may be null).
   const floorLots = gallery?.activeFloorLots ?? [];
@@ -1060,7 +1060,7 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
       ...(high ? { emphasis: true } : {}),
       ...(gallery?.auctioneer === seatId ? { tint: "#f59e0b" } : {}),
     });
-    // T036: chip towers beside tableau
+    // chip towers beside tableau
     const stack = Math.max(1, Math.min(Math.max(1, Math.floor(chips / 20) || (chips > 0 ? 1 : 0)), 6));
     if (chips > 0) {
       for (let s = 0; s < stack; s++) {
@@ -1076,7 +1076,7 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
         });
       }
     }
-    // T052/T056 · owned lots as readable seat-front framed-art (frame+canvas), not meeple/white-placard stand-ins.
+    // owned lots as readable seat-front framed-art (frame+canvas), not meeple/white-placard stand-ins.
     // Place just inward of meeple (camera-visible) with gallery-class scale — not tiny 0.42 thumbs lost at glancing angle.
     const collection = gallery?.collection?.[seatId] ?? [];
     collection.slice(0, 5).forEach((painting, pi) => {
@@ -1111,8 +1111,8 @@ export function auctionBiddingLayout(state: AuctionBiddingTabletopInput): Tablet
     });
   });
 
-  // T089 · shared gallery desk density (stands / pedestals / catalog plaques) — generic path, no sample specials
-  // T134 · auction lot / plaque density residual — denser shared dressing, no sample specials
+  // shared gallery desk density (stands / pedestals / catalog plaques) — generic path, no sample specials
+  // auction lot / plaque density residual — denser shared dressing, no sample specials
   // Empty felt ring around the auction floor gets readable props without covering lots or seat tableaux.
   const dressSeed = (gallery?.artists?.length ?? 0) * 17 + (gallery?.round ?? 0) * 3 + seatCount * 5;
   const dressRand = (i: number) => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { AgXToneMapping, DirectionalLight, HemisphereLight, PCFShadowMap, Scene, SRGBColorSpace, ShaderMaterial } from "three";
-import { configureRenderer, createLightingRig, createSkyDome } from "./lighting";
+import { AgXToneMapping, Color, DirectionalLight, HemisphereLight, PCFShadowMap, Scene, SRGBColorSpace, ShaderMaterial } from "three";
+import { clampPlayableLighting, configureRenderer, createLightingRig, createSkyDome, PLAYABLE_LIGHT_FLOORS } from "./lighting";
+import { clampPlayableAlbedo, PLAYABLE_ALBEDO_MAX } from "./materials";
 import { TIER_CAPS } from "./tiers";
 import { SCENE_TOKENS, shadowFrustumForBounds } from "./tokens";
 
@@ -14,6 +15,26 @@ describe("G3D-07 lighting rig", () => {
     expect(renderer.shadowMap).toEqual({ enabled: true, type: PCFShadowMap });
   });
 
+  it("clamps hot exposure, lighting intensities, and wash-white albedo channels", () => {
+    const hot = {
+      ...SCENE_TOKENS.lighting,
+      exposure: 2.0,
+      sun: { ...SCENE_TOKENS.lighting.sun, intensity: 5.98 },
+      hemisphere: { ...SCENE_TOKENS.lighting.hemisphere, intensity: 2.98 },
+      fill: { azimuthDeg: 290, elevationDeg: 64, intensity: 4.0, color: "#ffffff" },
+      rim: { azimuthDeg: 34, elevationDeg: 36, intensity: 2.55, color: "#fffcf0" },
+    };
+    const playable = clampPlayableLighting(hot);
+    expect(playable.exposure).toBeLessThanOrEqual(PLAYABLE_LIGHT_FLOORS.exposureMax);
+    expect(playable.sun.intensity).toBeLessThanOrEqual(PLAYABLE_LIGHT_FLOORS.sunIntensityMax);
+    expect(playable.hemisphere.intensity).toBeLessThanOrEqual(PLAYABLE_LIGHT_FLOORS.hemiIntensityMax);
+    expect(playable.fill!.intensity).toBeLessThanOrEqual(PLAYABLE_LIGHT_FLOORS.fillIntensityMax);
+    expect(playable.rim!.intensity).toBeLessThanOrEqual(PLAYABLE_LIGHT_FLOORS.rimIntensityMax);
+
+    const c = clampPlayableAlbedo(new Color("#ffffff"));
+    expect(Math.max(c.r, c.g, c.b)).toBeLessThanOrEqual(PLAYABLE_ALBEDO_MAX + 1e-6);
+  });
+
   it("builds sun + hemisphere from tokens and scales shadows per tier", () => {
     const scene = new Scene();
     const rig = createLightingRig(scene, SCENE_TOKENS.lighting, TIER_CAPS.high);
@@ -21,7 +42,7 @@ describe("G3D-07 lighting rig", () => {
     expect(rig.hemisphere).toBeInstanceOf(HemisphereLight);
     expect(rig.sun.intensity).toBe(3.05);
     expect(rig.sun.color.getHexString()).toBe(new DirectionalLight("#ffc890").color.getHexString());
-    expect(rig.hemisphere.intensity).toBe(1.18); // T166 warmer ground
+    expect(rig.hemisphere.intensity).toBe(1.18);
     expect(rig.sun.castShadow).toBe(true);
     expect(rig.sun.shadow.mapSize.x).toBe(2048);
     expect(rig.sun.shadow.radius).toBe(6.5);
@@ -62,8 +83,7 @@ describe("G3D-07 lighting rig", () => {
     rig.dispose();
   });
 
-
-  it("T086 builds soft fill + rim layers without casting shadows", () => {
+  it("builds soft fill + rim layers without casting shadows", () => {
     const scene = new Scene();
     const rig = createLightingRig(scene, SCENE_TOKENS.lighting, TIER_CAPS.high);
     expect(rig.fill).toBeInstanceOf(DirectionalLight);

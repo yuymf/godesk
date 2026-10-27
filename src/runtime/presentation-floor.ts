@@ -44,7 +44,7 @@ type KernelType = Extract<RuleSystem["runtimeSupport"], { status: "executable" }
  * - `generic-hud` = form-like controls only → fails.
  * - score-track / transcript / card-table = non-spatial genre surfaces.
  */
-export type BoardPresentation =
+type BoardPresentation =
   | "tabletop-3d"
   | "dedicated-board"
   | "score-track"

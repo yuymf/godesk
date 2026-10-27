@@ -102,7 +102,7 @@ describe("G3D-14 follow-up · 翻转棋实例化 draw call", () => {
   it("满盘 64 子：low ≤ 60、medium ≤ 100，棋子按座位材质合成 2 个 InstancedMesh", () => {
     const full = board((row, col) => ((row + col) % 3 === 0 ? 1 : 0));
     const scene = mapTabletopToScene(discFlippingLayout(full, []), render);
-    // T038/T269 · discs + contact-shadow piece nodes (64 discs → 128 piece kinds).
+    // discs + contact-shadow piece nodes (64 discs → 128 piece kinds).
     const pieceNodes = scene.model.nodes.filter((node) => node.kind === "piece");
     expect(pieceNodes.filter((node) => node.mesh !== "contact-shadow")).toHaveLength(64);
     expect(pieceNodes.filter((node) => node.mesh === "contact-shadow")).toHaveLength(64);

@@ -3,7 +3,7 @@
  * sits immediately before it or earlier in the same sentence
  * (e.g. 「非自走棋」「不得使用…赛博机甲默认名」).
  */
-export const CUE_NEGATION_NEAR = /(?:非|不是|不要|别用|禁止|不得(?:使用)?|勿|别|不含|排除)/;
+const CUE_NEGATION_NEAR = /(?:非|不是|不要|别用|禁止|不得(?:使用)?|勿|别|不含|排除)/;
 
 /** True if `cues` matches `idea` at least once outside a negated span. */
 export function cueMatchIsPositive(idea: string, cues: RegExp): boolean {

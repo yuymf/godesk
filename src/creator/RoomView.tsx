@@ -430,7 +430,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
   const gemEngine = isGemEngine(build.ruleSystem) && Boolean(gemEngineState);
   const patternDraftState = room.state.patternDraft;
   const patternDraft = isPatternDraft(build.ruleSystem) && Boolean(patternDraftState);
-  const deskTabletop = Boolean(gemEngine || patternDraft || auction || discFlipping || workerPlacement || harbor || networkRoute); // T062 · network tabletop-first
+  const deskTabletop = Boolean(gemEngine || patternDraft || auction || discFlipping || workerPlacement || harbor || networkRoute); // network tabletop-first
   const tabletopImmersive = woodChrome || deskTabletop;
   const autoBattlerState = room.state.autoBattler;
   const autoBattler = isAutoBattler(build.ruleSystem) && Boolean(autoBattlerState);
@@ -494,19 +494,19 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       ? copy.progress
       : copy.points;
 
-  // T080 · shareable Room: tabletop / immersive kernels keep playtest feedback in a
+  // shareable Room: tabletop / immersive kernels keep playtest feedback in a
   // collapsed off-table drawer so it does not steal desk focus. Non-desk kernels still
   // defer the open panel until the match ends (or keep legacy open panel).
   const feedbackAsDrawer = Boolean(tabletopImmersive || immersive);
   const feedbackVisible = feedbackAsDrawer
     ? true
     : !(autoBattler || auction || immersive) || room.state.status === "complete";
-  // T091 · hex immersive seated gets the same compact shareReady strip as tabletop
-  // T097 · further collapse share/seat chrome after seating (canvas vh ↑)
+  // hex immersive seated gets the same compact shareReady strip as tabletop
+  // further collapse share/seat chrome after seating (canvas vh ↑)
   const shareChromeCompact = Boolean((tabletopImmersive || hexSettlement) && seat !== null);
-  // UI-theme-packs · P3 — mount data-ui-theme from presentation / render config (default harbor-wood)
+  // P3 — mount data-ui-theme from presentation / render config (default harbor-wood)
   const uiThemeId = readUiThemeFromPresentation(build.ruleSystem.presentation);
-  // UI-density-fill · P4 — multi-slot hand / build group / seat badges (capability + schema driven)
+  // P4 — multi-slot hand / build group / seat badges (capability + schema driven)
   const densityCaps = densityCapabilities(build.ruleSystem);
   const densityHandSlots = buildDensityHandSlots({
     ruleSystem: build.ruleSystem,
@@ -568,7 +568,7 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       </header>
 
 {/* T091 · show compact share/seat chrome for seated hex immersive (parity with tabletop shareReady) */}
-{/* UI-share-seat · shareReady invite + seat row always mounted when chrome shows (undo T186 purge) */}
+{/* shareReady invite + seat row always mounted when chrome shows (undo T186 purge) */}
 {!immersive || shareChromeCompact ? (
             <section
               aria-label={copy.invitation}
@@ -710,8 +710,8 @@ export function RoomView({ sessionId }: { sessionId: string }) {
       )}
 
       {/* UI-room-shell · generic playable chrome: whose turn / phase / primary action placeholder */}
-      {/* UI-room-hud · settlecoast-grade density: left seat rail / bottom hand bar / right turn panel */}
-      {/* UI-density-fill · P4 hand-from-content / build-group-shell / seat-rail-rich */}
+      {/* settlecoast-grade density: left seat rail / bottom hand bar / right turn panel */}
+      {/* P4 hand-from-content / build-group-shell / seat-rail-rich */}
       {(tabletopImmersive || immersive || hexSettlement) ? (
         <section
           aria-label={locale === "zh" ? "对局状态" : "Match status"}

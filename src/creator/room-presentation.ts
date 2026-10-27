@@ -215,7 +215,7 @@ export function isAuctionBidding(ruleSystem: RuleSystem): boolean {
   return Boolean(auctionBiddingKernel(ruleSystem));
 }
 
-export function gemEngineKernel(
+function gemEngineKernel(
   ruleSystem: RuleSystem,
 ): Extract<
   Extract<RuleSystem["runtimeSupport"], { status: "executable" }>["kernel"],

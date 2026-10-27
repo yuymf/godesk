@@ -1,5 +1,5 @@
 /**
- * UI-P4 · density fill — generic Room hand / build-group / seat-badge chrome.
+ * density fill — generic Room hand / build-group / seat-badge chrome.
  *
  * Driven by rule-system content + hand schema, legal-action / action-drawer,
  * and presentationFloor / kernel *capability* declarations.
@@ -14,22 +14,22 @@ import type {
 } from "./project-contract";
 import { kernelCapabilities } from "./kernel-capabilities";
 
-export type DensityLocale = "zh" | "en";
+type DensityLocale = "zh" | "en";
 
-export type DensityHandSlot = {
+type DensityHandSlot = {
   key: string;
   label: string;
   qty: number | string;
   tone?: string;
 };
 
-export type DensityCostPip = {
+type DensityCostPip = {
   kind: string;
   amount: number;
   tone?: string;
 };
 
-export type DensityBuildAction = {
+type DensityBuildAction = {
   id: string;
   label: string;
   /** Cost pips aligned with P1 card-schema (≥0). Empty = readiness chrome only. */
@@ -38,14 +38,14 @@ export type DensityBuildAction = {
   value: number | null;
 };
 
-export type DensitySeatBadge = {
+type DensitySeatBadge = {
   key: string;
   label: string;
   value: string | number;
   kind: "resource-summary" | "vp" | "capability" | "score" | "hand";
 };
 
-export type HandSchemaKind = {
+type HandSchemaKind = {
   id: string;
   label: string;
   tone?: string;
@@ -166,7 +166,7 @@ function kindsFromContent(content: unknown): HandSchemaKind[] {
   return out;
 }
 
-export type DensityLiveHandState = {
+type DensityLiveHandState = {
   /** Private hand lengths by seat (hand-play). */
   handPlay?: { hands?: Record<number | string, readonly unknown[]> | readonly (readonly unknown[])[]; deckRemaining?: number };
   /** Gem / token bags by seat. */

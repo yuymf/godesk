@@ -63,7 +63,7 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-export type PullResult = {
+type PullResult = {
   query: string;
   asset: AssetServerAsset;
   glbBytes: number;

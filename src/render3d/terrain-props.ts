@@ -41,7 +41,7 @@ import { installPattern } from "./materials";
 import { getTidewellGeometriesSync } from "./model-templates";
 import { NUMBER_TOKEN_SCALE } from "./tokens";
 
-export type PropKind =
+type PropKind =
   | "pineTall" | "pineRound" | "pineSmall" | "canopy"
   | "sheep" | "trough" | "boulder" | "clay" | "bricks" | "sheaf" | "wheatrow" | "dune" | "pebble" | "blobshadow";
 export const PROP_KINDS: readonly PropKind[] = [
@@ -76,7 +76,7 @@ export const PROP_COUNTS: Record<RenderTierId, Record<string, Counts>> = {
     brick: { clay: 12, bricks: 7 },
     // R23: continuous golden ground field — no readable wheatrow props (texture + undulating colour noise carries the wave).
     wheat: {},
-    // T088 · denser desert empty-face dressing (shared PROP_COUNTS; no 汐屿 pack)
+    // denser desert empty-face dressing (shared PROP_COUNTS; no 汐屿 pack)
     desert: { dune: 9, pebble: 18 },
   },
   medium: {
@@ -95,7 +95,7 @@ export const PROP_COUNTS: Record<RenderTierId, Record<string, Counts>> = {
 };
 
 /** R20 羊群：每格分几簇、每簇几只（3–5，簇间留空）；按格子种子在候选里选一种。 */
-export const SHEEP_CLUMPS: Record<number, ReadonlyArray<readonly number[]>> = {
+const SHEEP_CLUMPS: Record<number, ReadonlyArray<readonly number[]>> = {
   8: [[5, 3], [4, 4], [3, 5]],
   6: [[3, 3]],
   5: [[5]],
@@ -104,14 +104,14 @@ export const SHEEP_CLUMPS: Record<number, ReadonlyArray<readonly number[]>> = {
 };
 /** 簇内羊间距 / 簇半径 / 簇心最小间距（簇间留空）。 */
 // R21: clumps spread a little (0.18/0.24/0.8 → 0.2/0.27/0.86) so a 5-clump reads as 5 sheep, not one wool cloud.
-export const SHEEP_CLUMP_SPACING = 0.2;
+const SHEEP_CLUMP_SPACING = 0.2;
 export const SHEEP_CLUMP_RADIUS = 0.27;
 export const SHEEP_CLUMP_GAP = 0.86;
 
 /** R22 麦浪：垄线正弦弯曲幅度 / 波数，垄高最小拉伸（最大 1.0）。 */
-export const WHEAT_WAVE_AMP = 0.055;
-export const WHEAT_WAVE_K = 4.2;
-export const WHEAT_STRETCH_MIN = 0.62;
+const WHEAT_WAVE_AMP = 0.055;
+const WHEAT_WAVE_K = 4.2;
+const WHEAT_STRETCH_MIN = 0.62;
 
 /** 道具间最小间距（相邻两件取均值）。 */
 const SPACING: Record<PropKind, number> = {
@@ -130,9 +130,9 @@ export const TILE_TOP = 0.28;
 /** 中心禁区：数字筹码（0.22 × 1.8）+ 余量；沙漠为强盗。 */
 export const PROP_CENTER_CLEAR = 0.22 * NUMBER_TOKEN_SCALE + 0.07;
 /** 六角内缩（边心距度量）：地块边心距 0.91·√3/2 ≈ 0.79，再让出栈道。 */
-export const PROP_HEX_INSET = 0.73;
+const PROP_HEX_INSET = 0.73;
 /** 角上渔村禁区（布局顶点半径 1.0）。 */
-export const PROP_CORNER_CLEAR = 0.24;
+const PROP_CORNER_CLEAR = 0.24;
 
 // ── 程序化几何（顶点色、平面着色） ───────────────────────────────────────────
 
@@ -254,7 +254,7 @@ function keepTriangles(g: BufferGeometry, keep: boolean[]): BufferGeometry {
 }
 
 /** Exported for tests: cull triangles fully inside another closed part's inscribed ball. */
-export function cullInterior(parts: BufferGeometry[]): BufferGeometry[] {
+function cullInterior(parts: BufferGeometry[]): BufferGeometry[] {
   const balls = parts.map((g) => {
     const c = g.userData[CLOSED_CENTER] as [number, number, number] | undefined;
     if (!c) return null;
@@ -367,7 +367,7 @@ function pineTallGeometry(): BufferGeometry {
   const crown: BufferGeometry[] = [];
   tiers.forEach(([y, r], ti) => {
     const a0 = ti * 1.9;
-    const n = ti < 3 ? 8 : 7; // T229/T242 denser crown clumps
+    const n = ti < 3 ? 8 : 7; // denser crown clumps
     for (let k = 0; k < n; k += 1) {
       const a = a0 + k * ((Math.PI * 2) / n);
       const dy = ((ti * 7 + k * 5) % 5 - 2) * 0.006;
@@ -376,7 +376,7 @@ function pineTallGeometry(): BufferGeometry {
   });
   crown.push(clump(0, 0.575, 0, 0.026, 1.5, "#2a5a3a", "#4a8a56", 41, 0.12));
   return merged([
-    grad(at(new CylinderGeometry(0.014, 0.022, 0.09, 8, 1, true), 0, 0.045, 0), "#3a2a1a", "#5a4028", 0, 0.09), // T229 trunk segs
+    grad(at(new CylinderGeometry(0.014, 0.022, 0.09, 8, 1, true), 0, 0.045, 0), "#3a2a1a", "#5a4028", 0, 0.09), // trunk segs
     ...crown,
     // R16 soft brush cards near crown — feathered silhouette vs hard umbrella
     brushCard(0.02, 0.5, 0.01, 0.07, 0.05, 0.4, "#2a5a36", "#4a8050"),
@@ -390,13 +390,13 @@ function pineTallGeometry(): BufferGeometry {
 function pineRoundGeometry(): BufferGeometry {
   // R18: cauliflower crown of painted clumps (warm yellow-green tops, cool undersides).
   const ring: BufferGeometry[] = [];
-  for (let k = 0; k < 14; k += 1) { // T229/T242 denser cauliflower
+  for (let k = 0; k < 14; k += 1) { // denser cauliflower
     const a = k * ((Math.PI * 2) / 6) + 0.3;
     const rr = 0.088 + (k % 2) * 0.012;
     ring.push(clump(Math.cos(a) * 0.09, 0.17 + (k % 3) * 0.035, Math.sin(a) * 0.09, rr, 0.8, "#24502c", k % 2 ? "#5e9a54" : "#6aa65a", 5 + k * 7));
   }
   return merged([
-    grad(at(new CylinderGeometry(0.02, 0.03, 0.08, 8, 1, true), 0, 0.04, 0), "#4a3220", "#6b4a2c", 0, 0.08), // T229
+    grad(at(new CylinderGeometry(0.02, 0.03, 0.08, 8, 1, true), 0, 0.04, 0), "#4a3220", "#6b4a2c", 0, 0.08),
     clump(0, 0.24, 0, 0.12, 0.82, "#24542c", "#5a9650", 3),
     ...ring,
     clump(0.012, 0.335, -0.01, 0.075, 0.9, "#2c5c32", "#74ae60", 29),
@@ -408,7 +408,7 @@ function pineRoundGeometry(): BufferGeometry {
 /** 矮灌：短胖两层 + 侧叶团，偏橄榄绿，高约 0.3。 */
 function pineSmallGeometry(): BufferGeometry {
   return merged([
-    grad(at(new CylinderGeometry(0.016, 0.022, 0.05, 8, 1, true), 0, 0.025, 0), "#3e2c1c", "#5c4028", 0, 0.05), // T229
+    grad(at(new CylinderGeometry(0.016, 0.022, 0.05, 8, 1, true), 0, 0.025, 0), "#3e2c1c", "#5c4028", 0, 0.05),
     // R18: olive shrub = 4 painted clumps (no lathe cone)
     clump(0, 0.115, 0, 0.088, 0.78, "#284626", "#5a7c40", 13),
     clump(0.065, 0.085, 0.03, 0.06, 0.75, "#264424", "#567838", 17),
@@ -442,7 +442,7 @@ function blobShadowGeometry(): BufferGeometry {
 /** R19 羊：白色羊毛小羊群（settlecoast 基准的读感：白绒身体 + 深色头腿，低头吃草），
  *  脚下只留牧场底色的软溶片（alpha→0，无硬边圆盘、无深色接触阴影）。 */
 function sheepGeometry(): BufferGeometry {
-  // T262 · LOD silhouette mesh: longer legs + ear fins + neck stalk (topology, not vertex-color deepen)
+  // LOD silhouette mesh: longer legs + ear fins + neck stalk (topology, not vertex-color deepen)
   const leg = (x: number, z: number) =>
     grad(at(new CylinderGeometry(0.011, 0.009, 0.108, 8, 1, true), x, 0.054, z), "#14100c", "#26201a", 0, 0.11);
   const puff = (x: number, y: number, z: number, r: number) =>
@@ -482,7 +482,7 @@ function troughGeometry(): BufferGeometry {
 
 /** R20 山地：低矮贴地的岩块群（≈R19 一半高、体量 ~0.7×），岩色贴 ore tile，根脚溶入灰石面。 */
 function boulderGeometry(): BufferGeometry {
-  // T229/T242 · product rock: higher-detail dodecahedra + softer jag (less toy facet)
+  // product rock: higher-detail dodecahedra + softer jag (less toy facet)
   return merged([
     paint(jag(at(new DodecahedronGeometry(0.092, 2), 0, 0.038, 0, 1.45, 0.66, 1.20), 0.085, 1), "#a7adb4", 0.32),
     paint(jag(at(new DodecahedronGeometry(0.066, 2), 0.078, 0.064, -0.036, 1.14, 0.82, 0.98, 0.5), 0.08, 3), "#6a7078", 0.30),
@@ -615,12 +615,12 @@ function liftGlbSheepSilhouette(g: BufferGeometry): BufferGeometry {
       const r = arr[o]!, g0 = arr[o + 1]!, b = arr[o + 2]!;
       const lum = 0.2126 * r + 0.7152 * g0 + 0.0722 * b;
       if (lum >= 0.38) {
-        // T258 · wool: brighter fleece vs tip for far-cluster read
+        // wool: brighter fleece vs tip for far-cluster read
         arr[o] = Math.min(1, 0.72 + r * 0.42);
         arr[o + 1] = Math.min(1, 0.72 + g0 * 0.42);
         arr[o + 2] = Math.min(1, 0.68 + b * 0.42);
       } else {
-        // T258 · head/legs: deeper silhouette for panorama decor clusters
+        // head/legs: deeper silhouette for panorama decor clusters
         arr[o] = Math.min(1, r * 0.38 + 0.01);
         arr[o + 1] = Math.min(1, g0 * 0.34 + 0.008);
         arr[o + 2] = Math.min(1, b * 0.32 + 0.006);
@@ -640,7 +640,7 @@ function glbOr(kind: PropKind, procedural: () => BufferGeometry): BufferGeometry
   if (kind === "sheep" && tide.sheep) {
     const g = tide.sheep.clone();
     g.computeVertexNormals();
-    return liftGlbSheepSilhouette(g); // T253
+    return liftGlbSheepSilhouette(g);
   }
   if (isPine(kind) || kind === "canopy") {
     const tree = tide.decorByTerrain.wood;
@@ -746,7 +746,7 @@ export function inPropRegion(dx: number, dz: number): boolean {
 }
 
 export type PropTile = { q: number; r: number; terrain: string; center: readonly [number, number, number] };
-export type PropPlacement = {
+type PropPlacement = {
   kind: PropKind; terrain: string; x: number; y: number; z: number; yaw: number; scale: number;
   /** 纵向挤压 / 拉伸系数（squash-and-stretch）。 */
   stretch: number; tone: number; hue: number;
@@ -893,7 +893,7 @@ export function placeTileProps(tile: PropTile, counts: Counts): PropPlacement[] 
         y: TILE_TOP + 0.004,
         z: b.z,
         yaw: b.yaw,
-        scale: (isPine(b.kind) ? 1.28 : b.kind === "boulder" ? 1.18 : b.kind === "sheep" ? 1.85 : 1.0) * b.scale, // T262 sheep LOD silhouette footprint
+        scale: (isPine(b.kind) ? 1.28 : b.kind === "boulder" ? 1.18 : b.kind === "sheep" ? 1.85 : 1.0) * b.scale, // sheep LOD silhouette footprint
         stretch: 1,
         tone: 0.5,
         hue: 0.5,
@@ -1041,7 +1041,7 @@ export function layoutProps(tiles: readonly PropTile[], tier: RenderTierId): Map
       byKind.set(p.kind, arr);
     }
   }
-  // T088 · empty-area density via shared shore dressing
+  // empty-area density via shared shore dressing
   for (const p of placeShoreDressing(tiles, tier)) {
     const arr = byKind.get(p.kind) ?? [];
     arr.push(p);
@@ -1052,7 +1052,7 @@ export function layoutProps(tiles: readonly PropTile[], tier: RenderTierId): Map
 
 /** 树种底调：贴近 wood tile；再叠 instance 抖动。 */
 const PINE_SPECIES_TONE: Record<"pineTall" | "pineRound" | "pineSmall", Color> = {
-  // T249 · bright tabletop miniature green (fix T246 burnt/dark GLB canopy)
+  // bright tabletop miniature green (fix T246 burnt/dark GLB canopy)
   pineTall: new Color(0.72, 0.86, 0.58),
   pineRound: new Color(0.78, 0.90, 0.60),
   pineSmall: new Color(0.74, 0.88, 0.56),
@@ -1060,7 +1060,7 @@ const PINE_SPECIES_TONE: Record<"pineTall" | "pineRound" | "pineSmall", Color> =
 const PEBBLE_TINT: Record<string, Color> = { desert: new Color("#e6d2a6"), ore: new Color("#d8dee4") };
 /** R17: instance multiply biased toward TERRAIN_MATERIALS.base — sheep/meadow continuous dissolve. */
 const TERRAIN_ALBEDO: Record<string, Color> = {
-  wood: new Color("#4a9a52"), // T249 brighter prop blend target
+  wood: new Color("#4a9a52"), // brighter prop blend target
   sheep: new Color("#8fbf6a"),
   ore: new Color("#c2ced6"),
   brick: new Color("#b85a3a"),
@@ -1089,7 +1089,7 @@ function toneFor(p: PropPlacement, out: Color): Color {
   if (albedo && p.kind !== "blobshadow" && p.kind !== "trough" && p.kind !== "sheep") {
     // R17: sheep strongly → meadow tile; pines/canopy keep dissolve; hex-face continuous with props
     // R21: pines 0.34 → 0.42 toward the dark wood albedo (dark-green field at camera a)
-    const blend = isPine(p.kind) || p.kind === "canopy" ? 0.18 // T249 less pull toward dark wood
+    const blend = isPine(p.kind) || p.kind === "canopy" ? 0.18 // less pull toward dark wood
       : p.kind === "wheatrow" || p.kind === "sheaf" ? 0.32
       : p.kind === "boulder" || p.kind === "clay" || p.kind === "bricks" ? 0.36
       : 0.16;
@@ -1108,7 +1108,7 @@ function toneFor(p: PropPlacement, out: Color): Color {
 // ── 场景图层 ───────────────────────────────────────────────────────────────
 
 /** R19 羊溶地：明亮牧场贴地色（≈ 渲染后 meadow hex 底色）。 */
-export const SHEEP_GROUND_TINT = "#7aa24c";
+const SHEEP_GROUND_TINT = "#7aa24c";
 /** R19 羊溶地带：只在蹄部 / 溶片（TILE_TOP+0.002 … +0.03）向地色过渡；羊毛本体保持白。 */
 export const SHEEP_DISSOLVE_BAND: readonly [number, number] = [TILE_TOP + 0.002, TILE_TOP + 0.03];
 
@@ -1124,7 +1124,7 @@ export function createSheepDissolveMaterial(): MeshStandardMaterial {
   m.polygonOffsetFactor = -1;
   m.polygonOffsetUnits = -2;
   const pattern = installPattern(m, "grass");
-  pattern.value = 0.03; // T253 wool/head chroma over grass dissolve
+  pattern.value = 0.03; // wool/head chroma over grass dissolve
   const base = m.onBeforeCompile;
   const ground = { value: new Color(SHEEP_GROUND_TINT) };
   const [y0, y1] = SHEEP_DISSOLVE_BAND;
@@ -1149,7 +1149,7 @@ export function createSheepDissolveMaterial(): MeshStandardMaterial {
   return m;
 }
 
-export type TerrainPropLayer = {
+type TerrainPropLayer = {
   group: Group;
   /** 地块 / 档位不变时不重建。返回本图层网格数（= draw call 数，不含阴影）。 */
   sync(tiles: readonly PropTile[], tier: RenderTierId, castShadow: boolean): number;
@@ -1160,7 +1160,7 @@ export type TerrainPropLayer = {
 export function createTerrainPropLayer(): TerrainPropLayer {
   const group = new Group();
   group.name = "terrain-props";
-  // T249 · keep sculpted GLB mesh; matte bright tabletop albedo (no burnt pattern/AO)
+  // keep sculpted GLB mesh; matte bright tabletop albedo (no burnt pattern/AO)
   const material = new MeshStandardMaterial({
     vertexColors: true, flatShading: false, roughness: 0.98, metalness: 0, envMapIntensity: 0,
   });
@@ -1178,7 +1178,7 @@ export function createTerrainPropLayer(): TerrainPropLayer {
   canopyMaterial.depthWrite = false;
   const sheepMaterial = createSheepDissolveMaterial();
   const shadowMaterial = new MeshStandardMaterial({
-    // T250 · soft GLB ground-contact disc (readable rooted props, not dark halo pad)
+    // soft GLB ground-contact disc (readable rooted props, not dark halo pad)
     color: "#2a241c", flatShading: true, roughness: 1, metalness: 0, envMapIntensity: 0,
     transparent: true, opacity: 0.30,
   });
@@ -1206,7 +1206,7 @@ export function createTerrainPropLayer(): TerrainPropLayer {
       const glb = getTidewellGeometriesSync().ready ? "glb" : "proc";
       const nextKey = `${nextTier}|${castShadow}|${glb}|${tiles.map((t) => `${t.q},${t.r}:${t.terrain}`).join(";")}`;
       if (nextKey === key) return group.children.length;
-      // T246 · drop cached procedural geos when GLB flips ready
+      // drop cached procedural geos when GLB flips ready
       if (glb === "glb") {
         for (const g of geometries.values()) g.dispose();
         geometries.clear();

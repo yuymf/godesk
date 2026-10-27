@@ -1,4 +1,4 @@
-export type AssetServerType =
+type AssetServerType =
   | "model"
   | "texture"
   | "material"
@@ -17,7 +17,7 @@ export interface AssetLicense {
   attributionRequired?: boolean;
 }
 
-export interface AssetPrice {
+interface AssetPrice {
   free: boolean;
   amount?: number;
   currency?: string;
@@ -44,7 +44,7 @@ export interface AssetServerAsset {
   score?: number;
 }
 
-export interface AssetProviderReport {
+interface AssetProviderReport {
   provider: string;
   name: string;
   status: "ok" | "error" | "timeout" | "skipped" | "link" | string;

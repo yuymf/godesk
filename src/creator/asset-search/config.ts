@@ -12,9 +12,9 @@ export const PREFERRED_PROVIDERS = [
 ] as const;
 
 /** Sites that only return a search/asset page. Never fetch files. */
-export const LINK_ONLY_PROVIDERS = ["fab", "poliigon", "turbosquid"] as const;
+const LINK_ONLY_PROVIDERS = ["fab", "poliigon", "turbosquid"] as const;
 
-export const PROVIDER_LABELS: Record<string, string> = {
+const PROVIDER_LABELS: Record<string, string> = {
   polyhaven: "Poly Haven",
   ambientcg: "ambientCG",
   kenney: "Kenney",
@@ -60,10 +60,6 @@ export function importTooLargeMessage(bytes?: number): string {
 
 export function providerLabel(id: string): string {
   return PROVIDER_LABELS[id] ?? id;
-}
-
-export function isPreferredProvider(id: string): boolean {
-  return (PREFERRED_PROVIDERS as readonly string[]).includes(id);
 }
 
 export function isLinkOnlyProvider(id: string): boolean {

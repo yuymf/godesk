@@ -60,7 +60,7 @@ import { DEFAULT_THEME_ID, THEME_PRESETS, type ThemeSpec } from "../../runtime/a
 import { UnitModelPool, type UnitModelSource } from "./unit-models";
 import { DEATH_FADE_MS, HIT_DELAY_MS, type Timeline } from "./timeline";
 
-export type ArenaView = {
+type ArenaView = {
   ownBoard: Array<Piece | null>;
   ownBench: Array<Piece | null>;
   enemyBoard: Array<Piece | null>;
@@ -84,7 +84,7 @@ export type TokenAnchor = {
   maxHp: number;
 };
 
-export type SceneCallbacks = {
+type SceneCallbacks = {
   onAction: (type: string, payload: Record<string, unknown>) => void;
   onDrag: (state: { dragging: boolean; overSell: boolean }) => void;
   onAnchors: (anchors: TokenAnchor[]) => void;

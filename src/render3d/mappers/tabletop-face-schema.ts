@@ -3,7 +3,7 @@
  * Encoded into piece.label → node.tag; never drawn as raw debug strings like `T1+0|green`.
  */
 
-export type CardFaceSchema = {
+type CardFaceSchema = {
   kind: "card";
   tier?: number;
   prestige?: number;
@@ -13,14 +13,14 @@ export type CardFaceSchema = {
   title?: string;
 };
 
-export type PlaqueFaceSchema = {
+type PlaqueFaceSchema = {
   kind: "plaque";
   title: string;
   prestige?: number;
   requirements?: Readonly<Record<string, number>>;
 };
 
-export type LotFaceSchema = {
+type LotFaceSchema = {
   kind: "lot";
   title: string;
   prestige?: number;
@@ -28,7 +28,7 @@ export type LotFaceSchema = {
   artistId?: string;
 };
 
-export type FaceSchema = CardFaceSchema | PlaqueFaceSchema | LotFaceSchema;
+type FaceSchema = CardFaceSchema | PlaqueFaceSchema | LotFaceSchema;
 
 const COST_KEYS = ["white", "blue", "green", "red", "black", "gold"] as const;
 const COST_SHORT: Record<string, string> = {

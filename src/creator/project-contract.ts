@@ -19,7 +19,7 @@ export interface GameProject {
   };
 }
 
-export type ImageUse = "visual-reference" | "project-asset";
+type ImageUse = "visual-reference" | "project-asset";
 
 interface SourceLibraryEntryBase {
   id: string;
@@ -52,7 +52,7 @@ export interface BoundImage {
   alt: string;
 }
 
-export type VisualProvenance =
+type VisualProvenance =
   | "extracted"
   | "generated"
   | "kit"
@@ -84,7 +84,7 @@ export type PlaySurfaceKind =
   | "scene"
   | "hybrid";
 
-export interface ParticipantRole {
+interface ParticipantRole {
   id: string;
   name: string;
   description: string;
@@ -164,7 +164,7 @@ export interface RuleSystem {
     render?: RenderSpec;
     image?: BoundImage;
     visuals?: VisualTreatment[];
-    /** UI-P3 · Room HUD Theme Pack id (harbor-wood default when omitted). */
+    /** Room HUD Theme Pack id (harbor-wood default when omitted). */
     uiTheme?: UiThemeId;
   };
   runtimeSupport:
@@ -419,7 +419,7 @@ export interface PlaytestLink {
   url: string;
 }
 
-export type HarborVoyageTableState = {
+type HarborVoyageTableState = {
   phase: "placement" | "movement" | "pilot" | "resolved";
   placementRound: number;
   movementRound: number;
@@ -452,7 +452,7 @@ export type HarborVoyageTableState = {
   winnerSeat: number | null;
 };
 
-export type WorkerPlacementTableState = {
+type WorkerPlacementTableState = {
   phase: "placement" | "resolved";
   activeSeat: number;
   players: Array<{
@@ -512,7 +512,7 @@ interface ParticipantFeedbackObservation {
   moment: FeedbackMoment;
 }
 
-export type ValidationEvidence =
+type ValidationEvidence =
   | {
       type: "automated-playtest";
       playtestId: string;
@@ -1430,7 +1430,7 @@ export interface PlaytestRun {
   replayUrl: string;
 }
 
-export interface SessionSeat {
+interface SessionSeat {
   seat: number;
   displayName?: string;
 }
@@ -1445,12 +1445,12 @@ export interface SessionFeedback {
   updatedAt: string;
 }
 
-export interface FeedbackMoment {
+interface FeedbackMoment {
   actionSequence: number;
   actionId: string;
 }
 
-export interface ExperimentBrief {
+interface ExperimentBrief {
   hypothesisId: string;
   question: string;
   successSignal: string;

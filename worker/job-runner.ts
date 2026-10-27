@@ -442,7 +442,7 @@ export async function runCreatorJob(
         !requestedMechanics.some((mechanic) =>
           ["hex-settlement", "disc-flipping", "route-network", "gem-engine"].includes(mechanic),
         );
-      // T008: hand-play must not steal route-network / hex subjects (even when corpus says 手牌).
+      // hand-play must not steal route-network / hex subjects (even when corpus says 手牌).
       const handPlayRuntimeConfigured =
         (sourceGenre === "hand-play" ||
           requestedMechanics.includes("hand-play")) &&
@@ -536,7 +536,7 @@ export async function runCreatorJob(
         generatedRuleSystem.actions.length === 2 &&
         generatedRuleSystem.actions.some((action) => action.id === "roll") &&
         generatedRuleSystem.actions.some((action) => action.id === "bank");
-      // T009/T013: factory/pattern-wall corpus — bind pattern-draft-v1 when inferred; else refuse turn-taking.
+      // factory/pattern-wall corpus — bind pattern-draft-v1 when inferred; else refuse turn-taking.
       patternDraftRefused =
         isPatternDraftCorpus(authoredMaterial) &&
         !patternDraftRuntimeConfigured &&
@@ -599,7 +599,7 @@ export async function runCreatorJob(
       if (multiActHiddenRoleRefused) {
         generationRuntimeConfigured = false;
       }
-      // T009: factory / pattern-wall draft — keep draft, no turn-taking executable.
+      // factory / pattern-wall draft — keep draft, no turn-taking executable.
       if (patternDraftRefused) {
         generationRuntimeConfigured = false;
       }

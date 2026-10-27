@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { resolveSealedBids, splitBrokerageAward, splitNegotiatedBrokerage } from "./brokerage";
 
-describe("brokerage shared (T023)", () => {
+describe("brokerage shared", () => {
   it("splits second-place cut when enabled", () => {
     const s = splitBrokerageAward({
       price: 10,
@@ -22,7 +22,7 @@ describe("brokerage shared (T023)", () => {
   });
 });
 
-describe("splitNegotiatedBrokerage (T024)", () => {
+describe("splitNegotiatedBrokerage", () => {
   it("pays an explicit broker seat a per-deal cut (not second-place award-cut)", () => {
     const split = splitNegotiatedBrokerage({
       price: 100,

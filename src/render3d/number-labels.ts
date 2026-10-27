@@ -21,22 +21,21 @@ import {
 import type { SceneNode } from "./scene-model";
 
 /** 筹码圆柱：半径 0.22、高 0.06，节点 position 为圆柱中心。 */
-export const NUMBER_TOKEN_RADIUS = 0.258; // T222/T237 · chip footprint
-export const NUMBER_TOKEN_HALF_HEIGHT = 0.092; // T250 · product wood-chip lip / side thickness
+const NUMBER_TOKEN_RADIUS = 0.258; // chip footprint
+export const NUMBER_TOKEN_HALF_HEIGHT = 0.092; // product wood-chip lip / side thickness
 /** 贴花离筹码顶面的高度（避免 z-fighting；配合 polygonOffset）。 */
-export const LABEL_LIFT = -0.026; // T261 · seat numeral into carved mesh well (not canvas ox/oy)
+export const LABEL_LIFT = -0.026; // seat numeral into carved mesh well (not canvas ox/oy)
 /** 贴花边长 = 筹码半径 × 1.85 × 节点缩放：略小于筹码直径（G3D-ART-3 由 1.6 放大，字形更大）。 */
-export const LABEL_SIZE_PER_RADIUS = 2.72; // T257 · wider stamp footprint stage-wide
+const LABEL_SIZE_PER_RADIUS = 2.72; // wider stamp footprint stage-wide
 export { NUMBER_TOKEN_SCALE } from "./tokens";
 
-export const LABEL_INK = "#0a0604"; // T225 · stamped ink on chip
+export const LABEL_INK = "#0a0604"; // stamped ink on chip
 /** 6 / 8 高亮：赤陶色（比风格色 #B8643C 深一档，保证在奶油色筹码面上对比度 ≥ 4.5）。 */
-export const LABEL_HOT = "#8a1c08"; // T101/T112/T118/T222
-
+export const LABEL_HOT = "#8a1c08";
 const GRID = 4;
 const NUMBERS = [2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 7] as const;
 
-export function isHotNumber(n: number): boolean {
+function isHotNumber(n: number): boolean {
   return n === 6 || n === 8;
 }
 
@@ -58,12 +57,12 @@ export function atlasCell(n: number): { col: number; row: number } {
  */
 export const LABEL_FONT = `"Helvetica Neue", Helvetica, Arial, "Noto Sans", "DejaVu Sans", "Liberation Sans", sans-serif`;
 /** 默认机位俯视角会把筹码顶面纵向压缩约一半；图集里预先纵向拉伸字形，抵消透视压缩。 */
-export const GLYPH_STRETCH_Y = 1.63; // T099/T112/T118 · T125/T129/T131/T133 ortho (floor 1.62, was 1.78)
+export const GLYPH_STRETCH_Y = 1.63; // T125/T129/T131/T133 ortho (floor 1.62, was 1.78)
 /** 两位数的字距（相对格宽，负值收紧），让「11」「12」成为一个整体而不是两个分离的笔画。 */
-export const GLYPH_TRACKING = -0.03;
+const GLYPH_TRACKING = -0.03;
 
 /** 浏览器里画数字图集；node 测试环境传入 stub。 */
-export function drawNumberAtlas(size = 1024): Texture {
+function drawNumberAtlas(size = 1024): Texture {
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -80,7 +79,7 @@ export function drawNumberAtlas(size = 1024): Texture {
     const color = isHotNumber(n) ? LABEL_HOT : LABEL_INK;
     ctx.fillStyle = color;
     const text = String(n);
-    // T099/T112/T118 · larger glyphs + cream stroke for stage-wide contrast (shared; no sample specials)
+    // larger glyphs + cream stroke for stage-wide contrast (shared; no sample specials)
     const fontPx = Math.round(cell * (text.length > 1 ? 0.86 : 0.94));
     ctx.font = `900 ${fontPx}px ${LABEL_FONT}`;
     // 逐字排版：实测字宽 + 收紧字距；两位数若超宽则整体横向压缩。
@@ -96,7 +95,7 @@ export function drawNumberAtlas(size = 1024): Texture {
     ctx.scale(squeeze, GLYPH_STRETCH_Y);
     ctx.lineJoin = "round";
     ctx.miterLimit = 2;
-    // T257 · wide-frame pressed stamp: broader recess shadow + brighter lip highlight
+    // wide-frame pressed stamp: broader recess shadow + brighter lip highlight
     const shadow = "rgba(5,2,0,0.94)";
     const hi = "rgba(255,254,248,0.98)";
     const ox = Math.max(7, fontPx * 0.16);
@@ -124,7 +123,7 @@ export function drawNumberAtlas(size = 1024): Texture {
     });
     ctx.restore();
     const pips = pipCount(n);
-    const r = cell * 0.068; // T099/T112/T118 · larger probability pips
+    const r = cell * 0.068; // larger probability pips
     const gap = r * 2.6;
     for (let i = 0; i < pips; i += 1) {
       const px = cx + (i - (pips - 1) / 2) * gap;
@@ -145,7 +144,7 @@ export function drawNumberAtlas(size = 1024): Texture {
   return texture;
 }
 
-export type NumberLabel = { id: string; number: number; hot: boolean; center: Vector3; size: number };
+type NumberLabel = { id: string; number: number; hot: boolean; center: Vector3; size: number };
 
 /** SceneModel → 每个带数字筹码的贴花中心（世界坐标，筹码顶面上方 LABEL_LIFT）。 */
 export function labelsFromNodes(nodes: readonly SceneNode[]): NumberLabel[] {
@@ -165,14 +164,14 @@ export function labelsFromNodes(nodes: readonly SceneNode[]): NumberLabel[] {
 }
 
 /** 合成所有贴花的几何：每个 4 顶点 / 2 三角形，法线 +Y，文字“上方”朝 -Z（默认机位在 +Z 侧时正读）。 */
-export function buildLabelGeometry(labels: readonly NumberLabel[]): BufferGeometry {
+function buildLabelGeometry(labels: readonly NumberLabel[]): BufferGeometry {
   const pos = new Float32Array(labels.length * 12);
   const uv = new Float32Array(labels.length * 8);
   const nrm = new Float32Array(labels.length * 12);
   const idx = new Uint16Array(labels.length * 6);
   labels.forEach((label, i) => {
     const h = label.size / 2;
-    // T129/T131/T133 · ortho UV plane: flatter depth so seat-close top-down does not over-elongate glyphs
+    // ortho UV plane: flatter depth so seat-close top-down does not over-elongate glyphs
     const hx = h;
     const hz = h * 0.85;
     const { x, y, z } = label.center;
@@ -206,7 +205,7 @@ export function projectLabels(labels: readonly NumberLabel[], camera: Camera, wi
   camera.getWorldPosition(camPos);
   return labels.map((label) => {
     const hx = label.size / 2;
-    const hz = (label.size / 2) * 0.85; // T129/T131/T133 aspect
+    const hz = (label.size / 2) * 0.85; // aspect
     const xs: number[] = [];
     const ys: number[] = [];
     let inView = true;
@@ -243,7 +242,7 @@ export function createNumberLabelLayer(options: { atlas?: () => Texture } = {}):
     transparent: true,
     alphaTest: 0.35,
     depthWrite: false,
-    roughness: 0.94, // T253 · matte pressed ink (not glossy sticker)
+    roughness: 0.94, // matte pressed ink (not glossy sticker)
     metalness: 0,
     polygonOffset: true,
     polygonOffsetFactor: -1,

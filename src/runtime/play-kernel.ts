@@ -35,7 +35,7 @@ export type PlayEvent =
   | { kind: "pass"; playerId: PlayerId; sequence: number }
   | { kind: "ended"; reason: string; winnerId: PlayerId | null; sequence: number };
 
-export type PlayStatus = "active" | "complete";
+type PlayStatus = "active" | "complete";
 
 /**
  * Public state envelope. Adapter-private fields live under `genre` only.

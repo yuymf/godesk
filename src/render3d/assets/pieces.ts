@@ -43,11 +43,11 @@ import {
 } from "three";
 import { SEAT_COLORS } from "../tokens";
 
-export type PieceKind = "settlement" | "city" | "road" | "robber" | "meeple";
+type PieceKind = "settlement" | "city" | "road" | "robber" | "meeple";
 
 type Vec3 = readonly [number, number, number];
 
-export type PartOptions = {
+type PartOptions = {
   pos?: Vec3;
   rot?: Vec3;
   scale?: Vec3;
@@ -182,7 +182,7 @@ function smoothstep(a: number, b: number, x: number): number {
  * `contact` fraction of the height, darker down-facing faces (eaves, overhangs),
  * a little extra light on up-facing faces. Mutates `geom`'s colour attribute.
  */
-export function bakeShading(geom: BufferGeometry, contact = 0.3): BufferGeometry {
+function bakeShading(geom: BufferGeometry, contact = 0.3): BufferGeometry {
   geom.computeBoundingBox();
   const box = geom.boundingBox!;
   const height = Math.max(box.max.y - box.min.y, 1e-6);
@@ -203,7 +203,7 @@ export function bakeShading(geom: BufferGeometry, contact = 0.3): BufferGeometry
 }
 
 /** Soft elliptical contact shadow under a piece (baked into the shared geometry). */
-export function contactShadow(rx: number, rz: number, y = 0.004): BufferGeometry {
+function contactShadow(rx: number, rz: number, y = 0.004): BufferGeometry {
   // Thin dark disc: darker centre, fades toward the rim via vertex colours.
   const segs = 16;
   const positions: number[] = [];
@@ -368,8 +368,8 @@ function houseParts({ width, depth, wallHeight, ridgeHeight, base, wall, roof, s
  * (no cottage/manor glTF suitable for InstancedMesh+vertexColors) — keep
  * procedural miniatures; survey noted in assets/LICENSES.md.
  */
-export const SETTLEMENT_SCALE = 2.38; // T060/T225 · taller pitched cottage
-export const CITY_SCALE = 2.80; // T060/T225 · taller keep silhouette
+const SETTLEMENT_SCALE = 2.38; // taller pitched cottage
+const CITY_SCALE = 2.80; // taller keep silhouette
 
 function scaled(geom: BufferGeometry, s: number): BufferGeometry {
   geom.scale(s, s, s);
@@ -469,7 +469,7 @@ export function buildCityGeometry(seat: number): BufferGeometry {
   return scaled(bakeShading(mergeParts(parts), 0.3), CITY_SCALE);
 }
 
-export const ROAD_LENGTH = 1.02; // T060/T225 · edge-aligned prism span
+export const ROAD_LENGTH = 1.02; // edge-aligned prism span
 
 export function buildRoadGeometry(seat: number): BufferGeometry {
   const main = seatColor(seat);
@@ -502,14 +502,14 @@ export function buildRoadGeometry(seat: number): BufferGeometry {
 
 /** T123 · shared seat marker for hex layout — was meeple silhouette; T171 → seat tray on desk. */
 /** T163/T165 · dual-lip product-frame language retained on tray rim. */
-export const MEEPLE_HEX_SCALE = 1.95; // T171…T198/T217 · tray scale (shared seat marker)
-export const MEEPLE_RIM_HEX = "#f6dcb0"; // T171…T196/T198 · wood tray lip
-export const MEEPLE_RIM_UNDERCUT = "#3a2414"; // T163 · dark undercut
+const MEEPLE_HEX_SCALE = 1.95; // tray scale (shared seat marker)
+const MEEPLE_RIM_HEX = "#f6dcb0"; // wood tray lip
+const MEEPLE_RIM_UNDERCUT = "#3a2414"; // dark undercut
 
-export function buildMeepleGeometry(seat = 0): BufferGeometry {
+function buildMeepleGeometry(seat = 0): BufferGeometry {
   const seatColor = SEAT_COLORS[seat % SEAT_COLORS.length] ?? "#ffffff";
   const parts: BufferGeometry[] = [];
-  // T171 · seat tray on desk (shared): wood oval tray + small seat-color chip (not color-swatch meeple)
+  // seat tray on desk (shared): wood oval tray + small seat-color chip (not color-swatch meeple)
   parts.push(
     paintPart(new CylinderGeometry(0.42, 0.46, 0.05, 24), MEEPLE_RIM_UNDERCUT, {
       pos: [0, 0.025, 0],
@@ -537,8 +537,7 @@ export function buildMeepleGeometry(seat = 0): BufferGeometry {
 }
 
 /** Robber ≈ hooded miniature (not a lathe cylinder). */
-export const ROBBER_SCALE = 1.78; // T217
-
+const ROBBER_SCALE = 1.78;
 function invertHull(geom: BufferGeometry): BufferGeometry {
   for (const name of ["position", "normal", "color"]) {
     const attr = geom.getAttribute(name);

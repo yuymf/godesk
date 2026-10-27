@@ -9,13 +9,13 @@
 
 export type SpriteMap = Record<string, [number, number]>;
 
-export type SpriteSource = {
+type SpriteSource = {
   id: "audio/sfx-core" | "audio/sfx-extended";
   url: string;
   sprite: SpriteMap;
 };
 
-export type LoopSource = { id: string; url: string };
+type LoopSource = { id: string; url: string };
 
 export type AudioSources = {
   core: SpriteSource | null;

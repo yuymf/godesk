@@ -2,7 +2,7 @@
  * Generic auto-battler VFX / skill presentation presets (not tide-arena skins).
  * Combat log + timeline carry `vfx` events; the 3D scene interprets presets.
  */
-export const VFX_PRESETS = [
+const VFX_PRESETS = [
   "projectile",
   "aoe",
   "heal",
@@ -10,7 +10,7 @@ export const VFX_PRESETS = [
   "hit_particles",
   "crit_shake",
 ] as const;
-export type VfxPreset = (typeof VFX_PRESETS)[number];
+type VfxPreset = (typeof VFX_PRESETS)[number];
 
 export function isVfxPreset(v: unknown): v is VfxPreset {
   return typeof v === "string" && (VFX_PRESETS as readonly string[]).includes(v);

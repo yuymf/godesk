@@ -13,9 +13,9 @@ export type HarborTargetId =
   | "pilot-small"
   | "pilot-large"
   | "insurance";
-export type HarborPhase = "placement" | "movement" | "pilot" | "resolved";
+type HarborPhase = "placement" | "movement" | "pilot" | "resolved";
 
-export type HarborPlayer = {
+type HarborPlayer = {
   seat: number;
   name: string;
   color: string;
@@ -23,7 +23,7 @@ export type HarborPlayer = {
   workers: number;
 };
 
-export type HarborPunt = {
+type HarborPunt = {
   cargoId: HarborCargoId;
   name: string;
   color: string;
@@ -33,7 +33,7 @@ export type HarborPunt = {
   result?: "port" | "shipyard" | "pirates";
 };
 
-export type HarborPlacement = {
+type HarborPlacement = {
   id: string;
   seat: number;
   targetId: HarborTargetId;

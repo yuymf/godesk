@@ -115,7 +115,7 @@ export const DEFAULT_NETWORK_EDGES: readonly NetworkEdgeDef[] = [
 ];
 
 /** Cargo contract template (content). */
-export type FreightContractDef = {
+type FreightContractDef = {
   id: string;
   name: string;
   from: string;
@@ -126,7 +126,7 @@ export type FreightContractDef = {
 };
 
 /** Ship type (content). cargo = max concurrent accepted contracts. */
-export type ShipDef = {
+type ShipDef = {
   id: string;
   name: string;
   cargo: number;
@@ -144,11 +144,11 @@ export type NetworkRouteContent = {
   edgeTolls?: Record<string, number>;
 };
 
-export type FreightContractInstance = FreightContractDef & {
+type FreightContractInstance = FreightContractDef & {
   instanceId: string;
 };
 
-export type NetworkRouteFreightState = {
+type NetworkRouteFreightState = {
   funds: number[];
   reputation: number[];
   /** Ship def ids owned per seat (starts with one). */
@@ -192,14 +192,14 @@ export type NetworkRouteGenre = {
 };
 
 /** Generic logistics cues (not starport-specific). */
-export const LOGISTICS_FREIGHT_CUES =
+const LOGISTICS_FREIGHT_CUES =
   /货运合约|派车运货|船型|信誉\s*\d+|物流竞速|物流路线|星港节点|freight\s*contract|cargo\s*contract|reputation\s*(?:to\s*)?(?:win|10)|convoy|运货/i;
 
 export function ideaRequestsFreightLogistics(idea: string): boolean {
   return LOGISTICS_FREIGHT_CUES.test(idea);
 }
 
-export function defaultFreightShips(): ShipDef[] {
+function defaultFreightShips(): ShipDef[] {
   return [
     { id: "barge", name: "驳船", cargo: 1, speed: 1, armor: 1 },
     { id: "cutter", name: "快艇", cargo: 1, speed: 2, armor: 1 },
@@ -209,7 +209,7 @@ export function defaultFreightShips(): ShipDef[] {
 }
 
 /** Build a small contract deck over the fixed graph (generic, not themed). */
-export function defaultFreightContracts(
+function defaultFreightContracts(
   cities: readonly NetworkCity[] = DEFAULT_NETWORK_CITIES,
 ): FreightContractDef[] {
   const ids = cities.map((c) => c.id);

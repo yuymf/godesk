@@ -47,8 +47,8 @@
   --shadow-float: 0 6px 12px rgba(41, 33, 20, 0.10), 0 20px 48px rgba(41, 33, 20, 0.18);
   --hud-glass: rgba(251, 248, 241, 0.86);
   --hud-glass-blur: blur(12px);
-  /* UI-room-hud · settlecoast-grade surface hierarchy (paper / float / wood)
-   * UI-theme-packs · harbor-wood defaults; other packs override via [data-ui-theme]. */
+  /* settlecoast-grade surface hierarchy (paper / float / wood)
+   * harbor-wood defaults; other packs override via [data-ui-theme]. */
   --surface-wood: #3a2a1c;
   --surface-wood-deep: #24180f;
   --surface-wood-edge: #5a4330;
@@ -58,7 +58,7 @@
   --hud-seat-rail-w: 13.5rem;
   --hud-turn-panel-w: 15.5rem;
   --hud-hand-h: 7.25rem;
-  /* UI-density-fill · P4 denser hand / badge floors */
+  /* P4 denser hand / badge floors */
   --hud-badge-h: 1.15rem;
   --hud-cost-pip: 0.55rem;
   --hud-accent: #8b1e1e;

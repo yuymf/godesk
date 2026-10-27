@@ -73,7 +73,7 @@ export type HexSettlementSceneInput = {
 /** Tile top surface (tile extrude depth); pieces stand on it. */
 export const TILE_TOP_Y = 0.28;
 /** Robber stands beside the number token on numbered tiles (desert: centre). */
-export const ROBBER_TOKEN_OFFSET: readonly [number, number] = [0.42, -0.32];
+const ROBBER_TOKEN_OFFSET: readonly [number, number] = [0.42, -0.32];
 
 export function mapHexSettlementToScene(genre: HexSettlementSceneInput): SceneModel {
   const nodes: SceneNode[] = [];
@@ -103,7 +103,7 @@ export function mapHexSettlementToScene(genre: HexSettlementSceneInput): SceneMo
         number: tile.number,
         tag: tile.number === 6 || tile.number === 8 ? "hot" : "normal",
         // G3D-ART-2：筹码放大到约 37% 六角宽，数字贴花才读得出（见 number-labels.ts）。
-        scale: [NUMBER_TOKEN_SCALE, 1.78, NUMBER_TOKEN_SCALE], // T241 · thicker beveled chip
+        scale: [NUMBER_TOKEN_SCALE, 1.78, NUMBER_TOKEN_SCALE], // thicker beveled chip
       });
     }
   }
@@ -185,8 +185,8 @@ export function mapHexSettlementToScene(genre: HexSettlementSceneInput): SceneMo
   });
 
 
-  // T123 · shared seat markers on hex near-edge (T171 · seat tray, not color-swatch meeple)
-  // T125 · pull near-edge band inward so framing/camera keeps markers + island together
+  // shared seat markers on hex near-edge (T171 · seat tray, not color-swatch meeple)
+  // pull near-edge band inward so framing/camera keeps markers + island together
   {
     const seatN = Math.max(genre.players.length, 2);
     let maxWorldZ = -Infinity;

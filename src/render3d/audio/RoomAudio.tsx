@@ -16,7 +16,7 @@ import { loadAudioSettings, MUSIC_TRACKS, saveAudioSettings, type AudioSettings,
 import { AUDIO_SOURCES } from "./sources";
 import "./sound-settings.css";
 
-export type RoomAudioProps = {
+type RoomAudioProps = {
   room: AudioRoomSnapshot;
   seat: number | null;
   /** RoomView 的错误文案；变为非空时播放 `illegal` */

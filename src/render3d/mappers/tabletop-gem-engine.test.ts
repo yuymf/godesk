@@ -27,7 +27,7 @@ function sampleGemState() {
   };
 }
 
-describe("T026 gem-engine tabletop layout", () => {
+describe("gem-engine tabletop layout", () => {
   it("emits bank / market / noble / seat pieces on a board", () => {
     const layout = gemEngineLayout(sampleGemState());
     expect(layout.kernelType).toBe("gem-engine-v1");

@@ -32,7 +32,7 @@ function sampleAuction() {
   };
 }
 
-describe("T028 auction-bidding tabletop layout", () => {
+describe("auction-bidding tabletop layout", () => {
   it("emits lot / seats / artists for gallery subset", () => {
     const layout = auctionBiddingLayout(sampleAuction());
     expect(layout.kernelType).toBe("auction-bidding-v1");

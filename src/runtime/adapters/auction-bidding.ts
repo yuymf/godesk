@@ -31,9 +31,9 @@ import {
   splitNegotiatedBrokerage,
 } from "../brokerage";
 
-export const AUCTION_BIDDING_KERNEL_TYPE = "auction-bidding-v1" as const;
+const AUCTION_BIDDING_KERNEL_TYPE = "auction-bidding-v1" as const;
 
-export type AuctionLotDef = {
+type AuctionLotDef = {
   id: string;
   name: string;
   /** 底价 — minimum meaningful bid / sealed floor. */
@@ -42,18 +42,18 @@ export type AuctionLotDef = {
   marketMult: number;
 };
 
-export type AuctionLotInstance = AuctionLotDef & { instanceId: string };
+type AuctionLotInstance = AuctionLotDef & { instanceId: string };
 
-export type AuctionBiddingContent = {
+type AuctionBiddingContent = {
   lots: AuctionLotDef[];
   startingFunds: number;
   /** open = alternate raise/pass; sealed = each seat commits once per lot. */
   bidVisibility: "open" | "sealed";
 };
 
-export type GalleryAuctionMode = "open" | "sealed" | "fixed" | "double";
+type GalleryAuctionMode = "open" | "sealed" | "fixed" | "double";
 
-export type GalleryPaintingDef = {
+type GalleryPaintingDef = {
   id: string;
   name: string;
   artistId: string;
@@ -61,9 +61,9 @@ export type GalleryPaintingDef = {
   reserve: number;
 };
 
-export type GalleryPaintingInstance = GalleryPaintingDef & { instanceId: string };
+type GalleryPaintingInstance = GalleryPaintingDef & { instanceId: string };
 
-export type GalleryAuctionContent = {
+type GalleryAuctionContent = {
   artists: Array<{ id: string; name: string }>;
   paintings: GalleryPaintingDef[];
   startingFunds: number;
@@ -88,7 +88,7 @@ export type GalleryAuctionContent = {
   negotiatedBrokerage: boolean;
 };
 
-export type GalleryAuctionState = {
+type GalleryAuctionState = {
   artists: Array<{ id: string; name: string }>;
   modes: GalleryAuctionMode[];
   currentMode: GalleryAuctionMode;
@@ -165,11 +165,11 @@ export type AuctionBiddingGenre = {
 };
 
 /** Generic harbor/auction-house cues (not 暗港-specific alone). */
-export const HARBOR_AUCTION_CUES =
+const HARBOR_AUCTION_CUES =
   /黑市|赃物|密封|拍品|底价|流拍|暗港|牌库|转售|black\s*market|sealed\s*bid|lot\s*queue|reserve\s*price/i;
 
 /** Generic gallery / multi-mode + artist-market cues (not Modern Art IP). */
-export const GALLERY_AUCTION_CUES =
+const GALLERY_AUCTION_CUES =
   /画家|行情|画作|画廊|定价购|定价购买|双画|公开加价|一次暗标|artist\s*market|fixed.?price|gallery\s*auction|market\s*ladder/i;
 
 export function ideaRequestsHarborAuction(idea: string): boolean {
@@ -180,7 +180,7 @@ export function ideaRequestsGalleryAuction(idea: string): boolean {
   return GALLERY_AUCTION_CUES.test(idea);
 }
 
-export function defaultHarborLots(): AuctionLotDef[] {
+function defaultHarborLots(): AuctionLotDef[] {
   const names = [
     "暗港罗盘",
     "伪旗",
@@ -230,7 +230,7 @@ export function harborAuctionUnsupportedNotes(): string[] {
   ];
 }
 
-export function defaultGalleryArtists(): Array<{ id: string; name: string }> {
+function defaultGalleryArtists(): Array<{ id: string; name: string }> {
   return [
     { id: "a0", name: "青釉" },
     { id: "a1", name: "赤陶" },
@@ -239,7 +239,7 @@ export function defaultGalleryArtists(): Array<{ id: string; name: string }> {
   ];
 }
 
-export function defaultGalleryPaintings(
+function defaultGalleryPaintings(
   artists: Array<{ id: string; name: string }> = defaultGalleryArtists(),
   copiesPerArtist = 4,
 ): GalleryPaintingDef[] {
@@ -785,7 +785,7 @@ function galleryMaybeEndAfterMarket(
     cashOutCollections(genre);
     return finishGameByChips(genre, actor);
   }
-  // T015: exact round-start refill timing — after market, before next offer.
+  // exact round-start refill timing — after market, before next offer.
   refillGalleryHands(g);
   return ensureOfferReady(genre, actor);
 }

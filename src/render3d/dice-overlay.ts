@@ -27,7 +27,7 @@ import {
 } from "three";
 import { TRAY } from "./dice";
 
-export type OverlayRect = { x: number; y: number; width: number; height: number };
+type OverlayRect = { x: number; y: number; width: number; height: number };
 
 /** Viewport aspect of the tray inset (width / height). */
 export const DICE_OVERLAY_ASPECT = 1.5;

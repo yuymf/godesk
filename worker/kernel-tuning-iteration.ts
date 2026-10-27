@@ -49,7 +49,7 @@ interface TuningKnob {
   max: number;
 }
 
-export interface KernelChange { key: string; label: string; value: string | number }
+interface KernelChange { key: string; label: string; value: string | number }
 
 /** Mutable draft a parser edits: numeric tuning + content (resolved, full). */
 interface Draft<TContent> {
@@ -650,7 +650,7 @@ const themeParser: ClauseParser<AutoBattlerContent> = (clauses, i, draft) => {
   return 1;
 };
 
-export const KERNEL_TUNING_REGISTRY: Partial<Record<Kernel["type"], KernelTuningSpec<AutoBattlerContent>>> = {
+const KERNEL_TUNING_REGISTRY: Partial<Record<Kernel["type"], KernelTuningSpec<AutoBattlerContent>>> = {
   "auto-battler-v1": {
     knobs: [
       { key: "prepShopSeconds", label: "商店备战时长", unit: "秒", subject: /(商店|购买|买棋|shop)/i, ...lim.prepShopSeconds },
@@ -698,7 +698,7 @@ const clauseSplit = /[，,。；;！!\n]|并且|同时|另外|然后|以及/;
 /** Clauses that carry no instruction (politeness / filler) never count as unsupported. */
 const filler = /^(?:请|帮我|麻烦|谢谢|好的|嗯|吧|呢|一下)*$/;
 
-export interface KernelEditResult {
+interface KernelEditResult {
   theme?: AutoBattlerThemePatch;
   branding?: AutoBattlerBranding;
   assetIntents?: AssetAttachIntent[];
@@ -779,7 +779,7 @@ export function parseKernelEdits(
   };
 }
 
-export interface KernelTuningIterationPlan {
+interface KernelTuningIterationPlan {
   prompt: string;
   summary: string;
   actionId: string;

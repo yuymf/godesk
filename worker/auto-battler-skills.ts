@@ -5,12 +5,12 @@ import type { AutoBattlerContent, TraitDef, UnitDef } from "../src/runtime/adapt
 import { vfxPresetFromHint, type UnitCombatFx } from "../src/runtime/adapters/auto-battler-vfx";
 import { resolveUnitHint } from "./auto-battler-assets";
 
-export type SkillFxIntent =
+type SkillFxIntent =
   | { kind: "unit_attack_fx"; unitHint: string; effectKind: string; value: number; vfx?: string; label?: string }
   | { kind: "unit_heal"; unitHint: string; value: number }
   | { kind: "new_trait_shield"; label: string; tiers?: number[]; values?: number[] };
 
-export type SkillFxReport = { lines: string[]; unsupported: string[] };
+type SkillFxReport = { lines: string[]; unsupported: string[] };
 
 /** Parse one clause into a skill/VFX intent (0 = not mine). */
 export function parseSkillFxClause(clause: string): SkillFxIntent | null {

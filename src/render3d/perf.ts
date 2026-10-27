@@ -18,9 +18,9 @@ export const WARMUP_FRAMES = 180;
 /** 120 s at 60 fps; older samples fall off the ring buffer. */
 const MAX_SAMPLES = 7_200;
 
-export type PerfTier = "high" | "medium" | "low";
+type PerfTier = "high" | "medium" | "low";
 
-export type RendererInfoSnapshot = {
+type RendererInfoSnapshot = {
   calls: number;
   triangles: number;
   points: number;
@@ -68,7 +68,7 @@ type HostHandle = {
   tier?: () => string;
 };
 
-export type PerfHarnessApi = {
+type PerfHarnessApi = {
   version: 1;
   snapshot: () => PerfSnapshot | null;
   /** Start a fresh measurement window; warm-up discard applies again unless `warmup: false`. */
@@ -82,7 +82,7 @@ export type PerfHarnessApi = {
   meshBreakdown: () => MeshTriangleRow[];
 };
 
-export type MeshTriangleRow = { key: string; meshes: number; instances: number; triangles: number; castShadow: boolean };
+type MeshTriangleRow = { key: string; meshes: number; instances: number; triangles: number; castShadow: boolean };
 
 declare global {
   interface Window {
@@ -101,20 +101,6 @@ export function requestedTier(search: string = typeof location === "undefined" ?
   return { tier: "high", source: "default" };
 }
 
-/** Effective render tier for snapshots (query → settings → auto). */
-export function resolvedPerfTier(
-  search: string = typeof location === "undefined" ? "" : location.search,
-): { tier: PerfTier; source: string } {
-  try {
-    // Lazy import pattern avoided; callers in SceneHost use tiers.ts directly.
-    const value = new URLSearchParams(search).get("tier");
-    if (value === "high" || value === "medium" || value === "low") return { tier: value, source: "query" };
-  } catch {
-    /* ignore */
-  }
-  return { tier: "high", source: "default" };
-}
-
 /** Nearest-rank percentile over an unsorted sample; null for an empty sample. */
 export function percentile(samples: readonly number[], p: number): number | null {
   if (!samples.length) return null;
@@ -124,7 +110,7 @@ export function percentile(samples: readonly number[], p: number): number | null
 }
 
 /** G3D-07：按实际阴影贴图尺寸估算（RGBA8 深度打包，每像素 4 字节）。 */
-export function shadowMapBytes(root: Object3D): number {
+function shadowMapBytes(root: Object3D): number {
   let bytes = 0;
   root.traverse((object) => {
     const light = object as Object3D & { castShadow?: boolean; isLight?: boolean; shadow?: { mapSize: { x: number; y: number } } };

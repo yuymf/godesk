@@ -86,7 +86,7 @@ describe("hasWeakGenreScoreRaceLeak (W4-05)", () => {
 });
 
 
-describe("T008/T011 board mechanics do not steal hand-play genre", () => {
+describe("board mechanics do not steal hand-play genre", () => {
   it("keeps hex settlement corpus generic despite incidental 手牌", () => {
     const book =
       "六角岛开拓。掷骰获得资源，建造道路与定居点。若掷出7，所有手牌≥7的玩家弃一半。非自走棋。";

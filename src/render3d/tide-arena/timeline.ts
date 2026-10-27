@@ -8,7 +8,7 @@ import { floaterText } from "./floaters";
 import { HIT_DELAY_MS, REPLAY_LEAD_MS, REPLAY_TAIL_MS, strikeStep } from "../../runtime/adapters/combat-playback";
 export { HIT_DELAY_MS, REPLAY_LEAD_MS, REPLAY_TAIL_MS, strikeStep };
 
-export const RANGED_UNITS: ReadonlySet<string> = new Set([
+const RANGED_UNITS: ReadonlySet<string> = new Set([
   "archer",
   "witch",
   "spirit",
@@ -19,7 +19,7 @@ export const RANGED_UNITS: ReadonlySet<string> = new Set([
 /** Projectile flight / lunge peak: the hit lands this long after the swing starts. */
 export const DEATH_FADE_MS = 500;
 
-export type ReplayStrike = {
+type ReplayStrike = {
   kind: "strike";
   t: number;
   hitT: number;
@@ -29,23 +29,23 @@ export type ReplayStrike = {
   targetHp: number;
   ranged: boolean;
 };
-export type ReplayHeal = {
+type ReplayHeal = {
   kind: "heal";
   t: number;
   uid: string;
   amount: number;
   targetHp: number;
 };
-export type ReplayTrait = {
+type ReplayTrait = {
   kind: "trait";
   t: number;
   trait: string;
   label: string;
   detail?: string;
 };
-export type ReplayDown = { kind: "down"; t: number; uid: string };
-export type ReplayEnd = { kind: "end"; t: number; winnerSeat: number | null; damageToLoser: number };
-export type ReplayVfx = {
+type ReplayDown = { kind: "down"; t: number; uid: string };
+type ReplayEnd = { kind: "end"; t: number; winnerSeat: number | null; damageToLoser: number };
+type ReplayVfx = {
   kind: "vfx";
   t: number;
   preset: string;
@@ -54,8 +54,8 @@ export type ReplayVfx = {
   toUid?: string;
   amount?: number;
 };
-export type ReplayEvent = ReplayStrike | ReplayHeal | ReplayTrait | ReplayDown | ReplayVfx | ReplayEnd;
-export type ReplayLine = {
+type ReplayEvent = ReplayStrike | ReplayHeal | ReplayTrait | ReplayDown | ReplayVfx | ReplayEnd;
+type ReplayLine = {
   t: number;
   stamp: string;
   text: string;

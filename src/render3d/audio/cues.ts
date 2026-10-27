@@ -31,12 +31,12 @@ export const CUE_IDS = [
 export type CueId = (typeof CUE_IDS)[number];
 
 /** `gain` 按此下标取变体（§3.6）。 */
-export const GAIN_RESOURCES = ["wood", "brick", "sheep", "wheat", "ore"] as const;
-export type GainResource = (typeof GAIN_RESOURCES)[number];
+const GAIN_RESOURCES = ["wood", "brick", "sheep", "wheat", "ore"] as const;
+type GainResource = (typeof GAIN_RESOURCES)[number];
 
 /** `trade` 按此下标取变体（§3.6）。 */
-export const TRADE_KINDS = ["offer", "accept", "decline", "bank"] as const;
-export type TradeKind = (typeof TRADE_KINDS)[number];
+const TRADE_KINDS = ["offer", "accept", "decline", "bank"] as const;
+type TradeKind = (typeof TRADE_KINDS)[number];
 
 export type CueRequest = {
   cue: CueId;

@@ -5,7 +5,7 @@
  * No sample IP special-cases.
  */
 
-export type BrokerageSplit = {
+type BrokerageSplit = {
   toSeller: number;
   toBroker: number;
   brokerSeat: number | null;

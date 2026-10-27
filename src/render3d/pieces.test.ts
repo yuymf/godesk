@@ -104,7 +104,7 @@ describe("miniature pieces (readable buildings / cloaked robber, vertex-coloured
     const s = size(geom);
     expect(s.minY).toBeCloseTo(0, 5);
     expect(s.x).toBeGreaterThan(0.35);
-    expect(s.x).toBeLessThan(0.95); // T217+ shared settlement scale
+    expect(s.x).toBeLessThan(0.95); // shared settlement scale
     expect(s.y).toBeGreaterThan(0.4);
     expect(s.y).toBeLessThan(0.85);
     expect(geom.getAttribute("color")).toBeDefined();
@@ -118,7 +118,7 @@ describe("miniature pieces (readable buildings / cloaked robber, vertex-coloured
     // A vertex one ring out from the centre (pieces stand on the tile top, y = 0.27).
     const px = projectedHeightPx(buildSettlementGeometry(0), [0.5, 0.27, 0.866], 910, 505);
     expect(px).toBeGreaterThanOrEqual(34);
-    expect(px).toBeLessThanOrEqual(72); // T217+ taller house for top-down readability
+    expect(px).toBeLessThanOrEqual(72); // taller house for top-down readability
   });
 
   it("baked AO: walls darken toward the ground; eave undersides darker than roof tops", () => {

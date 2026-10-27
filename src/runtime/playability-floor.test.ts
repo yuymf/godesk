@@ -521,7 +521,7 @@ describe("playabilityFloor", () => {
 });
 
 
-describe("T011 hex-settlement playabilityFloor with aligned mechanics", () => {
+describe("hex-settlement playabilityFloor with aligned mechanics", () => {
   it("passes hex-settlement-v1 when requestedMechanics align despite incidental 手牌", () => {
     const rule = executableHexIslandSpecFixture();
     rule.pitch =

@@ -61,13 +61,6 @@ export const DEFAULT_EXAMPLES: DefaultExample[] = [
 /** Homepage 「先玩一局现成的」 production showcase (SPEC §6 G3D-16 / G3D-17: flag removed). */
 export const HOMEPAGE_SHOWCASE: DefaultExampleId[] = ["tidewell-isles"];
 
-/** Classic three-card gallery kept for Creator Studio / MCP templates; not the homepage default. */
-export const HOMEPAGE_CLASSIC: DefaultExampleId[] = [
-  "harbor-13",
-  "mistpeak-lodge",
-  "idea-relay",
-];
-
 export function isDefaultExampleId(value: unknown): value is DefaultExampleId {
   return DEFAULT_EXAMPLES.some((example) => example.id === value);
 }

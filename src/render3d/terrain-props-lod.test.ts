@@ -18,8 +18,8 @@ const { appendFileSync } = (await import(/* @vite-ignore */ nodeId("fs"))) as { 
  * shadow flags and whether a shadow hook is installed. Baselines were produced at 0914ebf with
  * this same file (see REPORT in g3d-evidence/…/lod-high).
  */
-// T088 · medium baseline refreshed (shore dressing + denser sparse PROP_COUNTS); low unchanged.
-// T088+ shore/prop dressing refresh (2026-10-16 tip digests).
+// medium baseline refreshed (shore dressing + denser sparse PROP_COUNTS); low unchanged.
+// shore/prop dressing refresh (2026-10-16 tip digests).
 const BASELINE: Record<"medium" | "low", Record<"shadow" | "noshadow", string>> = {
   medium: { shadow: "542bf3d8ac3c6474ad8a845d9038cf1af5351273871da55e1a0098107c6aa916", noshadow: "a030d68609f7f20b74c745e8f1b5595406898e78303160d753233ce39bf74e61" },
   low: { shadow: "f52e0f0051e1d75b125b3962c4a3b00225c5a991980859fcfb3cc20e80a1fcb4", noshadow: "89a3949a121df63a7230a8ac210bcd2ee8a4849bff4c9adf84cd65a34639cca8" },

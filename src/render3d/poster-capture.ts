@@ -25,7 +25,7 @@ type PosterControls = {
   update: () => void;
 };
 
-export type PosterCaptureHandles = {
+type PosterCaptureHandles = {
   camera: Camera | null;
   controls: PosterControls | null;
   model: SceneModel | null;

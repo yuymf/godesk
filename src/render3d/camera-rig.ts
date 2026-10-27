@@ -22,13 +22,13 @@ export function isOrthographicCamera(camera: PlayCamera): camera is Orthographic
 }
 
 export type V3 = readonly [number, number, number];
-export type CameraMode = "play" | "overview";
+type CameraMode = "play" | "overview";
 
-export const CAMERA_MODE_POLAR_DEG: Readonly<Record<CameraMode, number>> = { play: 56, overview: 8 }; // T265 · side-read thickness (cornerCalm soft2)
+export const CAMERA_MODE_POLAR_DEG: Readonly<Record<CameraMode, number>> = { play: 56, overview: 8 }; // side-read thickness (cornerCalm soft2)
 /** Zoom is relative to the fitted distance: 1 = whole island (+ tray) in view. */
 export const ZOOM_LIMITS = { min: 0.7, max: 3.2 } as const;
-export const ZOOM_STEP = 1.25;
-export const ROTATE_STEP_DEG = 45;
+const ZOOM_STEP = 1.25;
+const ROTATE_STEP_DEG = 45;
 export const POLAR_LIMITS_DEG = { min: 0, max: 58 } as const;
 /** Viewport fraction (NDC) the framed points may occupy. R27: ease vs R26 so halfH rises a bit. */
 export const FRAME_MARGIN = 0.95;
@@ -43,7 +43,7 @@ export const SEA_HALF_EXTENT = 9;
 export const SEA_EDGE_PAD = 0.3;
 /** Play mode may flatten toward top-down to keep the sky out, but not below this. */
 // Own-turn floor: keep a readable 3/4 tilt (settlecoast source default φ≈53.9°, maxPolar≈58.4°). Prefer sky-at-corners over pure top-down until far-sea covers the frame.
-export const PLAY_MIN_POLAR_DEG = 46; // T265 · above tip 45; cornerCalm soft2
+export const PLAY_MIN_POLAR_DEG = 46; // above tip 45; cornerCalm soft2
 /** Default play azimuth (deg): settlecoast ≈11.5°; keep within 11–14°. */
 export const PLAY_AZIMUTH_DEG = 12;
 /**
@@ -51,23 +51,18 @@ export const PLAY_AZIMUTH_DEG = 12;
  * not dolly distance — avoids perspective foreshortening.
  */
 export const ORTHO_ORBIT_DISTANCE = 22;
-/** settlecoast CR half-top floor / numerator (wide ≤ ~1.57 aspect uses 3.6). */
-export const ORTHO_CR_HALF_TOP_FLOOR = 3.6;
-export const ORTHO_CR_HALF_TOP_NUM = 5.65;
 /** settlecoast jg board-fit pad. R27: ease vs R26 toward leave-space (halfH ↑ from ~2.89). */
 export const ORTHO_FRAME_PAD = 1.035;
 
 /** Pixel insets reserved for HUD chrome (settlecoast Hd / dice cinematic). */
-export type HudInsets = { top: number; bottom: number; left: number; right: number };
+type HudInsets = { top: number; bottom: number; left: number; right: number };
 
 /** Default play: top bar band + bottom camera toolbar; sides modest. */
-export const PLAY_HUD_INSETS = { top: 48, bottom: 72, left: 24, right: 24 } as const;
+const PLAY_HUD_INSETS = { top: 48, bottom: 72, left: 24, right: 24 } as const;
 /** settlecoast placement-like top reserve clamp. */
 export function settlecoastTopReservePx(canvasHeight: number): number {
   return Math.min(56, Math.max(28, (canvasHeight - 300) * 0.3));
 }
-/** Dice cinematic bottom reserve (settlecoast ~158). */
-export const DICE_HUD_BOTTOM_PX = 158;
 
 export function playHudInsets(canvasWidth: number, canvasHeight: number): HudInsets {
   const top = Math.round(settlecoastTopReservePx(canvasHeight));
@@ -206,7 +201,7 @@ export function maxSeaPolar(
 }
 
 /** Keep-in-frame margin for the must-see points (tiles) when the sea forces a crop. */
-export const KEEP_MARGIN = 1;
+const KEEP_MARGIN = 1;
 
 /**
  * Zoom-1 pose that frames `points` (island + harbours) for a preferred polar
@@ -262,12 +257,6 @@ export function playFraming(
   // frame, keep the ≥45° floor (tiles uncropped) rather than collapsing to
   // top-down — far-sea ring (±80) makes the preferred tilt sky-free once exposed.
   return seaSafeFraming(points, keepPoints, target, preferredPolar, PLAY_MIN_POLAR_DEG * DEG, azimuth, fovDeg, aspect, half);
-}
-
-/** settlecoast-style CR baseline half-top before board-fit. */
-export function orthoCrHalfTop(aspect: number): number {
-  const a = Math.max(aspect, 1e-3);
-  return Math.max(ORTHO_CR_HALF_TOP_FLOOR, ORTHO_CR_HALF_TOP_NUM / a);
 }
 
 /**
@@ -342,7 +331,7 @@ export function maxSeaOrthoHalfHeight(
 }
 
 /** Steepest polar (≤ from) at which `halfH` keeps ortho corners on the sea. */
-export function maxSeaOrthoPolar(
+function maxSeaOrthoPolar(
   target: V3,
   halfH: number,
   azimuth: number,
@@ -365,13 +354,13 @@ export function maxSeaOrthoPolar(
   return lo;
 }
 
-export type OrthoFraming = { polar: number; distance: number; fit: number; halfH: number; safe: boolean };
+type OrthoFraming = { polar: number; distance: number; fit: number; halfH: number; safe: boolean };
 
 /**
  * Ortho twin of seaSafeFraming: fit via half-height, flatten tilt then shrink frustum.
  * `hard` (overview): may crop keepPoints; play uses PLAY_MIN_POLAR floor.
  */
-export function seaSafeOrthoFraming(
+function seaSafeOrthoFraming(
   points: readonly V3[],
   keepPoints: readonly V3[],
   target: V3,
@@ -445,7 +434,7 @@ export function framingPoints(nodes: readonly FramingNode[]): V3[] {
     } else if (node.kind === "port") {
       out.push([x + 0.25, y + 0.1, z + 0.25], [x - 0.25, y + 0.1, z - 0.25]);
     } else if (node.kind === "meeple") {
-      // T125 · keep shared seat meeples in ortho frame (near-edge band)
+      // keep shared seat meeples in ortho frame (near-edge band)
       out.push([x, y + 0.35, z], [x - 0.2, y + 0.1, z], [x + 0.2, y + 0.1, z]);
     }
   }
@@ -527,7 +516,7 @@ export type CameraRigApi = {
 type Pose = { target: V3; distance: number; polar: number; azimuth: number };
 
 /** Island tour: azimuth steps (deg), leg duration, tilt and zoom. */
-export const TOUR = { stepsDeg: [60, 120, 180, 240, 300, 360], legMs: 1100, polarDeg: 40, zoom: 1.3 } as const;
+const TOUR = { stepsDeg: [60, 120, 180, 240, 300, 360], legMs: 1100, polarDeg: 40, zoom: 1.3 } as const;
 
 export class CameraDirector implements CameraRigApi {
   mode: CameraMode = "play";

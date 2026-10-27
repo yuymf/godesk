@@ -22,7 +22,7 @@ import {
 import type { AssetSearchResponse, AssetServerAsset, ImportedProjectAsset } from "./types";
 import "./AssetSearchPanel.css";
 
-export interface AssetSearchPanelProps {
+interface AssetSearchPanelProps {
   projectId: string;
   expectedVersion: number;
   disabled?: boolean;

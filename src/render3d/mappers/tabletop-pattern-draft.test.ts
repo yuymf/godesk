@@ -77,7 +77,7 @@ function samplePatternState() {
   };
 }
 
-describe("T027 pattern-draft tabletop layout", () => {
+describe("pattern-draft tabletop layout", () => {
   it("emits factories / center / seat lines / wall / floor pieces", () => {
     const layout = patternDraftLayout(samplePatternState());
     expect(layout.kernelType).toBe("pattern-draft-v1");

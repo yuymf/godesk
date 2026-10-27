@@ -16,7 +16,7 @@ export const JUDGE_PRESETS: readonly JudgePreset[] = [
   "g-midgame",
 ];
 
-export type JudgeCamera = { position: SceneVec3; target: SceneVec3; fov?: number };
+type JudgeCamera = { position: SceneVec3; target: SceneVec3; fov?: number };
 
 /** 近景要同时拍到的地形（森林 / 牧场 / 山地 / 麦田）。 */
 const CLOSEUP_TERRAINS = ["wood", "sheep", "ore", "wheat"] as const;

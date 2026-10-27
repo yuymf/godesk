@@ -257,7 +257,7 @@ export function NetworkRouteBoard({
     linked0 ? copy.linked : copy.unlinked
   } · ${copy.seat} 1 ${linked1 ? copy.linked : copy.unlinked}`;
 
-  // T062: SVG board retired from primary return; wood chrome keeps TabletopGameScreen.
+  // SVG board retired from primary return; wood chrome keeps TabletopGameScreen.
   if (render?.chrome === "wood") {
     const cityName = (id: string) => cityById(networkRoute.cities, id)?.name ?? id;
     const edgeName = (edgeId: string) => {
@@ -413,7 +413,7 @@ export function NetworkRouteBoard({
     );
   }
 
-  // T062 · tabletop-first: 3D canvas primary; HTML HUD collapsed to drawer (not the board).
+  // tabletop-first: 3D canvas primary; HTML HUD collapsed to drawer (not the board).
   return (
     <section
       aria-label={copy.board}

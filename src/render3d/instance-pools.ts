@@ -14,12 +14,6 @@ import {
 const _matrix = new Matrix4();
 const _dummy = new Object3D();
 
-export type InstanceHandle = Object3D & {
-  userData: Object3D["userData"] & {
-    gdInstance?: { poolKey: string; index: number };
-  };
-};
-
 type Pool = {
   mesh: InstancedMesh;
   /** free slot indices */
@@ -146,8 +140,4 @@ export function createInstancePools(parent: Object3D): InstancePools {
       pools.clear();
     },
   };
-}
-
-export function isBatchableKind(kind: string): boolean {
-  return kind === "tile" || kind === "road" || kind === "decor" || kind === "settlement" || kind === "city" || kind === "robber";
 }

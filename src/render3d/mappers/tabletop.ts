@@ -115,7 +115,7 @@ export type TabletopScene = {
 };
 
 export const BOARD_THICKNESS = 0.24;
-export const CELL_THICKNESS = 0.1;
+const CELL_THICKNESS = 0.1;
 const TABLE_Y = -0.06;
 
 /** 没有 binding 时的内置图元（SPEC：mapper 找不到 binding 时回退内置图元）。 */
@@ -457,7 +457,7 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
 
   const boardBinding = bindingFor(render, board.objectKind);
   const boardMatKey = board.materialKey ?? boardBinding.materialKey;
-  // T033 · when RenderSpec has cloth board + wood table, emit wood rim + felt inset
+  // when RenderSpec has cloth board + wood table, emit wood rim + felt inset
   // (desk layouts often mark the slab as materialKey "table"; still prefer felt center).
   const clothKey = render.materials.board?.pattern === "cloth"
     ? "board"
@@ -466,7 +466,7 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
       : null;
   const feltInset = Boolean(render.materials.table && clothKey);
   if (feltInset && clothKey) {
-    // T041 · product frame: wood-edge bevel rim + cloth inset + stitch lip + soft vignette corners.
+    // product frame: wood-edge bevel rim + cloth inset + stitch lip + soft vignette corners.
     const rim = 0.72;
     const feltShrink = 0.38;
     nodes.push({
@@ -485,7 +485,7 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
       position: [0, boardTop + 0.02, 0],
       scale: [round(board.width + rim * 0.92), 0.045, round(board.depth + rim * 0.92)],
     });
-    // T044: felt must sit ABOVE solid wood rim top (rim top ≈ boardTop+0.02).
+    // felt must sit ABOVE solid wood rim top (rim top ≈ boardTop+0.02).
     nodes.push({
       id: "board",
       kind: "cell",
@@ -567,16 +567,16 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
   ];
   for (const piece of layout.pieces) {
     if (!piece.label) continue;
-    // T037: card/plaque labels are face schema tags — do not spawn debug parchment nameplates.
+    // card/plaque labels are face schema tags — do not spawn debug parchment nameplates.
     if (FACE_SCHEMA_KINDS.has(piece.objectKind)) continue;
-    // T039: forbid persistent Eng pad boards (F0/F1) and seat debug plates.
+    // forbid persistent Eng pad boards (F0/F1) and seat debug plates.
     if (/^F\d+$/i.test(piece.label)) continue;
     if (/^S\d+:/i.test(piece.label)) continue;
-    // T051: station names render on-station plaques — no faint floating parchment.
+    // station names render on-station plaques — no faint floating parchment.
     if (piece.objectKind === "station") continue;
-    // T045: forbid translucent numeric cash/score billboards on the desk (cash → chip towers or HUD only).
+    // forbid translucent numeric cash/score billboards on the desk (cash → chip towers or HUD only).
     if (/^\$?\d+(\.\d+)?$/.test(piece.label.trim())) continue;
-    // T074 · purge bank/debug color counts + Eng ordinal chips (gold: 0, 1st, …)
+    // purge bank/debug color counts + Eng ordinal chips (gold: 0, 1st, …)
     if (/^(white|blue|green|red|black|gold|yellow):\d+$/i.test(piece.label.trim())) continue;
     if (/^(1st|2nd|3rd|nth)$/i.test(piece.label.trim())) continue;
     // 名牌：平放在棋子南侧（朝向默认机位），羊皮纸底 + 墨字（tabletop-objects `label` 网格）。
@@ -591,17 +591,17 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
   }
   for (const piece of [...layout.pieces, ...decorPieces]) {
     const resolved = bindingFor(render, piece.objectKind);
-    // T087 · shared stage-wide card scale boost (all kernels; no gem/auction fork)
+    // shared stage-wide card scale boost (all kernels; no gem/auction fork)
     const cardBoost = resolved.mesh === "card" ? 1.14 : 1;
     const size = round(piece.size * resolved.scale * cardBoost);
     const id = `piece:${resolved.mesh}:${piece.id}`;
     const onCell = layout.cells.some((cell) =>
       Math.abs(cell.x - piece.x) <= cell.width / 2 && Math.abs(cell.z - piece.z) <= cell.depth / 2);
-    // T047: piece.y is height ABOVE playTop (not absolute world Y). Absolute y buried
+    // piece.y is height ABOVE playTop (not absolute world Y). Absolute y buried
     // glazed factory tiles under the felt after T044 raised playTop.
     const baseY = playTop + (piece.y ?? (onCell ? CELL_THICKNESS : 0));
     // Face-schema labels win; else emphasis → major (stations); else plain label tag.
-    // T051: stations keep hub:/name tags (do not collapse emphasis to bare "major").
+    // stations keep hub:/name tags (do not collapse emphasis to bare "major").
     const pieceTag = FACE_SCHEMA_KINDS.has(piece.objectKind) && piece.label
       ? piece.label
       : piece.objectKind === "station" && piece.label
@@ -626,8 +626,8 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
         : libraryKey(piece.materialKey ?? seatKey(piece.seat, resolved.materialKey)),
     });
     if (piece.action) actions[id] = piece.action;
-    // T038: soft contact shadow under instanced discs/tokens (groups already embed theirs).
-    // T081: also absolute ground blobs for tile/plate — parent-scaled embeds read too faint on small pieces.
+    // soft contact shadow under instanced discs/tokens (groups already embed theirs).
+    // also absolute ground blobs for tile/plate — parent-scaled embeds read too faint on small pieces.
     if (
       piece.objectKind === "disc"
       || piece.objectKind === "token"
@@ -641,9 +641,9 @@ export function mapTabletopToScene(layout: TabletopLayout, render: TabletopRende
         : piece.objectKind === "tile"
           ? Math.max(0.22, size * 0.82)
           : piece.objectKind === "resource"
-            ? Math.max(0.48, size * 1.05) // T270 · short grounded ring under chip stacks
+            ? Math.max(0.48, size * 1.05) // short grounded ring under chip stacks
             : Math.max(0.22, size * 0.78); // disc/token ground (no HARD blot)
-      // T270 · resource/chip stacks ground at playTop (not mid-stack baseY) so contact stays sharp
+      // resource/chip stacks ground at playTop (not mid-stack baseY) so contact stays sharp
       const contactY = piece.objectKind === "resource" ? playTop + 0.003 : baseY + 0.003;
       nodes.push({
         // Slash-encode so T047 factory/:tile: filters do not treat ground blobs as tiles.

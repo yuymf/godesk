@@ -42,7 +42,7 @@ export const WATER_Y = -0.08;
 /** 岩壁顶面低于地块顶 4cm：地块间的缝里露出岩石，外圈形成岛的岩壁。 */
 export const SKIRT_TOP_Y = 0.24;
 /** R12：更深岸崖，穿过水面，嵌进桌面读感（非托盘窗框）。 */
-export const SKIRT_BOTTOM_Y = -1.45; // T262 · deeper cardboard skirt into water
+export const SKIRT_BOTTOM_Y = -1.45; // deeper cardboard skirt into water
 
 export type IslandTile = { q: number; r: number; terrain: string; center: SceneVec3 };
 export type IslandPort = { kind: string; vertices: SceneVec3[] };
@@ -312,7 +312,7 @@ function drawSigns(x: CanvasRenderingContext2D, cell: number, plate: HTMLImageEl
     const cx = (i % SIGN_COLS) * cell + cell / 2;
     const cy = Math.floor(i / SIGN_COLS) * cell + cell / 2;
     const r = cell * 0.46;
-    // T241 · always carve a thicker wood rim so plaque reads as 3D dock sign (not UI badge)
+    // always carve a thicker wood rim so plaque reads as 3D dock sign (not UI badge)
     {
       x.fillStyle = "#3a2416";
       x.beginPath();
@@ -340,7 +340,7 @@ function drawSigns(x: CanvasRenderingContext2D, cell: number, plate: HTMLImageEl
       x.arc(cx, cy, r * 0.70, 0, Math.PI * 2);
       x.fill();
     } else {
-      // T225/T241 · carved wood plaque face
+      // carved wood plaque face
       x.fillStyle = "#4a3020";
       x.beginPath();
       x.arc(cx, cy, r, 0, Math.PI * 2);
@@ -366,7 +366,7 @@ function drawSigns(x: CanvasRenderingContext2D, cell: number, plate: HTMLImageEl
     x.textAlign = "center";
     x.textBaseline = "middle";
     x.lineJoin = "round";
-    // T101/T112/T118/T222 · stage-wide harbor contrast: thicker cream stroke + larger ratio/word
+    // stage-wide harbor contrast: thicker cream stroke + larger ratio/word
     x.strokeStyle = "rgba(255, 250, 235, 0.99)";
     x.lineWidth = cell * 0.112;
     x.fillStyle = "#0e0a08";
@@ -442,19 +442,19 @@ export function coastWallGeometry(tiles: readonly IslandTile[], opts: { wetFootD
     const h1 = hash01(panel * 12.9898 + 78.23);
     const h2 = hash01(panel * 78.233 + 19.1);
     const h3 = hash01(panel * 41.17 + 3.9);
-    // T262 · thicker cardboard stand-off at waterline (mesh flare, not gdHi apothem)
+    // thicker cardboard stand-off at waterline (mesh flare, not gdHi apothem)
     const blockDepth = 0.12 + h1 * 0.48 + mass * 0.36;
     const undercut = 0.06 + h2 * 0.24 + mass * 0.16;
     // 每面独立 flare 曲线（非全岛同一台阶环）。
     const flarePow = 1.4 + h3 * 1.4;
-    const flare = Math.pow(t, flarePow) * (0.26 + h1 * 0.30) + t * t * t * (0.10 + h2 * 0.16); // T262 flare
+    const flare = Math.pow(t, flarePow) * (0.26 + h1 * 0.30) + t * t * t * (0.10 + h2 * 0.16); // flare
     const face = t * blockDepth + (t > 0.48 ? (t - 0.48) * undercut * (1.8 + mass) : 0);
     // 切向噪声破径向同心；顶部小凹口打破平整环唇。
     const tangX = -nz, tangZ = nx;
     const notch = t < 0.08 ? (hash01(panel * 2.3 + x * 0.1) - 0.5) * 0.035 : 0;
     const sidePush = (hash01(panel * 11.1 + t * 7.0) - 0.5) * (0.02 + mass * 0.03);
     const noise = t === 0 ? notch : Math.sin(x * 3.9 + panel * 1.7) * 0.018 + Math.sin(z * 4.6 - panel) * 0.014;
-    // T262 · top-lip overhang readable above waterline in ortho wide
+    // top-lip overhang readable above waterline in ortho wide
     const out = 0.06 + flare + face + noise + (1.0 - t) * 0.18;
     const wx = x + nx * out + tangX * sidePush;
     const wz = z + nz * out + tangZ * sidePush;
@@ -567,7 +567,7 @@ export function dockGeometry(length = 0.62, wetFoot = 0): BufferGeometry {
   const planks = 7;
   for (let i = 0; i < planks; i += 1) {
     const z = 0.04 + (i + 0.5) * (length / planks);
-    // T225/T241 · thicker product planks + stagger (dock thickness read)
+    // thicker product planks + stagger (dock thickness read)
     const hy = 0.078 + (i % 2) * 0.010;
     parts.push(paint(place(new BoxGeometry(0.34, hy, length / planks - 0.005), 0, hy * 0.20, z), i % 2 ? "#8a6340" : "#9a7048", 0.24));
   }
@@ -575,9 +575,9 @@ export function dockGeometry(length = 0.62, wetFoot = 0): BufferGeometry {
   parts.push(paint(place(new BoxGeometry(0.056, 0.056, length), 0.145, -0.026, length / 2 + 0.04), "#5e4128"));
   const postXZ = [[-0.14, 0.20], [0.14, 0.20], [-0.14, length], [0.14, length]] as const;
   for (const [px, pz] of postXZ) {
-    parts.push(paint(place(new CylinderGeometry(0.048, 0.054, 0.56, 12), px, -0.18, pz), "#4f3824")); // T241 pier posts
+    parts.push(paint(place(new CylinderGeometry(0.048, 0.054, 0.56, 12), px, -0.18, pz), "#4f3824")); // pier posts
   }
-  // T241 · plaque post + thicker wood backboard (3D plaque mount, not floating UI)
+  // plaque post + thicker wood backboard (3D plaque mount, not floating UI)
   parts.push(paint(place(new CylinderGeometry(0.030, 0.034, 0.52, 12), 0.1, 0.24, length - 0.02), "#4f3824"));
   parts.push(paint(place(new BoxGeometry(0.34, 0.34, 0.090), 0.1, 0.38, length - 0.03), "#6a4828", 0.18));
   parts.push(paint(place(new BoxGeometry(0.38, 0.38, 0.05), 0.1, 0.38, length - 0.10), "#3a2416", 0.14));
@@ -589,7 +589,7 @@ export function dockGeometry(length = 0.62, wetFoot = 0): BufferGeometry {
   // docksFor base y=0.1 → local waterline = WATER_Y - 0.1.
   if (wetFoot > 0) {
     const waterLocal = WATER_Y - 0.1;
-    // T262 · taller/wider wet-contact skirt under pier (mesh contact, not vertex darken)
+    // taller/wider wet-contact skirt under pier (mesh contact, not vertex darken)
     const skirtH = 0.09 + 0.045 * wetFoot;
     const skirtR = 0.042 + 0.014 * wetFoot;
     const wetHex = wetFoot > 0.55 ? "#16120e" : "#2a2118";
@@ -623,7 +623,7 @@ function applyPierWetFoot(g: BufferGeometry, strength: number): void {
 }
 
 /** 小帆船：船体 + 甲板 + 桅杆 + 三角帆 + 小旗（船头朝 +Z）。 */
-export type BoatGeomOpts = { wetLine?: number; sail?: number };
+type BoatGeomOpts = { wetLine?: number; sail?: number };
 
 /**
  * 帆船：船体 + 甲板 + 桅杆；可选三角帆布 + 水线湿带。
@@ -710,17 +710,17 @@ function applyBoatWetLine(g: BufferGeometry, strength: number): void {
 
 /** 帆船停泊点：岛外一圈，避开右前方骰盘（≈(4.2, 3.2)）。 */
 /** 港口牌半径 / 帆船缩放（round-2d2：放大，远景可读）。 */
-export const SIGN_RADIUS = 0.62 /* T269c HARD dock plaque */; // T118/T241/T269 · wooden harbor plaque product
-export const BOAT_SCALE = 1.7;
+const SIGN_RADIUS = 0.62 /* T269c HARD dock plaque */; // wooden harbor plaque product
+const BOAT_SCALE = 1.7;
 
-export const BOAT_SPOTS: ReadonlyArray<{ x: number; z: number; yaw: number; phase: number }> = [
+const BOAT_SPOTS: ReadonlyArray<{ x: number; z: number; yaw: number; phase: number }> = [
   { x: -6.1, z: 2.4, yaw: 0.9, phase: 0 },
   { x: 6.4, z: -1.6, yaw: -2.2, phase: 1.7 },
   { x: -1.4, z: -6.3, yaw: 2.6, phase: 3.1 },
   { x: 1.6, z: 6.4, yaw: -0.6, phase: 4.4 },
 ];
 
-export type IslandLayer = {
+type IslandLayer = {
   group: Group;
   sync(tiles: readonly IslandTile[], ports: readonly IslandPort[], tier: RenderTierId, castShadow: boolean): void;
   /** 每帧：帆船起伏 + 港口牌 dock-lock（T269）。frozen = 减少动态效果 / 评审截图。 */
@@ -803,9 +803,9 @@ export function createIslandLayer(): IslandLayer {
       // 连续岩壁 + 顶盖（1 个 draw call，几何随地块集合重建）。
       wallGeom?.dispose();
       wallGeom = coastWallGeometry(tiles, {
-        // T225 · wet foot on high only (cornerCalm); shore microcontrast via water shallow/foam
-        wetFootDark: true, // T262 · waterline wet foot on all tiers (mesh contact)
-        midBandDark: 1, // T262 · cardboard mid-band rock on all tiers (mesh/albedo, not gdHi)
+        // wet foot on high only (cornerCalm); shore microcontrast via water shallow/foam
+        wetFootDark: true, // waterline wet foot on all tiers (mesh contact)
+        midBandDark: 1, // cardboard mid-band rock on all tiers (mesh/albedo, not gdHi)
       });
       rockMat.map = tier === "high" ? rockMapHigh : tier === "medium" ? rockMapMed : rockMapLow;
       rockMat.needsUpdate = true;
@@ -818,8 +818,8 @@ export function createIslandLayer(): IslandLayer {
 
       // 岸石：每条外圈海岸边常规圆石；high 另在部分边加断续扁平礁石浅滩簇（非整圈砂台）。
       const edges = coastEdges(tiles);
-      const perEdge = tier === "low" ? 6 : 9; // T262 denser shore-stone mesh
-      const reefBudget = edges.length * 8; // T262 reef stones all tiers // clusters + gap wall-huggers
+      const perEdge = tier === "low" ? 6 : 9; // denser shore-stone mesh
+      const reefBudget = edges.length * 8; // reef stones all tiers // clusters + gap wall-huggers
       const stones = new InstancedMesh(stoneGeom, vertexMat, Math.max(1, edges.length * perEdge + reefBudget));
       let n = 0;
       let edgeIdx = 0;
@@ -838,7 +838,7 @@ export function createIslandLayer(): IslandLayer {
           m.compose(p.set(ex + (ox / ol) * out, WATER_Y + 0.015, ez + (oz / ol) * out), q, s.set(size * 1.3, size * 0.78, size));
           stones.setMatrixAt(n++, m);
         }
-        // T266 · wet-sand / reef apron on all tiers (seam mesh; high denser)
+        // wet-sand / reef apron on all tiers (seam mesh; high denser)
         if (tier === "high" || tier === "medium" || tier === "low") {
           const ox0 = (a[0] + b[0]) / 2 - c[0];
           const oz0 = (a[2] + b[2]) / 2 - c[2];
@@ -847,14 +847,14 @@ export function createIslandLayer(): IslandLayer {
           const nz = oz0 / ol0;
           if (reefEdgeMask(edgeIdx)) {
             // 断续礁石簇 — 约半数边；扁平错层外推。
-            const cluster = Math.max(1, Math.round(reefClusterSize(edgeIdx) * (tier === "high" ? 1 : tier === "medium" ? 0.7 : 0.45))); // T266
+            const cluster = Math.max(1, Math.round(reefClusterSize(edgeIdx) * (tier === "high" ? 1 : tier === "medium" ? 0.7 : 0.45)));
             for (let j = 0; j < cluster; j += 1) {
               const along = 0.18 + rand() * 0.64;
               const ex = a[0] + (b[0] - a[0]) * along + (-nz) * (rand() - 0.5) * 0.12;
               const ez = a[2] + (b[2] - a[2]) * along + nx * (rand() - 0.5) * 0.12;
               const step = j + rand() * 0.7;
               const out = 0.22 + step * 0.14 + rand() * 0.08;
-              const y = WATER_Y + 0.06 - step * 0.04 + (rand() - 0.5) * 0.02; // T266 wetter apron
+              const y = WATER_Y + 0.06 - step * 0.04 + (rand() - 0.5) * 0.02; // wetter apron
               const sx = 1.55 + rand() * 1.1;
               const sy = 0.22 + rand() * 0.28;
               const sz = 1.15 + rand() * 0.9;
@@ -889,18 +889,18 @@ export function createIslandLayer(): IslandLayer {
       stones.count = n;
       add(stones, "island:shore-stones", false);
 
-      // T266 · wet-sand apron discs at waterline (shared seam mesh, all tiers)
+      // wet-sand apron discs at waterline (shared seam mesh, all tiers)
       {
         const sandMat = new MeshStandardMaterial({
-          color: "#f3e6c0", // T266 bright wet sand HARD
+          color: "#f3e6c0", // bright wet sand HARD
           roughness: 0.92,
           metalness: 0,
           flatShading: true,
         });
         sandMat.userData.gdShared = true;
-        const disc = new CylinderGeometry(0.48, 0.58, 0.06, 7); // T266 apron HARD
+        const disc = new CylinderGeometry(0.48, 0.58, 0.06, 7); // apron HARD
         disc.translate(0, 0.01, 0);
-        const apronN = Math.max(1, edges.length * (tier === "high" ? 5 : tier === "medium" ? 3 : 2)); // T266 HARD denser
+        const apronN = Math.max(1, edges.length * (tier === "high" ? 5 : tier === "medium" ? 3 : 2)); // HARD denser
         const apron = new InstancedMesh(disc, sandMat, apronN);
         let ai = 0;
         let ei = 0;
@@ -971,7 +971,7 @@ export function createIslandLayer(): IslandLayer {
       }
       if (signs && dockList.length > 0) {
         dockList.forEach((d, i) => {
-          // T269 · dock-axis plaque (not free billboard): sit on carved face; yaw stays on
+          // dock-axis plaque (not free billboard): sit on carved face; yaw stays on
           // pier axis, flip 180° if needed so face reads toward camera (diegetic mount).
           const px = d.tip[0] + d.dir[1] * 0.1 + d.dir[0] * 0.02;
           const pz = d.tip[2] - d.dir[0] * 0.1 + d.dir[1] * 0.02;

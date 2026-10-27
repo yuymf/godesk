@@ -25,7 +25,6 @@ export type GenerationMetadata = z.infer<typeof generationMetadataSchema>;
 export const GENERATOR_VERSION = "rule-system-materializer-v1";
 export const RULES_VERSION = "source-rules-v1";
 const SCHEMA_VERSION = 2;
-export const GAME_SPEC_SCHEMA_VERSION = SCHEMA_VERSION;
 
 /** Data only. Hooks identify adapter responsibilities; they never execute scripts. */
 export const gameSpecSchema = z.strictObject({

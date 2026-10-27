@@ -222,13 +222,13 @@ const SHADOW_REFRESH_MS = 1_500;
 /** 可交互后延迟多久开始流式加载 PBR 贴图（避开首屏主线程窗口）。 */
 const PBR_STREAM_DELAY_MS = 1_200;
 /** R18/R19 boot reveal: canvas fade-in length, cap (ms after first content frame) and pre-sea clear colour. */
-export const BOOT_FADE_MS = 1_000;
-export const BOOT_REVEAL_CAP_MS = 6_000;
+const BOOT_FADE_MS = 1_000;
+const BOOT_REVEAL_CAP_MS = 6_000;
 /** R19: min ms between renders while the boot veil is up. */
-export const BOOT_VEILED_FRAME_MS = 500;
-export const BOOT_SEA_COLOR = "#1f5f66";
+const BOOT_VEILED_FRAME_MS = 500;
+const BOOT_SEA_COLOR = "#1f5f66";
 /** R26 hex play clear/fog stand-in (settlecoast bg ≈#6d8e8b): sea-teal, not cream, not navy. */
-export const PLAY_SEA_CLEAR = "#a8d4cc"; // T257 cornerCalm
+export const PLAY_SEA_CLEAR = "#a8d4cc"; // cornerCalm
 
 
 function supportsWebGL2(): boolean {
@@ -260,7 +260,7 @@ let SHARED_DECOR_GEOM: BufferGeometry | null = null;
 function sharedTileGeom(): BufferGeometry {
   if (!SHARED_TILE_GEOM) {
     // R21: face radius 0.99 (was TILE_RADIUS − 0.04 = 0.91) → hairline light seams instead of a dark grid.
-    const geom = new ExtrudeGeometry(hexShape(TILE_FACE_RADIUS, 0), { depth: 0.34, bevelEnabled: false }); // T250 paperboard thickness
+    const geom = new ExtrudeGeometry(hexShape(TILE_FACE_RADIUS, 0), { depth: 0.34, bevelEnabled: false }); // paperboard thickness
     geom.rotateX(-Math.PI / 2);
     // R22: faces touch (radius 1.0); the sides taper inward toward the base so neighbours leave no open slot
     // (no dark 1px side / shadow line) and outer sides stay tucked inside the coast wall top.
@@ -362,9 +362,9 @@ function batchableKind(kind: SceneNode["kind"]): boolean {
 }
 
 /** T261 · carved face-well depth (world units before chip scale) — mesh topology, not stamp ox/oy. */
-export const CHIP_FACE_RECESS = 0.032;
+const CHIP_FACE_RECESS = 0.032;
 /** T261 · outer lip rise around the well. */
-export const CHIP_FACE_RIM = 0.014;
+const CHIP_FACE_RIM = 0.014;
 let SHARED_NUMBER_GEOM: BufferGeometry | null = null;
 /** T241/T250/T261 · wood-chip: lathe body + carved top well for seated numeral (mesh recess). */
 function sharedNumberGeom(): BufferGeometry {
@@ -373,15 +373,15 @@ function sharedNumberGeom(): BufferGeometry {
     const r = 0.22;
     shape.absarc(0, 0, r, 0, Math.PI * 2, false);
     const geom = new ExtrudeGeometry(shape, {
-      depth: 0.138, // T250 · thicker wood-chip body
+      depth: 0.138, // thicker wood-chip body
       bevelEnabled: true,
-      bevelThickness: 0.034, // T250 · readable lathe lip
+      bevelThickness: 0.034, // readable lathe lip
       bevelSize: 0.024,
       bevelSegments: 6,
       curveSegments: 40,
     });
     geom.rotateX(-Math.PI / 2);
-    // T241 · side turning grooves: deeper ring notches on cylinder wall
+    // side turning grooves: deeper ring notches on cylinder wall
     geom.computeBoundingBox();
     const bb0 = geom.boundingBox!;
     const pos = geom.getAttribute("position");
@@ -394,11 +394,11 @@ function sharedNumberGeom(): BufferGeometry {
       const rad = Math.hypot(x, z);
       if (rad > 0.188 && Math.abs(y - midY0) < 0.062) {
         const band = Math.sin((y - midY0) * 96.0);
-        const k = 1 - 0.038 * Math.max(0, band); // T250 deeper side turning
+        const k = 1 - 0.038 * Math.max(0, band); // deeper side turning
         pos.setXYZ(i, x * k, y, z * k);
       }
     }
-    // T261 · mesh face well: sink inner top disk, raise outer rim (real carved topology)
+    // mesh face well: sink inner top disk, raise outer rim (real carved topology)
     for (let i = 0; i < pos.count; i += 1) {
       const y = pos.getY(i);
       const x = pos.getX(i);
@@ -659,7 +659,7 @@ export function SceneHost({
   const [activeTier, setActiveTier] = useState<RenderTierId>("high");
   const runtimeFloorRef = useRef<RenderTierId | null>(null);
   // R19: hex island scenes default to the brighter picture-book rig.
-  // T086 · merge shared fill/rim when a stored RenderSpec predates the layers
+  // merge shared fill/rim when a stored RenderSpec predates the layers
   const lightingDefaults = hexSettlement ? HEX_ISLAND_LIGHTING : SCENE_TOKENS.lighting;
   const lightingBase: LightingSpec = lighting ?? lightingDefaults;
   const lightingSpec: LightingSpec = {

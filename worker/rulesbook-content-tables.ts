@@ -12,7 +12,7 @@ import {
 } from "../src/runtime/adapters/auto-battler-content";
 import type { AutoBattlerBranding } from "../src/runtime/adapters/auto-battler-packs";
 
-export type RulesBookTableParse = {
+type RulesBookTableParse = {
   /** Content fields extracted from tables (units and/or traits). */
   patch?: AutoBattlerContentPatch;
   /** Tuning knobs from key/value setup tables (初始生命/金币/计时…). */

@@ -52,9 +52,7 @@ export const BUILTIN_TRAIT_EFFECT_KINDS = [
   "reflect",
   "aoe_on_hit",
 ] as const;
-/** @deprecated alias — prefer BUILTIN_TRAIT_EFFECT_KINDS; kept for older imports. */
-export const TRAIT_EFFECT_KINDS = BUILTIN_TRAIT_EFFECT_KINDS;
-export type TraitEffectKind = string;
+type TraitEffectKind = string;
 
 export type TraitDef = {
   id: string;
@@ -68,7 +66,7 @@ export type TraitDef = {
   effect?: { kind: TraitEffectKind; label: string; values: readonly number[] };
 };
 
-export type StarRules = { star2: boolean; star3: boolean; mult2: number; mult3: number };
+type StarRules = { star2: boolean; star3: boolean; mult2: number; mult3: number };
 
 export type AutoBattlerContent = {
   units: readonly UnitDef[];

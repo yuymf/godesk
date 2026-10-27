@@ -57,7 +57,7 @@ export const FACE_AXIS: Readonly<Record<number, readonly [number, number, number
  * origin). The tray is drawn as a fixed screen-corner inset (dice-overlay.ts),
  * so it no longer needs a world anchor beside the island.
  */
-export type DiceLayout = {
+type DiceLayout = {
   tray: { position: [number, number, number]; rotationY: number };
   dice: Array<{ position: [number, number, number]; rotationY: number }>;
 };

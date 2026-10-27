@@ -90,7 +90,7 @@ export function AuctionBiddingBoard({ auction, activeSeat, enabled, busy = false
               : `价值 ${auction.lotValue}`}
         </span>
       </div>
-      {/* T071 */}
+      {}
       <details className="desk-chrome desk-action-drawer" open data-ui-action-drawer="1">
         <summary className="desk-action-drawer-summary">行动</summary>
         <div className="desk-action-drawer-body">

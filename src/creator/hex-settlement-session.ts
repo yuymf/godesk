@@ -45,7 +45,7 @@ const EMPTY_BANK = (): ResourceBank => ({
   ore: 0,
 });
 
-export function toHexSettlementGenre(hexIsland: HexSettlementBoardState): HexIslandGenre {
+function toHexSettlementGenre(hexIsland: HexSettlementBoardState): HexIslandGenre {
   return {
     playerCount: hexIsland.playerCount,
     victoryPointsToWin: hexIsland.victoryPointsToWin,

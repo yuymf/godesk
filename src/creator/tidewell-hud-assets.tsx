@@ -1,5 +1,5 @@
 /** G3D-13 / G3D-judge-HUD · Tidewell HUD asset URLs. */
-export const inkIconsUrl = new URL("../../assets/ui/ink-icons.svg", import.meta.url).href;
+const inkIconsUrl = new URL("../../assets/ui/ink-icons.svg", import.meta.url).href;
 
 const portraitUrls = import.meta.glob("../../assets/illustrations/brand/portrait-*.webp", {
   eager: true,
@@ -57,7 +57,7 @@ export const RESOURCE_CARD_URL: Record<string, string | undefined> = {
 
 /** G3D-24 development-card faces, keyed by kernel `DevCardKind`. */
 export const DEV_CARD_KINDS = ["knight", "road_building", "victory"] as const;
-export type DevCardFaceKind = (typeof DEV_CARD_KINDS)[number];
+type DevCardFaceKind = (typeof DEV_CARD_KINDS)[number];
 export const DEV_CARD_URL: Record<DevCardFaceKind, string> = {
   knight: new URL("../../assets/illustrations/cards/dev-fog-signal.webp", import.meta.url).href,
   road_building: new URL("../../assets/illustrations/cards/dev-harbor-charter.webp", import.meta.url).href,
@@ -88,8 +88,6 @@ export const BUILD_ICON_URL: Record<string, string | undefined> = {
   buy: pick(buildWideUrls, "build-card-wide") ?? pick(buildIconUrls, "build-card"),
 };
 
-export const PANEL_FRAME_URL = pick(uiAiUrls, "panel-frame");
-export const CARD_FRAME_URL = pick(uiAiUrls, "card-frame");
 /** Tileable HUD wood / parchment (round-3h / ④). Prefer 512 over -256. */
 export const WOOD_GRAIN_URL =
   Object.entries(uiAiUrls).find(([k]) => k.endsWith("/wood-grain.webp"))?.[1] ??

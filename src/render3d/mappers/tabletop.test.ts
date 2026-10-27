@@ -4,8 +4,10 @@ import { HARBOR_TARGET_GROUPS, createHarborVoyageState } from "../../runtime/har
 import { mapTabletopToScene, resolveTabletopPick, tokenForRenderMaterial, type TabletopRenderInput } from "./tabletop";
 import {
   discFlippingLayout,
+  gemEngineLayout,
   harborVoyageLayout,
   networkRouteLayout,
+  patternDraftLayout,
   workerPlacementLayout,
 } from "./tabletop-kernels";
 
@@ -31,7 +33,7 @@ describe("G3D-14 tabletop mapper", () => {
   it("maps disc-flipping to board + grid + seat-coloured discs + legal hints", () => {
     const scene = mapTabletopToScene(discFlippingLayout(othelloStart(), OTHELLO_LEGAL), renderFor("disc-flipping-v1"));
     const kinds = scene.model.nodes.map((node) => node.kind);
-    // T038/T269 · each disc emits a soft contact-shadow piece node (4 discs + 4 shadows).
+    // each disc emits a soft contact-shadow piece node (4 discs + 4 shadows).
     const pieces = scene.model.nodes.filter((node) => node.kind === "piece");
     expect(pieces.filter((node) => node.mesh !== "contact-shadow")).toHaveLength(4);
     expect(pieces.filter((node) => node.mesh === "contact-shadow")).toHaveLength(4);
@@ -115,11 +117,11 @@ describe("G3D-14 tabletop mapper", () => {
     const scene = mapTabletopToScene(layout, renderFor("network-route-v1"));
     const links = scene.model.nodes.filter((node) => node.kind === "link");
     expect(links).toHaveLength(3);
-    // T046 · rail-track ids encode claim state: link:rail-track:{c|o}:{edgeId}
+    // rail-track ids encode claim state: link:rail-track:{c|o}:{edgeId}
     const claimed = links.find((node) => node.id === "link:rail-track:c:ab")!;
     expect(claimed.seat).toBe(0);
     expect(claimed.mesh).toBe("rail-track");
-    // T265 · seat0 desaturated chrome (not legacy #c0392b)
+    // seat0 desaturated chrome (not legacy #c0392b)
     expect(scene.materials[claimed.material!]!.base).toBe("#d49088");
     expect(resolveTabletopPick(scene, { nodeId: "link:rail-track:o:bc" })).toEqual({ type: "claim", payload: { edgeId: "bc" } });
     expect(resolveTabletopPick(scene, { nodeId: "link:rail-track:c:ab" })).toBeNull();
@@ -169,5 +171,32 @@ describe("G3D-14 tabletop mapper", () => {
       if (node.kind === "table" || node.id === "board") continue;
       expect(Math.abs(node.position[2])).toBeLessThanOrEqual(board.scale![2] / 2);
     }
+  });
+
+  it("maps cloth desk kernels with wood rim, felt inset, glazed tiles, plaques, cards and contact shadows", () => {
+    const gemLayout = gemEngineLayout({
+      bank: { white: 2, blue: 0, green: 0, red: 0, black: 0, gold: 0 },
+      market: [[{ id: "c", discount: "blue", prestige: 2, cost: { white: 1 } }], [], []],
+      nobles: [{ id: "n1", name: "白蓝勋爵", prestige: 3, requirements: { white: 3, blue: 3 } }],
+      seats: [{ gems: { white: 0, blue: 0, green: 0, red: 0, black: 0, gold: 0 }, prestige: 0, cards: [], reserved: [] }],
+    });
+    const gemScene = mapTabletopToScene(gemLayout, renderFor("gem-engine-v1"));
+    expect(gemScene.model.nodes.some((n) => n.id === "board-rim")).toBe(true);
+    expect(gemScene.model.nodes.some((n) => n.mesh === "felt-inset" && String(n.material ?? "").includes("board"))).toBe(true);
+    expect(gemScene.model.nodes.some((n) => n.mesh === "plaque")).toBe(true);
+    expect(gemScene.model.nodes.some((n) => n.mesh === "gem-chip")).toBe(true);
+    expect(gemScene.model.nodes.some((n) => n.mesh === "card" && String(n.tag ?? "").startsWith("face|"))).toBe(true);
+
+    const patternLayout = patternDraftLayout({
+      factories: [["blue", "red"], ["white"]],
+      center: ["yellow"],
+      markerInCenter: false,
+      seats: [{ lines: [{ color: null, tiles: [], capacity: 1 }], wall: [[null]], floor: [], score: 0 }],
+    });
+    expect(patternLayout.pieces.filter((p) => p.id.includes(":tile:")).every((p) => p.objectKind === "tile")).toBe(true);
+    expect(patternLayout.pieces.some((p) => p.id.includes("factory:") && p.id.endsWith(":pad"))).toBe(true);
+    const patternScene = mapTabletopToScene(patternLayout, renderFor("pattern-draft-v1"));
+    expect(patternScene.model.nodes.some((n) => n.mesh === "glazed-tile")).toBe(true);
+    expect(patternScene.model.nodes.some((n) => n.mesh === "contact-shadow")).toBe(true);
   });
 });

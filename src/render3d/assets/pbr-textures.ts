@@ -16,8 +16,8 @@ const PBR_URLS = import.meta.glob("../../../assets/textures/pbr/*/*/*.ktx2", {
   import: "default",
 }) as Record<string, string>;
 
-export type PbrResolution = 512 | 256;
-export type PbrSetUrls = { baseColor: string; normal: string; orm: string };
+type PbrResolution = 512 | 256;
+type PbrSetUrls = { baseColor: string; normal: string; orm: string };
 
 /** 纯函数：从 glob 结果里取一套贴图的 URL（三张缺一即返回 null）。 */
 export function pbrSetUrls(
@@ -97,9 +97,9 @@ async function loadTexture(loader: KTX2Loader, url: string, srgb: boolean): Prom
   return texture;
 }
 
-export type PbrLoaded = { maps: PbrMaps; resolution: PbrResolution };
+type PbrLoaded = { maps: PbrMaps; resolution: PbrResolution };
 
-export type PbrStreamer = {
+type PbrStreamer = {
   load(set: PbrSetId, resolution: PbrResolution): Promise<PbrLoaded | null>;
   dispose(): void;
 };

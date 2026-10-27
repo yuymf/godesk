@@ -30,7 +30,7 @@ function playStateFromGemSession(
   };
 }
 
-export function listGemEngineLegalActionsForSession(input: {
+function listGemEngineLegalActionsForSession(input: {
   gem: GemEngineBoardState;
   activeSeat: number;
   status: "active" | "complete";
@@ -76,7 +76,7 @@ export function GemEngineBoard({
   const own = viewerSeat !== null ? gem.seats[viewerSeat] : null;
   const pendingDiscard =
     (gem as { pendingDiscardSeat?: number | null }).pendingDiscardSeat === viewerSeat;
-  // T071 · short supply chip (no color-by-color debug dump)
+  // short supply chip (no color-by-color debug dump)
   const bankLine = `库存 ${Object.values(gem.bank).reduce((a, n) => a + Number(n || 0), 0)}`;
   const reserved = (own as { reserved?: Array<{ id?: string; discount?: string; prestige?: number }> } | null)?.reserved ?? [];
   const seats = gem.seats as Array<{
@@ -126,7 +126,7 @@ export function GemEngineBoard({
         </strong>
         <span className="desk-stage-hud-supply" aria-label="gem-bank">{bankLine}</span>
       </div>
-      {/* T071 */}
+      {}
       <details className="desk-chrome desk-action-drawer" open data-ui-action-drawer="1">
         <summary className="desk-action-drawer-summary">行动</summary>
         <div className="desk-action-drawer-body">

@@ -92,7 +92,7 @@ describe("inferRequestedMechanics — baseline vs unseen", () => {
 });
 
 
-describe("T004 mechanics cue negation", () => {
+describe("mechanics cue negation", () => {
   it("does not infer auto-battler from 非自走棋 / 不是 auto-battler", () => {
     expect(inferRequestedMechanics("星际物流竞速（非自走棋默认包、非潮汐）。星港节点派车运货")).not.toContain("auto-battler");
     expect(inferRequestedMechanics("这不是已有 auto-battler 默认包；星港物流车队")).not.toContain("auto-battler");
@@ -139,7 +139,7 @@ describe("BOT_PLAYABLE_KERNELS", () => {
 });
 
 
-describe("T008 route-network ticket/rail cues", () => {
+describe("route-network ticket/rail cues", () => {
   it("binds 车票/车厢/认领路线/铺线/铁道 corpus to route-network only", () => {
     const book = `洲际铁道。收集彩色车厢牌，支付认领路线；持有车票连通起终点得分。铺线，非自走棋。`;
     expect(inferRequestedMechanics(book)).toEqual(["route-network"]);
@@ -150,7 +150,7 @@ describe("T008 route-network ticket/rail cues", () => {
 });
 
 
-describe("T010 gem-engine cues", () => {
+describe("gem-engine cues", () => {
   it("binds gem-token / development / noble corpus to gem-engine", () => {
     const m = inferRequestedMechanics(
       "宝石作坊。拿宝石代币买发展牌获得永久折扣，贵族拜访，先到声望15。",

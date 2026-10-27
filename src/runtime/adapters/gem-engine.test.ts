@@ -12,7 +12,7 @@ import {
   ideaRequestsGemEngine,
 } from "./gem-engine";
 
-describe("gem-engine-v1 adapter (T010)", () => {
+describe("gem-engine-v1 adapter", () => {
   it("registers capability set for gem-engine mechanic", async () => {
     // capabilities wired in a follow-up import once kernel-capabilities updated;
     // adapter kernel type is stable here.
@@ -67,7 +67,7 @@ describe("gem-engine-v1 adapter (T010)", () => {
   });
 });
 
-describe("gem-engine-v1 reserve + overflow (T017)", () => {
+describe("gem-engine-v1 reserve + overflow", () => {
   it("reserves a market card and may take gold", () => {
     const config = createGemEngineKernelConfig({
       content: { bankGold: 5, prestigeToWin: 99 },
@@ -195,7 +195,7 @@ describe("gem-engine-v1 reserve + overflow (T017)", () => {
   });
 });
 
-describe("gem-engine-v1 multi-seat (T019)", () => {
+describe("gem-engine-v1 multi-seat", () => {
   it("boots 3 and 4 seats with scaled bank and nobles", () => {
     for (const n of [3, 4] as const) {
       const config = createGemEngineKernelConfig({ playerCount: n });

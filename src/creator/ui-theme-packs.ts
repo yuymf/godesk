@@ -1,5 +1,5 @@
 /**
- * UI-P3 · Theme Packs — switchable Room HUD chrome as an engine primitive.
+ * Theme Packs — switchable Room HUD chrome as an engine primitive.
  *
  * Packs are DATA + CSS variable ids only. Room mounts `data-ui-theme="<id>"`
  * on `.room-view`; density-shell CSS consumes `--surface-*` / `--hud-*` tokens.
@@ -15,7 +15,7 @@ export const UI_THEME_IDS = [
 
 export type UiThemeId = (typeof UI_THEME_IDS)[number];
 
-export type UiThemePack = {
+type UiThemePack = {
   id: UiThemeId;
   /** Short English label for tooling / NL (not player-facing chrome). */
   label: string;

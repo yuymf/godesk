@@ -112,7 +112,7 @@ const ICONS = {
   ),
 };
 
-export type CameraToolbarCopy = {
+type CameraToolbarCopy = {
   toolbar: string;
   zoomOut: string;
   zoomIn: string;
@@ -125,7 +125,7 @@ export type CameraToolbarCopy = {
   tour: string;
 };
 
-export const CAMERA_TOOLBAR_COPY: Record<"zh" | "en", CameraToolbarCopy> = {
+const CAMERA_TOOLBAR_COPY: Record<"zh" | "en", CameraToolbarCopy> = {
   zh: { toolbar: "视角", zoomOut: "缩小", zoomIn: "放大", zoom: "缩放", rotateLeft: "向左旋转", rotateRight: "向右旋转", reset: "复位视角", pan: "平移", harbors: "港口", tour: "环岛游览" },
   en: { toolbar: "Camera", zoomOut: "Zoom out", zoomIn: "Zoom in", zoom: "Zoom", rotateLeft: "Rotate left", rotateRight: "Rotate right", reset: "Reset view", pan: "Pan", harbors: "Harbors", tour: "Island tour" },
 };

@@ -96,7 +96,7 @@ export type HexIslandTile = {
   number: number | null;
 };
 
-export type PortKind = "any3" | Resource;
+type PortKind = "any3" | Resource;
 
 export type HexIslandPort = {
   /** Coastal vertices that grant this port. */
@@ -105,7 +105,7 @@ export type HexIslandPort = {
 };
 
 /** Negotiated domestic trade awaiting counterparty response (T014). */
-export type PendingTrade = {
+type PendingTrade = {
   from: PlayerId;
   to: PlayerId;
   /** Resources the proposer gives. */
@@ -115,7 +115,7 @@ export type PendingTrade = {
 };
 
 /** Domestic sealed resource auction (T023). */
-export type PendingAuction = {
+type PendingAuction = {
   seller: PlayerId;
   /** Lot the seller posts (removed from seller on resolve). */
   lot: ResourceBank;
@@ -127,11 +127,11 @@ export type PendingAuction = {
 };
 
 /** Live-floor lot payload: escrowed resource bag (T025). */
-export type DomesticFloorPayload = {
+type DomesticFloorPayload = {
   lot: ResourceBank;
 };
 
-export const HEX_MAX_LIVE_LOTS = 2;
+const HEX_MAX_LIVE_LOTS = 2;
 
 export type HexIslandGenre = {
   playerCount: number;

@@ -165,7 +165,7 @@ describe("network-route-v1 adapter", () => {
   });
 });
 
-describe("network-route-v1 freight subset (T006)", () => {
+describe("network-route-v1 freight subset", () => {
   const freightConfig = createNetworkRouteKernelConfig({
     content: defaultFreightContent({ winReputation: 3, startingFunds: 20 }),
   });
@@ -302,7 +302,7 @@ describe("freight cues for H02", () => {
   });
 });
 
-describe("network-route tickets subset (T016)", () => {
+describe("network-route tickets subset", () => {
   it("detects tickets cues from H02 rail rulebook without freight", () => {
     const idea = readFileSync(
       "docs/hardness/suites/H02-ticket-to-ride/INPUT.md",

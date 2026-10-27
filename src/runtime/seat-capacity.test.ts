@@ -10,7 +10,7 @@ import {
   winnerByHighestScore,
 } from "./seat-capacity";
 
-describe("seat-capacity (T019)", () => {
+describe("seat-capacity", () => {
   it("parses ideal ranges preferring upper bound", () => {
     expect(parseSeatCountFromIdea("人数：2–4", SEAT_CAPACITY["gem-engine-v1"])).toBe(4);
     expect(parseSeatCountFromIdea("3-4 理想", SEAT_CAPACITY["pattern-draft-v1"])).toBe(4);

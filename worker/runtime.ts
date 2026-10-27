@@ -105,7 +105,7 @@ import {
   type AutoBattlerGenre,
 } from "../src/runtime/adapters/auto-battler";
 
-export type ExecutableRuntime = Extract<
+type ExecutableRuntime = Extract<
   RuleSystem["runtimeSupport"],
   { status: "executable" }
 >;
@@ -1403,7 +1403,7 @@ function uniqueWinnerSeat(scores: number[]) {
 }
 
 /** A bot-chosen intent for the seat the kernel is waiting on. */
-export interface BotIntent {
+interface BotIntent {
   seat: number;
   actionId: string;
   payload?: Record<string, unknown>;

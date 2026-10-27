@@ -30,12 +30,12 @@ import {
   winnerByHighestScore,
 } from "../seat-capacity";
 
-export const PATTERN_DRAFT_KERNEL_TYPE = "pattern-draft-v1" as const;
+const PATTERN_DRAFT_KERNEL_TYPE = "pattern-draft-v1" as const;
 
-export const TILE_COLORS = ["blue", "yellow", "red", "black", "white"] as const;
-export type TileColor = (typeof TILE_COLORS)[number];
+const TILE_COLORS = ["blue", "yellow", "red", "black", "white"] as const;
+type TileColor = (typeof TILE_COLORS)[number];
 
-export type PatternEndBonuses = {
+type PatternEndBonuses = {
   /** Points per fully filled wall row. */
   perCompleteRow: number;
   /** Points per fully filled wall column. */
@@ -44,7 +44,7 @@ export type PatternEndBonuses = {
   perCompleteColorSet: number;
 };
 
-export type PatternDraftContent = {
+type PatternDraftContent = {
   /** Factories on the table (2p default 5). */
   factoryCount: number;
   tilesPerFactory: number;
@@ -59,13 +59,13 @@ type PatternDraftConfig = {
   content: PatternDraftContent;
 };
 
-export type PatternLine = {
+type PatternLine = {
   color: TileColor | null;
   tiles: TileColor[];
   capacity: number;
 };
 
-export type PatternSeat = {
+type PatternSeat = {
   lines: PatternLine[];
   /** 5×5; null = empty; value = placed color. */
   wall: Array<Array<TileColor | null>>;
@@ -329,26 +329,6 @@ export function applyEndGameBonuses(
   }
   seat.score += added;
   return added;
-}
-
-/** Test/helpers: expose completeness checks. */
-export function wallRowComplete(
-  wall: Array<Array<TileColor | null>>,
-  row: number,
-): boolean {
-  return rowComplete(wall, row);
-}
-export function wallColumnComplete(
-  wall: Array<Array<TileColor | null>>,
-  col: number,
-): boolean {
-  return columnComplete(wall, col);
-}
-export function wallColorSetComplete(
-  wall: Array<Array<TileColor | null>>,
-  color: TileColor,
-): boolean {
-  return colorSetComplete(wall, color);
 }
 
 function resolveWallPhase(
@@ -671,7 +651,7 @@ export function playActionFromPatternDraftIntent(
   };
 }
 
-export function pickPatternDraftBotAction(
+function pickPatternDraftBotAction(
   state: PlayState<PatternDraftGenre>,
   seed: number,
   config?: PlayKernelConfig,

@@ -10,7 +10,7 @@ export type UnitModelSource = { id: string; url: string; title?: string };
 const prototypeCache = new Map<string, Promise<Object3D>>();
 
 /** Fit an imported GLB into the token envelope (height ≈ TOKEN_HEIGHT * 0.9). */
-export function normalizeUnitModelScale(size: { x: number; y: number; z: number }): number {
+function normalizeUnitModelScale(size: { x: number; y: number; z: number }): number {
   const h = Math.max(size.y, 1e-3);
   const w = Math.max(size.x, size.z, 1e-3);
   return Math.min((TOKEN_HEIGHT * 0.9) / h, 0.7 / w);

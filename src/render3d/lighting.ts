@@ -28,7 +28,7 @@ import {
   shadowRadiusFor,
 } from "./tokens";
 
-/** UI-light-floors · playable exposure / key ceilings (kill wash-out that crushes UI text).
+/** playable exposure / key ceilings (kill wash-out that crushes UI text).
  *  Applies at renderer+rig time so RenderSpec/HARD authoring stays schema-valid; no suite forks. */
 /** UI-surface-contrast · tighter ceilings so wash-out white cannot crush chrome/text. */
 export const PLAYABLE_LIGHT_FLOORS = {
@@ -64,15 +64,15 @@ export function clampPlayableLighting(lighting: LightingSpec): LightingSpec {
 export function configureRenderer(renderer: WebGLRenderer, lighting: LightingSpec): void {
   const playable = clampPlayableLighting(lighting);
   renderer.toneMapping = AgXToneMapping;
-  // T245 · product tabletop: AgX keeps wood grain / paperboard from blowing out under sun
-  // UI-light-floors · exposure clamp so high-key RenderSpec cannot wash UI chrome
+  // product tabletop: AgX keeps wood grain / paperboard from blowing out under sun
+  // exposure clamp so high-key RenderSpec cannot wash UI chrome
   renderer.toneMappingExposure = playable.exposure;
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.shadowMap.enabled = playable.shadow.enabled;
   renderer.shadowMap.type = PCFShadowMap;
 }
 
-export type LightingRig = {
+type LightingRig = {
   sun: DirectionalLight;
   hemisphere: HemisphereLight;
   /** T086 · soft fill (no shadow). */
@@ -101,7 +101,7 @@ export function createLightingRig(scene: Scene, lighting: LightingSpec, caps: Ti
   const hemisphere = new HemisphereLight();
   hemisphere.name = "gd:hemisphere";
 
-  // T086 · fill + rim: no castShadow so contact-shadow blobs (T079/T081) stay authoritative
+  // fill + rim: no castShadow so contact-shadow blobs (T079/T081) stay authoritative
   const fill = new DirectionalLight();
   fill.name = "gd:fill";
   fill.castShadow = false;
@@ -181,7 +181,7 @@ export function createLightingRig(scene: Scene, lighting: LightingSpec, caps: Ti
   };
 
   const applyLighting = (next: LightingSpec) => {
-    // UI-light-floors · clamp key/fill/rim/hemi so HARD high-key cannot wash board or crush chrome
+    // clamp key/fill/rim/hemi so HARD high-key cannot wash board or crush chrome
     const playable = clampPlayableLighting(next);
     current = playable;
     sun.color.set(playable.sun.color);

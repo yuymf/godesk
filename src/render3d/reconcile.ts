@@ -1,11 +1,11 @@
 import type { Object3D } from "three";
 import { diffSceneModels, type SceneModel, type SceneNode } from "./scene-model";
 
-export type SceneNodeFactory = (node: SceneNode) => Object3D;
-export type SceneNodeUpdater = (object: Object3D, node: SceneNode) => void;
+type SceneNodeFactory = (node: SceneNode) => Object3D;
+type SceneNodeUpdater = (object: Object3D, node: SceneNode) => void;
 
 /** G3D-09: optional motion hooks; reconcile stays synchronous and state-authoritative. */
-export type ReconcileMotionHooks = {
+type ReconcileMotionHooks = {
   /** Called after a node is created on a non-initial reconcile. */
   added?: (object: Object3D, node: SceneNode) => void;
   /** Called after `update` applied the final pose; `prev` is the prior node. */

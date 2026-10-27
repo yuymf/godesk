@@ -116,7 +116,7 @@ describe("parseRulesBookContentTables", () => {
   });
 });
 
-describe("inferBrandingFromRulesBook (T005)", () => {
+describe("inferBrandingFromRulesBook", () => {
   const fb = { title: "潮阵", ownSeat: "汐屿·我方", enemySeat: "珊瑚港·对手" };
   it("reads H1 title", () => {
     expect(inferBrandingFromRulesBook("# 星港车队 — 规则书\n正文", fb).title).toBe("星港车队");

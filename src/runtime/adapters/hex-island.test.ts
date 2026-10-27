@@ -223,7 +223,7 @@ describe("hex-settlement-v1 hexIsland adapter", () => {
   });
 });
 
-describe("hex-settlement negotiated trade (T014)", () => {
+describe("hex-settlement negotiated trade", () => {
   it("propose → accept swaps multi-resource bags", () => {
     const config = createHexIslandKernelConfig({ playerCount: 2 });
     let state = createInitialState(hexIslandAdapter, config, 11);
@@ -326,7 +326,7 @@ describe("hex-settlement negotiated trade (T014)", () => {
   });
 });
 
-describe("hex-settlement-v1 domestic auction + brokerage (T023)", () => {
+describe("hex-settlement-v1 domestic auction + brokerage", () => {
   it("runs a 3-seat sealed resource auction with second-place cut", () => {
     const config = createHexIslandKernelConfig({ playerCount: 3 });
     let state = createInitialState(hexIslandAdapter, config, 11);
@@ -462,7 +462,7 @@ describe("hex-settlement-v1 domestic auction + brokerage (T023)", () => {
   });
 });
 
-describe("hex-settlement-v1 domestic live multi-lot + negotiated brokerage (T025)", () => {
+describe("hex-settlement-v1 domestic live multi-lot + negotiated brokerage", () => {
   function stockedMain(seed: number, playerCount = 3) {
     const config = createHexIslandKernelConfig({ playerCount });
     let state = createInitialState(hexIslandAdapter, config, seed);

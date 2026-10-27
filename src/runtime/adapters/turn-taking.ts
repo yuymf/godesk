@@ -21,7 +21,7 @@ export const TURN_TAKING_PHASES = [
   { id: "ended", name: "Ended" },
 ] as const;
 
-export type TurnTakingActionDef = { id: string; label: string };
+type TurnTakingActionDef = { id: string; label: string };
 
 type TurnTakingConfig = {
   maxTurns: number;

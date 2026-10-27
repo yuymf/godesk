@@ -124,11 +124,3 @@ export function resourceKindFromPath(
   }
   return null;
 }
-
-/** True when a share capability is allowed to read imported assets for projectId. */
-export function capabilityAllowsProject(
-  capability: ShareCapability,
-  projectId: string,
-) {
-  return capability.project === projectId;
-}

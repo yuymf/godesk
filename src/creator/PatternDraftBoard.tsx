@@ -30,7 +30,7 @@ function playStateFromPatternSession(
   };
 }
 
-export function listPatternDraftLegalActionsForSession(input: {
+function listPatternDraftLegalActionsForSession(input: {
   draft: PatternDraftBoardState;
   activeSeat: number;
   status: "active" | "complete";
@@ -133,7 +133,7 @@ export function PatternDraftBoard({
           {draft.markerInCenter ? " · 先手" : ""}
         </span>
       </div>
-      {/* T071 */}
+      {}
       <details className="desk-chrome desk-action-drawer" open data-ui-action-drawer="1">
         <summary className="desk-action-drawer-summary">行动</summary>
         <div className="desk-action-drawer-body">

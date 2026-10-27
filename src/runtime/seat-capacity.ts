@@ -4,7 +4,7 @@
  * Generic — no sample IP special-cases.
  */
 
-export type SeatCapacity = { readonly min: number; readonly max: number };
+type SeatCapacity = { readonly min: number; readonly max: number };
 
 export const SEAT_CAPACITY = {
   "hex-settlement-v1": { min: 2, max: 4 },
@@ -13,8 +13,6 @@ export const SEAT_CAPACITY = {
   "network-route-v1": { min: 2, max: 5 },
   "auction-bidding-v1-gallery": { min: 2, max: 5 },
 } as const;
-
-export type SeatCapableKernel = keyof typeof SEAT_CAPACITY;
 
 export function clampSeatCount(
   n: number,

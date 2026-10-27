@@ -10,7 +10,6 @@ import {
   Mesh,
   Object3D,
   Vector3,
-  type Material,
 } from "three";
 
 /** Fit geometry so its longest axis equals `maxExtent` (world units). Mutates in place. */
@@ -50,7 +49,7 @@ const MODEL_URLS: Record<string, () => Promise<string>> = Object.fromEntries(
  * stay thin felt pad in `assets/dice-geometry.ts`. GLB bundle still supplies
  * decor / sheep / docks / ships only — not piece buildings.
  */
-export type TidewellGeometries = {
+type TidewellGeometries = {
   sheep: BufferGeometry;
   dock: BufferGeometry;
   shipA: BufferGeometry;
@@ -120,7 +119,7 @@ async function loadOne(fragment: string, gltf: GLTFLoader): Promise<Map<string, 
 }
 
 const DECOR_PICK: Record<string, string[]> = {
-  // T245/T246 · prefer highest-fidelity named meshes from decor/props GLB
+  // prefer highest-fidelity named meshes from decor/props GLB
   wood: ["tree_pineTallA", "tree_pineTallB", "tree_pineRoundA", "tree_pineRoundB", "tree_pineSmallA", "log"],
   brick: ["rock_largeA", "rock_largeB", "rock_tallA", "stone_smallA"],
   sheep: ["sheep", "sheep_A", "plant_bush", "plant_bushSmall"],
@@ -161,16 +160,16 @@ export async function ensureTidewellGeometries(): Promise<TidewellGeometries> {
       const shipA = pick(props, "boat-a", "boat_a") ?? FALLBACK.shipA;
       const shipB = pick(props, "boat-b", "boat_b") ?? FALLBACK.shipB;
       // G3D-13 proportions vs TILE_RADIUS≈0.95 (≈hex edge): settlement footprint ~0.25 edge, dock <0.6 edge.
-      if (dock !== FALLBACK.dock) normalizeExtent(dock, 0.62); // T246 product dock scale
+      if (dock !== FALLBACK.dock) normalizeExtent(dock, 0.62); // product dock scale
       if (shipA !== FALLBACK.shipA) normalizeExtent(shipA, 0.48);
       if (shipB !== FALLBACK.shipB) normalizeExtent(shipB, 0.48);
       for (const [key, geom] of Object.entries(decorByTerrain)) {
-        // T246 · trees/rocks read as tabletop miniatures, not pixel stubs
+        // trees/rocks read as tabletop miniatures, not pixel stubs
         const extent = key === "wood" ? 0.58 : key === "ore" || key === "brick" ? 0.48 : 0.44;
         if (geom !== FALLBACK.decorByTerrain[key]) normalizeExtent(geom, extent);
       }
       cache = {
-        sheep: sheep !== FALLBACK.sheep ? normalizeExtent(sheep, 0.42) : sheep, // T246
+        sheep: sheep !== FALLBACK.sheep ? normalizeExtent(sheep, 0.42) : sheep,
         dock,
         shipA,
         shipB,
@@ -232,13 +231,4 @@ export function geometryForNode(node: SceneNode, geoms: TidewellGeometries): Buf
     default:
       return FALLBACK.dock;
   }
-}
-
-/** Mark materials on cloned GLB meshes as shared so disposeObject skips them. */
-export function applySharedMaterial(root: Object3D, material: Material): void {
-  root.traverse((child) => {
-    const mesh = child as Mesh;
-    if (!mesh.isMesh) return;
-    mesh.material = material;
-  });
 }
