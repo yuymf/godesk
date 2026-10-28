@@ -45,6 +45,11 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      # Same gate as the PR job: a direct push to main (which is how the
+      # Zero Trust identifiers got out) can never deploy a leaked value.
+      - name: Secret gate
+        run: node scripts/secret-scan.mjs all
+
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
       - run: node scripts/verify-release-records.mjs

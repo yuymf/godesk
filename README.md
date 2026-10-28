@@ -104,6 +104,53 @@ instead of shipping placeholders to production. Fresh clone → `cp .dev.vars.ex
 
 Template: [`.dev.vars.example`](.dev.vars.example). Localhost uses an explicit development identity — not live OAuth evidence.
 
+### Secret gate (and the 2026-10 history note)
+
+On 2026-10-28 this public repository carried real Cloudflare Zero Trust
+**identifiers** in `wrangler.jsonc` (`account_id`, the Access OIDC issuer URL, the
+Access application AUD tags). They were moved out of git on 2026-10-29 — but by
+hand, after the fact. The gate below is what stops a repeat:
+
+```bash
+pnpm secrets:check           # staged diff, offline — also installed as .git/hooks/pre-commit
+pnpm secrets:check:all       # every file git would publish (this is what CI runs)
+pnpm secrets:check:canary    # policy self-test: the rules still fire, the allowlist stays narrow
+pnpm secrets:check:history   # full git history, for audits
+pnpm secrets:install-hook    # opt-in commit interception on a new machine
+```
+
+Policy: [`.gitleaks.toml`](.gitleaks.toml) (Cloudflare Account ID / Access team
+domain / OIDC issuer / AUD tag / `GODESK_*` hex literals, plus upstream
+`generic-api-key`). The pinned gitleaks binary is checksum-verified once into
+`~/.cache/godesk-secretscan` and never needs the network again. Allowlist entries
+are line shapes, never whole files: the `wrangler types` banner hash, JSDoc
+`@example` samples, `idempotencyKey:` test labels, and the documented
+`REPLACE_ME` / `godesk-placeholder.invalid` placeholders. Findings always print
+redacted — CI logs of a public repo are public.
+GitHub-side, secret scanning and push protection are enabled on the repo;
+non-provider patterns and validity checks stay off because they are paid
+(GitHub Secret Protection) features, which is exactly why the repo owns the rule set.
+
+**History triage — deliberate, and not rewritten.** `pnpm secrets:check:history`
+reports **18 findings across 6 commits** (stock gitleaks rules without this repo's
+policy report 33 across 11 — mostly `idempotencyKey` test labels). Re-extracting
+every matched line at its own commit and comparing it against the real credential
+values gives **0 credential hits**: no `GODESK_WEB_CLIENT_SECRET`,
+`GODESK_SHARE_SECRET`, `GODESK_WEB_CLIENT_ID` or API-token value was ever in git,
+so **nothing needs rotating**. The identifier-class residue is the Cloudflare
+Account ID, the Access team domain / OIDC issuer (team host + app UUID) and the
+Access AUD tags — note that `wrangler types` copies var values into the generated
+`Env` literals, so `worker-configuration.d.ts` carried them too (2 commits); the
+gate's rules cover that file, and HEAD carries none of them. These values are all
+displayed in the Zero Trust dashboard by design, and the team domain is still
+derivable from content this repo publishes today (the `workers.dev` hostname in
+[`scripts/verify-production-smoke.mjs`](scripts/verify-production-smoke.mjs)).
+Rewriting history (BFG / `git filter-repo` + force push) would therefore remove
+nothing from the public surface while breaking every existing clone, leaving old
+objects in forks and GitHub's caches, and buying a false "clean" signal. Decision:
+**keep the history, document it here, and block new occurrences at commit time.**
+Future auditors: findings in that class are triaged, not open incidents.
+
 ## Codex Plugin
 
 Public thin package: [`yuymf/godesk-plugin`](https://github.com/yuymf/godesk-plugin). Install sentence is hosted at `/chatgpt-plugin`.
