@@ -31,6 +31,11 @@
     "perf:ci": "node scripts/perf-emulate.mjs --ci",
     "perf:serve": "node scripts/perf-serve.mjs",
     "launch:check": "node scripts/launch-checklist.mjs",
+    "secrets:check": "node scripts/secret-scan.mjs staged",
+    "secrets:check:all": "node scripts/secret-scan.mjs all",
+    "secrets:check:history": "node scripts/secret-scan.mjs history",
+    "secrets:check:canary": "node scripts/secret-scan.mjs canary",
+    "secrets:install-hook": "node scripts/secret-scan.mjs install-hook",
     "lighthouse": "lhci autorun"
   },
   "dependencies": {
