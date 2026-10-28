@@ -57,7 +57,7 @@ jobs:
       - run: pnpm verify:plugin
       - name: Install Playwright Chromium (manual full_e2e only)
         if: inputs.full_e2e
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install chromium
       - name: Playwright e2e (manual full_e2e only)
         if: inputs.full_e2e
         run: pnpm test:e2e
