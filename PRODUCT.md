@@ -42,7 +42,7 @@ Codex operate the same Game Project. Friends only need the invitation URL.
   contracts. They must not replace the shareable game as the outcome.
 - Design Hypotheses and Validation Findings are optional iteration tools.
 - Tabletop is one Play Surface, not the product boundary.
-- Inferred from the user brief and ADR 0011 / CONTEXT.md; not a new interview.
+- Inferred from the user brief and ADR 0011 / docs/GLOSSARY.md; not a new interview.
 
 ## Brand Commitments
 
@@ -50,7 +50,7 @@ Codex operate the same Game Project. Friends only need the invitation URL.
 - Binding interaction reference: ChatCut (prompt-first workspace, playable
   output as the product)
 - Audience named by the user: amateur 桌游 / 剧本杀 / 棋牌 hobbyists
-- Domain vocabulary in CONTEXT.md remains the internal contract. Visible UI
+- Domain vocabulary in docs/GLOSSARY.md remains the internal contract. Visible UI
   should speak in the hobbyist's words first.
 
 ## Evidence on Hand

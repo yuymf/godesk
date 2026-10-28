@@ -7,7 +7,7 @@
 3. [ADR 0014 — Three.js 3D 桌面是默认渲染面](0014-threejs-3d-table-is-the-default-render-surface.md)
 
 Product identity and the share gate live there, plus
-[`CONTEXT.md`](../../CONTEXT.md) and
+[[docs/GLOSSARY.md](./GLOSSARY.md)](../../docs/GLOSSARY.md) and
 [`docs/product/first-principles.md`](../product/first-principles.md).
 
 Do not take current product identity from ADR 0001, 0003, or 0005. Those

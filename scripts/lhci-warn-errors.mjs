@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * PR Lighthouse jobs collect 1 run per URL (docs/ci/actions-budget.md).
+ * PR Lighthouse jobs collect 1 run per URL (CI Lighthouse workflow).
  * A single simulated-throttle sample of homepage TBT is too noisy to keep as
  * error (G3D-05 3-run median was 0 ms; 1-run CI has landed at 229 / 369 ms).
  * Room categories.performance is also demoted: CI SwiftShader under 4× CPU

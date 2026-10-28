@@ -6,7 +6,7 @@
 许可证白名单：`CC0-1.0`、`OFL-1.1`、`LicenseRef-GoDesk-Original`、`LicenseRef-Purchased`、`LicenseRef-AI-Generated`。
 
 `LicenseRef-AI-Generated`（G3D-ART，用户 2026-10-06 决定允许 AI 生图）：修改说明列必须记录 工具 / 生成日期 / 完整提示词 / 后处理 / `法务审查:` 标记；
-标记为 `法务审查: 已豁免 2026-10-06` 的行表示用户已豁免 AI 法务闸门（站点暂不上线，见 G3D-STATUS）；`scripts/verify-assets.mjs` 不再计为 pending。提示词全文另见 `docs/art/ai-provenance.md`。
+标记为 `法务审查: 已豁免 2026-10-06` 的行表示用户已豁免 AI 法务闸门（站点暂不上线）；`scripts/verify-assets.mjs` 不再计为 pending。提示词全文另见 `docs/art/ai-provenance.md`。
 
 | 资产 id | 文件路径 | 名称 | 来源类型 | 来源 URL | 许可证 SPDX | 作者 | 获取日期 | 是否修改 | 修改说明 | 使用任务 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
