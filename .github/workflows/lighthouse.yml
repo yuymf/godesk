@@ -5,36 +5,13 @@ name: Lighthouse CI
 # No secrets and no paid services: reports go to LHCI temporary public storage
 # (link printed in the job log) and to the workflow artifact.
 #
-# CI minute budget (see docs/ci/actions-budget.md):
-# - Runs only when front-end / Worker / perf-harness files change, never for
-#   docs-only changes, and not on push to main (the PR run already covered it).
-# - Draft PRs are skipped; PR runs collect 1 run per URL. Homepage TBT and
-#   Room categories.performance are warn on that single sample (simulated-
-#   throttle TBT is noisy; Room TBT under SwiftShader is not a valid signal
-#   and tanks the performance category — see docs/perf/emulation-protocol.md).
-#   workflow_dispatch keeps the 3-run median and error-level asserts from
-#   lighthouserc.json.
+# CI minute / box budget (see docs/ci/actions-budget.md):
+# - Soft-disabled for auto runs: workflow_dispatch only (no pull_request).
+#   Hosted Actions minutes are billing-blocked; self-hosted box is memory-tight
+#   for Lighthouse + Worker. Run manually from the Actions tab when needed.
+# - workflow_dispatch keeps the 3-run median and error-level asserts from
+#   lighthouserc.json (or 1-run via inputs.runs).
 on:
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - "src/**"
-      - "public/**"
-      - "assets/**"
-      - "worker/**"
-      - "index.html"
-      - "vite.config.ts"
-      - "tsconfig*.json"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "wrangler.jsonc"
-      - "lighthouserc.json"
-      - "scripts/perf-serve.mjs"
-      - "scripts/perf/**"
-      - "scripts/lhci-warn-errors.mjs"
-      - ".github/workflows/lighthouse.yml"
-      - "!**/*.md"
   workflow_dispatch:
     inputs:
       runs:
@@ -54,11 +31,10 @@ jobs:
   lighthouse:
     # Check name kept stable for any merge gate.
     name: Lighthouse (mobile preset)
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, X64, box]
     timeout-minutes: 25
     env:
-      LHCI_RUNS: ${{ github.event_name == 'pull_request' && '1' || inputs.runs || '3' }}
+      LHCI_RUNS: ${{ inputs.runs || '3' }}
     steps:
       - uses: actions/checkout@v6
 
@@ -94,7 +70,7 @@ jobs:
           if [ "$LHCI_RUNS" = "1" ]; then
             CONFIG=lighthouserc.pr.json
             node scripts/lhci-warn-errors.mjs lighthouserc.json "$CONFIG"
-            echo "::notice::PR 1-run: homepage TBT + Room categories.performance demoted to warn (3-run dispatch stays error)"
+            echo "::notice::1-run: homepage TBT + Room categories.performance demoted to warn (3-run dispatch stays error)"
           fi
           pnpm exec lhci autorun --config="$CONFIG" --collect.numberOfRuns="$LHCI_RUNS" \
             --collect.url="$LHCI_HOME_URL" --collect.url="$LHCI_ROOM_URL"

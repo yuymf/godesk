@@ -1,14 +1,16 @@
 name: Verify pull request
 
-# CI minute budget (see docs/ci/actions-budget.md):
+# CI minute / box budget (see docs/ci/actions-budget.md):
+# - Runs on Grok Bot box self-hosted runners (hosted minutes billing-blocked).
 # - Docs-only PRs (docs/**, **/*.md, STATUS, prompt-trace) do not trigger this
 #   workflow. No branch protection requires this check today; if a required
 #   check is ever added, follow docs/ci/actions-budget.md#required-checks.
 # - Draft PRs run the fast subset only (unit, Worker, typecheck, build, asset /
 #   size / plugin gates). Full Playwright + perf:ci run on every non-draft
 #   event (opened ready, ready_for_review, synchronize/reopened while ready) or
-#   when the PR carries the `full-e2e` label, so a full e2e always runs on the
-#   final head before a ready PR is merged.
+#   when the PR carries the `full-e2e` label. Playwright needs Chromium system
+#   deps on the box (`playwright install-deps`); if those fail, use draft PRs
+#   for the fast path and `full-e2e` / ready only when deps are present.
 on:
   pull_request:
     branches: [main]
@@ -36,7 +38,7 @@ jobs:
     name: Tests and Playwright
     # Labels other than `full-e2e` do not need a run (skipped jobs bill 0 minutes).
     if: github.event.action != 'labeled' || github.event.label.name == 'full-e2e'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, X64, box]
     timeout-minutes: 45
     env:
       FULL_E2E: ${{ !github.event.pull_request.draft || contains(github.event.pull_request.labels.*.name, 'full-e2e') }}
