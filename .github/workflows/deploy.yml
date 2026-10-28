@@ -113,11 +113,30 @@ jobs:
             printf '%s' "$val" | pnpm exec wrangler secret put "$name"
           done
 
+      # Zero Trust identifiers (issuer / audiences) are placeholders in
+      # wrangler.jsonc so the public repo never carries them. The real values
+      # live only in repository secrets below and are injected as plain-text
+      # Worker vars at deploy time. An empty secret fails the job loudly —
+      # placeholders must never reach production.
       - name: Deploy to Cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: pnpm exec wrangler deploy
+          GODESK_AUTH_ISSUER: ${{ secrets.GODESK_AUTH_ISSUER }}
+          GODESK_AUTH_AUDIENCE: ${{ secrets.GODESK_AUTH_AUDIENCE }}
+          GODESK_ACCESS_AUD: ${{ secrets.GODESK_ACCESS_AUD }}
+        run: |
+          set -euo pipefail
+          for name in GODESK_AUTH_ISSUER GODESK_AUTH_AUDIENCE GODESK_ACCESS_AUD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Repository secret $name is empty. Copy the value from this repo's deployment host .dev.vars (gitignored), then re-run."
+              exit 1
+            fi
+          done
+          pnpm exec wrangler deploy \
+            --var GODESK_AUTH_ISSUER:"$GODESK_AUTH_ISSUER" \
+            --var GODESK_AUTH_AUDIENCE:"$GODESK_AUTH_AUDIENCE" \
+            --var GODESK_ACCESS_AUD:"$GODESK_ACCESS_AUD"
 
       - name: Smoke production composer
         run: pnpm verify:production

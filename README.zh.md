@@ -51,6 +51,10 @@ wrangler secret put GODESK_WEB_CLIENT_ID
 wrangler secret put GODESK_WEB_CLIENT_SECRET
 ```
 
+> 本仓库为 public：Cloudflare `account_id` 与 Zero Trust 标识符（Issuer / Audience / AUD）不进 git。
+> `wrangler.jsonc` 只保留占位符；生产部署由 GitHub Actions secrets 经 `wrangler deploy --var` 注入，
+> 本地开发写在 gitignore 的 `.dev.vars`。详见 [英文 README](README.md) 的 Deploy / Environment 一节。
+
 环境变量表与架构说明见 [英文 README](README.md)。
 
 ## 许可证

@@ -80,7 +80,7 @@ wrangler secret put GODESK_WEB_CLIENT_ID
 wrangler secret put GODESK_WEB_CLIENT_SECRET
 ```
 
-Set GitHub Actions secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` if you use [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml). Replace `account_id` / Access vars in `wrangler.jsonc` when self-hosting under your own Cloudflare account.
+Set GitHub Actions secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` if you use [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml). The deploy job additionally requires secrets `GODESK_AUTH_ISSUER`, `GODESK_AUTH_AUDIENCE` and `GODESK_ACCESS_AUD` and injects them with `wrangler deploy --var` — self-hosting under your own Cloudflare account means filling those four secrets plus the Worker secrets above, with no edits to `wrangler.jsonc` required.
 
 ### Environment
 
@@ -89,10 +89,18 @@ Set GitHub Actions secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` if
 | `GODESK_SHARE_SECRET` | Worker secret | yes (prod) | HMAC for share / seat tokens |
 | `GODESK_WEB_CLIENT_ID` | Worker secret | yes (prod) | Access SaaS OIDC client |
 | `GODESK_WEB_CLIENT_SECRET` | Worker secret | yes (prod) | Access SaaS OIDC secret |
-| `GODESK_AUTH_ISSUER` | `wrangler.jsonc` vars | yes | Access OIDC issuer URL |
-| `GODESK_AUTH_AUDIENCE` | `wrangler.jsonc` vars | yes | OIDC audience (client id) |
-| `GODESK_ACCESS_AUD` | `wrangler.jsonc` vars | yes | Access application **AUD tag** (not the app UUID) |
+| `GODESK_AUTH_ISSUER` | GitHub secret → `--var` at deploy; `.dev.vars` locally | yes | Access OIDC issuer URL (placeholder in repo) |
+| `GODESK_AUTH_AUDIENCE` | GitHub secret → `--var` at deploy; `.dev.vars` locally | yes | OIDC audience (client id) (placeholder in repo) |
+| `GODESK_ACCESS_AUD` | GitHub secret → `--var` at deploy; `.dev.vars` locally | yes | Access application **AUD tag** (not the app UUID) (placeholder in repo) |
 | `ASSET_SERVER_URL` | vars / `.dev.vars` | no | 3d-asset-server sidecar |
+
+`account_id` is likewise not committed: `deploy.yml` resolves the account from the
+`CLOUDFLARE_ACCOUNT_ID` repository secret, and local `wrangler` uses `wrangler login`
+credentials (or the same env var — see [`.dev.vars.example`](.dev.vars.example)).
+Because this repo is public, the Zero Trust identifiers above live **only** in
+GitHub Actions secrets and the gitignored `.dev.vars`; the deploy job fails loudly
+instead of shipping placeholders to production. Fresh clone → `cp .dev.vars.example .dev.vars`
+→ fill values from your own Zero Trust dashboard → `pnpm dev:worker`.
 
 Template: [`.dev.vars.example`](.dev.vars.example). Localhost uses an explicit development identity — not live OAuth evidence.
 

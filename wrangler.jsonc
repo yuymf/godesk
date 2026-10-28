@@ -1,17 +1,23 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "godesk",
-  "account_id": "a01c9b24cc8f4a23cea07321ae5546cd",
   "main": "./worker/index.ts",
   "compatibility_date": "2026-07-29",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "preview_urls": false,
+  // Repo carries placeholders only (public repo hygiene, 2026-10-29).
+  // Production: .github/workflows/deploy.yml injects the real values as
+  //   `wrangler deploy --var KEY:VALUE` from GitHub Actions secrets
+  //   (GODESK_AUTH_ISSUER / GODESK_AUTH_AUDIENCE / GODESK_ACCESS_AUD), failing
+  //   the job loudly if any is empty — placeholders never reach production.
+  // Local dev: .dev.vars (gitignored) overrides these during `wrangler dev`.
+  // See README "Deploy (Cloudflare)" for the full matrix.
   "vars": {
-    "GODESK_AUTH_ISSUER": "https://godesk-yumengfan220.cloudflareaccess.com/cdn-cgi/access/sso/oidc/00a3b1a12321f401c42152caca8027e7ac0049578ca7680893d8c80aca60be59",
-    "GODESK_AUTH_AUDIENCE": "00a3b1a12321f401c42152caca8027e7ac0049578ca7680893d8c80aca60be59",
+    "GODESK_AUTH_ISSUER": "https://godesk-placeholder.invalid/cdn-cgi/access/sso/oidc/REPLACE_ME",
+    "GODESK_AUTH_AUDIENCE": "REPLACE_ME-VIA-DEPLOY",
     // GoDesk Creator and MCP Access application AUD tag (ZT Overview). App UUID is not the AUD.
-    "GODESK_ACCESS_AUD": "065b23e01718a7c613297ac38777e54223ef02e1ed5a697861f750f326e3bcfe",
+    "GODESK_ACCESS_AUD": "REPLACE_ME-VIA-DEPLOY",
     // Local 3d-asset-server sidecar (Tidewell 资产搜索). Override with ASSET_SERVER_URL in .dev.vars.
     "ASSET_SERVER_URL": "http://127.0.0.1:8787"
   },
