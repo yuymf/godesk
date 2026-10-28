@@ -4,6 +4,9 @@
 *.tsbuildinfo
 .DS_Store
 .dev.vars
+.env
+.env.*
+!.env.example
 .lighthouseci/
 .scratch/
 .wrangler/
@@ -24,3 +27,26 @@ playwright/.cache/
 test-results/
 vite.config.d.ts
 vite.config.js
+coverage/
+*.log
+npm-debug.log*
+
+# Agent / IDE / process scratch (keep out of public tree)
+.cursor/
+.codex/
+.claude/
+.codebuddy/
+.idea/
+.vscode/
+.agent/
+.playwright-mcp/
+.gstack/
+.worktrees/
+.rerun-worktree
+.superpowers/
+*.session.json
+nightly-*/
+pony-*/
+*-evidence/
+*-scratch/
+handoffs/

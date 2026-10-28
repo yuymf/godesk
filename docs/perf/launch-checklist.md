@@ -4,7 +4,7 @@
 
 **launch-gate-block（2026-10-12）：** 两个 workflow 已改为全量 `GODESK_LAUNCH_GATE=block`；`size-budgets`（render3d core 188.66 / 200 KB）与 `lighthouse`（三条断言改 error，阈值见 emulation-protocol §6.1）均 pass。首页 LCP 3 800 / Room TBT 200 000 为**临时阈值**，待 GPU 机器复测。以下为上一刀记录。
 
-**G3D-17（上一刀）进度：** 整体仍是 `GODESK_LAUNCH_GATE=warn`；已用 `GODESK_LAUNCH_GATE_BLOCK` 逐项转正 **`asset-legal`**、**`hud-raw-action-ids`**、**`draw-calls`**。首页 `GODESK_FEATURE_TIDEWELL` 开关已删除（生产默认汐屿 showcase）。全量 `block` 仍待 `size-budgets` / `lighthouse` / `draw-calls` 诚实达标。模拟画像终验仍须有 GPU 的机器，见 [`docs/G3D-STATUS.md`](../G3D-STATUS.md)「G3D-17 上线前清单」。
+**G3D-17（上一刀）进度：** 整体仍是 `GODESK_LAUNCH_GATE=warn`；已用 `GODESK_LAUNCH_GATE_BLOCK` 逐项转正 **`asset-legal`**、**`hud-raw-action-ids`**、**`draw-calls`**。首页 `GODESK_FEATURE_TIDEWELL` 开关已删除（生产默认汐屿 showcase）。全量 `block` 仍待 `size-budgets` / `lighthouse` / `draw-calls` 诚实达标。模拟画像终验仍须有 GPU 的机器，见 G3D-17 launch notes in git history / this checklist。
 
 ## 检查项
 

@@ -1,7 +1,7 @@
 # 第一性需求
 
 GoDesk 的产品宪法。实现、文案、Skills、ADR 不得与此冲突。
-体裁细则见 `CONTEXT.md`。分享门槛见 ADR 0012。
+体裁细则见 [docs/GLOSSARY.md](./GLOSSARY.md)。分享门槛见 ADR 0012。
 
 1. **成功线**
    `source in → 可玩成品 out → 他人能一起玩`。

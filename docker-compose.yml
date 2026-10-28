@@ -1,0 +1,24 @@
+# GoDesk local stack — Cloudflare Worker (workerd) + Vite assets + DO SQLite
+# 1) cp .dev.vars.example .dev.vars   # optional: override placeholders
+# 2) docker compose up --build
+# Open http://127.0.0.1:8799
+#
+# Production: Cloudflare Workers (`pnpm deploy`). There is no honest one-click
+# Vercel path — Durable Objects and the Worker runtime are Cloudflare-only.
+
+services:
+  godesk:
+    build: .
+    image: godesk:local
+    ports:
+      - "${GODESK_PORT:-8799}:8799"
+    volumes:
+      # Persist local DO / wrangler state across restarts
+      - godesk-wrangler:/app/.wrangler
+    environment:
+      # Optional overrides (defaults come from .dev.vars baked at build, or mount)
+      ASSET_SERVER_URL: ${ASSET_SERVER_URL:-http://127.0.0.1:8787}
+    restart: unless-stopped
+
+volumes:
+  godesk-wrangler:
