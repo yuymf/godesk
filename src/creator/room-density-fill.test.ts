@@ -102,10 +102,10 @@ describe("room-density-fill hand / build-group / seat-rail", () => {
     expect(slots.filter((s) => s.key.startsWith("pieces-seat-")).length).toBe(2);
   });
 
-  it("build group shell exposes actions with cost pips + disabled when no legal runtime", () => {
-    const group = buildDensityBuildGroup({
+  it("build group skips ruleSystem clone when runtime empty; pips when legal", () => {
+    const empty = buildDensityBuildGroup({
       ruleSystemActions: [
-        { id: "place", label: "落子", description: "在合法格落子" },
+        { id: "place", label: "放置到资源区", description: "board owns this" },
         { id: "pass", label: "跳过", description: "无合法落子时跳过" },
       ],
       runtimeActions: [],
@@ -113,8 +113,7 @@ describe("room-density-fill hand / build-group / seat-rail", () => {
       busy: false,
       locale: "zh",
     });
-    expect(group.length).toBeGreaterThanOrEqual(2);
-    expect(group.every((a) => a.enabled === false)).toBe(true);
+    expect(empty).toEqual([]);
 
     const legal = buildDensityBuildGroup({
       ruleSystemActions: [],

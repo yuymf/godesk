@@ -986,8 +986,10 @@ export function RoomView({ sessionId }: { sessionId: string }) {
         <WorkerPlacementBoard render={build.ruleSystem.presentation.render}
           board={workerPlacementState as WorkerPlacementState}
           busy={busy}
+          enabled={isMyTurn}
           importedModels={importedModels}
           onAct={act}
+          viewerSeat={seat}
         />
       ) : discFlipping && othelloState ? (
         <OthelloBoard render={build.ruleSystem.presentation.render}

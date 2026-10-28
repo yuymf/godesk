@@ -97,6 +97,8 @@ test.describe("G3D-14 generic 3D tabletop", () => {
     const board = page.locator(".worker-placement-board");
     await expect(board).toBeVisible();
     await page.getByLabel("你的席位").selectOption("0");
+    // Pony Should #6: board owns place UI — one accessible name (no density HUD clone).
+    await expect(page.getByRole("button", { name: "放置到资源区" })).toHaveCount(1);
     await expect(page.getByRole("button", { name: "放置到资源区" })).toBeEnabled();
     const { stage, host } = await expectTabletop(page, "worker-placement-v1");
     const before = Number(await host.getAttribute("data-scene-nodes"));

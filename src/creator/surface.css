@@ -6083,7 +6083,7 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
 
 /* auto-battler e2e board slot markers (invisible; counted by .ta-anchor) */
 .ta-anchors { position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none; }
-.ta-anchor { display: none; }
+.ta-anchors .ta-anchor { display: none; }
 
 
 /* T035 · desk tabletop: after seated, collapse invite strip and grow 3D stage. */
@@ -7052,10 +7052,9 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
 }
 
 
-/* ========== UI-share-seat · shareReady + seat/invite row readable & clickable (P1) ==========
- * Hardness chrome summaries recorded shareReadyVisible:false / inviteLinkRowPresent:false
- * after T186 purge + T221 transparent/pointer-events collapse. Restore generic Room chrome
- * so invite link + seat chips contrast on bright 3D and remain clickable. No suite forks.
+/* ========== UI-share-seat · shareReady + seat/invite row readable (P1 / pony-must) ==========
+ * Share strip visible in flow for seated immersive; pointer-events only on controls so the
+ * strip never covers board / top-bar hits. Engine-generic (immersive / share-ready classes).
  */
 .room-view-tabletop-immersive.room-view-seated .room-invitation-rich.room-share-chrome.is-chrome-collapse,
 .room-view-hex-island.room-view-seated .room-invitation-rich.room-share-chrome.is-chrome-collapse,
@@ -7071,7 +7070,8 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   padding: 0.45rem 0.75rem !important;
   opacity: 1 !important;
   overflow: visible !important;
-  pointer-events: auto !important;
+  /* Strip stays in flow; do not steal board/HUD hits. Interactive children re-enable below. */
+  pointer-events: none !important;
   background: color-mix(in srgb, #1c1917 90%, #0c0a09) !important;
   color: #fafaf9 !important;
   border: 1px solid color-mix(in srgb, #fafaf9 18%, transparent) !important;
@@ -7079,6 +7079,24 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   box-shadow: 0 8px 22px rgb(12 10 9 / 28%) !important;
   z-index: 14 !important;
   position: relative !important;
+}
+
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.room-share-chrome.is-chrome-collapse .invite-copy-btn,
+.room-view-hex-island.room-view-seated .room-invitation-rich.room-share-chrome.is-chrome-collapse .invite-copy-btn,
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .invite-copy-btn,
+.room-invitation-rich[data-ui-share-ready="1"] .invite-copy-btn,
+.room-invitation[data-ui-share-ready="1"] .invite-copy-btn,
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.room-share-chrome.is-chrome-collapse .invite-url,
+.room-view-hex-island.room-view-seated .room-invitation-rich.room-share-chrome.is-chrome-collapse .invite-url,
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .invite-url,
+.room-invitation-rich[data-ui-share-ready="1"] .invite-url,
+.room-invitation[data-ui-share-ready="1"] .invite-url,
+.room-view-tabletop-immersive.room-view-seated .room-invitation-rich.room-share-chrome.is-chrome-collapse .seat-chip,
+.room-view-hex-island.room-view-seated .room-invitation-rich.room-share-chrome.is-chrome-collapse .seat-chip,
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .seat-chip,
+.room-invitation-rich[data-ui-share-ready="1"] .seat-chip,
+.room-invitation[data-ui-share-ready="1"] .seat-chip {
+  pointer-events: auto !important;
 }
 
 .room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-chrome-collapse .invitation-heading,
@@ -7091,7 +7109,7 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   gap: 0.35rem 0.55rem !important;
   max-height: none !important;
   opacity: 1 !important;
-  pointer-events: auto !important;
+  pointer-events: none !important;
   overflow: visible !important;
   color: #fafaf9 !important;
 }
@@ -7121,7 +7139,7 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   gap: 0.45rem !important;
   max-height: none !important;
   opacity: 1 !important;
-  pointer-events: auto !important;
+  pointer-events: none !important;
   overflow: visible !important;
 }
 .room-view-tabletop-immersive.room-view-seated .room-invitation-rich.is-chrome-collapse .invitation-link-row label,
@@ -7256,16 +7274,7 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   opacity: 0.85 !important;
 }
 
-/* tidewell immersive: fixed overlay (do not override T091 fixed with relative) */
-.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse,
-.room-view-tidewell-immersive.room-view-seated > .room-invitation[data-ui-share-ready="1"] {
-  position: fixed !important;
-  left: 12px !important;
-  right: 12px !important;
-  top: 8px !important;
-  margin: 0 !important;
-  z-index: 120 !important;
-}
+/* seated immersive share: stay in document flow (no fixed z-index cover over board/HUD) */
 
 
 

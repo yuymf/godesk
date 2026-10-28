@@ -379,8 +379,9 @@ function qtyForKind(kindId: string, live: DensityLiveHandState, mySeat: number |
 
 /**
  * Generic build / primary-action group for Room shell when board does NOT own HUD.
- * Uses runtime legal actions when present, else rule-system action declarations.
- * Cost pips follow P1 card-schema (dots); disabled when not my turn / busy / no legal.
+ * Only runtime legal actions — never clone static ruleSystem.actions (avoids duplicate
+ * accessible names next to board-owned place buttons). Empty runtime → no HUD buttons.
+ * Cost pips follow P1 card-schema (dots); disabled when not my turn / busy.
  */
 export function buildDensityBuildGroup(input: {
   ruleSystemActions: ReadonlyArray<{ id: string; label: string; description?: string }>;
@@ -389,46 +390,23 @@ export function buildDensityBuildGroup(input: {
   busy: boolean;
   locale: DensityLocale;
 }): DensityBuildAction[] {
-  const { ruleSystemActions, runtimeActions, isMyTurn, busy, locale } = input;
-  const source =
-    runtimeActions.length > 0
-      ? runtimeActions.map((a) => ({
-          id: a.id,
-          label: a.label,
-          value: a.value,
-          description: undefined as string | undefined,
-        }))
-      : ruleSystemActions.map((a) => ({
-          id: a.id,
-          label: a.label,
-          value: null as number | null,
-          description: a.description,
-        }));
+  const { runtimeActions, isMyTurn, busy } = input;
+  // Boards that own place UI (worker-placement, etc.) leave runtimeActions empty.
+  // Do not clone static ruleSystem.actions into HUD — that duplicates accessible names.
+  if (runtimeActions.length === 0) return [];
 
-  const rows =
-    source.length > 0
-      ? source
-      : [
-          {
-            id: "primary",
-            label: locale === "zh" ? "主操作" : "Primary",
-            value: null as number | null,
-            description: undefined as string | undefined,
-          },
-        ];
-
-  const legal = Boolean(isMyTurn && !busy && runtimeActions.length > 0);
-
-  return rows.slice(0, 6).map((action) => {
-    const costPips = costPipsForAction(action);
-    return {
+  const legal = Boolean(isMyTurn && !busy);
+  return runtimeActions.slice(0, 6).map((action) => ({
+    id: action.id,
+    label: action.label,
+    costPips: costPipsForAction({
       id: action.id,
       label: action.label,
-      costPips,
-      enabled: legal,
       value: action.value,
-    };
-  });
+    }),
+    enabled: legal,
+    value: action.value,
+  }));
 }
 
 function costPipsForAction(action: {
