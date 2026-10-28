@@ -288,7 +288,7 @@ describe("OAuth discovery", () => {
 
 describe("Cloudflare Access claim validation", () => {
   const accessExpected = {
-    issuer: "https://godesk-yumengfan220.cloudflareaccess.com",
+    issuer: "https://test-team.cloudflareaccess.com",
     audience: "godesk-access-audience",
     nowSeconds: 1_000,
   };

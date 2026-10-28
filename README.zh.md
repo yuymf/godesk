@@ -55,6 +55,31 @@ wrangler secret put GODESK_WEB_CLIENT_SECRET
 > `wrangler.jsonc` 只保留占位符；生产部署由 GitHub Actions secrets 经 `wrangler deploy --var` 注入，
 > 本地开发写在 gitignore 的 `.dev.vars`。详见 [英文 README](README.md) 的 Deploy / Environment 一节。
 
+### 密钥闸门（以及 2026-10 历史定性）
+
+2026-10-28 本公开仓曾把真实 Cloudflare Zero Trust **标识符**写进 `wrangler.jsonc`，
+2026-10-29 已挪出 git——但那是事后人肉清理。现在由机制拦：
+
+```bash
+pnpm secrets:check          # 拦 staged diff，离线；也可装成 .git/hooks/pre-commit
+pnpm secrets:check:all      # 扫「git 会发布的全部文件」，CI 跑这条
+pnpm secrets:check:canary   # 自测：规则仍要命中，允许清单仍须窄
+pnpm secrets:install-hook   # 新机器上 opt-in 装提交钩子
+```
+
+规则在 [`.gitleaks.toml`](.gitleaks.toml)；gitleaks 二进制按 `scripts/gitleaks.lock.json`
+校验 SHA256 后缓存到 `~/.cache/godesk-secretscan`，首次之后完全离线。允许清单只豁免
+**行形态**（`wrangler types` 生成哈希、JSDoc `@example`、测试里的 `idempotencyKey:`、
+文档占位符），不豁免整文件。输出恒为脱敏——公开仓的 CI 日志是公开的。
+
+历史**定性为不清洗**：全量扫描的历史命中全部属于标识符类（Account ID / Access team
+域名 / OIDC app UUID / AUD tag），逐行比对真凭据值的结果是 **0 命中**，即没有任何
+client secret / share secret / API token 值进过 git，**因此不需要轮换**。而这些标识符
+本身在 Zero Trust 面板里就公开展示，team 域名今天仍可从本仓公开的
+`scripts/verify-production-smoke.mjs` 里的 workers.dev 主机名拼出——洗历史换不到任何
+额外的隐蔽性，只会让所有 clone 失效、fork 与缓存里的旧对象仍在。结论与理由全文见
+[英文 README](README.md#secret-gate-and-the-2026-10-history-note)。
+
 环境变量表与架构说明见 [英文 README](README.md)。
 
 ## 许可证
