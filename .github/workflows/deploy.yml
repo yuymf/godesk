@@ -1,10 +1,13 @@
 name: Verify and deploy Godesk
 
-# CI minute budget (see docs/ci/actions-budget.md):
+# CI minute / box budget (see docs/ci/actions-budget.md):
+# - Runs on Grok Bot box self-hosted runners (hosted minutes billing-blocked).
 # - Docs-only pushes (docs/**, **/*.md, STATUS, prompt-trace) do not deploy.
 # - The full Playwright suite already ran on the ready PR head (verify.yml), so
 #   main runs build + unit/Worker tests only before deploying. Use
 #   "Run workflow" with full_e2e=true to rerun Playwright on main by hand.
+# - Cloudflare secrets still inject via repository secrets; Worker secrets stay
+#   on Cloudflare (`wrangler secret put`), never committed.
 on:
   push:
     branches: [main]
@@ -31,7 +34,7 @@ jobs:
   verify:
     # Renamed from "Tests and Playwright": push-to-main check, not a PR merge gate.
     name: Build and unit tests
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, X64, box]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
@@ -43,7 +46,6 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 22
-          cache: pnpm
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
@@ -54,7 +56,7 @@ jobs:
       - run: pnpm verify:plugin
       - name: Install Playwright Chromium (manual full_e2e only)
         if: inputs.full_e2e
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install chromium
       - name: Playwright e2e (manual full_e2e only)
         if: inputs.full_e2e
         run: pnpm test:e2e
@@ -62,7 +64,7 @@ jobs:
   deploy:
     name: Deploy to Cloudflare
     needs: verify
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, X64, box]
     timeout-minutes: 30
     outputs:
       release_tag: ${{ steps.release-record.outputs.tag }}
@@ -76,7 +78,6 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 22
-          cache: pnpm
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -160,7 +161,7 @@ jobs:
   release:
     name: Record release
     needs: deploy
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, X64, box]
     timeout-minutes: 10
     # Least privilege: only this job may write repository contents, so the tag
     # and Release are created here instead of widening the deploy job's
