@@ -9,21 +9,34 @@ import { TabletopStage } from "./TabletopStage";
 export function WorkerPlacementBoard({
   board,
   busy,
+  enabled = true,
   onAct,
   readOnly = false,
   render,
   importedModels,
+  viewerSeat = null,
 }: {
   board: WorkerPlacementState;
   busy?: boolean;
+  /** When false (not viewer turn), place UI stays disabled. */
+  enabled?: boolean;
   onAct?: (actionId: string) => void;
   readOnly?: boolean;
   /** G3D-14：build.ruleSystem.presentation.render（缺省用平台默认）。 */
   render?: RenderSpec;
   /** GoDesk ②：项目导入的 CC0 GLB（guest/play/replay 透传 → TabletopStage）。 */
   importedModels?: ReadonlyArray<{ id: string; url: string; title?: string }>;
+  /** Viewing seat — place only when this equals board.activeSeat. */
+  viewerSeat?: number | null;
 }) {
-  const interactive = !readOnly && Boolean(onAct) && board.phase !== "resolved";
+  const myTurn =
+    !readOnly &&
+    Boolean(onAct) &&
+    enabled &&
+    board.phase !== "resolved" &&
+    typeof viewerSeat === "number" &&
+    viewerSeat === board.activeSeat;
+  const interactive = myTurn;
 
   return (
     <div className="worker-placement-board">
@@ -75,7 +88,7 @@ export function WorkerPlacementBoard({
                   );
                 })}
               </div>
-              {interactive && (
+              {(!readOnly && Boolean(onAct) && board.phase !== "resolved") && (
                 <button
                   disabled={busy || !canPlace}
                   onClick={() => onAct?.(`place:${region.id}`)}

@@ -16,6 +16,11 @@ async function openBoard(page: import("@playwright/test").Page) {
   await card.getByRole("link", { name: "继续这一局" }).click();
   await page.waitForURL(/\/chatgpt-plugin\/room\//, { timeout: 30_000 });
   await claimTidewellSeat(page, 0);
+  // Pony Should #6: seated immersive invite stays in flow (not a fixed cover over ⚙ / board).
+  const invite = page.locator(".room-invitation").first();
+  if ((await invite.count()) > 0) {
+    await expect(invite).not.toHaveCSS("position", "fixed");
+  }
   const board = page.getByRole("region", { name: "六角岛桌面" });
   await expect(board).toBeVisible();
   await expect(page.getByTestId("g3d-scene-host")).toHaveAttribute("data-water", "on", { timeout: 60_000 });

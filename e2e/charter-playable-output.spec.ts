@@ -720,6 +720,7 @@ test.describe("ChatCut charter: source in, playable game out", () => {
     await expectLightPlaySurface(page);
     const board = page.locator(".worker-placement-board");
     await expect(board).toBeVisible();
+    await expect(page.getByRole("button", { name: "放置到资源区" })).toHaveCount(1);
     await expect(page.getByRole("button", { name: "放置到资源区" })).toBeVisible();
     await expect(page.getByRole("button", { name: "放置到工坊" })).toBeVisible();
     await expect(board).toContainText(/兑换\s*1\s*木材→建筑/);
