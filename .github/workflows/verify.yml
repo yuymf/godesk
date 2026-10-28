@@ -50,14 +50,13 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 22
-          cache: pnpm
 
       - name: CI mode
         run: |
           if [ "$FULL_E2E" = "true" ]; then
             echo "::notice::Full verify: fast subset + Playwright e2e + perf:ci"
           else
-            echo "::notice::Draft PR: fast subset only. Mark ready for review (or add label full-e2e) to run Playwright."
+            echo "::notice::Fast subset only. Add label full-e2e to run Playwright + perf:ci on the box."
           fi
 
       - run: pnpm install --frozen-lockfile
