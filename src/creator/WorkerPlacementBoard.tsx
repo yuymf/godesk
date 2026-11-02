@@ -37,13 +37,23 @@ export function WorkerPlacementBoard({
     typeof viewerSeat === "number" &&
     viewerSeat === board.activeSeat;
   const interactive = myTurn;
+  // Always pass onAct into the stage while the board is writable so layout keeps
+  // active-seat legal hints. Gating only the emit path avoids data-scene-nodes
+  // staying flat when a placed pawn (+1) cancels dropped viewer hints (−1).
+  const stageAct =
+    !readOnly && Boolean(onAct) && board.phase !== "resolved" && !busy
+      ? (actionId: string, _payload?: Record<string, unknown>) => {
+          if (!interactive) return;
+          onAct?.(actionId);
+        }
+      : undefined;
 
   return (
     <div className="worker-placement-board">
       <p className="worker-placement-instruction">
         {workerPlacementInstruction(board)}
       </p>
-      <TabletopStage kernel="worker-placement-v1" onAct={interactive && !busy ? onAct : undefined} render={render} state={board} importedModels={importedModels} />
+      <TabletopStage kernel="worker-placement-v1" onAct={stageAct} render={render} state={board} importedModels={importedModels} />
       <div className="worker-placement-regions" role="list">
         {board.regions.map((region) => {
           const occupied = board.placements.filter(

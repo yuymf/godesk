@@ -7070,7 +7070,7 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   padding: 0.45rem 0.75rem !important;
   opacity: 1 !important;
   overflow: visible !important;
-  /* Strip stays in flow; do not steal board/HUD hits. Interactive children re-enable below. */
+  /* In-flow relative (never fixed). pointer-events none on strip; children re-enable below. */
   pointer-events: none !important;
   background: color-mix(in srgb, #1c1917 90%, #0c0a09) !important;
   color: #fafaf9 !important;
@@ -7325,16 +7325,21 @@ html[data-g3d-poster="1"] [data-testid="g3d-scene-host"] {
   border-bottom: 1px solid var(--ui-chrome-on-light-border) !important;
 }
 
-/* keep floating sound FAB clipped on immersive (hud-polish iPhone) */
+/* keep floating sound FAB off-canvas on immersive (hud-polish iPhone) */
 .room-view-tidewell-immersive .room-sound-settings:not([data-open="1"]):not(:focus-within),
 .room-view-tidewell-immersive .room-sound-settings:not([data-open="1"]):not(:focus-within) .room-sound-settings-trigger {
   position: fixed !important;
+  left: -10000px !important;
+  top: 0 !important;
+  right: auto !important;
+  bottom: auto !important;
   width: 1px !important;
   height: 1px !important;
   opacity: 0 !important;
   pointer-events: none !important;
   overflow: hidden !important;
   clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
 }
 
 
