@@ -757,7 +757,14 @@ export function SceneHost({
     setActiveTier(caps.id);
     console.info(tierLogLine(resolution, "mount"));
 
-    const renderer = new WebGLRenderer({ antialias: caps.antialias, alpha: false });
+    let renderer: WebGLRenderer;
+    try {
+      renderer = new WebGLRenderer({ antialias: caps.antialias, alpha: false });
+    } catch (error) {
+      console.warn("[godesk.webgl] renderer init failed", error);
+      setUnsupported(true);
+      return;
+    }
     // G3D-07：AgX 色调映射 + sRGB 输出 + PCF 软阴影（§3.7 / §4.3）。
     configureRenderer(renderer, lightingRef.current);
     // 静止场景复用阴影贴图；内容变化后 SHADOW_REFRESH_MS 内逐帧重绘（见 tick）。

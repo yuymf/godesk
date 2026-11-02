@@ -63,15 +63,14 @@ body:has(.room-view-tidewell-immersive) {
 }
 
 /* T091 · seated shareReady / seat chrome pierces immersive hide (hex + tabletop parity) */
-/* T097 · tighter fixed strip so canvas reclaim vertical space */
-/* T180/T184/T186 · shareReady strip 再降权→purge：好友/链接条不可检出 */
+/* Pony Must / E2E: in-flow relative (never fixed) — strip must not cover board/⚙/sound. */
 .room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome {
   display: grid !important;
-  position: fixed !important;
-  left: 16px;
-  right: 16px;
-  top: 2px;
-  z-index: 120;
+  position: relative !important;
+  left: auto;
+  right: auto;
+  top: auto;
+  z-index: 14;
   width: auto !important;
   max-width: none !important;
   margin: 0 !important;
@@ -83,15 +82,16 @@ body:has(.room-view-tidewell-immersive) {
   max-height: 0.85rem;
   overflow: hidden;
   opacity: 0.48;
+  pointer-events: none;
 }
 .room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse {
-  /* T186 · seat-rail only; invite/link purged (keep strip light for upper-ink) */
-  max-height: 0.45rem !important;
-  opacity: 0.32 !important;
-  padding: 0 0.14rem !important;
-  background: color-mix(in srgb, #fff8ee 55%, transparent) !important;
-  pointer-events: none;
-  overflow: hidden !important;
+  /* Collapsed chrome stays in-flow; hits pass through except interactive children (surface.css). */
+  max-height: none !important;
+  opacity: 1 !important;
+  padding: 0.45rem 0.75rem !important;
+  background: color-mix(in srgb, #1c1917 90%, #0c0a09) !important;
+  pointer-events: none !important;
+  overflow: visible !important;
 }
 .room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .invitation-heading,
 .room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .invitation-link-row {
@@ -381,12 +381,14 @@ body:has(.room-view-tidewell-immersive) {
   padding: 0 !important;
 }
 
-/* Hide floating feedback FAB + sound FAB — controls live in top-bar menu */
+/* Hide floating feedback FAB + sound FAB — controls live in top-bar menu.
+   Park off-screen so closed trigger bbox cannot overlap the 3D stage (iPhone polish). */
 .room-view-tidewell-immersive > .room-feedback-drawer,
 .room-view-tidewell-immersive .room-sound-settings {
   position: fixed !important;
-  right: 12px;
-  top: 48px;
+  left: -10000px;
+  right: auto;
+  top: 0;
   bottom: auto !important;
   z-index: 95;
   opacity: 0;
@@ -395,10 +397,13 @@ body:has(.room-view-tidewell-immersive) {
   height: 1px;
   overflow: hidden;
 }
-/* When opened via topbar, restore interaction */
+/* When opened via topbar, restore interaction + on-screen anchor */
 .room-view-tidewell-immersive > .room-feedback-drawer[open],
 .room-view-tidewell-immersive .room-sound-settings[data-open="1"],
 .room-view-tidewell-immersive .room-sound-settings:focus-within {
+  left: auto;
+  right: 12px;
+  top: 48px;
   opacity: 1;
   pointer-events: auto;
   width: auto;
@@ -3612,19 +3617,18 @@ body:has(.room-view-tidewell-immersive) {
 }
 
 
-/* ========== UI-share-seat · tidewell shareReady strip restore (P1) ==========
- * Undo T180/T186 purge + pointer-events:none so invite/seat remain playable.
+/* ========== UI-share-seat · tidewell shareReady strip restore (P1 / pony-must) ==========
+ * Invite/seat readable in document flow. Strip never uses position:fixed (covers board/HUD).
+ * pointer-events none on chrome; interactive children re-enabled below / in surface.css.
  */
 .room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome,
 .room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse,
 .room-view-tidewell-immersive.room-view-seated > .room-invitation[data-ui-share-ready="1"] {
-  /* Keep fixed overlay (T091) — relative in-flow strip stole canvas vh and
-     put the clipped sound FAB over the stage (tidewell-hud-polish iPhone). */
   display: grid !important;
-  position: fixed !important;
-  left: 12px !important;
-  right: 12px !important;
-  top: 8px !important;
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
   width: auto !important;
   max-width: none !important;
   margin: 0 !important;
@@ -3633,8 +3637,8 @@ body:has(.room-view-tidewell-immersive) {
   min-height: 3.1rem !important;
   opacity: 1 !important;
   overflow: visible !important;
-  pointer-events: auto !important;
-  z-index: 120 !important;
+  pointer-events: none !important;
+  z-index: 14 !important;
   background: color-mix(in srgb, #1c1917 90%, #0c0a09) !important;
   color: #fafaf9 !important;
   border: 1px solid color-mix(in srgb, #fafaf9 18%, transparent) !important;
@@ -3643,9 +3647,18 @@ body:has(.room-view-tidewell-immersive) {
 }
 .room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .invitation-heading,
 .room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .invitation-link-row,
-.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .seat-rail-label,
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .seat-rail-label {
+  display: flex !important;
+  max-height: none !important;
+  opacity: 1 !important;
+  pointer-events: none !important;
+  overflow: visible !important;
+  color: #fafaf9 !important;
+}
 .room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .seat-chip,
-.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .seat-chip:not(.is-yours) {
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .seat-chip:not(.is-yours),
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .invite-copy-btn,
+.room-view-tidewell-immersive.room-view-seated > .room-invitation.room-share-chrome.is-chrome-collapse .invite-url {
   display: flex !important;
   max-height: none !important;
   opacity: 1 !important;

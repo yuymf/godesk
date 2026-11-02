@@ -50,9 +50,20 @@ export async function openLobbyCard(page: Page, projectId: string) {
     .getByRole("link", { name: "我的游戏" })
     .click();
   await page.waitForURL(/\/chatgpt-plugin\/games$/);
-  return page.locator(".lobby-card").filter({
+  const retry = page.getByRole("button", { name: "重试" });
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    if (await retry.isVisible().catch(() => false)) {
+      await retry.click();
+      await page.getByRole("status").waitFor({ state: "detached", timeout: 15_000 }).catch(() => undefined);
+    } else {
+      break;
+    }
+  }
+  const card = page.locator(".lobby-card").filter({
     has: page.locator(`a[href$="/studio/${projectId}"]`),
   });
+  await expect(card).toBeVisible({ timeout: 30_000 });
+  return card;
 }
 
 export async function shareHrefFromStudio(page: Page): Promise<string> {
