@@ -25,6 +25,7 @@ import {
 } from "./material";
 import { loadSeaTextures, type SeaTextures } from "./sea-textures";
 import { waterFeaturesFor } from "./tiers";
+import { harnessModeEnabled } from "../harness/mode";
 
 /** 海岸距离场覆盖半宽（主水面材质采样用；世界坐标外被 clamp 成深水）。 */
 export const WATER_HALF_EXTENT = 9;
@@ -161,7 +162,9 @@ export async function createWaterController(options: {
   let waveHeightBase = features.waveCount === 0 ? 0 : spec.waveHeight;
   let disposed = false;
   let committed = false;
-  const t0 = performance.now();
+  // G3D-HARNESS: shader time must derive from the virtual clock, not the wall
+  // clock, or two identical seeded runs render different water phases.
+  const t0 = harnessModeEnabled() ? 0 : performance.now();
 
   const teardown = () => {
     if (disposed) return;

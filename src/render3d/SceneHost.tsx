@@ -3,14 +3,18 @@ import {
   BoxGeometry,
   Color,
   CylinderGeometry,
+  Euler,
   ExtrudeGeometry,
+  Matrix4,
   Mesh,
   Object3D,
   OrthographicCamera,
   PerspectiveCamera,
+  Quaternion,
   Scene,
   Shape,
   SphereGeometry,
+  Vector3,
   type Texture,
   WebGLRenderer,
   type BufferGeometry,
@@ -39,6 +43,17 @@ import { boxCorners, densestCluster, tabletopHudInsets, tabletopOrthoFrame } fro
 import type { SceneModel, SceneNode } from "./scene-model";
 import type { HexSettlementSceneInput } from "./mappers/hex-settlement";
 import { markInteractive, perfModeEnabled } from "./perf-mark";
+import {
+  harnessAdvanceOne,
+  harnessDtMs,
+  harnessFrozen,
+  harnessModeEnabled,
+  harnessNowMs,
+  setHarnessFrozen,
+  setHarnessNow,
+  wallOrHarnessNow,
+} from "./harness/mode";
+import type { HarnessHost, HarnessSnapshot } from "./harness/api";
 import type { PerfRecorder } from "./perf";
 import { applyDieOrientation, idleBob, MotionController, prefersReducedMotion } from "./motion";
 import type { CameraDirector, CameraRigApi, PlayCamera } from "./camera-rig";
@@ -627,6 +642,9 @@ export function SceneHost({
   const diceSeedRef = useRef(1);
   const diceAnimatedRef = useRef(false);
   const lastActionRef = useRef<string | null | undefined>(undefined);
+  /** G3D-HARNESS: latest hex gameplay input, read by digest() subsystems. */
+  const harnessHexRef = useRef<HexSettlementSceneInput | null | undefined>(hexSettlement);
+  harnessHexRef.current = hexSettlement;
   const localSeatRef = useRef(localSeat);
   localSeatRef.current = localSeat;
   const viewportFrameRef = useRef(viewportFrame);
@@ -732,6 +750,9 @@ export function SceneHost({
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    // G3D-HARNESS: `?harness=1` swaps the frame clock for a fixed-dt virtual
+    // clock. The whole harness runtime is lazy-loaded only in this branch.
+    const harnessOn = harnessModeEnabled();
     if (!supportsWebGL2()) {
       setUnsupported(true);
       return;
@@ -783,7 +804,8 @@ export function SceneHost({
     // R18 boot reveal: no flat-board / cream-sky flash on session open. The canvas stays transparent
     // over the teal stage until the dressed scene (props + water) is up, then fades in once.
     // Hex (Tidewell) scenes only — othello / tabletop boards have no lazy dressing or sea to wait for.
-    const bootVeil = !bootRevealedRef.current && bootHexRef.current;
+    // Harness mode skips the veil: a deterministic run must not hide the canvas behind a wall-clock fade.
+    const bootVeil = !harnessOn && !bootRevealedRef.current && bootHexRef.current;
     let bootFirstContentAt = 0;
     let bootLastRender = 0;
     const bootSea = new Color(BOOT_SEA_COLOR);
@@ -808,7 +830,8 @@ export function SceneHost({
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    const motion = new MotionController();
+    // In harness mode tweens start on the virtual clock, not performance.now().
+    const motion = new MotionController({ now: wallOrHarnessNow });
     // e2e observability (like __g3dMotionLog): is any tween still in flight?
     (globalThis as { __g3dMotionBusy?: () => boolean }).__g3dMotionBusy = () => motion.busy;
     motionRef.current = motion;
@@ -951,7 +974,9 @@ export function SceneHost({
     let shadowDirtyUntil = Number.POSITIVE_INFINITY; // 首次挂载：直到第一次内容稳定
     let shadowFrames = 0;
     const markShadowsDirty = () => {
-      shadowDirtyUntil = performance.now() + SHADOW_REFRESH_MS;
+      // Route through the single clock: in harness mode this is the virtual
+      // timestamp, so shadow refresh windows are deterministic too.
+      shadowDirtyUntil = wallOrHarnessNow() + SHADOW_REFRESH_MS;
     };
     markShadowsDirtyRef.current = markShadowsDirty;
 
@@ -1169,7 +1194,9 @@ export function SceneHost({
     const startPbrStreaming = () => {
       pbrRequested = true;
       const resolutionPx = pbrResolutionFor(caps.id);
-      if (new URLSearchParams(window.location.search).get("pbr") === "0") {
+      // G3D-HARNESS: PBR streaming is a wall-clock setTimeout + async texture
+      // swap. Skip it entirely so the deterministic run has no async state.
+      if (harnessOn || new URLSearchParams(window.location.search).get("pbr") === "0") {
         setPbrState("off");
         container.dataset.pbr = "off";
         return;
@@ -1215,24 +1242,17 @@ export function SceneHost({
       }, PBR_STREAM_DELAY_MS);
     };
 
-    const tick = (now: number) => {
-      if (disposed) return;
-      frameId = window.requestAnimationFrame(tick);
-
-      const minFrameMs = caps.maxFps ? 1000 / caps.maxFps : 0;
-      if (minFrameMs > 0 && now - lastRenderedAt < minFrameMs - 0.5) {
-        return;
-      }
-      lastRenderedAt = now;
-
-      const delta = lastFrameAt === null ? null : now - lastFrameAt;
-      lastFrameAt = now;
+    /**
+     * ONE deterministic render/simulation frame. `now` and `delta` are always
+     * supplied by the caller: normally the wall clock, in harness mode the
+     * fixed-dt virtual clock. Splitting this out is what makes `step()` able to
+     * advance exactly N frames without waiting on rAF.
+     */
+    const frame = (now: number, delta: number | null) => {
       warmFrames += 1;
-
-      // Runtime downgrade after 180 warm-up frames (§4.7 / §4.6.3).
-      // R19: not under `?judge=1` (dev-only review captures) — SwiftShader's 10–45 fps band otherwise drops the
-      // tier mid-capture and the coast / dice shots lose water + props. Production URLs are unaffected.
-      if (!judgeEnabled && warmFrames > 180 && delta !== null) {
+      // Runtime downgrade is a wall-clock heuristic; a deterministic run must
+      // never remount the host mid-step.
+      if (!harnessOn && !judgeEnabled && warmFrames > 180 && delta !== null) {
         if (downgradeMonitor.shouldDowngrade(caps.id, now, delta)) {
           const nextId = downgradeTier(caps.id);
           if (nextId !== caps.id) {
@@ -1320,10 +1340,170 @@ export function SceneHost({
         (container.dataset.terrainProps !== undefined && container.dataset.water === "on");
       perf?.frame(renderer, now, hasContent && !dressingPendingRef.current && pbrReady && hexDressed);
     };
+
+    /**
+     * G3D-HARNESS: structured state export. Pure read of deterministic state —
+     * no wall clock, no renderer counters, no Math.random. `digestOf()` in
+     * ./harness/api normalises (key sort + 6-dp rounding) so JSON.stringify is
+     * byte-stable across two consecutive calls while frozen.
+     */
+    const _hMat = new Matrix4();
+    const _hPos = new Vector3();
+    const _hQuat = new Quaternion();
+    const _hScale = new Vector3();
+    const _hEuler = new Euler();
+    const harnessSnapshot = (): HarnessSnapshot => {
+      scene.updateMatrixWorld(true);
+      const objects: HarnessSnapshot["scene"]["objects"] = [];
+      for (const [id, object] of registryRef.current) {
+        object.updateWorldMatrix(true, false);
+        _hMat.copy(object.matrixWorld).decompose(_hPos, _hQuat, _hScale);
+        _hEuler.setFromQuaternion(_hQuat);
+        objects.push({
+          id,
+          kind: typeof object.userData.kind === "string" ? object.userData.kind : "unknown",
+          visible: Boolean(object.visible),
+          position: [_hPos.x, _hPos.y, _hPos.z],
+          rotation: [_hEuler.x, _hEuler.y, _hEuler.z],
+          quaternion: [_hQuat.x, _hQuat.y, _hQuat.z, _hQuat.w],
+          scale: [_hScale.x, _hScale.y, _hScale.z],
+        });
+      }
+      objects.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+      const isPerspective = camera instanceof PerspectiveCamera;
+      const hex = harnessHexRef.current;
+      const ds = container.dataset;
+      return {
+        scene: {
+          objects,
+          nodeCount: modelRef.current?.nodes.length ?? objects.length,
+          contentChildren: contentRoot.children.length,
+        },
+        animations: {
+          busy: motion.busy,
+          tweens: motion.describe(harnessNowMs()),
+        },
+        camera: {
+          type: isPerspective ? "perspective" : "orthographic",
+          position: [camera.position.x, camera.position.y, camera.position.z],
+          quaternion: [camera.quaternion.x, camera.quaternion.y, camera.quaternion.z, camera.quaternion.w],
+          target: [controls.target.x, controls.target.y, controls.target.z],
+          zoom: camera.zoom,
+          fov: isPerspective ? (camera as PerspectiveCamera).fov : null,
+          aspect: isPerspective ? (camera as PerspectiveCamera).aspect : null,
+        },
+        subsystems: {
+          physics: { model: "fixed-step", tickHz: 60, note: "GoDesk has no rigid-body engine; ticks count fixed simulation steps" },
+          render: {
+            tier: caps.id,
+            pbr: ds.pbr ?? null,
+            toneMapping: ds.toneMapping ?? null,
+            shadowMapSize: ds.shadowMapSize ?? null,
+            canvasWidth: renderer.domElement.width,
+            canvasHeight: renderer.domElement.height,
+            pixelRatio: renderer.getPixelRatio(),
+          },
+          water: { mounted: Boolean(waterRef.current), status: ds.water ?? null },
+          dressing: dressingRef.current?.stats() ?? null,
+          hex: hex
+            ? {
+                tiles: hex.tiles.length,
+                ports: hex.ports.length,
+                players: hex.players.map((p) => ({ settlements: p.settlements.length, cities: p.cities.length, roads: p.roads.length })),
+                lastDice: hex.lastDice ? [hex.lastDice[0], hex.lastDice[1]] : null,
+                lastAction: hex.lastAction ?? null,
+                robberHex: hex.robberHex,
+              }
+            : null,
+          dice: {
+            seed: diceSeedRef.current,
+            animated: diceAnimatedRef.current,
+            lastAction: lastActionRef.current ?? null,
+            activeSeat: activeSeatRef.current ?? null,
+            localSeat: localSeatRef.current ?? null,
+          },
+          motionLog: ((globalThis as { __g3dMotionLog?: unknown[] }).__g3dMotionLog ?? []).slice(-8),
+          dataset: {
+            boot: ds.boot ?? null,
+            bootReason: ds.bootReason ?? null,
+            numberLabels: ds.numberLabels ?? null,
+            sceneNodes: ds.sceneNodes ?? null,
+            terrainProps: ds.terrainProps ?? null,
+            island: ds.island ?? null,
+            diceOverlay: ds.diceOverlay ?? null,
+            importedModels: ds.importedModels ?? null,
+            pbrReused: ds.pbrReused ?? null,
+          },
+        },
+      };
+    };
+
+    /**
+     * Frozen harness frames still re-present the last deterministic frame so a
+     * pixel gate can screenshot the canvas. No simulation state is advanced.
+     */
+    const presentOnly = () => {
+      renderer.info.reset();
+      renderer.render(scene, camera);
+      overlayRef.current?.render(renderer);
+    };
+
+    const tick = (wallNow: number) => {
+      if (disposed) return;
+      frameId = window.requestAnimationFrame(tick);
+      if (harnessOn) {
+        if (harnessFrozen()) {
+          presentOnly();
+          return;
+        }
+        // Wall-paced fixed-dt playback for visual inspection only (`resume()`);
+        // regression stepping goes through __godeskHarness.step / stepUntil.
+        const nowMs = harnessAdvanceOne();
+        setHarnessNow(nowMs);
+        frame(nowMs, harnessDtMs());
+        return;
+      }
+      const minFrameMs = caps.maxFps ? 1000 / caps.maxFps : 0;
+      if (minFrameMs > 0 && wallNow - lastRenderedAt < minFrameMs - 0.5) {
+        return;
+      }
+      lastRenderedAt = wallNow;
+      const delta = lastFrameAt === null ? null : wallNow - lastFrameAt;
+      lastFrameAt = wallNow;
+      frame(wallNow, delta);
+    };
+    if (harnessOn) setHarnessFrozen(true);
     frameId = window.requestAnimationFrame(tick);
+
+    // `?harness=1` ONLY: lazy-load the public API (step / digest / stepUntil).
+    // Normal players never evaluate ./harness/api and never get the global.
+    let detachHarness: (() => void) | undefined;
+    if (harnessOn) {
+      void import("./harness/api")
+        .then(({ attachHarness }) => {
+          if (disposed) return;
+          const host: HarnessHost = {
+            frame: (nowMs, deltaMs) => frame(nowMs, deltaMs),
+            snapshot: harnessSnapshot,
+            finishTweens: () => motion.finishAll(),
+            playMotion: (id) => {
+              const object = registryRef.current.get(id);
+              if (!object) return -1;
+              // Canonical start pose: the tween's `step(0)` must be reproducible
+              // run-to-run even if a previous tween left the object mid-air.
+              object.scale.set(1, 1, 1);
+              object.position.y = typeof object.userData.baseY === "number" ? object.userData.baseY : object.position.y;
+              return motion.place(object, id);
+            },
+          };
+          detachHarness = attachHarness(host);
+        })
+        .catch((error) => console.error("[godesk.harness] lazy load failed", error));
+    }
 
     return () => {
       disposed = true;
+      detachHarness?.();
       window.cancelAnimationFrame(frameId);
       if (pbrTimer !== null) window.clearTimeout(pbrTimer);
       streamer?.dispose();

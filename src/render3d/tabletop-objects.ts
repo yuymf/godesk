@@ -45,6 +45,7 @@ import type { MaterialToken } from "./tokens";
 import type { TierCaps } from "./tiers";
 import { parseFaceSchema } from "./mappers/tabletop-face-schema";
 import { paintCardFace, paintIllustrationBand } from "./mappers/tabletop-card-face";
+import { harnessRandom } from "./harness/rng";
 
 type TabletopObjectContext = {
   library: MaterialLibrary;
@@ -1357,18 +1358,18 @@ function makeRailMaps(kind: "ballast" | "sleeper" | "steel", baseHex: string): {
         // gravel / crushed stone: high-freq noise clumps
         const n1 = Math.sin(u * 70) * Math.sin(v * 55);
         const n2 = Math.sin(u * 140 + 1.7) * Math.cos(v * 110);
-        const n3 = (Math.random() - 0.5) * 0.55;
+        const n3 = (harnessRandom() - 0.5) * 0.55;
         h0 = 0.5 + n1 * 0.22 + n2 * 0.18 + n3;
       } else if (kind === "sleeper") {
         // cross-grain lumber (ties run across gauge = local Z)
         const ring = Math.sin((v * 14 + Math.sin(u * 4) * 0.4) * Math.PI * 2);
         const pore = Math.sin(u * 55) * Math.sin(v * 40) * 0.15;
-        h0 = 0.5 + ring * 0.28 + pore + (Math.random() - 0.5) * 0.06;
+        h0 = 0.5 + ring * 0.28 + pore + (harnessRandom() - 0.5) * 0.06;
       } else {
         // steel: longitudinal scrapes + pit noise
         const scrape = Math.sin((u * 48 + v * 0.3) * Math.PI * 2) * 0.2;
         const pit = (Math.sin(u * 90) * Math.sin(v * 80)) * 0.12;
-        h0 = 0.5 + scrape + pit + (Math.random() - 0.5) * 0.05;
+        h0 = 0.5 + scrape + pit + (harnessRandom() - 0.5) * 0.05;
       }
       height[y * W + x] = h0;
     }
@@ -1497,7 +1498,7 @@ function woodRimMaterial(node: SceneNode, ctx: TabletopObjectContext): Material 
           const ring = Math.sin((u * 18 + Math.sin(v * 6.2) * 0.35) * Math.PI * 2);
           const ray = Math.sin((v * 3.5 + u * 0.8) * Math.PI * 2) * 0.25;
           const pore = (Math.sin(u * 90) * Math.sin(v * 70)) * 0.12;
-          const n = (Math.random() - 0.5) * 0.08;
+          const n = (harnessRandom() - 0.5) * 0.08;
           height[y * W + x] = 0.5 + ring * 0.32 + ray + pore + n;
         }
       }
@@ -1627,7 +1628,7 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
           const warp = Math.sin(wx) * 0.85;
           const weft = Math.sin(wy) * 0.85;
           const cross = Math.abs(warp) > Math.abs(weft) ? warp : weft;
-          const n = (Math.random() - 0.5) * 0.2;
+          const n = (harnessRandom() - 0.5) * 0.2;
           // low-frequency pile waves read at stage-wide
           const macro = Math.sin((x / W) * Math.PI * 3.4) * Math.sin((y / H) * Math.PI * 2.8) * 0.42;
           height[y * W + x] = 0.5 + cross * 0.62 + macro + n;
@@ -1673,10 +1674,10 @@ function feltPileMaterial(node: SceneNode, ctx: TabletopObjectContext): Material
       }
       // fine pile speckles on top of weave
       for (let i = 0; i < 4800; i += 1) {
-        const x = Math.floor(Math.random() * W);
-        const y = Math.floor(Math.random() * H);
+        const x = Math.floor(harnessRandom() * W);
+        const y = Math.floor(harnessRandom() * H);
         const o = (y * W + x) * 4;
-        const a = Math.random() < 0.5 ? -10 : 8;
+        const a = harnessRandom() < 0.5 ? -10 : 8;
         aImg.data[o] = Math.max(0, Math.min(255, aImg.data[o]! + a));
         aImg.data[o + 1] = Math.max(0, Math.min(255, aImg.data[o + 1]! + a));
         aImg.data[o + 2] = Math.max(0, Math.min(255, aImg.data[o + 2]! + a));

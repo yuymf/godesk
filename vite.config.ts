@@ -109,6 +109,12 @@ export default defineConfig({
           ) {
             return "assets/perf-overlay-[hash].js";
           }
+          // G3D-HARNESS: `?harness=1` only. Name it out of `render3d-*` so the
+          // deterministic-regression runtime is never charged to the render3d
+          // core budget and normal players never download it.
+          if (facade.includes("/src/render3d/harness/")) {
+            return "assets/g3d-harness-[hash].js";
+          }
           if (chunkInfo.name === "board-dressing") {
             return "assets/board-dressing-[hash].js";
           }
