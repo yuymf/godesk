@@ -68,6 +68,7 @@ ok = check("board-dressing (lazy)", files.filter((f) => /^board-dressing-.*\.js$
 ok = check("tabletop mapper (lazy)", files.filter((f) => /^TabletopScene3D-.*\.js$/.test(f)), 30) && ok; // hardness softContact/desk chrome freeze (was 12)
 ok = check("imported-props (lazy)", files.filter((f) => /^imported-props-.*\.js$/.test(f)), 4) && ok;
 ok = check("perf-overlay (lazy, ?perf=1)", files.filter((f) => /^perf-overlay-.*\.js$/.test(f)), 8) && ok;
+ok = check("g3d-harness (lazy, ?harness=1)", files.filter((f) => /^g3d-harness-.*\.js$/.test(f)), 12) && ok;
 ok = check("g3d-overlay toolbar (lazy)", files.filter((f) => /^g3d-overlay-.*\.js$/.test(f)), 6) && ok;
 ok = check("g3d-hexkit hex-board kit (lazy)", files.filter((f) => /^g3d-hexkit-.*\.js$/.test(f)), 22) && ok;
 ok = check("g3d-tabletop-cam ortho framing", files.filter((f) => /^g3d-tabletop-cam-.*\.js$/.test(f)), 6) && ok;

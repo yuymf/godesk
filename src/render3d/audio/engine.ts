@@ -13,6 +13,7 @@ import type { AudioBackend, ContextState, LoopHandle, SpriteHandle } from "./bac
 import { CORE_SPRITE_CUES, DEFAULT_CUE_FRAGMENTS, pickVariantIndex, type CueId, type CueRequest } from "./cues";
 import { MUSIC_TRACKS, type AudioSettings } from "./settings";
 import type { AudioSources } from "./sources";
+import { harnessRandom } from "../harness/rng";
 
 export type CueLogEntry = {
   cue: CueId;
@@ -67,7 +68,7 @@ export class AudioEngine {
       backend: options.backend,
       lowTier: options.lowTier ?? false,
       musicDelayMs: options.musicDelayMs ?? 5_000,
-      random: options.random ?? Math.random,
+      random: options.random ?? harnessRandom,
       now: options.now ?? (() => Date.now()),
       setTimer: options.setTimer ?? ((fn, ms) => setTimeout(fn, ms)),
       clearTimer: options.clearTimer ?? ((handle) => clearTimeout(handle as ReturnType<typeof setTimeout>)),

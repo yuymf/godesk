@@ -33,6 +33,7 @@ import {
   WebGLRenderer,
 } from "three";
 import { BENCH_SLOTS, BOARD_SLOTS, UNIT_CATALOG, type Piece } from "../../runtime/adapters/auto-battler";
+import { harnessRandom } from "../harness/rng";
 
 import { unitAppearance } from "./appearance";
 import type { TierCaps } from "../tiers";
@@ -766,9 +767,9 @@ export class TideArenaScene {
     this.fxHit.count = hit; this.fxHit.instanceMatrix.needsUpdate = true;
     if (ms <= this.shakeUntil) {
       const j = (this.shakeUntil - ms) / 280;
-      this.camera.position.x = this.baseCamPos.x + (Math.random() - 0.5) * 0.12 * j;
-      this.camera.position.y = this.baseCamPos.y + (Math.random() - 0.5) * 0.08 * j;
-      this.camera.position.z = this.baseCamPos.z + (Math.random() - 0.5) * 0.12 * j;
+      this.camera.position.x = this.baseCamPos.x + (harnessRandom() - 0.5) * 0.12 * j;
+      this.camera.position.y = this.baseCamPos.y + (harnessRandom() - 0.5) * 0.08 * j;
+      this.camera.position.z = this.baseCamPos.z + (harnessRandom() - 0.5) * 0.12 * j;
       this.camera.lookAt(0, 0.2, 0);
     } else if (this.baseCamPos.lengthSq() > 0) {
       this.camera.position.copy(this.baseCamPos);

@@ -18,6 +18,7 @@
 import { Easing, Group, Tween } from "@tweenjs/tween.js";
 import { Euler, Quaternion, Vector3, type Object3D } from "three";
 import type { SceneVec3 } from "./scene-model";
+import { tuningNumber } from "./harness/tuning";
 
 export const MOTION_MS = {
   place: 280,
@@ -40,8 +41,21 @@ export function prefersReducedMotion(
 }
 
 export function motionDurationMs(kind: MotionKind, reduced: boolean): number {
-  return reduced ? 0 : MOTION_MS[kind];
+  // `?harness=1&motion.placeMs=...` behaves exactly like editing MOTION_MS in
+  // source and rebuilding; with no override installed this is the literal.
+  return reduced ? 0 : tuningNumber(`motion.${kind}Ms`, MOTION_MS[kind]);
 }
+
+/** Read-only tween state for the deterministic harness digest. */
+export type MotionTweenSnapshot = {
+  id: string;
+  kind: MotionKind;
+  durationMs: number;
+  elapsedMs: number;
+  linearProgress: number;
+  easedProgress: number;
+  playing: boolean;
+};
 
 type MotionLogEntry = {
   kind: MotionKind;
@@ -206,6 +220,8 @@ type MotionControllerOptions = {
 export class MotionController {
   readonly group = new Group();
   private readonly running = new Map<object, Tween<{ p: number }>>();
+  /** Metadata for harness digest; never used on the render path. */
+  private readonly meta = new Map<object, { id: string; kind: MotionKind; durationMs: number; startAt: number; eased: number }>();
   private readonly reduced: () => boolean;
   private readonly now: () => number;
   private lastUserDragAt = Number.NEGATIVE_INFINITY;
@@ -240,6 +256,30 @@ export class MotionController {
     return out;
   }
 
+  /**
+   * Read-only tween state for `window.__godeskHarness.digest()`.
+   * Sorted by id so JSON.stringify is byte-stable. Pure read: no mutation.
+   */
+  describe(now = this.now()): MotionTweenSnapshot[] {
+    const out: MotionTweenSnapshot[] = [];
+    for (const [key, meta] of this.meta) {
+      const playing = this.running.get(key)?.isPlaying() ?? false;
+      const elapsedMs = Math.max(0, now - meta.startAt);
+      out.push({
+        id: meta.id,
+        kind: meta.kind,
+        durationMs: meta.durationMs,
+        elapsedMs,
+        linearProgress: meta.durationMs > 0 ? Math.min(1, elapsedMs / meta.durationMs) : 1,
+        // Back.Out legitimately overshoots > 1; report the ACTUAL value applied
+        // to the pose so a regression spec can predict it analytically.
+        easedProgress: meta.eased,
+        playing,
+      });
+    }
+    return out.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  }
+
   noteUserDrag(at = this.now()): void {
     this.lastUserDragAt = at;
   }
@@ -253,6 +293,7 @@ export class MotionController {
   finishAll(): void {
     for (const tween of [...this.running.values()]) tween.end();
     this.running.clear();
+    this.meta.clear();
     this.group.removeAll();
   }
 
@@ -268,6 +309,8 @@ export class MotionController {
     this.running.get(key)?.end();
     const touch = step;
     step = (p: number) => {
+      const entry = this.meta.get(key);
+      if (entry) entry.eased = p;
       touch(p);
       this.dirty.add(key);
     };
@@ -276,10 +319,13 @@ export class MotionController {
     const durationMs = durationOverrideMs !== undefined
       ? durationOverrideMs
       : (reduced ? 0 : motionDurationMs(kind, reduced));
-    recordMotion({ kind, id, durationMs, reduced, at: this.now() });
+    const startAt = this.now();
+    this.meta.set(key, { id, kind, durationMs, startAt, eased: 0 });
+    recordMotion({ kind, id, durationMs, reduced, at: startAt });
     if (durationMs === 0) {
       step(1);
       done?.();
+      this.meta.delete(key);
       return 0;
     }
     const state = { p: 0 };
@@ -290,16 +336,18 @@ export class MotionController {
       .onUpdate(() => step(state.p))
       .onComplete(() => {
         this.running.delete(key);
+        this.meta.delete(key);
         this.group.remove(tween);
         done?.();
       })
       .onStop(() => {
         this.running.delete(key);
+        this.meta.delete(key);
         this.group.remove(tween);
       });
     this.group.add(tween);
     this.running.set(key, tween);
-    tween.start(this.now());
+    tween.start(startAt);
     return durationMs;
   }
 

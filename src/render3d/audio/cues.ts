@@ -9,6 +9,8 @@
  * - `ended`（status 首次变为 complete）：本座位获胜 → `win`，否则 `lose`。
  */
 
+import { harnessRandom } from "../harness/rng";
+
 export const CUE_IDS = [
   "hover",
   "select",
@@ -118,7 +120,7 @@ const TRADE_KIND_BY_ACTION: Readonly<Record<string, TradeKind>> = Object.freeze(
  * 取变体下标：`gain` 按资源、`trade` 按交易类型，其余随机。
  * 变体数不足时回落到 0（素材缺片段也不抛错）。
  */
-export function pickVariantIndex(request: CueRequest, variantCount: number, random: () => number = Math.random): number {
+export function pickVariantIndex(request: CueRequest, variantCount: number, random: () => number = harnessRandom): number {
   if (variantCount <= 1) return 0;
   if (request.cue === "gain" && request.resource) {
     const index = GAIN_RESOURCES.indexOf(request.resource);
