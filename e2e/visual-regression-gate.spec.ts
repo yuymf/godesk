@@ -16,7 +16,15 @@ import {
   type HarnessApi,
 } from "./helpers/visual-capture";
 import { comparePng, diffBounds, formatDiff, type VisualDiffResult } from "./helpers/visual-diff";
-import { displayPath, resolveBaseline, writeBaseline, updateBaselineEnabled, BASELINE_DIR } from "./helpers/visual-baseline";
+import {
+  BASELINE_DIR,
+  describeBaselineEnv,
+  displayPath,
+  missingBaselineMessage,
+  resolveBaseline,
+  updateBaselineEnabled,
+  writeBaseline,
+} from "./helpers/visual-baseline";
 
 /**
  * G3D-PIXELGATE — shader / 视觉回归的像素门。
@@ -36,21 +44,31 @@ import { displayPath, resolveBaseline, writeBaseline, updateBaselineEnabled, BAS
  */
 
 /**
- * Playwright 1.63 期望 chromium r1243；本机只缓存 r1208/r1248 + 系统 Chrome。
+ * Playwright 1.63 期望 chromium r1243；本机（开发机）只缓存 r1208/r1248 + 系统 Chrome。
  * spec-local fallback：只在 r1243 缺失时启用，不动共享 playwright.config.ts。
  * （与父卡 harness-determinism.spec.ts 同一模式）
+ *
+ * CI/固定镜像里**不启用**：那里 Playwright 自带的 chromium 就是基线所属的那个浏览器，
+ * 用系统 Chrome 顶替会悄悄换掉渲染栈（实测两者同帧差 0.47%，见 e2e/helpers/visual-baseline.ts）。
  */
-const PW_CACHE = "/home/halyu/.cache/ms-playwright";
+const PW_CACHE = `${process.env.HOME ?? ""}/.cache/ms-playwright`;
 const expectedRevision = `${PW_CACHE}/chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell`;
 const fallbackBinaries = [
   "/usr/bin/google-chrome",
   `${PW_CACHE}/chromium-1248/chrome-linux64/chrome`,
   `${PW_CACHE}/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell`,
 ];
-const localBinary = existsSync(expectedRevision) ? null : (fallbackBinaries.find(existsSync) ?? null);
+const localBinary = process.env.CI || existsSync(expectedRevision) ? null : (fallbackBinaries.find(existsSync) ?? null);
 if (localBinary) {
   test.use({ launchOptions: { executablePath: localBinary, args: ["--enable-unsafe-swiftshader"] } });
 }
+/**
+ * 实际启动的是哪个浏览器 —— 基线按它分目录（`ubuntu22-google-chrome-152` vs
+ * `ubuntu24-chromium-153`）。系统 Chrome 与 Playwright 自带 chromium 是两条渲染栈，
+ * 混用会让像素门拿错基线。fallback 被用上时必须如实标注，不许都叫 "chromium"。
+ */
+const BROWSER_LABEL = localBinary ? "google-chrome" : "chromium";
+
 
 const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿六角岛资源建造游戏";
 /** 证据落盘根目录。
@@ -326,22 +344,28 @@ test.describe("G3D-PIXELGATE deterministic pixel gate", () => {
     await ensurePreview(page);
     const captured = await captureFrozen(page, previewPath, { tag: "baseline" });
 
-    const decision = resolveBaseline("hex-island/frozen-frame");
+    // 基线按**实际渲染栈**分目录（见 e2e/helpers/visual-baseline.ts 文件头）。
+    // 版本号取自真正在跑的浏览器，不是 package.json —— fallback 用系统 Chrome 时
+    // 那个数字会变，基线目录也跟着变，绝不会拿 chromium 基线去比 chrome 的帧。
+    const browserVersion = page.context().browser()?.version() ?? "unknown";
+    const envKey = describeBaselineEnv({ browserLabel: BROWSER_LABEL, browserVersion });
+    record(`[baseline-env] key=${envKey} browser=${BROWSER_LABEL}/${browserVersion} platform=${process.platform}`);
+
+    const decision = resolveBaseline("hex-island/frozen-frame", { envKey });
     if (decision.action === "missing") {
-      throw new Error(
-        `pixel-gate: baseline missing at ${displayPath(decision.path)}. ` +
-          `Baselines are never auto-created — run with GODESK_UPDATE_BASELINE=1 after reviewing the frame, ` +
-          `and say why in the PR. (See docs/visual-regression-gate.md §基线管理)`,
-      );
+      throw new Error(missingBaselineMessage(decision, "hex-island/frozen-frame"));
     }
     if (decision.action === "write") {
       writeBaseline(decision.path, captured.png);
-      record(`[baseline] WROTE ${displayPath(decision.path)} because ${process.env.GODESK_UPDATE_BASELINE === "1" ? "GODESK_UPDATE_BASELINE=1" : "?"}`);
+      record(`[baseline] WROTE ${displayPath(decision.path)} (env=${envKey}) because ${process.env.GODESK_UPDATE_BASELINE === "1" ? "GODESK_UPDATE_BASELINE=1" : "?"}`);
       return;
     }
 
     const result = diffAndRecord(decision.baseline, captured.png, "baseline-vs-frozen-frame", "baseline");
-    expect(result.diffPixels, `frozen frame must match the committed baseline at ${BASELINE_DIR}/hex-island/frozen-frame.png`).toBe(0);
+    expect(
+      result.diffPixels,
+      `frozen frame must match the committed baseline at ${BASELINE_DIR}/${envKey}/hex-island/frozen-frame.png`,
+    ).toBe(0);
   });
 
   test("③ shader 类：改一个真实 GLSL 常量 → 像素必须变（证明能抓到）", async ({ page }) => {

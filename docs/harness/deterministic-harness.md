@@ -129,6 +129,69 @@ node scripts/check-size-budgets.mjs
 > `pnpm exec playwright install chromium`，或临时用 `--config` 指系统 Chrome。
 > 这是宿主环境问题，与本卡改动无关。
 
+## 端口隔离与并发纪律（别退回硬编码 8799）
+
+`playwright.config.ts` 不再写死 `8799`，而是调用 `scripts/pick-e2e-port.mjs`：
+空闲就给熟悉的 **8799**，被占就顺延 **8801 / 8803 / …**（上限 8879）。
+`GODESK_E2E_PORT=<port>` 仍然可以显式钉住。
+
+**为什么**：`webServer` 跑的是 `bash scripts/e2e-webserver.sh`，它第一步就是
+`pnpm build`，然后直接读磁盘上的 `./dist`。两个 Playwright 进程共用 8799 时，
+后来的那个会命中 `reuseExistingServer` **静默接管**前一个的 server —— 于是它可能
+在别人的 build 上跑，而那个 build 正被并发 `pnpm build` 重写。本 spec 因此在
+10 次里出现过 1 次假红（`__godeskHarness.freeze()` 撞上 undefined）。
+
+`reuseExistingServer` 现在**只在显式钉住端口时**才为 true。自动选端口时，
+端口上已有监听者就说明那是别人的 run，绝不接管。
+
+**为什么不是「探测一下端口空不空」**：那是 TOCTOU 竞态 —— 同一毫秒启动的两个进程
+都看到 8799 空闲，然后都去抢，实测真的撞上了 `Address already in use`。
+所以**选择动作本身**用 `mkdir` 加锁（POSIX 上原子，只有一个进程能建成同名目录），
+赢家把端口写进 `.wrangler/e2e-port-locks/<owner-pid>-<port>.lock`，**预留会活到该 run
+结束**，于是后启动的 run 即使 wrangler 还没 bind 也能看到这一格已被占。
+owner 进程已死或预留超过 60s 会被自动回收，被杀掉的 run 不会把整套测试永久卡死。
+
+同一 run 里配置会被求值多次（主进程 + 每个 worker），所以预留**按 owner pid 复用**，
+不会给 worker 分配第二个端口 —— 否则 `baseURL` 会指向没人服务的端口
+（实测报错：`net::ERR_CONNECTION_REFUSED at http://127.0.0.1:8801`）。
+另外 `execFileSync` 读回端口时要 `FORCE_COLOR=0` 并剥掉 ANSI 转义：
+Playwright 的 TS loader 会给子进程 stdout 注入颜色码，`Number("\u001b[33m8811")` 是 `NaN`。
+
+**纪律**：同一个 checkout 优先串行跑。独立端口只解决 server 抢占，两个 run 仍共享
+一份 `./dist`，并发 build 依然能换掉对方的 asset（实测：并发跑时后启动的那轮
+第 1 个用例 1.2 分钟超时）。要真并行，请用独立 checkout（`git worktree`）。
+
+## 等待就绪的正确姿势（别退回「存在即通过」）
+
+`waitHarnessReady()` 要求 **两个信号同时连续稳定 `HARNESS_STABLE_MS`(250ms)**：
+`window.__godeskHarness` 全局 + `documentElement.dataset.godeskHarness === "1"`，
+并且必须是**同一个 API 实例**（换实例 = 发生了 detach/re-attach，计时重置）。
+随后再跨 2 个 rAF + 一个延迟窗口复查一次。
+
+「现在存在」不足以交给下一个 `evaluate`：poll 与下一次 CDP 往返之间文档可能已经
+被拆掉重建，调用方就会读到 `undefined`。这就是本 spec 曾 1/10 假红的形态。
+
+**为什么不在 `harness/api.ts` 里改**：实测过，不需要。给 `attachHarness` / `detach`
+埋点后连跑 4 轮，每轮都只有一次 `attach:enter` → `attach:done`，**`detach` 从未被调用**；
+另外在页面就绪后从外部触发一次并发 `pnpm build`（workerd `--live-reload` 默认开启），
+45 秒采样窗口内全局与文档标记**零变化**、无 `beforeunload`。所以竞态在**测试观测层**，
+不在产品运行时 —— 产品代码保持零改动，正常路径零开销。
+
+## 独立可跑（别退回模块级串行依赖）
+
+`previewPath` 曾由第 1 个用例赋值、第 2 个用例断言非空，于是
+`-g` / `--grep` / `--only` / IDE 单跑第 2 个用例必然假失败
+（`serial dependency: previous test must run first`）。
+
+现在改成按需构建（`ensurePreviewPath(page)`，每个 worker 只付一次约 15s），
+并且**每个用例自己 `goto` 后自己 `waitHarnessReady`**。三条命令都必须绿：
+
+```bash
+pnpm exec playwright test e2e/harness-determinism.spec.ts                            # 全量 2 passed
+pnpm exec playwright test e2e/harness-determinism.spec.ts -g "regression closed loop"  # 单跑第 2 个
+pnpm exec playwright test e2e/harness-determinism.spec.ts -g "four-piece"              # 单跑第 1 个
+```
+
 ## 边界 —— 能不能测 shader / 视觉改动？
 
 **不能。** 这是本卡最重要的诚实结论：

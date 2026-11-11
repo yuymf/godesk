@@ -120,7 +120,17 @@ jobs:
 
       - name: Playwright e2e
         if: env.FULL_E2E == 'true'
+        timeout-minutes: 25
         run: pnpm test:e2e
+
+      # 确定性 harness：`pnpm test:e2e` 已经跑过一轮（e2e/harness-determinism.spec.ts）。
+      # 这里再连跑 3 轮，专门盯"假红"—— 那张卡（t_1e1cf982）修的是端口共享导致的
+      # ~1/10 假红；CI 是单 runner 无并发，但"跑一次绿"不足以证明它稳定，所以至少 3 轮。
+      # 像素门 spec 不在这里面（默认 config 的 testIgnore 排除它，见 playwright.spec-ownership.ts）。
+      - name: Harness determinism (3 consecutive rounds)
+        if: env.FULL_E2E == 'true'
+        timeout-minutes: 12
+        run: pnpm exec playwright test e2e/harness-determinism.spec.ts --repeat-each=3 --retries=0
 
       # SPEC §4.6.1 CI gate: deterministic render budgets under SwiftShader
       # (bytes, requests, draw calls, triangles, GPU estimate, leaks, context loss).
@@ -142,5 +152,90 @@ jobs:
         with:
           name: perf-ci-budgets
           path: perf-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  pixelgate:
+    # 像素门（shader / 光照 / 贴图 / 透明排序）—— 只有像素能过的那道门。
+    #
+    # 为什么**独立 job**：
+    #   1. 约 8~12 分钟（含 pnpm build + 7 个用例 + 证据落盘），不能塞进 draft 快速通道；
+    #   2. 与 verify job 并行，互不拖累 45 分钟预算；
+    #   3. 它的失败语义不同（像素差 ≠ 代码错），需要单独的证据 artifact。
+    #
+    # 为什么跑在**指定 runner** 上而不是随便一台：
+    #   基线是**某个渲染栈**的产物。实测（t_57c01185）同一份构建、同一个种子：
+    #   本机 Chrome 152 ↔ Playwright Chromium 153（Ubuntu 24.04 镜像）= 1634/344064 =
+    #   0.4749% 的恒定偏移，而贴图 404 这种真故障只有 0.8086% —— 随便换渲染栈，
+    #   跨环境偏移就和真故障同量级，门就变成噪声源。
+    #   所以：像素门只在 `box` runner 上跑（与 verify job 同一台，apt/Chrome 依赖已知能用），
+    #   基线按 `e2e/visual-baselines/<env-key>/` 分目录、**仍然零容忍**（不放宽 maxDiffRatio）。
+    #   跑在 box 上是为了不引入 Docker 依赖（repo 的 hosted minutes 已被 billing 封，
+    #   且这台 box 的 apt mirror 会 500 —— 见 #187）；env-key 由实际浏览器版本推出，
+    #   哪天 box 换了底/升了 chromium，基线就"缺失"→ 明确红，而不是悄悄偏移。
+    name: Pixel gate (visual regression)
+    # 等价于 verify job 的 FULL_E2E 语义（job 级 if 拿不到 env，所以这里直接写全）：
+    #   - 没有 `full-e2e` label → 不跑（10 分钟不进快速通道）
+    #   - 非 full-e2e 的 `labeled` 事件 → 不跑（打别的标签不该触发）
+    if: >-
+      (github.event.action != 'labeled' || github.event.label.name == 'full-e2e')
+      && contains(github.event.pull_request.labels.*.name, 'full-e2e')
+    runs-on: [self-hosted, linux, X64, box]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Refuse baseline generation in normal CI
+        # 基线生成只允许在手工 workflow（.github/workflows/visual-baseline.yml）里做。
+        # 主流程里一旦混进 GODESK_UPDATE_BASELINE=1，红灯就会被"自动重建基线"吞掉。
+        run: |
+          if [ -n "${GODESK_UPDATE_BASELINE:-}" ]; then
+            echo "::error::GODESK_UPDATE_BASELINE is set in the normal CI flow ($GODESK_UPDATE_BASELINE). Baselines are evidence, not a green switch — use the manual 'Generate visual baseline' workflow."
+            exit 1
+          fi
+          echo "GODESK_UPDATE_BASELINE unset (as required)"
+
+      - name: Require ss (port-ownership self-proof)
+        # 像素门用 `ss` + /proc 证明 8823 上只有自己一个监听者。共享端口会静默换掉构建产物，
+        # 于是"像素差"其实是基建问题而不是回归。box 是 Debian（iproute2 属于 essential），
+        # 这里只做自检并给出可执行的提示 —— 不弱化断言，也不用会 500 的 apt mirror 装包。
+        run: |
+          if ! command -v ss >/dev/null 2>&1; then
+            echo "::error::\`ss\` (iproute2) is required by the pixel gate's port-ownership self-proof. Install iproute2 on the box runner."
+            exit 1
+          fi
+          ss -V | head -1
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+        # 不加 cache: pnpm：self-hosted 上 setup-node 的 post 步骤会因 pnpm store 路径
+        # 不存在而 Path Validation Error（见 #187）。
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium (no --with-deps on box)
+        # 与 verify job 同一策略：box 的 apt mirror 会 500，Chrome 依赖已就位。
+        run: pnpm exec playwright install chromium
+
+      - name: Pixel gate (renderer-bound baseline)
+        # 不加 -g：7 个用例全跑（自证 / 基线门 / shader 常量 / shader 编译失败 /
+        # 无关改动不误报 / 贴图 404 / 基线更新必须显式）。
+        timeout-minutes: 20
+        run: pnpm exec playwright test --config playwright.pixelgate.config.ts
+
+      - name: Upload pixel gate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          # diff 图 + 左右对照 + 证据日志：失败时人不用重跑就能看清"哪里变了"。
+          name: pixelgate-evidence
+          path: |
+            pixelgate-evidence/
+            test-results/
           if-no-files-found: ignore
           retention-days: 14

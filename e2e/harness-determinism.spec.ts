@@ -34,6 +34,12 @@ if (localBinary) test.use({ launchOptions: { executablePath: localBinary, args: 
 const HEX_ISLAND_PROMPT = "做一款可以与电脑对战的汐屿六角岛资源建造游戏";
 const SEED = 20261111;
 
+/**
+ * How long BOTH harness signals must stay continuously true, on the same API
+ * instance, before we call the page ready. See `waitHarnessReady`.
+ */
+const HARNESS_STABLE_MS = 250;
+
 type HarnessApi = {
   freeze(): boolean;
   resume(): boolean;
@@ -62,7 +68,10 @@ type HarnessApi = {
   };
 };
 
-type HarnessWindow = Window & { __godeskHarness?: HarnessApi };
+type HarnessWindow = Window & {
+  __godeskHarness?: HarnessApi;
+  __godeskHarnessStability?: { ref: HarnessApi | null; since: number };
+};
 
 const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
 
@@ -84,8 +93,47 @@ async function buildHexPreviewPath(page: Page): Promise<string> {
   return `/chatgpt-plugin/play/${encodeURIComponent(builds.at(-1)!.id)}`;
 }
 
+/**
+ * Wait until the harness runtime is not merely present, but STABLE.
+ *
+ * "Present right now" is too weak a predicate to hand to the next `evaluate`:
+ * a document can be torn down and re-created between the poll and the following
+ * CDP round-trip, and the caller then reads `undefined`. That is how this spec
+ * produced a ~1-in-10 false red on `__godeskHarness.freeze()`.
+ *
+ * So we require BOTH signals — the `window.__godeskHarness` global and the
+ * `documentElement.dataset.godeskHarness === "1"` marker — to hold on the SAME
+ * API instance for a continuous `HARNESS_STABLE_MS` window. Any delete, any
+ * re-attach (new instance) or any marker flap resets the clock inside the page,
+ * so this only resolves during a genuinely quiescent period.
+ *
+ * Then we cross two animation frames plus a delay — the gap the old
+ * "exists once" check left open — and re-assert both signals still hold.
+ */
 async function waitHarnessReady(page: Page): Promise<void> {
-  await page.waitForFunction(() => Boolean((window as HarnessWindow).__godeskHarness), null, { timeout: 60_000 });
+  await page.waitForFunction(
+    (stableMs: number) => {
+      const w = window as HarnessWindow;
+      const api = w.__godeskHarness;
+      const flag = document.documentElement.dataset.godeskHarness === "1";
+      const st = (w.__godeskHarnessStability ??= { ref: null, since: 0 });
+      if (!api || !flag) {
+        st.ref = null;
+        st.since = 0;
+        return false;
+      }
+      // A different instance means detach+re-attach happened: restart the clock.
+      if (st.ref !== api) {
+        st.ref = api;
+        st.since = performance.now();
+        return false;
+      }
+      return performance.now() - st.since >= stableMs;
+    },
+    HARNESS_STABLE_MS,
+    { timeout: 60_000, polling: 50 },
+  );
+
   await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
   // Wait for the async hex dressing + water chunks so the digest's subsystem
   // state is settled (otherwise two runs could sample different load stages).
@@ -98,6 +146,26 @@ async function waitHarnessReady(page: Page): Promise<void> {
     })),
     { timeout: 90_000 },
   ).toMatchObject({ water: "on", props: expect.any(String), island: expect.any(String), boot: "ready" });
+
+  // Settle across two frames + a delay, then prove BOTH signals are still there
+  // and still the same instance. This is the exact window the old check missed.
+  await page.evaluate(
+    () => new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    }),
+  );
+  await page.waitForTimeout(HARNESS_STABLE_MS);
+  const settled = await page.evaluate(() => {
+    const w = window as HarnessWindow;
+    return {
+      global: typeof w.__godeskHarness,
+      flag: document.documentElement.dataset.godeskHarness ?? null,
+      sameInstance: w.__godeskHarnessStability?.ref === w.__godeskHarness,
+    };
+  });
+  expect(settled.global, "harness global must survive the settle window").toBe("object");
+  expect(settled.flag, "harness marker must survive the settle window").toBe("1");
+  expect(settled.sameInstance, "harness instance must not be swapped under us").toBe(true);
 }
 
 async function digestJson(page: Page): Promise<string> {
@@ -105,16 +173,32 @@ async function digestJson(page: Page): Promise<string> {
 }
 
 test.describe("G3D-HARNESS browser-side deterministic regression", () => {
-  test.describe.configure({ mode: "serial" });
+  /**
+   * The preview build is created lazily on first use, through the test's own
+   * `page` fixture (which carries `use.baseURL`).
+   *
+   * This used to be a module-level `let previewPath = ""` assigned only by the
+   * first test, so the second test depended on the first having run. Any
+   * `-g` / `--grep` / `--only` / IDE single-test run then hit
+   * "serial dependency: previous test must run first" — a false failure that
+   * looks exactly like a real bug. Building on demand keeps the cost paid once
+   * per worker while making each test independently runnable.
+   */
   let previewPath = "";
+
+  async function ensurePreviewPath(page: Page): Promise<string> {
+    if (!previewPath) previewPath = await buildHexPreviewPath(page);
+    expect(previewPath, "fixture: preview build must exist").toBeTruthy();
+    return previewPath;
+  }
 
   test("four-piece: conditional global, idempotent digest, seeded RNG, step / stepUntil", async ({ browser, page }) => {
     test.setTimeout(300_000);
-    previewPath = await buildHexPreviewPath(page);
-    const harnessUrl = `${previewPath}?harness=1&seed=${SEED}`;
+    const built = await ensurePreviewPath(page);
+    const harnessUrl = `${built}?harness=1&seed=${SEED}`;
 
     // ---- ① conditional global: `?harness=1` only -------------------------
-    await page.goto(previewPath);
+    await page.goto(built);
     await expect(page.locator("canvas")).toHaveCount(1, { timeout: 60_000 });
     const normal = await page.evaluate(() => ({
       global: typeof (window as HarnessWindow).__godeskHarness,
@@ -228,9 +312,10 @@ test.describe("G3D-HARNESS browser-side deterministic regression", () => {
 
   test("regression closed loop: change a gameplay constant -> digest numbers move by the predicted ratio", async ({ page }) => {
     test.setTimeout(300_000);
-    expect(previewPath, "serial dependency: previous test must run first").toBeTruthy();
+    const built = await ensurePreviewPath(page);
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto(`${previewPath}?harness=1&seed=${SEED}`);
+    await page.goto(`${built}?harness=1&seed=${SEED}`);
+    // Independent readiness: never rely on a previous test's page state.
     await waitHarnessReady(page);
 
     // `motion.placeMs` is a REAL gameplay constant (MOTION_MS.place = 280).
