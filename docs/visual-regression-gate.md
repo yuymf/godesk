@@ -46,17 +46,35 @@ GODESK_UPDATE_BASELINE=1 pnpm exec playwright test --config playwright.pixelgate
 
 `.github/workflows/verify.yml` 的 `Pixel gate (visual regression)` job：
 
-- **只在 `FULL_E2E == 'true'` 时跑**（ready PR 或带 `full-e2e` label）。约 8~12 分钟，
-  不进 draft 快速通道。
-- **跑在固定镜像 `mcr.microsoft.com/playwright:v1.63.0-noble` 里**，不是裸 `ubuntu-latest`
-  + 自装 chromium：基线属于某个渲染栈，换栈就会得到 0.47% 的跨环境偏移（实测数据见
-  §基线管理）。镜像 tag 与 `e2e/visual-baselines/<env-key>/` 必须成对升级。
-- 镜像里没有 `iproute2`，job 里显式 `apt-get install iproute2` —— 端口独占自证要用 `ss`，
-  宁可装包也不弱化断言。
+- **只有 PR 带 `full-e2e` label 时才跑**（repo 的 hosted Actions minutes 已被 billing 封，
+  CI 全在自托管 `box` runner 上；`FULL_E2E` 现在是 label-only，draft/ready 不再决定）。
+  约 8~12 分钟，不进快速通道。
+- **跑在 `box` runner 上，和基线"同一台机器"**：基线属于某个渲染栈，换栈就得到 0.47% 的
+  跨环境偏移（实测见 §基线管理）。所以没有"随便找台机器跑一下"这个选项 ——
+  基线目录里的 `<env-key>` 就是渲染栈的指纹，环境一变基线即"缺失"→ 明确红。
+- job 第一步会把 `ss`（iproute2）做一个存在性自检：端口独占自证要用它，
+  缺了就明确失败并给安装提示（box 的 apt mirror 会 500，所以不在 workflow 里 apt install）。
 - 失败时 `if: always()` 上传 `pixelgate-evidence/` + `test-results/`（diff 图 / 左右对照 /
   逐用例证据日志），不用重跑就能看清"哪里变了"。
-- 基线生成走单独的手工 workflow（`.github/workflows/visual-baseline.yml`）；
+- 基线生成走单独的手工 workflow（`.github/workflows/visual-baseline.yml`，同样跑在 `box`）；
   正常流程里 `GODESK_UPDATE_BASELINE` 一旦被设就直接 fail。
+
+**首次在某台新 runner 上启用时**（或 box 换了底、chromium 大版本升了），基线门会以
+"no baseline for env `<env-key>`" 失败 —— 这是**设计好的**失败模式，不是 bug。
+按报错里给出的命令，或在 Actions 里跑一次 `Generate visual baseline (manual)`，
+人工看图后把 PNG 提交即可。
+
+### 仓库里现在有哪几条基线
+
+| env-key | 出自 | 谁在用 |
+|---|---|---|
+| `ubuntu22-google-chrome-152` | 开发机（系统 Google Chrome） | 本地手动跑像素门时 |
+| `ubuntu24-chromium-153` | `mcr.microsoft.com/playwright:v1.63.0-noble` | 任何人用该固定镜像跑时；同时是本卡跨环境实测的参照 |
+| `box` runner 的 key | 自托管 box（chromium 153，Debian） | CI 的 pixelgate job —— **首次 run 时用上面那条手工 workflow 生成** |
+
+同一个用例可以在多条环境基线之间互相比对（`comparePng` 会告诉你跨环境差多少），
+但**判定只看自己那条**。
+
 
 
 ## 端口必须独占（这是最重要的一条）
@@ -179,8 +197,8 @@ layout / GC 预热）。**实测 frame 0 vs frame 180 差 49.80% 像素** ——
 - `ubuntu24-chromium-153` —— CI 固定镜像（`mcr.microsoft.com/playwright:v1.63.0-noble`）
 - `darwin-chromium-153` —— macOS 开发机
 
-**升级时要一起改的三处**：`package.json` 的 `@playwright/test`、`verify.yml` 的镜像 tag、
-基线目录名。三者不同步的后果是"基线缺失"（明确红），不是静默偏移 —— 这是故意的。
+**升级时要一起改的两处**：`package.json` 的 `@playwright/test`（决定 Chromium 版本）
+与基线目录名。两者不同步的后果是"基线缺失"（明确红），不是静默偏移 —— 这是故意的。
 
 **怎么更新**：只有显式 `GODESK_UPDATE_BASELINE=1` 才写盘。**唯一**被允许的地方是手工
 workflow `.github/workflows/visual-baseline.yml`（下载 artifact → 人工看图 → 手工提交）。

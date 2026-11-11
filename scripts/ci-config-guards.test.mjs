@@ -127,7 +127,12 @@ describe("baseline policy: 基线按环境分目录，缺失必须 FAIL", () => 
   test("每个已提交的环境都有自己的基线，且都是 768x448 的帧（截图口径不变）", () => {
     const envDirs = readdirSync(join(repoRoot, BASELINE_DIR)).filter((name) => statSync(join(repoRoot, BASELINE_DIR, name)).isDirectory());
     expect(envDirs.length, "at least one env-keyed baseline must be committed").toBeGreaterThan(0);
-    expect(envDirs, "the CI env baseline (pinned Playwright noble image) must be committed").toContain("ubuntu24-chromium-153");
+    // 这条是**证据**而不是 CI 依赖：它是本卡跨环境实测（0.4749%）的参照帧，
+    // 也是任何人用 mcr.microsoft.com/playwright:v1.63.0-noble 跑像素门时的基线。
+    // 删掉它 = 丢掉唯一的跨环境实测参照，所以钉成测试。
+    expect(envDirs, "the pinned-image baseline (measured cross-env reference) must stay committed").toContain(
+      "ubuntu24-chromium-153",
+    );
     for (const env of envDirs) {
       const png = join(repoRoot, BASELINE_DIR, env, "hex-island", "frozen-frame.png");
       expect(existsSync(png), `missing baseline ${png}`).toBe(true);
