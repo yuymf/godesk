@@ -1,0 +1,97 @@
+name: Generate visual baseline (manual)
+
+# 基线生成**唯一**被允许的地方。
+#
+# 为什么不是自动化：基线是证据。把它做成"跑一下就有"的按钮，红灯就会被"重新生成基线"
+# 吞掉，像素门退化成橡皮图章。所以这里只做两件事：
+#   1. 在**固定渲染栈**（与像素门 job 同一个 mcr.microsoft.com/playwright 镜像）里跑
+#      `GODESK_UPDATE_BASELINE=1`，生成/更新 `e2e/visual-baselines/<env-key>/…`；
+#   2. 把 PNG 作为 artifact 交给人看 —— **不自动提交、不自动开 PR**。
+#
+# 人工流程：下载 artifact → 看 diff（`docs/visual-regression-gate.md` §基线管理）→
+# 在 PR 里连同"为什么变"和实测 `diffRatio` 一起提交。
+#
+# 触发：Actions → "Generate visual baseline (manual)" → Run workflow（需填 reason）。
+on:
+  workflow_dispatch:
+    inputs:
+      case:
+        description: "基线用例名（e2e/visual-baselines/<env>/<case>.png 去掉后缀）"
+        required: true
+        default: "hex-island/frozen-frame"
+      reason:
+        description: "为什么更新基线（会写进 run summary；省略理由的 run 视为无效证据）"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    name: Render baseline (pinned renderer)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      # 与 verify.yml 的 pixelgate job 必须保持**同一个镜像**：基线只有出自同一个渲染栈才有意义。
+      # Playwright 大版本升级时，这里的 tag、pixelgate job 的 tag、以及
+      # `e2e/visual-baselines/<env-key>/` 目录名必须一起改。
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --user root
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install iproute2 (port-ownership self-proof needs ss)
+        run: apt-get update -qq && apt-get install -y -qq iproute2
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Render + write baseline
+        env:
+          GODESK_UPDATE_BASELINE: "1"
+        # 只跑"基线门"这一个用例：它会打印 [baseline-env] key=… 并把帧写进
+        # e2e/visual-baselines/<env-key>/<case>.png。别的用例不该在更新模式下跑。
+        timeout-minutes: 20
+        run: |
+          set -euo pipefail
+          CASE="${{ inputs.case }}"
+          pnpm exec playwright test --config playwright.pixelgate.config.ts -g "基线门" 2>&1 | tee baseline-run.log
+          echo "--- written files ---"
+          git status --porcelain e2e/visual-baselines | tee written.txt
+          if ! grep -q 'frozen-frame.png' <<<"$(cat written.txt)"; then
+            echo "::error::no baseline file was written — check the [baseline-env] line in baseline-run.log"
+            exit 1
+          fi
+          {
+            echo "### Visual baseline run"
+            echo ""
+            echo "- case: \`${CASE}\`"
+            echo "- reason: ${{ inputs.reason }}"
+            echo ""
+            echo "Written baselines (commit these by hand, after reviewing them):"
+            echo '```'
+            cat written.txt
+            echo '```'
+            echo "Env key line from the run:"
+            echo '```'
+            grep -E '\[baseline-env\]|\[baseline\] WROTE' baseline-run.log || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload baseline artifact (review before committing)
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-baseline
+          path: |
+            e2e/visual-baselines/
+            baseline-run.log
+          if-no-files-found: error
+          retention-days: 14

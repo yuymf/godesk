@@ -38,7 +38,26 @@ GODESK_UPDATE_BASELINE=1 pnpm exec playwright test --config playwright.pixelgate
 ```
 
 **必须用 `playwright.pixelgate.config.ts`，不要用共享的 `playwright.config.ts`** ——
-原因见下一节。
+原因见下一节。默认 config 现在用 `testIgnore` 排除了这个 spec
+（`playwright.spec-ownership.ts` 是唯一事实来源，`scripts/ci-config-guards.test.mjs`
+用 `playwright test --list` 证明它真的没被收集）。
+
+## 在 CI 里怎么跑
+
+`.github/workflows/verify.yml` 的 `Pixel gate (visual regression)` job：
+
+- **只在 `FULL_E2E == 'true'` 时跑**（ready PR 或带 `full-e2e` label）。约 8~12 分钟，
+  不进 draft 快速通道。
+- **跑在固定镜像 `mcr.microsoft.com/playwright:v1.63.0-noble` 里**，不是裸 `ubuntu-latest`
+  + 自装 chromium：基线属于某个渲染栈，换栈就会得到 0.47% 的跨环境偏移（实测数据见
+  §基线管理）。镜像 tag 与 `e2e/visual-baselines/<env-key>/` 必须成对升级。
+- 镜像里没有 `iproute2`，job 里显式 `apt-get install iproute2` —— 端口独占自证要用 `ss`，
+  宁可装包也不弱化断言。
+- 失败时 `if: always()` 上传 `pixelgate-evidence/` + `test-results/`（diff 图 / 左右对照 /
+  逐用例证据日志），不用重跑就能看清"哪里变了"。
+- 基线生成走单独的手工 workflow（`.github/workflows/visual-baseline.yml`）；
+  正常流程里 `GODESK_UPDATE_BASELINE` 一旦被设就直接 fail。
+
 
 ## 端口必须独占（这是最重要的一条）
 
@@ -133,13 +152,44 @@ layout / GC 预热）。**实测 frame 0 vs frame 180 差 49.80% 像素** ——
 
 ## 基线管理
 
-**存哪**：`e2e/visual-baselines/<case>.png`，**入 git**（单独目录）。
+**存哪**：`e2e/visual-baselines/<env-key>/<case>.png`，**入 git**（单独目录）。
 和测试代码同仓是故意的 —— 基线变化会出现在 code review 的 diff 里，基线悄悄变了
 必须被看到。
 
-**怎么更新**：只有显式 `GODESK_UPDATE_BASELINE=1` 才写盘。
-默认情况下**基线缺失 = 用例 FAIL**，不是"自动生成基线然后绿"。这条是为了防止
-"第一次跑就自动落基线"变成绕过测试的后门。
+### 为什么按环境分目录（实测数据，不是猜测）
+
+基线是**某个渲染栈**的产物。同一份构建、同一个种子（`20261111`）、同一冻结帧：
+
+| 环境 | 对应基线 | 跨环境差异 |
+|---|---|---|
+| 本机：Ubuntu 22.04 + Google Chrome 152.0.7977.82 + SwiftShader | `ubuntu22-google-chrome-152/` | 0 px（自身基线） |
+| CI 等价：Ubuntu 24.04 + Playwright Chromium 153.0.8010.12 + SwiftShader（`mcr.microsoft.com/playwright:v1.63.0-noble`） | `ubuntu24-chromium-153/` | 对本机基线 **1634/344064 = 0.4749%** |
+| **同一环境内**：连拍 / 跨 context / 跨进程（两次独立 run） | — | **0/344064，三次都是 0** |
+
+也就是说：**跨环境有恒定偏移，同环境内是确定性 0**。差异集中在一块 `(91,44) 346×348`
+的区域（平涂面的法线插值 / 抗锯齿精度差），不是整帧噪声。
+
+所以正确做法不是抬高 `maxDiffRatio`（抬到 0.81% 就会漏掉贴图 404，实测见
+`scripts/ci-config-guards.test.mjs`），而是**每个渲染栈一条自己的基线，仍然零容忍**。
+
+`<env-key>` = `<平台+发行版大版本>-<浏览器>-<浏览器大版本>`，由**实际在跑的浏览器**推出
+（`describeBaselineEnv()`，浏览器版本取自 `browser.version()`，不是 `package.json`）：
+
+- `ubuntu22-google-chrome-152` —— 开发机用系统 Chrome 兜底时
+- `ubuntu24-chromium-153` —— CI 固定镜像（`mcr.microsoft.com/playwright:v1.63.0-noble`）
+- `darwin-chromium-153` —— macOS 开发机
+
+**升级时要一起改的三处**：`package.json` 的 `@playwright/test`、`verify.yml` 的镜像 tag、
+基线目录名。三者不同步的后果是"基线缺失"（明确红），不是静默偏移 —— 这是故意的。
+
+**怎么更新**：只有显式 `GODESK_UPDATE_BASELINE=1` 才写盘。**唯一**被允许的地方是手工
+workflow `.github/workflows/visual-baseline.yml`（下载 artifact → 人工看图 → 手工提交）。
+正常 CI（`verify.yml` 的 pixelgate job）里有一个 step 会在 `GODESK_UPDATE_BASELINE`
+被设成任何值时直接失败。
+
+默认情况下**基线缺失 = 用例 FAIL**，报错会列出"仓里现有哪些环境"和"怎么在正确环境里生成"。
+不是"自动生成基线然后绿" —— 这条是为了防止"第一次跑就自动落基线"变成绕过测试的后门。
+
 
 **什么情况下允许更新**：
 

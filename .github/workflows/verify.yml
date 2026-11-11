@@ -120,7 +120,17 @@ jobs:
 
       - name: Playwright e2e
         if: env.FULL_E2E == 'true'
+        timeout-minutes: 25
         run: pnpm test:e2e
+
+      # 确定性 harness：`pnpm test:e2e` 已经跑过一轮（e2e/harness-determinism.spec.ts）。
+      # 这里再连跑 3 轮，专门盯"假红"—— 那张卡（t_1e1cf982）修的是端口共享导致的
+      # ~1/10 假红；CI 是单 runner 无并发，但"跑一次绿"不足以证明它稳定，所以至少 3 轮。
+      # 像素门 spec 不在这里面（默认 config 的 testIgnore 排除它，见 playwright.spec-ownership.ts）。
+      - name: Harness determinism (3 consecutive rounds)
+        if: env.FULL_E2E == 'true'
+        timeout-minutes: 12
+        run: pnpm exec playwright test e2e/harness-determinism.spec.ts --repeat-each=3 --retries=0
 
       # SPEC §4.6.1 CI gate: deterministic render budgets under SwiftShader
       # (bytes, requests, draw calls, triangles, GPU estimate, leaks, context loss).
@@ -142,5 +152,79 @@ jobs:
         with:
           name: perf-ci-budgets
           path: perf-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  pixelgate:
+    # 像素门（shader / 光照 / 贴图 / 透明排序）—— 只有像素能过的那道门。
+    #
+    # 为什么是**独立 job + 固定镜像**，而不是接在 verify job 里：
+    #
+    #  1. 基线是**某个渲染栈**的产物。实测（本卡 t_57c01185）同一份构建、同一个种子，
+    #     本机 Chrome 152 与 Playwright Chromium 153 的同一帧差 1634/344064 = 0.47%，
+    #     而贴图 404 这种真故障只有 0.81% —— 用 `ubuntu-latest` + 自装 chromium 直跑，
+    #     跨环境偏移会和真故障同量级，像素门就退化成噪声源。
+    #     所以跑在 `mcr.microsoft.com/playwright:v1.63.0-noble` 里：镜像 = @playwright/test
+    #     1.63 配套的 chromium 153，与 `e2e/visual-baselines/ubuntu24-chromium-153/` 同栈。
+    #     **Playwright 大版本升级时，镜像 tag 与基线目录必须一起改。**
+    #  2. 约 8~12 分钟（含 pnpm build + 7 个用例 + 证据落盘），不能进 draft 快速通道。
+    #  3. 与 verify job 并行，互不拖累 45 分钟的预算。
+    name: Pixel gate (visual regression)
+    # 等价于 verify job 的 FULL_E2E 语义（job 级 if 拿不到 env，所以这里直接写全）：
+    #   - draft PR 且没有 full-e2e label  → 不跑（10 分钟不进快速通道）
+    #   - 非 full-e2e 的 `labeled` 事件    → 不跑（打别的标签不该触发）
+    if: >-
+      (github.event.action != 'labeled' || github.event.label.name == 'full-e2e')
+      && (!github.event.pull_request.draft || contains(github.event.pull_request.labels.*.name, 'full-e2e'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      # 固定镜像 = 基线所属的渲染栈，见上。
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --user root
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Refuse baseline generation in normal CI
+        # 基线生成只允许在手工 workflow（.github/workflows/visual-baseline.yml）里做。
+        # 主流程里一旦混进 GODESK_UPDATE_BASELINE=1，红灯就会被"自动重建基线"吞掉。
+        run: |
+          if [ -n "${GODESK_UPDATE_BASELINE:-}" ]; then
+            echo "::error::GODESK_UPDATE_BASELINE is set in the normal CI flow ($GODESK_UPDATE_BASELINE). Baselines are evidence, not a green switch — use the manual 'Generate visual baseline' workflow."
+            exit 1
+          fi
+          echo "GODESK_UPDATE_BASELINE unset (as required)"
+
+      - name: Install iproute2 (port-ownership self-proof needs ss)
+        # 像素门用 `ss` + /proc 证明 8823 端口只有自己一个监听者（共享端口会静默换掉构建产物，
+        # 导致"像素差"其实是基建问题）。Playwright 镜像里没有 iproute2，装上而不是弱化断言。
+        run: apt-get update -qq && apt-get install -y -qq iproute2
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Pixel gate (pinned renderer)
+        # -g 不加：7 个用例全跑（自证 / 基线门 / shader 常量 / shader 编译失败 /
+        # 无关改动不误报 / 贴图 404 / 基线更新必须显式）。
+        timeout-minutes: 20
+        run: pnpm exec playwright test --config playwright.pixelgate.config.ts
+
+      - name: Upload pixel gate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          # diff 图 + 左右对照 + 证据日志：失败时人不用重跑就能看清"哪里变了"。
+          name: pixelgate-evidence
+          path: |
+            pixelgate-evidence/
+            test-results/
           if-no-files-found: ignore
           retention-days: 14
