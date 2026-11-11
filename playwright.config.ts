@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { defineConfig, devices } from "@playwright/test";
+import { DEFAULT_CONFIG_TEST_IGNORE } from "./playwright.spec-ownership";
 
 const nodeMajor = Number.parseInt(process.versions.node.split(".")[0] ?? "0", 10);
 if (!Number.isFinite(nodeMajor) || nodeMajor < 22) {
@@ -65,6 +66,16 @@ const explicitPort = Boolean(process.env.GODESK_E2E_PORT);
 
 export default defineConfig({
   testDir: "./e2e",
+  // SPEC OWNERSHIP — do not drop this, or the default suite goes red.
+  //
+  // `e2e/visual-regression-gate.spec.ts` runs on its own port (8823) via
+  // `playwright.pixelgate.config.ts` and asserts `ownership.portMatches === true`.
+  // Collected by THIS config it would run on 8799 (or the auto-picked port), so that
+  // self-proof fails and `pnpm test:e2e` turns red — a whole-suite false red caused
+  // by a port mismatch, not by a product regression. The list lives in
+  // `playwright.spec-ownership.ts` (single source of truth) and is proven by
+  // `scripts/ci-config-guards.test.mjs` (`playwright test --list` must not contain it).
+  testIgnore: DEFAULT_CONFIG_TEST_IGNORE,
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,

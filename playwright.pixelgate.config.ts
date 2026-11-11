@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { PIXELGATE_SPEC_GLOB } from "./playwright.spec-ownership";
 
 /**
  * G3D-PIXELGATE 专用 Playwright 配置。
@@ -34,7 +35,8 @@ const origin = `http://127.0.0.1:${port}`;
 export default defineConfig({
   testDir: "./e2e",
   // 只跑像素门这一个 spec：别的 spec 有自己的就绪假设，混跑会互相拖慢。
-  testMatch: /visual-regression-gate\.spec\.ts/,
+  // 与 playwright.config.ts 的 testIgnore 同一份来源（playwright.spec-ownership.ts）。
+  testMatch: PIXELGATE_SPEC_GLOB,
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
