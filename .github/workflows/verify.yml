@@ -31,6 +31,33 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  secrets-scan:
+    # Repo-owned secret gate. GitHub push protection is enabled too, but it
+    # cannot see Cloudflare Zero Trust identifiers (non-provider patterns are a
+    # paid feature), so the policy lives in .gitleaks.toml and runs here as the
+    # cheapest first check on every PR.
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Cache pinned gitleaks
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/godesk-secretscan
+          key: godesk-secretscan-${{ runner.arch }}-v8.30.1
+
+      - name: Scan every committable file
+        run: node scripts/secret-scan.mjs all
+
+      - name: Self-test the policy (rules fire, allowlist stays narrow)
+        run: node scripts/secret-scan.mjs canary
+
   verify:
     # Check name kept stable ("Tests and Playwright") for any merge gate.
     name: Tests and Playwright
