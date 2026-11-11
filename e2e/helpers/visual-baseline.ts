@@ -110,7 +110,10 @@ export function describeBaselineEnv(
   identity: BaselineIdentity,
   options: { env?: NodeJS.ProcessEnv; platform?: string; osRelease?: OsRelease } = {},
 ): string {
-  const override = options.env?.[ENV_KEY_ENV]?.trim();
+  // 默认读**真实** process.env：spec 调用时不传 options，若这里写成
+  // `options.env?.[...]` 就会永远忽略 GODESK_VISUAL_BASELINE_ENV 覆盖（实测踩过）。
+  const env = options.env ?? process.env;
+  const override = env[ENV_KEY_ENV]?.trim();
   if (override) return override;
   const major = identity.browserVersion.trim().split(".")[0] || "unknown";
   const label = identity.browserLabel.trim().replace(/[^a-z0-9._-]+/gi, "-").toLowerCase();

@@ -120,6 +120,18 @@ describe("baseline policy: 基线按环境分目录，缺失必须 FAIL", () => 
       ),
       "explicit override wins (and is visible in the evidence log)",
     ).toBe("pinned-runner-1");
+
+    // 不传 options 时必须读**真实** process.env：spec 就是这么调的。
+    // （这里曾经写成 options.env?.[…]，覆盖永远不生效 —— 意味着文档里那条
+    //  "用 GODESK_VISUAL_BASELINE_ENV 指定环境"的救急命令实际是坏的。）
+    const saved = process.env.GODESK_VISUAL_BASELINE_ENV;
+    process.env.GODESK_VISUAL_BASELINE_ENV = "manual-override-9";
+    try {
+      expect(describeBaselineEnv({ browserLabel: "chromium", browserVersion: "153.0.8010.12" })).toBe("manual-override-9");
+    } finally {
+      if (saved === undefined) delete process.env.GODESK_VISUAL_BASELINE_ENV;
+      else process.env.GODESK_VISUAL_BASELINE_ENV = saved;
+    }
     expect(hostEnvSegment("linux", { id: "debian", versionId: "12.5" })).toBe("debian12");
     expect(hostEnvSegment("linux", {})).toBe("linux");
   });
