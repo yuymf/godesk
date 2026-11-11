@@ -139,12 +139,14 @@ Playwright 不再 `--with-deps`。因此像素门 job：
 
 | 命令 | 结果 |
 |---|---|
-| `pnpm test` | `Test Files 123 passed (123)`，`Tests 807 passed \| 1 skipped (808)` |
+| `pnpm test` | `Test Files 124 passed (124)`，`Tests 808 passed \| 1 skipped (809)`（合并 origin/main 后重跑） |
 | `pnpm typecheck` | clean（无输出） |
 | `pnpm build` | `✓ built in 4.96s` |
 | `pnpm size` | 全部 `OK`（homepage 202.10/210KB、render3d core 190.57/200KB、…） |
 | 像素门整套（CI 等价镜像） | **`7 passed (9.5m)`** |
-| harness 3 轮（CI 等价镜像） | **`6 passed (1.5m)`** |
+| harness 3 轮（CI 等价镜像，`--retries=0`） | **`6 passed (1.5m)`** |
+| harness 10 轮（CI 等价镜像，`--retries=0`） | **`20 passed (4.9m)`** |
+| 默认 suite 全量（CI 等价镜像） | `66 passed / 5 failed / 5 skipped (37.9m)` —— 见下面的解释 |
 
 像素门整套（`mcr.microsoft.com/playwright:v1.63.0-noble`，`CI=1`）：
 
@@ -159,13 +161,61 @@ Playwright 不再 `--with-deps`。因此像素门 job：
 7 passed (9.5m)
 ```
 
-### CI 实跑：没跑成，卡在哪
+### 默认 suite 全量在容器里那 5 个失败：是环境，不是本 PR
 
-- 仓库唯一的 runner `box-godesk` 现在是 **offline**（`gh api repos/yuymf/godesk/actions/runners`
-  → `"status":"offline"`；最后一次成功 PR run 是 2026-11-02）。
-- 所以本 PR 的 Actions run 只会排队，**拿不到真实 run id**。没有假装跑过。
-- 解除需要：`box` runner 上线 → 本 PR 打 `full-e2e` label。
+失败的 5 条全部是重 3D / 音频 / HUD 用例，且都是**超时**（3.0m、1.9m、4.0m），
+不是断言失败：
+
+`hex-settlement-3d-surfaces` / `room-audio` / `step3-route-wood-chrome` /
+`tabletop-3d-boards` / `tidewell-hud-polish`
+
+在**本机**用同一份 `origin/main` 代码跑这 5 个 spec：
+
+```
+9 passed (4.0m)        ← hex-settlement-3d-surfaces 20.7s（容器里 3.0m 超时）
+                          room-audio 2.1m / step3 16.3s / tabletop 4.6s / tidewell 6.8s
+```
+
+即：容器只有 CPU SwiftShader（没有 GPU、没有音频设备），重 3D 用例的时间预算在那种环境里
+不够用。这也说明**像素门之所以适合放在容器里**：它比的是"冻结帧"（无时间因素），
+而重 3D 交互用例不适合用这种方式等价验证。
+
+### CI 实跑：跑起来了，但卡在 runner offline
+
+PR：<https://github.com/yuymf/godesk/pull/190>
+
+run **43015247416**（`Verify pull request`，head `ci/harness-pixelgate`）的 job 状态：
+
+| job | 状态 | 说明 |
+|---|---|---|
+| Secret scan | **completed / success** | 在 hosted runner 上跑通 |
+| Tests and Playwright | **queued** | 等自托管 `box` runner |
+| Pixel gate (visual regression) | **queued** | 等自托管 `box` runner；**没有 skipped** → `full-e2e` label 与 `if:` 生效 |
+
+阻塞原因：仓库唯一的 runner `box-godesk` 现在是 **offline**
+（`gh api repos/yuymf/godesk/actions/runners` → `"status":"offline"`；
+最后一次成功的 PR run 是 2026-11-02）。所以**拿不到真实 run 结果**，没有假装跑过。
+
+解除需要：`box` runner 上线 → 本 PR（已带 `full-e2e` label）自动开始跑。
 - 首轮预期：像素门以 `no baseline for env <box env-key>` 失败（**设计如此**）→
   跑一次 `Generate visual baseline (manual)`（同一台 box）→ 人工看图 → 提交 PNG → 重跑转绿。
 - 另注：`docs/ci/actions-budget.md` 已在 #186（public release scrub）里被删除，
   但 `verify.yml`/`deploy.yml` 的注释仍引用它。本卡没有重建这份文档（属于那次裁剪的决定）。
+
+### origin/main 现在是红的（本 PR 修的就是这个）
+
+`main` 上刚合进了 `fe43e31`（像素门）与 `a346e4a`（harness 四件套），但**没有**这两张卡的修复
+（端口隔离 / `testIgnore`）。实测（`origin/main` 工作区）：
+
+```
+pnpm exec playwright test --list
+  … visual-regression-gate.spec.ts …
+  Total: 83 tests in 36 files          ← 像素门 7 条被默认 suite 捡到
+
+pnpm exec playwright test e2e/visual-regression-gate.spec.ts -g "基建自证"
+  ✘ ① 基建自证 … Error: pixel gate must not share port with other e2e suites (got :8951, want :8823)
+    （retry #1 同样失败）
+```
+
+也就是 `main` 的 `pnpm test:e2e` 现在是红的，且失败原因与产品无关 —— 正是本卡预判的端口错配。
+
