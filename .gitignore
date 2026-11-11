@@ -38,7 +38,11 @@ npm-debug.log*
 .codebuddy/
 .idea/
 .vscode/
-.agent/
+# .agent/ is project-level agent config and IS versioned — skills must travel with
+# the repo (see .agent/README.md). Everything else under it stays local scratch.
+.agent/*
+!.agent/README.md
+!.agent/skills/
 .playwright-mcp/
 .gstack/
 .worktrees/
