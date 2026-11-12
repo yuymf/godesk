@@ -1,0 +1,12 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "godesk": {
+      "type": "streamable-http",
+      "url": "https://godesk.yumengfan220.workers.dev/chatgpt-plugin/mcp",
+      "headers": {
+        "x-godesk-mcp-surface": "codex"
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "godesk",
+  "version": "0.2.0",
+  "description": "Turn a script or idea into a playable, shareable game. Friends join from a URL.",
+  "author": {
+    "name": "GoDesk",
+    "url": "https://github.com/yuymf/godesk"
+  },
+  "homepage": "https://godesk.yumengfan220.workers.dev/chatgpt-plugin",
+  "repository": "https://github.com/yuymf/godesk-plugin",
+  "keywords": [
+    "rule-game",
+    "game-creation",
+    "game-design",
+    "playtest",
+    "mcp"
+  ]
+}
